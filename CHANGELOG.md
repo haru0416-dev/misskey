@@ -11,6 +11,7 @@
 
 ### Server
 - Enhance: `clips/my-favorites` APIがページネーションに対応しました
+- Enhance: メモリ使用量を削減しました
 
 ## 2025.11.0
 
