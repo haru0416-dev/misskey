@@ -119,6 +119,9 @@ onMounted(() => {
 		max-width: 1380px;
 		margin: 0 auto;
 		display: flex;
+		overflow: auto;
+		overflow-y: clip;
+		white-space: nowrap;
 
 		> .right,
 		> .left {
@@ -169,13 +172,19 @@ onMounted(() => {
 				margin: 0 10px;
 				border-right: solid 0.5px var(--MI_THEME-divider);
 			}
+		}
 
+		> .left {
 			> .instance {
 				display: inline-block;
 				position: relative;
 				width: 56px;
 				height: 100%;
 				vertical-align: bottom;
+				position: sticky;
+				top: 0;
+				left: 0;
+				z-index: 1;
 
 				> img {
 					display: inline-block;
@@ -188,9 +197,17 @@ onMounted(() => {
 					margin: auto;
 				}
 			}
+		}
+
+		> .right {
+			margin-left: auto;
+			position: sticky;
+			top: 0;
+			right: 0;
 
 			> .post {
 				display: inline-block;
+				margin-right: 8px;
 
 				> .button {
 					width: 40px;
@@ -210,10 +227,6 @@ onMounted(() => {
 					margin-left: 8px;
 				}
 			}
-		}
-
-		> .right {
-			margin-left: auto;
 		}
 	}
 }
