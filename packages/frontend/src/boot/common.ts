@@ -109,13 +109,6 @@ export async function common(createVue: () => Promise<App<Element>>) {
 		else window.location.reload();
 	});
 
-	// If mobile, insert the viewport meta tag
-	if (['smartphone', 'tablet'].includes(deviceKind)) {
-		const viewport = window.document.getElementsByName('viewport').item(0);
-		viewport.setAttribute('content',
-			`${viewport.getAttribute('content')}, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover`);
-	}
-
 	//#region Set lang attr
 	const html = window.document.documentElement;
 	html.setAttribute('lang', lang);
