@@ -153,8 +153,15 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	});
 	//#endregion
 
+	if (!isSafeMode) {
+		// TODO: instance.defaultLightTheme/instance.defaultDarkThemeが不正な形式だった場合のケア
+		if (prefer.s.lightTheme == null && instance.defaultLightTheme != null) prefer.commit('lightTheme', JSON.parse(instance.defaultLightTheme));
+		if (prefer.s.darkTheme == null && instance.defaultDarkTheme != null) prefer.commit('darkTheme', JSON.parse(instance.defaultDarkTheme));
+	}
+
 	// NOTE: この処理は必ずクライアント更新チェック処理より後に来ること(テーマ再構築のため)
 	// NOTE: この処理は必ずダークモード判定処理より後に来ること(初回のテーマ適用のため)
+	// NOTE: この処理は必ずサーバーテーマ適用処理より後に来ること(二重applyTheme発火を防ぐため)
 	// see: https://github.com/misskey-dev/misskey/issues/16562
 	watch(store.r.darkMode, (darkMode) => {
 		const theme = (() => {
@@ -184,12 +191,6 @@ export async function common(createVue: () => Promise<App<Element>>) {
 			if (!store.s.darkMode) {
 				applyTheme(theme ?? defaultLightTheme);
 			}
-		});
-
-		fetchInstanceMetaPromise.then(() => {
-			// TODO: instance.defaultLightTheme/instance.defaultDarkThemeが不正な形式だった場合のケア
-			if (prefer.s.lightTheme == null && instance.defaultLightTheme != null) prefer.commit('lightTheme', JSON.parse(instance.defaultLightTheme));
-			if (prefer.s.darkTheme == null && instance.defaultDarkTheme != null) prefer.commit('darkTheme', JSON.parse(instance.defaultDarkTheme));
 		});
 	}
 
