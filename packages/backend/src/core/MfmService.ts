@@ -6,13 +6,13 @@
 import { URL } from 'node:url';
 import { Inject, Injectable } from '@nestjs/common';
 import * as parse5 from 'parse5';
-import { type Document, type HTMLParagraphElement, Window, XMLSerializer } from 'happy-dom';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { intersperse } from '@/misc/prelude/array.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
 import { bindThis } from '@/decorators.js';
+import { escapeHtml } from '@/misc/escape-html.js';
 import type { DefaultTreeAdapterMap } from 'parse5';
 import type * as mfm from 'mfm-js';
 
@@ -22,8 +22,6 @@ type ChildNode = DefaultTreeAdapterMap['childNode'];
 
 const urlRegex = /^https?:\/\/[\w\/:%#@$&?!()\[\]~.,=+\-]+/;
 const urlRegexFull = /^https?:\/\/[\w\/:%#@$&?!()\[\]~.,=+\-]+$/;
-
-export type Appender = (document: Document, body: HTMLParagraphElement) => void;
 
 @Injectable()
 export class MfmService {
@@ -269,52 +267,35 @@ export class MfmService {
 	}
 
 	@bindThis
-	public toHtml(nodes: mfm.MfmNode[] | null, mentionedRemoteUsers: IMentionedRemoteUsers = [], additionalAppenders: Appender[] = []) {
+	public toHtml(nodes: mfm.MfmNode[] | null, mentionedRemoteUsers: IMentionedRemoteUsers = [], extraHtml: string | null = null) {
 		if (nodes == null) {
 			return null;
 		}
 
-		const { happyDOM, window } = new Window();
-
-		const doc = window.document;
-
-		const body = doc.createElement('p');
-
-		function appendChildren(children: mfm.MfmNode[], targetElement: any): void {
-			if (children) {
-				for (const child of children.map(x => (handlers as any)[x.type](x))) targetElement.appendChild(child);
-			}
+		function toHtml(children?: mfm.MfmNode[]): string {
+			if (children == null) return '';
+			return children.map(x => handlers[x.type](x)).join('');
 		}
 
 		function fnDefault(node: mfm.MfmFn) {
-			const el = doc.createElement('i');
-			appendChildren(node.children, el);
-			return el;
+			return `<i>${toHtml(node.children)}</i>`;
 		}
 
-		const handlers: { [K in mfm.MfmNode['type']]: (node: mfm.NodeType<K>) => any } = {
+		const handlers = {
 			bold: (node) => {
-				const el = doc.createElement('b');
-				appendChildren(node.children, el);
-				return el;
+				return `<b>${toHtml(node.children)}</b>`;
 			},
 
 			small: (node) => {
-				const el = doc.createElement('small');
-				appendChildren(node.children, el);
-				return el;
+				return `<small>${toHtml(node.children)}</small>`;
 			},
 
 			strike: (node) => {
-				const el = doc.createElement('del');
-				appendChildren(node.children, el);
-				return el;
+				return `<del>${toHtml(node.children)}</del>`;
 			},
 
 			italic: (node) => {
-				const el = doc.createElement('i');
-				appendChildren(node.children, el);
-				return el;
+				return `<i>${toHtml(node.children)}</i>`;
 			},
 
 			fn: (node) => {
@@ -323,10 +304,7 @@ export class MfmService {
 						const text = node.children[0].type === 'text' ? node.children[0].props.text : '';
 						try {
 							const date = new Date(parseInt(text, 10) * 1000);
-							const el = doc.createElement('time');
-							el.setAttribute('datetime', date.toISOString());
-							el.textContent = date.toISOString();
-							return el;
+							return `<time datetime="${escapeHtml(date.toISOString())}">${escapeHtml(date.toISOString())}</time>`;
 						} catch (err) {
 							return fnDefault(node);
 						}
@@ -336,21 +314,9 @@ export class MfmService {
 						if (node.children.length === 1) {
 							const child = node.children[0];
 							const text = child.type === 'text' ? child.props.text : '';
-							const rubyEl = doc.createElement('ruby');
-							const rtEl = doc.createElement('rt');
 
-							// ruby未対応のHTMLサニタイザーを通したときにルビが「劉備（りゅうび）」となるようにする
-							const rpStartEl = doc.createElement('rp');
-							rpStartEl.appendChild(doc.createTextNode('('));
-							const rpEndEl = doc.createElement('rp');
-							rpEndEl.appendChild(doc.createTextNode(')'));
-
-							rubyEl.appendChild(doc.createTextNode(text.split(' ')[0]));
-							rtEl.appendChild(doc.createTextNode(text.split(' ')[1]));
-							rubyEl.appendChild(rpStartEl);
-							rubyEl.appendChild(rtEl);
-							rubyEl.appendChild(rpEndEl);
-							return rubyEl;
+							// ruby未対応のHTMLサニタイザーを通したときにルビが「対象テキスト（ルビテキスト）」にフォールバックするようにする
+							return `<ruby>${escapeHtml(text.split(' ')[0])}<rp>(</rp><rt>${escapeHtml(text.split(' ')[1])}</rt><rp>)</rp></ruby>`;
 						} else {
 							const rt = node.children.at(-1);
 
@@ -359,21 +325,9 @@ export class MfmService {
 							}
 
 							const text = rt.type === 'text' ? rt.props.text : '';
-							const rubyEl = doc.createElement('ruby');
-							const rtEl = doc.createElement('rt');
 
-							// ruby未対応のHTMLサニタイザーを通したときにルビが「劉備（りゅうび）」となるようにする
-							const rpStartEl = doc.createElement('rp');
-							rpStartEl.appendChild(doc.createTextNode('('));
-							const rpEndEl = doc.createElement('rp');
-							rpEndEl.appendChild(doc.createTextNode(')'));
-
-							appendChildren(node.children.slice(0, node.children.length - 1), rubyEl);
-							rtEl.appendChild(doc.createTextNode(text.trim()));
-							rubyEl.appendChild(rpStartEl);
-							rubyEl.appendChild(rtEl);
-							rubyEl.appendChild(rpEndEl);
-							return rubyEl;
+							// ruby未対応のHTMLサニタイザーを通したときにルビが「対象テキスト（ルビテキスト）」にフォールバックするようにする
+							return `<ruby>${toHtml(node.children.slice(0, node.children.length - 1))}<rp>(</rp><rt>${escapeHtml(text.trim())}</rt><rp>)</rp></ruby>`;
 						}
 					}
 
@@ -384,125 +338,98 @@ export class MfmService {
 			},
 
 			blockCode: (node) => {
-				const pre = doc.createElement('pre');
-				const inner = doc.createElement('code');
-				inner.textContent = node.props.code;
-				pre.appendChild(inner);
-				return pre;
+				return `<pre><code>${escapeHtml(node.props.code)}</code></pre>`;
 			},
 
 			center: (node) => {
-				const el = doc.createElement('div');
-				appendChildren(node.children, el);
-				return el;
+				return `<div style="text-align: center;">${toHtml(node.children)}</div>`;
 			},
 
 			emojiCode: (node) => {
-				return doc.createTextNode(`\u200B:${node.props.name}:\u200B`);
+				return `\u200B:${escapeHtml(node.props.name)}:\u200B`;
 			},
 
 			unicodeEmoji: (node) => {
-				return doc.createTextNode(node.props.emoji);
+				return node.props.emoji;
 			},
 
 			hashtag: (node) => {
-				const a = doc.createElement('a');
-				a.setAttribute('href', `${this.config.url}/tags/${node.props.hashtag}`);
-				a.textContent = `#${node.props.hashtag}`;
-				a.setAttribute('rel', 'tag');
-				return a;
+				return `<a href="${escapeHtml(`${this.config.url}/tags/${encodeURIComponent(node.props.hashtag)}`)}" rel="tag">#${escapeHtml(node.props.hashtag)}</a>`;
 			},
 
 			inlineCode: (node) => {
-				const el = doc.createElement('code');
-				el.textContent = node.props.code;
-				return el;
+				return `<code>${escapeHtml(node.props.code)}</code>`;
 			},
 
 			mathInline: (node) => {
-				const el = doc.createElement('code');
-				el.textContent = node.props.formula;
-				return el;
+				return `<code>${escapeHtml(node.props.formula)}</code>`;
 			},
 
 			mathBlock: (node) => {
-				const el = doc.createElement('code');
-				el.textContent = node.props.formula;
-				return el;
+				return `<pre><code>${escapeHtml(node.props.formula)}</code></pre>`;
 			},
 
 			link: (node) => {
-				const a = doc.createElement('a');
-				a.setAttribute('href', node.props.url);
-				appendChildren(node.children, a);
-				return a;
+				try {
+					const url = new URL(node.props.url);
+					return `<a href="${escapeHtml(url.href)}">${toHtml(node.children)}</a>`;
+				} catch (err) {
+					return `[${toHtml(node.children)}](${escapeHtml(node.props.url)})`;
+				}
 			},
 
 			mention: (node) => {
-				const a = doc.createElement('a');
 				const { username, host, acct } = node.props;
 				const remoteUserInfo = mentionedRemoteUsers.find(remoteUser => remoteUser.username.toLowerCase() === username.toLowerCase() && remoteUser.host?.toLowerCase() === host?.toLowerCase());
-				a.setAttribute('href', remoteUserInfo
+				const href = remoteUserInfo
 					? (remoteUserInfo.url ? remoteUserInfo.url : remoteUserInfo.uri)
-					: `${this.config.url}/${acct.endsWith(`@${this.config.url}`) ? acct.substring(0, acct.length - this.config.url.length - 1) : acct}`);
-				a.className = 'u-url mention';
-				a.textContent = acct;
-				return a;
+					: `${this.config.url}/${acct.endsWith(`@${this.config.url}`) ? acct.substring(0, acct.length - this.config.url.length - 1) : acct}`;
+				try {
+					const url = new URL(href);
+					return `<a href="${escapeHtml(url.href)}" class="u-url mention">${escapeHtml(acct)}</a>`;
+				} catch (err) {
+					return escapeHtml(acct);
+				}
 			},
 
 			quote: (node) => {
-				const el = doc.createElement('blockquote');
-				appendChildren(node.children, el);
-				return el;
+				return `<blockquote>${toHtml(node.children)}</blockquote>`;
 			},
 
 			text: (node) => {
 				if (!node.props.text.match(/[\r\n]/)) {
-					return doc.createTextNode(node.props.text);
+					return escapeHtml(node.props.text);
 				}
 
-				const el = doc.createElement('span');
-				const nodes = node.props.text.split(/\r\n|\r|\n/).map(x => doc.createTextNode(x));
+				let html = '';
 
-				for (const x of intersperse<FIXME | 'br'>('br', nodes)) {
-					el.appendChild(x === 'br' ? doc.createElement('br') : x);
+				const lines = node.props.text.split(/\r\n|\r|\n/).map(x => escapeHtml(x));
+
+				for (const x of intersperse<FIXME | 'br'>('br', lines)) {
+					html += x === 'br' ? '<br />' : x;
 				}
 
-				return el;
+				return html;
 			},
 
 			url: (node) => {
-				const a = doc.createElement('a');
-				a.setAttribute('href', node.props.url);
-				a.textContent = node.props.url;
-				return a;
+				try {
+					const url = new URL(node.props.url);
+					return `<a href="${escapeHtml(url.href)}">${escapeHtml(node.props.url)}</a>`;
+				} catch (err) {
+					return escapeHtml(node.props.url);
+				}
 			},
 
 			search: (node) => {
-				const a = doc.createElement('a');
-				a.setAttribute('href', `https://www.google.com/search?q=${node.props.query}`);
-				a.textContent = node.props.content;
-				return a;
+				return `<a href="${escapeHtml(`https://www.google.com/search?q=${encodeURIComponent(node.props.query)}`)}">${escapeHtml(node.props.content)}</a>`;
 			},
 
 			plain: (node) => {
-				const el = doc.createElement('span');
-				appendChildren(node.children, el);
-				return el;
+				return `<span>${toHtml(node.children)}</span>`;
 			},
-		};
+		} satisfies { [K in mfm.MfmNode['type']]: (node: mfm.NodeType<K>) => string } as { [K in mfm.MfmNode['type']]: (node: mfm.MfmNode) => string };
 
-		appendChildren(nodes, body);
-
-		for (const additionalAppender of additionalAppenders) {
-			additionalAppender(doc, body);
-		}
-
-		// Remove the unnecessary namespace
-		const serialized = new XMLSerializer().serializeToString(body).replace(/^\s*<p xmlns=\"http:\/\/www.w3.org\/1999\/xhtml\">/, '<p>');
-
-		happyDOM.close().catch(err => {});
-
-		return serialized;
+		return `${toHtml(nodes)}${extraHtml ?? ''}`;
 	}
 }
