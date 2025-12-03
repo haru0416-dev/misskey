@@ -22,6 +22,7 @@
 	],
 	"private": true,
 	"scripts": {
+		"convert:config": "cd packages/backend && pnpm convert:config",
 		"build-pre": "node ./scripts/build-pre.js",
 		"build-assets": "node ./scripts/build-assets.mjs",
 		"build": "pnpm build-pre && pnpm -r build && pnpm build-assets",
