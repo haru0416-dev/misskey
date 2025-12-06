@@ -1,5 +1,8 @@
 ## 2025.12.0
 
+### Note
+- configの`trustProxy`のデフォルト値を`false`に変更しました。アップデート前に現在のconfigをご確認の上、必要に応じて値を変更してください。
+
 ### Client
 - Fix: stacking router viewで連続して戻る操作を行うと何も表示されなくなる問題を修正
 
