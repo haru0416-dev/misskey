@@ -9,7 +9,7 @@ v2025.12.0で行われた「configの`trustProxy`のデフォルト値を`false`
 - 依存関係の更新
 
 ### Client
--
+- Fix: バージョン表記のないPlayが正しく動作しない問題を修正
 
 ### Server
 -
