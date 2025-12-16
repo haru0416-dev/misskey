@@ -129,7 +129,7 @@ jobs:
         if: steps.check-changes.outputs.changes == 'false'
         uses: thollander/actions-comment-pull-request@v3
         with:
-          comment_tag: check-misskey-js-autogen
+          comment-tag: check-misskey-js-autogen
           mode: delete
           message: "Thank you!"
           create_if_not_exists: false
