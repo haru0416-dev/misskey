@@ -11,9 +11,6 @@ v2025.12.0で行われた「configの`trustProxy`のデフォルト値を`false`
 ### Client
 - Fix: バージョン表記のないPlayが正しく動作しない問題を修正
 
-### Server
--
-
 
 ## 2025.12.1
 
