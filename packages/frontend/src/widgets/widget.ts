@@ -10,6 +10,7 @@ import type { Reactive } from 'vue';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import * as os from '@/os.js';
 import { deepClone } from '@/utility/clone.js';
+import { i18n } from '@/i18n';
 
 export type Widget<P extends Record<string, unknown>> = {
 	id: string;
@@ -75,7 +76,7 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 			canceled: true;
 		}>((resolve) => {
 			const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkWidgetSettingsDialog.vue')), {
-				widgetName: name,
+				widgetName: i18n.ts._widgets[name] ?? name,
 				form: form,
 				currentSettings: widgetProps,
 			}, {
