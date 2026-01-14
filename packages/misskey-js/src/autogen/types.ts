@@ -5373,7 +5373,8 @@ export type components = {
             /** Format: id */
             timeoutUserId: string | null;
             black: number | null;
-            bw: string;
+            /** @enum {string} */
+            bw: 'random' | '1' | '2';
             noIrregularRules: boolean;
             isLlotheo: boolean;
             canPutEverywhere: boolean;
@@ -5409,7 +5410,8 @@ export type components = {
             /** Format: id */
             timeoutUserId: string | null;
             black: number | null;
-            bw: string;
+            /** @enum {string} */
+            bw: 'random' | '1' | '2';
             noIrregularRules: boolean;
             isLlotheo: boolean;
             canPutEverywhere: boolean;
