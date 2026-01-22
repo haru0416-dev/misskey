@@ -14,6 +14,7 @@ import { fork } from 'node:child_process';
 import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import * as http from 'node:http';
 import * as fs from 'node:fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -88,6 +89,40 @@ async function measureMemory() {
 		process.stderr.write(`[server error] ${err}\n`);
 	});
 
+	async function triggerGc() {
+		const ok = new Promise((resolve) => {
+			serverProcess.once('message', (message) => {
+				if (message === 'gc ok') resolve();
+			});
+		});
+
+		serverProcess.send('gc');
+
+		await ok;
+
+		await setTimeout(1000);
+	}
+
+	function createRequest() {
+		return new Promise((resolve, reject) => {
+			const req = http.request({
+				host: 'localhost',
+				port: 61812,
+				path: '/api/meta',
+				method: 'POST',
+			}, (res) => {
+				res.on('data', () => { });
+				res.on('end', () => {
+					resolve();
+				});
+			});
+			req.on('error', (err) => {
+				reject(err);
+			});
+			req.end();
+		});
+	}
+
 	// Wait for server to be ready or timeout
 	const startupStartTime = Date.now();
 	while (!serverReady) {
@@ -108,17 +143,19 @@ async function measureMemory() {
 
 	const beforeGc = await getMemoryUsage(pid);
 
-	serverProcess.send('gc');
-
-	await new Promise((resolve) => {
-		serverProcess.once('message', (message) => {
-			if (message === 'gc ok') resolve();
-		});
-	});
-
-	await setTimeout(1000);
+	await triggerGc();
 
 	const afterGc = await getMemoryUsage(pid);
+
+	// create some http requests to simulate load
+	const REQUEST_COUNT = 10;
+	await Promise.all(
+		Array.from({ length: REQUEST_COUNT }).map(() => createRequest()),
+	);
+
+	await triggerGc();
+
+	const afterRequest = await getMemoryUsage(pid);
 
 	// Stop the server
 	serverProcess.kill('SIGTERM');
@@ -143,6 +180,7 @@ async function measureMemory() {
 		timestamp: new Date().toISOString(),
 		beforeGc,
 		afterGc,
+		afterRequest,
 	};
 
 	return result;
@@ -159,21 +197,25 @@ async function main() {
 	// Calculate averages
 	const beforeGc = structuredClone(keys);
 	const afterGc = structuredClone(keys);
+	const afterRequest = structuredClone(keys);
 	for (const res of results) {
 		for (const key of Object.keys(keys)) {
 			beforeGc[key] += res.beforeGc[key];
 			afterGc[key] += res.afterGc[key];
+			afterRequest[key] += res.afterRequest[key];
 		}
 	}
 	for (const key of Object.keys(keys)) {
 		beforeGc[key] = Math.round(beforeGc[key] / SAMPLE_COUNT);
 		afterGc[key] = Math.round(afterGc[key] / SAMPLE_COUNT);
+		afterRequest[key] = Math.round(afterRequest[key] / SAMPLE_COUNT);
 	}
 
 	const result = {
 		timestamp: new Date().toISOString(),
 		beforeGc,
 		afterGc,
+		afterRequest,
 	};
 
 	// Output as JSON to stdout
