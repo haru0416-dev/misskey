@@ -1,6 +1,7 @@
 ## 2026.5.1
 
 ### General
+- Enhance: チャンネルの作成の可否をロールポリシーで制御できるように
 - Fix: `.devcontainer/compose.yml`のvolumeのマウントパスを修正
 
 ### Client
