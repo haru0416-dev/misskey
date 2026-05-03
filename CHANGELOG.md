@@ -1,4 +1,4 @@
-## Unreleased
+## 2026.5.1
 
 ### General
 - Fix: `.devcontainer/compose.yml`のvolumeのマウントパスを修正
