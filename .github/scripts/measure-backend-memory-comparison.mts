@@ -27,10 +27,13 @@ export type MemoryReport = {
 			breakdownTopN: any;
 		};
 	};
-	summary: Record<typeof phases[number], {
-		memoryUsage: Record<string, number>;
-		heapSnapshot?: heapSnapshotUtil.HeapSnapshotData;
-	}>;
+	summary: Record<
+		(typeof phases)[number],
+		{
+			memoryUsage: Record<string, number>;
+			heapSnapshot?: heapSnapshotUtil.HeapSnapshotData;
+		}
+	>;
 	samples: (MemoryReportRaw['samples'][number] & {
 		round: number;
 	})[];
@@ -70,10 +73,12 @@ async function resetState(repoDir: string) {
 	}
 }
 
-function summarizeHeapSnapshotBreakdowns(samples: MemoryReport['samples'], phase: typeof phases[number]) {
+function summarizeHeapSnapshotBreakdowns(samples: MemoryReport['samples'], phase: (typeof phases)[number]) {
 	const breakdowns = {} as Record<keyof typeof heapSnapshotUtil.heapSnapshotCategory, Record<string, number>>;
 
-	for (const category of Object.keys(heapSnapshotUtil.heapSnapshotCategory) as (keyof typeof heapSnapshotUtil.heapSnapshotCategory)[]) {
+	for (const category of Object.keys(
+		heapSnapshotUtil.heapSnapshotCategory,
+	) as (keyof typeof heapSnapshotUtil.heapSnapshotCategory)[]) {
 		if (category === 'total') continue;
 
 		const childKeys = new Set<string>();
@@ -86,8 +91,8 @@ function summarizeHeapSnapshotBreakdowns(samples: MemoryReport['samples'], phase
 		const categoryBreakdown = {} as Record<string, number>;
 		for (const childKey of childKeys) {
 			const values = samples
-				.map(sample => sample.phases[phase].heapSnapshot?.breakdowns?.[category]?.[childKey])
-				.filter(value => Number.isFinite(value)) as number[];
+				.map((sample) => sample.phases[phase].heapSnapshot?.breakdowns?.[category]?.[childKey])
+				.filter((value) => Number.isFinite(value)) as number[];
 
 			if (values.length > 0) categoryBreakdown[childKey] = util.median(values);
 		}
@@ -106,9 +111,7 @@ function collapseHeapSnapshotBreakdown(breakdown: Record<string, number>) {
 		.toSorted((a, b) => b[1] - a[1]);
 
 	const topEntries = entries.slice(0, HEAP_SNAPSHOT_BREAKDOWN_TOP_N);
-	const otherValue = entries
-		.slice(HEAP_SNAPSHOT_BREAKDOWN_TOP_N)
-		.reduce((sum, [, value]) => sum + value, 0);
+	const otherValue = entries.slice(HEAP_SNAPSHOT_BREAKDOWN_TOP_N).reduce((sum, [, value]) => sum + value, 0);
 
 	const collapsed = Object.fromEntries(topEntries);
 	if (otherValue > 0) collapsed.Other = otherValue;
@@ -131,24 +134,28 @@ function summarizeSamples(samples: MemoryReport['samples']) {
 		}
 
 		for (const key of metricKeys) {
-			const values = samples.map(sample => sample.phases[phase].memoryUsage[key]);
+			const values = samples.map((sample) => sample.phases[phase].memoryUsage[key]);
 			summary[phase].memoryUsage[key] = util.median(values);
 		}
 
 		const heapSnapshotCategoryValues = {} as Record<keyof typeof heapSnapshotUtil.heapSnapshotCategory, number>;
-		for (const category of Object.keys(heapSnapshotUtil.heapSnapshotCategory) as (keyof typeof heapSnapshotUtil.heapSnapshotCategory)[]) {
+		for (const category of Object.keys(
+			heapSnapshotUtil.heapSnapshotCategory,
+		) as (keyof typeof heapSnapshotUtil.heapSnapshotCategory)[]) {
 			const values = samples
-				.map(sample => sample.phases[phase].heapSnapshot?.categories?.[category])
-				.filter(value => Number.isFinite(value)) as number[];
+				.map((sample) => sample.phases[phase].heapSnapshot?.categories?.[category])
+				.filter((value) => Number.isFinite(value)) as number[];
 
 			if (values.length > 0) heapSnapshotCategoryValues[category] = util.median(values);
 		}
 
 		const heapSnapshotNodeCountValues = {} as Record<keyof typeof heapSnapshotUtil.heapSnapshotCategory, number>;
-		for (const category of Object.keys(heapSnapshotUtil.heapSnapshotCategory) as (keyof typeof heapSnapshotUtil.heapSnapshotCategory)[]) {
+		for (const category of Object.keys(
+			heapSnapshotUtil.heapSnapshotCategory,
+		) as (keyof typeof heapSnapshotUtil.heapSnapshotCategory)[]) {
 			const values = samples
-				.map(sample => sample.phases[phase].heapSnapshot?.nodeCounts?.[category])
-				.filter(value => Number.isFinite(value)) as number[];
+				.map((sample) => sample.phases[phase].heapSnapshot?.nodeCounts?.[category])
+				.filter((value) => Number.isFinite(value)) as number[];
 
 			if (values.length > 0) heapSnapshotNodeCountValues[category] = util.median(values);
 		}
@@ -167,12 +174,17 @@ function summarizeSamples(samples: MemoryReport['samples']) {
 	return summary;
 }
 
-async function measureRepo(label: string, repoDir: string, round: number, options: { heapSnapshotSavePath?: string } = {}) {
+async function measureRepo(
+	label: string,
+	repoDir: string,
+	round: number,
+	options: { heapSnapshotSavePath?: string } = {},
+) {
 	process.stderr.write(`[${label}] Resetting database and Redis\n`);
 	await resetState(repoDir);
 
 	process.stderr.write(`[${label}] Running migrations\n`);
-	await util.run('pnpm', ['--filter', 'backend', 'migrate'], {
+	await util.run('bun', ['run', '--bun', '--filter', 'backend', 'migrate'], {
 		cwd: repoDir,
 		env: process.env,
 		logStdout: true,
@@ -186,7 +198,7 @@ async function measureRepo(label: string, repoDir: string, round: number, option
 	if (round <= 0) measureEnv.MK_MEMORY_HEAP_SNAPSHOT = '0';
 	if (options.heapSnapshotSavePath != null) measureEnv.MK_MEMORY_HEAP_SNAPSHOT_SAVE_PATH = options.heapSnapshotSavePath;
 
-	const stdout = await util.run('node', ['packages/backend/scripts/measure-memory.mts'], {
+	const stdout = await util.run('bun', ['packages/backend/scripts/measure-memory.mts'], {
 		cwd: repoDir,
 		env: measureEnv,
 	});
@@ -211,7 +223,11 @@ function selectRepresentativeHeadHeapSnapshotRound(samples: MemoryReport['sample
 		if (total == null || !Number.isFinite(total)) continue;
 
 		const distance = Math.abs(total - medianTotal);
-		if (selected == null || distance < selected.distance || (distance === selected.distance && sample.round < selected.round)) {
+		if (
+			selected == null ||
+			distance < selected.distance ||
+			(distance === selected.distance && sample.round < selected.round)
+		) {
 			selected = {
 				round: sample.round,
 				distance,
@@ -262,14 +278,12 @@ async function main() {
 	}
 
 	for (let round = 1; round <= rounds; round++) {
-		const order = round % 2 === 1 ? ['base', 'head'] as const : ['head', 'base'] as const;
+		const order = round % 2 === 1 ? (['base', 'head'] as const) : (['head', 'base'] as const);
 		process.stderr.write(`Starting measurement round ${round}/${rounds}: ${order.join(' -> ')}\n`);
 
 		for (const label of order) {
 			const shouldSaveHeadHeapSnapshot = label === 'head';
-			const options = shouldSaveHeadHeapSnapshot
-				? { heapSnapshotSavePath: headHeapSnapshotPath(round) }
-				: {};
+			const options = shouldSaveHeadHeapSnapshot ? { heapSnapshotSavePath: headHeapSnapshotPath(round) } : {};
 			const sample = await measureRepo(label, reports[label].dir, round, options);
 			reports[label].samples.push({
 				...sample,
@@ -303,7 +317,7 @@ async function main() {
 	}
 }
 
-main().catch(err => {
+main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });

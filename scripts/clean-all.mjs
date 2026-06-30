@@ -32,16 +32,10 @@ const __dirname = import.meta.dirname;
 	fs.rmSync(__dirname + '/../packages/misskey-js/built', { recursive: true, force: true });
 	fs.rmSync(__dirname + '/../packages/misskey-js/node_modules', { recursive: true, force: true });
 
-	fs.rmSync(__dirname + '/../packages/misskey-reversi/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/misskey-reversi/node_modules', { recursive: true, force: true });
-
-	fs.rmSync(__dirname + '/../packages/misskey-bubble-game/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/misskey-bubble-game/node_modules', { recursive: true, force: true });
-
 	fs.rmSync(__dirname + '/../built', { recursive: true, force: true });
 	fs.rmSync(__dirname + '/../node_modules', { recursive: true, force: true });
 
-	execSync('pnpm store prune', {
+	execSync('bun pm cache rm', {
 		cwd: __dirname + '/../',
 		stdio: 'inherit',
 	});

@@ -14,7 +14,7 @@ jobs:
       actions: read
       pull-requests: write
 
-# api-artifact
+    # api-artifact
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v8
@@ -65,7 +65,7 @@ jobs:
             echo '```diff' >> ./output.md
             cat ./api.json.diff >> ./output.md
             echo '```' >> ./output.md
-            echo '</details>' >> .output.md
+            echo '</details>' >> ./output.md
           fi
 
           echo "$FOOTER" >> ./output.md

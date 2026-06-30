@@ -30,6 +30,6 @@ SKILL.md 本体は references への索引だけ。具体的な手順や規約�
 
 ## 必ず最後に通る場所
 
-backend の変更を commit / PR にする前に、必ず [shipping-misskey-change](../shipping-misskey-change/SKILL.md) の最終チェックリストに従う。`pnpm lint` / misskey-js 再生成 / `check-migrations` / SPDX / CHANGELOG をまとめて確認する。
+backend の変更を commit / PR にする前に、必ず [shipping-misskey-change](../shipping-misskey-change/SKILL.md) の最終チェックリストに従う。`bun run lint` / misskey-js 再生成 / `check-migrations` / SPDX / CHANGELOG をまとめて確認する。
 
-API endpoint を追加・変更したなら、その出口で [misskey-api-reviewer](../../agents/misskey-api-reviewer.md) agent (この skill の規約を review-mode から機械チェックする専門 reviewer) を Task で起動すると、endpoint-list 登録漏れや misskey-js 再生成漏れを取りこぼしにくい。
+API endpoint を追加・変更したなら、subagent を使える環境では [misskey-api-reviewer](../../agents/misskey-api-reviewer.md) agent を Task で起動すると、endpoint-list 登録漏れや misskey-js 再生成漏れを取りこぼしにくい。Codex 等で subagent 起動が制限される環境では、同じ観点を自分でチェックする。

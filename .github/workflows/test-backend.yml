@@ -24,12 +24,6 @@ jobs:
   unit:
     name: Unit tests (backend)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version-file:
-          - .node-version
-          - .github/min.node-version
-
     services:
       postgres:
         image: postgres:18
@@ -43,7 +37,7 @@ jobs:
         ports:
           - 56312:6379
       meilisearch:
-        image: getmeili/meilisearch:v1.48.1
+        image: getmeili/meilisearch:v1.42.1
         ports:
           - 57712:7700
         env:
@@ -51,44 +45,34 @@ jobs:
           MEILI_ENV: development
 
     steps:
-    - uses: actions/checkout@v6.0.3
-      with:
-        submodules: true
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6.0.9
-    - name: Install FFmpeg
-      run: |
-        sudo apt install -y ffmpeg
-    - name: Use Node.js
-      uses: actions/setup-node@v6.4.0
-      with:
-        node-version-file: ${{ matrix.node-version-file }}
-        cache: 'pnpm'
-    - run: pnpm i --frozen-lockfile
-    - name: Check pnpm-lock.yaml
-      run: git diff --exit-code pnpm-lock.yaml
-    - name: Copy Configure
-      run: cp .github/misskey/test.yml .config
-    - name: Build
-      run: pnpm build
-    - name: Test
-      run: pnpm --filter backend test-and-coverage
-    - name: Upload to Codecov
-      uses: codecov/codecov-action@v6
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./packages/backend/coverage/coverage-final.json
+      - uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install FFmpeg
+        run: |
+          sudo apt install -y ffmpeg
+      - run: bun install --frozen-lockfile
+      - name: Check bun.lock
+        run: git diff --exit-code bun.lock
+      - name: Copy Configure
+        run: cp .github/misskey/test.yml .config
+      - name: Build
+        run: bun run build
+      - name: Test
+        run: bun run --bun --filter backend test-and-coverage
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./packages/backend/coverage/coverage-final.json
 
   e2e:
     name: E2E tests (backend)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version-file:
-          - .node-version
-          - .github/min.node-version
-
     services:
       postgres:
         image: postgres:18
@@ -103,25 +87,22 @@ jobs:
           - 56312:6379
 
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v6.0.2
         with:
           submodules: true
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6.0.9
-      - name: Use Node.js
-        uses: actions/setup-node@v6.4.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
         with:
-          node-version-file: ${{ matrix.node-version-file }}
-          cache: 'pnpm'
-      - run: pnpm i --frozen-lockfile
-      - name: Check pnpm-lock.yaml
-        run: git diff --exit-code pnpm-lock.yaml
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - name: Check bun.lock
+        run: git diff --exit-code bun.lock
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config
       - name: Build
-        run: pnpm build
+        run: bun run build
       - name: Test
-        run: pnpm --filter backend test-and-coverage:e2e
+        run: bun run --bun --filter backend test-and-coverage:e2e
       - name: Upload to Codecov
         uses: codecov/codecov-action@v6
         with:
@@ -131,12 +112,6 @@ jobs:
   migration:
     name: Migration tests (backend)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version-file:
-          - .node-version
-          #- .github/min.node-version
-
     services:
       postgres:
         image: postgres:18
@@ -147,27 +122,24 @@ jobs:
           POSTGRES_HOST_AUTH_METHOD: trust
 
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v6.0.2
         with:
           submodules: true
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6.0.9
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
       - name: Get current date
         id: current-date
         run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-      - name: Use Node.js
-        uses: actions/setup-node@v6.4.0
-        with:
-          node-version-file: ${{ matrix.node-version-file }}
-          cache: 'pnpm'
-      - run: pnpm i --frozen-lockfile
-      - name: Check pnpm-lock.yaml
-        run: git diff --exit-code pnpm-lock.yaml
+      - run: bun install --frozen-lockfile
+      - name: Check bun.lock
+        run: git diff --exit-code bun.lock
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config
       - name: Build
-        run: pnpm build
+        run: bun run build
       - name: Run migrations
-        run: MISSKEY_CONFIG_YML=test.yml pnpm --filter backend migrate
+        run: MISSKEY_CONFIG_YML=test.yml bun run --bun --filter backend migrate
       - name: Check no migrations are remaining
-        run: MISSKEY_CONFIG_YML=test.yml pnpm --filter backend check-migrations
+        run: MISSKEY_CONFIG_YML=test.yml bun run --bun --filter backend check-migrations

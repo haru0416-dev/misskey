@@ -21,6 +21,7 @@ import { WebAuthnService } from '@/core/WebAuthnService.js';
 import Logger from '@/logger.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { IdentifiableError } from '@/misc/identifiable-error.js';
+import { getRequestIp } from '@/server/api/get-request-ip.js';
 import { RateLimiterService } from './RateLimiterService.js';
 import { SigninService } from './SigninService.js';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
@@ -66,6 +67,7 @@ export class SigninWithPasskeyApiService {
 
 		const body = request.body;
 		const credential = body['credential'];
+		const ip = getRequestIp(request);
 
 		function error(status: number, error: { id: string }) {
 			reply.code(status);
@@ -77,7 +79,7 @@ export class SigninWithPasskeyApiService {
 			await this.signinsRepository.insert({
 				id: this.idService.gen(),
 				userId: userId,
-				ip: request.ip,
+				ip,
 				headers: request.headers as any,
 				success: false,
 			});
@@ -85,14 +87,14 @@ export class SigninWithPasskeyApiService {
 		};
 
 		if (this.config.enableIpRateLimit) {
-			if (process.env.NODE_ENV === 'production' && (request.ip === '::1' || request.ip === '127.0.0.1')) {
+			if (process.env.NODE_ENV === 'production' && (ip === '::1' || ip === '127.0.0.1')) {
 				this.logger.warn('Recieved signin with passkey request from localhost IP address for rate limiting in production environment. This is likely due to an improper trustProxy setting in the config file.');
 			}
 
 			try {
 			// Not more than 1 API call per 250ms and not more than 100 attempts per 30min
 			// NOTE: 1 Sign-in require 2 API calls
-				await this.rateLimiterService.limit({ key: 'signin-with-passkey', duration: 60 * 30 * 1000, max: 200, minInterval: 250 }, getIpHash(request.ip));
+				await this.rateLimiterService.limit({ key: 'signin-with-passkey', duration: 60 * 30 * 1000, max: 200, minInterval: 250 }, getIpHash(ip));
 			} catch (_) {
 				reply.code(429);
 				return {

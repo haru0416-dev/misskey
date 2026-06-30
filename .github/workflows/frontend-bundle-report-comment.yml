@@ -19,12 +19,10 @@ on:
       - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/misskey-js/**
-      - packages/misskey-reversi/**
-      - packages/misskey-bubble-game/**
       - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - .node-version
+      - bun.lock
+      - bunfig.toml
+      - .bun-version
       - .github/scripts/utility.mts
       - .github/scripts/frontend-js-size.mts
       - .github/workflows/frontend-bundle-report.yml

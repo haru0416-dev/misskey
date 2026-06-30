@@ -35,7 +35,7 @@ const options: BuildOptions = {
 };
 
 // コマンドライン引数を取得
-const args = process.argv.slice(2).map(arg => arg.toLowerCase());
+const args = process.argv.slice(2).map((arg) => arg.toLowerCase());
 
 // built配下をすべて削除する
 if (!args.includes('--no-clean')) {
@@ -54,7 +54,7 @@ function copyLocales(): void {
 
 	fs.mkdirSync(destDir, { recursive: true });
 
-	const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.yml'));
+	const files = fs.readdirSync(srcDir).filter((f) => f.endsWith('.yml'));
 	for (const file of files) {
 		fs.copyFileSync(resolve(srcDir, file), resolve(destDir, file));
 	}
@@ -100,13 +100,21 @@ async function buildSrc(): Promise<void> {
 
 function buildDts(): Promise<unknown> {
 	return execa(
-		'tsgo',
+		'bun',
 		[
-			'--project', 'tsconfig.json',
-			'--rootDir', 'src',
-			'--outDir', 'built',
-			'--declaration', 'true',
-			'--emitDeclarationOnly', 'true',
+			'run',
+			'--bun',
+			'tsgo',
+			'--project',
+			'tsconfig.json',
+			'--rootDir',
+			'src',
+			'--outDir',
+			'built',
+			'--declaration',
+			'true',
+			'--emitDeclarationOnly',
+			'true',
 		],
 		{
 			stdout: process.stdout,
@@ -127,21 +135,23 @@ async function watchSrc(): Promise<void> {
 		await generateLocaleInterface(_localesDir);
 	});
 
-	const plugins: Plugin[] = [{
-		name: 'gen-dts',
-		setup(build: PluginBuild) {
-			build.onStart(() => {
-				console.log(`[${_package.name}] detect changed...`);
-			});
-			build.onEnd(async (result: BuildResult) => {
-				if (result.errors.length > 0) {
-					console.error(`[${_package.name}] watch build failed:`, result);
-					return;
-				}
-				await buildDts();
-			});
+	const plugins: Plugin[] = [
+		{
+			name: 'gen-dts',
+			setup(build: PluginBuild) {
+				build.onStart(() => {
+					console.log(`[${_package.name}] detect changed...`);
+				});
+				build.onEnd(async (result: BuildResult) => {
+					if (result.errors.length > 0) {
+						console.error(`[${_package.name}] watch build failed:`, result);
+						return;
+					}
+					await buildDts();
+				});
+			},
 		},
-	}];
+	];
 
 	console.log(`[${_package.name}] start watching...`);
 

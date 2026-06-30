@@ -75,15 +75,18 @@ async function resetState() {
 
 function createRequest() {
 	return new Promise((resolvePromise, reject) => {
-		const req = http.request({
-			host: 'localhost',
-			port: 61812,
-			path: '/api/meta',
-			method: 'POST',
-		}, res => {
-			res.on('data', () => { });
-			res.on('end', () => resolvePromise());
-		});
+		const req = http.request(
+			{
+				host: 'localhost',
+				port: 61812,
+				path: '/api/meta',
+				method: 'POST',
+			},
+			(res) => {
+				res.on('data', () => {});
+				res.on('end', () => resolvePromise());
+			},
+		);
 		req.on('error', reject);
 		req.end();
 	});
@@ -91,7 +94,7 @@ function createRequest() {
 
 async function waitForServerReady(serverProcess) {
 	let serverReady = false;
-	serverProcess.on('message', message => {
+	serverProcess.on('message', (message) => {
 		if (message === 'ok') serverReady = true;
 	});
 
@@ -109,7 +112,7 @@ async function stopServer(serverProcess) {
 	serverProcess.kill('SIGTERM');
 
 	let exited = false;
-	await new Promise(resolvePromise => {
+	await new Promise((resolvePromise) => {
 		serverProcess.on('exit', () => {
 			exited = true;
 			resolvePromise(undefined);
@@ -129,7 +132,7 @@ function getPackageNameFromPath(filePath) {
 	if (index === -1) return null;
 
 	const rest = normalized.slice(index + marker.length).split('/');
-	if (rest[0] === '.pnpm') {
+	if (rest[0] === '.bun') {
 		const nestedNodeModulesIndex = rest.indexOf('node_modules');
 		if (nestedNodeModulesIndex === -1) return null;
 		const packageParts = rest.slice(nestedNodeModulesIndex + 1);
@@ -137,7 +140,7 @@ function getPackageNameFromPath(filePath) {
 		return packageParts[0].startsWith('@') ? packageParts.slice(0, 2).join('/') : packageParts[0];
 	}
 
-	return rest[0]?.startsWith('@') ? rest.slice(0, 2).join('/') : rest[0] ?? null;
+	return rest[0]?.startsWith('@') ? rest.slice(0, 2).join('/') : (rest[0] ?? null);
 }
 
 function findPackageDir(filePath, packageName) {
@@ -169,7 +172,7 @@ function readPackageInfo(filePath) {
 			try {
 				const packageJson = JSON.parse(fsSync.readFileSync(join(packageDir, 'package.json'), 'utf8'));
 				version = typeof packageJson.version === 'string' ? packageJson.version : null;
-			} catch { }
+			} catch {}
 		}
 
 		const info = {
@@ -268,7 +271,7 @@ async function readTraceRecords() {
 		if (line.trim() === '') continue;
 		try {
 			records.push(JSON.parse(line));
-		} catch { }
+		} catch {}
 	}
 	return records;
 }
@@ -376,9 +379,9 @@ function summarizeRecords(records, phase) {
 		if (packageSummary != null) packageSummary.nativeAddon = true;
 	}
 
-	const externalPackages = [...packages.values()].filter(packageSummary => packageSummary.category === 'external');
+	const externalPackages = [...packages.values()].filter((packageSummary) => packageSummary.category === 'external');
 	totals.externalPackageCount = externalPackages.length;
-	totals.nativeAddonPackageCount = externalPackages.filter(packageSummary => packageSummary.nativeAddon).length;
+	totals.nativeAddonPackageCount = externalPackages.filter((packageSummary) => packageSummary.nativeAddon).length;
 
 	return {
 		totals: {
@@ -399,7 +402,7 @@ async function measureFootprint() {
 	await resetState();
 
 	process.stderr.write('Running migrations\n');
-	await util.run('pnpm', ['--filter', 'backend', 'migrate'], {
+	await util.run('bun', ['run', '--bun', '--filter', 'backend', 'migrate'], {
 		cwd: repoDir,
 		env: process.env,
 		logStdout: true,
@@ -424,15 +427,15 @@ async function measureFootprint() {
 		],
 	});
 
-	serverProcess.stdout?.on('data', data => {
+	serverProcess.stdout?.on('data', (data) => {
 		process.stderr.write(`[server stdout] ${data}`);
 	});
 
-	serverProcess.stderr?.on('data', data => {
+	serverProcess.stderr?.on('data', (data) => {
 		process.stderr.write(`[server stderr] ${data}`);
 	});
 
-	serverProcess.on('error', err => {
+	serverProcess.on('error', (err) => {
 		process.stderr.write(`[server error] ${err}\n`);
 	});
 
@@ -442,9 +445,7 @@ async function measureFootprint() {
 
 		//const startup = summarizeRecords(await readTraceRecords(), 'startup');
 
-		await Promise.all(
-			Array.from({ length: REQUEST_COUNT }).map(() => createRequest()),
-		);
+		await Promise.all(Array.from({ length: REQUEST_COUNT }).map(() => createRequest()));
 		await setTimeout(1000);
 
 		const afterRequest = summarizeRecords(await readTraceRecords(), 'afterRequest');

@@ -23,8 +23,8 @@ packages/sw/.yarn/cache
 # pnpm
 .pnpm-store
 
-# Playwright
-packages/frontend/test/e2e/artifacts
+playwright-report
+test-results
 
 # Coverage
 coverage

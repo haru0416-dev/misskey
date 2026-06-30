@@ -25,7 +25,7 @@ description: GitHub 上で Issue / Pull Request を起票する際のルール�
 > 
 > AI がこの内容を起票することはできません。ご自身で以下の脆弱性報告専用フォームに直接記入し、非公開で報告を行ってください。
 > 
-> [脆弱性報告専用フォーム](https://github.com/misskey-dev/misskey/security/policy)
+> **リポジトリの Security policy / private advisory 経由**で非公開報告してください。作業中の fork に Security policy が無い場合は、まずユーザーに報告先を確認し、通常 Issue / PR には書かないでください。
 
 ## 起票前の確認プロセス
 
@@ -44,7 +44,7 @@ Issue Template に定義されていない Issue のジャンル (Blank Issue �
 
 なお、
 
-- Q&A (サーバー運用上の質問や、バグか仕様かが怪しいものに関する質問) については Issue ではなく [Discussions](https://github.com/misskey-dev/misskey/discussions) を案内すること。
+- Q&A (サーバー運用上の質問や、バグか仕様かが怪しいものに関する質問) については、リポジトリに Discussions が有効なら Discussions を案内する。有効でない fork では、ユーザーに扱いを確認する。
 
 ## Pull Request
 

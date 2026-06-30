@@ -1,19 +1,10 @@
 {
 	$schema: 'https://docs.renovatebot.com/renovate-schema.json',
-	extends: [
-		'config:recommended',
-	],
-	toolSettings: {
-		nodeMaxMemory: 4096,
-	},
+	extends: ['config:recommended'],
 	timezone: 'Asia/Tokyo',
-	schedule: [
-		'* 0 * * *',
-	],
+	schedule: ['* 0 * * *'],
 	prHourlyLimit: 5,
-	labels: [
-		'dependencies',
-	],
+	labels: ['dependencies'],
 	dependencyDashboardApproval: true,
 	dependencyDashboardAutoclose: true,
 	osvVulnerabilityAlerts: true,
@@ -24,17 +15,15 @@
 		'@typescript/lib-webworker',
 		// https://github.com/misskey-dev/misskey/pull/15494#issuecomment-2660775258
 		'nsfwjs',
-    // https://github.com/misskey-dev/misskey/issues/15920
-    'sharp',
+		// https://github.com/misskey-dev/misskey/issues/15920
+		'sharp',
 		'@misskey-dev/sharp-read-bmp',
 		'@syuilo/aiscript-0-19-0',
 	],
 	packageRules: [
 		{
 			groupName: '[Backend] Update dependencies',
-			matchFileNames: [
-				'packages/backend/**/package.json',
-			],
+			matchFileNames: ['packages/backend/**/package.json'],
 		},
 		{
 			groupName: '[Frontend] Update dependencies',
@@ -53,45 +42,29 @@
 		},
 		{
 			groupName: '[misskey-js] Update dependencies',
-			matchFileNames: [
-				'packages/misskey-js/**/package.json',
-			],
+			matchFileNames: ['packages/misskey-js/**/package.json'],
 		},
 		{
 			groupName: '[Root] Update dependencies',
-			matchFileNames: [
-				'package.json',
-			],
+			matchFileNames: ['package.json'],
 		},
 		{
 			groupName: '[Tools] Update dependencies',
-			matchFileNames: [
-				'scripts/**/package.json',
-			],
+			matchFileNames: ['scripts/**/package.json'],
 		},
 		{
 			groupName: '[GitHub Actions] Update dependencies',
-			matchFileNames: [
-				'.github/workflows/**/*.yml',
-			],
+			matchFileNames: ['.github/workflows/**/*.yml'],
 		},
 		{
-			groupName: '[Node.js] Update dependencies',
-			matchFileNames: [
-				'.node-version',
-			],
-		},
-		{
-			groupName: '[Node.js] Update dependencies',
+			groupName: '[Bun] Update dependencies',
 			matchManagers: ['custom.regex'],
-			matchPackageNames: ['node'],
+			matchPackageNames: ['oven/bun', 'oven-sh/bun'],
 		},
 		{
-			groupName: '[Node.js] Update dependencies',
-			matchDepNames: ['ghcr.io/devcontainers/features/node:1'],
-			matchFileNames: [
-				'.devcontainer/**',
-			],
+			groupName: '[Bun] Update dependencies',
+			matchDepNames: ['ghcr.io/devcontainers-extra/features/bun:1'],
+			matchFileNames: ['.devcontainer/**'],
 		},
 		{
 			groupName: '[Docker] Update dependencies',
@@ -104,31 +77,24 @@
 		},
 		{
 			groupName: '[devcontainer] Update dependencies',
-			matchDepNames: ['!ghcr.io/devcontainers/features/node:1'],
-			matchFileNames: [
-				'.devcontainer/**',
-			],
-		},
-		{
-			// devcontainer (Dockerfile用の設定)
-			groupName: '[devcontainer] Update dependencies',
-			matchFileNames: ['.devcontainer/Dockerfile'],
-			matchDepNames: ['mcr.microsoft.com/devcontainers/javascript-node'],
-			allowedVersions: '/-[0-9]+-trixie$/',
-
-			// major/minor/patch: devcontainer の semver
-			// build: Node メジャー
-			// dist: Debian codename (e.g., bullseye, bookworm)（比較には使わない）
-			versioning: 'regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-(?<build>\\d+)-(?<dist>.+)$',
+			matchDepNames: ['!ghcr.io/devcontainers-extra/features/bun:1'],
+			matchFileNames: ['.devcontainer/**'],
 		},
 	],
 	customManagers: [
 		{
 			customType: 'regex',
+			managerFilePatterns: ['/^\\.bun-version$/'],
+			matchStrings: ['^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\n?$'],
+			datasourceTemplate: 'github-releases',
+			depNameTemplate: 'oven-sh/bun',
+		},
+		{
+			customType: 'regex',
 			managerFilePatterns: ['/^Dockerfile$/'],
-			matchStrings: ['ARG NODE_VERSION=(?<currentValue>.*?)\\n'],
+			matchStrings: ['ARG BUN_VERSION=(?<currentValue>.*?)\\n'],
 			datasourceTemplate: 'docker',
-			depNameTemplate: 'node',
+			depNameTemplate: 'oven/bun',
 			versioningTemplate: 'docker',
 		},
 	],

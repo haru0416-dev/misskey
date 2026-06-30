@@ -25,9 +25,7 @@ function main() {
 	const base = parseChangeLog('./CHANGELOG-base.md');
 	const head = parseChangeLog('./CHANGELOG-head.md');
 
-	const result = (base.length < head.length)
-		? checkNewRelease(base, head)
-		: checkNewTopic(base, head);
+	const result = base.length < head.length ? checkNewRelease(base, head) : checkNewTopic(base, head);
 
 	if (!result.success) {
 		abort(result.message);

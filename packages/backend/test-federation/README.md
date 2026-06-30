@@ -3,22 +3,22 @@ Test federation between two Misskey servers: `a.test` and `b.test`.
 
 Before testing, you need to build the entire project, and change working directory to here:
 ```sh
-pnpm build
+bun run build
 cd packages/backend/test-federation
 ```
 
 First, you need to start servers by executing following commands:
 ```sh
 bash ./setup.sh
-NODE_VERSION=22 docker compose up --scale tester=0
+BUN_VERSION=1.3.14 docker compose up --scale tester=0
 ```
 
 Then you can run all tests by a following command:
 ```sh
-NODE_VERSION=22 docker compose run --no-deps --rm tester
+BUN_VERSION=1.3.14 docker compose run --no-deps --rm tester
 ```
 
 For testing a specific file, run a following command:
 ```sh
-NODE_VERSION=22 docker compose run --no-deps --rm tester -- pnpm -F backend test:fed packages/backend/test-federation/test/user.test.ts
+BUN_VERSION=1.3.14 docker compose run --no-deps --rm tester -- bun run --bun --filter backend test:fed packages/backend/test-federation/test/user.test.ts
 ```

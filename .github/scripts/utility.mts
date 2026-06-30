@@ -20,10 +20,10 @@ export function mad(values: number[]) {
 	if (values.length < 2) throw new Error('Not enough samples to calculate MAD');
 
 	const center = median(values);
-	return median(values.map(value => Math.abs(value - center)));
+	return median(values.map((value) => Math.abs(value - center)));
 }
 
-function getSamplesByRound<T extends { round: number; }[]>(samples: T) {
+function getSamplesByRound<T extends { round: number }[]>(samples: T) {
 	const samplesByRound = new Map<number, T[number]>();
 	for (const sample of samples) {
 		if (sample.round <= 0) continue;
@@ -32,7 +32,11 @@ function getSamplesByRound<T extends { round: number; }[]>(samples: T) {
 	return samplesByRound;
 }
 
-export function pairedDeltaSummary<T extends { round: number; }[]>(baseSamples: T, headSamples: T, getValue: (sample: T[number]) => number | null) {
+export function pairedDeltaSummary<T extends { round: number }[]>(
+	baseSamples: T,
+	headSamples: T,
+	getValue: (sample: T[number]) => number | null,
+) {
 	const baseSamplesByRound = getSamplesByRound(baseSamples);
 	const headSamplesByRound = getSamplesByRound(headSamples);
 	const values = [];
@@ -87,11 +91,7 @@ export async function* traverseDirectory(dir: string): AsyncGenerator<string> {
 }
 
 export function escapeLatex(text: string) {
-	return text
-		.replaceAll('\\', '\\\\')
-		.replaceAll('{', '\\{')
-		.replaceAll('}', '\\}')
-		.replaceAll('%', '\\%');
+	return text.replaceAll('\\', '\\\\').replaceAll('{', '\\{').replaceAll('}', '\\}').replaceAll('%', '\\%');
 }
 
 export function formatColoredDelta(delta: number, text: (value: number) => string, colorThreshold = 0) {
@@ -127,11 +127,11 @@ export function formatBytes(value: number) {
 export function calcAndFormatDeltaNumber(before: number, after: number, colorThreshold = 0) {
 	if (before == null || after == null) return '-';
 	const delta = after - before;
-	return formatColoredDelta(delta, v => formatNumber(v), colorThreshold);
+	return formatColoredDelta(delta, (v) => formatNumber(v), colorThreshold);
 }
 
 export function formatDeltaBytes(deltaBytes: number, colorThreshold = 0) {
-	return formatColoredDelta(deltaBytes, v => formatBytes(v), colorThreshold);
+	return formatColoredDelta(deltaBytes, (v) => formatBytes(v), colorThreshold);
 }
 
 export function calcAndFormatDeltaBytes(before: number, after: number, colorThreshold = 0) {
@@ -145,18 +145,18 @@ export function formatPercent(value: number) {
 }
 
 export function formatDeltaPercent(deltaPercent: number, colorThreshold = 0) {
-	return formatColoredDelta(deltaPercent, v => formatPercent(v), colorThreshold);
+	return formatColoredDelta(deltaPercent, (v) => formatPercent(v), colorThreshold);
 }
 
 export function calcAndFormatDeltaPercent(before: number, after: number, colorThreshold = 0) {
 	if (before == null || before === 0 || after == null || after === 0) return '-';
 	const delta = after - before;
-	return formatDeltaPercent(delta / before * 100, colorThreshold);
+	return formatDeltaPercent((delta / before) * 100, colorThreshold);
 }
 
 export function commandName(command: string) {
 	if (process.platform !== 'win32') return command;
-	if (command === 'pnpm') return 'pnpm.cmd';
+	if (command === 'bun') return 'bun.exe';
 	return command;
 }
 
@@ -170,7 +170,11 @@ export function readIntegerEnv(name: string, defaultValue: number, min: number) 
 	return value;
 }
 
-export function run(command: string, args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv; logStdout?: boolean } = {}) {
+export function run(
+	command: string,
+	args: string[],
+	options: { cwd?: string; env?: NodeJS.ProcessEnv; logStdout?: boolean } = {},
+) {
 	return new Promise<string>((resolvePromise, reject) => {
 		const child = spawn(commandName(command), args, {
 			cwd: options.cwd,
@@ -181,19 +185,19 @@ export function run(command: string, args: string[], options: { cwd?: string; en
 		let stdout = '';
 		let stderr = '';
 
-		child.stdout.on('data', data => {
+		child.stdout.on('data', (data) => {
 			stdout += data;
 			if (options.logStdout) process.stderr.write(data);
 		});
 
-		child.stderr.on('data', data => {
+		child.stderr.on('data', (data) => {
 			stderr += data;
 			process.stderr.write(data);
 		});
 
 		child.on('error', reject);
 
-		child.on('close', code => {
+		child.on('close', (code) => {
 			if (code === 0) {
 				resolvePromise(stdout);
 			} else {

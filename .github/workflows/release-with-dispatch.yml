@@ -1,4 +1,4 @@
-name: "Release Manager [Dispatch]"
+name: 'Release Manager [Dispatch]'
 
 on:
   workflow_dispatch:

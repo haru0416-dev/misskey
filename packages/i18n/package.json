@@ -15,29 +15,25 @@
 		}
 	},
 	"scripts": {
-		"generate": "tsx scripts/generateLocaleInterface.ts",
-		"verify": "tsx scripts/verify.ts",
-		"build": "tsx ./build.ts",
-		"watch": "nodemon -w package.json -e json --exec \"tsx ./build.ts --watch\"",
+		"generate": "bun scripts/generateLocaleInterface.ts",
+		"verify": "bun scripts/verify.ts",
+		"build": "bun ./build.ts",
+		"watch": "bun ./build.ts --watch",
 		"tsd": "tsd",
 		"typecheck": "tsgo --noEmit",
-		"lint": "pnpm typecheck && pnpm eslint",
-		"lint:fix": "pnpm eslint --fix"
+		"lint": "bun run --bun typecheck"
 	},
 	"files": [
 		"built"
 	],
 	"devDependencies": {
-		"@types/node": "26.0.1",
-		"@typescript-eslint/eslint-plugin": "8.62.0",
-		"@typescript-eslint/parser": "8.62.0",
+		"@types/js-yaml": "4.0.9",
+		"@types/node": "26.0.0",
 		"chokidar": "5.0.0",
 		"esbuild": "0.28.1",
-		"execa": "9.6.1",
-		"nodemon": "3.1.14",
-		"tsx": "4.22.4"
+		"execa": "9.6.1"
 	},
 	"dependencies": {
-		"js-yaml": "5.2.0"
+		"js-yaml": "4.2.0"
 	}
 }

@@ -14,6 +14,7 @@ import { SigninEntityService } from '@/core/entities/SigninEntityService.js';
 import { bindThis } from '@/decorators.js';
 import { EmailService } from '@/core/EmailService.js';
 import { NotificationService } from '@/core/NotificationService.js';
+import { getRequestIp } from '@/server/api/get-request-ip.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 @Injectable()
@@ -41,7 +42,7 @@ export class SigninService {
 			const record = await this.signinsRepository.insertOne({
 				id: this.idService.gen(),
 				userId: user.id,
-				ip: request.ip,
+				ip: getRequestIp(request),
 				headers: request.headers as any,
 				success: true,
 			});
@@ -64,4 +65,3 @@ export class SigninService {
 		} satisfies Misskey.entities.SigninFlowResponse;
 	}
 }
-
