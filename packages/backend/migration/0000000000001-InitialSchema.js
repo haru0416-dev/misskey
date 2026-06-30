@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export class InitialSchema1782842763805 {
-    name = 'InitialSchema1782842763805'
+export class InitialSchema0000000000001 {
+    name = 'InitialSchema0000000000001'
 
     async up(queryRunner) {
         await queryRunner.query(`CREATE TABLE "drive_folder" ("id" character varying(32) NOT NULL, "name" character varying(128) NOT NULL, "userId" character varying(32), "parentId" character varying(32), CONSTRAINT "PK_7a0c089191f5ebdc214e0af808a" PRIMARY KEY ("id")); COMMENT ON COLUMN "drive_folder"."name" IS 'The name of the DriveFolder.'; COMMENT ON COLUMN "drive_folder"."userId" IS 'The owner ID.'; COMMENT ON COLUMN "drive_folder"."parentId" IS 'The parent folder ID. If null, it means the DriveFolder is located in root.'`);
