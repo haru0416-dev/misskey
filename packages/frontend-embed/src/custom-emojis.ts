@@ -21,12 +21,16 @@ const storageCache = await get('emojis');
 export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(Array.isArray(storageCache) ? storageCache : []);
 
 export const customEmojisMap = new Map<string, Misskey.entities.EmojiSimple>();
-watch(customEmojis, emojis => {
-	customEmojisMap.clear();
-	for (const emoji of emojis) {
-		customEmojisMap.set(emoji.name, emoji);
-	}
-}, { immediate: true });
+watch(
+	customEmojis,
+	(emojis) => {
+		customEmojisMap.clear();
+		for (const emoji of emojis) {
+			customEmojisMap.set(emoji.name, emoji);
+		}
+	},
+	{ immediate: true },
+);
 
 export async function fetchCustomEmojis(force = false) {
 	const now = Date.now();
@@ -36,7 +40,7 @@ export async function fetchCustomEmojis(force = false) {
 		res = await misskeyApi('emojis', {});
 	} else {
 		const lastFetchedAt = await get('lastEmojisFetchedAt');
-		if (lastFetchedAt && (now - lastFetchedAt) < 1000 * 60 * 60) return;
+		if (lastFetchedAt && now - lastFetchedAt < 1000 * 60 * 60) return;
 		res = await misskeyApiGet('emojis', {});
 	}
 
@@ -45,11 +49,11 @@ export async function fetchCustomEmojis(force = false) {
 	set('lastEmojisFetchedAt', now);
 }
 
-let cachedTags;
-export function getCustomEmojiTags() {
+let cachedTags: string[] | undefined;
+export function getCustomEmojiTags(): string[] {
 	if (cachedTags) return cachedTags;
 
-	const tags = new Set();
+	const tags = new Set<string>();
 	for (const emoji of customEmojis.value) {
 		for (const tag of emoji.aliases) {
 			tags.add(tag);

@@ -65,7 +65,9 @@ export function checkNewTopic(base: Release[], head: Release[]): Result {
 			// カテゴリごと書き加えられたパターン
 			if (headLatest.releaseName !== headItem.releaseName) {
 				// 最新リリース以外に追記されていた場合
-				return Result.ofFailed(`There is an error in the update history. expected additions:${headLatest.releaseName}, actual additions:${headItem.releaseName}`);
+				return Result.ofFailed(
+					`There is an error in the update history. expected additions:${headLatest.releaseName}, actual additions:${headItem.releaseName}`,
+				);
 			}
 		} else {
 			// カテゴリ数の変動はないのでリスト項目の数をチェック
@@ -75,13 +77,17 @@ export function checkNewTopic(base: Release[], head: Release[]): Result {
 
 				if (baseCategory.categoryName !== headCategory.categoryName) {
 					// カテゴリの順番が変わっていると成立しないのでエラーにする
-					return Result.ofFailed(`Category is different. base:${baseCategory.categoryName}, head:${headCategory.categoryName}`);
+					return Result.ofFailed(
+						`Category is different. base:${baseCategory.categoryName}, head:${headCategory.categoryName}`,
+					);
 				}
 
 				if (baseCategory.items.length !== headCategory.items.length) {
 					if (headLatest.releaseName !== headItem.releaseName) {
 						// 最新リリース以外に追記されていた場合
-						return Result.ofFailed(`There is an error in the update history. expected additions:${headLatest.releaseName}, actual additions:${headItem.releaseName}`);
+						return Result.ofFailed(
+							`There is an error in the update history. expected additions:${headLatest.releaseName}, actual additions:${headItem.releaseName}`,
+						);
 					}
 				}
 			}

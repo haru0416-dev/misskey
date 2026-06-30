@@ -1,7 +1,7 @@
 import { defineConfig } from 'rolldown';
 import { version as summalyVersion } from '@misskey-dev/summaly';
 import type { Plugin, ExternalOption } from 'rolldown';
-import { execa, execaNode } from 'execa';
+import { execa } from 'execa';
 import type { ResultPromise } from 'execa';
 import esmShim from '@rollup/plugin-esm-shim';
 
@@ -12,7 +12,7 @@ function backendDevServerPlugin(): Plugin {
 	let backendProcess: ResultPromise | null = null;
 
 	async function runBuildAssets() {
-		await execa('pnpm', ['run', 'build-assets'], {
+		await execa('bun', ['run', 'build-assets'], {
 			cwd: '../../',
 			stdout: process.stdout,
 			stderr: process.stderr,
@@ -23,7 +23,7 @@ function backendDevServerPlugin(): Plugin {
 		if (backendProcess) {
 			backendProcess.catch(() => {}); // backendProcess.kill()によって発生する例外を無視するためにcatch()を呼び出す
 			backendProcess.kill();
-			await new Promise(resolve => backendProcess!.on('exit', resolve));
+			await new Promise((resolve) => backendProcess!.on('exit', resolve));
 			backendProcess = null;
 		}
 	}
@@ -35,7 +35,7 @@ function backendDevServerPlugin(): Plugin {
 			if (backendProcess) {
 				await killBackendProcess();
 			}
-			backendProcess = execaNode('./built/entry.js', [], {
+			backendProcess = execa('bun', ['./built/entry.js'], {
 				stdout: process.stdout,
 				stderr: process.stderr,
 				env: {
@@ -79,7 +79,7 @@ export default defineConfig((args) => {
 
 	const define: Record<string, string> = {
 		// Summalyのバージョンを埋め込む
-		'_SUMMALY_VERSION_': JSON.stringify(summalyVersion),
+		_SUMMALY_VERSION_: JSON.stringify(summalyVersion),
 	};
 
 	if (isE2E) {
@@ -87,9 +87,7 @@ export default defineConfig((args) => {
 			input: './test-server/entry.ts',
 			platform: 'node',
 			tsconfig: './test-server/tsconfig.json',
-			plugins: [
-				esmShim(),
-			],
+			plugins: [esmShim()],
 			transform: {
 				define,
 			},
@@ -113,10 +111,7 @@ export default defineConfig((args) => {
 			],
 			platform: 'node',
 			tsconfig: true,
-			plugins: [
-				esmShim(),
-				(isWatchMode ? backendDevServerPlugin() : undefined),
-			],
+			plugins: [esmShim(), isWatchMode ? backendDevServerPlugin() : undefined],
 			transform: {
 				define,
 			},

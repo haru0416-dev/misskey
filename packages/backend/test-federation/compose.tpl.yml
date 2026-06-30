@@ -12,7 +12,7 @@ services:
       retries: 20
 
   misskey:
-    image: node:${NODE_VERSION}
+    image: oven/bun:${BUN_VERSION}-debian
     env_file:
       - ./.config/docker.env
     environment:
@@ -51,8 +51,36 @@ services:
         target: /misskey/packages/backend/package.json
         read_only: true
       - type: bind
+        source: ../../frontend-shared/package.json
+        target: /misskey/packages/frontend-shared/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend/package.json
+        target: /misskey/packages/frontend/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-builder/package.json
+        target: /misskey/packages/frontend-builder/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-embed/package.json
+        target: /misskey/packages/frontend-embed/package.json
+        read_only: true
+      - type: bind
         source: ../scripts/compile_config.js
         target: /misskey/packages/backend/scripts/compile_config.js
+        read_only: true
+      - type: bind
+        source: ../../icons-subsetter/package.json
+        target: /misskey/packages/icons-subsetter/package.json
+        read_only: true
+      - type: bind
+        source: ../../aiscript-languageserver-stub/package.json
+        target: /misskey/packages/aiscript-languageserver-stub/package.json
+        read_only: true
+      - type: bind
+        source: ../../sw/package.json
+        target: /misskey/packages/sw/package.json
         read_only: true
       - type: bind
         source: ../../misskey-js/built
@@ -61,6 +89,10 @@ services:
       - type: bind
         source: ../../misskey-js/package.json
         target: /misskey/packages/misskey-js/package.json
+        read_only: true
+      - type: bind
+        source: ../../misskey-js/generator/package.json
+        target: /misskey/packages/misskey-js/generator/package.json
         read_only: true
       - type: bind
         source: ../../i18n/built
@@ -79,6 +111,10 @@ services:
         target: /misskey/packages/misskey-reversi/package.json
         read_only: true
       - type: bind
+        source: ../../misskey-bubble-game/package.json
+        target: /misskey/packages/misskey-bubble-game/package.json
+        read_only: true
+      - type: bind
         source: ../../../healthcheck.sh
         target: /misskey/healthcheck.sh
         read_only: true
@@ -87,12 +123,16 @@ services:
         target: /misskey/package.json
         read_only: true
       - type: bind
-        source: ../../../pnpm-lock.yaml
-        target: /misskey/pnpm-lock.yaml
+        source: ../../../scripts/changelog-checker/package.json
+        target: /misskey/scripts/changelog-checker/package.json
         read_only: true
       - type: bind
-        source: ../../../pnpm-workspace.yaml
-        target: /misskey/pnpm-workspace.yaml
+        source: ../../../bun.lock
+        target: /misskey/bun.lock
+        read_only: true
+      - type: bind
+        source: ../../../bunfig.toml
+        target: /misskey/bunfig.toml
         read_only: true
       - type: bind
         source: ../../../patches
@@ -105,9 +145,9 @@ services:
     working_dir: /misskey
     command: >
       bash -c "
-        npm install -g pnpm
-        pnpm -F backend migrate
-        pnpm -F backend start
+        bun install --frozen-lockfile
+        bun run --bun --filter backend migrate
+        bun run --bun --filter backend start
       "
     healthcheck:
       test: bash /misskey/healthcheck.sh

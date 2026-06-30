@@ -17,24 +17,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6.0.2
-      with:
-        submodules: true
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6.0.3
-    - name: Use Node.js
-      uses: actions/setup-node@v6.4.0
-      with:
-        node-version-file: '.node-version'
-        cache: 'pnpm'
-    - name: Install Redocly CLI
-      run: npm i -g @redocly/cli
-    - run: pnpm i --frozen-lockfile
-    - name: Check pnpm-lock.yaml
-      run: git diff --exit-code pnpm-lock.yaml
-    - name: Copy Configure
-      run: cp .config/example.yml .config/default.yml
-    - name: Build and generate
-      run: pnpm build && pnpm --filter backend generate-api-json
-    - name: Validation
-      run: npx @redocly/cli lint --extends=minimal ./packages/backend/built/api.json
+      - uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - name: Check bun.lock
+        run: git diff --exit-code bun.lock
+      - name: Copy Configure
+        run: cp .config/example.yml .config/default.yml
+      - name: Build and generate
+        run: bun run build && bun run --bun --filter backend generate-api-json
+      - name: Validation
+        run: bunx @redocly/cli lint --extends=minimal ./packages/backend/built/api.json

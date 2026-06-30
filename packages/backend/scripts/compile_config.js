@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);

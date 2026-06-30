@@ -19,23 +19,16 @@ jobs:
       - uses: actions/checkout@v6.0.2
         with:
           submodules: true
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6.0.3
-      - name: Use Node.js
-        uses: actions/setup-node@v6.4.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
         with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-          # see https://docs.github.com/actions/use-cases-and-examples/publishing-packages/publishing-nodejs-packages#publishing-packages-to-the-npm-registry
-          registry-url: 'https://registry.npmjs.org'
-      # Ensure npm 11.5.1 or later is installed
-      - name: Update npm
-        run: npm install -g npm@latest
+          bun-version-file: .bun-version
       - name: Publish package
         run: |
-          pnpm i --frozen-lockfile
-          pnpm build
-          pnpm --filter misskey-js publish --access public --no-git-checks --provenance
+          bun install --frozen-lockfile
+          bun run build
+          cd packages/misskey-js
+          bun publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}

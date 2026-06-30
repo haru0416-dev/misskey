@@ -41,7 +41,7 @@ const __dirname = import.meta.dirname;
 	fs.rmSync(__dirname + '/../built', { recursive: true, force: true });
 	fs.rmSync(__dirname + '/../node_modules', { recursive: true, force: true });
 
-	execSync('pnpm store prune', {
+	execSync('bun pm cache rm', {
 		cwd: __dirname + '/../',
 		stdio: 'inherit',
 	});

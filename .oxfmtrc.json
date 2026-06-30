@@ -1,0 +1,33 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"useTabs": true,
+	"tabWidth": 2,
+	"singleQuote": true,
+	"semi": true,
+	"trailingComma": "all",
+	"printWidth": 120,
+	"bracketSpacing": true,
+	"arrowParens": "always",
+	"endOfLine": "lf",
+	"insertFinalNewline": true,
+	"vueIndentScriptAndStyle": false,
+	"sortPackageJson": false,
+	"ignorePatterns": [
+		".agents/**",
+		".claude/**",
+		".config/**",
+		"built/**",
+		"built-test/**",
+		"chart/**",
+		"coverage/**",
+		"idea/**",
+		"locales/**",
+		"node_modules/**",
+		"packages/**",
+		"packages/backend/built/**",
+		"packages/backend/migration/**",
+		"packages/frontend/**/*.vue",
+		"packages/frontend-embed/**/*.vue",
+		"packages/frontend/js-built/**"
+	]
+}

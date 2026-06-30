@@ -16,20 +16,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6.0.2
-      with:
-        submodules: true
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6.0.3
-    - name: Use Node.js
-      uses: actions/setup-node@v6.4.0
-      with:
-        node-version-file: '.node-version'
-        cache: 'pnpm'
-    - run: pnpm i --frozen-lockfile
-    - name: Check pnpm-lock.yaml
-      run: git diff --exit-code pnpm-lock.yaml
-    - name: Copy Configure
-      run: cp .github/misskey/test.yml .config/default.yml
-    - name: Build
-      run: pnpm build
+      - uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - name: Check bun.lock
+        run: git diff --exit-code bun.lock
+      - name: Copy Configure
+        run: cp .github/misskey/test.yml .config/default.yml
+      - name: Build
+        run: bun run build

@@ -64,7 +64,7 @@ type Source = {
 		index: string;
 		scope?: 'local' | 'global' | string[];
 	};
-	sentryForBackend?: { options: Partial<Sentry.NodeOptions>; enableNodeProfiling: boolean; };
+	sentryForBackend?: { options: Partial<Sentry.NodeOptions>; enableNodeProfiling: boolean };
 	sentryForFrontend?: {
 		options: Partial<SentryVue.BrowserOptions> & { dsn: string };
 		vueIntegration?: SentryVue.VueIntegrationOptions | null;
@@ -111,10 +111,10 @@ type Source = {
 
 	logging?: {
 		sql?: {
-			disableQueryTruncation?: boolean,
-			enableQueryParamLogging?: boolean,
-		}
-	}
+			disableQueryTruncation?: boolean;
+			enableQueryParamLogging?: boolean;
+		};
+	};
 };
 
 export type Config = {
@@ -135,24 +135,28 @@ export type Config = {
 		extra?: { [x: string]: string };
 	};
 	dbReplications: boolean | undefined;
-	dbSlaves: {
-		host: string;
-		port: number;
-		db: string;
-		user: string;
-		pass: string;
-	}[] | undefined;
+	dbSlaves:
+		| {
+				host: string;
+				port: number;
+				db: string;
+				user: string;
+				pass: string;
+		  }[]
+		| undefined;
 	fulltextSearch?: {
 		provider?: FulltextSearchProvider;
 	};
-	meilisearch: {
-		host: string;
-		port: string;
-		apiKey: string;
-		ssl?: boolean;
-		index: string;
-		scope?: 'local' | 'global' | string[];
-	} | undefined;
+	meilisearch:
+		| {
+				host: string;
+				port: string;
+				apiKey: string;
+				ssl?: boolean;
+				index: string;
+				scope?: 'local' | 'global' | string[];
+		  }
+		| undefined;
 	proxy: string | undefined;
 	proxySmtp: string | undefined;
 	proxyBypassHosts: string[] | undefined;
@@ -173,10 +177,10 @@ export type Config = {
 	inboxJobMaxAttempts: number | undefined;
 	logging?: {
 		sql?: {
-			disableQueryTruncation?: boolean,
-			enableQueryParamLogging?: boolean,
-		}
-	}
+			disableQueryTruncation?: boolean;
+			enableQueryParamLogging?: boolean;
+		};
+	};
 
 	version: string;
 	publishTarballInsteadOfProvideRepositoryUrl: boolean;
@@ -201,13 +205,15 @@ export type Config = {
 	redisForJobQueue: RedisOptions & RedisOptionsSource;
 	redisForTimelines: RedisOptions & RedisOptionsSource;
 	redisForReactions: RedisOptions & RedisOptionsSource;
-	sentryForBackend: { options: Partial<Sentry.NodeOptions>; enableNodeProfiling: boolean; } | undefined;
-	sentryForFrontend: {
-		options: Partial<SentryVue.BrowserOptions> & { dsn: string };
-		vueIntegration?: SentryVue.VueIntegrationOptions | null;
-		browserTracingIntegration?: Parameters<typeof SentryVue.browserTracingIntegration>[0] | null;
-		replayIntegration?: Parameters<typeof SentryVue.replayIntegration>[0] | null;
-	} | undefined;
+	sentryForBackend: { options: Partial<Sentry.NodeOptions>; enableNodeProfiling: boolean } | undefined;
+	sentryForFrontend:
+		| {
+				options: Partial<SentryVue.BrowserOptions> & { dsn: string };
+				vueIntegration?: SentryVue.VueIntegrationOptions | null;
+				browserTracingIntegration?: Parameters<typeof SentryVue.browserTracingIntegration>[0] | null;
+				replayIntegration?: Parameters<typeof SentryVue.replayIntegration>[0] | null;
+		  }
+		| undefined;
 	perChannelMaxNoteCacheCount: number;
 	perUserNotificationsMaxCount: number;
 	deactivateAntennaThreshold: number;
@@ -243,7 +249,7 @@ export const compiledConfigFilePath = fs.existsSync(compiledConfigFilePathForTes
 
 export function loadConfig(): Config {
 	if (!fs.existsSync(compiledConfigFilePath)) {
-		throw new Error('Compiled configuration file not found. Try running \'pnpm compile-config\'.');
+		throw new Error("Compiled configuration file not found. Try running 'bun run compile-config'.");
 	}
 
 	const meta = JSON.parse(fs.readFileSync(resolve(projectBuiltDir, 'meta.json'), 'utf-8'));
@@ -264,8 +270,10 @@ export function loadConfig(): Config {
 	const dbUser = config.db.user ?? process.env.DATABASE_USER ?? '';
 	const dbPass = config.db.pass ?? process.env.DATABASE_PASSWORD ?? '';
 
-	const externalMediaProxy = config.mediaProxy ?
-		config.mediaProxy.endsWith('/') ? config.mediaProxy.substring(0, config.mediaProxy.length - 1) : config.mediaProxy
+	const externalMediaProxy = config.mediaProxy
+		? config.mediaProxy.endsWith('/')
+			? config.mediaProxy.substring(0, config.mediaProxy.length - 1)
+			: config.mediaProxy
 		: null;
 	const internalMediaProxy = `${scheme}://${host}/proxy`;
 	const redis = convertRedisOptions(config.redis, host);
@@ -328,8 +336,10 @@ export function loadConfig(): Config {
 		inboxJobMaxAttempts: config.inboxJobMaxAttempts,
 		mediaProxy: externalMediaProxy ?? internalMediaProxy,
 		externalMediaProxyEnabled: externalMediaProxy !== null && externalMediaProxy !== internalMediaProxy,
-		videoThumbnailGenerator: config.videoThumbnailGenerator ?
-			config.videoThumbnailGenerator.endsWith('/') ? config.videoThumbnailGenerator.substring(0, config.videoThumbnailGenerator.length - 1) : config.videoThumbnailGenerator
+		videoThumbnailGenerator: config.videoThumbnailGenerator
+			? config.videoThumbnailGenerator.endsWith('/')
+				? config.videoThumbnailGenerator.substring(0, config.videoThumbnailGenerator.length - 1)
+				: config.videoThumbnailGenerator
 			: null,
 		userAgent: `Misskey/${version} (${config.url})`,
 		frontendManifestExists: frontendManifestExists,
@@ -337,7 +347,7 @@ export function loadConfig(): Config {
 		rootDir,
 		perChannelMaxNoteCacheCount: config.perChannelMaxNoteCacheCount ?? 1000,
 		perUserNotificationsMaxCount: config.perUserNotificationsMaxCount ?? 500,
-		deactivateAntennaThreshold: config.deactivateAntennaThreshold ?? (1000 * 60 * 60 * 24 * 7),
+		deactivateAntennaThreshold: config.deactivateAntennaThreshold ?? 1000 * 60 * 60 * 24 * 7,
 		pidFile: config.pidFile,
 		logging: config.logging,
 	};

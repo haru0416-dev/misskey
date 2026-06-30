@@ -44,7 +44,8 @@ jobs:
           }
 
           directories=(
-            "cypress/e2e"
+            "playwright/e2e"
+            "playwright/support"
             "packages/backend/migration"
             "packages/backend/src"
             "packages/backend/test"

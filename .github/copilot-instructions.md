@@ -2,7 +2,7 @@
 
 このファイルは GitHub Copilot の repository-wide instructions として使われる。Copilot code review では `AGENTS.md` が読まれない環境があるため、レビューや軽微な実装判断に必要な規約はこのファイル単体で満たすこと。
 
-リポジトリは Misskey の pnpm workspace モノレポ。主要な実装は `packages/backend` (NestJS / TypeORM) と `packages/frontend` (Vue 3) にある。より詳しいガイドはリポジトリルートの `AGENTS.md` を参照してよいが、このファイルの要件を省略してそちらへの参照だけで済ませないこと。
+リポジトリは Misskey の Bun workspace モノレポ。主要な実装は `packages/backend` (NestJS / TypeORM) と `packages/frontend` (Vue 3) にある。より詳しいガイドはリポジトリルートの `AGENTS.md` を参照してよいが、このファイルの要件を省略してそちらへの参照だけで済ませないこと。
 
 ## 絶対にやってはいけない事
 
@@ -49,25 +49,25 @@
 
 ## 変更を出す前の最低チェック
 
-1. `pnpm lint` が通る (typecheck + eslint, 全パッケージ)
-2. backend で `meta` / `paramDef` / `res` を変更した → `pnpm build-misskey-js-with-types` を実行し `packages/misskey-js/src/autogen/` の差分も commit に含めた
-3. entity / migration を変更した → `pnpm --filter backend check-migrations` が pending DDL 0 件で通る / 新規 migration は `up()` と `down()` 両方実装済
+1. `bun run lint` が通る (oxlint + typecheck, 全パッケージ)
+2. backend で `meta` / `paramDef` / `res` を変更した → `bun run build-misskey-js-with-types` を実行し `packages/misskey-js/src/autogen/` の差分も commit に含めた
+3. entity / migration を変更した → `bun run --bun --filter backend check-migrations` が pending DDL 0 件で通る / 新規 migration は `up()` と `down()` 両方実装済
 4. 新規 `.ts` / `.js` / `.cjs` / `.mjs` / `.vue` / `.scss` / `.html` ファイルを追加した → SPDX ヘッダーを付けた
 5. ユーザー影響のある変更 → `CHANGELOG.md` の `## Unreleased` 配下の該当サブセクション (`### General` / `### Client` / `### Server`) に `- <Feat|Enhance|Fix>: <概要>` を 1 行追記
 6. `locales/` を編集した場合、`git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'` が空 (ja-JP.yml 以外に差分が無い) ことを確認
 
 ## Validation コマンド
 
-- 全体ビルド: `pnpm build`
-- 全体 lint / typecheck: `pnpm lint`
-- Backend unit test: `pnpm --filter backend test`
-- Backend e2e test: `pnpm --filter backend test:e2e`
-- Backend federation test: `pnpm --filter backend test:fed`
-- Frontend test: `pnpm --filter frontend test`
-- Migration 差分検査: `pnpm --filter backend check-migrations`
-- `misskey-js` 再生成 (API 変更後必須): `pnpm build-misskey-js-with-types`
+- 全体ビルド: `bun run build`
+- 全体 lint / typecheck: `bun run lint`
+- Backend unit test: `bun run --bun --filter backend test`
+- Backend e2e test: `bun run --bun --filter backend test:e2e`
+- Backend federation test: `bun run --bun --filter backend test:fed`
+- Frontend test: `bun run --bun --filter frontend test`
+- Migration 差分検査: `bun run --bun --filter backend check-migrations`
+- `misskey-js` 再生成 (API 変更後必須): `bun run build-misskey-js-with-types`
 
-**注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要。未作成の場合は `ncp .github/misskey/test.yml .config/test.yml` (または `cp .github/misskey/test.yml .config/test.yml`) を実行してから走らせる。各テストスクリプトが内部で `cross-env NODE_ENV=test pnpm compile-config` を呼ぶため、コピー済みであれば追加の compile-config は不要。
+**注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要。未作成の場合は `cp .github/misskey/test.yml .config/test.yml` を実行してから走らせる。各テストスクリプトが内部で `cross-env NODE_ENV=test bun run compile-config` を呼ぶため、コピー済みであれば追加の compile-config は不要。
 
 変更範囲に応じて最も近いコマンドから優先して検証し、必要なら全体コマンドに広げること。
 

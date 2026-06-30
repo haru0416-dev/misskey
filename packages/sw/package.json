@@ -2,11 +2,10 @@
 	"name": "sw",
 	"private": true,
 	"scripts": {
-		"watch": "nodemon -w ../../package.json -e json --exec \"node build.js watch\"",
-		"build": "node build.js",
+		"watch": "bun build.js watch",
+		"build": "bun build.js",
 		"typecheck": "tsgo --noEmit",
-		"eslint": "eslint --quiet src/**/*.ts",
-		"lint": "pnpm typecheck && pnpm eslint"
+		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
 		"i18n": "workspace:*",
@@ -15,10 +14,7 @@
 		"misskey-js": "workspace:*"
 	},
 	"devDependencies": {
-		"@typescript-eslint/parser": "8.61.1",
-		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74",
-		"eslint-plugin-import": "2.32.0",
-		"nodemon": "3.1.14"
+		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74"
 	},
 	"type": "module"
 }

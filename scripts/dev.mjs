@@ -9,105 +9,85 @@ import { execa } from 'execa';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
+const rootDir = _dirname + '/../';
 
-await execa('pnpm', ['clean'], {
-	cwd: _dirname + '/../',
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
+const bun = (args) =>
+	execa('bun', args, {
+		cwd: rootDir,
+		stdout: process.stdout,
+		stderr: process.stderr,
+	});
+
+await bun(['run', 'clean']);
 
 // アセットのビルドで依存しているので一番最初に必要
-await execa('pnpm', ['--filter', 'i18n', 'build'], {
-	cwd: _dirname + '/../',
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
+await bun(['run', '--bun', '--filter', 'i18n', 'build']);
 
 await Promise.all([
-	execa('pnpm', ['build-pre'], {
-		cwd: _dirname + '/../',
-		stdout: process.stdout,
-		stderr: process.stderr,
-	}),
-	execa('pnpm', ['build-assets'], {
-		cwd: _dirname + '/../',
-		stdout: process.stdout,
-		stderr: process.stderr,
-	}),
-	execa('pnpm', ['--filter', 'backend...', '--filter=!backend', 'build'], {
-		cwd: _dirname + '/../',
-		stdout: process.stdout,
-		stderr: process.stderr,
-	}),
+	bun(['run', 'build-pre']),
+	bun(['run', 'build-assets']),
+	bun(['run', 'build:backend-deps']),
 	// icons-subsetterは開発段階では使用されないが、型エラーを抑制するためにはじめの一度だけビルドする
-	execa('pnpm', ['--filter', 'icons-subsetter', 'build'], {
-		cwd: _dirname + '/../',
-		stdout: process.stdout,
-		stderr: process.stderr,
-	}),
-	execa('pnpm', ['--filter', 'misskey-js', 'build'], {
-		cwd: _dirname + '/../',
-		stdout: process.stdout,
-		stderr: process.stderr,
-	}),
+	bun(['run', '--bun', '--filter', 'icons-subsetter', 'build']),
+	bun(['run', '--bun', '--filter', 'misskey-js', 'build']),
 ]);
 
-execa('pnpm', ['build-pre', '--watch'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', 'build-pre', '--watch'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['build-assets', '--watch'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', 'build-assets', '--watch'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'backend', 'dev'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'backend', 'dev'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'frontend', 'watch'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'frontend', 'watch'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'frontend-embed', 'watch'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'frontend-embed', 'watch'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'sw', 'watch'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'sw', 'watch'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'misskey-js', 'watch', '--no-clean'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'misskey-js', 'watch', '--no-clean'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'i18n', 'watch', '--no-clean'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'i18n', 'watch', '--no-clean'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'misskey-reversi', 'watch', '--no-clean'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'misskey-reversi', 'watch', '--no-clean'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
 
-execa('pnpm', ['--filter', 'misskey-bubble-game', 'watch', '--no-clean'], {
-	cwd: _dirname + '/../',
+execa('bun', ['run', '--bun', '--filter', 'misskey-bubble-game', 'watch', '--no-clean'], {
+	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
