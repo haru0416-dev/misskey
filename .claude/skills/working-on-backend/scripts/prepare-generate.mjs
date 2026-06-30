@@ -1,13 +1,13 @@
 /*
  * typeorm migration:generate の前準備をまとめて実行する (冪等・クロスプラットフォーム)。
- * リポジトリルートから実行: node .claude/skills/working-on-backend/scripts/prepare-generate.mjs
+ * リポジトリルートから実行: bun .claude/skills/working-on-backend/scripts/prepare-generate.mjs
  *
  * generate はエンティティのビルド出力 (built/)、コンパイル済み設定 (built/.config.json)、
  * 稼働中の DB を必要とする。手で 5 段並べると取りこぼすのでここに集約する。
  * migration:create (空雛形) しか使わないなら DB もビルドも不要なのでこのスクリプトは不要。
  *
- * Node で書いているのは pure Windows (bash の無い環境) でも動かすため。node はこのリポジトリの
- * ランタイムなので必ず存在し、build-pre.mjs / compile_config.js と同じ流儀に揃う。
+ * Bun で直接実行する。shell に依存する手順をまとめ、build-pre.mjs / compile_config.js と同じ
+ * JavaScript ベースの補助スクリプトとして扱う。
  */
 
 import { execSync } from 'node:child_process';
@@ -47,13 +47,13 @@ if (!existsSync('.config/docker.env')) {
 console.log('OK: .config/default.yml と .config/docker.env あり');
 
 step('2/5 built/meta.json の生成 (build-pre)');
-run('pnpm build-pre');
+run('bun run build-pre');
 
 step('3/5 設定のコンパイル (compile-config -> built/.config.json)');
-run('pnpm --filter backend compile-config');
+run('bun run --bun --filter backend compile-config');
 
 step('4/5 backend のビルド (エンティティを built/ へ反映)');
-run('pnpm --filter backend build');
+run('bun run --bun --filter backend build');
 
 step('5/5 ローカル DB の起動 (postgres のみ・healthcheck 完了まで待機)');
 // migration:generate が必要とするのは postgres だけ。db サービスに絞れば meilisearch.env 等が無くても動く。
@@ -63,4 +63,4 @@ step('5/5 ローカル DB の起動 (postgres のみ・healthcheck 完了まで�
 run('docker compose -f compose.local-db.yml up -d --wait db');
 
 console.log('\n準備完了。次を実行できます:');
-console.log('  pnpm --filter backend exec typeorm migration:generate -d ormconfig.js -o --esm migration/<PascalName>');
+console.log('  cd packages/backend && bun ./node_modules/typeorm/cli.js migration:generate -d ormconfig.js -o --esm migration/<PascalName>');

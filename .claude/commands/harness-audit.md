@@ -12,7 +12,7 @@ upstream path: commands/harness-audit.md
 upstream license: MIT — https://github.com/affaan-m/everything-claude-code/blob/main/LICENSE
 project-level notice: see .claude/THIRD_PARTY_LICENSES.md (Misskey 内サードパーティ一覧 + MIT 全文)
 
-Imported into Misskey .claude/ on 2026-05-10. The 7-category rubric and output contract are derived from the upstream ECC version (MIT). The runtime layer was substantially reimplemented for Misskey: the upstream relies on scripts/harness-audit.js to mechanically score, while this version asks Claude to score directly with pnpm/git/grep, and adds Misskey-specific evaluation axes (SPDX coverage / endpoint-list 登録漏れ / migration 順序 / ja-JP.yml 整合).
+Imported into Misskey .claude/ on 2026-05-10. The 7-category rubric and output contract are derived from the upstream ECC version (MIT). The runtime layer was substantially reimplemented for Misskey: the upstream relies on scripts/harness-audit.js to mechanically score, while this version asks Claude to score directly with Bun/git/grep, and adds Misskey-specific evaluation axes (SPDX coverage / endpoint-list 登録漏れ / migration 順序 / ja-JP.yml 整合).
 
 note: 元 ECC 版は scripts/harness-audit.js (専用 Node スクリプト) で機械採点していたが、Misskey は ECC plugin runtime に依存しない方針なので、Claude が直接ファイルを読んで採点する手動運用版に書き換えた。Misskey 固有の重要観点 (SPDX 適用率 / endpoint-list 登録漏れ / migration 順序 / ja-JP.yml 整合) を評価軸として明示的に組み込んでいる。
 -->
@@ -35,7 +35,7 @@ Misskey リポジトリの `.claude/` 構成を 7 カテゴリで採点し、改
 | 2 | Context Efficiency | frontmatter description の冗長度、SKILL.md の長さ分布、重複情報、CLAUDE.md の肥大化 |
 | 3 | Quality Gates | Stop / PreToolUse / PostToolUse hook の整備、`/quality-gate` 等の完了前ゲートの有無、自動 lint/typecheck |
 | 4 | Memory Persistence | `.claude/skills/*/SKILL.md` と `references/` の同期状態を評価。プロジェクト側 `.claude/memory/` は未採用方針 (auto-memory はユーザーホーム側で自動運用) のため、ここを採点起点にせず既定 5/10 から開始する |
-| 5 | Eval Coverage | `working-on-backend` / `working-on-frontend` の testing リファレンス (backend-testing.md / frontend-testing.md) の網羅、Misskey 固有の e2e/fed/Storybook/Cypress 適用ガイド |
+| 5 | Eval Coverage | `working-on-backend` / `working-on-frontend` の testing リファレンス (backend-testing.md / frontend-testing.md) の網羅、Misskey 固有の e2e/fed/Storybook/Playwright 適用ガイド |
 | 6 | Security Guardrails | SPDX 規約適用、migration 不変性ルール、ja-JP.yml 限定編集ルール、secrets 検出 |
 | 7 | Cost Efficiency | enabledPlugins の重複・過剰、context-budget の整備、MCP 過剰登録なし |
 
@@ -67,7 +67,7 @@ git log --since='30 days ago' --pretty=format: --name-only -- 'locales/*.yml' \
 # → 出力が無い、または全て Crowdin 由来 commit なら満点
 
 # 3. [Security Guardrails] migration の pending DDL 検査 (TypeORM schema builder)
-pnpm --filter backend check-migrations
+bun run --bun --filter backend check-migrations
 # → 0 errors (= "All migrations are clean.") なら満点
 
 # 4. [Tool Coverage] endpoint-list.ts 登録漏れ (新規 endpoint がリストにない場合)
@@ -137,10 +137,10 @@ Suggested next skills to apply:
 
 - 確定的: 同じ commit / 同じ `.claude/` 構成なら同じスコア
 - ヒューリスティクス: 「description の冗長度」のような主観項目は同一基準で機械的に判定
-- スクリプト不要: `pnpm` と `git`、`grep`/`find` 等の標準ツールのみ
+- スクリプト不要: `bun` と `git`、`grep`/`find` 等の標準ツールのみ
 
 ## 参考: ECC オリジナルとの差分
 
 - ECC 版は `node scripts/harness-audit.js` を直叩きする運用で、ECC リポジトリ全体に閉じた採点だった。
-- Misskey 版は **Misskey の規約 (SPDX/migration/locales/endpoint-list)** を Security 採点に組み込み、`pnpm` ベースの実コマンドで根拠を取る方式に再設計。
+- Misskey 版は **Misskey の規約 (SPDX/migration/locales/endpoint-list)** を Security 採点に組み込み、Bun ベースの実コマンドで根拠を取る方式に再設計。
 - 結果として ECC への依存はゼロ。

@@ -27,10 +27,10 @@ SKILL.md 本体は references への索引だけ。具体的な手順や規約�
 - SCSS Modules / `--MI_THEME-*` `--MI-*` CSS 変数 / グローバル utility class (`_button` 等) → [references/knowledge/scss-modules.md](references/knowledge/scss-modules.md)
 - `os.alert` / `os.confirm` / `os.popup` 等 UI ヘルパー (ブラウザ標準 `alert()` 直呼びは禁止) → [references/knowledge/os-api.md](references/knowledge/os-api.md)
 - `*.stories.impl.ts` 併設規則 + 複数 story / argTypes / layout / action パターン → [references/knowledge/storybook.md](references/knowledge/storybook.md)
-- frontend Vitest / Cypress E2E の書き方と前提 → [references/knowledge/frontend-testing.md](references/knowledge/frontend-testing.md)
+- frontend Vitest / Playwright E2E の書き方と前提 → [references/knowledge/frontend-testing.md](references/knowledge/frontend-testing.md)
 
 ## 必ず最後に通る場所
 
-frontend の変更を commit / PR にする前に、必ず [shipping-misskey-change](../shipping-misskey-change/SKILL.md) の最終チェックリストに従う。`pnpm lint` / SPDX / `ja-JP.yml` のみ編集確認 / CHANGELOG をまとめて確認する。
+frontend の変更を commit / PR にする前に、必ず [shipping-misskey-change](../shipping-misskey-change/SKILL.md) の最終チェックリストに従う。`bun run lint` / SPDX / `ja-JP.yml` のみ編集確認 / CHANGELOG をまとめて確認する。
 
-`.vue` を追加・変更したなら、その出口で [vue-component-reviewer](../../agents/vue-component-reviewer.md) agent (この skill の規約を review-mode から機械チェックする専門 reviewer) を Task で起動すると、SPDX 形式・命名・i18n・SCSS 変数・a11y・Storybook 併設の逸脱を取りこぼしにくい。
+`.vue` を追加・変更したなら、subagent を使える環境では [vue-component-reviewer](../../agents/vue-component-reviewer.md) agent を Task で起動すると、SPDX 形式・命名・i18n・SCSS 変数・a11y・Storybook 併設の逸脱を取りこぼしにくい。Codex 等で subagent 起動が制限される環境では、同じ観点を自分でチェックする。
