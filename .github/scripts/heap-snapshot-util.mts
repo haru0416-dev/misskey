@@ -46,12 +46,12 @@ export function renderHeapSnapshotTable(base: HeapSnapshotReport, head: HeapSnap
 
 	function getHeapSnapshotSampleSpread(report: HeapSnapshotReport, category: keyof typeof heapSnapshotCategory) {
 		const values = report.samples
-			.map(sample => sample.data.categories[category])
-			.filter(value => Number.isFinite(value)) as number[];
+			.map((sample) => sample.data.categories[category])
+			.filter((value) => Number.isFinite(value)) as number[];
 		if (values.length < 2) throw new Error(`Not enough samples for category ${category}`);
 
 		const center = util.median(values);
-		return util.median(values.map(value => Math.abs(value - center)));
+		return util.median(values.map((value) => Math.abs(value - center)));
 	}
 
 	for (const category of Object.keys(heapSnapshotCategory) as (keyof typeof heapSnapshotCategory)[]) {
@@ -60,14 +60,16 @@ export function renderHeapSnapshotTable(base: HeapSnapshotReport, head: HeapSnap
 		const baseSpread = getHeapSnapshotSampleSpread(base, category);
 		const headSpread = getHeapSnapshotSampleSpread(head, category);
 		const summary = util.pairedDeltaSummary(base.samples, head.samples, (sample) => sample.data.categories[category]);
-		const percent = summary.median * 100 / baseValue;
+		const percent = (summary.median * 100) / baseValue;
 
 		if (category === 'total') {
 			const deltaMedian = `${util.formatDeltaBytes(summary.median, 100000)}<br>${util.formatDeltaPercent(percent, 0.1).replaceAll('\\%', '\\\\%')}`;
 			const baseText = `${util.formatBytes(baseValue)} <br> ± ${util.formatBytes(baseSpread)}`;
 			const headText = `${util.formatBytes(headValue)} <br> ± ${util.formatBytes(headSpread)}`;
 			const metricText = `$\\color{${heapSnapshotCategory[category].color}}{\\rule{8pt}{8pt}}$ **${heapSnapshotCategory[category].label}**`;
-			lines.push(`| ${metricText} | ${baseText} | ${headText} | ${deltaMedian} | ${util.formatBytes(summary.mad)} | ${util.formatDeltaBytes(summary.min, 100000)} | ${util.formatDeltaBytes(summary.max, 100000)} |`);
+			lines.push(
+				`| ${metricText} | ${baseText} | ${headText} | ${deltaMedian} | ${util.formatBytes(summary.mad)} | ${util.formatDeltaBytes(summary.min, 100000)} | ${util.formatDeltaBytes(summary.max, 100000)} |`,
+			);
 			lines.push('| | | | | | | |');
 		} else {
 			const deltaMedian = util.formatDeltaBytes(summary.median, 100000);
@@ -76,7 +78,9 @@ export function renderHeapSnapshotTable(base: HeapSnapshotReport, head: HeapSnap
 			const basePercent = util.formatPercent((baseValue * 100) / baseTotal);
 			const headPercent = util.formatPercent((headValue * 100) / headTotal);
 			const metricText = `<details><summary>$\\color{${heapSnapshotCategory[category].color}}{\\rule{8pt}{8pt}}$ **${heapSnapshotCategory[category].label}**</summary>${basePercent} → ${headPercent}</details>`;
-			lines.push(`| ${metricText} | ${baseText} | ${headText} | ${deltaMedian} | ${util.formatBytes(summary.mad)} | ${util.formatDeltaBytes(summary.min, 100000)} | ${util.formatDeltaBytes(summary.max, 100000)} |`);
+			lines.push(
+				`| ${metricText} | ${baseText} | ${headText} | ${deltaMedian} | ${util.formatBytes(summary.mad)} | ${util.formatDeltaBytes(summary.min, 100000)} | ${util.formatDeltaBytes(summary.max, 100000)} |`,
+			);
 		}
 	}
 
@@ -116,8 +120,8 @@ export function renderHeapSnapshotSankey(report: HeapSnapshotReport, title: stri
 	}
 
 	const categories = (Object.keys(heapSnapshotCategory) as (keyof typeof heapSnapshotCategory)[])
-		.filter(category => category !== 'total')
-		.map(category => {
+		.filter((category) => category !== 'total')
+		.map((category) => {
 			const value = getHeapSnapshotCategoryValue(report, category);
 			if (value == null || value <= 0) return null;
 			const breakdownEntries = getHeapSnapshotBreakdownEntries(category);
@@ -148,7 +152,7 @@ export function renderHeapSnapshotSankey(report: HeapSnapshotReport, title: stri
 				childEntries,
 			};
 		})
-		.filter(value => value != null);
+		.filter((value) => value != null);
 
 	if (categories.length === 0) return null;
 
@@ -177,7 +181,7 @@ export function renderHeapSnapshotSankey(report: HeapSnapshotReport, title: stri
 				nodePadding: 10,
 				nodeColors: {
 					...nodeColors,
-					'Other': '#888888',
+					Other: '#888888',
 				},
 			},
 		})}}%%`,
@@ -185,10 +189,14 @@ export function renderHeapSnapshotSankey(report: HeapSnapshotReport, title: stri
 	];
 
 	for (const { category, percent, childEntries } of categories) {
-		lines.push(`${escapeCsvValue(title)},${escapeCsvValue(heapSnapshotCategory[category].label)},${formatSankeyPercentValue(percent)}`);
+		lines.push(
+			`${escapeCsvValue(title)},${escapeCsvValue(heapSnapshotCategory[category].label)},${formatSankeyPercentValue(percent)}`,
+		);
 
 		for (const [childName, childPercent] of childEntries) {
-			lines.push(`${escapeCsvValue(heapSnapshotCategory[category].label)},${escapeCsvValue(childName)},${formatSankeyPercentValue(childPercent)}`);
+			lines.push(
+				`${escapeCsvValue(heapSnapshotCategory[category].label)},${escapeCsvValue(childName)},${formatSankeyPercentValue(childPercent)}`,
+			);
 		}
 	}
 

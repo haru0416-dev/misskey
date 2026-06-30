@@ -10,6 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script setup lang="ts" generic="T extends string | ParameterizedString">
 import { computed, h } from 'vue';
 import type { ParameterizedString } from 'i18n';
+import type { VNodeChild } from 'vue';
 
 const props = withDefaults(defineProps<{
 	src: T;
@@ -20,7 +21,7 @@ const props = withDefaults(defineProps<{
 	tag: 'span',
 });
 
-const slots = defineSlots<T extends ParameterizedString<infer R> ? { [K in R]: () => unknown } : NonNullable<unknown>>();
+const slots = defineSlots<Record<string, () => unknown>>();
 
 const parsed = computed(() => {
 	let str = props.src as string;
@@ -46,9 +47,10 @@ const parsed = computed(() => {
 });
 
 const render = () => {
-	// slotsの型はTの条件型で決まり文字列インデックスアクセスができないため、
-	// frontend側の同名コンポーネント (packages/frontend/src/components/global/I18n.vue) と同じくanyでキャストする
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	return h(props.tag, parsed.value.map(x => typeof x === 'string' ? (props.textTag ? h(props.textTag, x) : x) : (slots as any)[x.arg]()));
+	const children: VNodeChild[] = parsed.value.map((x): VNodeChild => {
+		if (typeof x === 'string') return props.textTag ? h(props.textTag, x) : x;
+		return slots[x.arg]?.() as VNodeChild;
+	});
+	return h(props.tag, {}, children);
 };
 </script>

@@ -9,13 +9,12 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import walk from 'ignore-walk';
 import { Pack } from 'tar/pack';
-import meta from '../package.json' with { type: "json" };
+import meta from '../package.json' with { type: 'json' };
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
 const ignore = [
 	'**/.git/**/*',
 	'**/*ignore',
-	'**/.gitmodules',
 	// Exclude files you don't want to include in the tarball here
 ];
 

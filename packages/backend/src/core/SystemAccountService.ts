@@ -60,6 +60,10 @@ export class SystemAccountService implements OnApplicationShutdown {
 			const { type, body } = obj.message as GlobalEvents['internal']['payload'];
 			switch (type) {
 				case 'metaUpdated': {
+					for (const account of SYSTEM_ACCOUNT_TYPES) {
+						this.cache.delete(account);
+					}
+
 					if (body.before != null && body.before.name !== body.after.name) {
 						for (const account of SYSTEM_ACCOUNT_TYPES) {
 							await this.updateCorrespondingUserProfile(account, {
@@ -125,6 +129,18 @@ export class SystemAccountService implements OnApplicationShutdown {
 
 		// Start transaction
 		await this.db.transaction(async transactionalEntityManager => {
+			await transactionalEntityManager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`system-account:${type}`]);
+
+			const systemAccount = await transactionalEntityManager.findOne(MiSystemAccount, {
+				where: { type },
+				relations: { user: true },
+			});
+
+			if (systemAccount?.user) {
+				account = systemAccount.user;
+				return;
+			}
+
 			const exist = await transactionalEntityManager.findOneBy(MiUser, {
 				usernameLower: extra.username.toLowerCase(),
 				host: IsNull(),
@@ -132,43 +148,42 @@ export class SystemAccountService implements OnApplicationShutdown {
 
 			if (exist) {
 				account = exist;
-				return;
+			} else {
+				account = await transactionalEntityManager.insert(MiUser, {
+					id: this.idService.gen(),
+					username: extra.username,
+					usernameLower: extra.username.toLowerCase(),
+					host: null,
+					token: secret,
+					isLocked: true,
+					isExplorable: false,
+					isBot: true,
+					name: extra.name,
+				}).then(x => transactionalEntityManager.findOneByOrFail(MiUser, x.identifiers[0]));
+
+				await transactionalEntityManager.insert(MiUserKeypair, {
+					publicKey: keyPair.publicKey,
+					privateKey: keyPair.privateKey,
+					userId: account.id,
+				});
+
+				await transactionalEntityManager.insert(MiUserProfile, {
+					userId: account.id,
+					autoAcceptFollowed: false,
+					password: hash,
+				});
+
+				await transactionalEntityManager.upsert(MiUsedUsername, {
+					createdAt: new Date(),
+					username: extra.username.toLowerCase(),
+				}, ['username']);
 			}
 
-			account = await transactionalEntityManager.insert(MiUser, {
-				id: this.idService.gen(),
-				username: extra.username,
-				usernameLower: extra.username.toLowerCase(),
-				host: null,
-				token: secret,
-				isLocked: true,
-				isExplorable: false,
-				isBot: true,
-				name: extra.name,
-			}).then(x => transactionalEntityManager.findOneByOrFail(MiUser, x.identifiers[0]));
-
-			await transactionalEntityManager.insert(MiUserKeypair, {
-				publicKey: keyPair.publicKey,
-				privateKey: keyPair.privateKey,
-				userId: account.id,
-			});
-
-			await transactionalEntityManager.insert(MiUserProfile, {
-				userId: account.id,
-				autoAcceptFollowed: false,
-				password: hash,
-			});
-
-			await transactionalEntityManager.insert(MiUsedUsername, {
-				createdAt: new Date(),
-				username: extra.username.toLowerCase(),
-			});
-
-			await transactionalEntityManager.insert(MiSystemAccount, {
-				id: this.idService.gen(),
+			await transactionalEntityManager.upsert(MiSystemAccount, {
+				id: account.id,
 				userId: account.id,
 				type: type,
-			});
+			}, ['type']);
 		});
 
 		return account as MiLocalUser;

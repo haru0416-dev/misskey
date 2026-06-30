@@ -11,30 +11,33 @@ import type { MemoryReport } from './measure-backend-memory-comparison.mts';
 const [baseFile, headFile, outputFile, baseJsFootprintFile, headJsFootprintFile] = process.argv.slice(2);
 
 type RuntimeLoadedJsFootprintReport = {
-	phases: Record<'afterRequest', {
-		totals: {
-			loadedJsModules: number;
-			loadedJsSourceBytes: number;
-			loadedJsGzipBytes: number;
-			astNodeCount: number;
-			functionCount: number;
-			classCount: number;
-			stringLiteralBytes: number;
-			externalPackageCount: number;
-			nativeAddonPackageCount: number;
-		};
-		modules: {
-			path: string;
-			package: string;
-			category: string;
-			sourceBytes: number;
-			gzipBytes: number;
-			astNodeCount: number;
-			functionCount: number;
-			classCount: number;
-			stringLiteralBytes: number;
-		}[];
-	}>;
+	phases: Record<
+		'afterRequest',
+		{
+			totals: {
+				loadedJsModules: number;
+				loadedJsSourceBytes: number;
+				loadedJsGzipBytes: number;
+				astNodeCount: number;
+				functionCount: number;
+				classCount: number;
+				stringLiteralBytes: number;
+				externalPackageCount: number;
+				nativeAddonPackageCount: number;
+			};
+			modules: {
+				path: string;
+				package: string;
+				category: string;
+				sourceBytes: number;
+				gzipBytes: number;
+				astNodeCount: number;
+				functionCount: number;
+				classCount: number;
+				stringLiteralBytes: number;
+			}[];
+		}
+	>;
 };
 
 const memoryReportPhases = [
@@ -44,43 +47,53 @@ const memoryReportPhases = [
 	},
 ] as const;
 
-const metrics = [
-	'HeapUsed',
-	'Pss',
-	'Private_Dirty',
-	'VmRSS',
-	'External',
-] as const;
+const metrics = ['HeapUsed', 'Pss', 'Private_Dirty', 'VmRSS', 'External'] as const;
 
 function formatMemoryMb(valueKiB: number | null | undefined) {
 	if (valueKiB == null) return '-';
 	return `${util.formatNumber(valueKiB / 1000)} MB`;
 }
 
-function getMemoryValue(report: MemoryReport, phase: typeof memoryReportPhases[number]['key'], metric: typeof metrics[number]) {
+function getMemoryValue(
+	report: MemoryReport,
+	phase: (typeof memoryReportPhases)[number]['key'],
+	metric: (typeof metrics)[number],
+) {
 	return report.summary[phase].memoryUsage[metric];
 }
 
-function getMemoryValueFromSample(sample: MemoryReport['samples'][number], phase: typeof memoryReportPhases[number]['key'], metric: typeof metrics[number]) {
+function getMemoryValueFromSample(
+	sample: MemoryReport['samples'][number],
+	phase: (typeof memoryReportPhases)[number]['key'],
+	metric: (typeof metrics)[number],
+) {
 	return sample.phases[phase].memoryUsage[metric];
 }
 
-function getSampleSpread(report: MemoryReport, phase: typeof memoryReportPhases[number]['key'], metric: typeof metrics[number]) {
-	const values = report.samples.map(sample => getMemoryValueFromSample(sample, phase, metric));
+function getSampleSpread(
+	report: MemoryReport,
+	phase: (typeof memoryReportPhases)[number]['key'],
+	metric: (typeof metrics)[number],
+) {
+	const values = report.samples.map((sample) => getMemoryValueFromSample(sample, phase, metric));
 	if (values.length < 2) return null;
 
 	const center = util.median(values);
-	return util.median(values.map(value => Math.abs(value - center)));
+	return util.median(values.map((value) => Math.abs(value - center)));
 }
 
-function renderMainTableForPhase(base: MemoryReport, head: MemoryReport, phase: typeof memoryReportPhases[number]['key']) {
+function renderMainTableForPhase(
+	base: MemoryReport,
+	head: MemoryReport,
+	phase: (typeof memoryReportPhases)[number]['key'],
+) {
 	const lines = [
 		'| Metric | Base | Head | Δ median | Δ MAD | Δ min | Δ max |',
 		'| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
 	];
 
 	function formatDeltaMemory(deltaKiB: number) {
-		return util.formatColoredDelta(deltaKiB, v => formatMemoryMb(v), 100); // 0.1 MB threshold
+		return util.formatColoredDelta(deltaKiB, (v) => formatMemoryMb(v), 100); // 0.1 MB threshold
 	}
 
 	for (const metric of metrics) {
@@ -89,11 +102,18 @@ function renderMainTableForPhase(base: MemoryReport, head: MemoryReport, phase: 
 
 		const baseSpread = getSampleSpread(base, phase, metric);
 		const headSpread = getSampleSpread(head, phase, metric);
-		const summary = util.pairedDeltaSummary(base.samples, head.samples, (sample) => getMemoryValueFromSample(sample, phase, metric));
-		const percent = summary.median * 100 / baseValue;
-		const deltaMedian = summary == null ? '-' : `${formatDeltaMemory(summary.median)}<br>${util.formatDeltaPercent(percent, 0.1).replaceAll('\\%', '\\\\%')}`;
+		const summary = util.pairedDeltaSummary(base.samples, head.samples, (sample) =>
+			getMemoryValueFromSample(sample, phase, metric),
+		);
+		const percent = (summary.median * 100) / baseValue;
+		const deltaMedian =
+			summary == null
+				? '-'
+				: `${formatDeltaMemory(summary.median)}<br>${util.formatDeltaPercent(percent, 0.1).replaceAll('\\%', '\\\\%')}`;
 
-		lines.push(`| **${metric}** | ${formatMemoryMb(baseValue)} <br> ± ${formatMemoryMb(baseSpread)} | ${formatMemoryMb(headValue)} <br> ± ${formatMemoryMb(headSpread)} | ${deltaMedian} | ${summary?.mad == null ? '-' : formatMemoryMb(summary.mad)} | ${summary == null ? '-' : formatDeltaMemory(summary.min)} | ${summary == null ? '-' : formatDeltaMemory(summary.max)} |`);
+		lines.push(
+			`| **${metric}** | ${formatMemoryMb(baseValue)} <br> ± ${formatMemoryMb(baseSpread)} | ${formatMemoryMb(headValue)} <br> ± ${formatMemoryMb(headSpread)} | ${deltaMedian} | ${summary?.mad == null ? '-' : formatMemoryMb(summary.mad)} | ${summary == null ? '-' : formatDeltaMemory(summary.min)} | ${summary == null ? '-' : formatDeltaMemory(summary.max)} |`,
+		);
 	}
 
 	return lines.join('\n');
@@ -119,7 +139,7 @@ function measurementSummary(base, head) {
 function renderHeapSnapshotSection(base: MemoryReport, head: MemoryReport) {
 	const baseHeapSnapshotReport = {
 		summary: base.summary.afterGc.heapSnapshot!,
-		samples: base.samples.map(sample => ({
+		samples: base.samples.map((sample) => ({
 			round: sample.round,
 			data: sample.phases.afterGc.heapSnapshot!,
 		})),
@@ -127,7 +147,7 @@ function renderHeapSnapshotSection(base: MemoryReport, head: MemoryReport) {
 
 	const headHeapSnapshotReport = {
 		summary: head.summary.afterGc.heapSnapshot!,
-		samples: head.samples.map(sample => ({
+		samples: head.samples.map((sample) => ({
 			round: sample.round,
 			data: sample.phases.afterGc.heapSnapshot!,
 		})),
@@ -136,12 +156,7 @@ function renderHeapSnapshotSection(base: MemoryReport, head: MemoryReport) {
 	const table = heapSnapshotUtil.renderHeapSnapshotTable(baseHeapSnapshotReport, headHeapSnapshotReport);
 	if (table == null) return null;
 
-	const lines = [
-		'### V8 Heap Snapshot Statistics',
-		'',
-		table,
-		'',
-	];
+	const lines = ['### V8 Heap Snapshot Statistics', '', table, ''];
 
 	for (const graph of [
 		//heapSnapshotUtil.renderHeapSnapshotSankey(baseHeapSnapshotReport, 'Base'),
@@ -155,7 +170,11 @@ function renderHeapSnapshotSection(base: MemoryReport, head: MemoryReport) {
 	return lines.join('\n');
 }
 
-function getJsFootprintValue(report: RuntimeLoadedJsFootprintReport, phase: 'afterRequest', key: keyof RuntimeLoadedJsFootprintReport['phases'][typeof phase]['totals']) {
+function getJsFootprintValue(
+	report: RuntimeLoadedJsFootprintReport,
+	phase: 'afterRequest',
+	key: keyof RuntimeLoadedJsFootprintReport['phases'][typeof phase]['totals'],
+) {
 	const value = report.phases[phase].totals[key];
 	return Number.isFinite(value) ? value : null;
 }
@@ -173,17 +192,16 @@ function renderJsFootprintMetricTable(base: RuntimeLoadedJsFootprintReport, head
 		['Native addon packages', 'nativeAddonPackageCount', util.formatNumber],
 	] as const;
 
-	const lines = [
-		'| Metric | Base | Head | Δ | Δ (%) |',
-		'| --- | ---: | ---: | ---: | ---: |',
-	];
+	const lines = ['| Metric | Base | Head | Δ | Δ (%) |', '| --- | ---: | ---: | ---: | ---: |'];
 
 	for (const [title, key, formatter] of metricRows) {
 		const baseValue = getJsFootprintValue(base, 'afterRequest', key);
 		const headValue = getJsFootprintValue(head, 'afterRequest', key);
 		if (baseValue == null || headValue == null) continue;
 
-		lines.push(`| **${title}** | ${formatter(baseValue)} | ${formatter(headValue)} | ${util.formatColoredDelta(headValue - baseValue, v => formatter(v))} | ${util.calcAndFormatDeltaPercent(baseValue, headValue).replaceAll('\\%', '\\\\%')} |`);
+		lines.push(
+			`| **${title}** | ${formatter(baseValue)} | ${formatter(headValue)} | ${util.formatColoredDelta(headValue - baseValue, (v) => formatter(v))} | ${util.calcAndFormatDeltaPercent(baseValue, headValue).replaceAll('\\%', '\\\\%')} |`,
+		);
 	}
 
 	return lines.join('\n');
@@ -228,7 +246,7 @@ function renderNewExternalPackages(base: RuntimeLoadedJsFootprintReport, head: R
 	const basePackages = packageMap(base);
 	const headPackages = packageMap(head);
 	const newPackages = [...headPackages.values()]
-		.filter(packageSummary => !basePackages.has(packageSummary.name))
+		.filter((packageSummary) => !basePackages.has(packageSummary.name))
 		.toSorted((a, b) => b.sourceBytes - a.sourceBytes)
 		.slice(0, 10);
 
@@ -242,7 +260,9 @@ function renderNewExternalPackages(base: RuntimeLoadedJsFootprintReport, head: R
 	];
 
 	for (const packageSummary of newPackages) {
-		lines.push(`| ${packageDisplayName(packageSummary)} | ${util.formatBytes(packageSummary.sourceBytes)} | ${util.formatNumber(packageSummary.modules)} | ${packageSummary.nativeAddon ? 'native addon' : ''} |`);
+		lines.push(
+			`| ${packageDisplayName(packageSummary)} | ${util.formatBytes(packageSummary.sourceBytes)} | ${util.formatNumber(packageSummary.modules)} | ${packageSummary.nativeAddon ? 'native addon' : ''} |`,
+		);
 	}
 
 	return lines.join('\n');
@@ -252,7 +272,7 @@ function renderLargestPackageIncreases(base: RuntimeLoadedJsFootprintReport, hea
 	const basePackages = packageMap(base);
 	const headPackages = packageMap(head);
 	const increases = [...headPackages.values()]
-		.map(headPackage => {
+		.map((headPackage) => {
 			const basePackage = basePackages.get(headPackage.name);
 			const baseSourceBytes = basePackage?.sourceBytes ?? 0;
 			const baseModules = basePackage?.modules ?? 0;
@@ -264,7 +284,7 @@ function renderLargestPackageIncreases(base: RuntimeLoadedJsFootprintReport, hea
 				moduleDiff: headPackage.modules - baseModules,
 			};
 		})
-		.filter(packageSummary => packageSummary.sourceDiff > 0)
+		.filter((packageSummary) => packageSummary.sourceDiff > 0)
 		.toSorted((a, b) => b.sourceDiff - a.sourceDiff)
 		.slice(0, 10);
 
@@ -278,7 +298,9 @@ function renderLargestPackageIncreases(base: RuntimeLoadedJsFootprintReport, hea
 	];
 
 	for (const packageSummary of increases) {
-		lines.push(`| ${packageDisplayName(packageSummary)} | ${util.formatBytes(packageSummary.baseSourceBytes)} | ${util.formatBytes(packageSummary.sourceBytes)} | ${util.formatColoredDelta(packageSummary.sourceBytes - packageSummary.baseSourceBytes, v => util.formatBytes(v))} | ${util.formatColoredDelta(packageSummary.modules - packageSummary.baseModules, v => util.formatNumber(v))} |`);
+		lines.push(
+			`| ${packageDisplayName(packageSummary)} | ${util.formatBytes(packageSummary.baseSourceBytes)} | ${util.formatBytes(packageSummary.sourceBytes)} | ${util.formatColoredDelta(packageSummary.sourceBytes - packageSummary.baseSourceBytes, (v) => util.formatBytes(v))} | ${util.formatColoredDelta(packageSummary.modules - packageSummary.baseModules, (v) => util.formatNumber(v))} |`,
+		);
 	}
 
 	return lines.join('\n');
@@ -297,21 +319,18 @@ function renderNewLoadedModules(base: RuntimeLoadedJsFootprintReport, head: Runt
 	const baseModules = moduleMap(base);
 	const headModules = moduleMap(head);
 	const newModules = [...headModules.values()]
-		.filter(moduleSummary => !baseModules.has(moduleSummary.path))
+		.filter((moduleSummary) => !baseModules.has(moduleSummary.path))
 		.toSorted((a, b) => b.sourceBytes - a.sourceBytes)
 		.slice(0, 10);
 
 	if (newModules.length === 0) return null;
 
-	const lines = [
-		'#### Largest Newly Loaded Modules',
-		'',
-		'| Module | Package | Loaded JS |',
-		'| --- | --- | ---: |',
-	];
+	const lines = ['#### Largest Newly Loaded Modules', '', '| Module | Package | Loaded JS |', '| --- | --- | ---: |'];
 
 	for (const moduleSummary of newModules) {
-		lines.push(`| \`${moduleSummary.path}\` | ${moduleSummary.package} | ${util.formatBytes(moduleSummary.sourceBytes)} |`);
+		lines.push(
+			`| \`${moduleSummary.path}\` | ${moduleSummary.package} | ${util.formatBytes(moduleSummary.sourceBytes)} |`,
+		);
 	}
 
 	return lines.join('\n');
@@ -351,10 +370,7 @@ const base = JSON.parse(await readFile(baseFile, 'utf8')) as MemoryReport;
 const head = JSON.parse(await readFile(headFile, 'utf8')) as MemoryReport;
 const baseJsFootprint = JSON.parse(await readFile(baseJsFootprintFile, 'utf8')) as RuntimeLoadedJsFootprintReport;
 const headJsFootprint = JSON.parse(await readFile(headJsFootprintFile, 'utf8')) as RuntimeLoadedJsFootprintReport;
-const lines = [
-	'## ⚙️ Backend Memory Usage Report',
-	'',
-];
+const lines = ['## ⚙️ Backend Memory Usage Report', ''];
 
 //const summary = measurementSummary(base, head);
 //if (summary != null) {
@@ -393,7 +409,12 @@ function getWarningMetric(base: MemoryReport, head: MemoryReport) {
 	return null;
 }
 
-function getDiffPercent(base: MemoryReport, head: MemoryReport, phase: typeof memoryReportPhases[number]['key'], metric: typeof metrics[number]) {
+function getDiffPercent(
+	base: MemoryReport,
+	head: MemoryReport,
+	phase: (typeof memoryReportPhases)[number]['key'],
+	metric: (typeof metrics)[number],
+) {
 	const baseValue = getMemoryValue(base, phase, metric);
 	const headValue = getMemoryValue(head, phase, metric);
 	if (baseValue == null || headValue == null || baseValue <= 0) return null;
@@ -401,7 +422,12 @@ function getDiffPercent(base: MemoryReport, head: MemoryReport, phase: typeof me
 	return ((headValue - baseValue) * 100) / baseValue;
 }
 
-function isBeyondSampleNoise(base: MemoryReport, head: MemoryReport, phase: typeof memoryReportPhases[number]['key'], metric: typeof metrics[number]) {
+function isBeyondSampleNoise(
+	base: MemoryReport,
+	head: MemoryReport,
+	phase: (typeof memoryReportPhases)[number]['key'],
+	metric: (typeof metrics)[number],
+) {
 	const baseValue = getMemoryValue(base, phase, metric);
 	const headValue = getMemoryValue(head, phase, metric);
 	if (baseValue == null || headValue == null) return false;
@@ -419,8 +445,15 @@ function isBeyondSampleNoise(base: MemoryReport, head: MemoryReport, phase: type
 
 const warningMetric = getWarningMetric(base, head);
 const warningDiffPercent = warningMetric == null ? null : getDiffPercent(base, head, 'afterGc', warningMetric);
-if (warningMetric != null && warningDiffPercent != null && warningDiffPercent > 5 && isBeyondSampleNoise(base, head, 'afterGc', warningMetric)) {
-	lines.push(`⚠️ **Warning**: Memory usage (${warningMetric}) has increased by more than 5% and exceeds the observed sample noise. Please verify this is not an unintended change.`);
+if (
+	warningMetric != null &&
+	warningDiffPercent != null &&
+	warningDiffPercent > 5 &&
+	isBeyondSampleNoise(base, head, 'afterGc', warningMetric)
+) {
+	lines.push(
+		`⚠️ **Warning**: Memory usage (${warningMetric}) has increased by more than 5% and exceeds the observed sample noise. Please verify this is not an unintended change.`,
+	);
 	lines.push('');
 }
 

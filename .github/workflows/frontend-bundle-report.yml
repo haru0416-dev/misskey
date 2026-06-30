@@ -14,12 +14,10 @@ on:
       - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/misskey-js/**
-      - packages/misskey-reversi/**
-      - packages/misskey-bubble-game/**
       - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - .node-version
+      - bun.lock
+      - bunfig.toml
+      - .bun-version
       - .github/scripts/utility.mts
       - .github/scripts/frontend-js-size.mts
       - .github/workflows/frontend-bundle-report.yml
@@ -41,7 +39,7 @@ jobs:
       FRONTEND_JS_SIZE_LOCALE: ja-JP
     steps:
       - name: Checkout base
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v6.0.2
         with:
           repository: ${{ github.event.pull_request.base.repo.full_name }}
           ref: ${{ github.event.pull_request.base.sha }}
@@ -49,7 +47,7 @@ jobs:
           submodules: true
 
       - name: Checkout pull request
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v6.0.2
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
@@ -67,31 +65,21 @@ jobs:
             echo 'Base commit does not support frontend bundle visualizer. Skipping frontend bundle report.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Setup pnpm
+      - name: Setup Bun
         if: steps.check-base-visualizer.outputs.supported == 'true'
-        uses: pnpm/action-setup@v6.0.9
+        uses: oven-sh/setup-bun@v2.2.0
         with:
-          package_json_file: after/package.json
-
-      - name: Setup Node.js
-        if: steps.check-base-visualizer.outputs.supported == 'true'
-        uses: actions/setup-node@v6.4.0
-        with:
-          node-version-file: after/.node-version
-          cache: pnpm
-          cache-dependency-path: |
-            before/pnpm-lock.yaml
-            after/pnpm-lock.yaml
+          bun-version-file: after/.bun-version
 
       - name: Install dependencies for base
         if: steps.check-base-visualizer.outputs.supported == 'true'
         working-directory: before
-        run: pnpm i --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Build frontend dependencies for base
         if: steps.check-base-visualizer.outputs.supported == 'true'
         working-directory: before
-        run: pnpm --filter "frontend^..." run build
+        run: bun run build:frontend-deps
 
       - name: Prepare report output
         if: steps.check-base-visualizer.outputs.supported == 'true'
@@ -103,17 +91,17 @@ jobs:
         env:
           FRONTEND_BUNDLE_VISUALIZER: 'true'
           FRONTEND_BUNDLE_VISUALIZER_FILE: ${{ runner.temp }}/frontend-bundle-report/before-stats.json
-        run: pnpm --filter frontend run build
+        run: bun run --bun --filter frontend build
 
       - name: Install dependencies for pull request
         if: steps.check-base-visualizer.outputs.supported == 'true'
         working-directory: after
-        run: pnpm i --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Build frontend dependencies for pull request
         if: steps.check-base-visualizer.outputs.supported == 'true'
         working-directory: after
-        run: pnpm --filter "frontend^..." run build
+        run: bun run build:frontend-deps
 
       - name: Build frontend report for pull request
         if: steps.check-base-visualizer.outputs.supported == 'true'
@@ -122,7 +110,7 @@ jobs:
           FRONTEND_BUNDLE_VISUALIZER: 'true'
           FRONTEND_BUNDLE_VISUALIZER_FILE: ${{ runner.temp }}/frontend-bundle-report/after-stats.json
           FRONTEND_BUNDLE_VISUALIZER_HTML_FILE: ${{ runner.temp }}/frontend-bundle-report/frontend-bundle-visualizer.html
-        run: pnpm --filter frontend run build
+        run: bun run --bun --filter frontend build
 
       - name: Upload bundle visualizer
         if: steps.check-base-visualizer.outputs.supported == 'true'
@@ -145,7 +133,7 @@ jobs:
           FRONTEND_BUNDLE_REPORT_ARTIFACT_URL: ${{ steps.upload-bundle-visualizer.outputs.artifact-url }}
         run: |
           REPORT_DIR="$RUNNER_TEMP/frontend-bundle-report"
-          node after/.github/scripts/frontend-js-size.mts before after "$REPORT_DIR/before-stats.json" "$REPORT_DIR/after-stats.json" "$REPORT_DIR/frontend-js-size-report.md"
+          bun after/.github/scripts/frontend-js-size.mts before after "$REPORT_DIR/before-stats.json" "$REPORT_DIR/after-stats.json" "$REPORT_DIR/frontend-js-size-report.md"
           printf '%s\n' "$PR_NUMBER" > "$REPORT_DIR/pr-number.txt"
           printf '%s\n' "$BASE_SHA" > "$REPORT_DIR/base-sha.txt"
           printf '%s\n' "$HEAD_SHA" > "$REPORT_DIR/head-sha.txt"

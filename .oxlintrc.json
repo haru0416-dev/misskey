@@ -1,0 +1,43 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "oxc"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn",
+		"perf": "warn"
+	},
+	"rules": {
+		"no-async-promise-executor": "off",
+		"no-constant-condition": "off",
+		"no-control-regex": "off",
+		"no-unsafe-optional-chaining": "off",
+		"no-unused-vars": "off",
+		"no-useless-escape": "off",
+		"no-unused-expressions": "off",
+		"no-useless-rename": "off",
+		"oxc/bad-min-max-func": "off"
+	},
+	"env": {
+		"builtin": true,
+		"browser": true,
+		"node": true
+	},
+	"globals": {
+		"_DEV_": "readonly",
+		"_LANGS_": "readonly",
+		"_VERSION_": "readonly",
+		"_ENV_": "readonly",
+		"_PERF_PREFIX_": "readonly"
+	},
+	"ignorePatterns": [
+		"built/**",
+		"built-test/**",
+		"coverage/**",
+		"node_modules/**",
+		"packages/backend/built/**",
+		"packages/backend/migration/**",
+		"packages/frontend/js-built/**",
+		"packages/frontend/src/**/*.stories.ts",
+		"packages/frontend/src/**/*.stories.impl.ts"
+	]
+}

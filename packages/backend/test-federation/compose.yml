@@ -9,14 +9,11 @@ services:
       service: misskey
     command: >
       bash -c "
-        npm install -g pnpm
-        pnpm -F backend i
-        pnpm -F misskey-js i
-        pnpm -F misskey-reversi i
+        bun install --frozen-lockfile
       "
 
   tester:
-    image: node:${NODE_VERSION}
+    image: oven/bun:${BUN_VERSION}-debian
     depends_on:
       a.test:
         condition: service_healthy
@@ -33,6 +30,22 @@ services:
       - type: bind
         source: ../package.json
         target: /misskey/packages/backend/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-shared/package.json
+        target: /misskey/packages/frontend-shared/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend/package.json
+        target: /misskey/packages/frontend/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-builder/package.json
+        target: /misskey/packages/frontend-builder/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-embed/package.json
+        target: /misskey/packages/frontend-embed/package.json
         read_only: true
       - type: bind
         source: ../test/resources
@@ -55,12 +68,28 @@ services:
         target: /misskey/packages/backend/scripts/compile_config.js
         read_only: true
       - type: bind
+        source: ../../icons-subsetter/package.json
+        target: /misskey/packages/icons-subsetter/package.json
+        read_only: true
+      - type: bind
+        source: ../../aiscript-languageserver-stub/package.json
+        target: /misskey/packages/aiscript-languageserver-stub/package.json
+        read_only: true
+      - type: bind
+        source: ../../sw/package.json
+        target: /misskey/packages/sw/package.json
+        read_only: true
+      - type: bind
         source: ../../misskey-js/built
         target: /misskey/packages/misskey-js/built
         read_only: true
       - type: bind
         source: ../../misskey-js/package.json
         target: /misskey/packages/misskey-js/package.json
+        read_only: true
+      - type: bind
+        source: ../../misskey-js/generator/package.json
+        target: /misskey/packages/misskey-js/generator/package.json
         read_only: true
       - type: bind
         source: ../../i18n/built
@@ -75,12 +104,16 @@ services:
         target: /misskey/package.json
         read_only: true
       - type: bind
-        source: ../../../pnpm-lock.yaml
-        target: /misskey/pnpm-lock.yaml
+        source: ../../../scripts/changelog-checker/package.json
+        target: /misskey/scripts/changelog-checker/package.json
         read_only: true
       - type: bind
-        source: ../../../pnpm-workspace.yaml
-        target: /misskey/pnpm-workspace.yaml
+        source: ../../../bun.lock
+        target: /misskey/bun.lock
+        read_only: true
+      - type: bind
+        source: ../../../bunfig.toml
+        target: /misskey/bunfig.toml
         read_only: true
       - type: bind
         source: ../../../patches
@@ -93,15 +126,13 @@ services:
     working_dir: /misskey
     entrypoint: >
       bash -c '
-        npm install -g pnpm
-        pnpm -F misskey-js i --frozen-lockfile
-        pnpm -F backend i --frozen-lockfile
+        bun install --frozen-lockfile
         exec "$0" "$@"
       '
-    command: pnpm -F backend test:fed
+    command: bun run --bun --filter backend test:fed
 
   daemon:
-    image: node:${NODE_VERSION}
+    image: oven/bun:${BUN_VERSION}-debian
     depends_on:
       redis.test:
         condition: service_healthy
@@ -109,6 +140,46 @@ services:
       - type: bind
         source: ../package.json
         target: /misskey/packages/backend/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-shared/package.json
+        target: /misskey/packages/frontend-shared/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend/package.json
+        target: /misskey/packages/frontend/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-builder/package.json
+        target: /misskey/packages/frontend-builder/package.json
+        read_only: true
+      - type: bind
+        source: ../../frontend-embed/package.json
+        target: /misskey/packages/frontend-embed/package.json
+        read_only: true
+      - type: bind
+        source: ../../i18n/package.json
+        target: /misskey/packages/i18n/package.json
+        read_only: true
+      - type: bind
+        source: ../../icons-subsetter/package.json
+        target: /misskey/packages/icons-subsetter/package.json
+        read_only: true
+      - type: bind
+        source: ../../aiscript-languageserver-stub/package.json
+        target: /misskey/packages/aiscript-languageserver-stub/package.json
+        read_only: true
+      - type: bind
+        source: ../../sw/package.json
+        target: /misskey/packages/sw/package.json
+        read_only: true
+      - type: bind
+        source: ../../misskey-js/package.json
+        target: /misskey/packages/misskey-js/package.json
+        read_only: true
+      - type: bind
+        source: ../../misskey-js/generator/package.json
+        target: /misskey/packages/misskey-js/generator/package.json
         read_only: true
       - type: bind
         source: ./daemon.ts
@@ -123,12 +194,16 @@ services:
         target: /misskey/package.json
         read_only: true
       - type: bind
-        source: ../../../pnpm-lock.yaml
-        target: /misskey/pnpm-lock.yaml
+        source: ../../../scripts/changelog-checker/package.json
+        target: /misskey/scripts/changelog-checker/package.json
         read_only: true
       - type: bind
-        source: ../../../pnpm-workspace.yaml
-        target: /misskey/pnpm-workspace.yaml
+        source: ../../../bun.lock
+        target: /misskey/bun.lock
+        read_only: true
+      - type: bind
+        source: ../../../bunfig.toml
+        target: /misskey/bunfig.toml
         read_only: true
       - type: bind
         source: ../../../patches
@@ -137,10 +212,9 @@ services:
     working_dir: /misskey
     command: >
       bash -c "
-        npm install -g pnpm
-        pnpm -F backend i --frozen-lockfile
-        pnpm exec tsgo -p ./packages/backend/test-federation
-        node ./packages/backend/test-federation/built/daemon.js
+        bun install --frozen-lockfile
+        bun run --bun tsgo -p ./packages/backend/test-federation
+        bun ./packages/backend/test-federation/built/daemon.js
       "
 
   redis.test:

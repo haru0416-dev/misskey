@@ -20,32 +20,24 @@ jobs:
   test:
     name: Federation test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version-file:
-          - .node-version
-          - .github/min.node-version
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: true
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6.0.9
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
       - name: Install FFmpeg
         run: |
           sudo apt install -y ffmpeg
-      - name: Use Node.js
-        uses: actions/setup-node@v6.4.0
-        with:
-          node-version-file: ${{ matrix.node-version-file }}
-          cache: 'pnpm'
       - name: Build Misskey
         run: |
-          pnpm i --frozen-lockfile
-          pnpm build
+          bun install --frozen-lockfile
+          bun run build
       - name: Setup
         run: |
-          echo "NODE_VERSION=$(cat ${{ matrix.node-version-file }})" >> $GITHUB_ENV
+          echo "BUN_VERSION=$(cat .bun-version)" >> $GITHUB_ENV
           cd packages/backend/test-federation
           bash ./setup.sh
           sudo chmod 644 ./certificates/*.test.key

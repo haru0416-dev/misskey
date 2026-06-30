@@ -88,8 +88,6 @@ export const DI = {
 	chatRoomsRepository: Symbol('chatRoomsRepository'),
 	chatRoomMembershipsRepository: Symbol('chatRoomMembershipsRepository'),
 	chatRoomInvitationsRepository: Symbol('chatRoomInvitationsRepository'),
-	bubbleGameRecordsRepository: Symbol('bubbleGameRecordsRepository'),
-	reversiGamesRepository: Symbol('reversiGamesRepository'),
 	noteDraftsRepository: Symbol('noteDraftsRepository'),
 	//#endregion
 };
