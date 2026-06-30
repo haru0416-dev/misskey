@@ -6,7 +6,11 @@ exact = true
 minimumReleaseAge = 604800
 
 minimumReleaseAgeExcludes = [
-	"@misskey-dev/*",
+	"@misskey-dev/browser-image-resizer",
+	"@misskey-dev/emoji-assets",
+	"@misskey-dev/emoji-data",
+	"@misskey-dev/sharp-read-bmp",
+	"@misskey-dev/summaly",
 	"@syuilo/aiscript",
 	"buraha",
 	"mfm-js",
@@ -24,6 +28,6 @@ minimumReleaseAgeExcludes = [
 	"slacc-linux-x64-musl",
 	"slacc-win32-arm64-msvc",
 	"slacc-win32-x64-msvc",
-	"@typescript/native-preview*",
+	"@typescript/native-preview",
 	"vite",
 ]

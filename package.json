@@ -86,9 +86,6 @@
 	"trustedDependencies": [
 		"@nestjs/core",
 		"@parcel/watcher",
-		"@sentry-internal/node-cpu-profiler",
-		"@sentry/node-cpu-profiler",
-		"@sentry/profiling-node",
 		"bufferutil",
 		"canvas",
 		"core-js",

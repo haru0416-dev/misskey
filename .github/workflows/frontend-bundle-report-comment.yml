@@ -19,8 +19,6 @@ on:
       - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/misskey-js/**
-      - packages/misskey-reversi/**
-      - packages/misskey-bubble-game/**
       - package.json
       - bun.lock
       - bunfig.toml
