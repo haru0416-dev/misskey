@@ -12,7 +12,7 @@
 	"postCreateCommand": "/bin/bash .devcontainer/init.sh",
 	"customizations": {
 		"vscode": {
-			"extensions": ["editorconfig.editorconfig", "dbaeumer.vscode-eslint", "Vue.volar", "mrmlnc.vscode-json5"]
+			"extensions": ["editorconfig.editorconfig", "Vue.volar", "mrmlnc.vscode-json5"]
 		}
 	}
 }

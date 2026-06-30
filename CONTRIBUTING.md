@@ -180,7 +180,6 @@ To use Dev Container, open the project directory on VSCode with Dev Containers i
 
 It will run the following command automatically inside the container.
 ``` bash
-git submodule update --init
 bun install --frozen-lockfile
 cp .devcontainer/devcontainer.yml .config/default.yml
 bun run build

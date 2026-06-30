@@ -15,7 +15,6 @@ const cwd = fileURLToPath(new URL('..', import.meta.url));
 const ignore = [
 	'**/.git/**/*',
 	'**/*ignore',
-	'**/.gitmodules',
 	// Exclude files you don't want to include in the tarball here
 ];
 
