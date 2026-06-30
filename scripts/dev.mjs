@@ -79,15 +79,3 @@ execa('bun', ['run', '--bun', '--filter', 'i18n', 'watch', '--no-clean'], {
 	stdout: process.stdout,
 	stderr: process.stderr,
 });
-
-execa('bun', ['run', '--bun', '--filter', 'misskey-reversi', 'watch', '--no-clean'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
-
-execa('bun', ['run', '--bun', '--filter', 'misskey-bubble-game', 'watch', '--no-clean'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});

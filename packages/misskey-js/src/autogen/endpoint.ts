@@ -176,9 +176,6 @@ import type {
     BlockingDeleteResponse,
     BlockingListRequest,
     BlockingListResponse,
-    BubbleGameRankingRequest,
-    BubbleGameRankingResponse,
-    BubbleGameRegisterRequest,
     ChannelsCreateRequest,
     ChannelsCreateResponse,
     ChannelsFavoriteRequest,
@@ -575,17 +572,6 @@ import type {
     RequestResetPasswordRequest,
     ResetPasswordRequest,
     RetentionResponse,
-    ReversiCancelMatchRequest,
-    ReversiGamesRequest,
-    ReversiGamesResponse,
-    ReversiInvitationsResponse,
-    ReversiMatchRequest,
-    ReversiMatchResponse,
-    ReversiShowGameRequest,
-    ReversiShowGameResponse,
-    ReversiSurrenderRequest,
-    ReversiVerifyRequest,
-    ReversiVerifyResponse,
     RolesListResponse,
     RolesNotesRequest,
     RolesNotesResponse,
@@ -814,8 +800,6 @@ export type Endpoints = {
     'blocking/create': { req: BlockingCreateRequest; res: BlockingCreateResponse };
     'blocking/delete': { req: BlockingDeleteRequest; res: BlockingDeleteResponse };
     'blocking/list': { req: BlockingListRequest; res: BlockingListResponse };
-    'bubble-game/ranking': { req: BubbleGameRankingRequest; res: BubbleGameRankingResponse };
-    'bubble-game/register': { req: BubbleGameRegisterRequest; res: EmptyResponse };
     'channels/create': { req: ChannelsCreateRequest; res: ChannelsCreateResponse };
     'channels/favorite': { req: ChannelsFavoriteRequest; res: EmptyResponse };
     'channels/featured': { req: EmptyRequest; res: ChannelsFeaturedResponse };
@@ -1086,13 +1070,6 @@ export type Endpoints = {
     'reset-db': { req: EmptyRequest; res: EmptyResponse };
     'reset-password': { req: ResetPasswordRequest; res: EmptyResponse };
     retention: { req: EmptyRequest; res: RetentionResponse };
-    'reversi/cancel-match': { req: ReversiCancelMatchRequest; res: EmptyResponse };
-    'reversi/games': { req: ReversiGamesRequest; res: ReversiGamesResponse };
-    'reversi/invitations': { req: EmptyRequest; res: ReversiInvitationsResponse };
-    'reversi/match': { req: ReversiMatchRequest; res: ReversiMatchResponse };
-    'reversi/show-game': { req: ReversiShowGameRequest; res: ReversiShowGameResponse };
-    'reversi/surrender': { req: ReversiSurrenderRequest; res: EmptyResponse };
-    'reversi/verify': { req: ReversiVerifyRequest; res: ReversiVerifyResponse };
     'roles/list': { req: EmptyRequest; res: RolesListResponse };
     'roles/notes': { req: RolesNotesRequest; res: RolesNotesResponse };
     'roles/show': { req: RolesShowRequest; res: RolesShowResponse };

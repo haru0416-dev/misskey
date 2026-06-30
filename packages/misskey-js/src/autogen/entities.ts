@@ -299,12 +299,6 @@ export type BlockingDeleteRequest = operations['blocking___delete']['requestBody
 export type BlockingDeleteResponse = operations['blocking___delete']['responses']['200']['content']['application/json'];
 export type BlockingListRequest = operations['blocking___list']['requestBody']['content']['application/json'];
 export type BlockingListResponse = operations['blocking___list']['responses']['200']['content']['application/json'];
-export type BubbleGameRankingRequest =
-    operations['bubble-game___ranking']['requestBody']['content']['application/json'];
-export type BubbleGameRankingResponse =
-    operations['bubble-game___ranking']['responses']['200']['content']['application/json'];
-export type BubbleGameRegisterRequest =
-    operations['bubble-game___register']['requestBody']['content']['application/json'];
 export type ChannelsCreateRequest = operations['channels___create']['requestBody']['content']['application/json'];
 export type ChannelsCreateResponse = operations['channels___create']['responses']['200']['content']['application/json'];
 export type ChannelsFavoriteRequest = operations['channels___favorite']['requestBody']['content']['application/json'];
@@ -868,20 +862,6 @@ export type RequestResetPasswordRequest =
     operations['request-reset-password']['requestBody']['content']['application/json'];
 export type ResetPasswordRequest = operations['reset-password']['requestBody']['content']['application/json'];
 export type RetentionResponse = operations['retention']['responses']['200']['content']['application/json'];
-export type ReversiCancelMatchRequest =
-    operations['reversi___cancel-match']['requestBody']['content']['application/json'];
-export type ReversiGamesRequest = operations['reversi___games']['requestBody']['content']['application/json'];
-export type ReversiGamesResponse = operations['reversi___games']['responses']['200']['content']['application/json'];
-export type ReversiInvitationsResponse =
-    operations['reversi___invitations']['responses']['200']['content']['application/json'];
-export type ReversiMatchRequest = operations['reversi___match']['requestBody']['content']['application/json'];
-export type ReversiMatchResponse = operations['reversi___match']['responses']['200']['content']['application/json'];
-export type ReversiShowGameRequest = operations['reversi___show-game']['requestBody']['content']['application/json'];
-export type ReversiShowGameResponse =
-    operations['reversi___show-game']['responses']['200']['content']['application/json'];
-export type ReversiSurrenderRequest = operations['reversi___surrender']['requestBody']['content']['application/json'];
-export type ReversiVerifyRequest = operations['reversi___verify']['requestBody']['content']['application/json'];
-export type ReversiVerifyResponse = operations['reversi___verify']['responses']['200']['content']['application/json'];
 export type RolesListResponse = operations['roles___list']['responses']['200']['content']['application/json'];
 export type RolesNotesRequest = operations['roles___notes']['requestBody']['content']['application/json'];
 export type RolesNotesResponse = operations['roles___notes']['responses']['200']['content']['application/json'];

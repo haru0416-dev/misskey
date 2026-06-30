@@ -1,3 +1,8 @@
+## Unreleased
+
+### General
+- Enhance: ゲーム機能を削除
+
 ## 2026.6.1
 
 ### Note

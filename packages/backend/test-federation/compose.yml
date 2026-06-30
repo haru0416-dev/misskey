@@ -100,14 +100,6 @@ services:
         target: /misskey/packages/i18n/package.json
         read_only: true
       - type: bind
-        source: ../../misskey-reversi/package.json
-        target: /misskey/packages/misskey-reversi/package.json
-        read_only: true
-      - type: bind
-        source: ../../misskey-bubble-game/package.json
-        target: /misskey/packages/misskey-bubble-game/package.json
-        read_only: true
-      - type: bind
         source: ../../../package.json
         target: /misskey/package.json
         read_only: true
@@ -188,14 +180,6 @@ services:
       - type: bind
         source: ../../misskey-js/generator/package.json
         target: /misskey/packages/misskey-js/generator/package.json
-        read_only: true
-      - type: bind
-        source: ../../misskey-reversi/package.json
-        target: /misskey/packages/misskey-reversi/package.json
-        read_only: true
-      - type: bind
-        source: ../../misskey-bubble-game/package.json
-        target: /misskey/packages/misskey-bubble-game/package.json
         read_only: true
       - type: bind
         source: ./daemon.ts

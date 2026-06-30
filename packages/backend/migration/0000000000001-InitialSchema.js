@@ -97,10 +97,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`CREATE INDEX "IDX_2cd4a2743a99671308f5417759" ON "blocking"  ("blockeeId") `);
         await queryRunner.query(`CREATE INDEX "IDX_0627125f1a8a42c9a1929edb55" ON "blocking"  ("blockerId") `);
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_98a1bc5cb30dfd159de056549f" ON "blocking"  ("blockerId", "blockeeId") `);
-        await queryRunner.query(`CREATE TABLE "bubble_game_record" ("id" character varying(32) NOT NULL, "userId" character varying(32) NOT NULL, "seededAt" TIMESTAMP WITH TIME ZONE NOT NULL, "seed" character varying(1024) NOT NULL, "gameVersion" integer NOT NULL, "gameMode" character varying(128) NOT NULL, "score" integer NOT NULL, "logs" jsonb NOT NULL DEFAULT '[]', "isVerified" boolean NOT NULL DEFAULT false, CONSTRAINT "PK_a75395fe404b392e2893b50d7ea" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_75276757070d21fdfaf4c05290" ON "bubble_game_record"  ("userId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_4ae7053179014915d1432d3f40" ON "bubble_game_record"  ("seededAt") `);
-        await queryRunner.query(`CREATE INDEX "IDX_26d4ee490b5a487142d35466ee" ON "bubble_game_record"  ("score") `);
         await queryRunner.query(`CREATE TABLE "channel" ("id" character varying(32) NOT NULL, "lastNotedAt" TIMESTAMP WITH TIME ZONE, "userId" character varying(32), "name" character varying(128) NOT NULL, "description" character varying(2048), "bannerId" character varying(32), "pinnedNoteIds" character varying(128) array NOT NULL DEFAULT '{}', "color" character varying(16) NOT NULL DEFAULT '#86b300', "isArchived" boolean NOT NULL DEFAULT false, "notesCount" integer NOT NULL DEFAULT '0', "usersCount" integer NOT NULL DEFAULT '0', "isSensitive" boolean NOT NULL DEFAULT false, "allowRenoteToExternal" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_590f33ee6ee7d76437acf362e39" PRIMARY KEY ("id")); COMMENT ON COLUMN "channel"."userId" IS 'The owner ID.'; COMMENT ON COLUMN "channel"."name" IS 'The name of the Channel.'; COMMENT ON COLUMN "channel"."description" IS 'The description of the Channel.'; COMMENT ON COLUMN "channel"."bannerId" IS 'The ID of banner Channel.'; COMMENT ON COLUMN "channel"."notesCount" IS 'The count of notes.'; COMMENT ON COLUMN "channel"."usersCount" IS 'The count of users.'`);
         await queryRunner.query(`CREATE INDEX "IDX_29ef80c6f13bcea998447fce43" ON "channel"  ("lastNotedAt") `);
         await queryRunner.query(`CREATE INDEX "IDX_823bae55bd81b3be6e05cff438" ON "channel"  ("userId") `);
@@ -266,7 +262,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`CREATE TABLE "retention_aggregation" ("id" character varying(32) NOT NULL, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL, "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL, "dateKey" character varying(512) NOT NULL, "userIds" character varying(32) array NOT NULL, "usersCount" integer NOT NULL, "data" jsonb NOT NULL DEFAULT '{}', CONSTRAINT "PK_22aad3e8640b15fb3b90ee02d18" PRIMARY KEY ("id")); COMMENT ON COLUMN "retention_aggregation"."createdAt" IS 'The created date of the Note.'; COMMENT ON COLUMN "retention_aggregation"."updatedAt" IS 'The updated date of the GalleryPost.'`);
         await queryRunner.query(`CREATE INDEX "IDX_09f4e5b9e4a2f268d3e284e4b3" ON "retention_aggregation"  ("createdAt") `);
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_f7c3576b37bd2eec966ae24477" ON "retention_aggregation"  ("dateKey") `);
-        await queryRunner.query(`CREATE TABLE "reversi_game" ("id" character varying(32) NOT NULL, "startedAt" TIMESTAMP WITH TIME ZONE, "endedAt" TIMESTAMP WITH TIME ZONE, "user1Id" character varying(32) NOT NULL, "user2Id" character varying(32) NOT NULL, "user1Ready" boolean NOT NULL DEFAULT false, "user2Ready" boolean NOT NULL DEFAULT false, "black" integer, "isStarted" boolean NOT NULL DEFAULT false, "isEnded" boolean NOT NULL DEFAULT false, "winnerId" character varying(32), "surrenderedUserId" character varying(32), "timeoutUserId" character varying(32), "timeLimitForEachTurn" smallint NOT NULL DEFAULT '90', "logs" jsonb NOT NULL DEFAULT '[]', "map" character varying(64) array NOT NULL, "bw" character varying(32) NOT NULL, "noIrregularRules" boolean NOT NULL DEFAULT false, "isLlotheo" boolean NOT NULL DEFAULT false, "canPutEverywhere" boolean NOT NULL DEFAULT false, "loopedBoard" boolean NOT NULL DEFAULT false, "form1" jsonb, "form2" jsonb, "crc32" character varying(32), CONSTRAINT "PK_76b30eeba71b1193ad7c5311c3f" PRIMARY KEY ("id")); COMMENT ON COLUMN "reversi_game"."startedAt" IS 'The started date of the ReversiGame.'; COMMENT ON COLUMN "reversi_game"."endedAt" IS 'The ended date of the ReversiGame.'`);
         await queryRunner.query(`CREATE TYPE "public"."role_target_enum" AS ENUM('manual', 'conditional')`);
         await queryRunner.query(`CREATE TABLE "role" ("id" character varying(32) NOT NULL, "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL, "lastUsedAt" TIMESTAMP WITH TIME ZONE NOT NULL, "name" character varying(256) NOT NULL, "description" character varying(1024) NOT NULL, "color" character varying(256), "iconUrl" character varying(512), "target" "public"."role_target_enum" NOT NULL DEFAULT 'manual', "condFormula" jsonb NOT NULL DEFAULT '{}', "isPublic" boolean NOT NULL DEFAULT false, "asBadge" boolean NOT NULL DEFAULT false, "isModerator" boolean NOT NULL DEFAULT false, "isAdministrator" boolean NOT NULL DEFAULT false, "isExplorable" boolean NOT NULL DEFAULT false, "preserveAssignmentOnMoveAccount" boolean NOT NULL DEFAULT false, "canEditMembersByModerator" boolean NOT NULL DEFAULT false, "displayOrder" integer NOT NULL DEFAULT '0', "policies" jsonb NOT NULL DEFAULT '{}', CONSTRAINT "PK_b36bcfe02fc8de3c57a8b2391c2" PRIMARY KEY ("id")); COMMENT ON COLUMN "role"."updatedAt" IS 'The updated date of the Role.'; COMMENT ON COLUMN "role"."lastUsedAt" IS 'The last used date of the Role.'`);
         await queryRunner.query(`CREATE TABLE "role_assignment" ("id" character varying(32) NOT NULL, "userId" character varying(32) NOT NULL, "roleId" character varying(32) NOT NULL, "expiresAt" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_7e79671a8a5db18936173148cb4" PRIMARY KEY ("id")); COMMENT ON COLUMN "role_assignment"."userId" IS 'The user ID.'; COMMENT ON COLUMN "role_assignment"."roleId" IS 'The role ID.'`);
@@ -390,7 +385,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`ALTER TABLE "auth_session" ADD CONSTRAINT "FK_dbe037d4bddd17b03a1dc778dee" FOREIGN KEY ("appId") REFERENCES "app"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "blocking" ADD CONSTRAINT "FK_2cd4a2743a99671308f5417759e" FOREIGN KEY ("blockeeId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "blocking" ADD CONSTRAINT "FK_0627125f1a8a42c9a1929edb552" FOREIGN KEY ("blockerId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "bubble_game_record" ADD CONSTRAINT "FK_75276757070d21fdfaf4c052909" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "channel" ADD CONSTRAINT "FK_823bae55bd81b3be6e05cff4383" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "channel" ADD CONSTRAINT "FK_999da2bcc7efadbfe0e92d3bc19" FOREIGN KEY ("bannerId") REFERENCES "drive_file"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "channel_favorite" ADD CONSTRAINT "FK_d3ca0db011b75ac2a940a2337d2" FOREIGN KEY ("channelId") REFERENCES "channel"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
@@ -450,8 +444,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`ALTER TABLE "registry_item" ADD CONSTRAINT "FK_fb9d21ba0abb83223263df6bcb3" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "renote_muting" ADD CONSTRAINT "FK_7eac97594bcac5ffcf2068089b6" FOREIGN KEY ("muteeId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "renote_muting" ADD CONSTRAINT "FK_7aa72a5fe76019bfe8e5e0e8b7d" FOREIGN KEY ("muterId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "reversi_game" ADD CONSTRAINT "FK_f7467510c60a45ce5aca6292743" FOREIGN KEY ("user1Id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "reversi_game" ADD CONSTRAINT "FK_6649a4e8c5d5cf32fb03b5da9f6" FOREIGN KEY ("user2Id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "role_assignment" ADD CONSTRAINT "FK_db5b72c16227c97ca88734d5c2b" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "role_assignment" ADD CONSTRAINT "FK_f0de67fd09cd3cd0aabca79994d" FOREIGN KEY ("roleId") REFERENCES "role"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "signin" ADD CONSTRAINT "FK_2c308dbdc50d94dc625670055f7" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
@@ -489,8 +481,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`ALTER TABLE "signin" DROP CONSTRAINT "FK_2c308dbdc50d94dc625670055f7"`);
         await queryRunner.query(`ALTER TABLE "role_assignment" DROP CONSTRAINT "FK_f0de67fd09cd3cd0aabca79994d"`);
         await queryRunner.query(`ALTER TABLE "role_assignment" DROP CONSTRAINT "FK_db5b72c16227c97ca88734d5c2b"`);
-        await queryRunner.query(`ALTER TABLE "reversi_game" DROP CONSTRAINT "FK_6649a4e8c5d5cf32fb03b5da9f6"`);
-        await queryRunner.query(`ALTER TABLE "reversi_game" DROP CONSTRAINT "FK_f7467510c60a45ce5aca6292743"`);
         await queryRunner.query(`ALTER TABLE "renote_muting" DROP CONSTRAINT "FK_7aa72a5fe76019bfe8e5e0e8b7d"`);
         await queryRunner.query(`ALTER TABLE "renote_muting" DROP CONSTRAINT "FK_7eac97594bcac5ffcf2068089b6"`);
         await queryRunner.query(`ALTER TABLE "registry_item" DROP CONSTRAINT "FK_fb9d21ba0abb83223263df6bcb3"`);
@@ -550,7 +540,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`ALTER TABLE "channel_favorite" DROP CONSTRAINT "FK_d3ca0db011b75ac2a940a2337d2"`);
         await queryRunner.query(`ALTER TABLE "channel" DROP CONSTRAINT "FK_999da2bcc7efadbfe0e92d3bc19"`);
         await queryRunner.query(`ALTER TABLE "channel" DROP CONSTRAINT "FK_823bae55bd81b3be6e05cff4383"`);
-        await queryRunner.query(`ALTER TABLE "bubble_game_record" DROP CONSTRAINT "FK_75276757070d21fdfaf4c052909"`);
         await queryRunner.query(`ALTER TABLE "blocking" DROP CONSTRAINT "FK_0627125f1a8a42c9a1929edb552"`);
         await queryRunner.query(`ALTER TABLE "blocking" DROP CONSTRAINT "FK_2cd4a2743a99671308f5417759e"`);
         await queryRunner.query(`ALTER TABLE "auth_session" DROP CONSTRAINT "FK_dbe037d4bddd17b03a1dc778dee"`);
@@ -674,7 +663,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`DROP TABLE "role_assignment"`);
         await queryRunner.query(`DROP TABLE "role"`);
         await queryRunner.query(`DROP TYPE "public"."role_target_enum"`);
-        await queryRunner.query(`DROP TABLE "reversi_game"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_f7c3576b37bd2eec966ae24477"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_09f4e5b9e4a2f268d3e284e4b3"`);
         await queryRunner.query(`DROP TABLE "retention_aggregation"`);
@@ -840,10 +828,6 @@ export class InitialSchema0000000000001 {
         await queryRunner.query(`DROP INDEX "public"."IDX_823bae55bd81b3be6e05cff438"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_29ef80c6f13bcea998447fce43"`);
         await queryRunner.query(`DROP TABLE "channel"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_26d4ee490b5a487142d35466ee"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_4ae7053179014915d1432d3f40"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_75276757070d21fdfaf4c05290"`);
-        await queryRunner.query(`DROP TABLE "bubble_game_record"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_98a1bc5cb30dfd159de056549f"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_0627125f1a8a42c9a1929edb55"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_2cd4a2743a99671308f5417759"`);

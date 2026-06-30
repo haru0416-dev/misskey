@@ -1361,28 +1361,6 @@ declare module '../api.js' {
         /**
          * No description provided.
          *
-         * **Credential required**: *No*
-         */
-        request<E extends 'bubble-game/ranking', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *Yes* / **Permission**: *write:account*
-         */
-        request<E extends 'bubble-game/register', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
          * **Credential required**: *Yes* / **Permission**: *write:channels*
          */
         request<E extends 'channels/create', P extends Endpoints[E]['req']>(
@@ -4282,83 +4260,6 @@ declare module '../api.js' {
          * **Credential required**: *No*
          */
         request<E extends 'retention', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *Yes* / **Permission**: *write:account*
-         */
-        request<E extends 'reversi/cancel-match', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *No*
-         */
-        request<E extends 'reversi/games', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *Yes* / **Permission**: *read:account*
-         */
-        request<E extends 'reversi/invitations', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *Yes* / **Permission**: *write:account*
-         */
-        request<E extends 'reversi/match', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *No*
-         */
-        request<E extends 'reversi/show-game', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *Yes* / **Permission**: *write:account*
-         */
-        request<E extends 'reversi/surrender', P extends Endpoints[E]['req']>(
-            endpoint: E,
-            params: P,
-            credential?: string | null,
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *No*
-         */
-        request<E extends 'reversi/verify', P extends Endpoints[E]['req']>(
             endpoint: E,
             params: P,
             credential?: string | null,

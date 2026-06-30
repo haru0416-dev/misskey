@@ -77,7 +77,6 @@ import { FanoutTimelineService } from './FanoutTimelineService.js';
 import { ChannelFollowingService } from './ChannelFollowingService.js';
 import { ChatService } from './ChatService.js';
 import { RegistryApiService } from './RegistryApiService.js';
-import { ReversiService } from './ReversiService.js';
 import { PageService } from './PageService.js';
 
 import { ChartLoggerService } from './chart/ChartLoggerService.js';
@@ -130,7 +129,6 @@ import { UserListEntityService } from './entities/UserListEntityService.js';
 import { FlashEntityService } from './entities/FlashEntityService.js';
 import { FlashLikeEntityService } from './entities/FlashLikeEntityService.js';
 import { RoleEntityService } from './entities/RoleEntityService.js';
-import { ReversiGameEntityService } from './entities/ReversiGameEntityService.js';
 import { MetaEntityService } from './entities/MetaEntityService.js';
 
 import { ApAudienceService } from './activitypub/ApAudienceService.js';
@@ -227,7 +225,6 @@ const $ChannelFollowingService: Provider = { provide: 'ChannelFollowingService',
 const $ChannelMutingService: Provider = { provide: 'ChannelMutingService', useExisting: ChannelMutingService };
 const $ChatService: Provider = { provide: 'ChatService', useExisting: ChatService };
 const $RegistryApiService: Provider = { provide: 'RegistryApiService', useExisting: RegistryApiService };
-const $ReversiService: Provider = { provide: 'ReversiService', useExisting: ReversiService };
 const $PageService: Provider = { provide: 'PageService', useExisting: PageService };
 
 const $ChartLoggerService: Provider = { provide: 'ChartLoggerService', useExisting: ChartLoggerService };
@@ -281,7 +278,6 @@ const $UserListEntityService: Provider = { provide: 'UserListEntityService', use
 const $FlashEntityService: Provider = { provide: 'FlashEntityService', useExisting: FlashEntityService };
 const $FlashLikeEntityService: Provider = { provide: 'FlashLikeEntityService', useExisting: FlashLikeEntityService };
 const $RoleEntityService: Provider = { provide: 'RoleEntityService', useExisting: RoleEntityService };
-const $ReversiGameEntityService: Provider = { provide: 'ReversiGameEntityService', useExisting: ReversiGameEntityService };
 const $MetaEntityService: Provider = { provide: 'MetaEntityService', useExisting: MetaEntityService };
 const $SystemWebhookEntityService: Provider = { provide: 'SystemWebhookEntityService', useExisting: SystemWebhookEntityService };
 
@@ -380,7 +376,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChannelMutingService,
 		ChatService,
 		RegistryApiService,
-		ReversiService,
 		PageService,
 
 		ChartLoggerService,
@@ -434,7 +429,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		FlashEntityService,
 		FlashLikeEntityService,
 		RoleEntityService,
-		ReversiGameEntityService,
 		MetaEntityService,
 		SystemWebhookEntityService,
 
@@ -530,7 +524,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ChannelMutingService,
 		$ChatService,
 		$RegistryApiService,
-		$ReversiService,
 		$PageService,
 
 		$ChartLoggerService,
@@ -584,7 +577,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$FlashEntityService,
 		$FlashLikeEntityService,
 		$RoleEntityService,
-		$ReversiGameEntityService,
 		$MetaEntityService,
 		$SystemWebhookEntityService,
 
@@ -680,7 +672,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChannelMutingService,
 		ChatService,
 		RegistryApiService,
-		ReversiService,
 		PageService,
 
 		FederationChart,
@@ -733,7 +724,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		FlashEntityService,
 		FlashLikeEntityService,
 		RoleEntityService,
-		ReversiGameEntityService,
 		MetaEntityService,
 		SystemWebhookEntityService,
 
@@ -828,7 +818,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ChannelMutingService,
 		$ChatService,
 		$RegistryApiService,
-		$ReversiService,
 		$PageService,
 
 		$FederationChart,
@@ -881,7 +870,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$FlashEntityService,
 		$FlashLikeEntityService,
 		$RoleEntityService,
-		$ReversiGameEntityService,
 		$MetaEntityService,
 		$SystemWebhookEntityService,
 
