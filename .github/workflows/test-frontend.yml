@@ -51,12 +51,7 @@ jobs:
       - name: Build
         run: bun run build
       - name: Test
-        run: bun run --bun --filter frontend test-and-coverage
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./packages/frontend/coverage/coverage-final.json
+        run: bun run --bun --filter frontend test
 
   e2e:
     name: E2E tests (frontend)
