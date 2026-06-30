@@ -79,12 +79,9 @@ export const ACHIEVEMENT_TYPES = [
 	'clickedClickHere',
 	'justPlainLucky',
 	'setNameToSyuilo',
-	'cookieClicked',
 	'brainDiver',
 	'smashTestNotificationButton',
 	'tutorialCompleted',
-	'bubbleGameExplodingHead',
-	'bubbleGameDoubleExplodingHead',
 ] as const;
 
 export const ACHIEVEMENT_BADGES = {
@@ -448,11 +445,6 @@ export const ACHIEVEMENT_BADGES = {
 		bg: 'linear-gradient(0deg, rgb(255 144 144), rgb(255 232 168))',
 		frame: 'silver',
 	},
-	'cookieClicked': {
-		img: '/fluent-emoji/1f36a.png',
-		bg: 'linear-gradient(0deg, rgb(187 183 59), rgb(255 143 77))',
-		frame: 'bronze',
-	},
 	'brainDiver': {
 		img: '/fluent-emoji/1f9e0.png',
 		bg: 'linear-gradient(0deg, rgb(144, 224, 255), rgb(255, 168, 252))',
@@ -467,16 +459,6 @@ export const ACHIEVEMENT_BADGES = {
 		img: '/fluent-emoji/1f393.png',
 		bg: 'linear-gradient(0deg, rgb(220 223 225), rgb(172 192 207))',
 		frame: 'bronze',
-	},
-	'bubbleGameExplodingHead': {
-		img: '/fluent-emoji/1f92f.png',
-		bg: 'linear-gradient(0deg, rgb(255 77 77), rgb(247 155 214))',
-		frame: 'bronze',
-	},
-	'bubbleGameDoubleExplodingHead': {
-		img: '/fluent-emoji/1f92f.png',
-		bg: 'linear-gradient(0deg, rgb(255 77 77), rgb(247 155 214))',
-		frame: 'silver',
 	},
 /* @see <https://github.com/misskey-dev/misskey/pull/10365#discussion_r1155511107>
 } as const satisfies Record<typeof ACHIEVEMENT_TYPES[number], {

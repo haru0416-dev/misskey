@@ -1,9 +1,8 @@
 import { defineConfig } from 'rolldown';
 import { version as summalyVersion } from '@misskey-dev/summaly';
 import type { Plugin, ExternalOption } from 'rolldown';
-import { execa, execaNode } from 'execa';
+import { execa } from 'execa';
 import type { ResultPromise } from 'execa';
-import fkill from 'fkill';
 import esmShim from '@rollup/plugin-esm-shim';
 
 /**
@@ -11,10 +10,9 @@ import esmShim from '@rollup/plugin-esm-shim';
  */
 function backendDevServerPlugin(): Plugin {
 	let backendProcess: ResultPromise | null = null;
-	let backendShutdownPromise: Promise<void> | null = null;
 
 	async function runBuildAssets() {
-		await execa('pnpm', ['run', 'build-assets'], {
+		await execa('bun', ['run', 'build-assets'], {
 			cwd: '../../',
 			stdout: process.stdout,
 			stderr: process.stderr,
@@ -22,31 +20,12 @@ function backendDevServerPlugin(): Plugin {
 	}
 
 	async function killBackendProcess() {
-		if (backendShutdownPromise) return backendShutdownPromise;
-		if (!backendProcess) return;
-
-		const processToKill = backendProcess;
-		backendProcess = null;
-		processToKill.catch(() => {}); // プロセスの終了によって発生する例外を無視するためにcatch()を呼び出す
-
-		backendShutdownPromise = (async () => {
-			if (process.platform === 'win32' && processToKill.pid != null) {
-				await fkill(processToKill.pid, {
-					force: true,
-					tree: true,
-					silent: true,
-					waitForExit: 5000,
-				});
-			} else {
-				processToKill.kill();
-			}
-
-			await processToKill.catch(() => {});
-		})().finally(() => {
-			backendShutdownPromise = null;
-		});
-
-		return backendShutdownPromise;
+		if (backendProcess) {
+			backendProcess.catch(() => {}); // backendProcess.kill()によって発生する例外を無視するためにcatch()を呼び出す
+			backendProcess.kill();
+			await new Promise((resolve) => backendProcess!.on('exit', resolve));
+			backendProcess = null;
+		}
 	}
 
 	return {
@@ -56,7 +35,7 @@ function backendDevServerPlugin(): Plugin {
 			if (backendProcess) {
 				await killBackendProcess();
 			}
-			backendProcess = execaNode('./built/entry.js', [], {
+			backendProcess = execa('bun', ['./built/entry.js'], {
 				stdout: process.stdout,
 				stderr: process.stderr,
 				env: {
@@ -69,9 +48,6 @@ function backendDevServerPlugin(): Plugin {
 				await killBackendProcess();
 				await runBuildAssets();
 			}
-		},
-		async closeWatcher() {
-			await killBackendProcess();
 		},
 	};
 }
@@ -99,13 +75,11 @@ export default defineConfig((args) => {
 		're2',
 		'ipaddr.js',
 		'file-type',
-		// バンドルするとSentryの自動計装が正しく行われなくなるため外しておく
-		'pg',
 	];
 
 	const define: Record<string, string> = {
 		// Summalyのバージョンを埋め込む
-		'_SUMMALY_VERSION_': JSON.stringify(summalyVersion),
+		_SUMMALY_VERSION_: JSON.stringify(summalyVersion),
 	};
 
 	if (isE2E) {
@@ -113,9 +87,7 @@ export default defineConfig((args) => {
 			input: './test-server/entry.ts',
 			platform: 'node',
 			tsconfig: './test-server/tsconfig.json',
-			plugins: [
-				esmShim(),
-			],
+			plugins: [esmShim()],
 			transform: {
 				define,
 			},
@@ -139,10 +111,7 @@ export default defineConfig((args) => {
 			],
 			platform: 'node',
 			tsconfig: true,
-			plugins: [
-				esmShim(),
-				(isWatchMode ? backendDevServerPlugin() : undefined),
-			],
+			plugins: [esmShim(), isWatchMode ? backendDevServerPlugin() : undefined],
 			transform: {
 				define,
 			},

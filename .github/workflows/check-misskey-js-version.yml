@@ -2,13 +2,13 @@ name: Check Misskey JS version
 
 on:
   push:
-    branches: [ develop ]
+    branches: [develop]
     paths:
       - packages/misskey-js/package.json
       - package.json
       - .github/workflows/check-misskey-js-version.yml
   pull_request:
-    branches: [ develop ]
+    branches: [develop]
     paths:
       - packages/misskey-js/package.json
       - package.json
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v6.0.2
       - name: Check version
         run: |
           if [ "$(jq -r '.version' package.json)" != "$(jq -r '.version' packages/misskey-js/package.json)" ]; then

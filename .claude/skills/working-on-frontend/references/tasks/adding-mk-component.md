@@ -158,20 +158,17 @@ const emit = defineEmits<{
 ## 検証フロー
 
 ```bash
-# 型チェック (vue-tsc)
-pnpm --filter frontend typecheck
+# 型チェック (vue-tsc-bun)
+bun run --bun --filter frontend typecheck
 
-# ESLint (規約全体)
-pnpm --filter frontend eslint
-
-# 単一ファイルに ESLint --fix
-pnpm exec eslint --fix packages/frontend/src/components/Mk<Name>.vue
+# 全体 lint (oxlint + typecheck)
+bun run lint
 
 # Storybook で目視確認
-pnpm --filter frontend storybook-dev    # localhost:6006
+bun run --bun --filter frontend storybook-dev    # localhost:6006
 
 # Vitest unit test (component spec があれば)
-pnpm --filter frontend test
+bun run --bun --filter frontend test
 ```
 
 ## CHANGELOG エントリ

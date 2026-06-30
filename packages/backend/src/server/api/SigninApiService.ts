@@ -26,6 +26,7 @@ import { UserAuthService } from '@/core/UserAuthService.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
+import { getRequestIp } from '@/server/api/get-request-ip.js';
 import { RateLimiterService } from './RateLimiterService.js';
 import { SigninService } from './SigninService.js';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
@@ -89,6 +90,7 @@ export class SigninApiService {
 		const username = body['username'];
 		const password = body['password'];
 		const token = body['token'];
+		const ip = getRequestIp(request);
 
 		function error(status: number, error: { id: string }) {
 			reply.code(status);
@@ -97,10 +99,10 @@ export class SigninApiService {
 
 		// not more than 1 attempt per second and not more than 10 attempts per hour
 		if (this.config.enableIpRateLimit) {
-			if (process.env.NODE_ENV === 'production' && (request.ip === '::1' || request.ip === '127.0.0.1')) {
+			if (process.env.NODE_ENV === 'production' && (ip === '::1' || ip === '127.0.0.1')) {
 				this.logger.warn('Recieved signin request from localhost IP address for rate limiting in production environment. This is likely due to an improper trustProxy setting in the config file.');
 			}
-			const rateLimit = await this.rateLimiterService.limit({ key: 'signin', duration: 60 * 60 * 1000, max: 10, minInterval: 1000 }, getIpHash(request.ip));
+			const rateLimit = await this.rateLimiterService.limit({ key: 'signin', duration: 60 * 60 * 1000, max: 10, minInterval: 1000 }, getIpHash(ip));
 			if (rateLimit != null) {
 				reply.code(429);
 				return {
@@ -172,7 +174,7 @@ export class SigninApiService {
 			await this.signinsRepository.insert({
 				id: this.idService.gen(),
 				userId: user.id,
-				ip: request.ip,
+				ip,
 				headers: request.headers as any,
 				success: false,
 			});

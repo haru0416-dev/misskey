@@ -25,14 +25,17 @@ function recordLoadedFile(kind, filePath, request) {
 		return;
 	}
 
-	appendFileSync(traceFile, `${JSON.stringify({
-		kind,
-		format: extension === '.node' ? 'native' : 'commonjs',
-		path: filePath,
-		request,
-		size,
-		timestamp: Date.now(),
-	})}\n`);
+	appendFileSync(
+		traceFile,
+		`${JSON.stringify({
+			kind,
+			format: extension === '.node' ? 'native' : 'commonjs',
+			path: filePath,
+			request,
+			size,
+			timestamp: Date.now(),
+		})}\n`,
+	);
 }
 
 const originalLoad = Module._load;

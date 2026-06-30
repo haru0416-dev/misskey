@@ -13,27 +13,15 @@ async function generateBaseTypes(
 	openApiJsonPath: string,
 	typeFileName: string,
 ) {
-	const disabledLints = [
-		'@typescript-eslint/naming-convention',
-		'@typescript-eslint/no-explicit-any',
-	];
-
 	const lines: string[] = [];
-	for (const lint of disabledLints) {
-		lines.push(`/* eslint ${lint}: 0 */`);
-	}
-	lines.push('');
 
 	// NOTE: Align `operationId` of GET and POST to avoid duplication of type definitions
 	const openApi = JSON.parse(await readFile(openApiJsonPath, 'utf8')) as OpenAPI3;
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	for (const [key, item] of Object.entries(openApi.paths!)) {
 		assert('post' in item);
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		openApi.paths![key] = {
 			post: {
 				...item.post,
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 				operationId: ((item as PathItemObject).post as OperationObject).operationId!.replaceAll('post___', ''),
 			},
 		};
@@ -107,7 +95,6 @@ async function generateEndpoints(
 
 	for (const operation of postPathItems) {
 		const path = operation._path_;
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const operationId = operation.operationId!.replaceAll('get___', '').replaceAll('post___', '');
 		const endpoint = new Endpoint(path);
 		endpoints.push(endpoint);
@@ -149,8 +136,6 @@ async function generateEndpoints(
 	}
 
 	const entitiesOutputLine: string[] = [];
-
-	entitiesOutputLine.push('/* eslint @typescript-eslint/naming-convention: 0 */');
 
 	entitiesOutputLine.push(`import { operations } from '${toImportPath(typeFileName)}';`);
 	entitiesOutputLine.push('');
@@ -224,7 +209,6 @@ async function generateApiClientJSDoc(
 		.filter(filterUndefined);
 
 	for (const operation of postPathItems) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const operationId = operation.operationId!.replaceAll('get___', '').replaceAll('post___', '');
 
 		if (operation.description) {

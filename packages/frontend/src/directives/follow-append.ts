@@ -6,16 +6,13 @@
 import type { Directive } from 'vue';
 import { getScrollContainer, getScrollPosition } from '@@/js/scroll.js';
 
-const states = new WeakMap<HTMLElement, {
-	observer: ResizeObserver;
-	abortController: AbortController;
-}>();
+interface HTMLElementWithRO extends HTMLElement {
+	_ro_?: ResizeObserver;
+}
 
 export const followAppendDirective = {
 	mounted(src, binding) {
 		if (binding.value === false) return;
-
-		const abortController = new AbortController();
 
 		let isBottom = true;
 
@@ -25,10 +22,10 @@ export const followAppendDirective = {
 			const viewHeight = container.clientHeight;
 			const height = container.scrollHeight;
 			isBottom = (pos + viewHeight > height - 32);
-		}, { passive: true, signal: abortController.signal });
+		}, { passive: true });
 		container.scrollTop = container.scrollHeight;
 
-		const ro = new ResizeObserver(() => {
+		const ro = new ResizeObserver((entries, observer) => {
 			if (isBottom) {
 				const height = container.scrollHeight;
 				container.scrollTop = height;
@@ -37,18 +34,11 @@ export const followAppendDirective = {
 
 		ro.observe(src);
 
-		states.set(src, {
-			observer: ro,
-			abortController,
-		});
+		// TODO: 新たにプロパティを作るのをやめMapを使う
+		src._ro_ = ro;
 	},
 
-	beforeUnmount(src) {
-		const state = states.get(src);
-		if (!state) return;
-
-		state.observer.disconnect();
-		state.abortController.abort();
-		states.delete(src);
+	unmounted(src) {
+		if (src._ro_) src._ro_.unobserve(src);
 	},
-} as Directive<HTMLElement, boolean>;
+} as Directive<HTMLElementWithRO, boolean>;

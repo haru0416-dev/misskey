@@ -30,7 +30,6 @@ import type {
 	MiMeta,
 	NotesRepository,
 	PagesRepository,
-	ReversiGamesRepository,
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
@@ -39,7 +38,6 @@ import { handleRequestRedirectToOmitSearch } from '@/misc/fastify-hook-handlers.
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import { bindThis } from '@/decorators.js';
 import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
-import { ReversiGameEntityService } from '@/core/entities/ReversiGameEntityService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import { FeedService } from './FeedService.js';
 import { UrlPreviewService } from './UrlPreviewService.js';
@@ -54,7 +52,6 @@ import { ClipPage } from './views/clip.js';
 import { FlashPage } from './views/flash.js';
 import { GalleryPostPage } from './views/gallery-post.js';
 import { ChannelPage } from './views/channel.js';
-import { ReversiGamePage } from './views/reversi-game.js';
 import { AnnouncementPage } from './views/announcement.js';
 import { BaseEmbed } from './views/base-embed.js';
 import { InfoCardPage } from './views/info-card.js';
@@ -108,9 +105,6 @@ export class ClientServerService {
 		@Inject(DI.flashsRepository)
 		private flashsRepository: FlashsRepository,
 
-		@Inject(DI.reversiGamesRepository)
-		private reversiGamesRepository: ReversiGamesRepository,
-
 		@Inject(DI.announcementsRepository)
 		private announcementsRepository: AnnouncementsRepository,
 
@@ -121,7 +115,6 @@ export class ClientServerService {
 		private galleryPostEntityService: GalleryPostEntityService,
 		private clipEntityService: ClipEntityService,
 		private channelEntityService: ChannelEntityService,
-		private reversiGameEntityService: ReversiGameEntityService,
 		private announcementEntityService: AnnouncementEntityService,
 		private urlPreviewService: UrlPreviewService,
 		private feedService: FeedService,
@@ -734,24 +727,6 @@ export class ClientServerService {
 				reply.header('Cache-Control', 'public, max-age=15');
 				return await HtmlTemplateService.replyHtml(reply, ChannelPage({
 					channel: _channel,
-					...(await this.htmlTemplateService.getCommonData()),
-				}));
-			} else {
-				return await renderBase(reply);
-			}
-		});
-
-		// Reversi game
-		fastify.get<{ Params: { game: string; } }>('/reversi/g/:game', async (request, reply) => {
-			const game = await this.reversiGamesRepository.findOneBy({
-				id: request.params.game,
-			});
-
-			if (game) {
-				const _game = await this.reversiGameEntityService.packDetail(game);
-				reply.header('Cache-Control', 'public, max-age=3600');
-				return await HtmlTemplateService.replyHtml(reply, ReversiGamePage({
-					reversiGame: _game,
 					...(await this.htmlTemplateService.getCommonData()),
 				}));
 			} else {

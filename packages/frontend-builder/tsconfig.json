@@ -9,7 +9,6 @@
 		"sourceMap": false,
 		"noEmit": true,
 		"removeComments": true,
-		"skipLibCheck": true,
 		"resolveJsonModule": true,
 		"strict": true,
 		"strictFunctionTypes": true,

@@ -32,7 +32,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 }
 ```
 
-`// eslint-disable-line import/no-default-export` は Endpoint のお約束 (NestJS が default export を要求する一方で、ESLint ルールでは制約されているため)。
+`// eslint-disable-line import/no-default-export` は Endpoint のお約束 (NestJS が default export を要求する一方で、lint ルールでは制約されているため)。
 
 ## 主要 DI トークン
 

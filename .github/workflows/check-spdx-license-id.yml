@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v6.0.2
       - name: Check
         run: |
           counter=0
@@ -44,6 +44,8 @@ jobs:
           }
 
           directories=(
+            "playwright/e2e"
+            "playwright/support"
             "packages/backend/migration"
             "packages/backend/src"
             "packages/backend/test"
@@ -59,8 +61,6 @@ jobs:
             "packages/frontend-embed/@types"
             "packages/frontend-embed/src"
             "packages/icons-subsetter/src"
-            "packages/misskey-bubble-game/src"
-            "packages/misskey-reversi/src"
             "packages/sw/src"
             "scripts"
           )

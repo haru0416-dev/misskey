@@ -544,14 +544,6 @@ export const meta = {
 				type: 'string',
 				optional: false, nullable: true,
 			},
-			urlPreviewSensitiveList: {
-				type: 'array',
-				optional: false, nullable: false,
-				items: {
-					type: 'string',
-					optional: false, nullable: false,
-				},
-			},
 			federation: {
 				type: 'string',
 				enum: ['all', 'specified', 'none'],
@@ -768,7 +760,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				urlPreviewRequireContentLength: instance.urlPreviewRequireContentLength,
 				urlPreviewUserAgent: instance.urlPreviewUserAgent,
 				urlPreviewSummaryProxyUrl: instance.urlPreviewSummaryProxyUrl,
-				urlPreviewSensitiveList: instance.urlPreviewSensitiveList,
 				federation: instance.federation,
 				federationHosts: instance.federationHosts,
 				deliverSuspendedSoftware: instance.deliverSuspendedSoftware,

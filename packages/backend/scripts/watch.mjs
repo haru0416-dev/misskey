@@ -15,13 +15,13 @@ import { execa } from 'execa';
 	*/
 
 	setInterval(() => {
-		execa('tsc-alias', ['-p', 'tsconfig.json'], {
+		execa('bun', ['run', '--bun', 'tsc-alias', '-p', 'tsconfig.json'], {
 			stdout: process.stdout,
 			stderr: process.stderr,
 		});
 	}, 3000);
 
-	execa('tsgo', ['-w', '-p', 'tsconfig.json'], {
+	execa('bun', ['run', '--bun', 'tsgo', '-w', '-p', 'tsconfig.json'], {
 		stdout: process.stdout,
 		stderr: process.stderr,
 	});

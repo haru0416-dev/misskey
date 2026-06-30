@@ -11,7 +11,6 @@ import type {
 	Note,
 	Page,
 	Role,
-	ReversiGameDetailed,
 	SystemWebhook,
 	ChatRoom,
 } from './autogen/models.js';
@@ -246,18 +245,6 @@ export const queueTypes = [
 	'userWebhookDeliver',
 	'systemWebhookDeliver',
 ] as const;
-
-// See: packages/backend/src/core/ReversiService.ts@L410
-export const reversiUpdateKeys = [
-	'map',
-	'bw',
-	'isLlotheo',
-	'canPutEverywhere',
-	'loopedBoard',
-	'timeLimitForEachTurn',
-] as const satisfies (keyof ReversiGameDetailed)[];
-
-export type ReversiUpdateKey = typeof reversiUpdateKeys[number];
 
 type AvatarDecoration = {
 	id: string;

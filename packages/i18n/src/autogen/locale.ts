@@ -5105,10 +5105,6 @@ export interface Locale extends ILocale {
      */
     "enableQuickAddMfmFunction": string;
     /**
-     * バブルゲーム
-     */
-    "bubbleGame": string;
-    /**
      * 効果音
      */
     "sfx": string;
@@ -5116,38 +5112,6 @@ export interface Locale extends ILocale {
      * サウンドが再生されます
      */
     "soundWillBePlayed": string;
-    /**
-     * リプレイを見る
-     */
-    "showReplay": string;
-    /**
-     * リプレイ
-     */
-    "replay": string;
-    /**
-     * リプレイ中
-     */
-    "replaying": string;
-    /**
-     * リプレイを終了
-     */
-    "endReplay": string;
-    /**
-     * リプレイデータをコピー
-     */
-    "copyReplayData": string;
-    /**
-     * ランキング
-     */
-    "ranking": string;
-    /**
-     * 直近{n}日
-     */
-    "lastNDays": ParameterizedString<"n">;
-    /**
-     * タイトルへ
-     */
-    "backToTitle": string;
     /**
      * お住まいの地域
      */
@@ -5168,14 +5132,6 @@ export interface Locale extends ILocale {
      * 読み込み中
      */
     "loading": string;
-    /**
-     * やめる
-     */
-    "surrender": string;
-    /**
-     * リトライ
-     */
-    "gameRetry": string;
     /**
      * 使用しない場合は空欄にしてください
      */
@@ -5691,14 +5647,6 @@ export interface Locale extends ILocale {
      * 先頭に追加
      */
     "prepend": string;
-    /**
-     * サムネイルの表示を制限するURL
-     */
-    "urlPreviewSensitiveList": string;
-    /**
-     * スペースで区切るとAND指定になり、改行で区切るとOR指定になります。スラッシュで囲むと正規表現になります。一致した場合、サムネイルが表示されなくなります。
-     */
-    "urlPreviewSensitiveListDescription": string;
     "_imageEditing": {
         "_vars": {
             /**
@@ -6451,60 +6399,6 @@ export interface Locale extends ILocale {
              * 配信停止中のソフトウェアであるため停止中
              */
             "softwareSuspended": string;
-        };
-    };
-    "_bubbleGame": {
-        /**
-         * 遊び方
-         */
-        "howToPlay": string;
-        /**
-         * ホールド
-         */
-        "hold": string;
-        "_score": {
-            /**
-             * スコア
-             */
-            "score": string;
-            /**
-             * 稼いだ金額
-             */
-            "scoreYen": string;
-            /**
-             * ハイスコア
-             */
-            "highScore": string;
-            /**
-             * 最大チェーン数
-             */
-            "maxChain": string;
-            /**
-             * {yen}円
-             */
-            "yen": ParameterizedString<"yen">;
-            /**
-             * {qty}個分
-             */
-            "estimatedQty": ParameterizedString<"qty">;
-            /**
-             * おにぎり {onigiriQtyWithUnit}
-             */
-            "scoreSweets": ParameterizedString<"onigiriQtyWithUnit">;
-        };
-        "_howToPlay": {
-            /**
-             * 位置を調整してハコにモノを落とします。
-             */
-            "section1": string;
-            /**
-             * 同じ種類のモノがくっつくと別のモノに変化して、スコアが得られます。
-             */
-            "section2": string;
-            /**
-             * モノがハコからあふれるとゲームオーバーです。ハコからあふれないようにしつつモノを融合させてハイスコアを目指そう！
-             */
-            "section3": string;
         };
     };
     "_announcement": {
@@ -7885,20 +7779,6 @@ export interface Locale extends ILocale {
                  */
                 "flavor": string;
             };
-            "_cookieClicked": {
-                /**
-                 * クッキーをクリックするゲーム
-                 */
-                "title": string;
-                /**
-                 * クッキーをクリックした
-                 */
-                "description": string;
-                /**
-                 * ソフト間違ってない？
-                 */
-                "flavor": string;
-            };
             "_brainDiver": {
                 /**
                  * Brain Diver
@@ -7932,30 +7812,6 @@ export interface Locale extends ILocale {
                  * チュートリアルを完了した
                  */
                 "description": string;
-            };
-            "_bubbleGameExplodingHead": {
-                /**
-                 * 🤯
-                 */
-                "title": string;
-                /**
-                 * バブルゲームで最も大きいモノを出した
-                 */
-                "description": string;
-            };
-            "_bubbleGameDoubleExplodingHead": {
-                /**
-                 * ダブル🤯
-                 */
-                "title": string;
-                /**
-                 * バブルゲームで最も大きいモノを2つ同時に出した
-                 */
-                "description": string;
-                /**
-                 * これくらいの　おべんとばこに　🤯　🤯　ちょっとつめて
-                 */
-                "flavor": string;
             };
         };
     };
@@ -9985,10 +9841,6 @@ export interface Locale extends ILocale {
             "chooseList": string;
         };
         /**
-         * クリッカー
-         */
-        "clicker": string;
-        /**
          * もうすぐ誕生日のユーザー
          */
         "birthdayFollowings": string;
@@ -11880,180 +11732,6 @@ export interface Locale extends ILocale {
          * 一部のクライアント設定で、季節を判定するために使用します。
          */
         "caption": string;
-    };
-    "_reversi": {
-        /**
-         * リバーシ
-         */
-        "reversi": string;
-        /**
-         * 対局の設定
-         */
-        "gameSettings": string;
-        /**
-         * ボードを選択
-         */
-        "chooseBoard": string;
-        /**
-         * 先行/後攻
-         */
-        "blackOrWhite": string;
-        /**
-         * {name}が黒(先行)
-         */
-        "blackIs": ParameterizedString<"name">;
-        /**
-         * ルール
-         */
-        "rules": string;
-        /**
-         * 対局はまもなく開始されます
-         */
-        "thisGameIsStartedSoon": string;
-        /**
-         * 相手の準備が完了するのを待っています
-         */
-        "waitingForOther": string;
-        /**
-         * あなたの準備が完了するのを待っています
-         */
-        "waitingForMe": string;
-        /**
-         * 準備してください
-         */
-        "waitingBoth": string;
-        /**
-         * 準備完了
-         */
-        "ready": string;
-        /**
-         * 準備を再開
-         */
-        "cancelReady": string;
-        /**
-         * 相手のターンです
-         */
-        "opponentTurn": string;
-        /**
-         * あなたのターンです
-         */
-        "myTurn": string;
-        /**
-         * {name}のターンです
-         */
-        "turnOf": ParameterizedString<"name">;
-        /**
-         * {name}のターン
-         */
-        "pastTurnOf": ParameterizedString<"name">;
-        /**
-         * 投了
-         */
-        "surrender": string;
-        /**
-         * 投了により
-         */
-        "surrendered": string;
-        /**
-         * 時間切れ
-         */
-        "timeout": string;
-        /**
-         * 引き分け
-         */
-        "drawn": string;
-        /**
-         * {name}の勝ち
-         */
-        "won": ParameterizedString<"name">;
-        /**
-         * 黒
-         */
-        "black": string;
-        /**
-         * 白
-         */
-        "white": string;
-        /**
-         * 合計
-         */
-        "total": string;
-        /**
-         * {count}ターン目
-         */
-        "turnCount": ParameterizedString<"count">;
-        /**
-         * 自分の対局
-         */
-        "myGames": string;
-        /**
-         * みんなの対局
-         */
-        "allGames": string;
-        /**
-         * 終了
-         */
-        "ended": string;
-        /**
-         * 対局中
-         */
-        "playing": string;
-        /**
-         * 石の少ない方が勝ち(ロセオ)
-         */
-        "isLlotheo": string;
-        /**
-         * ループマップ
-         */
-        "loopedMap": string;
-        /**
-         * どこでも置けるモード
-         */
-        "canPutEverywhere": string;
-        /**
-         * 1ターンの時間制限
-         */
-        "timeLimitForEachTurn": string;
-        /**
-         * フリーマッチ
-         */
-        "freeMatch": string;
-        /**
-         * 対戦相手を探しています
-         */
-        "lookingForPlayer": string;
-        /**
-         * 対局がキャンセルされました
-         */
-        "gameCanceled": string;
-        /**
-         * 開始時に対局をタイムラインに投稿
-         */
-        "shareToTlTheGameWhenStart": string;
-        /**
-         * 対局を開始しました！ #MisskeyReversi
-         */
-        "iStartedAGame": string;
-        /**
-         * 相手が設定を変更しました
-         */
-        "opponentHasSettingsChanged": string;
-        /**
-         * 変則許可 (完全フリー)
-         */
-        "allowIrregularRules": string;
-        /**
-         * 変則なし
-         */
-        "disallowIrregularRules": string;
-        /**
-         * 盤面に行・列番号を表示
-         */
-        "showBoardLabels": string;
-        /**
-         * 石をアイコンにする
-         */
-        "useAvatarAsStone": string;
     };
     "_offlineScreen": {
         /**

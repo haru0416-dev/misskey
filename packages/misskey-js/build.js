@@ -23,7 +23,7 @@ const options = {
 };
 
 // built配下をすべて削除する
-const args = process.argv.slice(2).map(arg => arg.toLowerCase());
+const args = process.argv.slice(2).map((arg) => arg.toLowerCase());
 
 // built配下をすべて削除する
 if (!args.includes('--no-clean')) {
@@ -59,12 +59,19 @@ async function buildSrc() {
 
 function buildDts() {
 	return execa(
-		'tsgo',
+		'bun',
 		[
-			'--project', 'tsconfig.json',
-			'--outDir', 'built',
-			'--declaration', 'true',
-			'--emitDeclarationOnly', 'true',
+			'run',
+			'--bun',
+			'tsgo',
+			'--project',
+			'tsconfig.json',
+			'--outDir',
+			'built',
+			'--declaration',
+			'true',
+			'--emitDeclarationOnly',
+			'true',
 		],
 		{
 			stdout: process.stdout,
@@ -74,21 +81,23 @@ function buildDts() {
 }
 
 async function watchSrc() {
-	const plugins = [{
-		name: 'gen-dts',
-		setup(build) {
-			build.onStart(() => {
-				console.log(`[${_package.name}] detect changed...`);
-			});
-			build.onEnd(async result => {
-				if (result.errors.length > 0) {
-					console.error(`[${_package.name}] watch build failed:`, result);
-					return;
-				}
-				await buildDts();
-			});
+	const plugins = [
+		{
+			name: 'gen-dts',
+			setup(build) {
+				build.onStart(() => {
+					console.log(`[${_package.name}] detect changed...`);
+				});
+				build.onEnd(async (result) => {
+					if (result.errors.length > 0) {
+						console.error(`[${_package.name}] watch build failed:`, result);
+						return;
+					}
+					await buildDts();
+				});
+			},
 		},
-	}];
+	];
 
 	console.log(`[${_package.name}] start watching...`);
 

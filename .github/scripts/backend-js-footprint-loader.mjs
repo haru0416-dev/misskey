@@ -30,13 +30,16 @@ function recordLoadedFile(kind, url, format) {
 		return;
 	}
 
-	appendFileSync(traceFile, `${JSON.stringify({
-		kind,
-		format,
-		path: filePath,
-		size,
-		timestamp: Date.now(),
-	})}\n`);
+	appendFileSync(
+		traceFile,
+		`${JSON.stringify({
+			kind,
+			format,
+			path: filePath,
+			size,
+			timestamp: Date.now(),
+		})}\n`,
+	);
 }
 
 export async function load(url, context, nextLoad) {

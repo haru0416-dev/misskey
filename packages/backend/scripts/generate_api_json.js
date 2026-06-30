@@ -8,7 +8,7 @@ import { execa } from 'execa';
 
 async function main() {
 	if (!process.argv.includes('--no-build')) {
-		await execa('pnpm', ['run', 'build'], {
+		await execa('bun', ['run', 'build'], {
 			stdout: process.stdout,
 			stderr: process.stderr,
 		});
@@ -30,7 +30,7 @@ async function main() {
 	writeFileSync('./built/api.json', JSON.stringify(spec), 'utf-8');
 }
 
-main().catch(e => {
+main().catch((e) => {
 	console.error(e);
 	process.exit(1);
 });

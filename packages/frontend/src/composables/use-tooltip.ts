@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { ref, watch, onBeforeUnmount } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
 
 export function useTooltip(
@@ -100,15 +100,7 @@ export function useTooltip(
 		flush: 'post',
 	});
 
-	onBeforeUnmount(() => {
+	onUnmounted(() => {
 		close();
-		if (elRef.value) {
-			const el = elRef.value instanceof Element ? elRef.value : elRef.value.$el;
-			el.removeEventListener('mouseover', onMouseover);
-			el.removeEventListener('mouseleave', onMouseleave);
-			el.removeEventListener('touchstart', onTouchstart);
-			el.removeEventListener('touchend', onTouchend);
-			el.removeEventListener('click', close);
-		}
 	});
 }
