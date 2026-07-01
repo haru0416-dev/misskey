@@ -51,7 +51,6 @@ import {
 	miRepository,
 	MiRole,
 	MiRoleAssignment,
-	MiSwSubscription,
 	MiSystemWebhook,
 	MiUser,
 	MiUserIp,
@@ -229,12 +228,6 @@ const $renoteMutingsRepository: Provider = {
 const $blockingsRepository: Provider = {
 	provide: DI.blockingsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiBlocking).extend(miRepository as MiRepository<MiBlocking>),
-	inject: [DI.db],
-};
-
-const $swSubscriptionsRepository: Provider = {
-	provide: DI.swSubscriptionsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiSwSubscription).extend(miRepository as MiRepository<MiSwSubscription>),
 	inject: [DI.db],
 };
 
@@ -448,7 +441,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$mutingsRepository,
 		$renoteMutingsRepository,
 		$blockingsRepository,
-		$swSubscriptionsRepository,
 		$hashtagsRepository,
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,
@@ -508,7 +500,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$mutingsRepository,
 		$renoteMutingsRepository,
 		$blockingsRepository,
-		$swSubscriptionsRepository,
 		$hashtagsRepository,
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,
