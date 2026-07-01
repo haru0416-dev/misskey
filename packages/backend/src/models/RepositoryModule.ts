@@ -14,7 +14,6 @@ import {
 	MiAnnouncementRead,
 	MiAntenna,
 	MiApp,
-	MiAuthSession,
 	MiBlocking,
 	MiChannel,
 	MiClip,
@@ -219,12 +218,6 @@ const $registrationTicketsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $authSessionsRepository: Provider = {
-	provide: DI.authSessionsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiAuthSession).extend(miRepository as MiRepository<MiAuthSession>),
-	inject: [DI.db],
-};
-
 const $accessTokensRepository: Provider = {
 	provide: DI.accessTokensRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiAccessToken).extend(miRepository as MiRepository<MiAccessToken>),
@@ -357,7 +350,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,
 		$registrationTicketsRepository,
-		$authSessionsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
@@ -404,7 +396,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,
 		$registrationTicketsRepository,
-		$authSessionsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,

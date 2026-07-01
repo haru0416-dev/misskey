@@ -43,7 +43,6 @@ export const DI = {
 	abuseUserReportsRepository: Symbol('abuseUserReportsRepository'),
 	abuseReportNotificationRecipientRepository: Symbol('abuseReportNotificationRecipientRepository'),
 	registrationTicketsRepository: Symbol('registrationTicketsRepository'),
-	authSessionsRepository: Symbol('authSessionsRepository'),
 	accessTokensRepository: Symbol('accessTokensRepository'),
 	pagesRepository: Symbol('pagesRepository'),
 	galleryPostsRepository: Symbol('galleryPostsRepository'),

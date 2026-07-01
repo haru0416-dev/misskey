@@ -6,10 +6,12 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AppsRepository, AuthSessionsRepository } from '@/models/_.js';
+import type { AppsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
+import { createAuthSessionInDatabase } from '@/core/AuthSessionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -59,8 +61,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.appsRepository)
 		private appsRepository: AppsRepository,
 
-		@Inject(DI.authSessionsRepository)
-		private authSessionsRepository: AuthSessionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -78,7 +80,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const token = randomUUID();
 
 			// Create session token document
-			const doc = await this.authSessionsRepository.insertOne({
+			const doc = await createAuthSessionInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				appId: app.id,
 				token: token,

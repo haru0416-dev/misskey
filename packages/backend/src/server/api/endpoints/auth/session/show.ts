@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AuthSessionsRepository } from '@/models/_.js';
 import { AuthSessionEntityService } from '@/core/entities/AuthSessionEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchAuthSessionByTokenFromDatabase } from '@/core/AuthSessionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -56,16 +57,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.authSessionsRepository)
-		private authSessionsRepository: AuthSessionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private authSessionEntityService: AuthSessionEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Lookup session
-			const session = await this.authSessionsRepository.findOneBy({
-				token: ps.token,
-			});
+			const session = await fetchAuthSessionByTokenFromDatabase(this.drizzle, ps.token);
 
 			if (session == null) {
 				throw new ApiError(meta.errors.noSuchSession);

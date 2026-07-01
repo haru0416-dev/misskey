@@ -6,10 +6,12 @@
 import * as crypto from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AuthSessionsRepository, AppsRepository, AccessTokensRepository } from '@/models/_.js';
+import type { AppsRepository, AccessTokensRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { DI } from '@/di-symbols.js';
+import { fetchAuthSessionByTokenFromDatabase, updateAuthSessionUserIdInDatabase } from '@/core/AuthSessionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -42,8 +44,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.appsRepository)
 		private appsRepository: AppsRepository,
 
-		@Inject(DI.authSessionsRepository)
-		private authSessionsRepository: AuthSessionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		@Inject(DI.accessTokensRepository)
 		private accessTokensRepository: AccessTokensRepository,
@@ -52,8 +54,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Fetch token
-			const session = await this.authSessionsRepository
-				.findOneBy({ token: ps.token });
+			const session = await fetchAuthSessionByTokenFromDatabase(this.drizzle, ps.token);
 
 			if (session == null) {
 				throw new ApiError(meta.errors.noSuchSession);
@@ -90,9 +91,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// Update session
-			await this.authSessionsRepository.update(session.id, {
-				userId: me.id,
-			});
+			await updateAuthSessionUserIdInDatabase(this.drizzle, session.id, me.id);
 		});
 	}
 }

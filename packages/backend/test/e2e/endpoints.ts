@@ -100,6 +100,72 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('auth/session', () => {
+		test('legacy auth session flow', async () => {
+			const app = await api('app/create', {
+				name: 'legacy auth test',
+				description: 'legacy auth test',
+				permission: ['read:account'],
+				callbackUrl: null,
+			});
+			assert.strictEqual(app.status, 200);
+			const appSecret = app.body.secret;
+			if (typeof appSecret !== 'string') {
+				assert.fail('app secret is missing');
+			}
+
+			const generated = await api('auth/session/generate', {
+				appSecret,
+			});
+			assert.strictEqual(generated.status, 200);
+			const sessionToken = generated.body.token;
+			assert.strictEqual(typeof sessionToken, 'string');
+			assert.ok(generated.body.url.endsWith(`/auth/${sessionToken}`));
+
+			const shown = await api('auth/session/show', {
+				token: sessionToken,
+			});
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.token, sessionToken);
+			assert.strictEqual(shown.body.app.id, app.body.id);
+
+			const pending = await api('auth/session/userkey', {
+				appSecret,
+				token: sessionToken,
+			});
+			assert.strictEqual(pending.status, 400);
+			assert.strictEqual(castAsError(pending.body as any).error.code, 'PENDING_SESSION');
+
+			const accepted = await api('auth/accept', {
+				token: sessionToken,
+			}, alice);
+			assert.strictEqual(accepted.status, 204);
+
+			const userkey = await api('auth/session/userkey', {
+				appSecret,
+				token: sessionToken,
+			});
+			assert.strictEqual(userkey.status, 200);
+			const accessToken = userkey.body.accessToken;
+			if (typeof accessToken !== 'string') {
+				assert.fail('access token is missing');
+			}
+			assert.strictEqual(userkey.body.user.id, alice.id);
+
+			const credential = await api('i', {}, {
+				token: accessToken,
+			});
+			assert.strictEqual(credential.status, 200);
+			assert.strictEqual(credential.body.id, alice.id);
+
+			const deleted = await api('auth/session/show', {
+				token: sessionToken,
+			});
+			assert.strictEqual(deleted.status, 400);
+			assert.strictEqual(castAsError(deleted.body as any).error.code, 'NO_SUCH_SESSION');
+		});
+	});
+
 	describe('i/update', () => {
 		test('アカウント設定を更新できる', async () => {
 			const myName = '大室櫻子';
