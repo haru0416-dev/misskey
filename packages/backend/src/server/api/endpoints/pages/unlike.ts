@@ -4,10 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { PagesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { deletePageLikeByIdFromDatabase, fetchPageLikeFromDatabase } from '@/core/PageLikeStore.js';
+import { decrementPageLikedCountInDatabase, fetchPageByIdFromDatabase } from '@/core/PageStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
@@ -46,14 +46,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const page = await this.pagesRepository.findOneBy({ id: ps.pageId });
+			const page = await fetchPageByIdFromDatabase(this.drizzle, ps.pageId);
 			if (page == null) {
 				throw new ApiError(meta.errors.noSuchPage);
 			}
@@ -67,7 +64,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Delete like
 			await deletePageLikeByIdFromDatabase(this.drizzle, exist.id);
 
-			this.pagesRepository.decrement({ id: page.id }, 'likedCount', 1);
+			decrementPageLikedCountInDatabase(this.drizzle, page.id);
 		});
 	}
 }

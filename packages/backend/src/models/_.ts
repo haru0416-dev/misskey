@@ -83,7 +83,6 @@ export type FollowingsRepository = Repository<MiFollowing> & MiRepository<MiFoll
 export type InstancesRepository = Repository<MiInstance> & MiRepository<MiInstance>;
 export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
 export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
-export type PagesRepository = Repository<MiPage> & MiRepository<MiPage>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;

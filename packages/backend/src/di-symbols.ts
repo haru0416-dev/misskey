@@ -27,7 +27,6 @@ export const DI = {
 	driveFilesRepository: Symbol('driveFilesRepository'),
 	mutingsRepository: Symbol('mutingsRepository'),
 	blockingsRepository: Symbol('blockingsRepository'),
-	pagesRepository: Symbol('pagesRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	rolesRepository: Symbol('rolesRepository'),
 	//#endregion

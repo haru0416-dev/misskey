@@ -4,13 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { PagesRepository } from '@/models/_.js';
 import { PageLikeEntityService } from '@/core/entities/PageLikeEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { listPageLikesByUserIdFromDatabase } from '@/core/PageLikeStore.js';
+import { listPagesByIdsFromDatabase } from '@/core/PageStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
@@ -56,9 +55,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -100,7 +96,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			const pageIds = likes.map(like => like.pageId);
-			const pageById = await this.pagesRepository.findBy({ id: In(pageIds) })
+			const pageById = await listPagesByIdsFromDatabase(this.drizzle, pageIds)
 				.then(pages => new Map(pages.map(page => [page.id, page])));
 			const likesWithPages = likes.map(like => ({
 				...like,

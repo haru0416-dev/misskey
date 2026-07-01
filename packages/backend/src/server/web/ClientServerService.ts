@@ -25,7 +25,6 @@ import type {
 	ChannelsRepository,
 	MiMeta,
 	NotesRepository,
-	PagesRepository,
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
@@ -39,6 +38,7 @@ import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStor
 import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
 import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
+import { fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
 import { UrlPreviewService } from './UrlPreviewService.js';
@@ -93,9 +93,6 @@ export class ClientServerService {
 
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
-
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -608,10 +605,7 @@ export class ClientServerService {
 
 			if (user == null) return;
 
-			const page = await this.pagesRepository.findOneBy({
-				name: request.params.page,
-				userId: user.id,
-			});
+			const page = await fetchPageByNameAndUserIdFromDatabase(this.drizzle, request.params.page, user.id);
 
 			if (page) {
 				const _page = await this.pageEntityService.pack(page);

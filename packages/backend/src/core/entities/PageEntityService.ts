@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, PagesRepository } from '@/models/_.js';
+import type { DriveFilesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -15,6 +15,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
+import { fetchPageByIdOrFailFromDatabase, updatePageContentInDatabase } from '@/core/PageStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
@@ -22,9 +23,6 @@ import { DriveFileEntityService } from './DriveFileEntityService.js';
 @Injectable()
 export class PageEntityService {
 	constructor(
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -46,7 +44,7 @@ export class PageEntityService {
 		},
 	): Promise<Packed<'Page'>> {
 		const meId = me ? me.id : null;
-		const page = typeof src === 'object' ? src : await this.pagesRepository.findOneByOrFail({ id: src });
+		const page = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(this.drizzle, src);
 
 		const attachedFiles: Promise<MiDriveFile | null>[] = [];
 		const collectFile = (xs: any[]) => {
@@ -85,9 +83,7 @@ export class PageEntityService {
 		};
 		migrate(page.content);
 		if (migrated) {
-			this.pagesRepository.update(page.id, {
-				content: page.content,
-			});
+			updatePageContentInDatabase(this.drizzle, page.id, page.content);
 		}
 
 		return await awaitAll({

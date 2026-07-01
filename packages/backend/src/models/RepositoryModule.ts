@@ -13,7 +13,6 @@ import {
 	MiInstance,
 	MiMuting,
 	MiNote,
-	MiPage,
 	MiRepository,
 	miRepository,
 	MiRole,
@@ -85,12 +84,6 @@ const $blockingsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $pagesRepository: Provider = {
-	provide: DI.pagesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiPage).extend(miRepository as MiRepository<MiPage>),
-	inject: [DI.db],
-};
-
 const $channelsRepository: Provider = {
 	provide: DI.channelsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiChannel).extend(miRepository as MiRepository<MiChannel>),
@@ -116,7 +109,6 @@ const $rolesRepository: Provider = {
 		$driveFilesRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$pagesRepository,
 		$channelsRepository,
 		$rolesRepository,
 	],
@@ -131,7 +123,6 @@ const $rolesRepository: Provider = {
 		$driveFilesRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$pagesRepository,
 		$channelsRepository,
 		$rolesRepository,
 	],

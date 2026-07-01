@@ -6,7 +6,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MoreThan } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, NotesRepository, PagesRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { DriveFilesRepository, NotesRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -15,6 +15,8 @@ import { EmailService } from '@/core/EmailService.js';
 import { bindThis } from '@/decorators.js';
 import { SearchService } from '@/core/SearchService.js';
 import { PageService } from '@/core/PageService.js';
+import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/PageStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 import type { DbUserDeleteJobData } from '../types.js';
@@ -36,8 +38,8 @@ export class DeleteAccountProcessorService {
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private pageService: PageService,
@@ -120,14 +122,9 @@ export class DeleteAccountProcessorService {
 		{
 			// delete pages. Necessary for decrementing pageCount of notes.
 			while (true) {
-				const pages = await this.pagesRepository.find({
-					where: {
-						userId: user.id,
-					},
-					take: 100,
-					order: {
-						id: 1,
-					},
+				const pages = await listPagesByUserIdWithPaginationFromDatabase(this.drizzle, user.id, {
+					limit: 100,
+					order: 'asc',
 				});
 
 				if (pages.length === 0) {
