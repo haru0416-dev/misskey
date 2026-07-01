@@ -7,11 +7,11 @@ import { Global, Inject, Module } from '@nestjs/common';
 import * as Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { Meilisearch } from 'meilisearch';
-import { MiMeta } from '@/models/Meta.js';
+import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { DI } from './di-symbols.js';
 import { Config, loadConfig } from './config.js';
 import { createDrizzleDatabase, createDrizzlePool } from './drizzle.js';
-import type { MiDrizzlePool } from './drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from './drizzle.js';
 import { createPostgresDataSource } from './postgres.js';
 import { RepositoryModule } from './models/RepositoryModule.js';
 import { allSettled } from './misc/promise-tracker.js';
@@ -117,34 +117,8 @@ const $redisForReactions: Provider = {
 
 const $meta: Provider = {
 	provide: DI.meta,
-	useFactory: async (db: DataSource, redisForSub: Redis.Redis) => {
-		const meta = await db.transaction(async transactionalEntityManager => {
-			// 過去のバグでレコードが複数出来てしまっている可能性があるので新しいIDを優先する
-			const metas = await transactionalEntityManager.find(MiMeta, {
-				order: {
-					id: 'DESC',
-				},
-			});
-
-			const meta = metas[0];
-
-			if (meta) {
-				return meta;
-			} else {
-				// metaが空のときfetchMetaが同時に呼ばれるとここが同時に呼ばれてしまうことがあるのでフェイルセーフなupsertを使う
-				const saved = await transactionalEntityManager
-					.upsert(
-						MiMeta,
-						{
-							id: 'x',
-						},
-						['id'],
-					)
-					.then((x) => transactionalEntityManager.findOneByOrFail(MiMeta, x.identifiers[0]));
-
-				return saved;
-			}
-		});
+	useFactory: async (db: MiDrizzleDatabase, redisForSub: Redis.Redis) => {
+		const meta = await fetchMetaFromDatabase(db);
 
 		async function onMessage(_: string, data: string): Promise<void> {
 			const obj = JSON.parse(data);
@@ -169,7 +143,7 @@ const $meta: Provider = {
 
 		return meta;
 	},
-	inject: [DI.db, DI.redisForSub],
+	inject: [DI.drizzle, DI.redisForSub],
 };
 
 @Global()
