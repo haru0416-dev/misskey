@@ -4,10 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelFavoritesRepository } from '@/models/_.js';
+import type { ChannelsRepository } from '@/models/_.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchFavoriteChannelIdsFromDatabase } from '@/core/ChannelFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiChannel } from '@/models/Channel.js';
 
 export const meta = {
 	tags: ['channels', 'account'],
@@ -37,20 +41,28 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelFavoritesRepository)
-		private channelFavoritesRepository: ChannelFavoritesRepository,
+		@Inject(DI.channelsRepository)
+		private channelsRepository: ChannelsRepository,
+
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private channelEntityService: ChannelEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.channelFavoritesRepository.createQueryBuilder('favorite')
-				.andWhere('favorite.userId = :meId', { meId: me.id })
-				.leftJoinAndSelect('favorite.channel', 'channel');
+			const channelIds = await fetchFavoriteChannelIdsFromDatabase(this.drizzle, me.id);
+			if (channelIds.length === 0) {
+				return [];
+			}
 
-			const favorites = await query
-				.getMany();
+			const channelById = await this.channelsRepository.findBy({ id: In(channelIds) })
+				.then(channels => new Map(channels.map(channel => [channel.id, channel])));
 
-			return await Promise.all(favorites.map(x => this.channelEntityService.pack(x.channel!, me)));
+			const channels = channelIds
+				.map(id => channelById.get(id))
+				.filter((channel): channel is MiChannel => channel != null);
+
+			return await Promise.all(channels.map(channel => this.channelEntityService.pack(channel, me)));
 		});
 	}
 }

@@ -5,8 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelFavoritesRepository, ChannelsRepository } from '@/models/_.js';
+import type { ChannelsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { deleteChannelFavoriteFromDatabase } from '@/core/ChannelFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -41,8 +43,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
 
-		@Inject(DI.channelFavoritesRepository)
-		private channelFavoritesRepository: ChannelFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const channel = await this.channelsRepository.findOneBy({
@@ -53,10 +55,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.noSuchChannel);
 			}
 
-			await this.channelFavoritesRepository.delete({
-				userId: me.id,
-				channelId: channel.id,
-			});
+			await deleteChannelFavoriteFromDatabase(this.drizzle, me.id, channel.id);
 		});
 	}
 }

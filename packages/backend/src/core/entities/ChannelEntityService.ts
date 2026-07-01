@@ -7,7 +7,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type {
-	ChannelFavoritesRepository,
 	ChannelFollowingsRepository, ChannelMutingRepository,
 	ChannelsRepository,
 	DriveFilesRepository,
@@ -20,6 +19,8 @@ import type { MiUser } from '@/models/User.js';
 import type { MiChannel } from '@/models/Channel.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { channelFavoriteExistsInDatabase, fetchFavoritedChannelIdsInDatabase } from '@/core/ChannelFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
 import { NoteEntityService } from './NoteEntityService.js';
 
@@ -30,8 +31,8 @@ export class ChannelEntityService {
 		private channelsRepository: ChannelsRepository,
 		@Inject(DI.channelFollowingsRepository)
 		private channelFollowingsRepository: ChannelFollowingsRepository,
-		@Inject(DI.channelFavoritesRepository)
-		private channelFavoritesRepository: ChannelFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 		@Inject(DI.channelMutingRepository)
 		private channelMutingRepository: ChannelMutingRepository,
 		@Inject(DI.notesRepository)
@@ -76,12 +77,7 @@ export class ChannelEntityService {
 				},
 			});
 
-			isFavorited = opts?.favorites?.has(channel.id) ?? await this.channelFavoritesRepository.exists({
-				where: {
-					userId: me.id,
-					channelId: channel.id,
-				},
-			});
+			isFavorited = opts?.favorites?.has(channel.id) ?? await channelFavoriteExistsInDatabase(this.drizzle, me.id, channel.id);
 
 			isMuting = opts?.muting?.has(channel.id) ?? await this.channelMutingRepository.exists({
 				where: {
@@ -166,12 +162,7 @@ export class ChannelEntityService {
 			: new Set<MiChannel['id']>();
 
 		const favorites = me
-			? await this.channelFavoritesRepository
-				.findBy({
-					userId: me.id,
-					channelId: In(channels.map(it => it.id)),
-				})
-				.then(it => new Set(it.map(it => it.channelId)))
+			? await fetchFavoritedChannelIdsInDatabase(this.drizzle, me.id, channels.map(it => it.id))
 			: new Set<MiChannel['id']>();
 
 		const muting = me
@@ -200,4 +191,3 @@ export class ChannelEntityService {
 		})));
 	}
 }
-
