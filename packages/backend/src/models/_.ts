@@ -116,4 +116,3 @@ export type WebhooksRepository = Repository<MiWebhook> & MiRepository<MiWebhook>
 export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>;
 export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;
 export type FlashsRepository = Repository<MiFlash> & MiRepository<MiFlash>;
-export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<MiChatMessage>;

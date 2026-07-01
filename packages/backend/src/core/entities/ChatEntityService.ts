@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { MiUser, ChatMessagesRepository, MiChatMessage } from '@/models/_.js';
+import type { MiUser, MiChatMessage } from '@/models/_.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
 import type { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
@@ -24,6 +24,7 @@ import {
 	listChatRoomInvitationsByRoomIdsAndUserIdFromDatabase,
 	listChatRoomMembershipsByRoomIdsAndUserIdFromDatabase,
 } from '@/core/ChatRoomStore.js';
+import { fetchChatMessageByIdOrFailFromDatabase } from '@/core/ChatMessageStore.js';
 import type { ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
 import type { ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -43,9 +44,6 @@ type ChatRoomMembershipPackable = ChatRoomMembershipRow & {
 @Injectable()
 export class ChatEntityService {
 	constructor(
-		@Inject(DI.chatMessagesRepository)
-		private chatMessagesRepository: ChatMessagesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -71,7 +69,7 @@ export class ChatEntityService {
 		const packedFiles = options?._hint_?.packedFiles;
 		const packedRooms = options?._hint_?.packedRooms;
 
-		const message = typeof src === 'object' ? src : await this.chatMessagesRepository.findOneByOrFail({ id: src });
+		const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(this.db, src);
 
 		// userは削除されている可能性があるのでnull許容
 		const reactions: { user: Packed<'UserLite'> | null; reaction: string; }[] = [];
@@ -152,7 +150,7 @@ export class ChatEntityService {
 	): Promise<Packed<'ChatMessageLiteFor1on1'>> {
 		const packedFiles = options?._hint_?.packedFiles;
 
-		const message = typeof src === 'object' ? src : await this.chatMessagesRepository.findOneByOrFail({ id: src });
+		const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(this.db, src);
 
 		const reactions: { reaction: string; }[] = [];
 
@@ -202,7 +200,7 @@ export class ChatEntityService {
 		const packedFiles = options?._hint_?.packedFiles;
 		const packedUsers = options?._hint_?.packedUsers;
 
-		const message = typeof src === 'object' ? src : await this.chatMessagesRepository.findOneByOrFail({ id: src });
+		const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(this.db, src);
 
 		// userは削除されている可能性があるのでnull許容
 		const reactions: { user: Packed<'UserLite'> | null; reaction: string; }[] = [];
