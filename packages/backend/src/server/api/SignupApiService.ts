@@ -7,7 +7,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { RegistrationTicketsRepository, UsedUsernamesRepository, UserPendingsRepository, UserProfilesRepository, UsersRepository, MiRegistrationTicket, MiMeta } from '@/models/_.js';
+import { isUsedUsername } from '@/core/UsedUsernameStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { RegistrationTicketsRepository, UserPendingsRepository, UserProfilesRepository, UsersRepository, MiRegistrationTicket, MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { IdService } from '@/core/IdService.js';
@@ -39,8 +41,8 @@ export class SignupApiService {
 		@Inject(DI.userPendingsRepository)
 		private userPendingsRepository: UserPendingsRepository,
 
-		@Inject(DI.usedUsernamesRepository)
-		private usedUsernamesRepository: UsedUsernamesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		@Inject(DI.registrationTicketsRepository)
 		private registrationTicketsRepository: RegistrationTicketsRepository,
@@ -175,7 +177,7 @@ export class SignupApiService {
 			}
 
 			// Check deleted username duplication
-			if (await this.usedUsernamesRepository.exists({ where: { username: username.toLowerCase() } })) {
+			if (await isUsedUsername(this.drizzle, username)) {
 				throw new FastifyReplyError(400, 'USED_USERNAME');
 			}
 

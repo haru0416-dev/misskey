@@ -8,7 +8,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { DataSource, IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { MiMeta, UsedUsernamesRepository, UsersRepository } from '@/models/_.js';
+import { isUsedUsername } from '@/core/UsedUsernameStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiMeta, UsersRepository } from '@/models/_.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserProfile } from '@/models/UserProfile.js';
 import { IdService } from '@/core/IdService.js';
@@ -35,8 +37,8 @@ export class SignupService {
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
-		@Inject(DI.usedUsernamesRepository)
-		private usedUsernamesRepository: UsedUsernamesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private userService: UserService,
@@ -84,7 +86,7 @@ export class SignupService {
 		}
 
 		// Check deleted username duplication
-		if (await this.usedUsernamesRepository.exists({ where: { username: username.toLowerCase() } })) {
+		if (await isUsedUsername(this.drizzle, username)) {
 			throw new Error('USED_USERNAME');
 		}
 
