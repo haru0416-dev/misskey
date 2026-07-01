@@ -6,12 +6,12 @@
 import * as crypto from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AccessTokensRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { DI } from '@/di-symbols.js';
 import { fetchAuthSessionByTokenFromDatabase, updateAuthSessionUserIdInDatabase } from '@/core/AuthSessionStore.js';
 import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
+import { createAccessTokenInDatabase, existsAccessTokenByAppIdAndUserIdFromDatabase } from '@/core/AccessTokenStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
@@ -45,9 +45,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
-
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -61,12 +58,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const accessToken = secureRndstr(32);
 
 			// Fetch exist access token
-			const exist = await this.accessTokensRepository.exists({
-				where: {
-					appId: session.appId,
-					userId: me.id,
-				},
-			});
+			const exist = await existsAccessTokenByAppIdAndUserIdFromDatabase(this.drizzle, session.appId, me.id);
 
 			if (!exist) {
 				const app = await fetchAppByIdOrFailFromDatabase(this.drizzle, session.appId);
@@ -78,7 +70,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 				const now = new Date();
 
-				await this.accessTokensRepository.insert({
+				await createAccessTokenInDatabase(this.drizzle, {
 					id: this.idService.gen(now.getTime()),
 					lastUsedAt: now,
 					appId: session.appId,

@@ -5,11 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AccessTokensRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { deleteAuthSessionByIdFromDatabase, fetchAuthSessionByTokenAndAppIdFromDatabase } from '@/core/AuthSessionStore.js';
 import { fetchAppBySecretFromDatabase } from '@/core/AppStore.js';
+import { fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase } from '@/core/AccessTokenStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
@@ -71,9 +71,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
-
 		private userEntityService: UserEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -96,10 +93,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// Lookup access token
-			const accessToken = await this.accessTokensRepository.findOneByOrFail({
-				appId: app.id,
-				userId: session.userId,
-			});
+			const accessToken = await fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase(this.drizzle, app.id, session.userId);
 
 			// Delete session
 			await deleteAuthSessionByIdFromDatabase(this.drizzle, session.id);

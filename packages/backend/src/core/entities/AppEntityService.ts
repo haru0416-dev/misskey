@@ -5,11 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { AccessTokensRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { AppRow } from '@/db/schema/app.js';
 import type { MiUser } from '@/models/User.js';
 import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
+import { existsAccessTokenByAppIdAndUserIdFromDatabase } from '@/core/AccessTokenStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 
@@ -18,9 +18,6 @@ export class AppEntityService {
 	constructor(
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
 	) {
 	}
 
@@ -49,10 +46,7 @@ export class AppEntityService {
 			permission: app.permission,
 			...(opts.includeSecret ? { secret: app.secret } : {}),
 			...(me ? {
-				isAuthorized: await this.accessTokensRepository.countBy({
-					appId: app.id,
-					userId: me.id,
-				}).then(count => count > 0),
+				isAuthorized: await existsAccessTokenByAppIdAndUserIdFromDatabase(this.db, app.id, me.id),
 			} : {}),
 		};
 	}

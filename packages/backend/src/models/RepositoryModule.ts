@@ -6,7 +6,6 @@
 import { Module } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import {
-	MiAccessToken,
 	MiAntenna,
 	MiBlocking,
 	MiChannel,
@@ -118,12 +117,6 @@ const $blockingsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $accessTokensRepository: Provider = {
-	provide: DI.accessTokensRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiAccessToken).extend(miRepository as MiRepository<MiAccessToken>),
-	inject: [DI.db],
-};
-
 const $pagesRepository: Provider = {
 	provide: DI.pagesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiPage).extend(miRepository as MiRepository<MiPage>),
@@ -183,7 +176,6 @@ const $rolesRepository: Provider = {
 		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
 		$clipsRepository,
@@ -207,7 +199,6 @@ const $rolesRepository: Provider = {
 		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
 		$clipsRepository,

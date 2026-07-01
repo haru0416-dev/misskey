@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AccessTokensRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { DI } from '@/di-symbols.js';
+import { createAccessTokenInDatabase } from '@/core/AccessTokenStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['auth'],
@@ -47,8 +48,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private notificationService: NotificationService,
@@ -60,7 +61,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const now = new Date();
 
 			// Insert access token doc
-			await this.accessTokensRepository.insert({
+			await createAccessTokenInDatabase(this.db, {
 				id: this.idService.gen(now.getTime()),
 				lastUsedAt: now,
 				session: ps.session,

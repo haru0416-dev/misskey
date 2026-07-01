@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { app, type AppInsert, type AppRow } from '@/db/schema/app.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
@@ -45,6 +45,22 @@ export async function fetchAppBySecretFromDatabase(
 		.limit(1);
 
 	return row ?? null;
+}
+
+/**
+ * i/apps.ts の一覧向け。トークンごとに個別クエリを飛ばして N+1 にならないよう、
+ * 対象の appId 群をまとめて1クエリで取得する。
+ */
+export async function listAppsByIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: AppRow['id'][],
+): Promise<AppRow[]> {
+	if (ids.length === 0) return [];
+
+	return await db
+		.select()
+		.from(app)
+		.where(inArray(app.id, ids));
 }
 
 export async function listAppsByUserIdFromDatabase(

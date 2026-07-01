@@ -9,9 +9,11 @@ import multipart from '@fastify/multipart';
 import { ModuleRef } from '@nestjs/core';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import type { Config } from '@/config.js';
-import type { InstancesRepository, AccessTokensRepository } from '@/models/_.js';
+import type { InstancesRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { fetchAccessTokenBySessionFromDatabase, markAccessTokenFetchedInDatabase } from '@/core/AccessTokenStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import endpoints from './endpoints.js';
 import { ApiCallService } from './ApiCallService.js';
@@ -31,8 +33,8 @@ export class ApiServerService {
 		@Inject(DI.instancesRepository)
 		private instancesRepository: InstancesRepository,
 
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private apiCallService: ApiCallService,
@@ -155,14 +157,10 @@ export class ApiServerService {
 		});
 
 		fastify.post<{ Params: { session: string; } }>('/miauth/:session/check', async (request, reply) => {
-			const token = await this.accessTokensRepository.findOneBy({
-				session: request.params.session,
-			});
+			const token = await fetchAccessTokenBySessionFromDatabase(this.db, request.params.session);
 
 			if (token && token.session != null && !token.fetched) {
-				this.accessTokensRepository.update(token.id, {
-					fetched: true,
-				});
+				markAccessTokenFetchedInDatabase(this.db, token.id);
 
 				return {
 					ok: true,

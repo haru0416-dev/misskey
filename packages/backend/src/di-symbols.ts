@@ -31,7 +31,6 @@ export const DI = {
 	driveFoldersRepository: Symbol('driveFoldersRepository'),
 	mutingsRepository: Symbol('mutingsRepository'),
 	blockingsRepository: Symbol('blockingsRepository'),
-	accessTokensRepository: Symbol('accessTokensRepository'),
 	pagesRepository: Symbol('pagesRepository'),
 	galleryPostsRepository: Symbol('galleryPostsRepository'),
 	clipsRepository: Symbol('clipsRepository'),

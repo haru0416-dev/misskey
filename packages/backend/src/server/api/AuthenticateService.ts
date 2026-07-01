@@ -5,12 +5,14 @@
 
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { AccessTokensRepository, UsersRepository } from '@/models/_.js';
+import type { UsersRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import type { AppRow } from '@/db/schema/app.js';
 import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
+import { deserializeAccessToken } from '@/db/schema/access-token.js';
+import { fetchAccessTokenByHashOrTokenFromDatabase, updateAccessTokenLastUsedAtInDatabase } from '@/core/AccessTokenStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { CacheService } from '@/core/CacheService.js';
 import { isNativeUserToken } from '@/misc/token.js';
@@ -30,9 +32,6 @@ export class AuthenticateService implements OnApplicationShutdown {
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
-
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -58,21 +57,13 @@ export class AuthenticateService implements OnApplicationShutdown {
 
 			return [user, null];
 		} else {
-			const accessToken = await this.accessTokensRepository.findOne({
-				where: [{
-					hash: token.toLowerCase(), // app
-				}, {
-					token: token, // miauth
-				}],
-			});
+			const accessToken = await fetchAccessTokenByHashOrTokenFromDatabase(this.db, token.toLowerCase(), token);
 
 			if (accessToken == null) {
 				throw new AuthenticationError('invalid signature');
 			}
 
-			this.accessTokensRepository.update(accessToken.id, {
-				lastUsedAt: new Date(),
-			});
+			updateAccessTokenLastUsedAtInDatabase(this.db, accessToken.id, new Date());
 
 			const user = await this.cacheService.localUserByIdCache.fetch(accessToken.userId,
 				() => this.usersRepository.findOneBy({
@@ -88,7 +79,7 @@ export class AuthenticateService implements OnApplicationShutdown {
 					permission: app.permission,
 				} as MiAccessToken];
 			} else {
-				return [user, accessToken];
+				return [user, deserializeAccessToken(accessToken)];
 			}
 		}
 	}

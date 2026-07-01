@@ -81,7 +81,6 @@ export {
 	MiChatMessage,
 };
 
-export type AccessTokensRepository = Repository<MiAccessToken> & MiRepository<MiAccessToken>;
 export type AntennasRepository = Repository<MiAntenna> & MiRepository<MiAntenna>;
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
 export type ClipsRepository = Repository<MiClip> & MiRepository<MiClip>;
