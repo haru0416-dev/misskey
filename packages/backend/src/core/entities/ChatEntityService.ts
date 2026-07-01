@@ -130,8 +130,7 @@ export class ChatEntityService {
 		const [packedUsers, packedFiles, packedRooms] = await Promise.all([
 			this.userEntityService.packMany(users, me)
 				.then(users => new Map(users.map(u => [u.id, u]))),
-			this.driveFileEntityService.packMany(messages.map(m => m.file).filter(x => x != null))
-				.then(files => new Map(files.map(f => [f.id, f]))),
+			this.driveFileEntityService.packManyByIdsMap(messages.map(m => m.fileId).filter(x => x != null)),
 			this.packRooms(messages.map(m => m.toRoom ?? m.toRoomId).filter(x => x != null), me)
 				.then(rooms => new Map(rooms.map(r => [r.id, r]))),
 		]);
@@ -180,8 +179,7 @@ export class ChatEntityService {
 		if (messages.length === 0) return [];
 
 		const [packedFiles] = await Promise.all([
-			this.driveFileEntityService.packMany(messages.map(m => m.file).filter(x => x != null))
-				.then(files => new Map(files.map(f => [f.id, f]))),
+			this.driveFileEntityService.packManyByIdsMap(messages.map(m => m.fileId).filter(x => x != null)),
 		]);
 
 		return Promise.all(messages.map(message => this.packMessageLiteFor1on1(message, { _hint_: { packedFiles } })));
@@ -244,8 +242,7 @@ export class ChatEntityService {
 		const [packedUsers, packedFiles] = await Promise.all([
 			this.userEntityService.packMany(users)
 				.then(users => new Map(users.map(u => [u.id, u]))),
-			this.driveFileEntityService.packMany(messages.map(m => m.file).filter(x => x != null))
-				.then(files => new Map(files.map(f => [f.id, f]))),
+			this.driveFileEntityService.packManyByIdsMap(messages.map(m => m.fileId).filter(x => x != null)),
 		]);
 
 		return Promise.all(messages.map(message => this.packMessageLiteForRoom(message, { _hint_: { packedFiles, packedUsers } })));
