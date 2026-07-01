@@ -13,13 +13,13 @@ import { GlobalModule } from '@/GlobalModule.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import type {
-	AnnouncementReadsRepository,
 	AnnouncementsRepository,
 	MiAnnouncement,
 	MiUser,
 	UsersRepository,
 } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { announcementRead } from '@/db/schema/announcement-read.js';
 import { meta as metaTable } from '@/db/schema/meta.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genAidx } from '@/misc/id/aidx.js';
@@ -35,7 +35,6 @@ describe('AnnouncementService', () => {
 	let announcementService: AnnouncementService;
 	let usersRepository: UsersRepository;
 	let announcementsRepository: AnnouncementsRepository;
-	let announcementReadsRepository: AnnouncementReadsRepository;
 	let globalEventService: Mocked<GlobalEventService>;
 	let moderationLogService: Mocked<ModerationLogService>;
 
@@ -94,7 +93,6 @@ describe('AnnouncementService', () => {
 		announcementService = app.get<AnnouncementService>(AnnouncementService);
 		usersRepository = app.get<UsersRepository>(DI.usersRepository);
 		announcementsRepository = app.get<AnnouncementsRepository>(DI.announcementsRepository);
-		announcementReadsRepository = app.get<AnnouncementReadsRepository>(DI.announcementReadsRepository);
 		globalEventService = app.get<GlobalEventService>(GlobalEventService) as Mocked<GlobalEventService>;
 		moderationLogService = app.get<ModerationLogService>(ModerationLogService) as Mocked<ModerationLogService>;
 	});
@@ -104,9 +102,9 @@ describe('AnnouncementService', () => {
 
 		await Promise.all([
 			db.delete(metaTable),
+			db.delete(announcementRead),
 			usersRepository.createQueryBuilder().delete().execute(),
 			announcementsRepository.createQueryBuilder().delete().execute(),
-			announcementReadsRepository.createQueryBuilder().delete().execute(),
 		]);
 
 		await app.close();
@@ -203,7 +201,39 @@ describe('AnnouncementService', () => {
 		});
 	});
 
-	describe.todo('read', () => {
-		// TODO
+	describe('read', () => {
+		test('既読を作成する', async () => {
+			const user = await createUser();
+			const announcement = await createAnnouncement();
+
+			await announcementService.read(user, announcement.id);
+
+			const reads = await announcementService.getReads(user.id);
+			expect(reads).toHaveLength(1);
+			expect(reads[0].announcementId).toBe(announcement.id);
+		});
+
+		test('重複既読は無視する', async () => {
+			const user = await createUser();
+			const announcement = await createAnnouncement();
+
+			await announcementService.read(user, announcement.id);
+			await announcementService.read(user, announcement.id);
+
+			const reads = await announcementService.getReads(user.id);
+			expect(reads).toHaveLength(1);
+		});
+
+		test('ユーザー指定お知らせは既読時に非アクティブ化する', async () => {
+			const user = await createUser();
+			const announcement = await createAnnouncement({
+				userId: user.id,
+			});
+
+			await announcementService.read(user, announcement.id);
+
+			const result = await announcementsRepository.findOneByOrFail({ id: announcement.id });
+			expect(result.isActive).toBe(false);
+		});
 	});
 });

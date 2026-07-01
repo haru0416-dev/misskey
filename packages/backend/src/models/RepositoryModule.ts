@@ -11,7 +11,6 @@ import {
 	MiAccessToken,
 	MiAd,
 	MiAnnouncement,
-	MiAnnouncementRead,
 	MiAntenna,
 	MiApp,
 	MiBlocking,
@@ -71,12 +70,6 @@ const $notesRepository: Provider = {
 const $announcementsRepository: Provider = {
 	provide: DI.announcementsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiAnnouncement).extend(miRepository as MiRepository<MiAnnouncement>),
-	inject: [DI.db],
-};
-
-const $announcementReadsRepository: Provider = {
-	provide: DI.announcementReadsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiAnnouncementRead).extend(miRepository as MiRepository<MiAnnouncementRead>),
 	inject: [DI.db],
 };
 
@@ -326,7 +319,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$usersRepository,
 		$notesRepository,
 		$announcementsRepository,
-		$announcementReadsRepository,
 		$appsRepository,
 		$noteFavoritesRepository,
 		$noteReactionsRepository,
@@ -372,7 +364,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$usersRepository,
 		$notesRepository,
 		$announcementsRepository,
-		$announcementReadsRepository,
 		$appsRepository,
 		$noteFavoritesRepository,
 		$noteReactionsRepository,
