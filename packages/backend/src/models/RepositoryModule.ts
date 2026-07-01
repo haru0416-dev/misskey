@@ -49,7 +49,6 @@ import {
 	MiPollVote,
 	MiRegistrationTicket,
 	MiRegistryItem,
-	MiRelay,
 	MiRenoteMuting,
 	MiRepository,
 	miRepository,
@@ -348,12 +347,6 @@ const $antennasRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $relaysRepository: Provider = {
-	provide: DI.relaysRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiRelay).extend(miRepository as MiRepository<MiRelay>),
-	inject: [DI.db],
-};
-
 const $channelsRepository: Provider = {
 	provide: DI.channelsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiChannel).extend(miRepository as MiRepository<MiChannel>),
@@ -522,7 +515,6 @@ const $chatApprovalsRepository: Provider = {
 		$clipNotesRepository,
 		$clipFavoritesRepository,
 		$antennasRepository,
-		$relaysRepository,
 		$channelsRepository,
 		$channelFollowingsRepository,
 		$channelFavoritesRepository,
@@ -590,7 +582,6 @@ const $chatApprovalsRepository: Provider = {
 		$clipNotesRepository,
 		$clipFavoritesRepository,
 		$antennasRepository,
-		$relaysRepository,
 		$channelsRepository,
 		$channelFollowingsRepository,
 		$channelFavoritesRepository,

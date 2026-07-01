@@ -57,7 +57,6 @@ import { MiPoll } from '@/models/Poll.js';
 import { MiPollVote } from '@/models/PollVote.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
 import { MiRegistryItem } from '@/models/RegistryItem.js';
-import { MiRelay } from '@/models/Relay.js';
 import { MiRenoteMuting } from '@/models/RenoteMuting.js';
 import { MiRetentionAggregation } from '@/models/RetentionAggregation.js';
 import { MiRole } from '@/models/Role.js';
@@ -130,7 +129,6 @@ export {
 	MiPollVote,
 	MiRegistrationTicket,
 	MiRegistryItem,
-	MiRelay,
 	MiSignin,
 	MiSwSubscription,
 	MiUser,
@@ -200,7 +198,6 @@ export type PollsRepository = Repository<MiPoll> & MiRepository<MiPoll>;
 export type PollVotesRepository = Repository<MiPollVote> & MiRepository<MiPollVote>;
 export type RegistrationTicketsRepository = Repository<MiRegistrationTicket> & MiRepository<MiRegistrationTicket>;
 export type RegistryItemsRepository = Repository<MiRegistryItem> & MiRepository<MiRegistryItem>;
-export type RelaysRepository = Repository<MiRelay> & MiRepository<MiRelay>;
 export type SigninsRepository = Repository<MiSignin> & MiRepository<MiSignin>;
 export type SwSubscriptionsRepository = Repository<MiSwSubscription> & MiRepository<MiSwSubscription>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
