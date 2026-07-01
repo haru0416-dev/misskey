@@ -38,7 +38,6 @@ import {
 	MiNoteThreadMuting,
 	MiNoteDraft,
 	MiPage,
-	MiPageLike,
 	MiPoll,
 	MiPollVote,
 	MiRegistrationTicket,
@@ -255,12 +254,6 @@ const $pagesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $pageLikesRepository: Provider = {
-	provide: DI.pageLikesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiPageLike).extend(miRepository as MiRepository<MiPageLike>),
-	inject: [DI.db],
-};
-
 const $galleryPostsRepository: Provider = {
 	provide: DI.galleryPostsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiGalleryPost).extend(miRepository as MiRepository<MiGalleryPost>),
@@ -404,7 +397,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$authSessionsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
-		$pageLikesRepository,
 		$galleryPostsRepository,
 		$galleryLikesRepository,
 		$clipsRepository,
@@ -457,7 +449,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$authSessionsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
-		$pageLikesRepository,
 		$galleryPostsRepository,
 		$galleryLikesRepository,
 		$clipsRepository,

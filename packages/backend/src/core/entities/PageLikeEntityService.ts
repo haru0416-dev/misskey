@@ -5,18 +5,24 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { PageLikesRepository } from '@/models/_.js';
 import type { } from '@/models/Blocking.js';
 import type { MiUser } from '@/models/User.js';
-import type { MiPageLike } from '@/models/PageLike.js';
+import type { MiPage } from '@/models/Page.js';
+import { fetchPageLikeByIdOrFailFromDatabase } from '@/core/PageLikeStore.js';
+import type { PageLikeRow } from '@/db/schema/page-like.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { PageEntityService } from './PageEntityService.js';
+
+export type PageLikePackable = PageLikeRow & {
+	page?: MiPage | null;
+};
 
 @Injectable()
 export class PageLikeEntityService {
 	constructor(
-		@Inject(DI.pageLikesRepository)
-		private pageLikesRepository: PageLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private pageEntityService: PageEntityService,
 	) {
@@ -24,23 +30,23 @@ export class PageLikeEntityService {
 
 	@bindThis
 	public async pack(
-		src: MiPageLike['id'] | MiPageLike,
+		src: PageLikeRow['id'] | PageLikePackable,
 		me?: { id: MiUser['id'] } | null | undefined,
 	) {
-		const like = typeof src === 'object' ? src : await this.pageLikesRepository.findOneByOrFail({ id: src });
+		const like = typeof src === 'object' ? src : await fetchPageLikeByIdOrFailFromDatabase(this.drizzle, src);
+		const page = typeof src === 'object' ? (src.page ?? src.pageId) : like.pageId;
 
 		return {
 			id: like.id,
-			page: await this.pageEntityService.pack(like.page ?? like.pageId, me),
+			page: await this.pageEntityService.pack(page, me),
 		};
 	}
 
 	@bindThis
 	public packMany(
-		likes: any[],
+		likes: PageLikePackable[],
 		me: { id: MiUser['id'] },
 	) {
 		return Promise.all(likes.map(x => this.pack(x, me)));
 	}
 }
-

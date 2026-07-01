@@ -46,7 +46,6 @@ import { MiNoteFavorite } from '@/models/NoteFavorite.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
 import { MiNoteThreadMuting } from '@/models/NoteThreadMuting.js';
 import { MiPage } from '@/models/Page.js';
-import { MiPageLike } from '@/models/PageLike.js';
 import { MiPoll } from '@/models/Poll.js';
 import { MiPollVote } from '@/models/PollVote.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
@@ -106,7 +105,6 @@ export {
 	MiNoteReaction,
 	MiNoteThreadMuting,
 	MiPage,
-	MiPageLike,
 	MiPoll,
 	MiPollVote,
 	MiRegistrationTicket,
@@ -161,7 +159,6 @@ export type NoteFavoritesRepository = Repository<MiNoteFavorite> & MiRepository<
 export type NoteReactionsRepository = Repository<MiNoteReaction> & MiRepository<MiNoteReaction>;
 export type NoteThreadMutingsRepository = Repository<MiNoteThreadMuting> & MiRepository<MiNoteThreadMuting>;
 export type PagesRepository = Repository<MiPage> & MiRepository<MiPage>;
-export type PageLikesRepository = Repository<MiPageLike> & MiRepository<MiPageLike>;
 export type PollsRepository = Repository<MiPoll> & MiRepository<MiPoll>;
 export type PollVotesRepository = Repository<MiPollVote> & MiRepository<MiPollVote>;
 export type RegistrationTicketsRepository = Repository<MiRegistrationTicket> & MiRepository<MiRegistrationTicket>;
