@@ -8,8 +8,10 @@ import { id } from './util/id.js';
 import { MiUser } from './User.js';
 import { MiChannel } from './Channel.js';
 
+const manualUniqueIndex = { unique: true, synchronize: false } as const;
+
 @Entity('channel_muting')
-@Index(['userId', 'channelId'], {})
+@Index('IDX_CHANNEL_MUTING_USER_ID_CHANNEL_ID_UNIQUE', ['userId', 'channelId'], manualUniqueIndex)
 export class MiChannelMuting {
 	@PrimaryColumn(id())
 	public id: string;

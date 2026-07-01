@@ -25,6 +25,7 @@ export class MiClipFavorite {
 	public user: MiUser | null;
 
 	@Column(id())
+	@Index('IDX_CLIP_FAVORITE_CLIP_ID', { synchronize: false })
 	public clipId: MiClip['id'];
 
 	@ManyToOne(() => MiClip, {

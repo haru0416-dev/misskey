@@ -25,6 +25,7 @@ export class MiGalleryLike {
 	public user: MiUser | null;
 
 	@Column(id())
+	@Index('IDX_GALLERY_LIKE_POST_ID', { synchronize: false })
 	public postId: MiGalleryPost['id'];
 
 	@ManyToOne(() => MiGalleryPost, {

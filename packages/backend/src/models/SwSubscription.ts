@@ -7,12 +7,14 @@ import { PrimaryColumn, Entity, Index, JoinColumn, Column, ManyToOne } from 'typ
 import { id } from './util/id.js';
 import { MiUser } from './User.js';
 
+const manualUniqueIndex = { unique: true, synchronize: false } as const;
+
 @Entity('sw_subscription')
+@Index('IDX_SW_SUBSCRIPTION_USER_ID_ENDPOINT_UNIQUE', ['userId', 'endpoint'], manualUniqueIndex)
 export class MiSwSubscription {
 	@PrimaryColumn(id())
 	public id: string;
 
-	@Index()
 	@Column(id())
 	public userId: MiUser['id'];
 
@@ -25,6 +27,7 @@ export class MiSwSubscription {
 	@Column('varchar', {
 		length: 512,
 	})
+	@Index('IDX_SW_SUBSCRIPTION_ENDPOINT', { synchronize: false })
 	public endpoint: string;
 
 	@Column('varchar', {

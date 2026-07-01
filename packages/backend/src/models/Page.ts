@@ -66,6 +66,7 @@ export class MiPage {
 		...id(),
 		nullable: true,
 	})
+	@Index('IDX_PAGE_EYE_CATCHING_IMAGE_ID', { synchronize: false })
 	public eyeCatchingImageId: MiDriveFile['id'] | null;
 
 	@ManyToOne(() => MiDriveFile, {

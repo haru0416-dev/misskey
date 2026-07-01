@@ -51,6 +51,7 @@ export class MiAccessToken {
 		...id(),
 		nullable: true,
 	})
+	@Index('IDX_ACCESS_TOKEN_APP_ID', { synchronize: false })
 	public appId: MiApp['id'] | null;
 
 	@ManyToOne(() => MiApp, {

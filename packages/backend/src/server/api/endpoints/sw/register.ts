@@ -9,6 +9,7 @@ import type { MiMeta, SwSubscriptionsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
+import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 
 export const meta = {
 	tags: ['account'],
@@ -75,28 +76,52 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const exist = await this.swSubscriptionsRepository.findOneBy({
 				userId: me.id,
 				endpoint: ps.endpoint,
-				auth: ps.auth,
-				publickey: ps.publickey,
 			});
 
 			if (exist != null) {
+				const isSameSubscription = exist.auth === ps.auth
+					&& exist.publickey === ps.publickey
+					&& exist.sendReadMessage === ps.sendReadMessage;
+
+				if (!isSameSubscription) {
+					await this.swSubscriptionsRepository.update(exist.id, {
+						auth: ps.auth,
+						publickey: ps.publickey,
+						sendReadMessage: ps.sendReadMessage,
+					});
+					this.pushNotificationService.refreshCache(me.id);
+				}
+
 				return {
-					state: 'already-subscribed' as const,
+					state: isSameSubscription ? 'already-subscribed' as const : 'subscribed' as const,
 					key: this.serverSettings.swPublicKey,
 					userId: me.id,
-					endpoint: exist.endpoint,
-					sendReadMessage: exist.sendReadMessage,
+					endpoint: ps.endpoint,
+					sendReadMessage: ps.sendReadMessage,
 				};
 			}
 
-			await this.swSubscriptionsRepository.insert({
-				id: this.idService.gen(),
-				userId: me.id,
-				endpoint: ps.endpoint,
-				auth: ps.auth,
-				publickey: ps.publickey,
-				sendReadMessage: ps.sendReadMessage,
-			});
+			try {
+				await this.swSubscriptionsRepository.insert({
+					id: this.idService.gen(),
+					userId: me.id,
+					endpoint: ps.endpoint,
+					auth: ps.auth,
+					publickey: ps.publickey,
+					sendReadMessage: ps.sendReadMessage,
+				});
+			} catch (e) {
+				if (!isDuplicateKeyValueError(e)) throw e;
+
+				await this.swSubscriptionsRepository.update({
+					userId: me.id,
+					endpoint: ps.endpoint,
+				}, {
+					auth: ps.auth,
+					publickey: ps.publickey,
+					sendReadMessage: ps.sendReadMessage,
+				});
+			}
 
 			this.pushNotificationService.refreshCache(me.id);
 

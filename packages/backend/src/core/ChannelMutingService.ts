@@ -12,6 +12,7 @@ import { IdService } from '@/core/IdService.js';
 import { GlobalEvents, GlobalEventService } from '@/core/GlobalEventService.js';
 import { bindThis } from '@/decorators.js';
 import { RedisKVCache } from '@/misc/cache.js';
+import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 
 @Injectable()
 export class ChannelMutingService {
@@ -146,12 +147,23 @@ export class ChannelMutingService {
 		targetChannelId: MiChannel['id'],
 		expiresAt?: Date | null,
 	}): Promise<void> {
-		await this.channelMutingRepository.insert({
-			id: this.idService.gen(),
-			userId: params.requestUserId,
-			channelId: params.targetChannelId,
-			expiresAt: params.expiresAt,
-		});
+		try {
+			await this.channelMutingRepository.insert({
+				id: this.idService.gen(),
+				userId: params.requestUserId,
+				channelId: params.targetChannelId,
+				expiresAt: params.expiresAt,
+			});
+		} catch (e) {
+			if (!isDuplicateKeyValueError(e)) throw e;
+
+			await this.channelMutingRepository.update({
+				userId: params.requestUserId,
+				channelId: params.targetChannelId,
+			}, {
+				expiresAt: params.expiresAt,
+			});
+		}
 
 		this.globalEventService.publishInternalEvent('muteChannel', {
 			userId: params.requestUserId,

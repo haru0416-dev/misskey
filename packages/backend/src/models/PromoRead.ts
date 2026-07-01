@@ -25,6 +25,7 @@ export class MiPromoRead {
 	public user: MiUser | null;
 
 	@Column(id())
+	@Index('IDX_PROMO_READ_NOTE_ID', { synchronize: false })
 	public noteId: MiNote['id'];
 
 	@ManyToOne(() => MiNote, {

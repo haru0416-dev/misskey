@@ -25,6 +25,7 @@ export class MiPageLike {
 	public user: MiUser | null;
 
 	@Column(id())
+	@Index('IDX_PAGE_LIKE_PAGE_ID', { synchronize: false })
 	public pageId: MiPage['id'];
 
 	@ManyToOne(() => MiPage, {

@@ -70,6 +70,7 @@ export class MiChatMessage {
 		...id(),
 		nullable: true,
 	})
+	@Index('IDX_CHAT_MESSAGE_FILE_ID', { synchronize: false })
 	public fileId: MiDriveFile['id'] | null;
 
 	@ManyToOne(() => MiDriveFile, {

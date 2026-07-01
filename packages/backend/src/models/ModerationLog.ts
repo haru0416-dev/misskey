@@ -7,7 +7,11 @@ import { PrimaryColumn, Entity, Index, JoinColumn, Column, ManyToOne } from 'typ
 import { id } from './util/id.js';
 import { MiUser } from './User.js';
 
+const manualIndex = { unique: false, synchronize: false } as const;
+
 @Entity('moderation_log')
+@Index('IDX_MODERATION_LOG_TYPE_ID', ['type', 'id'], manualIndex)
+@Index('IDX_MODERATION_LOG_USER_ID_ID', ['userId', 'id'], manualIndex)
 export class MiModerationLog {
 	@PrimaryColumn(id())
 	public id: string;

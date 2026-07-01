@@ -7,7 +7,10 @@ import { PrimaryColumn, Entity, Index, JoinColumn, Column, ManyToOne } from 'typ
 import { id } from './util/id.js';
 import { MiUser } from './User.js';
 
+const manualIndex = { unique: false, synchronize: false } as const;
+
 @Entity('signin')
+@Index('IDX_SIGNIN_USER_ID_ID', ['userId', 'id'], manualIndex)
 export class MiSignin {
 	@PrimaryColumn(id())
 	public id: string;

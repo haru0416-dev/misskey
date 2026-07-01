@@ -25,6 +25,7 @@ export class MiUserListFavorite {
 	public user: MiUser | null;
 
 	@Column(id())
+	@Index('IDX_USER_LIST_FAVORITE_USER_LIST_ID', { synchronize: false })
 	public userListId: MiUserList['id'];
 
 	@ManyToOne(() => MiUserList, {

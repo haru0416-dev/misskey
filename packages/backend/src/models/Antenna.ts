@@ -43,6 +43,7 @@ export class MiAntenna {
 		...id(),
 		nullable: true,
 	})
+	@Index('IDX_ANTENNA_USER_LIST_ID', { synchronize: false })
 	public userListId: MiUserList['id'] | null;
 
 	@ManyToOne(() => MiUserList, {

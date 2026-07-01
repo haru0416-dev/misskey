@@ -25,6 +25,7 @@ export class MiFlashLike {
 	public user: MiUser | null;
 
 	@Column(id())
+	@Index('IDX_FLASH_LIKE_FLASH_ID', { synchronize: false })
 	public flashId: MiFlash['id'];
 
 	@ManyToOne(() => MiFlash, {

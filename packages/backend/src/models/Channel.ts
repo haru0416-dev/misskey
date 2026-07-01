@@ -50,6 +50,7 @@ export class MiChannel {
 		nullable: true,
 		comment: 'The ID of banner Channel.',
 	})
+	@Index('IDX_CHANNEL_BANNER_ID', { synchronize: false })
 	public bannerId: MiDriveFile['id'] | null;
 
 	@ManyToOne(() => MiDriveFile, {

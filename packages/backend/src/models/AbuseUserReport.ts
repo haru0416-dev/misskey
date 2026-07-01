@@ -9,7 +9,12 @@ import { MiUser } from './User.js';
 
 export type AbuseReportResolveType = 'accept' | 'reject';
 
+const manualIndex = { unique: false, synchronize: false } as const;
+
 @Entity('abuse_user_report')
+@Index('IDX_ABUSE_USER_REPORT_RESOLVED_ID', ['resolved', 'id'], manualIndex)
+@Index('IDX_ABUSE_USER_REPORT_TARGET_HOST_ID', ['targetUserHost', 'id'], manualIndex)
+@Index('IDX_ABUSE_USER_REPORT_REPORTER_HOST_ID', ['reporterHost', 'id'], manualIndex)
 export class MiAbuseUserReport {
 	@PrimaryColumn(id())
 	public id: string;
@@ -38,6 +43,7 @@ export class MiAbuseUserReport {
 		...id(),
 		nullable: true,
 	})
+	@Index('IDX_ABUSE_USER_REPORT_ASSIGNEE_ID', { synchronize: false })
 	public assigneeId: MiUser['id'] | null;
 
 	@ManyToOne(() => MiUser, {

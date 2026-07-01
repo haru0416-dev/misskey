@@ -23,6 +23,7 @@ export class MiAuthSession {
 		...id(),
 		nullable: true,
 	})
+	@Index('IDX_AUTH_SESSION_USER_ID', { synchronize: false })
 	public userId: MiUser['id'] | null;
 
 	@ManyToOne(() => MiUser, {
@@ -33,6 +34,7 @@ export class MiAuthSession {
 	public user: MiUser | null;
 
 	@Column(id())
+	@Index('IDX_AUTH_SESSION_APP_ID', { synchronize: false })
 	public appId: MiApp['id'];
 
 	@ManyToOne(() => MiApp, {
