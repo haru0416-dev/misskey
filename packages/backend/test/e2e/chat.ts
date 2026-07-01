@@ -31,6 +31,27 @@ describe('Chat', () => {
 
 		const roomId = roomRes.body.id;
 
+		const owned = await api('chat/rooms/owned', {
+			limit: 10,
+		}, alice);
+		assert.strictEqual(owned.status, 200);
+		assert.ok(owned.body.some(room => room.id === roomId && room.name === 'team room'));
+
+		const show = await api('chat/rooms/show', {
+			roomId,
+		}, alice);
+		assert.strictEqual(show.status, 200);
+		assert.strictEqual(show.body.id, roomId);
+
+		const update = await api('chat/rooms/update', {
+			roomId,
+			name: 'team room updated',
+			description: 'updated room for drizzle migration',
+		}, alice);
+		assert.strictEqual(update.status, 200);
+		assert.strictEqual(update.body.name, 'team room updated');
+		assert.strictEqual(update.body.description, 'updated room for drizzle migration');
+
 		const inviteBob = await api('chat/rooms/invitations/create', {
 			roomId,
 			userId: bob.id,
@@ -59,7 +80,7 @@ describe('Chat', () => {
 			limit: 10,
 		}, bob);
 		assert.strictEqual(joinedRooms.status, 200);
-		assert.ok(joinedRooms.body.some(membership => membership.roomId === roomId && membership.room?.name === 'team room'));
+		assert.ok(joinedRooms.body.some(membership => membership.roomId === roomId && membership.room?.name === 'team room updated'));
 
 		const members = await api('chat/rooms/members', {
 			roomId,
@@ -127,5 +148,8 @@ describe('Chat', () => {
 		}, bob);
 		assert.strictEqual(afterLeave.status, 200);
 		assert.strictEqual(afterLeave.body.some(membership => membership.roomId === roomId), false);
+
+		const remove = await api('chat/rooms/delete', { roomId }, alice);
+		assert.strictEqual(remove.status, 204);
 	});
 });

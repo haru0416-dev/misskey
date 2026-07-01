@@ -4,6 +4,7 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { chatRoom, type ChatRoomInsert, type ChatRoomRow } from '@/db/schema/chat-room.js';
 import { chatRoomInvitation, type ChatRoomInvitationInsert, type ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
 import { chatRoomMembership, type ChatRoomMembershipInsert, type ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -11,6 +12,19 @@ import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiUser } from '@/models/User.js';
 
 export type ChatRoomRecordOrder = 'asc' | 'desc';
+
+type ChatRoomUpdate = Partial<Pick<ChatRoomInsert, 'name' | 'description' | 'isArchived'>>;
+
+function deserializeChatRoom(row: ChatRoomRow): MiChatRoom {
+	return {
+		...row,
+		owner: null,
+	} as MiChatRoom;
+}
+
+function toChatRoomUpdate(data: ChatRoomUpdate): ChatRoomUpdate {
+	return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) as ChatRoomUpdate;
+}
 
 export function resolveChatRoomRecordPagination(
 	options: {
@@ -75,6 +89,172 @@ function applyChatRoomInvitationPaginationCondition(
 	} else if (untilId) {
 		conditions.push(lt(chatRoomInvitation.id, untilId));
 	}
+}
+
+function applyChatRoomPaginationCondition(
+	conditions: SQL[],
+	sinceId?: string | null,
+	untilId?: string | null,
+): void {
+	if (sinceId && untilId) {
+		conditions.push(gt(chatRoom.id, sinceId));
+		conditions.push(lt(chatRoom.id, untilId));
+	} else if (sinceId) {
+		conditions.push(gt(chatRoom.id, sinceId));
+	} else if (untilId) {
+		conditions.push(lt(chatRoom.id, untilId));
+	}
+}
+
+export async function fetchChatRoomByIdFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiChatRoom['id'],
+): Promise<MiChatRoom | null> {
+	const [row] = await db
+		.select()
+		.from(chatRoom)
+		.where(eq(chatRoom.id, id))
+		.limit(1);
+
+	return row == null ? null : deserializeChatRoom(row);
+}
+
+export async function fetchChatRoomByIdOrFailFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiChatRoom['id'],
+): Promise<MiChatRoom> {
+	const room = await fetchChatRoomByIdFromDatabase(db, id);
+	if (room == null) {
+		throw new Error(`Chat room ${id} not found`);
+	}
+
+	return room;
+}
+
+export async function fetchChatRoomByIdAndOwnerIdFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiChatRoom['id'],
+	ownerId: MiUser['id'],
+): Promise<MiChatRoom | null> {
+	const [row] = await db
+		.select()
+		.from(chatRoom)
+		.where(and(
+			eq(chatRoom.id, id),
+			eq(chatRoom.ownerId, ownerId),
+		))
+		.limit(1);
+
+	return row == null ? null : deserializeChatRoom(row);
+}
+
+export async function fetchChatRoomByIdAndOwnerIdOrFailFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiChatRoom['id'],
+	ownerId: MiUser['id'],
+): Promise<MiChatRoom> {
+	const room = await fetchChatRoomByIdAndOwnerIdFromDatabase(db, id, ownerId);
+	if (room == null) {
+		throw new Error(`Chat room ${id} owned by ${ownerId} not found`);
+	}
+
+	return room;
+}
+
+export async function listChatRoomsByIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiChatRoom['id'][],
+): Promise<MiChatRoom[]> {
+	if (ids.length === 0) {
+		return [];
+	}
+
+	const rows = await db
+		.select()
+		.from(chatRoom)
+		.where(inArray(chatRoom.id, ids));
+
+	const roomMap = new Map(rows.map(row => [row.id, deserializeChatRoom(row)]));
+	return ids.flatMap(id => {
+		const room = roomMap.get(id);
+		return room == null ? [] : [room];
+	});
+}
+
+export async function listChatRoomsByOwnerIdFromDatabase(
+	db: MiDrizzleDatabase,
+	ownerId: MiUser['id'],
+	options: {
+		limit?: number;
+		order?: ChatRoomRecordOrder;
+		sinceId?: string | null;
+		untilId?: string | null;
+	} = {},
+): Promise<MiChatRoom[]> {
+	const conditions: SQL[] = [eq(chatRoom.ownerId, ownerId)];
+	applyChatRoomPaginationCondition(conditions, options.sinceId, options.untilId);
+
+	let query = db
+		.select()
+		.from(chatRoom)
+		.where(and(...conditions))
+		.orderBy((options.order ?? 'asc') === 'asc' ? asc(chatRoom.id) : desc(chatRoom.id))
+		.$dynamic();
+
+	if (options.limit != null) {
+		query = query.limit(options.limit);
+	}
+
+	const rows = await query;
+	return rows.map(row => deserializeChatRoom(row));
+}
+
+export async function createChatRoomInDatabase(
+	db: MiDrizzleDatabase,
+	data: ChatRoomInsert,
+): Promise<MiChatRoom> {
+	const [row] = await db
+		.insert(chatRoom)
+		.values(data)
+		.returning();
+
+	if (row == null) {
+		throw new Error('Failed to create chat room');
+	}
+
+	return deserializeChatRoom(row);
+}
+
+export async function updateChatRoomInDatabase(
+	db: MiDrizzleDatabase,
+	id: MiChatRoom['id'],
+	data: ChatRoomUpdate,
+): Promise<MiChatRoom> {
+	const update = toChatRoomUpdate(data);
+	if (Object.keys(update).length === 0) {
+		return fetchChatRoomByIdOrFailFromDatabase(db, id);
+	}
+
+	const [row] = await db
+		.update(chatRoom)
+		.set(update)
+		.where(eq(chatRoom.id, id))
+		.returning();
+
+	if (row == null) {
+		throw new Error(`Chat room ${id} not found`);
+	}
+
+	return deserializeChatRoom(row);
+}
+
+export async function deleteChatRoomByIdFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiChatRoom['id'],
+): Promise<void> {
+	await db
+		.delete(chatRoom)
+		.where(eq(chatRoom.id, id));
 }
 
 export async function fetchChatRoomMembershipFromDatabase(

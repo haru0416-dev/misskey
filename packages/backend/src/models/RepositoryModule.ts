@@ -40,7 +40,6 @@ import {
 	MiUserSecurityKey,
 	MiWebhook,
 	MiChatMessage,
-	MiChatRoom,
 } from './_.js';
 import type { Provider } from '@nestjs/common';
 import type { DataSource } from 'typeorm';
@@ -237,12 +236,6 @@ const $chatMessagesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $chatRoomsRepository: Provider = {
-	provide: DI.chatRoomsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiChatRoom).extend(miRepository as MiRepository<MiChatRoom>),
-	inject: [DI.db],
-};
-
 @Module({
 	imports: [],
 	providers: [
@@ -278,7 +271,6 @@ const $chatRoomsRepository: Provider = {
 		$roleAssignmentsRepository,
 		$flashsRepository,
 		$chatMessagesRepository,
-		$chatRoomsRepository,
 	],
 	exports: [
 		$usersRepository,
@@ -313,7 +305,6 @@ const $chatRoomsRepository: Provider = {
 		$roleAssignmentsRepository,
 		$flashsRepository,
 		$chatMessagesRepository,
-		$chatRoomsRepository,
 	],
 })
 export class RepositoryModule {

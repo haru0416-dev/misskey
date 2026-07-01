@@ -16,7 +16,8 @@ import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
 import { bindThis } from '@/decorators.js';
-import type { ChatMessagesRepository, ChatRoomsRepository, MiChatMessage, MiChatRoom, MiDriveFile, MiUser, MutingsRepository, UsersRepository } from '@/models/_.js';
+import type { ChatMessagesRepository, MiChatMessage, MiDriveFile, MiUser, MutingsRepository, UsersRepository } from '@/models/_.js';
+import type { MiChatRoom } from '@/models/ChatRoom.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { QueryService } from '@/core/QueryService.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -32,7 +33,13 @@ import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/ChatApprovalStore.js';
 import {
 	countChatRoomMembershipsByRoomIdFromDatabase,
+	createChatRoomInDatabase,
 	createChatRoomInvitationInDatabase,
+	deleteChatRoomByIdFromDatabase,
+	fetchChatRoomByIdAndOwnerIdFromDatabase,
+	fetchChatRoomByIdAndOwnerIdOrFailFromDatabase,
+	fetchChatRoomByIdFromDatabase,
+	fetchChatRoomByIdOrFailFromDatabase,
 	deleteChatRoomMembershipByIdFromDatabase,
 	fetchChatRoomInvitationFromDatabase,
 	fetchChatRoomInvitationOrFailFromDatabase,
@@ -41,9 +48,11 @@ import {
 	joinChatRoomFromInvitationInDatabase,
 	listChatRoomInvitationsByRoomIdFromDatabase,
 	listChatRoomInvitationsByUserIdFromDatabase,
+	listChatRoomsByOwnerIdFromDatabase,
 	listChatRoomMembershipsByRoomIdFromDatabase,
 	listChatRoomMembershipsByUserIdFromDatabase,
 	resolveChatRoomRecordPagination,
+	updateChatRoomInDatabase,
 	updateChatRoomInvitationIgnoredFromDatabase,
 	updateChatRoomMembershipMuteFromDatabase,
 } from '@/core/ChatRoomStore.js';
@@ -84,9 +93,6 @@ export class ChatService {
 
 		@Inject(DI.chatMessagesRepository)
 		private chatMessagesRepository: ChatMessagesRepository,
-
-		@Inject(DI.chatRoomsRepository)
-		private chatRoomsRepository: ChatRoomsRepository,
 
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
@@ -473,9 +479,7 @@ export class ChatService {
 		// TODO: 一回のクエリにまとめられるかも
 		const [memberRoomIds, ownedRoomIds] = await Promise.all([
 			listChatRoomMembershipsByUserIdFromDatabase(this.drizzle, meId).then(xs => xs.map(x => x.roomId)),
-			this.chatRoomsRepository.findBy({
-				ownerId: meId,
-			}).then(xs => xs.map(x => x.id)),
+			listChatRoomsByOwnerIdFromDatabase(this.drizzle, meId).then(xs => xs.map(x => x.id)),
 		]);
 
 		const roomIds = memberRoomIds.concat(ownedRoomIds);
@@ -564,12 +568,12 @@ export class ChatService {
 	}>) {
 		const room = {
 			id: this.idService.gen(),
-			name: params.name,
-			description: params.description,
+			name: params.name ?? '',
+			description: params.description ?? '',
 			ownerId: owner.id,
-		} satisfies Partial<MiChatRoom>;
+		};
 
-		const created = await this.chatRoomsRepository.insertOne(room);
+		const created = await createChatRoomInDatabase(this.drizzle, room);
 
 		return created;
 	}
@@ -625,7 +629,7 @@ export class ChatService {
 		}
 		await redisPipeline.exec();
 
-		await this.chatRoomsRepository.delete(room.id);
+		await deleteChatRoomByIdFromDatabase(this.drizzle, room.id);
 
 		if (deleter) {
 			const deleterIsModerator = await this.roleService.isModerator(deleter);
@@ -641,15 +645,12 @@ export class ChatService {
 
 	@bindThis
 	public async findMyRoomById(ownerId: MiUser['id'], roomId: MiChatRoom['id']) {
-		return this.chatRoomsRepository.findOneBy({ id: roomId, ownerId: ownerId });
+		return fetchChatRoomByIdAndOwnerIdFromDatabase(this.drizzle, roomId, ownerId);
 	}
 
 	@bindThis
 	public async findRoomById(roomId: MiChatRoom['id']) {
-		return this.chatRoomsRepository.findOne({
-			where: { id: roomId },
-			relations: { owner: true },
-		});
+		return fetchChatRoomByIdFromDatabase(this.drizzle, roomId);
 	}
 
 	@bindThis
@@ -665,7 +666,7 @@ export class ChatService {
 			throw new Error('yourself');
 		}
 
-		const room = await this.chatRoomsRepository.findOneByOrFail({ id: roomId, ownerId: inviterId });
+		const room = await fetchChatRoomByIdAndOwnerIdOrFailFromDatabase(this.drizzle, roomId, inviterId);
 
 		if (await this.isRoomMember(room, inviteeId)) {
 			throw new Error('already member');
@@ -710,10 +711,10 @@ export class ChatService {
 
 	@bindThis
 	public async getOwnedRoomsWithPagination(ownerId: MiUser['id'], limit: number, sinceId?: MiChatRoom['id'] | null, untilId?: MiChatRoom['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatRoomsRepository.createQueryBuilder('room'), sinceId, untilId)
-			.andWhere('room.ownerId = :ownerId', { ownerId });
-
-		const rooms = await query.take(limit).getMany();
+		const rooms = await listChatRoomsByOwnerIdFromDatabase(this.drizzle, ownerId, {
+			limit,
+			...resolveChatRoomRecordPagination({ sinceId, untilId }),
+		});
 
 		return rooms;
 	}
@@ -776,14 +777,7 @@ export class ChatService {
 		name?: string;
 		description?: string;
 	}): Promise<MiChatRoom> {
-		return this.chatRoomsRepository.createQueryBuilder().update()
-			.set(params)
-			.where('id = :id', { id: room.id })
-			.returning('*')
-			.execute()
-			.then((response) => {
-				return response.raw[0];
-			});
+		return updateChatRoomInDatabase(this.drizzle, room.id, params);
 	}
 
 	@bindThis
@@ -822,19 +816,14 @@ export class ChatService {
 		} else if (params.roomId) {
 			q.where('message.toRoomId = :roomId', { roomId: params.roomId });
 		} else {
-			const ownedRoomsQuery = this.chatRoomsRepository.createQueryBuilder('room')
-				.select('room.id')
-				.where('room.ownerId = :meId', { meId });
-
 			q.andWhere(new Brackets(qb => {
 				qb
 					.where('message.fromUserId = :meId')
 					.orWhere('message.toUserId = :meId')
 					.orWhere('message.toRoomId IN (SELECT "roomId" FROM "chat_room_membership" WHERE "userId" = :meId)')
-					.orWhere(`message.toRoomId IN (${ownedRoomsQuery.getQuery()})`);
-			}));
-
-			q.setParameters(ownedRoomsQuery.getParameters());
+					.orWhere('message.toRoomId IN (SELECT "id" FROM "chat_room" WHERE "ownerId" = :meId)');
+			}))
+				.setParameter('meId', meId);
 		}
 
 		q.andWhere('LOWER(message.text) LIKE :q', { q: `%${ sqlLikeEscape(query.toLowerCase()) }%` });
@@ -883,7 +872,7 @@ export class ChatService {
 			throw new Error('too many reactions');
 		}
 
-		const room = message.toRoomId ? await this.chatRoomsRepository.findOneByOrFail({ id: message.toRoomId }) : null;
+		const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(this.drizzle, message.toRoomId) : null;
 
 		if (room) {
 			if (!(await this.isRoomMember(room, userId))) {
@@ -933,7 +922,7 @@ export class ChatService {
 
 		const message = await this.chatMessagesRepository.findOneByOrFail({ id: messageId });
 
-		const room = message.toRoomId ? await this.chatRoomsRepository.findOneByOrFail({ id: message.toRoomId }) : null;
+		const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(this.drizzle, message.toRoomId) : null;
 
 		await this.chatMessagesRepository.createQueryBuilder().update()
 			.set({

@@ -4,9 +4,9 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { MiUser, ChatMessagesRepository, MiChatMessage, ChatRoomsRepository, MiChatRoom } from '@/models/_.js';
+import type { MiUser, ChatMessagesRepository, MiChatMessage } from '@/models/_.js';
+import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
 import type { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
@@ -15,10 +15,12 @@ import type { } from '@/models/Blocking.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import {
+	fetchChatRoomByIdOrFailFromDatabase,
 	fetchChatRoomInvitationByIdOrFailFromDatabase,
 	fetchChatRoomInvitationFromDatabase,
 	fetchChatRoomMembershipByIdOrFailFromDatabase,
 	fetchChatRoomMembershipFromDatabase,
+	listChatRoomsByIdsFromDatabase,
 	listChatRoomInvitationsByRoomIdsAndUserIdFromDatabase,
 	listChatRoomMembershipsByRoomIdsAndUserIdFromDatabase,
 } from '@/core/ChatRoomStore.js';
@@ -43,9 +45,6 @@ export class ChatEntityService {
 	constructor(
 		@Inject(DI.chatMessagesRepository)
 		private chatMessagesRepository: ChatMessagesRepository,
-
-		@Inject(DI.chatRoomsRepository)
-		private chatRoomsRepository: ChatRoomsRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -266,7 +265,7 @@ export class ChatEntityService {
 			};
 		},
 	): Promise<Packed<'ChatRoom'>> {
-		const room = typeof src === 'object' ? src : await this.chatRoomsRepository.findOneByOrFail({ id: src });
+		const room = typeof src === 'object' ? src : await fetchChatRoomByIdOrFailFromDatabase(this.db, src);
 
 		const membership = me && me.id !== room.ownerId ? (options?._hint_?.myMemberships?.get(room.id) ?? (await fetchChatRoomMembershipFromDatabase(this.db, room.id, me.id))) : null;
 		const invitation = me && me.id !== room.ownerId ? (options?._hint_?.myInvitations?.get(room.id) ?? (await fetchChatRoomInvitationFromDatabase(this.db, room.id, me.id))) : null;
@@ -293,12 +292,7 @@ export class ChatEntityService {
 		const _rooms = rooms.filter((room): room is MiChatRoom => typeof room !== 'string');
 		if (_rooms.length !== rooms.length) {
 			_rooms.push(
-				...(await this.chatRoomsRepository.find({
-					where: {
-						id: In(rooms.filter((room): room is string => typeof room === 'string')),
-					},
-					relations: { owner: true },
-				})),
+				...(await listChatRoomsByIdsFromDatabase(this.db, rooms.filter((room): room is string => typeof room === 'string'))),
 			);
 		}
 

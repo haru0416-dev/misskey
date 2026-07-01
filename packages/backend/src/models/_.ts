@@ -17,7 +17,6 @@ import { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 import { MiBlocking } from '@/models/Blocking.js';
 import { MiChannel } from '@/models/Channel.js';
 import { MiChatMessage } from '@/models/ChatMessage.js';
-import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiClip } from '@/models/Clip.js';
 import { MiDriveFile } from '@/models/DriveFile.js';
 import { MiDriveFolder } from '@/models/DriveFolder.js';
@@ -90,7 +89,6 @@ export {
 	MiRoleAssignment,
 	MiFlash,
 	MiChatMessage,
-	MiChatRoom,
 };
 
 export type AbuseUserReportsRepository = Repository<MiAbuseUserReport> & MiRepository<MiAbuseUserReport>;
@@ -125,4 +123,3 @@ export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;
 export type RoleAssignmentsRepository = Repository<MiRoleAssignment> & MiRepository<MiRoleAssignment>;
 export type FlashsRepository = Repository<MiFlash> & MiRepository<MiFlash>;
 export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<MiChatMessage>;
-export type ChatRoomsRepository = Repository<MiChatRoom> & MiRepository<MiChatRoom>;
