@@ -44,7 +44,6 @@ import {
 	MiNoteDraft,
 	MiPage,
 	MiPageLike,
-	MiPasswordResetRequest,
 	MiPoll,
 	MiPollVote,
 	MiRegistrationTicket,
@@ -395,12 +394,6 @@ const $adsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $passwordResetRequestsRepository: Provider = {
-	provide: DI.passwordResetRequestsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiPasswordResetRequest).extend(miRepository as MiRepository<MiPasswordResetRequest>),
-	inject: [DI.db],
-};
-
 const $retentionAggregationsRepository: Provider = {
 	provide: DI.retentionAggregationsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiRetentionAggregation).extend(miRepository as MiRepository<MiRetentionAggregation>),
@@ -523,7 +516,6 @@ const $chatApprovalsRepository: Provider = {
 		$webhooksRepository,
 		$systemWebhooksRepository,
 		$adsRepository,
-		$passwordResetRequestsRepository,
 		$retentionAggregationsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
@@ -590,7 +582,6 @@ const $chatApprovalsRepository: Provider = {
 		$webhooksRepository,
 		$systemWebhooksRepository,
 		$adsRepository,
-		$passwordResetRequestsRepository,
 		$retentionAggregationsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,

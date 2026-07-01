@@ -6,13 +6,15 @@
 import ms from 'ms';
 import { IsNull } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { PasswordResetRequestsRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { IdService } from '@/core/IdService.js';
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { EmailService } from '@/core/EmailService.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
+import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['reset password'],
@@ -52,8 +54,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
 
-		@Inject(DI.passwordResetRequestsRepository)
-		private passwordResetRequestsRepository: PasswordResetRequestsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private emailService: EmailService,
@@ -83,7 +85,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const token = secureRndstr(64, { chars: L_CHARS });
 
-			await this.passwordResetRequestsRepository.insert({
+			await createPasswordResetRequestInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: profile.userId,
 				token,
