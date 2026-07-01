@@ -21,7 +21,6 @@ export const DI = {
 	notesRepository: Symbol('notesRepository'),
 	userProfilesRepository: Symbol('userProfilesRepository'),
 	userListsRepository: Symbol('userListsRepository'),
-	userListMembershipsRepository: Symbol('userListMembershipsRepository'),
 	followingsRepository: Symbol('followingsRepository'),
 	instancesRepository: Symbol('instancesRepository'),
 	driveFilesRepository: Symbol('driveFilesRepository'),

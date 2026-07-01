@@ -13,7 +13,7 @@ import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mf
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
 import { MiNote } from '@/models/Note.js';
-import type { BlockingsRepository, ChannelsRepository, DriveFilesRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, UserListMembershipsRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { BlockingsRepository, ChannelsRepository, DriveFilesRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiApp } from '@/models/App.js';
 import { concat } from '@/misc/prelude/array.js';
@@ -59,6 +59,7 @@ import { CacheService } from '@/core/CacheService.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { listFollowerUserIdsByChannelIdFromDatabase } from '@/core/ChannelFollowingStore.js';
 import { noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
+import { listUserListMembershipsForFanoutByUserIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 type NotificationType = 'reply' | 'renote' | 'quote' | 'mention';
@@ -228,9 +229,6 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
 
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
@@ -1067,16 +1065,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 						withReplies: true,
 					},
 				}),
-				this.userListMembershipsRepository.find({
-					where: {
-						userId: user.id,
-					},
-					select: {
-						userListId: true,
-						userListUserId: true,
-						withReplies: true,
-					},
-				}),
+				listUserListMembershipsForFanoutByUserIdFromDatabase(this.drizzle, user.id),
 			]);
 
 			if (note.visibility === 'followers') {

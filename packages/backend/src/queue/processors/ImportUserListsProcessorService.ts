@@ -6,12 +6,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, DriveFilesRepository, UserListMembershipsRepository, UserListsRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { UsersRepository, DriveFilesRepository, UserListsRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import * as Acct from '@/misc/acct.js';
 import { RemoteUserResolveService } from '@/core/RemoteUserResolveService.js';
 import { DownloadService } from '@/core/DownloadService.js';
 import { UserListService } from '@/core/UserListService.js';
+import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { IdService } from '@/core/IdService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
@@ -33,8 +35,8 @@ export class ImportUserListsProcessorService {
 		@Inject(DI.userListsRepository)
 		private userListsRepository: UserListsRepository,
 
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private idService: IdService,
@@ -109,7 +111,7 @@ export class ImportUserListsProcessorService {
 					target = await this.remoteUserResolveService.resolveUser(username, host);
 				}
 
-				if (await this.userListMembershipsRepository.findOneBy({ userListId: list!.id, userId: target.id }) != null) continue;
+				if (await userListMembershipExistsInDatabase(this.db, target.id, list!.id)) continue;
 
 				await this.userListService.addMember(target, list, user, {
 					withReplies: withReplies,

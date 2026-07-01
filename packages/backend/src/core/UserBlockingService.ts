@@ -11,7 +11,7 @@ import type { MiBlocking } from '@/models/Blocking.js';
 import { QueueService } from '@/core/QueueService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
-import type { BlockingsRepository, UserListsRepository, UserListMembershipsRepository } from '@/models/_.js';
+import type { BlockingsRepository, UserListsRepository } from '@/models/_.js';
 import Logger from '@/logger.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -22,6 +22,7 @@ import { CacheService } from '@/core/CacheService.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
+import { deleteUserListMembershipInDatabase } from '@/core/UserListMembershipStore.js';
 
 @Injectable()
 export class UserBlockingService implements OnModuleInit {
@@ -39,9 +40,6 @@ export class UserBlockingService implements OnModuleInit {
 
 		@Inject(DI.userListsRepository)
 		private userListsRepository: UserListsRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
 
 		private cacheService: CacheService,
 		private userEntityService: UserEntityService,
@@ -138,10 +136,7 @@ export class UserBlockingService implements OnModuleInit {
 		});
 
 		for (const userList of userLists) {
-			await this.userListMembershipsRepository.delete({
-				userListId: userList.id,
-				userId: user.id,
-			});
+			await deleteUserListMembershipInDatabase(this.db, user.id, userList.id);
 		}
 	}
 

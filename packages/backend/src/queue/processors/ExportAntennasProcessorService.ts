@@ -8,9 +8,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { format as DateFormat } from 'date-fns';
 import { In } from 'typeorm';
 import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { UsersRepository, UserListMembershipsRepository, MiUser } from '@/models/_.js';
+import type { UsersRepository, MiUser } from '@/models/_.js';
 import Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { bindThis } from '@/decorators.js';
@@ -32,9 +33,6 @@ export class ExportAntennasProcessorService {
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
 
 		private driveService: DriveService,
 		private utilityService: UtilityService,
@@ -70,9 +68,9 @@ export class ExportAntennasProcessorService {
 			for (const [index, antenna] of antennas.entries()) {
 				let users: MiUser[] | undefined;
 				if (antenna.userListId !== null) {
-					const memberships = await this.userListMembershipsRepository.findBy({ userListId: antenna.userListId });
+					const memberIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(this.db, antenna.userListId);
 					users = await this.usersRepository.findBy({
-						id: In(memberships.map(j => j.userId)),
+						id: In(memberIds),
 					});
 				}
 				write(JSON.stringify({

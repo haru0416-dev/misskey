@@ -8,11 +8,13 @@ import { IsNull, In, MoreThan, Not } from 'typeorm';
 
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import type { BlockingsRepository, FollowingsRepository, InstancesRepository, MiMeta, MutingsRepository, UserListMembershipsRepository, UsersRepository } from '@/models/_.js';
+import type { BlockingsRepository, FollowingsRepository, InstancesRepository, MiMeta, MutingsRepository, UsersRepository } from '@/models/_.js';
 import type { RelationshipJobData, ThinUser } from '@/queue/types.js';
 
 import { IdService } from '@/core/IdService.js';
+import { createUserListMembershipsInDatabase, listUserListMembershipsByUserIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { QueueService } from '@/core/QueueService.js';
 import { RelayService } from '@/core/RelayService.js';
@@ -33,6 +35,9 @@ export class AccountMoveService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
@@ -44,9 +49,6 @@ export class AccountMoveService {
 
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
 
 		@Inject(DI.instancesRepository)
 		private instancesRepository: InstancesRepository,
@@ -245,18 +247,11 @@ export class AccountMoveService {
 	@bindThis
 	public async updateLists(src: ThinUser, dst: MiUser): Promise<void> {
 		// Return if there is no list to be updated.
-		const oldMemberships = await this.userListMembershipsRepository.find({
-			where: {
-				userId: src.id,
-			},
-		});
+		const oldMemberships = await listUserListMembershipsByUserIdFromDatabase(this.db, src.id);
 		if (oldMemberships.length === 0) return;
 
-		const existingUserListIds = await this.userListMembershipsRepository.find({
-			where: {
-				userId: dst.id,
-			},
-		}).then(memberships => memberships.map(membership => membership.userListId));
+		const existingUserListIds = await listUserListMembershipsByUserIdFromDatabase(this.db, dst.id)
+			.then(memberships => memberships.map(membership => membership.userListId));
 
 		const newMemberships: Map<string, { userId: string; userListId: string; userListUserId: string; }> = new Map();
 
@@ -278,7 +273,7 @@ export class AccountMoveService {
 		}
 
 		const arrayToInsert = Array.from(newMemberships.entries()).map(entry => ({ ...entry[1], id: entry[0] }));
-		await this.userListMembershipsRepository.insert(arrayToInsert);
+		await createUserListMembershipsInDatabase(this.db, arrayToInsert);
 
 		// Have the proxy account follow the new account in the same way as UserListService.push
 		if (this.userEntityService.isRemoteUser(dst)) {

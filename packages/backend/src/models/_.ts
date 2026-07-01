@@ -85,7 +85,6 @@ export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
 export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
-export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
 export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;
 export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>;
 export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;

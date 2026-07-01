@@ -18,7 +18,6 @@ import {
 	MiRole,
 	MiUser,
 	MiUserList,
-	MiUserListMembership,
 	MiUserProfile,
 } from './_.js';
 import type { Provider } from '@nestjs/common';
@@ -45,12 +44,6 @@ const $userProfilesRepository: Provider = {
 const $userListsRepository: Provider = {
 	provide: DI.userListsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserList).extend(miRepository as MiRepository<MiUserList>),
-	inject: [DI.db],
-};
-
-const $userListMembershipsRepository: Provider = {
-	provide: DI.userListMembershipsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserListMembership).extend(miRepository as MiRepository<MiUserListMembership>),
 	inject: [DI.db],
 };
 
@@ -103,7 +96,6 @@ const $rolesRepository: Provider = {
 		$notesRepository,
 		$userProfilesRepository,
 		$userListsRepository,
-		$userListMembershipsRepository,
 		$followingsRepository,
 		$instancesRepository,
 		$driveFilesRepository,
@@ -117,7 +109,6 @@ const $rolesRepository: Provider = {
 		$notesRepository,
 		$userProfilesRepository,
 		$userListsRepository,
-		$userListMembershipsRepository,
 		$followingsRepository,
 		$instancesRepository,
 		$driveFilesRepository,

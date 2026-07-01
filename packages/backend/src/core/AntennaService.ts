@@ -15,7 +15,7 @@ import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Acct from '@/misc/acct.js';
 import type { Packed } from '@/misc/json-schema.js';
-import type { UserListMembershipsRepository } from '@/models/_.js';
+import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -36,9 +36,6 @@ export class AntennaService implements OnApplicationShutdown {
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
 
 		private cacheService: CacheService,
 		private utilityService: UtilityService,
@@ -139,12 +136,7 @@ export class AntennaService implements OnApplicationShutdown {
 			// TODO
 		} else if (antenna.src === 'list') {
 			if (antenna.userListId == null) return false;
-			const exists = await this.userListMembershipsRepository.exists({
-				where: {
-					userListId: antenna.userListId,
-					userId: note.userId,
-				},
-			});
+			const exists = await userListMembershipExistsInDatabase(this.db, note.userId, antenna.userListId);
 			if (!exists) return false;
 		} else if (antenna.src === 'users') {
 			const accts = antenna.users.map(x => {
