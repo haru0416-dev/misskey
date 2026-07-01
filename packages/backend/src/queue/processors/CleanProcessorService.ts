@@ -6,10 +6,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { In, LessThan } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository, RoleAssignmentsRepository, UserIpsRepository } from '@/models/_.js';
+import type { AntennasRepository, RoleAssignmentsRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import type { Config } from '@/config.js';
+import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 
@@ -21,8 +23,8 @@ export class CleanProcessorService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.userIpsRepository)
-		private userIpsRepository: UserIpsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		@Inject(DI.antennasRepository)
 		private antennasRepository: AntennasRepository,
@@ -39,9 +41,7 @@ export class CleanProcessorService {
 	public async process(): Promise<void> {
 		this.logger.info('Cleaning...');
 
-		this.userIpsRepository.delete({
-			createdAt: LessThan(new Date(Date.now() - (1000 * 60 * 60 * 24 * 90))),
-		});
+		await deleteUserIpsOlderThanFromDatabase(this.drizzle, new Date(Date.now() - (1000 * 60 * 60 * 24 * 90)));
 
 		// 使われてないアンテナを停止
 		if (this.config.deactivateAntennaThreshold > 0) {
