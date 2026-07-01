@@ -9,8 +9,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { randomString } from '../utils.js';
 import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
 import {
-	AbuseReportNotificationRecipientRepository,
-	MiAbuseReportNotificationRecipient,
 	MiAbuseUserReport,
 	MiSystemWebhook,
 	MiUser,
@@ -18,6 +16,7 @@ import {
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
+import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { IdService } from '@/core/IdService.js';
@@ -26,9 +25,14 @@ import { RoleService } from '@/core/RoleService.js';
 import { MetaService } from '@/core/MetaService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { abuseReportNotificationRecipient } from '@/db/schema/abuse-report-notification-recipient.js';
+import {
+	createAbuseReportNotificationRecipientInDatabase,
+	fetchAbuseReportNotificationRecipientByIdFromDatabase,
+} from '@/core/AbuseReportNotificationRecipientStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 process.env.NODE_ENV = 'test';
 
@@ -41,7 +45,7 @@ describe('AbuseReportNotificationService', () => {
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
 	let systemWebhooksRepository: SystemWebhooksRepository;
-	let abuseReportNotificationRecipientRepository: AbuseReportNotificationRecipientRepository;
+	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let roleService: Mocked<RoleService>;
 	let emailService: Mocked<EmailService>;
@@ -86,14 +90,15 @@ describe('AbuseReportNotificationService', () => {
 	}
 
 	async function createRecipient(data: Partial<MiAbuseReportNotificationRecipient> = {}) {
-		return abuseReportNotificationRecipientRepository
-			.insert({
-				id: idService.gen(),
-				isActive: true,
-				name: randomString(),
-				...data,
-			})
-			.then(x => abuseReportNotificationRecipientRepository.findOneByOrFail(x.identifiers[0]));
+		return createAbuseReportNotificationRecipientInDatabase(db, {
+			id: idService.gen(),
+			isActive: true,
+			name: randomString(),
+			method: 'email',
+			userId: null,
+			systemWebhookId: null,
+			...data,
+		});
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -138,7 +143,7 @@ describe('AbuseReportNotificationService', () => {
 		usersRepository = app.get(DI.usersRepository);
 		userProfilesRepository = app.get(DI.userProfilesRepository);
 		systemWebhooksRepository = app.get(DI.systemWebhooksRepository);
-		abuseReportNotificationRecipientRepository = app.get(DI.abuseReportNotificationRecipientRepository);
+		db = app.get(DI.drizzle);
 
 		service = app.get(AbuseReportNotificationService);
 		idService = app.get(IdService);
@@ -163,10 +168,10 @@ describe('AbuseReportNotificationService', () => {
 		emailService.sendEmail.mockClear();
 		webhookService.enqueueSystemWebhook.mockClear();
 
-		await usersRepository.createQueryBuilder().delete().execute();
-		await userProfilesRepository.createQueryBuilder().delete().execute();
+		await db.delete(abuseReportNotificationRecipient);
 		await systemWebhooksRepository.createQueryBuilder().delete().execute();
-		await abuseReportNotificationRecipientRepository.createQueryBuilder().delete().execute();
+		await userProfilesRepository.createQueryBuilder().delete().execute();
+		await usersRepository.createQueryBuilder().delete().execute();
 	});
 
 	afterAll(async () => {
@@ -252,7 +257,7 @@ describe('AbuseReportNotificationService', () => {
 
 			await service.deleteRecipient(recipient1.id, root);
 
-			await expect(abuseReportNotificationRecipientRepository.findOneBy({ id: recipient1.id })).resolves.toBeNull();
+			await expect(fetchAbuseReportNotificationRecipientByIdFromDatabase(db, recipient1.id)).resolves.toBeNull();
 		});
 	});
 

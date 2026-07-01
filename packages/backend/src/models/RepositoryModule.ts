@@ -6,7 +6,6 @@
 import { Module } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import {
-	MiAbuseReportNotificationRecipient,
 	MiAbuseUserReport,
 	MiAccessToken,
 	MiAnnouncement,
@@ -191,12 +190,6 @@ const $abuseUserReportsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $abuseReportNotificationRecipientRepository: Provider = {
-	provide: DI.abuseReportNotificationRecipientRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiAbuseReportNotificationRecipient).extend(miRepository as MiRepository<MiAbuseReportNotificationRecipient>),
-	inject: [DI.db],
-};
-
 const $registrationTicketsRepository: Provider = {
 	provide: DI.registrationTicketsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiRegistrationTicket).extend(miRepository as MiRepository<MiRegistrationTicket>),
@@ -325,7 +318,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$mutingsRepository,
 		$blockingsRepository,
 		$abuseUserReportsRepository,
-		$abuseReportNotificationRecipientRepository,
 		$registrationTicketsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
@@ -368,7 +360,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$mutingsRepository,
 		$blockingsRepository,
 		$abuseUserReportsRepository,
-		$abuseReportNotificationRecipientRepository,
 		$registrationTicketsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
