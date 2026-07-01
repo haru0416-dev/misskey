@@ -34,7 +34,6 @@ import {
 	MiGalleryPost,
 	MiHashtag,
 	MiInstance,
-	MiModerationLog,
 	MiMuting,
 	MiNote,
 	MiNoteFavorite,
@@ -291,12 +290,6 @@ const $galleryLikesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $moderationLogsRepository: Provider = {
-	provide: DI.moderationLogsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiModerationLog).extend(miRepository as MiRepository<MiModerationLog>),
-	inject: [DI.db],
-};
-
 const $clipsRepository: Provider = {
 	provide: DI.clipsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiClip).extend(miRepository as MiRepository<MiClip>),
@@ -451,7 +444,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$pageLikesRepository,
 		$galleryPostsRepository,
 		$galleryLikesRepository,
-		$moderationLogsRepository,
 		$clipsRepository,
 		$clipNotesRepository,
 		$clipFavoritesRepository,
@@ -510,7 +502,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$pageLikesRepository,
 		$galleryPostsRepository,
 		$galleryLikesRepository,
-		$moderationLogsRepository,
 		$clipsRepository,
 		$clipNotesRepository,
 		$clipFavoritesRepository,
