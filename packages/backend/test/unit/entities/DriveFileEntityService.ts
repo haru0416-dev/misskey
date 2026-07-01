@@ -8,7 +8,7 @@ process.env.NODE_ENV = 'test';
 import { afterAll, beforeAll, beforeEach, describe, expect, vi, test } from 'vitest';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
-import type { DriveFilesRepository, DriveFoldersRepository, UsersRepository } from '@/models/_.js';
+import type { DriveFilesRepository, UsersRepository } from '@/models/_.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
@@ -17,6 +17,8 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const describeBenchmark = process.env.RUN_BENCHMARKS === '1' ? describe : describe.skip;
 
@@ -25,7 +27,7 @@ describe('DriveFileEntityService', () => {
 	let service: DriveFileEntityService;
 	let driveFolderEntityService: DriveFolderEntityService;
 	let driveFilesRepository: DriveFilesRepository;
-	let driveFoldersRepository: DriveFoldersRepository;
+	let db: MiDrizzleDatabase;
 	let usersRepository: UsersRepository;
 	let idCounter = 0;
 
@@ -59,13 +61,12 @@ describe('DriveFileEntityService', () => {
 
 	const createFolder = async (name: string, parentId: string | null) => {
 		const id = nextId();
-		await driveFoldersRepository.insert({
+		return createDriveFolderInDatabase(db, {
 			id,
 			name,
 			userId: null,
 			parentId,
 		});
-		return driveFoldersRepository.findOneByOrFail({ id });
 	};
 
 	const createFile = async (folderId: string | null, userId: string | null) => {
@@ -115,7 +116,7 @@ describe('DriveFileEntityService', () => {
 		service = app.get<DriveFileEntityService>(DriveFileEntityService);
 		driveFolderEntityService = app.get<DriveFolderEntityService>(DriveFolderEntityService);
 		driveFilesRepository = app.get<DriveFilesRepository>(DI.driveFilesRepository);
-		driveFoldersRepository = app.get<DriveFoldersRepository>(DI.driveFoldersRepository);
+		db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		usersRepository = app.get<UsersRepository>(DI.usersRepository);
 	});
 

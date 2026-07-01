@@ -5,10 +5,15 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFoldersRepository } from '@/models/_.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
+import {
+	fetchDriveFolderByIdAndUserIdFromDatabase,
+	fetchDriveFolderByIdOrFailFromDatabase,
+	updateDriveFolderInDatabase,
+} from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -58,18 +63,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFoldersRepository)
-		private driveFoldersRepository: DriveFoldersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFolderEntityService: DriveFolderEntityService,
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Fetch folder
-			const folder = await this.driveFoldersRepository.findOneBy({
-				id: ps.folderId,
-				userId: me.id,
-			});
+			const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, ps.folderId, me.id);
 
 			if (folder == null) {
 				throw new ApiError(meta.errors.noSuchFolder);
@@ -84,10 +86,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					folder.parentId = null;
 				} else {
 					// Get parent folder
-					const parent = await this.driveFoldersRepository.findOneBy({
-						id: ps.parentId,
-						userId: me.id,
-					});
+					const parent = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, ps.parentId, me.id);
 
 					if (parent == null) {
 						throw new ApiError(meta.errors.noSuchParentFolder);
@@ -95,9 +94,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 					// Check if the circular reference will occur
 					const checkCircle = async (folderId: string): Promise<boolean> => {
-						const folder2 = await this.driveFoldersRepository.findOneByOrFail({
-							id: folderId,
-						});
+						const folder2 = await fetchDriveFolderByIdOrFailFromDatabase(this.db, folderId);
 
 						if (folder2.id === folder.id) {
 							return true;
@@ -119,7 +116,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// Update
-			await this.driveFoldersRepository.update(folder.id, {
+			await updateDriveFolderInDatabase(this.db, folder.id, {
 				name: folder.name,
 				parentId: folder.parentId,
 			});

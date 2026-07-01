@@ -8,20 +8,22 @@ process.env.NODE_ENV = 'test';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
-import type { DriveFilesRepository, DriveFoldersRepository } from '@/models/_.js';
+import type { DriveFilesRepository } from '@/models/_.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const describeBenchmark = process.env.RUN_BENCHMARKS === '1' ? describe : describe.skip;
 
 describe('DriveFolderEntityService', () => {
 	let app: TestingModule;
 	let service: DriveFolderEntityService;
-	let driveFoldersRepository: DriveFoldersRepository;
+	let db: MiDrizzleDatabase;
 	let driveFilesRepository: DriveFilesRepository;
 	let idCounter = 0;
 
@@ -29,13 +31,12 @@ describe('DriveFolderEntityService', () => {
 
 	const createFolder = async (name: string, parentId: string | null) => {
 		const id = nextId();
-		await driveFoldersRepository.insert({
+		return createDriveFolderInDatabase(db, {
 			id,
 			name,
 			userId: null,
 			parentId,
 		});
-		return driveFoldersRepository.findOneByOrFail({ id });
 	};
 
 	const createFile = async (folderId: string | null) => {
@@ -79,7 +80,7 @@ describe('DriveFolderEntityService', () => {
 		app.enableShutdownHooks();
 
 		service = app.get<DriveFolderEntityService>(DriveFolderEntityService);
-		driveFoldersRepository = app.get<DriveFoldersRepository>(DI.driveFoldersRepository);
+		db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		driveFilesRepository = app.get<DriveFilesRepository>(DI.driveFilesRepository);
 	});
 

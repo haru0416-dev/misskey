@@ -18,7 +18,6 @@ import { MiChannel } from '@/models/Channel.js';
 import { MiChatMessage } from '@/models/ChatMessage.js';
 import { MiClip } from '@/models/Clip.js';
 import { MiDriveFile } from '@/models/DriveFile.js';
-import { MiDriveFolder } from '@/models/DriveFolder.js';
 import { MiEmoji } from '@/models/Emoji.js';
 import { MiFlash } from '@/models/Flash.js';
 import { MiFollowing } from '@/models/Following.js';
@@ -58,7 +57,6 @@ export {
 	MiBlocking,
 	MiClip,
 	MiDriveFile,
-	MiDriveFolder,
 	MiEmoji,
 	MiFollowing,
 	MiFollowRequest,
@@ -85,7 +83,6 @@ export type AntennasRepository = Repository<MiAntenna> & MiRepository<MiAntenna>
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
 export type ClipsRepository = Repository<MiClip> & MiRepository<MiClip>;
 export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;
-export type DriveFoldersRepository = Repository<MiDriveFolder> & MiRepository<MiDriveFolder>;
 export type EmojisRepository = Repository<MiEmoji> & MiRepository<MiEmoji>;
 export type FollowingsRepository = Repository<MiFollowing> & MiRepository<MiFollowing>;
 export type FollowRequestsRepository = Repository<MiFollowRequest> & MiRepository<MiFollowRequest>;

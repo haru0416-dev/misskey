@@ -11,7 +11,6 @@ import {
 	MiChannel,
 	MiClip,
 	MiDriveFile,
-	MiDriveFolder,
 	MiEmoji,
 	MiFlash,
 	MiFollowing,
@@ -99,12 +98,6 @@ const $driveFilesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $driveFoldersRepository: Provider = {
-	provide: DI.driveFoldersRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiDriveFolder).extend(miRepository as MiRepository<MiDriveFolder>),
-	inject: [DI.db],
-};
-
 const $mutingsRepository: Provider = {
 	provide: DI.mutingsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiMuting).extend(miRepository as MiRepository<MiMuting>),
@@ -173,7 +166,6 @@ const $rolesRepository: Provider = {
 		$instancesRepository,
 		$emojisRepository,
 		$driveFilesRepository,
-		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
 		$pagesRepository,
@@ -196,7 +188,6 @@ const $rolesRepository: Provider = {
 		$instancesRepository,
 		$emojisRepository,
 		$driveFilesRepository,
-		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
 		$pagesRepository,

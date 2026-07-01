@@ -12,7 +12,12 @@ import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import { In, IsNull } from 'typeorm';
 import { DeleteObjectCommandInput, PutObjectCommandInput, NoSuchKey } from '@aws-sdk/client-s3';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, UsersRepository, DriveFoldersRepository, UserProfilesRepository, MiMeta } from '@/models/_.js';
+import type { DriveFilesRepository, UsersRepository, UserProfilesRepository, MiMeta } from '@/models/_.js';
+import {
+	fetchDriveFolderByIdAndUserIdFromDatabase,
+	fetchDriveFolderByIdAndUserIdOrFailFromDatabase,
+} from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
 import Logger from '@/logger.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
@@ -111,8 +116,8 @@ export class DriveService {
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
-		@Inject(DI.driveFoldersRepository)
-		private driveFoldersRepository: DriveFoldersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private fileInfoService: FileInfoService,
 		private userEntityService: UserEntityService,
@@ -564,10 +569,7 @@ export class DriveService {
 				return null;
 			}
 
-			const driveFolder = await this.driveFoldersRepository.findOneBy({
-				id: folderId,
-				userId: user ? user.id : IsNull(),
-			});
+			const driveFolder = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, folderId, user ? user.id : null);
 
 			if (driveFolder == null) throw new Error('folder-not-found');
 
@@ -694,10 +696,7 @@ export class DriveService {
 		}
 
 		if (values.folderId != null) {
-			const folder = await this.driveFoldersRepository.findOneBy({
-				id: values.folderId,
-				userId: file.userId!,
-			});
+			const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, values.folderId, file.userId!);
 
 			if (folder == null) {
 				throw new DriveService.NoSuchFolderError();
@@ -739,10 +738,7 @@ export class DriveService {
 
 	@bindThis
 	public async moveFiles(fileIds: MiDriveFile['id'][], folderId: MiDriveFolder['id'] | null, userId: MiUser['id']) {
-		const folder = folderId ? await this.driveFoldersRepository.findOneByOrFail({
-			id: folderId,
-			userId: userId,
-		}) : null;
+		const folder = folderId ? await fetchDriveFolderByIdAndUserIdOrFailFromDatabase(this.db, folderId, userId) : null;
 
 		await this.driveFilesRepository.update({
 			id: In(fileIds),
