@@ -31,7 +31,6 @@ import { MiFlash } from '@/models/Flash.js';
 import { MiFollowing } from '@/models/Following.js';
 import { MiFollowRequest } from '@/models/FollowRequest.js';
 import { MiGalleryPost } from '@/models/GalleryPost.js';
-import { MiHashtag } from '@/models/Hashtag.js';
 import { MiInstance } from '@/models/Instance.js';
 import { MiMeta } from '@/models/Meta.js';
 import { MiMuting } from '@/models/Muting.js';
@@ -83,7 +82,6 @@ export {
 	MiFollowing,
 	MiFollowRequest,
 	MiGalleryPost,
-	MiHashtag,
 	MiInstance,
 	MiMeta,
 	MiMuting,
@@ -131,7 +129,6 @@ export type EmojisRepository = Repository<MiEmoji> & MiRepository<MiEmoji>;
 export type FollowingsRepository = Repository<MiFollowing> & MiRepository<MiFollowing>;
 export type FollowRequestsRepository = Repository<MiFollowRequest> & MiRepository<MiFollowRequest>;
 export type GalleryPostsRepository = Repository<MiGalleryPost> & MiRepository<MiGalleryPost>;
-export type HashtagsRepository = Repository<MiHashtag> & MiRepository<MiHashtag>;
 export type InstancesRepository = Repository<MiInstance> & MiRepository<MiInstance>;
 export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
 export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;

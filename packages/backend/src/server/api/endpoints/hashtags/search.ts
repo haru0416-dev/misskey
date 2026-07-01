@@ -5,9 +5,9 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { HashtagsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
-import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { searchHashtagNamesFromDatabase } from '@/core/HashtagStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['hashtags'],
@@ -37,19 +37,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.hashtagsRepository)
-		private hashtagsRepository: HashtagsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const hashtags = await this.hashtagsRepository.createQueryBuilder('tag')
-				.where('tag.name like :q', { q: sqlLikeEscape(ps.query.toLowerCase()) + '%' })
-				.orderBy('tag.mentionedLocalUsersCount', 'DESC')
-				.groupBy('tag.id')
-				.limit(ps.limit)
-				.offset(ps.offset)
-				.getMany();
-
-			return hashtags.map(tag => tag.name);
+			return await searchHashtagNamesFromDatabase(this.drizzle, {
+				query: ps.query,
+				limit: ps.limit,
+				offset: ps.offset,
+			});
 		});
 	}
 }

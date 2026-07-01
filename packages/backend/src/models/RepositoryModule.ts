@@ -24,7 +24,6 @@ import {
 	MiFollowing,
 	MiFollowRequest,
 	MiGalleryPost,
-	MiHashtag,
 	MiInstance,
 	MiMuting,
 	MiNote,
@@ -187,12 +186,6 @@ const $blockingsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $hashtagsRepository: Provider = {
-	provide: DI.hashtagsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiHashtag).extend(miRepository as MiRepository<MiHashtag>),
-	inject: [DI.db],
-};
-
 const $abuseUserReportsRepository: Provider = {
 	provide: DI.abuseUserReportsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiAbuseUserReport).extend(miRepository as MiRepository<MiAbuseUserReport>),
@@ -338,7 +331,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$hashtagsRepository,
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,
 		$registrationTicketsRepository,
@@ -383,7 +375,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$hashtagsRepository,
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,
 		$registrationTicketsRepository,
