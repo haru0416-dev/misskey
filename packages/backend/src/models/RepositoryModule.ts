@@ -37,7 +37,6 @@ import {
 	MiUser,
 	MiUserList,
 	MiUserListMembership,
-	MiUserNotePining,
 	MiUserProfile,
 	MiUserSecurityKey,
 	MiWebhook,
@@ -118,12 +117,6 @@ const $userListsRepository: Provider = {
 const $userListMembershipsRepository: Provider = {
 	provide: DI.userListMembershipsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserListMembership).extend(miRepository as MiRepository<MiUserListMembership>),
-	inject: [DI.db],
-};
-
-const $userNotePiningsRepository: Provider = {
-	provide: DI.userNotePiningsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserNotePining).extend(miRepository as MiRepository<MiUserNotePining>),
 	inject: [DI.db],
 };
 
@@ -286,7 +279,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$userSecurityKeysRepository,
 		$userListsRepository,
 		$userListMembershipsRepository,
-		$userNotePiningsRepository,
 		$followingsRepository,
 		$followRequestsRepository,
 		$instancesRepository,
@@ -325,7 +317,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$userSecurityKeysRepository,
 		$userListsRepository,
 		$userListMembershipsRepository,
-		$userNotePiningsRepository,
 		$followingsRepository,
 		$followRequestsRepository,
 		$instancesRepository,

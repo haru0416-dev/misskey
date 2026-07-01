@@ -12,7 +12,6 @@ import {
 	type NotesRepository,
 	type NoteFavoritesRepository,
 	type NoteReactionsRepository,
-	type UserNotePiningsRepository,
 	type UsersRepository,
 	type UserProfilesRepository,
 	MiMeta,
@@ -23,6 +22,9 @@ import { IdService } from '@/core/IdService.js';
 import { QueueLoggerService } from '@/queue/QueueLoggerService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { userNotePining } from '@/db/schema/user-note-pining.js';
+import { createUserNotePiningInDatabase } from '@/core/UserNotePiningStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 describe('CleanRemoteNotesProcessorService', () => {
 	let app: TestingModule;
@@ -31,7 +33,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 	let notesRepository: NotesRepository;
 	let noteFavoritesRepository: NoteFavoritesRepository;
 	let noteReactionsRepository: NoteReactionsRepository;
-	let userNotePiningsRepository: UserNotePiningsRepository;
+	let db: MiDrizzleDatabase;
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
 
@@ -115,7 +117,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 		notesRepository = app.get(DI.notesRepository);
 		noteFavoritesRepository = app.get(DI.noteFavoritesRepository);
 		noteReactionsRepository = app.get(DI.noteReactionsRepository);
-		userNotePiningsRepository = app.get(DI.userNotePiningsRepository);
+		db = app.get(DI.drizzle);
 		usersRepository = app.get(DI.usersRepository);
 		userProfilesRepository = app.get(DI.userProfilesRepository);
 
@@ -140,7 +142,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 		// Clean up test data
 		await Promise.all([
 			notesRepository.createQueryBuilder().delete().execute(),
-			userNotePiningsRepository.createQueryBuilder().delete().execute(),
+			db.delete(userNotePining),
 			noteFavoritesRepository.createQueryBuilder().delete().execute(),
 			noteReactionsRepository.createQueryBuilder().delete().execute(),
 		]);
@@ -254,7 +256,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// Pin the note by the user who created it
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: bob.id, // Same user as the note creator
 				noteId: olderRemoteNote.id,
@@ -422,7 +424,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			}, carol, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 2000);
 
 			// Pin the reply note
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: carol.id,
 				noteId: replyNote.id,
@@ -480,7 +482,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// Should NOT be deleted: old remote note but pinned
 			const pinnedNote = await createNote({}, bob, oldTime);
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: bob.id,
 				noteId: pinnedNote.id,
@@ -1202,7 +1204,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 3) ピン留め保護
 			const pinned = await createNote({}, bob, oldTime - 2);
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: bob.id,
 				noteId: pinned.id,

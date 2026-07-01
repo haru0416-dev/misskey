@@ -43,7 +43,6 @@ import { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserList } from '@/models/UserList.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
-import { MiUserNotePining } from '@/models/UserNotePining.js';
 import { MiUserProfile } from '@/models/UserProfile.js';
 import { MiUserSecurityKey } from '@/models/UserSecurityKey.js';
 import { MiWebhook } from '@/models/Webhook.js';
@@ -87,7 +86,6 @@ export {
 	MiUser,
 	MiUserList,
 	MiUserListMembership,
-	MiUserNotePining,
 	MiUserProfile,
 	MiUserSecurityKey,
 	MiWebhook,
@@ -126,7 +124,6 @@ export type RegistrationTicketsRepository = Repository<MiRegistrationTicket> & M
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
-export type UserNotePiningsRepository = Repository<MiUserNotePining> & MiRepository<MiUserNotePining>;
 export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;
 export type UserSecurityKeysRepository = Repository<MiUserSecurityKey> & MiRepository<MiUserSecurityKey>;
 export type WebhooksRepository = Repository<MiWebhook> & MiRepository<MiWebhook>;

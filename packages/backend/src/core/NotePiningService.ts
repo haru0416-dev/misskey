@@ -5,12 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UserNotePiningsRepository, UsersRepository } from '@/models/_.js';
+import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
 import { IdService } from '@/core/IdService.js';
-import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import { RelayService } from '@/core/RelayService.js';
 import type { Config } from '@/config.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -18,6 +17,12 @@ import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerServ
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
+import {
+	createUserNotePiningInDatabase,
+	deleteUserNotePiningFromDatabase,
+	listUserNotePiningsByUserIdFromDatabase,
+} from '@/core/UserNotePiningStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class NotePiningService {
@@ -31,8 +36,8 @@ export class NotePiningService {
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 
-		@Inject(DI.userNotePiningsRepository)
-		private userNotePiningsRepository: UserNotePiningsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -60,7 +65,7 @@ export class NotePiningService {
 			throw new IdentifiableError('70c4e51f-5bea-449c-a030-53bee3cce202', 'No such note.');
 		}
 
-		const pinings = await this.userNotePiningsRepository.findBy({ userId: user.id });
+		const pinings = await listUserNotePiningsByUserIdFromDatabase(this.db, user.id);
 
 		if (pinings.length >= (await this.roleService.getUserPolicies(user.id)).pinLimit) {
 			throw new IdentifiableError('15a018eb-58e5-4da1-93be-330fcc5e4e1a', 'You can not pin notes any more.');
@@ -70,11 +75,11 @@ export class NotePiningService {
 			throw new IdentifiableError('23f0cf4e-59a3-4276-a91d-61a5891c1514', 'That note has already been pinned.');
 		}
 
-		await this.userNotePiningsRepository.insert({
+		await createUserNotePiningInDatabase(this.db, {
 			id: this.idService.gen(),
 			userId: user.id,
 			noteId: note.id,
-		} as MiUserNotePining);
+		});
 
 		// Deliver to remote followers
 		if (this.userEntityService.isLocalUser(user) && !note.localOnly && ['public', 'home'].includes(note.visibility)) {
@@ -99,7 +104,7 @@ export class NotePiningService {
 			throw new IdentifiableError('b302d4cf-c050-400a-bbb3-be208681f40c', 'No such note.');
 		}
 
-		this.userNotePiningsRepository.delete({
+		await deleteUserNotePiningFromDatabase(this.db, {
 			userId: user.id,
 			noteId: note.id,
 		});

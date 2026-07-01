@@ -29,19 +29,23 @@ import type {
 	FollowRequestsRepository,
 	MiFollowing,
 	MiMeta,
-	MiUserNotePining,
 	MiUserProfile,
 	MutingsRepository,
-	UserNotePiningsRepository,
+	NotesRepository,
 	UserProfilesRepository,
 	UserSecurityKeysRepository,
 	UsersRepository,
 } from '@/models/_.js';
+import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import {
 	fetchUserMemoTextFromDatabase,
 	listUserMemoTextsByUserIdFromDatabase,
 } from '@/core/UserMemoStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import {
+	listUserNotePiningsByUserIdFromDatabase,
+	listUserNotePiningsByUserIdsFromDatabase,
+} from '@/core/UserNotePiningStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -118,6 +122,9 @@ export class UserEntityService implements OnModuleInit {
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
+		@Inject(DI.notesRepository)
+		private notesRepository: NotesRepository,
+
 		@Inject(DI.userSecurityKeysRepository)
 		private userSecurityKeysRepository: UserSecurityKeysRepository,
 
@@ -132,9 +139,6 @@ export class UserEntityService implements OnModuleInit {
 
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
-
-		@Inject(DI.userNotePiningsRepository)
-		private userNotePiningsRepository: UserNotePiningsRepository,
 
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
@@ -394,6 +398,26 @@ export class UserEntityService implements OnModuleInit {
 		return `${this.config.url}/users/${userId}`;
 	}
 
+	@bindThis
+	private async attachNotesToPinings(pinings: MiUserNotePining[]): Promise<MiUserNotePining[]> {
+		if (pinings.length === 0) {
+			return [];
+		}
+
+		const notes = await this.notesRepository.findBy({
+			id: In([...new Set(pinings.map(pin => pin.noteId))]),
+		});
+		const noteMap = new Map(notes.map(note => [note.id, note]));
+
+		return pinings.flatMap(pin => {
+			const note = noteMap.get(pin.noteId);
+			return note == null ? [] : [{
+				...pin,
+				note,
+			}];
+		});
+	}
+
 	public async pack<S extends 'MeDetailed' | 'UserDetailedNotMe' | 'UserDetailed' | 'UserLite' = 'UserLite'>(
 		src: MiUser['id'] | MiUser,
 		me?: { id: MiUser['id']; } | null | undefined,
@@ -445,11 +469,9 @@ export class UserEntityService implements OnModuleInit {
 			if (opts.pinNotes) {
 				pins = opts.pinNotes.get(user.id) ?? [];
 			} else {
-				pins = await this.userNotePiningsRepository.createQueryBuilder('pin')
-					.where('pin.userId = :userId', { userId: user.id })
-					.innerJoinAndSelect('pin.note', 'note')
-					.orderBy('pin.id', 'DESC')
-					.getMany();
+				pins = await this.attachNotesToPinings(
+					await listUserNotePiningsByUserIdFromDatabase(this.drizzle, user.id, { order: 'desc' }),
+				);
 			}
 		}
 
@@ -684,10 +706,9 @@ export class UserEntityService implements OnModuleInit {
 
 				if (_userIds.length > 0) {
 					userRelations = await this.getRelations(meId, _userIds);
-					pinNotes = await this.userNotePiningsRepository.createQueryBuilder('pin')
-						.where('pin.userId IN (:...userIds)', { userIds: _userIds })
-						.innerJoinAndSelect('pin.note', 'note')
-						.getMany()
+					pinNotes = await this.attachNotesToPinings(
+						await listUserNotePiningsByUserIdsFromDatabase(this.drizzle, _userIds, { order: 'desc' }),
+					)
 						.then(pinsNotes => {
 							const map = new Map<MiUser['id'], MiUserNotePining[]>();
 							for (const note of pinsNotes) {

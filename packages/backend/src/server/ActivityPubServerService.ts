@@ -13,7 +13,7 @@ import accepts from 'accepts';
 import vary from 'vary';
 import secureJson from 'secure-json-parse';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, NotesRepository, EmojisRepository, NoteReactionsRepository, UserProfilesRepository, UserNotePiningsRepository, UsersRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
+import type { FollowingsRepository, NotesRepository, EmojisRepository, NoteReactionsRepository, UserProfilesRepository, UsersRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
 import * as url from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -31,6 +31,8 @@ import { IActivity } from '@/core/activitypub/type.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import * as Acct from '@/misc/acct.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
+import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginOptions, FastifyBodyParser } from 'fastify';
 import type { FindOptionsWhere } from 'typeorm';
 
@@ -61,8 +63,8 @@ export class ActivityPubServerService {
 		@Inject(DI.emojisRepository)
 		private emojisRepository: EmojisRepository,
 
-		@Inject(DI.userNotePiningsRepository)
-		private userNotePiningsRepository: UserNotePiningsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
@@ -402,13 +404,13 @@ export class ActivityPubServerService {
 			return;
 		}
 
-		const pinings = await this.userNotePiningsRepository.find({
-			where: { userId: user.id },
-			order: { id: 'DESC' },
-		});
-
-		const pinnedNotes = (await Promise.all(pinings.map(pining =>
-			this.notesRepository.findOneByOrFail({ id: pining.noteId }))))
+		const pinings = await listUserNotePiningsByUserIdFromDatabase(this.db, user.id, { order: 'desc' });
+		const notes = pinings.length === 0
+			? []
+			: await this.notesRepository.findBy({ id: In(pinings.map(pining => pining.noteId)) });
+		const noteMap = new Map(notes.map(note => [note.id, note]));
+		const pinnedNotes = pinings.map(pining => noteMap.get(pining.noteId))
+			.filter((note): note is MiNote => note != null)
 			.filter(note => !note.localOnly && ['public', 'home'].includes(note.visibility));
 
 		const renderedNotes = await Promise.all(pinnedNotes.map(note => this.apRendererService.renderNote(note)));
