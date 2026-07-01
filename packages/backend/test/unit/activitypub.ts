@@ -19,6 +19,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import { ApImageService } from '@/core/activitypub/models/ApImageService.js';
 import { ApNoteService } from '@/core/activitypub/models/ApNoteService.js';
 import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
+import { ApDbResolverService } from '@/core/activitypub/ApDbResolverService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { JsonLdService } from '@/core/activitypub/JsonLdService.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
@@ -97,6 +98,7 @@ describe('ActivityPub', () => {
 	let imageService: ApImageService;
 	let noteService: ApNoteService;
 	let personService: ApPersonService;
+	let apDbResolverService: ApDbResolverService;
 	let rendererService: ApRendererService;
 	let jsonLdService: JsonLdService;
 	let resolver: MockResolver;
@@ -149,6 +151,7 @@ describe('ActivityPub', () => {
 
 		noteService = app.get<ApNoteService>(ApNoteService);
 		personService = app.get<ApPersonService>(ApPersonService);
+		apDbResolverService = app.get<ApDbResolverService>(ApDbResolverService);
 		rendererService = app.get<ApRendererService>(ApRendererService);
 		imageService = app.get<ApImageService>(ApImageService);
 		jsonLdService = app.get<JsonLdService>(JsonLdService);
@@ -183,6 +186,22 @@ describe('ActivityPub', () => {
 			assert.deepStrictEqual(user.uri, actor.id);
 			assert.deepStrictEqual(user.username, actor.preferredUsername);
 			assert.deepStrictEqual(user.inbox, actor.inbox);
+		});
+
+		test('Actor public key', async () => {
+			const actor = createRandomActor();
+			const publicKey = {
+				id: `${actor.id}#main-key`,
+				publicKeyPem: '-----BEGIN PUBLIC KEY-----\nactor-test-key\n-----END PUBLIC KEY-----',
+			};
+			resolver.register(actor.id, { ...actor, publicKey });
+
+			const user = await personService.createPerson(actor.id, resolver);
+			const authUser = await apDbResolverService.getAuthUserFromKeyId(publicKey.id);
+
+			assert.notStrictEqual(authUser, null);
+			assert.strictEqual(authUser?.user.id, user.id);
+			assert.strictEqual(authUser?.key.keyPem, publicKey.publicKeyPem);
 		});
 
 		test('Minimum Note', async () => {

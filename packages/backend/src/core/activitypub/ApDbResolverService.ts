@@ -5,7 +5,7 @@
 
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UserPublickeysRepository, UsersRepository } from '@/models/_.js';
+import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import type { MiUserPublickey } from '@/models/UserPublickey.js';
@@ -14,6 +14,8 @@ import { UtilityService } from '@/core/UtilityService.js';
 import type { MiNote } from '@/models/Note.js';
 import { bindThis } from '@/decorators.js';
 import { MiLocalUser, MiRemoteUser } from '@/models/User.js';
+import { fetchUserPublickeyByKeyIdFromDatabase, fetchUserPublickeyByUserIdFromDatabase } from '@/core/UserPublickeyStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { getApId } from './type.js';
 import { ApPersonService } from './models/ApPersonService.js';
 import type { IObject } from './type.js';
@@ -49,8 +51,8 @@ export class ApDbResolverService implements OnApplicationShutdown {
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 
-		@Inject(DI.userPublickeysRepository)
-		private userPublickeysRepository: UserPublickeysRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 		private apPersonService: ApPersonService,
@@ -129,9 +131,7 @@ export class ApDbResolverService implements OnApplicationShutdown {
 		key: MiUserPublickey;
 	} | null> {
 		const key = await this.publicKeyCache.fetch(keyId, async () => {
-			const key = await this.userPublickeysRepository.findOneBy({
-				keyId,
-			});
+			const key = await fetchUserPublickeyByKeyIdFromDatabase(this.drizzle, keyId);
 
 			if (key == null) return null;
 
@@ -163,7 +163,7 @@ export class ApDbResolverService implements OnApplicationShutdown {
 
 		const key = await this.publicKeyByUserIdCache.fetch(
 			user.id,
-			() => this.userPublickeysRepository.findOneBy({ userId: user.id }),
+			() => fetchUserPublickeyByUserIdFromDatabase(this.drizzle, user.id),
 			v => v != null,
 		);
 

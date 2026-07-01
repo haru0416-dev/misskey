@@ -76,7 +76,6 @@ import { MiUserMemo } from '@/models/UserMemo.js';
 import { MiUserNotePining } from '@/models/UserNotePining.js';
 import { MiUserPending } from '@/models/UserPending.js';
 import { MiUserProfile } from '@/models/UserProfile.js';
-import { MiUserPublickey } from '@/models/UserPublickey.js';
 import { MiUserSecurityKey } from '@/models/UserSecurityKey.js';
 import { MiWebhook } from '@/models/Webhook.js';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
@@ -147,7 +146,6 @@ export {
 	MiUserNotePining,
 	MiUserPending,
 	MiUserProfile,
-	MiUserPublickey,
 	MiUserSecurityKey,
 	MiWebhook,
 	MiSystemWebhook,
@@ -222,7 +220,6 @@ export type UserListMembershipsRepository = Repository<MiUserListMembership> & M
 export type UserNotePiningsRepository = Repository<MiUserNotePining> & MiRepository<MiUserNotePining>;
 export type UserPendingsRepository = Repository<MiUserPending> & MiRepository<MiUserPending>;
 export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;
-export type UserPublickeysRepository = Repository<MiUserPublickey> & MiRepository<MiUserPublickey>;
 export type UserSecurityKeysRepository = Repository<MiUserSecurityKey> & MiRepository<MiUserSecurityKey>;
 export type WebhooksRepository = Repository<MiWebhook> & MiRepository<MiWebhook>;
 export type SystemWebhooksRepository = Repository<MiSystemWebhook> & MiRepository<MiWebhook>;

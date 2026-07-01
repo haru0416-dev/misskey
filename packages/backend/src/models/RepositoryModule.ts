@@ -71,7 +71,6 @@ import {
 	MiUserNotePining,
 	MiUserPending,
 	MiUserProfile,
-	MiUserPublickey,
 	MiUserSecurityKey,
 	MiWebhook,
 	MiChatMessage,
@@ -170,12 +169,6 @@ const $userPendingsRepository: Provider = {
 const $userSecurityKeysRepository: Provider = {
 	provide: DI.userSecurityKeysRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserSecurityKey).extend(miRepository as MiRepository<MiUserSecurityKey>),
-	inject: [DI.db],
-};
-
-const $userPublickeysRepository: Provider = {
-	provide: DI.userPublickeysRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserPublickey).extend(miRepository as MiRepository<MiUserPublickey>),
 	inject: [DI.db],
 };
 
@@ -527,7 +520,6 @@ const $chatApprovalsRepository: Provider = {
 		$userProfilesRepository,
 		$userPendingsRepository,
 		$userSecurityKeysRepository,
-		$userPublickeysRepository,
 		$userListsRepository,
 		$userListFavoritesRepository,
 		$userListMembershipsRepository,
@@ -600,7 +592,6 @@ const $chatApprovalsRepository: Provider = {
 		$userProfilesRepository,
 		$userPendingsRepository,
 		$userSecurityKeysRepository,
-		$userPublickeysRepository,
 		$userListsRepository,
 		$userListFavoritesRepository,
 		$userListMembershipsRepository,
