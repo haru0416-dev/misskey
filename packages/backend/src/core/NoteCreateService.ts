@@ -13,7 +13,7 @@ import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mf
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
 import { MiNote } from '@/models/Note.js';
-import type { BlockingsRepository, ChannelFollowingsRepository, ChannelsRepository, DriveFilesRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, NoteThreadMutingsRepository, UserListMembershipsRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { BlockingsRepository, ChannelsRepository, DriveFilesRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, NoteThreadMutingsRepository, UserListMembershipsRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiApp } from '@/models/App.js';
 import { concat } from '@/misc/prelude/array.js';
@@ -57,6 +57,8 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CollapsedQueue } from '@/misc/collapsed-queue.js';
 import { CacheService } from '@/core/CacheService.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
+import { listFollowerUserIdsByChannelIdFromDatabase } from '@/core/ChannelFollowingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 type NotificationType = 'reply' | 'renote' | 'quote' | 'mention';
 
@@ -205,6 +207,9 @@ export class NoteCreateService implements OnApplicationShutdown {
 		@Inject(DI.db)
 		private db: DataSource,
 
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
+
 		@Inject(DI.redisForTimelines)
 		private redisForTimelines: Redis.Redis,
 
@@ -234,9 +239,6 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.channelFollowingsRepository)
-		private channelFollowingsRepository: ChannelFollowingsRepository,
 
 		@Inject(DI.blockingsRepository)
 		private blockingsRepository: BlockingsRepository,
@@ -1054,17 +1056,12 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 			this.fanoutTimelineService.push(`userTimelineWithChannel:${user.id}`, note.id, note.userHost == null ? this.meta.perLocalUserUserTimelineCacheMax : this.meta.perRemoteUserUserTimelineCacheMax, r);
 
-			const channelFollowings = await this.channelFollowingsRepository.find({
-				where: {
-					followeeId: note.channelId,
-				},
-				select: { followerId: true },
-			});
+			const channelFollowerIds = await listFollowerUserIdsByChannelIdFromDatabase(this.drizzle, note.channelId);
 
-			for (const channelFollowing of channelFollowings) {
-				this.fanoutTimelineService.push(`homeTimeline:${channelFollowing.followerId}`, note.id, this.meta.perUserHomeTimelineCacheMax, r);
+			for (const followerId of channelFollowerIds) {
+				this.fanoutTimelineService.push(`homeTimeline:${followerId}`, note.id, this.meta.perUserHomeTimelineCacheMax, r);
 				if (note.fileIds.length > 0) {
-					this.fanoutTimelineService.push(`homeTimelineWithFiles:${channelFollowing.followerId}`, note.id, this.meta.perUserHomeTimelineCacheMax / 2, r);
+					this.fanoutTimelineService.push(`homeTimelineWithFiles:${followerId}`, note.id, this.meta.perUserHomeTimelineCacheMax / 2, r);
 				}
 			}
 		} else {

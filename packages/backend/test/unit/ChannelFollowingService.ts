@@ -12,11 +12,9 @@ import { CoreModule } from '@/core/CoreModule.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { IdService } from '@/core/IdService.js';
 import {
-	type ChannelFollowingsRepository,
 	ChannelsRepository,
 	DriveFilesRepository,
 	MiChannel,
-	MiChannelFollowing,
 	MiDriveFile,
 	MiUser,
 	UserProfilesRepository,
@@ -24,16 +22,18 @@ import {
 } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { ChannelFollowingService } from "@/core/ChannelFollowingService.js";
-import { MiLocalUser } from "@/models/User.js";
+import type { MiLocalUser } from "@/models/User.js";
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { channelFollowing, type ChannelFollowingRow } from '@/db/schema/channel-following.js';
 
 describe('ChannelFollowingService', () => {
 	let app: TestingModule;
 	let service: ChannelFollowingService;
 	let channelsRepository: ChannelsRepository;
-	let channelFollowingsRepository: ChannelFollowingsRepository;
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
 	let driveFilesRepository: DriveFilesRepository;
+	let drizzle: MiDrizzleDatabase;
 	let idService: IdService;
 
 	let alice: MiLocalUser;
@@ -70,17 +70,20 @@ describe('ChannelFollowingService', () => {
 			.then(x => channelsRepository.findOneByOrFail(x.identifiers[0]));
 	}
 
-	async function createChannelFollowing(data: Partial<MiChannelFollowing> = {}) {
-		return await channelFollowingsRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => channelFollowingsRepository.findOneByOrFail(x.identifiers[0]));
+	async function createChannelFollowing(data: Partial<ChannelFollowingRow> = {}) {
+		const row = {
+			id: idService.gen(),
+			...data,
+		} as ChannelFollowingRow;
+		await drizzle
+			.insert(channelFollowing)
+			.values(row);
+
+		return row;
 	}
 
 	async function fetchChannelFollowing() {
-		return await channelFollowingsRepository.findBy({});
+		return await drizzle.select().from(channelFollowing);
 	}
 
 	async function createDriveFile(data: Partial<MiDriveFile> = {}) {
@@ -116,10 +119,10 @@ describe('ChannelFollowingService', () => {
 		service = app.get<ChannelFollowingService>(ChannelFollowingService);
 		idService = app.get<IdService>(IdService);
 		channelsRepository = app.get<ChannelsRepository>(DI.channelsRepository);
-		channelFollowingsRepository = app.get<ChannelFollowingsRepository>(DI.channelFollowingsRepository);
 		usersRepository = app.get<UsersRepository>(DI.usersRepository);
 		userProfilesRepository = app.get<UserProfilesRepository>(DI.userProfilesRepository);
 		driveFilesRepository = app.get<DriveFilesRepository>(DI.driveFilesRepository);
+		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
 	});
 
 	afterAll(async () => {
@@ -137,7 +140,7 @@ describe('ChannelFollowingService', () => {
 	});
 
 	afterEach(async () => {
-		await channelFollowingsRepository.deleteAll();
+		await drizzle.delete(channelFollowing);
 		await channelsRepository.deleteAll();
 		await userProfilesRepository.deleteAll();
 		await usersRepository.deleteAll();

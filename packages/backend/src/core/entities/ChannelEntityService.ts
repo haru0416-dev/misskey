@@ -7,7 +7,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type {
-	ChannelFollowingsRepository,
 	ChannelsRepository,
 	DriveFilesRepository,
 	MiDriveFile,
@@ -21,6 +20,7 @@ import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { channelFavoriteExistsInDatabase, fetchFavoritedChannelIdsInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelMutingExistsInDatabase, fetchMutedChannelIdsInDatabase } from '@/core/ChannelMutingStore.js';
+import { channelFollowingExistsInDatabase, fetchFollowingChannelIdsInDatabase } from '@/core/ChannelFollowingStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
 import { NoteEntityService } from './NoteEntityService.js';
@@ -30,8 +30,6 @@ export class ChannelEntityService {
 	constructor(
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
-		@Inject(DI.channelFollowingsRepository)
-		private channelFollowingsRepository: ChannelFollowingsRepository,
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 		@Inject(DI.notesRepository)
@@ -69,12 +67,7 @@ export class ChannelEntityService {
 		let isFavorited = false;
 		let isMuting = false;
 		if (me) {
-			isFollowing = opts?.followings?.has(channel.id) ?? await this.channelFollowingsRepository.exists({
-				where: {
-					followerId: me.id,
-					followeeId: channel.id,
-				},
-			});
+			isFollowing = opts?.followings?.has(channel.id) ?? await channelFollowingExistsInDatabase(this.drizzle, me.id, channel.id);
 
 			isFavorited = opts?.favorites?.has(channel.id) ?? await channelFavoriteExistsInDatabase(this.drizzle, me.id, channel.id);
 
@@ -147,12 +140,7 @@ export class ChannelEntityService {
 			.then(it => new Map(it.map(it => [it.id, it])));
 
 		const followings = me
-			? await this.channelFollowingsRepository
-				.findBy({
-					followerId: me.id,
-					followeeId: In(channels.map(it => it.id)),
-				})
-				.then(it => new Set(it.map(it => it.followeeId)))
+			? await fetchFollowingChannelIdsInDatabase(this.drizzle, me.id, channels.map(it => it.id))
 			: new Set<MiChannel['id']>();
 
 		const favorites = me

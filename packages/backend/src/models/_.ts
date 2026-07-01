@@ -20,7 +20,6 @@ import { MiAuthSession } from '@/models/AuthSession.js';
 import { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 import { MiBlocking } from '@/models/Blocking.js';
 import { MiChannel } from '@/models/Channel.js';
-import { MiChannelFollowing } from '@/models/ChannelFollowing.js';
 import { MiChatMessage } from '@/models/ChatMessage.js';
 import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
@@ -82,7 +81,6 @@ export {
 	MiAvatarDecoration,
 	MiAuthSession,
 	MiBlocking,
-	MiChannelFollowing,
 	MiClip,
 	MiClipNote,
 	MiDriveFile,
@@ -135,7 +133,6 @@ export type AntennasRepository = Repository<MiAntenna> & MiRepository<MiAntenna>
 export type AppsRepository = Repository<MiApp> & MiRepository<MiApp>;
 export type AuthSessionsRepository = Repository<MiAuthSession> & MiRepository<MiAuthSession>;
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
-export type ChannelFollowingsRepository = Repository<MiChannelFollowing> & MiRepository<MiChannelFollowing>;
 export type ClipsRepository = Repository<MiClip> & MiRepository<MiClip>;
 export type ClipNotesRepository = Repository<MiClipNote> & MiRepository<MiClipNote>;
 export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;
