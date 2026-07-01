@@ -7,8 +7,10 @@ import fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as DateFormat } from 'date-fns';
 import { In } from 'typeorm';
+import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository, UsersRepository, UserListMembershipsRepository, MiUser } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { UsersRepository, UserListMembershipsRepository, MiUser } from '@/models/_.js';
 import Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { bindThis } from '@/decorators.js';
@@ -28,8 +30,8 @@ export class ExportAntennasProcessorService {
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
-		@Inject(DI.antennasRepository)
-		private antennsRepository: AntennasRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.userListMembershipsRepository)
 		private userListMembershipsRepository: UserListMembershipsRepository,
@@ -63,7 +65,7 @@ export class ExportAntennasProcessorService {
 			});
 		};
 		try {
-			const antennas = await this.antennsRepository.findBy({ userId: job.data.user.id });
+			const antennas = await listAntennasByUserIdFromDatabase(this.db, job.data.user.id);
 			write('[');
 			for (const [index, antenna] of antennas.entries()) {
 				let users: MiUser[] | undefined;

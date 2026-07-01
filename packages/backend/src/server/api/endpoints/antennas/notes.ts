@@ -7,9 +7,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
 import { Brackets } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NotesRepository, AntennasRepository } from '@/models/_.js';
+import { fetchAntennaByIdAndUserIdFromDatabase, updateAntennaInDatabase } from '@/core/AntennaStore.js';
+import type { NotesRepository } from '@/models/_.js';
 import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { IdService } from '@/core/IdService.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
@@ -63,8 +65,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private noteEntityService: NoteEntityService,
@@ -77,10 +79,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
 
-			const antenna = await this.antennasRepository.findOneBy({
-				id: ps.antennaId,
-				userId: me.id,
-			});
+			const antenna = await fetchAntennaByIdAndUserIdFromDatabase(this.db, ps.antennaId, me.id);
 
 			if (antenna == null) {
 				throw new ApiError(meta.errors.noSuchAntenna);
@@ -91,7 +90,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			antenna.isActive = true;
 			antenna.lastUsedAt = new Date();
-			trackPromise(this.antennasRepository.update(antenna.id, antenna));
+			trackPromise(updateAntennaInDatabase(this.db, antenna.id, {
+				isActive: antenna.isActive,
+				lastUsedAt: antenna.lastUsedAt,
+			}));
 
 			if (needPublishEvent) {
 				this.globalEventService.publishInternalEvent('antennaUpdated', antenna);

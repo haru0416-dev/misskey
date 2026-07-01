@@ -30,7 +30,6 @@ export const DI = {
 	blockingsRepository: Symbol('blockingsRepository'),
 	pagesRepository: Symbol('pagesRepository'),
 	galleryPostsRepository: Symbol('galleryPostsRepository'),
-	antennasRepository: Symbol('antennasRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	rolesRepository: Symbol('rolesRepository'),
 	//#endregion

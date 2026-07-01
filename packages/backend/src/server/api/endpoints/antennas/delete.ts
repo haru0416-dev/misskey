@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AntennasRepository } from '@/models/_.js';
+import { deleteAntennaFromDatabase, fetchAntennaByIdAndUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -37,22 +38,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const antenna = await this.antennasRepository.findOneBy({
-				id: ps.antennaId,
-				userId: me.id,
-			});
+			const antenna = await fetchAntennaByIdAndUserIdFromDatabase(this.db, ps.antennaId, me.id);
 
 			if (antenna == null) {
 				throw new ApiError(meta.errors.noSuchAntenna);
 			}
 
-			await this.antennasRepository.delete(antenna.id);
+			await deleteAntennaFromDatabase(this.db, antenna.id);
 
 			this.globalEventService.publishInternalEvent('antennaDeleted', antenna);
 		});

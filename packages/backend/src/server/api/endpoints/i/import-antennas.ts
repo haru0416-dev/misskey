@@ -6,9 +6,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
+import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { QueueService } from '@/core/QueueService.js';
-import type { AntennasRepository, DriveFilesRepository, UsersRepository, MiAntenna as _Antenna } from '@/models/_.js';
+import type { DriveFilesRepository, UsersRepository, MiAntenna as _Antenna } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { RoleService } from '@/core/RoleService.js';
 import { DownloadService } from '@/core/DownloadService.js';
 import { ApiError } from '../../error.js';
@@ -61,8 +63,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -78,7 +80,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			if (file === null) throw new ApiError(meta.errors.noSuchFile);
 			if (file.size === 0) throw new ApiError(meta.errors.emptyFile);
 			const antennas: (_Antenna & { userListAccts: string[] | null })[] = JSON.parse(await this.downloadService.downloadTextFile(file.url));
-			const currentAntennasCount = await this.antennasRepository.countBy({ userId: me.id });
+			const currentAntennasCount = await countAntennasByUserIdFromDatabase(this.db, me.id);
 			if (currentAntennasCount + antennas.length >= (await this.roleService.getUserPolicies(me.id)).antennaLimit) {
 				throw new ApiError(meta.errors.tooManyAntennas);
 			}

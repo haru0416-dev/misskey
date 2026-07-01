@@ -4,12 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { LessThan } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import type { Config } from '@/config.js';
+import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/AntennaStore.js';
 import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
 import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/RoleAssignmentStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -27,9 +26,6 @@ export class CleanProcessorService {
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
-
 		private queueLoggerService: QueueLoggerService,
 	) {
 		this.logger = this.queueLoggerService.logger.createSubLogger('clean');
@@ -43,11 +39,7 @@ export class CleanProcessorService {
 
 		// 使われてないアンテナを停止
 		if (this.config.deactivateAntennaThreshold > 0) {
-			this.antennasRepository.update({
-				lastUsedAt: LessThan(new Date(Date.now() - this.config.deactivateAntennaThreshold)),
-			}, {
-				isActive: false,
-			});
+			deactivateAntennasNotUsedSinceFromDatabase(this.drizzle, new Date(Date.now() - this.config.deactivateAntennaThreshold));
 		}
 
 		await deleteExpiredRoleAssignmentsFromDatabase(this.drizzle, new Date());
