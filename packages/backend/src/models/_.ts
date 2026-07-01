@@ -23,7 +23,6 @@ import { MiChannel } from '@/models/Channel.js';
 import { MiChannelFavorite } from '@/models/ChannelFavorite.js';
 import { MiChannelFollowing } from '@/models/ChannelFollowing.js';
 import { MiChannelMuting } from "@/models/ChannelMuting.js";
-import { MiChatApproval } from '@/models/ChatApproval.js';
 import { MiChatMessage } from '@/models/ChatMessage.js';
 import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
@@ -146,7 +145,6 @@ export {
 	MiChatRoom,
 	MiChatRoomMembership,
 	MiChatRoomInvitation,
-	MiChatApproval,
 };
 
 export type AbuseUserReportsRepository = Repository<MiAbuseUserReport> & MiRepository<MiAbuseUserReport>;
@@ -211,4 +209,3 @@ export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<Mi
 export type ChatRoomsRepository = Repository<MiChatRoom> & MiRepository<MiChatRoom>;
 export type ChatRoomMembershipsRepository = Repository<MiChatRoomMembership> & MiRepository<MiChatRoomMembership>;
 export type ChatRoomInvitationsRepository = Repository<MiChatRoomInvitation> & MiRepository<MiChatRoomInvitation>;
-export type ChatApprovalsRepository = Repository<MiChatApproval> & MiRepository<MiChatApproval>;

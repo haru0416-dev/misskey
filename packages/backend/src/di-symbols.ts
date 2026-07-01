@@ -73,7 +73,6 @@ export const DI = {
 	flashsRepository: Symbol('flashsRepository'),
 	flashLikesRepository: Symbol('flashLikesRepository'),
 	chatMessagesRepository: Symbol('chatMessagesRepository'),
-	chatApprovalsRepository: Symbol('chatApprovalsRepository'),
 	chatRoomsRepository: Symbol('chatRoomsRepository'),
 	chatRoomMembershipsRepository: Symbol('chatRoomMembershipsRepository'),
 	chatRoomInvitationsRepository: Symbol('chatRoomInvitationsRepository'),

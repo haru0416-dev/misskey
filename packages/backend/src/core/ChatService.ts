@@ -16,7 +16,7 @@ import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
 import { bindThis } from '@/decorators.js';
-import type { ChatApprovalsRepository, ChatMessagesRepository, ChatRoomInvitationsRepository, ChatRoomMembershipsRepository, ChatRoomsRepository, MiChatMessage, MiChatRoom, MiChatRoomMembership, MiDriveFile, MiUser, MutingsRepository, UsersRepository } from '@/models/_.js';
+import type { ChatMessagesRepository, ChatRoomInvitationsRepository, ChatRoomMembershipsRepository, ChatRoomsRepository, MiChatMessage, MiChatRoom, MiChatRoomMembership, MiDriveFile, MiUser, MutingsRepository, UsersRepository } from '@/models/_.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { QueryService } from '@/core/QueryService.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -28,6 +28,8 @@ import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/ChatApprovalStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const MAX_ROOM_MEMBERS = 50;
 const MAX_REACTIONS_PER_MESSAGE = 100;
@@ -56,14 +58,14 @@ export class ChatService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
+
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
 		@Inject(DI.chatMessagesRepository)
 		private chatMessagesRepository: ChatMessagesRepository,
-
-		@Inject(DI.chatApprovalsRepository)
-		private chatApprovalsRepository: ChatApprovalsRepository,
 
 		@Inject(DI.chatRoomsRepository)
 		private chatRoomsRepository: ChatRoomsRepository,
@@ -138,17 +140,7 @@ export class ChatService {
 			throw new Error('yourself');
 		}
 
-		const approvals = await this.chatApprovalsRepository.createQueryBuilder('approval')
-			.where(new Brackets(qb => { // 自分が相手を許可しているか
-				qb.where('approval.userId = :fromUserId', { fromUserId: fromUser.id })
-					.andWhere('approval.otherId = :toUserId', { toUserId: toUser.id });
-			}))
-			.orWhere(new Brackets(qb => { // 相手が自分を許可しているか
-				qb.where('approval.userId = :toUserId', { toUserId: toUser.id })
-					.andWhere('approval.otherId = :fromUserId', { fromUserId: fromUser.id });
-			}))
-			.take(2)
-			.getMany();
+		const approvals = await listChatApprovalsBetweenUsers(this.drizzle, fromUser.id, toUser.id);
 
 		const otherApprovedMe = approvals.some(approval => approval.userId === toUser.id);
 		const iApprovedOther = approvals.some(approval => approval.userId === fromUser.id);
@@ -197,7 +189,7 @@ export class ChatService {
 
 		// 相手を許可しておく
 		if (!iApprovedOther) {
-			this.chatApprovalsRepository.insertOne({
+			await createChatApprovalInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: fromUser.id,
 				otherId: toUser.id,
