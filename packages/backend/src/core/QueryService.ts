@@ -7,7 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Brackets, ObjectLiteral } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { MiUser } from '@/models/User.js';
-import type { UserProfilesRepository, FollowingsRepository, BlockingsRepository, NoteThreadMutingsRepository, MutingsRepository, RenoteMutingsRepository, MiMeta } from '@/models/_.js';
+import type { UserProfilesRepository, FollowingsRepository, BlockingsRepository, MutingsRepository, RenoteMutingsRepository, MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import type { SelectQueryBuilder } from 'typeorm';
@@ -23,9 +23,6 @@ export class QueryService {
 
 		@Inject(DI.blockingsRepository)
 		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.noteThreadMutingsRepository)
-		private noteThreadMutingsRepository: NoteThreadMutingsRepository,
 
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
@@ -165,18 +162,16 @@ export class QueryService {
 
 	@bindThis
 	public generateMutedNoteThreadQuery(q: SelectQueryBuilder<any>, me: { id: MiUser['id'] }): void {
-		const mutedQuery = this.noteThreadMutingsRepository.createQueryBuilder('threadMuted')
-			.select('threadMuted.threadId')
-			.where('threadMuted.userId = :userId', { userId: me.id });
+		const mutedQuery = 'SELECT "threadId" FROM "note_thread_muting" WHERE "userId" = :mutedNoteThreadUserId';
 
-		q.andWhere(`note.id NOT IN (${ mutedQuery.getQuery() })`);
+		q.andWhere(`note.id NOT IN (${mutedQuery})`);
 		q.andWhere(new Brackets(qb => {
 			qb
 				.where('note.threadId IS NULL')
-				.orWhere(`note.threadId NOT IN (${ mutedQuery.getQuery() })`);
+				.orWhere(`note.threadId NOT IN (${mutedQuery})`);
 		}));
 
-		q.setParameters(mutedQuery.getParameters());
+		q.setParameters({ mutedNoteThreadUserId: me.id });
 	}
 
 	@bindThis

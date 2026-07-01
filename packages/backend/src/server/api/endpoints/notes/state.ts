@@ -4,9 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, NoteThreadMutingsRepository, NoteFavoritesRepository } from '@/models/_.js';
+import type { NotesRepository, NoteFavoritesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -44,8 +46,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 
-		@Inject(DI.noteThreadMutingsRepository)
-		private noteThreadMutingsRepository: NoteThreadMutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		@Inject(DI.noteFavoritesRepository)
 		private noteFavoritesRepository: NoteFavoritesRepository,
@@ -61,18 +63,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					},
 					take: 1,
 				}),
-				this.noteThreadMutingsRepository.count({
-					where: {
-						userId: me.id,
-						threadId: note.threadId ?? note.id,
-					},
-					take: 1,
-				}),
+				noteThreadMutingExistsInDatabase(this.drizzle, me.id, note.threadId ?? note.id),
 			]);
 
 			return {
 				isFavorited: favorite !== 0,
-				isMutedThread: threadMuting !== 0,
+				isMutedThread: threadMuting,
 			};
 		});
 	}

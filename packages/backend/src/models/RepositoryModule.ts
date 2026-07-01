@@ -32,7 +32,6 @@ import {
 	MiNote,
 	MiNoteFavorite,
 	MiNoteReaction,
-	MiNoteThreadMuting,
 	MiNoteDraft,
 	MiPage,
 	MiPoll,
@@ -92,12 +91,6 @@ const $appsRepository: Provider = {
 const $noteFavoritesRepository: Provider = {
 	provide: DI.noteFavoritesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiNoteFavorite).extend(miRepository as MiRepository<MiNoteFavorite>),
-	inject: [DI.db],
-};
-
-const $noteThreadMutingsRepository: Provider = {
-	provide: DI.noteThreadMutingsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiNoteThreadMuting).extend(miRepository as MiRepository<MiNoteThreadMuting>),
 	inject: [DI.db],
 };
 
@@ -350,7 +343,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$announcementReadsRepository,
 		$appsRepository,
 		$noteFavoritesRepository,
-		$noteThreadMutingsRepository,
 		$noteReactionsRepository,
 		$noteDraftsRepository,
 		$pollsRepository,
@@ -399,7 +391,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$announcementReadsRepository,
 		$appsRepository,
 		$noteFavoritesRepository,
-		$noteThreadMutingsRepository,
 		$noteReactionsRepository,
 		$noteDraftsRepository,
 		$pollsRepository,
