@@ -6,7 +6,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { MiNoteDraft, NoteDraftsRepository, MiNote, MiDriveFile, MiChannel, UsersRepository, DriveFilesRepository, NotesRepository, BlockingsRepository, ChannelsRepository } from '@/models/_.js';
+import type { MiNote, MiDriveFile, MiChannel, UsersRepository, DriveFilesRepository, NotesRepository, BlockingsRepository, ChannelsRepository } from '@/models/_.js';
+import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
@@ -15,6 +16,14 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { QueueService } from '@/core/QueueService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	countNoteDraftsByUserIdFromDatabase,
+	createNoteDraftInDatabase,
+	deleteNoteDraftByIdFromDatabase,
+	fetchNoteDraftByIdAndUserIdFromDatabase,
+	updateNoteDraftInDatabase,
+} from '@/core/NoteDraftStore.js';
 
 export type NoteDraftOptions = Omit<MiNoteDraft, 'id' | 'userId' | 'user' | 'reply' | 'renote' | 'channel'>;
 
@@ -24,11 +33,11 @@ export class NoteDraftService {
 		@Inject(DI.blockingsRepository)
 		private blockingsRepository: BlockingsRepository,
 
-		@Inject(DI.noteDraftsRepository)
-		private noteDraftsRepository: NoteDraftsRepository,
-
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
+
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -48,12 +57,7 @@ export class NoteDraftService {
 
 	@bindThis
 	public async get(me: MiLocalUser, draftId: MiNoteDraft['id']): Promise<MiNoteDraft | null> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
-
-		return draft;
+		return fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 	}
 
 	@bindThis
@@ -61,18 +65,13 @@ export class NoteDraftService {
 		//#region check draft limit
 		const policies = await this.roleService.getUserPolicies(me.id);
 
-		const currentCount = await this.noteDraftsRepository.countBy({
-			userId: me.id,
-		});
+		const currentCount = await countNoteDraftsByUserIdFromDatabase(this.db, me.id);
 		if (currentCount >= policies.noteDraftLimit) {
 			throw new IdentifiableError('9ee33bbe-fde3-4c71-9b51-e50492c6b9c8', 'Too many drafts');
 		}
 
 		if (data.isActuallyScheduled) {
-			const currentScheduledCount = await this.noteDraftsRepository.countBy({
-				userId: me.id,
-				isActuallyScheduled: true,
-			});
+			const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(this.db, me.id, { isActuallyScheduled: true });
 			if (currentScheduledCount >= policies.scheduledNoteLimit) {
 				throw new IdentifiableError('c3275f19-4558-4c59-83e1-4f684b5fab66', 'Too many scheduled notes');
 			}
@@ -81,7 +80,7 @@ export class NoteDraftService {
 
 		await this.validate(me, data);
 
-		const draft = await this.noteDraftsRepository.insertOne({
+		const draft = await createNoteDraftInDatabase(this.db, {
 			...data,
 			id: this.idService.gen(),
 			userId: me.id,
@@ -96,10 +95,7 @@ export class NoteDraftService {
 
 	@bindThis
 	public async update(me: MiLocalUser, draftId: MiNoteDraft['id'], data: Partial<NoteDraftOptions>): Promise<MiNoteDraft> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
+		const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 
 		if (draft == null) {
 			throw new IdentifiableError('49cd6b9d-848e-41ee-b0b9-adaca711a6b1', 'No such note draft');
@@ -109,10 +105,7 @@ export class NoteDraftService {
 		const policies = await this.roleService.getUserPolicies(me.id);
 
 		if (!draft.isActuallyScheduled && data.isActuallyScheduled) {
-			const currentScheduledCount = await this.noteDraftsRepository.countBy({
-				userId: me.id,
-				isActuallyScheduled: true,
-			});
+			const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(this.db, me.id, { isActuallyScheduled: true });
 			if (currentScheduledCount >= policies.scheduledNoteLimit) {
 				throw new IdentifiableError('bacdf856-5c51-4159-b88a-804fa5103be5', 'Too many scheduled notes');
 			}
@@ -121,12 +114,7 @@ export class NoteDraftService {
 
 		await this.validate(me, data);
 
-		const updatedDraft = await this.noteDraftsRepository.createQueryBuilder().update()
-			.set(data)
-			.where('id = :id', { id: draftId })
-			.returning('*')
-			.execute()
-			.then((response) => response.raw[0]);
+		const updatedDraft = await updateNoteDraftInDatabase(this.db, draftId, data);
 
 		this.clearSchedule(draftId).then(() => {
 			if (updatedDraft.scheduledAt != null && updatedDraft.isActuallyScheduled) {
@@ -139,26 +127,20 @@ export class NoteDraftService {
 
 	@bindThis
 	public async delete(me: MiLocalUser, draftId: MiNoteDraft['id']): Promise<void> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
+		const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 
 		if (draft == null) {
 			throw new IdentifiableError('49cd6b9d-848e-41ee-b0b9-adaca711a6b1', 'No such note draft');
 		}
 
-		await this.noteDraftsRepository.delete(draft.id);
+		await deleteNoteDraftByIdFromDatabase(this.db, draft.id);
 
 		this.clearSchedule(draftId);
 	}
 
 	@bindThis
 	public async getDraft(me: MiLocalUser, draftId: MiNoteDraft['id']): Promise<MiNoteDraft> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
+		const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 
 		if (draft == null) {
 			throw new IdentifiableError('49cd6b9d-848e-41ee-b0b9-adaca711a6b1', 'No such note draft');

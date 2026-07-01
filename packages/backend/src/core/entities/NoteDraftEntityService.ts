@@ -9,11 +9,14 @@ import { EntityNotFoundError } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
-import type { MiUser, MiNote, MiNoteDraft } from '@/models/_.js';
-import type { NoteDraftsRepository, ChannelsRepository } from '@/models/_.js';
+import type { MiUser, MiNote } from '@/models/_.js';
+import type { MiNoteDraft } from '@/models/NoteDraft.js';
+import type { ChannelsRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { DebounceLoader } from '@/misc/loader.js';
 import { IdService } from '@/core/IdService.js';
+import { fetchNoteDraftByIdOrFailFromDatabase } from '@/core/NoteDraftStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnModuleInit } from '@nestjs/common';
 import type { UserEntityService } from './UserEntityService.js';
 import type { DriveFileEntityService } from './DriveFileEntityService.js';
@@ -30,8 +33,8 @@ export class NoteDraftEntityService implements OnModuleInit {
 	constructor(
 		private moduleRef: ModuleRef,
 
-		@Inject(DI.noteDraftsRepository)
-		private noteDraftsRepository: NoteDraftsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
@@ -182,11 +185,6 @@ export class NoteDraftEntityService implements OnModuleInit {
 
 	@bindThis
 	private findNoteDraftOrFail(id: string): Promise<MiNoteDraft> {
-		return this.noteDraftsRepository.findOneOrFail({
-			where: { id },
-			relations: {
-				user: true,
-			},
-		});
+		return fetchNoteDraftByIdOrFailFromDatabase(this.db, id);
 	}
 }

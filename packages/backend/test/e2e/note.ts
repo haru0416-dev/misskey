@@ -1077,4 +1077,47 @@ describe('Note', () => {
 			assert.strictEqual(castAsError(res.body).error.code, 'UNAVAILABLE');
 		});
 	});
+
+	describe('notes/drafts', () => {
+		test('下書きの作成、更新、一覧、件数、削除ができる', async () => {
+			const beforeCount = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(beforeCount.status, 200);
+
+			const createRes = await api('notes/drafts/create', {
+				text: 'draft body',
+			}, alice);
+			assert.strictEqual(createRes.status, 200);
+			assert.strictEqual(createRes.body.createdDraft.text, 'draft body');
+
+			const draftId = createRes.body.createdDraft.id;
+
+			const countAfterCreate = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(countAfterCreate.status, 200);
+			assert.strictEqual(countAfterCreate.body, beforeCount.body + 1);
+
+			const listRes = await api('notes/drafts/list', {
+				limit: 10,
+				scheduled: false,
+			}, alice);
+			assert.strictEqual(listRes.status, 200);
+			assert.ok(listRes.body.some(draft => draft.id === draftId && draft.text === 'draft body'));
+
+			const updateRes = await api('notes/drafts/update', {
+				draftId,
+				text: 'updated draft body',
+			}, alice);
+			assert.strictEqual(updateRes.status, 200);
+			assert.strictEqual(updateRes.body.updatedDraft.id, draftId);
+			assert.strictEqual(updateRes.body.updatedDraft.text, 'updated draft body');
+
+			const deleteRes = await api('notes/drafts/delete', {
+				draftId,
+			}, alice);
+			assert.strictEqual(deleteRes.status, 204);
+
+			const countAfterDelete = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(countAfterDelete.status, 200);
+			assert.strictEqual(countAfterDelete.body, beforeCount.body);
+		});
+	});
 });

@@ -25,7 +25,6 @@ import {
 	MiMuting,
 	MiNote,
 	MiNoteReaction,
-	MiNoteDraft,
 	MiPage,
 	MiPoll,
 	MiRegistrationTicket,
@@ -71,12 +70,6 @@ const $appsRepository: Provider = {
 const $noteReactionsRepository: Provider = {
 	provide: DI.noteReactionsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiNoteReaction).extend(miRepository as MiRepository<MiNoteReaction>),
-	inject: [DI.db],
-};
-
-const $noteDraftsRepository: Provider = {
-	provide: DI.noteDraftsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiNoteDraft).extend(miRepository as MiRepository<MiNoteDraft>),
 	inject: [DI.db],
 };
 
@@ -244,7 +237,6 @@ const $chatMessagesRepository: Provider = {
 		$announcementsRepository,
 		$appsRepository,
 		$noteReactionsRepository,
-		$noteDraftsRepository,
 		$pollsRepository,
 		$userProfilesRepository,
 		$userSecurityKeysRepository,
@@ -278,7 +270,6 @@ const $chatMessagesRepository: Provider = {
 		$announcementsRepository,
 		$appsRepository,
 		$noteReactionsRepository,
-		$noteDraftsRepository,
 		$pollsRepository,
 		$userProfilesRepository,
 		$userSecurityKeysRepository,
