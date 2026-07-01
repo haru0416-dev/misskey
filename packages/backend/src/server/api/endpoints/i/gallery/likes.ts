@@ -4,13 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { GalleryPostsRepository } from '@/models/_.js';
 import { GalleryLikeEntityService } from '@/core/entities/GalleryLikeEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { listGalleryLikesByUserIdFromDatabase } from '@/core/GalleryLikeStore.js';
+import { listGalleryPostsByIdsFromDatabase } from '@/core/GalleryPostStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
@@ -57,9 +56,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -101,7 +97,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			const postIds = likes.map(like => like.postId);
-			const postById = await this.galleryPostsRepository.findBy({ id: In(postIds) })
+			const postById = await listGalleryPostsByIdsFromDatabase(this.drizzle, postIds)
 				.then(posts => new Map(posts.map(post => [post.id, post])));
 			const likesWithPosts = likes.map(like => ({
 				...like,

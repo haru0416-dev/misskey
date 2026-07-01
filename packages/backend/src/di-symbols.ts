@@ -28,7 +28,6 @@ export const DI = {
 	mutingsRepository: Symbol('mutingsRepository'),
 	blockingsRepository: Symbol('blockingsRepository'),
 	pagesRepository: Symbol('pagesRepository'),
-	galleryPostsRepository: Symbol('galleryPostsRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	rolesRepository: Symbol('rolesRepository'),
 	//#endregion

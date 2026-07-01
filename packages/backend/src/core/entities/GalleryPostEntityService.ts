@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { GalleryPostsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -14,6 +13,7 @@ import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { galleryLikeExistsInDatabase } from '@/core/GalleryLikeStore.js';
+import { fetchGalleryPostByIdOrFailFromDatabase } from '@/core/GalleryPostStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
@@ -21,9 +21,6 @@ import { DriveFileEntityService } from './DriveFileEntityService.js';
 @Injectable()
 export class GalleryPostEntityService {
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -42,7 +39,7 @@ export class GalleryPostEntityService {
 		},
 	): Promise<Packed<'GalleryPost'>> {
 		const meId = me ? me.id : null;
-		const post = typeof src === 'object' ? src : await this.galleryPostsRepository.findOneByOrFail({ id: src });
+		const post = typeof src === 'object' ? src : await fetchGalleryPostByIdOrFailFromDatabase(this.drizzle, src);
 
 		return await awaitAll({
 			id: post.id,

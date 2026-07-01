@@ -23,7 +23,6 @@ import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import type {
 	ChannelsRepository,
-	GalleryPostsRepository,
 	MiMeta,
 	NotesRepository,
 	PagesRepository,
@@ -39,6 +38,7 @@ import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntitySer
 import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
 import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
 import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
 import { UrlPreviewService } from './UrlPreviewService.js';
@@ -90,9 +90,6 @@ export class ClientServerService {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
-
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
 
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
@@ -687,7 +684,7 @@ export class ClientServerService {
 
 		// Gallery post
 		fastify.get<{ Params: { post: string; } }>('/gallery/:post', async (request, reply) => {
-			const post = await this.galleryPostsRepository.findOneBy({ id: request.params.post });
+			const post = await fetchGalleryPostByIdFromDatabase(this.drizzle, request.params.post);
 
 			if (post) {
 				const _post = await this.galleryPostEntityService.pack(post);

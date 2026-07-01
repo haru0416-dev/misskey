@@ -10,7 +10,6 @@ import {
 	MiChannel,
 	MiDriveFile,
 	MiFollowing,
-	MiGalleryPost,
 	MiInstance,
 	MiMuting,
 	MiNote,
@@ -92,12 +91,6 @@ const $pagesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $galleryPostsRepository: Provider = {
-	provide: DI.galleryPostsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiGalleryPost).extend(miRepository as MiRepository<MiGalleryPost>),
-	inject: [DI.db],
-};
-
 const $channelsRepository: Provider = {
 	provide: DI.channelsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiChannel).extend(miRepository as MiRepository<MiChannel>),
@@ -124,7 +117,6 @@ const $rolesRepository: Provider = {
 		$mutingsRepository,
 		$blockingsRepository,
 		$pagesRepository,
-		$galleryPostsRepository,
 		$channelsRepository,
 		$rolesRepository,
 	],
@@ -140,7 +132,6 @@ const $rolesRepository: Provider = {
 		$mutingsRepository,
 		$blockingsRepository,
 		$pagesRepository,
-		$galleryPostsRepository,
 		$channelsRepository,
 		$rolesRepository,
 	],

@@ -5,10 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { GalleryPostsRepository, UsersRepository } from '@/models/_.js';
+import type { UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { RoleService } from '@/core/RoleService.js';
+import { deleteGalleryPostByIdFromDatabase, fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -44,17 +46,17 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
-
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
+
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private moderationLogService: ModerationLogService,
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const post = await this.galleryPostsRepository.findOneBy({ id: ps.postId });
+			const post = await fetchGalleryPostByIdFromDatabase(this.drizzle, ps.postId);
 
 			if (post == null) {
 				throw new ApiError(meta.errors.noSuchPost);
@@ -64,7 +66,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.accessDenied);
 			}
 
-			await this.galleryPostsRepository.delete(post.id);
+			await deleteGalleryPostByIdFromDatabase(this.drizzle, post.id);
 
 			if (post.userId !== me.id) {
 				const user = await this.usersRepository.findOneByOrFail({ id: post.userId });
