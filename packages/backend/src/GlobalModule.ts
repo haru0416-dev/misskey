@@ -10,6 +10,8 @@ import { Meilisearch } from 'meilisearch';
 import { MiMeta } from '@/models/Meta.js';
 import { DI } from './di-symbols.js';
 import { Config, loadConfig } from './config.js';
+import { createDrizzleDatabase, createDrizzlePool } from './drizzle.js';
+import type { MiDrizzlePool } from './drizzle.js';
 import { createPostgresDataSource } from './postgres.js';
 import { RepositoryModule } from './models/RepositoryModule.js';
 import { allSettled } from './misc/promise-tracker.js';
@@ -33,6 +35,22 @@ const $db: Provider = {
 		}
 	},
 	inject: [DI.config],
+};
+
+const $drizzlePool: Provider = {
+	provide: DI.drizzlePool,
+	useFactory: (config: Config) => {
+		return createDrizzlePool(config);
+	},
+	inject: [DI.config],
+};
+
+const $drizzle: Provider = {
+	provide: DI.drizzle,
+	useFactory: (pool: MiDrizzlePool, config: Config) => {
+		return createDrizzleDatabase(pool, config);
+	},
+	inject: [DI.drizzlePool, DI.config],
 };
 
 const $meilisearch: Provider = {
@@ -157,12 +175,13 @@ const $meta: Provider = {
 @Global()
 @Module({
 	imports: [RepositoryModule],
-	providers: [$config, $db, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions],
-	exports: [$config, $db, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions, RepositoryModule],
+	providers: [$config, $db, $drizzlePool, $drizzle, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions],
+	exports: [$config, $db, $drizzlePool, $drizzle, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions, RepositoryModule],
 })
 export class GlobalModule implements OnApplicationShutdown {
 	constructor(
 		@Inject(DI.db) private db: DataSource,
+		@Inject(DI.drizzlePool) private drizzlePool: MiDrizzlePool,
 		@Inject(DI.redis) private redisClient: Redis.Redis,
 		@Inject(DI.redisForPub) private redisForPub: Redis.Redis,
 		@Inject(DI.redisForSub) private redisForSub: Redis.Redis,
@@ -176,6 +195,7 @@ export class GlobalModule implements OnApplicationShutdown {
 		// And then disconnect from DB
 		await Promise.all([
 			this.db.destroy(),
+			this.drizzlePool.end(),
 			this.redisClient.disconnect(),
 			this.redisForPub.disconnect(),
 			this.redisForSub.disconnect(),

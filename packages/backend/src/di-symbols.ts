@@ -6,6 +6,8 @@
 export const DI = {
 	config: Symbol('config'),
 	db: Symbol('db'),
+	drizzle: Symbol('drizzle'),
+	drizzlePool: Symbol('drizzlePool'),
 	meta: Symbol('meta'),
 	meilisearch: Symbol('meilisearch'),
 	redis: Symbol('redis'),
