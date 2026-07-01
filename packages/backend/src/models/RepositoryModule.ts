@@ -30,7 +30,6 @@ import {
 	MiNoteDraft,
 	MiPage,
 	MiPoll,
-	MiPollVote,
 	MiRegistrationTicket,
 	MiRepository,
 	miRepository,
@@ -96,12 +95,6 @@ const $noteDraftsRepository: Provider = {
 const $pollsRepository: Provider = {
 	provide: DI.pollsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiPoll).extend(miRepository as MiRepository<MiPoll>),
-	inject: [DI.db],
-};
-
-const $pollVotesRepository: Provider = {
-	provide: DI.pollVotesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiPollVote).extend(miRepository as MiRepository<MiPollVote>),
 	inject: [DI.db],
 };
 
@@ -296,7 +289,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$noteReactionsRepository,
 		$noteDraftsRepository,
 		$pollsRepository,
-		$pollVotesRepository,
 		$userProfilesRepository,
 		$userSecurityKeysRepository,
 		$userListsRepository,
@@ -337,7 +329,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$noteReactionsRepository,
 		$noteDraftsRepository,
 		$pollsRepository,
-		$pollVotesRepository,
 		$userProfilesRepository,
 		$userSecurityKeysRepository,
 		$userListsRepository,

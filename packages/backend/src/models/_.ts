@@ -38,7 +38,6 @@ import { MiNoteFavorite } from '@/models/NoteFavorite.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
 import { MiPage } from '@/models/Page.js';
 import { MiPoll } from '@/models/Poll.js';
-import { MiPollVote } from '@/models/PollVote.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
 import { MiRole } from '@/models/Role.js';
 import { MiRoleAssignment } from '@/models/RoleAssignment.js';
@@ -86,7 +85,6 @@ export {
 	MiNoteReaction,
 	MiPage,
 	MiPoll,
-	MiPollVote,
 	MiRegistrationTicket,
 	MiUser,
 	MiUserList,
@@ -127,7 +125,6 @@ export type NoteFavoritesRepository = Repository<MiNoteFavorite> & MiRepository<
 export type NoteReactionsRepository = Repository<MiNoteReaction> & MiRepository<MiNoteReaction>;
 export type PagesRepository = Repository<MiPage> & MiRepository<MiPage>;
 export type PollsRepository = Repository<MiPoll> & MiRepository<MiPoll>;
-export type PollVotesRepository = Repository<MiPollVote> & MiRepository<MiPollVote>;
 export type RegistrationTicketsRepository = Repository<MiRegistrationTicket> & MiRepository<MiRegistrationTicket>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;

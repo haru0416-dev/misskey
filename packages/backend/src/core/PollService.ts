@@ -5,8 +5,9 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository, PollsRepository, PollVotesRepository, MiUser } from '@/models/_.js';
+import type { NotesRepository, UsersRepository, PollsRepository } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
+import type { MiUser } from '@/models/User.js';
 import { RelayService } from '@/core/RelayService.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -15,6 +16,8 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerService.js';
 import { bindThis } from '@/decorators.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
+import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class PollService {
@@ -28,8 +31,8 @@ export class PollService {
 		@Inject(DI.pollsRepository)
 		private pollsRepository: PollsRepository,
 
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -59,10 +62,7 @@ export class PollService {
 		}
 
 		// if already voted
-		const exist = await this.pollVotesRepository.findBy({
-			noteId: note.id,
-			userId: user.id,
-		});
+		const exist = await listPollVotesByNoteAndUserFromDatabase(this.db, note.id, user.id);
 
 		if (poll.multiple) {
 			if (exist.some(x => x.choice === choice)) {
@@ -72,7 +72,7 @@ export class PollService {
 			throw new Error('already voted');
 		}
 
-		await this.pollVotesRepository.insert({
+		await createPollVoteInDatabase(this.db, {
 			id: this.idService.gen(),
 			noteId: note.id,
 			userId: user.id,

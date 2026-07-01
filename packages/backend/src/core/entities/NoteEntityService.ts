@@ -11,13 +11,15 @@ import type { Packed } from '@/misc/json-schema.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
-import type { UsersRepository, NotesRepository, FollowingsRepository, PollsRepository, PollVotesRepository, NoteReactionsRepository, ChannelsRepository, MiMeta } from '@/models/_.js';
+import type { UsersRepository, NotesRepository, FollowingsRepository, PollsRepository, NoteReactionsRepository, ChannelsRepository, MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { DebounceLoader } from '@/misc/loader.js';
 import { IdService } from '@/core/IdService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import { CacheService } from '@/core/CacheService.js';
+import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnModuleInit } from '@nestjs/common';
 import type { CustomEmojiService } from '../CustomEmojiService.js';
 import type { ReactionService } from '../ReactionService.js';
@@ -88,8 +90,8 @@ export class NoteEntityService implements OnModuleInit {
 		@Inject(DI.pollsRepository)
 		private pollsRepository: PollsRepository,
 
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.noteReactionsRepository)
 		private noteReactionsRepository: NoteReactionsRepository,
@@ -201,20 +203,14 @@ export class NoteEntityService implements OnModuleInit {
 
 		if (meId) {
 			if (poll.multiple) {
-				const votes = await this.pollVotesRepository.findBy({
-					userId: meId,
-					noteId: note.id,
-				});
+				const votes = await listPollVotesByNoteAndUserFromDatabase(this.db, note.id, meId);
 
 				const myChoices = votes.map(v => v.choice);
 				for (const myChoice of myChoices) {
 					choices[myChoice].isVoted = true;
 				}
 			} else {
-				const vote = await this.pollVotesRepository.findOneBy({
-					userId: meId,
-					noteId: note.id,
-				});
+				const vote = await fetchPollVoteByNoteAndUserFromDatabase(this.db, note.id, meId);
 
 				if (vote) {
 					choices[vote.choice].isVoted = true;

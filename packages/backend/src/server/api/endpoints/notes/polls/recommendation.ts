@@ -5,7 +5,7 @@
 
 import { Brackets, In } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, MutingsRepository, PollsRepository, PollVotesRepository } from '@/models/_.js';
+import type { NotesRepository, MutingsRepository, PollsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
@@ -46,9 +46,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.pollsRepository)
 		private pollsRepository: PollsRepository,
 
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
-
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
 
@@ -66,14 +63,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}));
 
 			//#region exclude arleady voted polls
-			const votedQuery = this.pollVotesRepository.createQueryBuilder('vote')
-				.select('vote.noteId')
-				.where('vote.userId = :meId', { meId: me.id });
-
 			query
-				.andWhere(`poll.noteId NOT IN (${ votedQuery.getQuery() })`);
-
-			query.setParameters(votedQuery.getParameters());
+				.andWhere('poll.noteId NOT IN (SELECT "vote"."noteId" FROM "poll_vote" "vote" WHERE "vote"."userId" = :meId)', { meId: me.id });
 			//#endregion
 
 			//#region mute
