@@ -4,22 +4,30 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
-import type { AbuseUserReportsRepository, MiAbuseUserReport, MiUser, UsersRepository } from '@/models/_.js';
+import type { MiAbuseUserReport, MiUser, UsersRepository } from '@/models/_.js';
 import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
 import { QueueService } from '@/core/QueueService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	createAbuseUserReportInDatabase,
+	fetchAbuseUserReportByIdOrFailFromDatabase,
+	listAbuseUserReportsByIdsFromDatabase,
+	markAbuseUserReportForwardedInDatabase,
+	resolveAbuseUserReportInDatabase,
+	updateAbuseUserReportModerationNoteInDatabase,
+} from '@/core/AbuseUserReportStore.js';
 import { IdService } from './IdService.js';
 
 @Injectable()
 export class AbuseReportService {
 	constructor(
-		@Inject(DI.abuseUserReportsRepository)
-		private abuseUserReportsRepository: AbuseUserReportsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -63,7 +71,7 @@ export class AbuseReportService {
 
 		const reports = Array.of<MiAbuseUserReport>();
 		for (const entity of entities) {
-			const report = await this.abuseUserReportsRepository.insertOne(entity);
+			const report = await createAbuseUserReportInDatabase(this.db, entity);
 			reports.push(report);
 		}
 
@@ -91,16 +99,13 @@ export class AbuseReportService {
 		moderator: MiUser,
 	) {
 		const paramsMap = new Map(params.map(it => [it.reportId, it]));
-		const reports = await this.abuseUserReportsRepository.findBy({
-			id: In(params.map(it => it.reportId)),
-		});
+		const reports = await listAbuseUserReportsByIdsFromDatabase(this.db, params.map(it => it.reportId));
 
 		for (const report of reports) {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			const ps = paramsMap.get(report.id)!;
 
-			await this.abuseUserReportsRepository.update(report.id, {
-				resolved: true,
+			await resolveAbuseUserReportInDatabase(this.db, report.id, {
 				assigneeId: moderator.id,
 				resolvedAs: ps.resolvedAs,
 			});
@@ -113,7 +118,7 @@ export class AbuseReportService {
 				});
 		}
 
-		return this.abuseUserReportsRepository.findBy({ id: In(reports.map(it => it.id)) })
+		return listAbuseUserReportsByIdsFromDatabase(this.db, reports.map(it => it.id))
 			.then(reports => this.abuseReportNotificationService.notifySystemWebhook(reports, 'abuseReportResolved'));
 	}
 
@@ -122,7 +127,7 @@ export class AbuseReportService {
 		reportId: MiAbuseUserReport['id'],
 		moderator: MiUser,
 	) {
-		const report = await this.abuseUserReportsRepository.findOneByOrFail({ id: reportId });
+		const report = await fetchAbuseUserReportByIdOrFailFromDatabase(this.db, reportId);
 
 		if (report.targetUserHost == null) {
 			throw new Error('The target user host is null.');
@@ -132,9 +137,7 @@ export class AbuseReportService {
 			throw new Error('The report has already been forwarded.');
 		}
 
-		await this.abuseUserReportsRepository.update(report.id, {
-			forwarded: true,
-		});
+		await markAbuseUserReportForwardedInDatabase(this.db, report.id);
 
 		const actor = await this.systemAccountService.fetch('actor');
 		const targetUser = await this.usersRepository.findOneByOrFail({ id: report.targetUserId });
@@ -158,11 +161,9 @@ export class AbuseReportService {
 		},
 		moderator: MiUser,
 	) {
-		const report = await this.abuseUserReportsRepository.findOneByOrFail({ id: reportId });
+		const report = await fetchAbuseUserReportByIdOrFailFromDatabase(this.db, reportId);
 
-		await this.abuseUserReportsRepository.update(report.id, {
-			moderationNote: params.moderationNote,
-		});
+		await updateAbuseUserReportModerationNoteInDatabase(this.db, report.id, params.moderationNote);
 
 		if (params.moderationNote != null && report.moderationNote !== params.moderationNote) {
 			this.moderationLogService.log(moderator, 'updateAbuseReportNote', {
