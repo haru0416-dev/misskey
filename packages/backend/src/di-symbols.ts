@@ -43,7 +43,6 @@ export const DI = {
 	pagesRepository: Symbol('pagesRepository'),
 	galleryPostsRepository: Symbol('galleryPostsRepository'),
 	clipsRepository: Symbol('clipsRepository'),
-	clipNotesRepository: Symbol('clipNotesRepository'),
 	antennasRepository: Symbol('antennasRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	webhooksRepository: Symbol('webhooksRepository'),

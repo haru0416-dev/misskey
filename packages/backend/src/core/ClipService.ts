@@ -4,14 +4,39 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { QueryFailedError } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { ClipsRepository, MiNote, MiClip, ClipNotesRepository, NotesRepository } from '@/models/_.js';
+import type { ClipsRepository, MiNote, MiClip, NotesRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
-import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
+import {
+	countClipNotesByClipIdFromDatabase,
+	createClipNoteInDatabase,
+	deleteClipNoteInDatabase,
+} from '@/core/ClipNoteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
+
+function getDatabaseErrorCode(error: unknown): unknown {
+	let current: unknown = error;
+
+	for (let i = 0; i < 5 && current != null && typeof current === 'object'; i++) {
+		const candidate = current as {
+			code?: unknown;
+			cause?: unknown;
+			driverError?: unknown;
+		};
+
+		if (candidate.code != null) {
+			return candidate.code;
+		}
+
+		current = candidate.driverError ?? candidate.cause;
+	}
+
+	return undefined;
+}
 
 @Injectable()
 export class ClipService {
@@ -25,8 +50,8 @@ export class ClipService {
 		@Inject(DI.clipsRepository)
 		private clipsRepository: ClipsRepository,
 
-		@Inject(DI.clipNotesRepository)
-		private clipNotesRepository: ClipNotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
@@ -99,26 +124,29 @@ export class ClipService {
 			throw new ClipService.NoSuchClipError();
 		}
 
-		const currentCount = await this.clipNotesRepository.countBy({
-			clipId: clip.id,
-		});
+		const currentCount = await countClipNotesByClipIdFromDatabase(this.db, clip.id);
 		if (currentCount >= (await this.roleService.getUserPolicies(me.id)).noteEachClipsLimit) {
 			throw new ClipService.TooManyClipNotesError();
 		}
 
+		const note = await this.notesRepository.findOneBy({ id: noteId });
+		if (note == null) {
+			throw new ClipService.NoSuchNoteError();
+		}
+
 		try {
-			await this.clipNotesRepository.insert({
+			await createClipNoteInDatabase(this.db, {
 				id: this.idService.gen(),
 				noteId: noteId,
 				clipId: clip.id,
 			});
 		} catch (e: unknown) {
-			if (e instanceof QueryFailedError) {
-				if (isDuplicateKeyValueError(e)) {
-					throw new ClipService.AlreadyAddedError();
-				} else if (e.driverError.detail.includes('is not present in table "note".')) {
-					throw new ClipService.NoSuchNoteError();
-				}
+			if (isDuplicateKeyValueDatabaseError(e)) {
+				throw new ClipService.AlreadyAddedError();
+			}
+
+			if (getDatabaseErrorCode(e) === '23503') {
+				throw new ClipService.NoSuchNoteError();
 			}
 
 			throw e;
@@ -148,7 +176,7 @@ export class ClipService {
 			throw new ClipService.NoSuchNoteError();
 		}
 
-		await this.clipNotesRepository.delete({
+		await deleteClipNoteInDatabase(this.db, {
 			noteId: noteId,
 			clipId: clip.id,
 		});

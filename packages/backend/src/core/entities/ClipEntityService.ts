@@ -5,13 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { ClipNotesRepository, ClipsRepository, MiUser } from '@/models/_.js';
+import type { ClipsRepository, MiUser } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
 import type { MiClip } from '@/models/Clip.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { countClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
 import { clipFavoriteExistsInDatabase, countClipFavoritesFromDatabase } from '@/core/ClipFavoriteStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
@@ -21,9 +22,6 @@ export class ClipEntityService {
 	constructor(
 		@Inject(DI.clipsRepository)
 		private clipsRepository: ClipsRepository,
-
-		@Inject(DI.clipNotesRepository)
-		private clipNotesRepository: ClipNotesRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -55,7 +53,7 @@ export class ClipEntityService {
 			isPublic: clip.isPublic,
 			favoritedCount: await countClipFavoritesFromDatabase(this.drizzle, clip.id),
 			isFavorited: meId ? await clipFavoriteExistsInDatabase(this.drizzle, meId, clip.id) : undefined,
-			notesCount: (meId === clip.userId) ? await this.clipNotesRepository.countBy({ clipId: clip.id }) : undefined,
+			notesCount: (meId === clip.userId) ? await countClipNotesByClipIdFromDatabase(this.drizzle, clip.id) : undefined,
 		});
 	}
 

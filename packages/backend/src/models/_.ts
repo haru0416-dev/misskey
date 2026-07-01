@@ -21,7 +21,6 @@ import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
 import { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
 import { MiClip } from '@/models/Clip.js';
-import { MiClipNote } from '@/models/ClipNote.js';
 import { MiDriveFile } from '@/models/DriveFile.js';
 import { MiDriveFolder } from '@/models/DriveFolder.js';
 import { MiEmoji } from '@/models/Emoji.js';
@@ -69,7 +68,6 @@ export {
 	MiAvatarDecoration,
 	MiBlocking,
 	MiClip,
-	MiClipNote,
 	MiDriveFile,
 	MiDriveFolder,
 	MiEmoji,
@@ -110,7 +108,6 @@ export type AntennasRepository = Repository<MiAntenna> & MiRepository<MiAntenna>
 export type AppsRepository = Repository<MiApp> & MiRepository<MiApp>;
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
 export type ClipsRepository = Repository<MiClip> & MiRepository<MiClip>;
-export type ClipNotesRepository = Repository<MiClipNote> & MiRepository<MiClipNote>;
 export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;
 export type DriveFoldersRepository = Repository<MiDriveFolder> & MiRepository<MiDriveFolder>;
 export type EmojisRepository = Repository<MiEmoji> & MiRepository<MiEmoji>;
