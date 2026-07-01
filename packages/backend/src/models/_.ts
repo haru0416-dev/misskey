@@ -69,7 +69,6 @@ import { MiSwSubscription } from '@/models/SwSubscription.js';
 import { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserIp } from '@/models/UserIp.js';
-import { MiUserKeypair } from '@/models/UserKeypair.js';
 import { MiUserList } from '@/models/UserList.js';
 import { MiUserListFavorite } from '@/models/UserListFavorite.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
@@ -142,7 +141,6 @@ export {
 	MiSwSubscription,
 	MiUser,
 	MiUserIp,
-	MiUserKeypair,
 	MiUserList,
 	MiUserListFavorite,
 	MiUserListMembership,
@@ -218,7 +216,6 @@ export type SigninsRepository = Repository<MiSignin> & MiRepository<MiSignin>;
 export type SwSubscriptionsRepository = Repository<MiSwSubscription> & MiRepository<MiSwSubscription>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserIpsRepository = Repository<MiUserIp> & MiRepository<MiUserIp>;
-export type UserKeypairsRepository = Repository<MiUserKeypair> & MiRepository<MiUserKeypair>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
 export type UserListFavoritesRepository = Repository<MiUserListFavorite> & MiRepository<MiUserListFavorite>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;

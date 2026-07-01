@@ -64,7 +64,6 @@ import {
 	MiSystemWebhook,
 	MiUser,
 	MiUserIp,
-	MiUserKeypair,
 	MiUserList,
 	MiUserListFavorite,
 	MiUserListMembership,
@@ -159,12 +158,6 @@ const $pollVotesRepository: Provider = {
 const $userProfilesRepository: Provider = {
 	provide: DI.userProfilesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserProfile).extend(miRepository as MiRepository<MiUserProfile>),
-	inject: [DI.db],
-};
-
-const $userKeypairsRepository: Provider = {
-	provide: DI.userKeypairsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserKeypair).extend(miRepository as MiRepository<MiUserKeypair>),
 	inject: [DI.db],
 };
 
@@ -532,7 +525,6 @@ const $chatApprovalsRepository: Provider = {
 		$pollsRepository,
 		$pollVotesRepository,
 		$userProfilesRepository,
-		$userKeypairsRepository,
 		$userPendingsRepository,
 		$userSecurityKeysRepository,
 		$userPublickeysRepository,
@@ -606,7 +598,6 @@ const $chatApprovalsRepository: Provider = {
 		$pollsRepository,
 		$pollVotesRepository,
 		$userProfilesRepository,
-		$userKeypairsRepository,
 		$userPendingsRepository,
 		$userSecurityKeysRepository,
 		$userPublickeysRepository,

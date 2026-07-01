@@ -29,7 +29,6 @@ export const DI = {
 	pollsRepository: Symbol('pollsRepository'),
 	pollVotesRepository: Symbol('pollVotesRepository'),
 	userProfilesRepository: Symbol('userProfilesRepository'),
-	userKeypairsRepository: Symbol('userKeypairsRepository'),
 	userPendingsRepository: Symbol('userPendingsRepository'),
 	userSecurityKeysRepository: Symbol('userSecurityKeysRepository'),
 	userPublickeysRepository: Symbol('userPublickeysRepository'),
