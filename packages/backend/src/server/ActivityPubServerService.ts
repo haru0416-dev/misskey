@@ -13,7 +13,7 @@ import accepts from 'accepts';
 import vary from 'vary';
 import secureJson from 'secure-json-parse';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, NotesRepository, EmojisRepository, NoteReactionsRepository, UserProfilesRepository, UsersRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
+import type { FollowingsRepository, NotesRepository, EmojisRepository, UserProfilesRepository, UsersRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
 import * as url from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -32,6 +32,7 @@ import { isQuote, isRenote } from '@/misc/is-renote.js';
 import * as Acct from '@/misc/acct.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import { fetchNoteReactionByIdFromDatabase } from '@/core/NoteReactionStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginOptions, FastifyBodyParser } from 'fastify';
 import type { FindOptionsWhere } from 'typeorm';
@@ -56,9 +57,6 @@ export class ActivityPubServerService {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
-
-		@Inject(DI.noteReactionsRepository)
-		private noteReactionsRepository: NoteReactionsRepository,
 
 		@Inject(DI.emojisRepository)
 		private emojisRepository: EmojisRepository,
@@ -831,7 +829,7 @@ export class ActivityPubServerService {
 				return;
 			}
 
-			const reaction = await this.noteReactionsRepository.findOneBy({ id: request.params.like });
+			const reaction = await fetchNoteReactionByIdFromDatabase(this.db, request.params.like);
 
 			if (reaction == null) {
 				reply.code(404);

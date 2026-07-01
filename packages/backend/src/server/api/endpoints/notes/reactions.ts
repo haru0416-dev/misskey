@@ -4,13 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets, type FindOptionsWhere } from 'typeorm';
-import type { NoteReactionsRepository } from '@/models/_.js';
-import type { MiNoteReaction } from '@/models/NoteReaction.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteReactionEntityService } from '@/core/entities/NoteReactionEntityService.js';
 import { DI } from '@/di-symbols.js';
-import { QueryService } from '@/core/QueryService.js';
+import { IdService } from '@/core/IdService.js';
+import { listNoteReactionsByNoteIdFromDatabase, resolveNoteReactionPagination } from '@/core/NoteReactionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['notes', 'reactions'],
@@ -56,27 +55,27 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.noteReactionsRepository)
-		private noteReactionsRepository: NoteReactionsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteReactionEntityService: NoteReactionEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.noteReactionsRepository.createQueryBuilder('reaction'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('reaction.noteId = :noteId', { noteId: ps.noteId })
-				.leftJoinAndSelect('reaction.user', 'user')
-				.leftJoinAndSelect('reaction.note', 'note');
-
+			let type: string | null = null;
 			if (ps.type) {
 				// ローカルリアクションはホスト名が . とされているが
 				// DB 上ではそうではないので、必要に応じて変換
 				const suffix = '@.:';
-				const type = ps.type.endsWith(suffix) ? ps.type.slice(0, ps.type.length - suffix.length) + ':' : ps.type;
-				query.andWhere('reaction.reaction = :type', { type });
+				type = ps.type.endsWith(suffix) ? ps.type.slice(0, ps.type.length - suffix.length) + ':' : ps.type;
 			}
 
-			const reactions = await query.limit(ps.limit).getMany();
+			const pagination = resolveNoteReactionPagination(this.idService, ps);
+			const reactions = await listNoteReactionsByNoteIdFromDatabase(this.db, ps.noteId, {
+				limit: ps.limit,
+				...pagination,
+				type,
+			});
 
 			return await this.noteReactionEntityService.packMany(reactions, me);
 		});

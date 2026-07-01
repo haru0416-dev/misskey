@@ -14,7 +14,6 @@ import type { UtilityService } from '@/core/UtilityService.js';
 import type {
 	FollowRequestsRepository,
 	MiMeta,
-	NoteReactionsRepository,
 	NotesRepository,
 	PollsRepository,
 	UsersRepository,
@@ -22,6 +21,7 @@ import type {
 import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { bindThis } from '@/decorators.js';
 import { Resolver } from '@/core/activitypub/ApResolverService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 type MockResponse = {
 	type: string;
@@ -39,7 +39,7 @@ export class MockResolver extends Resolver {
 			{} as UsersRepository,
 			{} as NotesRepository,
 			{} as PollsRepository,
-			{} as NoteReactionsRepository,
+			{} as MiDrizzleDatabase,
 			{} as FollowRequestsRepository,
 			{} as UtilityService,
 			{} as SystemAccountService,

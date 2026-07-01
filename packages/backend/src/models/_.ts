@@ -94,7 +94,6 @@ export type GalleryPostsRepository = Repository<MiGalleryPost> & MiRepository<Mi
 export type InstancesRepository = Repository<MiInstance> & MiRepository<MiInstance>;
 export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
 export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
-export type NoteReactionsRepository = Repository<MiNoteReaction> & MiRepository<MiNoteReaction>;
 export type PagesRepository = Repository<MiPage> & MiRepository<MiPage>;
 export type PollsRepository = Repository<MiPoll> & MiRepository<MiPoll>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;

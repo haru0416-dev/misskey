@@ -9,7 +9,6 @@ import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import type {
 	FollowRequestsRepository,
 	MiMeta,
-	NoteReactionsRepository,
 	NotesRepository,
 	PollsRepository,
 	UsersRepository
@@ -23,6 +22,8 @@ import { LoggerService } from '@/core/LoggerService.js';
 import type Logger from '@/logger.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { ICollection, IObject, IOrderedCollection } from './type.js';
 import { isCollectionOrOrderedCollection } from './type.js';
 import { ApDbResolverService } from './ApDbResolverService.js';
@@ -54,8 +55,8 @@ export class Resolver {
 		@Inject(DI.pollsRepository)
 		private pollsRepository: PollsRepository,
 
-		@Inject(DI.noteReactionsRepository)
-		private noteReactionsRepository: NoteReactionsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.followRequestsRepository)
 		private followRequestsRepository: FollowRequestsRepository,
@@ -173,7 +174,7 @@ export class Resolver {
 				])
 					.then(([note, poll]) => this.apRendererService.renderQuestion({ id: note.userId }, note, poll));
 			case 'likes':
-				return this.noteReactionsRepository.findOneByOrFail({ id: parsed.id }).then(async reaction =>
+				return fetchNoteReactionByIdOrFailFromDatabase(this.db, parsed.id).then(async reaction =>
 					this.apRendererService.addContext(await this.apRendererService.renderLike(reaction, { uri: null })));
 			case 'follows':
 				return this.followRequestsRepository.findOneBy({ id: parsed.id })

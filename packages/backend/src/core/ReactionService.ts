@@ -5,13 +5,20 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { EmojisRepository, NoteReactionsRepository, UsersRepository, NotesRepository, MiMeta } from '@/models/_.js';
+import type { EmojisRepository, UsersRepository, NotesRepository, MiMeta } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiNoteReaction } from '@/models/NoteReaction.js';
-import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import {
+	createNoteReactionInDatabase,
+	deleteNoteReactionByIdFromDatabase,
+	fetchNoteReactionByUserAndNoteFromDatabase,
+	fetchNoteReactionByUserAndNoteOrFailFromDatabase,
+} from '@/core/NoteReactionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import PerUserReactionsChart from '@/core/chart/charts/per-user-reactions.js';
@@ -79,8 +86,8 @@ export class ReactionService {
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 
-		@Inject(DI.noteReactionsRepository)
-		private noteReactionsRepository: NoteReactionsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.emojisRepository)
 		private emojisRepository: EmojisRepository,
@@ -172,18 +179,15 @@ export class ReactionService {
 		};
 
 		try {
-			await this.noteReactionsRepository.insert(record);
+			await createNoteReactionInDatabase(this.db, record);
 		} catch (e) {
-			if (isDuplicateKeyValueError(e)) {
-				const exists = await this.noteReactionsRepository.findOneByOrFail({
-					noteId: note.id,
-					userId: user.id,
-				});
+			if (isDuplicateKeyValueDatabaseError(e)) {
+				const exists = await fetchNoteReactionByUserAndNoteOrFailFromDatabase(this.db, user.id, note.id);
 
 				if (exists.reaction !== reaction) {
 					// 別のリアクションがすでにされていたら置き換える
 					await this.delete(user, note);
-					await this.noteReactionsRepository.insert(record);
+					await createNoteReactionInDatabase(this.db, record);
 				} else {
 					// 同じリアクションがすでにされていたらエラー
 					throw new IdentifiableError('51c42bb4-931a-456b-bff7-e5a8a70dd298');
@@ -288,17 +292,14 @@ export class ReactionService {
 	@bindThis
 	public async delete(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot']; }, note: MiNote) {
 		// if already unreacted
-		const exist = await this.noteReactionsRepository.findOneBy({
-			noteId: note.id,
-			userId: user.id,
-		});
+		const exist = await fetchNoteReactionByUserAndNoteFromDatabase(this.db, user.id, note.id);
 
 		if (exist == null) {
 			throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
 		}
 
 		// Delete reaction
-		const result = await this.noteReactionsRepository.delete(exist.id);
+		const result = await deleteNoteReactionByIdFromDatabase(this.db, exist.id);
 
 		if (result.affected !== 1) {
 			throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');

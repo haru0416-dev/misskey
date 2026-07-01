@@ -10,7 +10,6 @@ import {
 	type MiNote,
 	type MiUser,
 	type NotesRepository,
-	type NoteReactionsRepository,
 	type UsersRepository,
 	type UserProfilesRepository,
 	MiMeta,
@@ -22,8 +21,10 @@ import { QueueLoggerService } from '@/queue/QueueLoggerService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { noteFavorite } from '@/db/schema/note-favorite.js';
+import { noteReaction } from '@/db/schema/note-reaction.js';
 import { userNotePining } from '@/db/schema/user-note-pining.js';
 import { createNoteFavoriteInDatabase } from '@/core/NoteFavoriteStore.js';
+import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
 import { createUserNotePiningInDatabase } from '@/core/UserNotePiningStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
@@ -32,7 +33,6 @@ describe('CleanRemoteNotesProcessorService', () => {
 	let service: CleanRemoteNotesProcessorService;
 	let idService: IdService;
 	let notesRepository: NotesRepository;
-	let noteReactionsRepository: NoteReactionsRepository;
 	let db: MiDrizzleDatabase;
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
@@ -115,7 +115,6 @@ describe('CleanRemoteNotesProcessorService', () => {
 		service = app.get(CleanRemoteNotesProcessorService);
 		idService = app.get(IdService);
 		notesRepository = app.get(DI.notesRepository);
-		noteReactionsRepository = app.get(DI.noteReactionsRepository);
 		db = app.get(DI.drizzle);
 		usersRepository = app.get(DI.usersRepository);
 		userProfilesRepository = app.get(DI.userProfilesRepository);
@@ -143,7 +142,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			notesRepository.createQueryBuilder().delete().execute(),
 			db.delete(noteFavorite),
 			db.delete(userNotePining),
-			noteReactionsRepository.createQueryBuilder().delete().execute(),
+			db.delete(noteReaction),
 		]);
 	}, 60 * 1000);
 
@@ -865,7 +864,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// alice (local) がリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: olderRemoteNote.id,
@@ -888,7 +887,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// carol (remote) がリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: carol.id,
 				noteId: olderRemoteNote.id,
@@ -910,19 +909,19 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
-			await noteReactionsRepository.save([
-				{
+			await Promise.all([
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: alice.id, // local
 					noteId: olderRemoteNote.id,
 					reaction: '👍',
-				},
-				{
+				}),
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: carol.id, // remote
 					noteId: olderRemoteNote.id,
 					reaction: '❤️',
-				},
+				}),
 			]);
 
 			const result = await service.process(job as any);
@@ -943,7 +942,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const reply = await createNote({ replyId: root.id }, carol, oldTime - 1000);
 
 			// root にローカルユーザーがリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: root.id,
@@ -969,7 +968,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const reply = await createNote({ replyId: root.id }, carol, oldTime - 1000);
 
 			// reply にローカルユーザーがリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: reply.id,
@@ -995,19 +994,19 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const reply = await createNote({ replyId: root.id }, carol, oldTime - 1000);
 
 			// root と reply それぞれに リモートユーザーがリアクション
-			await noteReactionsRepository.save([
-				{
+			await Promise.all([
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: carol.id, // remote
 					noteId: root.id,
 					reaction: '👍',
-				},
-				{
+				}),
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: bob.id, // remote
 					noteId: reply.id,
 					reaction: '❤️',
-				},
+				}),
 			]);
 
 			const result = await service.process(job as any);
@@ -1031,7 +1030,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const r3 = await createNote({ replyId: r2.id }, carol, oldTime - 3000);
 
 			// 末端 r3 にローカルリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: r3.id,
@@ -1059,7 +1058,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			}
 			for (let i = 0; i < 5; i++) {
 				const n = await createNote({}, carol, oldTime - 100 - i);
-				await noteReactionsRepository.save({
+				await createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: alice.id, // local
 					noteId: n.id,
@@ -1217,7 +1216,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 6) ローカルリアクション保護
 			const reactedByLocal = await createNote({}, bob, oldTime - 5);
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: reactedByLocal.id,
@@ -1226,7 +1225,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 7) リモートのみリアクション → 保護されない（削除される）
 			const reactedByRemote = await createNote({}, bob, oldTime - 6);
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: carol.id, // remote
 				noteId: reactedByRemote.id,
@@ -1250,7 +1249,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			// 12) 古い root + 古い reply, reply にローカルリアクション → ツリー保護
 			const protectedTreeRoot = await createNote({}, bob, oldTime - 11);
 			const protectedTreeReply = await createNote({ replyId: protectedTreeRoot.id }, carol, oldTime - 12);
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: protectedTreeReply.id,

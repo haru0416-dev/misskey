@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NoteReactionsRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
@@ -13,10 +12,19 @@ import type { OnModuleInit } from '@nestjs/common';
 import type { } from '@/models/Blocking.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNoteReaction } from '@/models/NoteReaction.js';
+import type { MiNote } from '@/models/Note.js';
+import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
+import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { ReactionService } from '../ReactionService.js';
 import type { UserEntityService } from './UserEntityService.js';
 import type { NoteEntityService } from './NoteEntityService.js';
 import { ModuleRef } from '@nestjs/core';
+
+export type NoteReactionPackable = NoteReactionRow & {
+	user?: MiUser | null;
+	note?: MiNote | null;
+};
 
 @Injectable()
 export class NoteReactionEntityService implements OnModuleInit {
@@ -28,8 +36,8 @@ export class NoteReactionEntityService implements OnModuleInit {
 	constructor(
 		private moduleRef: ModuleRef,
 
-		@Inject(DI.noteReactionsRepository)
-		private noteReactionsRepository: NoteReactionsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		//private userEntityService: UserEntityService,
 		//private noteEntityService: NoteEntityService,
@@ -47,7 +55,7 @@ export class NoteReactionEntityService implements OnModuleInit {
 
 	@bindThis
 	public async pack(
-		src: MiNoteReaction['id'] | MiNoteReaction,
+		src: MiNoteReaction['id'] | NoteReactionPackable,
 		me?: { id: MiUser['id'] } | null | undefined,
 		options?: object,
 		hints?: {
@@ -57,7 +65,7 @@ export class NoteReactionEntityService implements OnModuleInit {
 		const _opts = Object.assign({
 		}, options);
 
-		const reaction = typeof src === 'object' ? src : await this.noteReactionsRepository.findOneByOrFail({ id: src });
+		const reaction: NoteReactionPackable = typeof src === 'object' ? src : await fetchNoteReactionByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: reaction.id,
@@ -69,7 +77,7 @@ export class NoteReactionEntityService implements OnModuleInit {
 
 	@bindThis
 	public async packMany(
-		reactions: MiNoteReaction[],
+		reactions: NoteReactionPackable[],
 		me?: { id: MiUser['id'] } | null | undefined,
 		options?: object,
 	): Promise<Packed<'NoteReaction'>[]> {
@@ -83,7 +91,7 @@ export class NoteReactionEntityService implements OnModuleInit {
 
 	@bindThis
 	public async packWithNote(
-		src: MiNoteReaction['id'] | MiNoteReaction,
+		src: MiNoteReaction['id'] | NoteReactionPackable,
 		me?: { id: MiUser['id'] } | null | undefined,
 		options?: object,
 		hints?: {
@@ -93,7 +101,7 @@ export class NoteReactionEntityService implements OnModuleInit {
 		const _opts = Object.assign({
 		}, options);
 
-		const reaction = typeof src === 'object' ? src : await this.noteReactionsRepository.findOneByOrFail({ id: src });
+		const reaction: NoteReactionPackable = typeof src === 'object' ? src : await fetchNoteReactionByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: reaction.id,
@@ -106,7 +114,7 @@ export class NoteReactionEntityService implements OnModuleInit {
 
 	@bindThis
 	public async packManyWithNote(
-		reactions: MiNoteReaction[],
+		reactions: NoteReactionPackable[],
 		me?: { id: MiUser['id'] } | null | undefined,
 		options?: object,
 	): Promise<Packed<'NoteReactionWithNote'>[]> {
