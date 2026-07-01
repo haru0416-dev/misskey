@@ -11,7 +11,6 @@ import {
 	MiChannel,
 	MiDriveFile,
 	MiEmoji,
-	MiFlash,
 	MiFollowing,
 	MiFollowRequest,
 	MiGalleryPost,
@@ -126,12 +125,6 @@ const $channelsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $flashsRepository: Provider = {
-	provide: DI.flashsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiFlash).extend(miRepository as MiRepository<MiFlash>),
-	inject: [DI.db],
-};
-
 const $rolesRepository: Provider = {
 	provide: DI.rolesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiRole).extend(miRepository as MiRepository<MiRole>),
@@ -158,7 +151,6 @@ const $rolesRepository: Provider = {
 		$antennasRepository,
 		$channelsRepository,
 		$rolesRepository,
-		$flashsRepository,
 	],
 	exports: [
 		$usersRepository,
@@ -178,7 +170,6 @@ const $rolesRepository: Provider = {
 		$antennasRepository,
 		$channelsRepository,
 		$rolesRepository,
-		$flashsRepository,
 	],
 })
 export class RepositoryModule {

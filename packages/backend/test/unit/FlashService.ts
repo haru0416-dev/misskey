@@ -8,12 +8,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { afterAll, afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { FlashService } from '@/core/FlashService.js';
 import { IdService } from '@/core/IdService.js';
-import { FlashsRepository, MiFlash, MiUser, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import { MiUser, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { flash, type FlashInsert } from '@/db/schema/flash.js';
 import { flashLike } from '@/db/schema/flash-like.js';
+import { createFlashInDatabase } from '@/core/FlashStore.js';
 
 describe('FlashService', () => {
 	let app: TestingModule;
@@ -21,7 +23,6 @@ describe('FlashService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	let flashsRepository: FlashsRepository;
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
 	let drizzle: MiDrizzleDatabase;
@@ -35,8 +36,8 @@ describe('FlashService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	async function createFlash(data: Partial<MiFlash>) {
-		return flashsRepository.insert({
+	async function createFlash(data: Partial<FlashInsert>) {
+		return createFlashInDatabase(drizzle, {
 			id: idService.gen(),
 			updatedAt: new Date(),
 			userId: root.id,
@@ -46,7 +47,7 @@ describe('FlashService', () => {
 			permissions: [],
 			likedCount: 0,
 			...data,
-		}).then(x => flashsRepository.findOneByOrFail(x.identifiers[0]));
+		});
 	}
 
 	async function createUser(data: Partial<MiUser> = {}) {
@@ -80,7 +81,6 @@ describe('FlashService', () => {
 
 		service = app.get(FlashService);
 
-		flashsRepository = app.get(DI.flashsRepository);
 		usersRepository = app.get(DI.usersRepository);
 		userProfilesRepository = app.get(DI.userProfilesRepository);
 		drizzle = app.get(DI.drizzle);
@@ -94,8 +94,8 @@ describe('FlashService', () => {
 	afterEach(async () => {
 		await usersRepository.createQueryBuilder().delete().execute();
 		await userProfilesRepository.createQueryBuilder().delete().execute();
-		await flashsRepository.createQueryBuilder().delete().execute();
 		await drizzle.delete(flashLike);
+		await drizzle.delete(flash);
 	});
 
 	afterAll(async () => {

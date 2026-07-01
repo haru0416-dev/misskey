@@ -4,7 +4,7 @@
  */
 
 import { sql } from 'drizzle-orm';
-import { integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -20,7 +20,10 @@ export const flash = pgTable('flash', {
 	permissions: varchar({ length: 256 }).array().default(emptyVarcharArray).notNull(),
 	likedCount: integer().default(0).notNull(),
 	visibility: varchar({ length: 512 }).default('public').notNull().$type<MiFlash['visibility']>(),
-});
+}, table => [
+	index('IDX_3aa8ea9a8f15214ad91638c0a7').on(table.updatedAt),
+	index('IDX_9b88250fc2fd009b8f1b5623ed').on(table.userId),
+]);
 
 export type FlashRow = typeof flash.$inferSelect;
 export type FlashInsert = typeof flash.$inferInsert;

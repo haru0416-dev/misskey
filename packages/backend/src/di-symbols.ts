@@ -34,6 +34,5 @@ export const DI = {
 	antennasRepository: Symbol('antennasRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	rolesRepository: Symbol('rolesRepository'),
-	flashsRepository: Symbol('flashsRepository'),
 	//#endregion
 };

@@ -5,21 +5,19 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { FlashsRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiFlash } from '@/models/Flash.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { flashLikeExistsInDatabase, listLikedFlashIdsByUserIdFromDatabase } from '@/core/FlashLikeStore.js';
+import { fetchFlashByIdOrFailFromDatabase } from '@/core/FlashStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 
 @Injectable()
 export class FlashEntityService {
 	constructor(
-		@Inject(DI.flashsRepository)
-		private flashsRepository: FlashsRepository,
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 		private userEntityService: UserEntityService,
@@ -37,7 +35,7 @@ export class FlashEntityService {
 		},
 	): Promise<Packed<'Flash'>> {
 		const meId = me ? me.id : null;
-		const flash = typeof src === 'object' ? src : await this.flashsRepository.findOneByOrFail({ id: src });
+		const flash = typeof src === 'object' ? src : await fetchFlashByIdOrFailFromDatabase(this.drizzle, src);
 
 		// { schema: 'UserDetailed' } すると無限ループするので注意
 		const user = hint?.packedUser ?? await this.userEntityService.pack(flash.user ?? flash.userId, me);

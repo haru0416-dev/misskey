@@ -4,11 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { FlashsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { createFlashLikeInDatabase, flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
+import { fetchFlashByIdFromDatabase, incrementFlashLikedCountInDatabase } from '@/core/FlashStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
@@ -54,16 +54,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.flashsRepository)
-		private flashsRepository: FlashsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const flash = await this.flashsRepository.findOneBy({ id: ps.flashId });
+			const flash = await fetchFlashByIdFromDatabase(this.drizzle, ps.flashId);
 			if (flash == null) {
 				throw new ApiError(meta.errors.noSuchFlash);
 			}
@@ -93,7 +90,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw error;
 			}
 
-			this.flashsRepository.increment({ id: flash.id }, 'likedCount', 1);
+			incrementFlashLikedCountInDatabase(this.drizzle, flash.id);
 		});
 	}
 }

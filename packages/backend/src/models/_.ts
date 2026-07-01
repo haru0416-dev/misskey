@@ -94,4 +94,3 @@ export type UserListMembershipsRepository = Repository<MiUserListMembership> & M
 export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;
 export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>;
 export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;
-export type FlashsRepository = Repository<MiFlash> & MiRepository<MiFlash>;

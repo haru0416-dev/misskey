@@ -23,7 +23,6 @@ import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import type {
 	ChannelsRepository,
-	FlashsRepository,
 	GalleryPostsRepository,
 	MiMeta,
 	NotesRepository,
@@ -39,6 +38,7 @@ import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
 import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
+import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
 import { UrlPreviewService } from './UrlPreviewService.js';
@@ -99,9 +99,6 @@ export class ClientServerService {
 
 		@Inject(DI.pagesRepository)
 		private pagesRepository: PagesRepository,
-
-		@Inject(DI.flashsRepository)
-		private flashsRepository: FlashsRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -643,9 +640,7 @@ export class ClientServerService {
 
 		// Flash
 		fastify.get<{ Params: { id: string; } }>('/play/:id', async (request, reply) => {
-			const flash = await this.flashsRepository.findOneBy({
-				id: request.params.id,
-			});
+			const flash = await fetchFlashByIdFromDatabase(this.drizzle, request.params.id);
 
 			if (flash) {
 				const _flash = await this.flashEntityService.pack(flash);
