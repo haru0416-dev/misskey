@@ -117,7 +117,8 @@ const $redisForReactions: Provider = {
 
 const $meta: Provider = {
 	provide: DI.meta,
-	useFactory: async (db: MiDrizzleDatabase, redisForSub: Redis.Redis) => {
+	// Ensure TypeORM-backed schema initialization completes before Drizzle reads meta.
+	useFactory: async (db: MiDrizzleDatabase, redisForSub: Redis.Redis, _typeormDb: DataSource) => {
 		const meta = await fetchMetaFromDatabase(db);
 
 		async function onMessage(_: string, data: string): Promise<void> {
@@ -143,7 +144,7 @@ const $meta: Provider = {
 
 		return meta;
 	},
-	inject: [DI.drizzle, DI.redisForSub],
+	inject: [DI.drizzle, DI.redisForSub, DI.db],
 };
 
 @Global()

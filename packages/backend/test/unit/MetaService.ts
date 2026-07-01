@@ -12,7 +12,7 @@ import { DI } from '@/di-symbols.js';
 import { MetaService } from '@/core/MetaService.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import type { TestingModule } from '@nestjs/testing';
-import type { DataSource } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 describe('MetaService', () => {
 	let app: TestingModule;
@@ -39,7 +39,7 @@ describe('MetaService', () => {
 	});
 
 	test('fetch (cache)', async () => {
-		const db = app.get<DataSource>(DI.db);
+		const db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		const spy = vi.spyOn(db, 'transaction');
 
 		const result = await metaService.fetch();
@@ -49,7 +49,7 @@ describe('MetaService', () => {
 	});
 
 	test('fetch (force)', async () => {
-		const db = app.get<DataSource>(DI.db);
+		const db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		const spy = vi.spyOn(db, 'transaction');
 
 		const result = await metaService.fetch(true);
