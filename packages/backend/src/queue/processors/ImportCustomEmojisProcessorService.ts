@@ -6,9 +6,10 @@
 import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { ZipReader } from 'slacc';
-import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { EmojisRepository, DriveFilesRepository } from '@/models/_.js';
+import type { DriveFilesRepository } from '@/models/_.js';
+import { deleteEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { createTempDir } from '@/misc/create-temp.js';
@@ -28,8 +29,8 @@ export class ImportCustomEmojisProcessorService {
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private customEmojiService: CustomEmojiService,
 		private driveService: DriveService,
@@ -85,10 +86,7 @@ export class ImportCustomEmojisProcessorService {
 					continue;
 				}
 				const emojiPath = outputPath + '/' + record.fileName;
-				await this.emojisRepository.delete({
-					name: emojiInfo.name,
-					host: IsNull(),
-				});
+				await deleteEmojiByNameAndHostFromDatabase(this.db, emojiInfo.name, null);
 
 				try {
 					const driveFile = await this.driveService.addFile({

@@ -6,7 +6,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { EmojisRepository, MiRole, RolesRepository } from '@/models/_.js';
+import { fetchEmojiByIdOrFailFromDatabase, listEmojisByIdsFromDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiRole, RolesRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import { bindThis } from '@/decorators.js';
@@ -14,8 +16,8 @@ import { bindThis } from '@/decorators.js';
 @Injectable()
 export class EmojiEntityService {
 	constructor(
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 		@Inject(DI.rolesRepository)
 		private rolesRepository: RolesRepository,
 	) {
@@ -25,7 +27,7 @@ export class EmojiEntityService {
 	public async packSimple(
 		src: MiEmoji['id'] | MiEmoji,
 	): Promise<Packed<'EmojiSimple'>> {
-		const emoji = typeof src === 'object' ? src : await this.emojisRepository.findOneByOrFail({ id: src });
+		const emoji = typeof src === 'object' ? src : await fetchEmojiByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			aliases: emoji.aliases,
@@ -50,7 +52,7 @@ export class EmojiEntityService {
 	public async packDetailed(
 		src: MiEmoji['id'] | MiEmoji,
 	): Promise<Packed<'EmojiDetailed'>> {
-		const emoji = typeof src === 'object' ? src : await this.emojisRepository.findOneByOrFail({ id: src });
+		const emoji = typeof src === 'object' ? src : await fetchEmojiByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: emoji.id,
@@ -81,7 +83,7 @@ export class EmojiEntityService {
 			roles?: Map<MiRole['id'], MiRole>
 		},
 	): Promise<Packed<'EmojiDetailedAdmin'>> {
-		const emoji = typeof src === 'object' ? src : await this.emojisRepository.findOneByOrFail({ id: src });
+		const emoji = typeof src === 'object' ? src : await fetchEmojiByIdOrFailFromDatabase(this.db, src);
 
 		const roles = Array.of<MiRole>();
 		if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
@@ -136,7 +138,7 @@ export class EmojiEntityService {
 		const emojiEntities = emojis.filter(x => typeof x === 'object') as MiEmoji[];
 		const emojiIdOnlyList = emojis.filter(x => typeof x === 'string') as string[];
 		if (emojiIdOnlyList.length > 0) {
-			emojiEntities.push(...await this.emojisRepository.findBy({ id: In(emojiIdOnlyList) }));
+			emojiEntities.push(...await listEmojisByIdsFromDatabase(this.db, emojiIdOnlyList));
 		}
 
 		// 特定ロール専用の絵文字である場合、そのロール情報をあらかじめまとめて取得しておく（pack側で都度取得も出来るが負荷が高いので）

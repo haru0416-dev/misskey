@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { EmojisRepository, UsersRepository, NotesRepository, MiMeta } from '@/models/_.js';
+import type { UsersRepository, NotesRepository, MiMeta } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
@@ -18,6 +18,7 @@ import {
 	fetchNoteReactionByUserAndNoteFromDatabase,
 	fetchNoteReactionByUserAndNoteOrFailFromDatabase,
 } from '@/core/NoteReactionStore.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { NotificationService } from '@/core/NotificationService.js';
@@ -89,9 +90,6 @@ export class ReactionService {
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
-
 		private utilityService: UtilityService,
 		private customEmojiService: CustomEmojiService,
 		private roleService: RoleService,
@@ -141,10 +139,7 @@ export class ReactionService {
 				const name = custom[1];
 				const emoji = reacterHost == null
 					? (await this.customEmojiService.localEmojisCache.fetch()).get(name)
-					: await this.emojisRepository.findOneBy({
-						host: reacterHost,
-						name,
-					});
+					: await fetchEmojiByNameAndHostFromDatabase(this.db, name, reacterHost);
 
 				if (emoji) {
 					if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 || (await this.roleService.getUserRoles(user.id)).some(r => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(r.id))) {
@@ -240,13 +235,7 @@ export class ReactionService {
 
 		const customEmoji = decodedReaction.name == null ? null : decodedReaction.host == null
 			? (await this.customEmojiService.localEmojisCache.fetch()).get(decodedReaction.name)
-			: await this.emojisRepository.findOne(
-				{
-					where: {
-						name: decodedReaction.name,
-						host: decodedReaction.host,
-					},
-				});
+			: await fetchEmojiByNameAndHostFromDatabase(this.db, decodedReaction.name, decodedReaction.host);
 
 		this.globalEventService.publishNoteStream(note, 'reacted', {
 			reaction: decodedReaction.reaction,

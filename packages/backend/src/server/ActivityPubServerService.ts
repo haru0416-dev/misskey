@@ -13,7 +13,7 @@ import accepts from 'accepts';
 import vary from 'vary';
 import secureJson from 'secure-json-parse';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, NotesRepository, EmojisRepository, UserProfilesRepository, UsersRepository, MiMeta } from '@/models/_.js';
+import type { FollowingsRepository, NotesRepository, UserProfilesRepository, UsersRepository, MiMeta } from '@/models/_.js';
 import * as url from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -34,6 +34,7 @@ import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointServ
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
 import { fetchNoteReactionByIdFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginOptions, FastifyBodyParser } from 'fastify';
 import type { FindOptionsWhere } from 'typeorm';
@@ -58,9 +59,6 @@ export class ActivityPubServerService {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
-
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -805,10 +803,7 @@ export class ActivityPubServerService {
 				return;
 			}
 
-			const emoji = await this.emojisRepository.findOneBy({
-				host: IsNull(),
-				name: request.params.emoji,
-			});
+			const emoji = await fetchEmojiByNameAndHostFromDatabase(this.db, request.params.emoji, null);
 
 			if (emoji == null || emoji.localOnly) {
 				reply.code(404);

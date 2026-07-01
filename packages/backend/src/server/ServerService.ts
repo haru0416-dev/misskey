@@ -12,8 +12,10 @@ import fastifyStatic from '@fastify/static';
 import fastifyRawBody from 'fastify-raw-body';
 import { IsNull } from 'typeorm';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
-import type { EmojisRepository, MiMeta, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiMeta, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import type Logger from '@/logger.js';
 import * as Acct from '@/misc/acct.js';
@@ -52,8 +54,8 @@ export class ServerService implements OnApplicationShutdown {
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
 
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private apiServerService: ApiServerService,
@@ -171,11 +173,12 @@ export class ServerService implements OnApplicationShutdown {
 			const name = pathChunks.shift();
 			const host = pathChunks.pop();
 
-			const emoji = await this.emojisRepository.findOneBy({
+			const emoji = await fetchEmojiByNameAndHostFromDatabase(
+				this.db,
+				name!,
 				// `@.` is the spec of ReactionService.decodeReaction
-				host: (host === undefined || host === '.') ? IsNull() : host,
-				name: name,
-			});
+				(host === undefined || host === '.') ? null : host,
+			);
 
 			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
 

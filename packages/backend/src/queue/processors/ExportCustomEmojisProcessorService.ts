@@ -5,12 +5,13 @@
 
 import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull } from 'typeorm';
 import { format as dateFormat } from 'date-fns';
 import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { DI } from '@/di-symbols.js';
-import type { EmojisRepository, UsersRepository } from '@/models/_.js';
+import type { UsersRepository } from '@/models/_.js';
+import { listLocalEmojisOrderedByIdFromDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
@@ -32,8 +33,8 @@ export class ExportCustomEmojisProcessorService {
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private downloadService: DownloadService,
@@ -77,14 +78,7 @@ export class ExportCustomEmojisProcessorService {
 
 		await writeMeta(`{"metaVersion":2,"host":"${this.config.host}","exportedAt":"${new Date().toString()}","emojis":[`);
 
-		const customEmojis = await this.emojisRepository.find({
-			where: {
-				host: IsNull(),
-			},
-			order: {
-				id: 'ASC',
-			},
-		});
+		const customEmojis = await listLocalEmojisOrderedByIdFromDatabase(this.db);
 
 		for (const emoji of customEmojis) {
 			if (!/^[a-zA-Z0-9_]+$/.test(emoji.name)) {

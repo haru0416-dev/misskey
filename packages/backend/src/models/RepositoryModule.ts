@@ -9,7 +9,6 @@ import {
 	MiBlocking,
 	MiChannel,
 	MiDriveFile,
-	MiEmoji,
 	MiFollowing,
 	MiGalleryPost,
 	MiInstance,
@@ -69,12 +68,6 @@ const $instancesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $emojisRepository: Provider = {
-	provide: DI.emojisRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiEmoji).extend(miRepository as MiRepository<MiEmoji>),
-	inject: [DI.db],
-};
-
 const $driveFilesRepository: Provider = {
 	provide: DI.driveFilesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiDriveFile).extend(miRepository as MiRepository<MiDriveFile>),
@@ -127,7 +120,6 @@ const $rolesRepository: Provider = {
 		$userListMembershipsRepository,
 		$followingsRepository,
 		$instancesRepository,
-		$emojisRepository,
 		$driveFilesRepository,
 		$mutingsRepository,
 		$blockingsRepository,
@@ -144,7 +136,6 @@ const $rolesRepository: Provider = {
 		$userListMembershipsRepository,
 		$followingsRepository,
 		$instancesRepository,
-		$emojisRepository,
 		$driveFilesRepository,
 		$mutingsRepository,
 		$blockingsRepository,

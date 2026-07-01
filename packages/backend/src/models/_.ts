@@ -79,7 +79,6 @@ export {
 
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
 export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;
-export type EmojisRepository = Repository<MiEmoji> & MiRepository<MiEmoji>;
 export type FollowingsRepository = Repository<MiFollowing> & MiRepository<MiFollowing>;
 export type GalleryPostsRepository = Repository<MiGalleryPost> & MiRepository<MiGalleryPost>;
 export type InstancesRepository = Repository<MiInstance> & MiRepository<MiInstance>;
