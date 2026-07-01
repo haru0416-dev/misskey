@@ -4,9 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { FlashsRepository, FlashLikesRepository } from '@/models/_.js';
+import type { FlashsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { deleteFlashLikeByIdFromDatabase, fetchFlashLikeFromDatabase } from '@/core/FlashLikeStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -47,8 +49,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.flashsRepository)
 		private flashsRepository: FlashsRepository,
 
-		@Inject(DI.flashLikesRepository)
-		private flashLikesRepository: FlashLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const flash = await this.flashsRepository.findOneBy({ id: ps.flashId });
@@ -56,17 +58,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.noSuchFlash);
 			}
 
-			const exist = await this.flashLikesRepository.findOneBy({
-				flashId: flash.id,
-				userId: me.id,
-			});
+			const exist = await fetchFlashLikeFromDatabase(this.drizzle, me.id, flash.id);
 
 			if (exist == null) {
 				throw new ApiError(meta.errors.notLiked);
 			}
 
 			// Delete like
-			await this.flashLikesRepository.delete(exist.id);
+			await deleteFlashLikeByIdFromDatabase(this.drizzle, exist.id);
 
 			this.flashsRepository.decrement({ id: flash.id }, 'likedCount', 1);
 		});

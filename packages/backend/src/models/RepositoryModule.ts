@@ -24,7 +24,6 @@ import {
 	MiDriveFolder,
 	MiEmoji,
 	MiFlash,
-	MiFlashLike,
 	MiFollowing,
 	MiFollowRequest,
 	MiGalleryPost,
@@ -313,12 +312,6 @@ const $flashsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $flashLikesRepository: Provider = {
-	provide: DI.flashLikesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiFlashLike).extend(miRepository as MiRepository<MiFlashLike>),
-	inject: [DI.db],
-};
-
 const $rolesRepository: Provider = {
 	provide: DI.rolesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiRole).extend(miRepository as MiRepository<MiRole>),
@@ -402,7 +395,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$rolesRepository,
 		$roleAssignmentsRepository,
 		$flashsRepository,
-		$flashLikesRepository,
 		$chatMessagesRepository,
 		$chatRoomsRepository,
 		$chatRoomMembershipsRepository,
@@ -453,7 +445,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$rolesRepository,
 		$roleAssignmentsRepository,
 		$flashsRepository,
-		$flashLikesRepository,
 		$chatMessagesRepository,
 		$chatRoomsRepository,
 		$chatRoomMembershipsRepository,

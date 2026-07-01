@@ -31,7 +31,6 @@ import { MiDriveFile } from '@/models/DriveFile.js';
 import { MiDriveFolder } from '@/models/DriveFolder.js';
 import { MiEmoji } from '@/models/Emoji.js';
 import { MiFlash } from '@/models/Flash.js';
-import { MiFlashLike } from '@/models/FlashLike.js';
 import { MiFollowing } from '@/models/Following.js';
 import { MiFollowRequest } from '@/models/FollowRequest.js';
 import { MiGalleryPost } from '@/models/GalleryPost.js';
@@ -118,7 +117,6 @@ export {
 	MiRole,
 	MiRoleAssignment,
 	MiFlash,
-	MiFlashLike,
 	MiChatMessage,
 	MiChatRoom,
 	MiChatRoomMembership,
@@ -171,7 +169,6 @@ export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>
 export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;
 export type RoleAssignmentsRepository = Repository<MiRoleAssignment> & MiRepository<MiRoleAssignment>;
 export type FlashsRepository = Repository<MiFlash> & MiRepository<MiFlash>;
-export type FlashLikesRepository = Repository<MiFlashLike> & MiRepository<MiFlashLike>;
 export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<MiChatMessage>;
 export type ChatRoomsRepository = Repository<MiChatRoom> & MiRepository<MiChatRoom>;
 export type ChatRoomMembershipsRepository = Repository<MiChatRoomMembership> & MiRepository<MiChatRoomMembership>;

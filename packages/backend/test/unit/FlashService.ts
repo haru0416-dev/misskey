@@ -8,10 +8,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { afterAll, afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { FlashService } from '@/core/FlashService.js';
 import { IdService } from '@/core/IdService.js';
-import { FlashLikesRepository, FlashsRepository, MiFlash, MiUser, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import { FlashsRepository, MiFlash, MiUser, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { flashLike } from '@/db/schema/flash-like.js';
 
 describe('FlashService', () => {
 	let app: TestingModule;
@@ -20,9 +22,9 @@ describe('FlashService', () => {
 	// --------------------------------------------------------------------------------------
 
 	let flashsRepository: FlashsRepository;
-	let flashLikesRepository: FlashLikesRepository;
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
+	let drizzle: MiDrizzleDatabase;
 	let idService: IdService;
 
 	// --------------------------------------------------------------------------------------
@@ -79,9 +81,9 @@ describe('FlashService', () => {
 		service = app.get(FlashService);
 
 		flashsRepository = app.get(DI.flashsRepository);
-		flashLikesRepository = app.get(DI.flashLikesRepository);
 		usersRepository = app.get(DI.usersRepository);
 		userProfilesRepository = app.get(DI.userProfilesRepository);
+		drizzle = app.get(DI.drizzle);
 		idService = app.get(IdService);
 
 		root = await createUser({ username: 'root', usernameLower: 'root' });
@@ -93,7 +95,7 @@ describe('FlashService', () => {
 		await usersRepository.createQueryBuilder().delete().execute();
 		await userProfilesRepository.createQueryBuilder().delete().execute();
 		await flashsRepository.createQueryBuilder().delete().execute();
-		await flashLikesRepository.createQueryBuilder().delete().execute();
+		await drizzle.delete(flashLike);
 	});
 
 	afterAll(async () => {

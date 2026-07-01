@@ -60,7 +60,6 @@ export const DI = {
 	rolesRepository: Symbol('rolesRepository'),
 	roleAssignmentsRepository: Symbol('roleAssignmentsRepository'),
 	flashsRepository: Symbol('flashsRepository'),
-	flashLikesRepository: Symbol('flashLikesRepository'),
 	chatMessagesRepository: Symbol('chatMessagesRepository'),
 	chatRoomsRepository: Symbol('chatRoomsRepository'),
 	chatRoomMembershipsRepository: Symbol('chatRoomMembershipsRepository'),

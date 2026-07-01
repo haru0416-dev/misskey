@@ -4,10 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { FlashsRepository, FlashLikesRepository } from '@/models/_.js';
+import type { FlashsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { createFlashLikeInDatabase, flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -54,8 +57,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.flashsRepository)
 		private flashsRepository: FlashsRepository,
 
-		@Inject(DI.flashLikesRepository)
-		private flashLikesRepository: FlashLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -70,23 +73,25 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// if already liked
-			const exist = await this.flashLikesRepository.exists({
-				where: {
-					flashId: flash.id,
-					userId: me.id,
-				},
-			});
+			const exist = await flashLikeExistsInDatabase(this.drizzle, me.id, flash.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyLiked);
 			}
 
 			// Create like
-			await this.flashLikesRepository.insert({
-				id: this.idService.gen(),
-				flashId: flash.id,
-				userId: me.id,
-			});
+			try {
+				await createFlashLikeInDatabase(this.drizzle, {
+					id: this.idService.gen(),
+					flashId: flash.id,
+					userId: me.id,
+				});
+			} catch (error) {
+				if (isDuplicateKeyValueDatabaseError(error)) {
+					throw new ApiError(meta.errors.alreadyLiked);
+				}
+				throw error;
+			}
 
 			this.flashsRepository.increment({ id: flash.id }, 'likedCount', 1);
 		});
