@@ -15,11 +15,12 @@ import {
 	BlockingsRepository,
 	FollowingsRepository, FollowRequestsRepository,
 	MiUserProfile, MutingsRepository, RenoteMutingsRepository,
-	UserMemoRepository,
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { AvatarDecorationService } from '@/core/AvatarDecorationService.js';
 import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
@@ -61,7 +62,7 @@ describe('UserEntityService', () => {
 		let service: UserEntityService;
 		let usersRepository: UsersRepository;
 		let userProfileRepository: UserProfilesRepository;
-		let userMemosRepository: UserMemoRepository;
+		let drizzle: MiDrizzleDatabase;
 		let followingRepository: FollowingsRepository;
 		let followingRequestRepository: FollowRequestsRepository;
 		let blockingRepository: BlockingsRepository;
@@ -88,7 +89,7 @@ describe('UserEntityService', () => {
 		}
 
 		async function memo(writer: MiUser, target: MiUser, memo: string) {
-			await userMemosRepository.insert({
+			await upsertUserMemoInDatabase(drizzle, {
 				id: genAidx(Date.now()),
 				userId: writer.id,
 				targetUserId: target.id,
@@ -190,7 +191,7 @@ describe('UserEntityService', () => {
 			service = app.get<UserEntityService>(UserEntityService);
 			usersRepository = app.get<UsersRepository>(DI.usersRepository);
 			userProfileRepository = app.get<UserProfilesRepository>(DI.userProfilesRepository);
-			userMemosRepository = app.get<UserMemoRepository>(DI.userMemosRepository);
+			drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
 			followingRepository = app.get<FollowingsRepository>(DI.followingsRepository);
 			followingRequestRepository = app.get<FollowRequestsRepository>(DI.followRequestsRepository);
 			blockingRepository = app.get<BlockingsRepository>(DI.blockingsRepository);

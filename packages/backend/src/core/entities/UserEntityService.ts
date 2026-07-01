@@ -33,12 +33,16 @@ import type {
 	MiUserProfile,
 	MutingsRepository,
 	RenoteMutingsRepository,
-	UserMemoRepository,
 	UserNotePiningsRepository,
 	UserProfilesRepository,
 	UserSecurityKeysRepository,
 	UsersRepository,
 } from '@/models/_.js';
+import {
+	fetchUserMemoTextFromDatabase,
+	listUserMemoTextsByUserIdFromDatabase,
+} from '@/core/UserMemoStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
 import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
@@ -108,6 +112,9 @@ export class UserEntityService implements OnModuleInit {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
+
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
@@ -134,9 +141,6 @@ export class UserEntityService implements OnModuleInit {
 
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userMemosRepository)
-		private userMemosRepository: UserMemoRepository,
 	) {
 	}
 
@@ -444,8 +448,7 @@ export class UserEntityService implements OnModuleInit {
 			if (opts.userMemos) {
 				memo = opts.userMemos.get(user.id) ?? null;
 			} else {
-				memo = await this.userMemosRepository.findOneBy({ userId: meId, targetUserId: user.id })
-					.then(row => row?.memo ?? null);
+				memo = await fetchUserMemoTextFromDatabase(this.drizzle, meId, user.id);
 			}
 		}
 
@@ -689,8 +692,7 @@ export class UserEntityService implements OnModuleInit {
 
 			const meId = me ? me.id : null;
 			if (meId) {
-				userMemos = await this.userMemosRepository.findBy({ userId: meId })
-					.then(memos => new Map(memos.map(memo => [memo.targetUserId, memo.memo])));
+				userMemos = await listUserMemoTextsByUserIdFromDatabase(this.drizzle, meId);
 
 				if (_userIds.length > 0) {
 					userRelations = await this.getRelations(meId, _userIds);

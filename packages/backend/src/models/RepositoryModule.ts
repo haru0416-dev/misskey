@@ -60,7 +60,6 @@ import {
 	MiUserList,
 	MiUserListFavorite,
 	MiUserListMembership,
-	MiUserMemo,
 	MiUserNotePining,
 	MiUserProfile,
 	MiUserSecurityKey,
@@ -410,12 +409,6 @@ const $roleAssignmentsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $userMemosRepository: Provider = {
-	provide: DI.userMemosRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserMemo).extend(miRepository as MiRepository<MiUserMemo>),
-	inject: [DI.db],
-};
-
 const $chatMessagesRepository: Provider = {
 	provide: DI.chatMessagesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiChatMessage).extend(miRepository as MiRepository<MiChatMessage>),
@@ -505,7 +498,6 @@ const $chatApprovalsRepository: Provider = {
 		$roleAssignmentsRepository,
 		$flashsRepository,
 		$flashLikesRepository,
-		$userMemosRepository,
 		$chatMessagesRepository,
 		$chatRoomsRepository,
 		$chatRoomMembershipsRepository,
@@ -569,7 +561,6 @@ const $chatApprovalsRepository: Provider = {
 		$roleAssignmentsRepository,
 		$flashsRepository,
 		$flashLikesRepository,
-		$userMemosRepository,
 		$chatMessagesRepository,
 		$chatRoomsRepository,
 		$chatRoomMembershipsRepository,
