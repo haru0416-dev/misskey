@@ -20,6 +20,8 @@ import type {
 	UsersRepository,
 } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { meta as metaTable } from '@/db/schema/meta.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
@@ -98,8 +100,10 @@ describe('AnnouncementService', () => {
 	});
 
 	afterEach(async () => {
+		const db = app.get<MiDrizzleDatabase>(DI.drizzle);
+
 		await Promise.all([
-			app.get(DI.metasRepository).createQueryBuilder().delete().execute(),
+			db.delete(metaTable),
 			usersRepository.createQueryBuilder().delete().execute(),
 			announcementsRepository.createQueryBuilder().delete().execute(),
 			announcementReadsRepository.createQueryBuilder().delete().execute(),
@@ -203,4 +207,3 @@ describe('AnnouncementService', () => {
 		// TODO
 	});
 });
-

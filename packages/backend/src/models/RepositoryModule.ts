@@ -34,7 +34,6 @@ import {
 	MiGalleryPost,
 	MiHashtag,
 	MiInstance,
-	MiMeta,
 	MiModerationLog,
 	MiMuting,
 	MiNote,
@@ -216,12 +215,6 @@ const $driveFilesRepository: Provider = {
 const $driveFoldersRepository: Provider = {
 	provide: DI.driveFoldersRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiDriveFolder).extend(miRepository as MiRepository<MiDriveFolder>),
-	inject: [DI.db],
-};
-
-const $metasRepository: Provider = {
-	provide: DI.metasRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiMeta).extend(miRepository as MiRepository<MiMeta>),
 	inject: [DI.db],
 };
 
@@ -480,7 +473,6 @@ const $chatApprovalsRepository: Provider = {
 		$emojisRepository,
 		$driveFilesRepository,
 		$driveFoldersRepository,
-		$metasRepository,
 		$mutingsRepository,
 		$renoteMutingsRepository,
 		$blockingsRepository,
@@ -545,7 +537,6 @@ const $chatApprovalsRepository: Provider = {
 		$emojisRepository,
 		$driveFilesRepository,
 		$driveFoldersRepository,
-		$metasRepository,
 		$mutingsRepository,
 		$renoteMutingsRepository,
 		$blockingsRepository,

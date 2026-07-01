@@ -24,6 +24,8 @@ import {
 	UsersRepository,
 } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { meta as metaTable } from '@/db/schema/meta.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { MetaService } from '@/core/MetaService.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { CacheService } from '@/core/CacheService.js';
@@ -160,7 +162,7 @@ describe('RoleService', () => {
 		 * Delete meta and roleAssignment first to avoid deadlock due to schema dependencies
 		 * https://github.com/misskey-dev/misskey/issues/16783
 		 */
-		await app.get(DI.metasRepository).createQueryBuilder().delete().execute();
+		await app.get<MiDrizzleDatabase>(DI.drizzle).delete(metaTable);
 		await roleAssignmentsRepository.createQueryBuilder().delete().execute();
 		await Promise.all([
 			usersRepository.createQueryBuilder().delete().execute(),
