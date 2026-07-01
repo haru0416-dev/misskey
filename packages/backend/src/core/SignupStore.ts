@@ -22,7 +22,7 @@ type SignupAccountInsert = {
 	privateKey: string;
 };
 
-function deserializeUser(row: UserRow): MiUser {
+export function deserializeUser(row: UserRow): MiUser {
 	return {
 		...row,
 		alsoKnownAs: row.alsoKnownAs == null || row.alsoKnownAs === '' ? null : row.alsoKnownAs.split(','),
