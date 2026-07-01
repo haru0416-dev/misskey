@@ -7,7 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type {
-	ChannelFollowingsRepository, ChannelMutingRepository,
+	ChannelFollowingsRepository,
 	ChannelsRepository,
 	DriveFilesRepository,
 	MiDriveFile,
@@ -20,6 +20,7 @@ import type { MiChannel } from '@/models/Channel.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { channelFavoriteExistsInDatabase, fetchFavoritedChannelIdsInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { channelMutingExistsInDatabase, fetchMutedChannelIdsInDatabase } from '@/core/ChannelMutingStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
 import { NoteEntityService } from './NoteEntityService.js';
@@ -33,8 +34,6 @@ export class ChannelEntityService {
 		private channelFollowingsRepository: ChannelFollowingsRepository,
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-		@Inject(DI.channelMutingRepository)
-		private channelMutingRepository: ChannelMutingRepository,
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 		@Inject(DI.driveFilesRepository)
@@ -79,12 +78,7 @@ export class ChannelEntityService {
 
 			isFavorited = opts?.favorites?.has(channel.id) ?? await channelFavoriteExistsInDatabase(this.drizzle, me.id, channel.id);
 
-			isMuting = opts?.muting?.has(channel.id) ?? await this.channelMutingRepository.exists({
-				where: {
-					userId: me.id,
-					channelId: channel.id,
-				},
-			});
+			isMuting = opts?.muting?.has(channel.id) ?? await channelMutingExistsInDatabase(this.drizzle, me.id, channel.id);
 		}
 
 		const pinnedNotes = Array.of<MiNote>();
@@ -166,12 +160,7 @@ export class ChannelEntityService {
 			: new Set<MiChannel['id']>();
 
 		const muting = me
-			? await this.channelMutingRepository
-				.findBy({
-					userId: me.id,
-					channelId: In(channels.map(it => it.id)),
-				})
-				.then(it => new Set(it.map(it => it.channelId)))
+			? await fetchMutedChannelIdsInDatabase(this.drizzle, me.id, channels.map(it => it.id))
 			: new Set<MiChannel['id']>();
 
 		const pinnedNotes = await this.notesRepository

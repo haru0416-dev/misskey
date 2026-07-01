@@ -8,28 +8,9 @@ import { swSubscription, type SwSubscriptionInsert, type SwSubscriptionRow } fro
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiSwSubscription } from '@/models/SwSubscription.js';
 import type { MiUser } from '@/models/User.js';
+export { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 
 type SwSubscriptionUpdate = Pick<MiSwSubscription, 'auth' | 'publickey' | 'sendReadMessage'>;
-
-export function isDuplicateKeyValueDatabaseError(error: unknown): boolean {
-	let current: unknown = error;
-
-	for (let i = 0; i < 5 && current != null && typeof current === 'object'; i++) {
-		const candidate = current as {
-			code?: unknown;
-			cause?: unknown;
-			driverError?: unknown;
-		};
-
-		if (candidate.code === '23505') {
-			return true;
-		}
-
-		current = candidate.driverError ?? candidate.cause;
-	}
-
-	return false;
-}
 
 function deserializeSwSubscription(row: SwSubscriptionRow): MiSwSubscription {
 	return row as MiSwSubscription;

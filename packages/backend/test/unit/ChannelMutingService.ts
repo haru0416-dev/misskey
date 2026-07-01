@@ -13,16 +13,18 @@ import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { IdService } from '@/core/IdService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
 import {
-	ChannelMutingRepository,
 	ChannelsRepository,
 	DriveFilesRepository,
 	MiChannel,
-	MiChannelMuting,
 	MiDriveFile,
 	MiUser,
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
+import type { MiChannelMuting } from '@/models/ChannelMuting.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { channelMuting, type ChannelMutingInsert } from '@/db/schema/channel-muting.js';
+import { createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
 import { DI } from '@/di-symbols.js';
 import { setTimeout } from 'node:timers/promises';
 
@@ -30,7 +32,7 @@ describe('ChannelMutingService', () => {
 	let app: TestingModule;
 	let service: ChannelMutingService;
 	let channelsRepository: ChannelsRepository;
-	let channelMutingRepository: ChannelMutingRepository;
+	let drizzle: MiDrizzleDatabase;
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
 	let driveFilesRepository: DriveFilesRepository;
@@ -70,17 +72,19 @@ describe('ChannelMutingService', () => {
 			.then(x => channelsRepository.findOneByOrFail(x.identifiers[0]));
 	}
 
-	async function createChannelMuting(data: Partial<MiChannelMuting> = {}) {
-		return await channelMutingRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => channelMutingRepository.findOneByOrFail(x.identifiers[0]));
+	async function createChannelMuting(data: Partial<ChannelMutingInsert> = {}) {
+		const muting = {
+			id: idService.gen(),
+			...data,
+		} as ChannelMutingInsert;
+
+		await createChannelMutingInDatabase(drizzle, muting);
+
+		return muting;
 	}
 
 	async function fetchChannelMuting() {
-		return await channelMutingRepository.findBy({});
+		return await drizzle.select().from(channelMuting);
 	}
 
 	async function createDriveFile(data: Partial<MiDriveFile> = {}) {
@@ -116,7 +120,7 @@ describe('ChannelMutingService', () => {
 		service = app.get<ChannelMutingService>(ChannelMutingService);
 		idService = app.get<IdService>(IdService);
 		channelsRepository = app.get<ChannelsRepository>(DI.channelsRepository);
-		channelMutingRepository = app.get<ChannelMutingRepository>(DI.channelMutingRepository);
+		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
 		usersRepository = app.get<UsersRepository>(DI.usersRepository);
 		userProfilesRepository = app.get<UserProfilesRepository>(DI.userProfilesRepository);
 		driveFilesRepository = app.get<DriveFilesRepository>(DI.driveFilesRepository);
@@ -137,7 +141,7 @@ describe('ChannelMutingService', () => {
 	});
 
 	afterEach(async () => {
-		await channelMutingRepository.deleteAll();
+		await drizzle.delete(channelMuting);
 		await channelsRepository.deleteAll();
 		await userProfilesRepository.deleteAll();
 		await usersRepository.deleteAll();

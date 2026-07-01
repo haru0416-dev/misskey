@@ -57,7 +57,6 @@ export const DI = {
 	antennasRepository: Symbol('antennasRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	channelFollowingsRepository: Symbol('channelFollowingsRepository'),
-	channelMutingRepository: Symbol('channelMutingRepository'),
 	webhooksRepository: Symbol('webhooksRepository'),
 	systemWebhooksRepository: Symbol('systemWebhooksRepository'),
 	adsRepository: Symbol('adsRepository'),

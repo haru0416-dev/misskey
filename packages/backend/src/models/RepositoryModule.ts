@@ -18,7 +18,6 @@ import {
 	MiBlocking,
 	MiChannel,
 	MiChannelFollowing,
-	MiChannelMuting,
 	MiClip,
 	MiClipFavorite,
 	MiClipNote,
@@ -311,12 +310,6 @@ const $channelFollowingsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $channelMutingRepository: Provider = {
-	provide: DI.channelMutingRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiChannelMuting).extend(miRepository as MiRepository<MiChannelMuting>),
-	inject: [DI.db],
-};
-
 const $webhooksRepository: Provider = {
 	provide: DI.webhooksRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiWebhook).extend(miRepository as MiRepository<MiWebhook>),
@@ -427,7 +420,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$antennasRepository,
 		$channelsRepository,
 		$channelFollowingsRepository,
-		$channelMutingRepository,
 		$webhooksRepository,
 		$systemWebhooksRepository,
 		$adsRepository,
@@ -482,7 +474,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$antennasRepository,
 		$channelsRepository,
 		$channelFollowingsRepository,
-		$channelMutingRepository,
 		$webhooksRepository,
 		$systemWebhooksRepository,
 		$adsRepository,
