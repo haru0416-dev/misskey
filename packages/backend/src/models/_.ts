@@ -86,7 +86,6 @@ export {
 };
 
 export type AccessTokensRepository = Repository<MiAccessToken> & MiRepository<MiAccessToken>;
-export type AnnouncementsRepository = Repository<MiAnnouncement> & MiRepository<MiAnnouncement>;
 export type AntennasRepository = Repository<MiAntenna> & MiRepository<MiAntenna>;
 export type AppsRepository = Repository<MiApp> & MiRepository<MiApp>;
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;

@@ -7,7 +7,6 @@ import { Module } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import {
 	MiAccessToken,
-	MiAnnouncement,
 	MiAntenna,
 	MiApp,
 	MiBlocking,
@@ -48,12 +47,6 @@ const $usersRepository: Provider = {
 const $notesRepository: Provider = {
 	provide: DI.notesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiNote).extend(miRepository as MiRepository<MiNote>),
-	inject: [DI.db],
-};
-
-const $announcementsRepository: Provider = {
-	provide: DI.announcementsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiAnnouncement).extend(miRepository as MiRepository<MiAnnouncement>),
 	inject: [DI.db],
 };
 
@@ -206,7 +199,6 @@ const $rolesRepository: Provider = {
 	providers: [
 		$usersRepository,
 		$notesRepository,
-		$announcementsRepository,
 		$appsRepository,
 		$noteReactionsRepository,
 		$pollsRepository,
@@ -235,7 +227,6 @@ const $rolesRepository: Provider = {
 	exports: [
 		$usersRepository,
 		$notesRepository,
-		$announcementsRepository,
 		$appsRepository,
 		$noteReactionsRepository,
 		$pollsRepository,

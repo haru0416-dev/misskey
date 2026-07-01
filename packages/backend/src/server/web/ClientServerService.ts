@@ -22,7 +22,6 @@ import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityServi
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import type {
-	AnnouncementsRepository,
 	ChannelsRepository,
 	ClipsRepository,
 	FlashsRepository,
@@ -39,6 +38,8 @@ import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import { bindThis } from '@/decorators.js';
 import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
+import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
 import { UrlPreviewService } from './UrlPreviewService.js';
 import { ClientLoggerService } from './ClientLoggerService.js';
@@ -105,8 +106,8 @@ export class ClientServerService {
 		@Inject(DI.flashsRepository)
 		private flashsRepository: FlashsRepository,
 
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private flashEntityService: FlashEntityService,
 		private userEntityService: UserEntityService,
@@ -736,10 +737,7 @@ export class ClientServerService {
 
 		// 個別お知らせページ
 		fastify.get<{ Params: { announcementId: string; } }>('/announcements/:announcementId', async (request, reply) => {
-			const announcement = await this.announcementsRepository.findOneBy({
-				id: request.params.announcementId,
-				userId: IsNull(),
-			});
+			const announcement = await fetchGlobalAnnouncementByIdFromDatabase(this.drizzle, request.params.announcementId);
 
 			if (announcement) {
 				const _announcement = await this.announcementEntityService.pack(announcement);

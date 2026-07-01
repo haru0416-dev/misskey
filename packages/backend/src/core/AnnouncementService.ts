@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets, EntityNotFoundError } from 'typeorm';
+import { EntityNotFoundError } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { MiUser } from '@/models/User.js';
-import type { AnnouncementsRepository, MiAnnouncement, UsersRepository } from '@/models/_.js';
+import { MiAnnouncement } from '@/models/Announcement.js';
+import type { UsersRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { Packed } from '@/misc/json-schema.js';
 import { IdService } from '@/core/IdService.js';
@@ -15,15 +16,21 @@ import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntitySer
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase, listAnnouncementReadsByUserIdFromDatabase } from '@/core/AnnouncementReadStore.js';
+import {
+	createAnnouncementInDatabase,
+	deleteAnnouncementInDatabase,
+	fetchAnnouncementByIdFromDatabase,
+	fetchAnnouncementByIdOrFailFromDatabase,
+	listUnreadAnnouncementsForUserFromDatabase,
+	updateAnnouncementInDatabase,
+} from '@/core/AnnouncementStore.js';
 import type { AnnouncementReadRow } from '@/db/schema/announcement-read.js';
+import type { AnnouncementInsert } from '@/db/schema/announcement.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class AnnouncementService {
 	constructor(
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -44,29 +51,12 @@ export class AnnouncementService {
 
 	@bindThis
 	public async getUnreadAnnouncements(user: MiUser): Promise<MiAnnouncement[]> {
-		const readsQuery = 'SELECT "announcementId" FROM "announcement_read" WHERE "userId" = :readUserId';
-
-		const q = this.announcementsRepository.createQueryBuilder('announcement')
-			.where('announcement.isActive = true')
-			.andWhere('announcement.silence = false')
-			.andWhere(new Brackets(qb => {
-				qb.orWhere('announcement.userId = :userId', { userId: user.id });
-				qb.orWhere('announcement.userId IS NULL');
-			}))
-			.andWhere(new Brackets(qb => {
-				qb.orWhere('announcement.forExistingUsers = false');
-				qb.orWhere('announcement.id > :userId', { userId: user.id });
-			}))
-			.andWhere(`announcement.id NOT IN (${readsQuery})`);
-
-		q.setParameters({ readUserId: user.id });
-
-		return q.getMany();
+		return listUnreadAnnouncementsForUserFromDatabase(this.drizzle, user.id);
 	}
 
 	@bindThis
 	public async create(values: Partial<MiAnnouncement>, moderator?: MiUser): Promise<{ raw: MiAnnouncement; packed: Packed<'Announcement'> }> {
-		const announcement = await this.announcementsRepository.insertOne({
+		const announcement = await createAnnouncementInDatabase(this.drizzle, {
 			id: this.idService.gen(),
 			updatedAt: null,
 			title: values.title,
@@ -78,7 +68,7 @@ export class AnnouncementService {
 			silence: values.silence,
 			needConfirmationToRead: values.needConfirmationToRead,
 			userId: values.userId,
-		});
+		} as AnnouncementInsert);
 
 		const packed = await this.announcementEntityService.pack(announcement);
 
@@ -118,7 +108,7 @@ export class AnnouncementService {
 
 	@bindThis
 	public async update(announcement: MiAnnouncement, values: Partial<MiAnnouncement>, moderator?: MiUser): Promise<void> {
-		await this.announcementsRepository.update(announcement.id, {
+		await updateAnnouncementInDatabase(this.drizzle, announcement.id, {
 			updatedAt: new Date(),
 			title: values.title,
 			text: values.text,
@@ -132,7 +122,7 @@ export class AnnouncementService {
 			isActive: values.isActive,
 		});
 
-		const after = await this.announcementsRepository.findOneByOrFail({ id: announcement.id });
+		const after = await fetchAnnouncementByIdOrFailFromDatabase(this.drizzle, announcement.id);
 
 		if (moderator) {
 			if (announcement.userId) {
@@ -157,7 +147,7 @@ export class AnnouncementService {
 
 	@bindThis
 	public async delete(announcement: MiAnnouncement, moderator?: MiUser): Promise<void> {
-		await this.announcementsRepository.delete(announcement.id);
+		await deleteAnnouncementInDatabase(this.drizzle, announcement.id);
 
 		if (moderator) {
 			if (announcement.userId) {
@@ -180,10 +170,10 @@ export class AnnouncementService {
 
 	@bindThis
 	public async getAnnouncement(announcementId: MiAnnouncement['id'], me: MiUser | null): Promise<Packed<'Announcement'>> {
-		const announcement = await this.announcementsRepository.findOneByOrFail({ id: announcementId });
+		const announcement = await fetchAnnouncementByIdOrFailFromDatabase(this.drizzle, announcementId);
 
 		if (announcement.userId && (me == null || announcement.userId !== me.id)) {
-			throw new EntityNotFoundError(this.announcementsRepository.metadata.target, { id: announcementId });
+			throw new EntityNotFoundError(MiAnnouncement, { id: announcementId });
 		}
 
 		if (me) {
@@ -203,9 +193,9 @@ export class AnnouncementService {
 		});
 		if (!created) return;
 
-		const announcement = await this.announcementsRepository.findOneBy({ id: announcementId });
+		const announcement = await fetchAnnouncementByIdFromDatabase(this.drizzle, announcementId);
 		if (announcement != null && announcement.userId === user.id) {
-			await this.announcementsRepository.update(announcementId, {
+			await updateAnnouncementInDatabase(this.drizzle, announcementId, {
 				isActive: false,
 			});
 		}

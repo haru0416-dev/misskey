@@ -4,12 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { AnnouncementsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/AnnouncementReadStore.js';
+import { listAnnouncementsForAdminFromDatabase, resolveAnnouncementPagination } from '@/core/AnnouncementStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
@@ -110,31 +109,18 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
-		private queryService: QueryService,
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.announcementsRepository.createQueryBuilder('announcement'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
-
-			if (ps.status === 'archived') {
-				query.andWhere('announcement.isActive = false');
-			} else if (ps.status === 'active') {
-				query.andWhere('announcement.isActive = true');
-			}
-
-			if (ps.userId) {
-				query.andWhere('announcement.userId = :userId', { userId: ps.userId });
-			} else {
-				query.andWhere('announcement.userId IS NULL');
-			}
-
-			const announcements = await query.limit(ps.limit).getMany();
+			const announcements = await listAnnouncementsForAdminFromDatabase(this.drizzle, {
+				limit: ps.limit,
+				...resolveAnnouncementPagination(this.idService, ps),
+				status: ps.status,
+				userId: ps.userId,
+			});
 			const reads = await countAnnouncementReadsByAnnouncementIdsFromDatabase(this.drizzle, announcements.map(announcement => announcement.id));
 
 			return announcements.map(announcement => ({
