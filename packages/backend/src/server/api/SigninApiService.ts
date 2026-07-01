@@ -10,7 +10,6 @@ import * as Misskey from 'misskey-js';
 import { DI } from '@/di-symbols.js';
 import type {
 	MiMeta,
-	SigninsRepository,
 	UserProfilesRepository,
 	UserSecurityKeysRepository,
 	UsersRepository,
@@ -25,6 +24,8 @@ import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { LoggerService } from '@/core/LoggerService.js';
+import { createSigninInDatabase } from '@/core/SigninStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
 import { getRequestIp } from '@/server/api/get-request-ip.js';
 import { RateLimiterService } from './RateLimiterService.js';
@@ -52,8 +53,8 @@ export class SigninApiService {
 		@Inject(DI.userSecurityKeysRepository)
 		private userSecurityKeysRepository: UserSecurityKeysRepository,
 
-		@Inject(DI.signinsRepository)
-		private signinsRepository: SigninsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private loggerService: LoggerService,
 		private idService: IdService,
@@ -171,7 +172,7 @@ export class SigninApiService {
 
 		const fail = async (status?: number, failure?: { id: string; }) => {
 			// Append signin history
-			await this.signinsRepository.insert({
+			await createSigninInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: user.id,
 				ip,

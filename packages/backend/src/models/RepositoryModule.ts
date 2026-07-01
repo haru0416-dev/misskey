@@ -51,7 +51,6 @@ import {
 	miRepository,
 	MiRole,
 	MiRoleAssignment,
-	MiSignin,
 	MiSwSubscription,
 	MiSystemWebhook,
 	MiUser,
@@ -275,12 +274,6 @@ const $accessTokensRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $signinsRepository: Provider = {
-	provide: DI.signinsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiSignin).extend(miRepository as MiRepository<MiSignin>),
-	inject: [DI.db],
-};
-
 const $pagesRepository: Provider = {
 	provide: DI.pagesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiPage).extend(miRepository as MiRepository<MiPage>),
@@ -462,7 +455,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$registrationTicketsRepository,
 		$authSessionsRepository,
 		$accessTokensRepository,
-		$signinsRepository,
 		$pagesRepository,
 		$pageLikesRepository,
 		$galleryPostsRepository,
@@ -523,7 +515,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$registrationTicketsRepository,
 		$authSessionsRepository,
 		$accessTokensRepository,
-		$signinsRepository,
 		$pagesRepository,
 		$pageLikesRepository,
 		$galleryPostsRepository,

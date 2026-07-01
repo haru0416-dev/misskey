@@ -8,7 +8,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type {
-	SigninsRepository,
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
@@ -18,6 +17,8 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { bindThis } from '@/decorators.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
+import { createSigninInDatabase } from '@/core/SigninStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import Logger from '@/logger.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { IdentifiableError } from '@/misc/identifiable-error.js';
@@ -40,8 +41,8 @@ export class SigninWithPasskeyApiService {
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
 
-		@Inject(DI.signinsRepository)
-		private signinsRepository: SigninsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private rateLimiterService: RateLimiterService,
@@ -76,7 +77,7 @@ export class SigninWithPasskeyApiService {
 
 		const fail = async (userId: MiUser['id'], status?: number, failure?: { id: string }) => {
 			// Append signin history
-			await this.signinsRepository.insert({
+			await createSigninInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: userId,
 				ip,

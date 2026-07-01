@@ -4,12 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository, SigninsRepository, UserProfilesRepository } from '@/models/_.js';
+import type { UsersRepository, UserProfilesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
 import { RoleEntityService } from '@/core/entities/RoleEntityService.js';
 import { IdService } from '@/core/IdService.js';
+import { listSigninsByUserIdFromDatabase } from '@/core/SigninStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
 
 export const meta = {
@@ -200,8 +202,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
 
-		@Inject(DI.signinsRepository)
-		private signinsRepository: SigninsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private roleService: RoleService,
 		private roleEntityService: RoleEntityService,
@@ -225,7 +227,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new Error('cannot show info of admin');
 			}
 
-			const signins = await this.signinsRepository.findBy({ userId: user.id });
+			const signins = await listSigninsByUserIdFromDatabase(this.drizzle, user.id);
 
 			const roleAssigns = await this.roleService.getUserAssigns(user.id);
 			const roles = await this.roleService.getUserRoles(user.id);

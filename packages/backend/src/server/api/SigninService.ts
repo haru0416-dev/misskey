@@ -6,7 +6,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import * as Misskey from 'misskey-js';
 import { DI } from '@/di-symbols.js';
-import type { SigninsRepository, UserProfilesRepository } from '@/models/_.js';
+import type { UserProfilesRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -14,14 +14,16 @@ import { SigninEntityService } from '@/core/entities/SigninEntityService.js';
 import { bindThis } from '@/decorators.js';
 import { EmailService } from '@/core/EmailService.js';
 import { NotificationService } from '@/core/NotificationService.js';
+import { createSigninInDatabase } from '@/core/SigninStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { getRequestIp } from '@/server/api/get-request-ip.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 @Injectable()
 export class SigninService {
 	constructor(
-		@Inject(DI.signinsRepository)
-		private signinsRepository: SigninsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
@@ -39,7 +41,7 @@ export class SigninService {
 		setImmediate(async () => {
 			this.notificationService.createNotification(user.id, 'login', {});
 
-			const record = await this.signinsRepository.insertOne({
+			const record = await createSigninInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: user.id,
 				ip: getRequestIp(request),
