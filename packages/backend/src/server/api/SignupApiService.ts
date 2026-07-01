@@ -9,13 +9,14 @@ import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { RegistrationTicketsRepository, UserPendingsRepository, UserProfilesRepository, UsersRepository, MiRegistrationTicket, MiMeta } from '@/models/_.js';
+import type { RegistrationTicketsRepository, UserProfilesRepository, UsersRepository, MiRegistrationTicket, MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { IdService } from '@/core/IdService.js';
 import { SignupService } from '@/core/SignupService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { EmailService } from '@/core/EmailService.js';
+import { createUserPendingInDatabase, deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
 import { MiLocalUser } from '@/models/User.js';
 import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
 import { bindThis } from '@/decorators.js';
@@ -37,9 +38,6 @@ export class SignupApiService {
 
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userPendingsRepository)
-		private userPendingsRepository: UserPendingsRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -192,7 +190,7 @@ export class SignupApiService {
 			const salt = await bcrypt.genSalt(8);
 			const hash = await bcrypt.hash(password, salt);
 
-			const pendingUser = await this.userPendingsRepository.insertOne({
+			const pendingUser = await createUserPendingInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				code,
 				email: emailAddress!,
@@ -251,7 +249,7 @@ export class SignupApiService {
 		const code = body['code'];
 
 		try {
-			const pendingUser = await this.userPendingsRepository.findOneByOrFail({ code });
+			const pendingUser = await fetchUserPendingByCodeFromDatabase(this.drizzle, code);
 
 			if (this.idService.parse(pendingUser.id).date.getTime() + (1000 * 60 * 30) < Date.now()) {
 				throw new FastifyReplyError(400, 'EXPIRED');
@@ -262,9 +260,7 @@ export class SignupApiService {
 				passwordHash: pendingUser.password,
 			});
 
-			this.userPendingsRepository.delete({
-				id: pendingUser.id,
-			});
+			await deleteUserPendingFromDatabase(this.drizzle, pendingUser.id);
 
 			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: account.id });
 

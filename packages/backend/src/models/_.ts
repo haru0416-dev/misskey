@@ -74,7 +74,6 @@ import { MiUserListFavorite } from '@/models/UserListFavorite.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
 import { MiUserMemo } from '@/models/UserMemo.js';
 import { MiUserNotePining } from '@/models/UserNotePining.js';
-import { MiUserPending } from '@/models/UserPending.js';
 import { MiUserProfile } from '@/models/UserProfile.js';
 import { MiUserSecurityKey } from '@/models/UserSecurityKey.js';
 import { MiWebhook } from '@/models/Webhook.js';
@@ -144,7 +143,6 @@ export {
 	MiUserListFavorite,
 	MiUserListMembership,
 	MiUserNotePining,
-	MiUserPending,
 	MiUserProfile,
 	MiUserSecurityKey,
 	MiWebhook,
@@ -218,7 +216,6 @@ export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserLi
 export type UserListFavoritesRepository = Repository<MiUserListFavorite> & MiRepository<MiUserListFavorite>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
 export type UserNotePiningsRepository = Repository<MiUserNotePining> & MiRepository<MiUserNotePining>;
-export type UserPendingsRepository = Repository<MiUserPending> & MiRepository<MiUserPending>;
 export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;
 export type UserSecurityKeysRepository = Repository<MiUserSecurityKey> & MiRepository<MiUserSecurityKey>;
 export type WebhooksRepository = Repository<MiWebhook> & MiRepository<MiWebhook>;

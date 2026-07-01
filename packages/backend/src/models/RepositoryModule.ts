@@ -69,7 +69,6 @@ import {
 	MiUserListMembership,
 	MiUserMemo,
 	MiUserNotePining,
-	MiUserPending,
 	MiUserProfile,
 	MiUserSecurityKey,
 	MiWebhook,
@@ -157,12 +156,6 @@ const $pollVotesRepository: Provider = {
 const $userProfilesRepository: Provider = {
 	provide: DI.userProfilesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserProfile).extend(miRepository as MiRepository<MiUserProfile>),
-	inject: [DI.db],
-};
-
-const $userPendingsRepository: Provider = {
-	provide: DI.userPendingsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserPending).extend(miRepository as MiRepository<MiUserPending>),
 	inject: [DI.db],
 };
 
@@ -518,7 +511,6 @@ const $chatApprovalsRepository: Provider = {
 		$pollsRepository,
 		$pollVotesRepository,
 		$userProfilesRepository,
-		$userPendingsRepository,
 		$userSecurityKeysRepository,
 		$userListsRepository,
 		$userListFavoritesRepository,
@@ -590,7 +582,6 @@ const $chatApprovalsRepository: Provider = {
 		$pollsRepository,
 		$pollVotesRepository,
 		$userProfilesRepository,
-		$userPendingsRepository,
 		$userSecurityKeysRepository,
 		$userListsRepository,
 		$userListFavoritesRepository,
