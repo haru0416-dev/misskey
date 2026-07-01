@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import type { BlockingsRepository, FollowingsRepository, MutingsRepository, RenoteMutingsRepository, MiUserProfile, UserProfilesRepository, UsersRepository, MiFollowing } from '@/models/_.js';
+import type { BlockingsRepository, FollowingsRepository, MutingsRepository, MiUserProfile, UserProfilesRepository, UsersRepository, MiFollowing } from '@/models/_.js';
 import { MemoryKVCache, RedisKVCache } from '@/misc/cache.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
@@ -13,6 +13,8 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import type { OnApplicationShutdown } from '@nestjs/common';
+import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class CacheService implements OnApplicationShutdown {
@@ -34,6 +36,9 @@ export class CacheService implements OnApplicationShutdown {
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
 
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
+
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
@@ -45,9 +50,6 @@ export class CacheService implements OnApplicationShutdown {
 
 		@Inject(DI.blockingsRepository)
 		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.renoteMutingsRepository)
-		private renoteMutingsRepository: RenoteMutingsRepository,
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
@@ -105,10 +107,7 @@ export class CacheService implements OnApplicationShutdown {
 		this.renoteMutingsCache = new RedisKVCache<Set<string>>(this.redisClient, 'renoteMutings', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.renoteMutingsRepository.find({
-				where: { muterId: key },
-				select: { muteeId: true },
-			}).then(xs => new Set(xs.map(x => x.muteeId))),
+			fetcher: (key) => listRenoteMuteeIdsByMuterIdFromDatabase(this.drizzle, key).then(xs => new Set(xs)),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value)),
 			fromRedisConverter: (value) => new Set(JSON.parse(value)),
 		});

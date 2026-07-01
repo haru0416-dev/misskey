@@ -14,7 +14,7 @@ import { genAidx } from '@/misc/id/aidx.js';
 import {
 	BlockingsRepository,
 	FollowingsRepository, FollowRequestsRepository,
-	MiUserProfile, MutingsRepository, RenoteMutingsRepository,
+	MiUserProfile, MutingsRepository,
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
@@ -53,6 +53,7 @@ import { ReactionService } from '@/core/ReactionService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import { ChatService } from '@/core/ChatService.js';
+import { renoteMuting } from '@/db/schema/renote-muting.js';
 
 process.env.NODE_ENV = 'test';
 
@@ -67,7 +68,6 @@ describe('UserEntityService', () => {
 		let followingRequestRepository: FollowRequestsRepository;
 		let blockingRepository: BlockingsRepository;
 		let mutingRepository: MutingsRepository;
-		let renoteMutingsRepository: RenoteMutingsRepository;
 
 		async function createUser(userData: Partial<MiUser> = {}, profileData: Partial<MiUserProfile> = {}) {
 			const un = secureRndstr(16);
@@ -130,7 +130,7 @@ describe('UserEntityService', () => {
 		}
 
 		async function muteRenote(mutant: MiUser, mutee: MiUser) {
-			await renoteMutingsRepository.insert({
+			await drizzle.insert(renoteMuting).values({
 				id: genAidx(Date.now()),
 				muterId: mutant.id,
 				muteeId: mutee.id,
@@ -196,7 +196,6 @@ describe('UserEntityService', () => {
 			followingRequestRepository = app.get<FollowRequestsRepository>(DI.followRequestsRepository);
 			blockingRepository = app.get<BlockingsRepository>(DI.blockingsRepository);
 			mutingRepository = app.get<MutingsRepository>(DI.mutingsRepository);
-			renoteMutingsRepository = app.get<RenoteMutingsRepository>(DI.renoteMutingsRepository);
 		});
 
 		afterAll(async () => {

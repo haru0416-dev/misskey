@@ -37,7 +37,6 @@ import {
 	MiPoll,
 	MiPollVote,
 	MiRegistrationTicket,
-	MiRenoteMuting,
 	MiRepository,
 	miRepository,
 	MiRole,
@@ -187,12 +186,6 @@ const $driveFoldersRepository: Provider = {
 const $mutingsRepository: Provider = {
 	provide: DI.mutingsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiMuting).extend(miRepository as MiRepository<MiMuting>),
-	inject: [DI.db],
-};
-
-const $renoteMutingsRepository: Provider = {
-	provide: DI.renoteMutingsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiRenoteMuting).extend(miRepository as MiRepository<MiRenoteMuting>),
 	inject: [DI.db],
 };
 
@@ -359,7 +352,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$driveFilesRepository,
 		$driveFoldersRepository,
 		$mutingsRepository,
-		$renoteMutingsRepository,
 		$blockingsRepository,
 		$hashtagsRepository,
 		$abuseUserReportsRepository,
@@ -407,7 +399,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$driveFilesRepository,
 		$driveFoldersRepository,
 		$mutingsRepository,
-		$renoteMutingsRepository,
 		$blockingsRepository,
 		$hashtagsRepository,
 		$abuseUserReportsRepository,

@@ -32,7 +32,6 @@ import type {
 	MiUserNotePining,
 	MiUserProfile,
 	MutingsRepository,
-	RenoteMutingsRepository,
 	UserNotePiningsRepository,
 	UserProfilesRepository,
 	UserSecurityKeysRepository,
@@ -42,6 +41,7 @@ import {
 	fetchUserMemoTextFromDatabase,
 	listUserMemoTextsByUserIdFromDatabase,
 } from '@/core/UserMemoStore.js';
+import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -133,9 +133,6 @@ export class UserEntityService implements OnModuleInit {
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
 
-		@Inject(DI.renoteMutingsRepository)
-		private renoteMutingsRepository: RenoteMutingsRepository,
-
 		@Inject(DI.userNotePiningsRepository)
 		private userNotePiningsRepository: UserNotePiningsRepository,
 
@@ -221,12 +218,7 @@ export class UserEntityService implements OnModuleInit {
 					muteeId: target,
 				},
 			}),
-			this.renoteMutingsRepository.exists({
-				where: {
-					muterId: me,
-					muteeId: target,
-				},
-			}),
+			renoteMutingExistsInDatabase(this.drizzle, me, target),
 		]);
 
 		return {
@@ -287,11 +279,7 @@ export class UserEntityService implements OnModuleInit {
 				.where('m.muterId = :me', { me })
 				.getRawMany<{ m_muteeId: string }>()
 				.then(it => it.map(it => it.m_muteeId)),
-			this.renoteMutingsRepository.createQueryBuilder('m')
-				.select('m.muteeId')
-				.where('m.muterId = :me', { me })
-				.getRawMany<{ m_muteeId: string }>()
-				.then(it => it.map(it => it.m_muteeId)),
+			listRenoteMuteeIdsByMuterIdFromDatabase(this.drizzle, me),
 		]);
 
 		return new Map(

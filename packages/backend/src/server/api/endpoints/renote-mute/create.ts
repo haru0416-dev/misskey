@@ -9,8 +9,9 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { ApiError } from '../../error.js';
-import { UserRenoteMutingService } from "@/core/UserRenoteMutingService.js";
-import type { RenoteMutingsRepository } from '@/models/_.js';
+import { UserRenoteMutingService } from '@/core/UserRenoteMutingService.js';
+import { renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['account'],
@@ -57,8 +58,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.renoteMutingsRepository)
-		private renoteMutingsRepository: RenoteMutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 		private userRenoteMutingService: UserRenoteMutingService,
@@ -78,12 +79,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// Check if already muting
-			const exist = await this.renoteMutingsRepository.exists({
-				where: {
-					muterId: muter.id,
-					muteeId: mutee.id,
-				},
-			});
+			const exist = await renoteMutingExistsInDatabase(this.drizzle, muter.id, mutee.id);
 
 			if (exist === true) {
 				throw new ApiError(meta.errors.alreadyMuting);

@@ -45,7 +45,6 @@ import { MiPage } from '@/models/Page.js';
 import { MiPoll } from '@/models/Poll.js';
 import { MiPollVote } from '@/models/PollVote.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
-import { MiRenoteMuting } from '@/models/RenoteMuting.js';
 import { MiRole } from '@/models/Role.js';
 import { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { MiSystemWebhook } from '@/models/SystemWebhook.js';
@@ -92,7 +91,6 @@ export {
 	MiInstance,
 	MiMeta,
 	MiMuting,
-	MiRenoteMuting,
 	MiNote,
 	MiNoteDraft,
 	MiNoteFavorite,
@@ -142,7 +140,6 @@ export type GalleryPostsRepository = Repository<MiGalleryPost> & MiRepository<Mi
 export type HashtagsRepository = Repository<MiHashtag> & MiRepository<MiHashtag>;
 export type InstancesRepository = Repository<MiInstance> & MiRepository<MiInstance>;
 export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
-export type RenoteMutingsRepository = Repository<MiRenoteMuting> & MiRepository<MiRenoteMuting>;
 export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
 export type NoteDraftsRepository = Repository<MiNoteDraft> & MiRepository<MiNoteDraft>;
 export type NoteFavoritesRepository = Repository<MiNoteFavorite> & MiRepository<MiNoteFavorite>;
