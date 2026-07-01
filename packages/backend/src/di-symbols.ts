@@ -49,8 +49,6 @@ export const DI = {
 	flashsRepository: Symbol('flashsRepository'),
 	chatMessagesRepository: Symbol('chatMessagesRepository'),
 	chatRoomsRepository: Symbol('chatRoomsRepository'),
-	chatRoomMembershipsRepository: Symbol('chatRoomMembershipsRepository'),
-	chatRoomInvitationsRepository: Symbol('chatRoomInvitationsRepository'),
 	noteDraftsRepository: Symbol('noteDraftsRepository'),
 	//#endregion
 };
