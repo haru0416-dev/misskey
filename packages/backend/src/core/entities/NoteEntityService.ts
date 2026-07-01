@@ -11,7 +11,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
-import type { UsersRepository, NotesRepository, FollowingsRepository, PollsRepository, ChannelsRepository, MiMeta } from '@/models/_.js';
+import type { UsersRepository, NotesRepository, FollowingsRepository, ChannelsRepository, MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { DebounceLoader } from '@/misc/loader.js';
 import { IdService } from '@/core/IdService.js';
@@ -19,6 +19,7 @@ import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase, listNoteReactionsByUserIdAndNoteIdsFromDatabase } from '@/core/NoteReactionStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnModuleInit } from '@nestjs/common';
@@ -87,9 +88,6 @@ export class NoteEntityService implements OnModuleInit {
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -192,7 +190,7 @@ export class NoteEntityService implements OnModuleInit {
 
 	@bindThis
 	private async populatePoll(note: MiNote, meId: MiUser['id'] | null) {
-		const poll = await this.pollsRepository.findOneByOrFail({ noteId: note.id });
+		const poll = await fetchPollByNoteIdOrFailFromDatabase(this.db, note.id);
 		const choices = poll.choices.map(c => ({
 			text: c,
 			votes: poll.votes[poll.choices.indexOf(c)],

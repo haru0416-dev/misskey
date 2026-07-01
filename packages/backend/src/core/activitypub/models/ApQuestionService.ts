@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, NotesRepository, PollsRepository } from '@/models/_.js';
+import type { UsersRepository, NotesRepository } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { MiRemoteUser } from '@/models/User.js';
@@ -17,6 +17,8 @@ import { ApLoggerService } from '../ApLoggerService.js';
 import { ApResolverService } from '../ApResolverService.js';
 import type { Resolver } from '../ApResolverService.js';
 import type { IObject } from '../type.js';
+import { fetchPollByNoteIdFromDatabase, updatePollVotesInDatabase } from '@/core/PollStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class ApQuestionService {
@@ -32,8 +34,8 @@ export class ApQuestionService {
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private apResolverService: ApResolverService,
 		private apLoggerService: ApLoggerService,
@@ -82,7 +84,7 @@ export class ApQuestionService {
 		const note = await this.notesRepository.findOneBy({ uri });
 		if (note == null) throw new Error('Question is not registered');
 
-		const poll = await this.pollsRepository.findOneBy({ noteId: note.id });
+		const poll = await fetchPollByNoteIdFromDatabase(this.db, note.id);
 		if (poll == null) throw new Error('Question is not registered');
 
 		const user = await this.usersRepository.findOneBy({ id: poll.userId });
@@ -121,7 +123,7 @@ export class ApQuestionService {
 			}
 		}
 
-		await this.pollsRepository.update({ noteId: note.id }, { votes: poll.votes });
+		await updatePollVotesInDatabase(this.db, note.id, poll.votes);
 
 		return changed;
 	}

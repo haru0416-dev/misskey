@@ -8,7 +8,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MoreThan } from 'typeorm';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, PollsRepository, UsersRepository } from '@/models/_.js';
+import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -21,6 +21,8 @@ import { IdService } from '@/core/IdService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { JsonArrayStream } from '@/misc/JsonArrayStream.js';
 import { FileWriterStream } from '@/misc/FileWriterStream.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 import type { DbJobDataWithUser } from '../types.js';
@@ -29,7 +31,7 @@ class NoteStream extends ReadableStream<Record<string, unknown>> {
 	constructor(
 		job: Bull.Job,
 		notesRepository: NotesRepository,
-		pollsRepository: PollsRepository,
+		db: MiDrizzleDatabase,
 		driveFileEntityService: DriveFileEntityService,
 		idService: IdService,
 		userId: string,
@@ -81,7 +83,7 @@ class NoteStream extends ReadableStream<Record<string, unknown>> {
 
 				for (const note of notes) {
 					const poll = note.hasPoll
-						? await pollsRepository.findOneByOrFail({ noteId: note.id }) // N+1
+						? await fetchPollByNoteIdOrFailFromDatabase(db, note.id) // N+1
 						: null;
 					const files = await driveFileEntityService.packManyByIds(note.fileIds); // N+1
 					const content = serialize(note, poll, files);
@@ -105,11 +107,11 @@ export class ExportNotesProcessorService {
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
-
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
+
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private queueLoggerService: QueueLoggerService,
@@ -139,7 +141,7 @@ export class ExportNotesProcessorService {
 			await new NoteStream(
 				job,
 				this.notesRepository,
-				this.pollsRepository,
+				this.db,
 				this.driveFileEntityService,
 				this.idService,
 				user.id,

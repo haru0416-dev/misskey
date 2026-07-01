@@ -10,7 +10,6 @@ import type {
 	FollowRequestsRepository,
 	MiMeta,
 	NotesRepository,
-	PollsRepository,
 	UsersRepository
 } from '@/models/_.js';
 import type { Config } from '@/config.js';
@@ -23,6 +22,7 @@ import type Logger from '@/logger.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { ICollection, IObject, IOrderedCollection } from './type.js';
 import { isCollectionOrOrderedCollection } from './type.js';
@@ -51,9 +51,6 @@ export class Resolver {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -170,7 +167,7 @@ export class Resolver {
 				// Polls are indexed by the note they are attached to.
 				return Promise.all([
 					this.notesRepository.findOneByOrFail({ id: parsed.id }),
-					this.pollsRepository.findOneByOrFail({ noteId: parsed.id }),
+					fetchPollByNoteIdOrFailFromDatabase(this.db, parsed.id),
 				])
 					.then(([note, poll]) => this.apRendererService.renderQuestion({ id: note.userId }, note, poll));
 			case 'likes':

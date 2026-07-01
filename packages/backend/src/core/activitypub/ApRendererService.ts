@@ -23,12 +23,14 @@ import { MfmService } from '@/core/MfmService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, PollsRepository, MiMeta } from '@/models/_.js';
+import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { IdService } from '@/core/IdService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { escapeHtml } from '@/misc/escape-html.js';
+import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { JsonLdService } from './JsonLdService.js';
 import { ApMfmService } from './ApMfmService.js';
 import { CONTEXT } from './misc/contexts.js';
@@ -55,8 +57,8 @@ export class ApRendererService {
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private customEmojiService: CustomEmojiService,
 		private userEntityService: UserEntityService,
@@ -430,7 +432,7 @@ export class ApRendererService {
 		let poll: MiPoll | null = null;
 
 		if (note.hasPoll) {
-			poll = await this.pollsRepository.findOneBy({ noteId: note.id });
+			poll = await fetchPollByNoteIdFromDatabase(this.db, note.id);
 		}
 
 		let extraHtml: string | null = null;

@@ -20,7 +20,6 @@ import {
 	MiMuting,
 	MiNote,
 	MiPage,
-	MiPoll,
 	MiRepository,
 	miRepository,
 	MiRole,
@@ -41,12 +40,6 @@ const $usersRepository: Provider = {
 const $notesRepository: Provider = {
 	provide: DI.notesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiNote).extend(miRepository as MiRepository<MiNote>),
-	inject: [DI.db],
-};
-
-const $pollsRepository: Provider = {
-	provide: DI.pollsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiPoll).extend(miRepository as MiRepository<MiPoll>),
 	inject: [DI.db],
 };
 
@@ -157,7 +150,6 @@ const $rolesRepository: Provider = {
 	providers: [
 		$usersRepository,
 		$notesRepository,
-		$pollsRepository,
 		$userProfilesRepository,
 		$userListsRepository,
 		$userListMembershipsRepository,
@@ -179,7 +171,6 @@ const $rolesRepository: Provider = {
 	exports: [
 		$usersRepository,
 		$notesRepository,
-		$pollsRepository,
 		$userProfilesRepository,
 		$userListsRepository,
 		$userListMembershipsRepository,

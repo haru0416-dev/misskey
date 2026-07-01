@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository, PollsRepository } from '@/models/_.js';
+import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { RelayService } from '@/core/RelayService.js';
@@ -17,6 +17,7 @@ import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerServ
 import { bindThis } from '@/decorators.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchPollByNoteIdFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
@@ -27,9 +28,6 @@ export class PollService {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -46,7 +44,7 @@ export class PollService {
 
 	@bindThis
 	public async vote(user: MiUser, note: MiNote, choice: number) {
-		const poll = await this.pollsRepository.findOneBy({ noteId: note.id });
+		const poll = await fetchPollByNoteIdFromDatabase(this.db, note.id);
 
 		if (poll == null) throw new Error('poll not found');
 
@@ -80,8 +78,7 @@ export class PollService {
 		});
 
 		// Increment votes count
-		const index = choice + 1; // In SQL, array index is 1 based
-		await this.pollsRepository.query(`UPDATE poll SET votes[${index}] = votes[${index}] + 1 WHERE "noteId" = '${poll.noteId}'`);
+		await incrementPollVoteInDatabase(this.db, poll.noteId, choice);
 
 		this.globalEventService.publishNoteStream(note, 'pollVoted', {
 			choice: choice,

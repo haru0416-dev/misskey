@@ -8,7 +8,7 @@ import { Writable } from 'node:stream';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { ClipsRepository, MiClip, MiUser, NotesRepository, PollsRepository, UsersRepository } from '@/models/_.js';
+import type { ClipsRepository, MiClip, MiUser, NotesRepository, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -21,6 +21,7 @@ import { NotificationService } from '@/core/NotificationService.js';
 import { QueryService } from '@/core/QueryService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
@@ -33,9 +34,6 @@ export class ExportClipsProcessorService {
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
@@ -178,7 +176,7 @@ export class ExportClipsProcessorService {
 
 				let poll: MiPoll | undefined;
 				if (note.hasPoll) {
-					poll = await this.pollsRepository.findOneByOrFail({ noteId: note.id });
+					poll = await fetchPollByNoteIdOrFailFromDatabase(this.db, note.id);
 				}
 				const content = JSON.stringify(this.serializeClipNote({
 					...clipNote,

@@ -15,7 +15,6 @@ import type {
 	FollowRequestsRepository,
 	MiMeta,
 	NotesRepository,
-	PollsRepository,
 	UsersRepository,
 } from '@/models/_.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
@@ -38,7 +37,6 @@ export class MockResolver extends Resolver {
 			{} as MiMeta,
 			{} as UsersRepository,
 			{} as NotesRepository,
-			{} as PollsRepository,
 			{} as MiDrizzleDatabase,
 			{} as FollowRequestsRepository,
 			{} as UtilityService,

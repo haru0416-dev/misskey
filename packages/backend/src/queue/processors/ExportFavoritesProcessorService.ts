@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, PollsRepository, MiUser, UsersRepository } from '@/models/_.js';
+import type { NotesRepository, MiUser, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -22,6 +22,7 @@ import {
 	countNoteFavoritesByUserIdFromDatabase,
 	listNoteFavoritesByUserIdFromDatabase,
 } from '@/core/NoteFavoriteStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import type { NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
@@ -35,9 +36,6 @@ export class ExportFavoritesProcessorService {
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
@@ -127,7 +125,7 @@ export class ExportFavoritesProcessorService {
 
 					let poll: MiPoll | undefined;
 					if (note.hasPoll) {
-						poll = await this.pollsRepository.findOneByOrFail({ noteId: note.id });
+						poll = await fetchPollByNoteIdOrFailFromDatabase(this.db, note.id);
 					}
 					const content = JSON.stringify(this.serialize({
 						...favorite,

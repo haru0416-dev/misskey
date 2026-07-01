@@ -29,7 +29,6 @@ import { MiMuting } from '@/models/Muting.js';
 import { MiNote } from '@/models/Note.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
 import { MiPage } from '@/models/Page.js';
-import { MiPoll } from '@/models/Poll.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
 import { MiRole } from '@/models/Role.js';
 import { MiUser } from '@/models/User.js';
@@ -67,7 +66,6 @@ export {
 	MiNote,
 	MiNoteReaction,
 	MiPage,
-	MiPoll,
 	MiRegistrationTicket,
 	MiUser,
 	MiUserList,
@@ -91,7 +89,6 @@ export type InstancesRepository = Repository<MiInstance> & MiRepository<MiInstan
 export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
 export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
 export type PagesRepository = Repository<MiPage> & MiRepository<MiPage>;
-export type PollsRepository = Repository<MiPoll> & MiRepository<MiPoll>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
