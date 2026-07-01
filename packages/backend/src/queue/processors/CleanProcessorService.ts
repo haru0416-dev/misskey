@@ -4,13 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In, LessThan } from 'typeorm';
+import { LessThan } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository, RoleAssignmentsRepository } from '@/models/_.js';
+import type { AntennasRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import type { Config } from '@/config.js';
 import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
+import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/RoleAssignmentStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
@@ -28,9 +29,6 @@ export class CleanProcessorService {
 
 		@Inject(DI.antennasRepository)
 		private antennasRepository: AntennasRepository,
-
-		@Inject(DI.roleAssignmentsRepository)
-		private roleAssignmentsRepository: RoleAssignmentsRepository,
 
 		private queueLoggerService: QueueLoggerService,
 	) {
@@ -52,16 +50,7 @@ export class CleanProcessorService {
 			});
 		}
 
-		const expiredRoleAssignments = await this.roleAssignmentsRepository.createQueryBuilder('assign')
-			.where('assign.expiresAt IS NOT NULL')
-			.andWhere('assign.expiresAt < :now', { now: new Date() })
-			.getMany();
-
-		if (expiredRoleAssignments.length > 0) {
-			await this.roleAssignmentsRepository.delete({
-				id: In(expiredRoleAssignments.map(x => x.id)),
-			});
-		}
+		await deleteExpiredRoleAssignmentsFromDatabase(this.drizzle, new Date());
 
 		this.logger.succ('Cleaned.');
 	}

@@ -31,7 +31,6 @@ import {
 	MiRepository,
 	miRepository,
 	MiRole,
-	MiRoleAssignment,
 	MiUser,
 	MiUserList,
 	MiUserListMembership,
@@ -217,12 +216,6 @@ const $rolesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $roleAssignmentsRepository: Provider = {
-	provide: DI.roleAssignmentsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiRoleAssignment).extend(miRepository as MiRepository<MiRoleAssignment>),
-	inject: [DI.db],
-};
-
 const $chatMessagesRepository: Provider = {
 	provide: DI.chatMessagesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiChatMessage).extend(miRepository as MiRepository<MiChatMessage>),
@@ -260,7 +253,6 @@ const $chatMessagesRepository: Provider = {
 		$channelsRepository,
 		$webhooksRepository,
 		$rolesRepository,
-		$roleAssignmentsRepository,
 		$flashsRepository,
 		$chatMessagesRepository,
 	],
@@ -293,7 +285,6 @@ const $chatMessagesRepository: Provider = {
 		$channelsRepository,
 		$webhooksRepository,
 		$rolesRepository,
-		$roleAssignmentsRepository,
 		$flashsRepository,
 		$chatMessagesRepository,
 	],

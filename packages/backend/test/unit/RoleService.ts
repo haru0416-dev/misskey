@@ -17,15 +17,20 @@ import { RoleService } from '@/core/RoleService.js';
 import {
 	MiMeta,
 	MiRole,
-	MiRoleAssignment,
 	MiUser,
-	RoleAssignmentsRepository,
 	RolesRepository,
 	UsersRepository,
 } from '@/models/_.js';
+import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { DI } from '@/di-symbols.js';
 import { meta as metaTable } from '@/db/schema/meta.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	createRoleAssignmentInDatabase,
+	deleteAllRoleAssignmentsFromDatabase,
+	fetchRoleAssignmentByIdOrFailFromDatabase,
+	listRoleAssignmentsByUserIdFromDatabase,
+} from '@/core/RoleAssignmentStore.js';
 import { MetaService } from '@/core/MetaService.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { CacheService } from '@/core/CacheService.js';
@@ -41,7 +46,7 @@ describe('RoleService', () => {
 	let roleService: RoleService;
 	let usersRepository: UsersRepository;
 	let rolesRepository: RolesRepository;
-	let roleAssignmentsRepository: RoleAssignmentsRepository;
+	let db: MiDrizzleDatabase;
 	let meta: Mocked<MiMeta>;
 	let notificationService: Mocked<NotificationService>;
 	let clock: lolex.Clock;
@@ -85,17 +90,23 @@ describe('RoleService', () => {
 	}
 
 	async function assignRole(args: Partial<MiRoleAssignment>) {
+		if (args.userId == null || args.roleId == null) {
+			throw new Error('userId and roleId are required');
+		}
+
 		const id = genAidx(Date.now());
 		const expiresAt = new Date();
 		expiresAt.setDate(expiresAt.getDate() + 1);
 
-		await roleAssignmentsRepository.insert({
+		await createRoleAssignmentInDatabase(db, {
 			id,
 			expiresAt,
+			userId: args.userId,
+			roleId: args.roleId,
 			...args,
 		});
 
-		return await roleAssignmentsRepository.findOneByOrFail({ id });
+		return await fetchRoleAssignmentByIdOrFailFromDatabase(db, id);
 	}
 
 	function aidx() {
@@ -147,7 +158,7 @@ describe('RoleService', () => {
 		roleService = app.get<RoleService>(RoleService);
 		usersRepository = app.get<UsersRepository>(DI.usersRepository);
 		rolesRepository = app.get<RolesRepository>(DI.rolesRepository);
-		roleAssignmentsRepository = app.get<RoleAssignmentsRepository>(DI.roleAssignmentsRepository);
+		db = app.get<MiDrizzleDatabase>(DI.drizzle);
 
 		meta = app.get<MiMeta>(DI.meta) as Mocked<MiMeta>;
 		notificationService = app.get<NotificationService>(NotificationService) as Mocked<NotificationService>;
@@ -162,8 +173,8 @@ describe('RoleService', () => {
 		 * Delete meta and roleAssignment first to avoid deadlock due to schema dependencies
 		 * https://github.com/misskey-dev/misskey/issues/16783
 		 */
-		await app.get<MiDrizzleDatabase>(DI.drizzle).delete(metaTable);
-		await roleAssignmentsRepository.createQueryBuilder().delete().execute();
+		await db.delete(metaTable);
+		await deleteAllRoleAssignmentsFromDatabase(db);
 		await Promise.all([
 			usersRepository.createQueryBuilder().delete().execute(),
 			rolesRepository.createQueryBuilder().delete().execute(),
@@ -1156,12 +1167,7 @@ describe('RoleService', () => {
 			clock.uninstall();
 			await setTimeout(100);
 
-			const assignments = await roleAssignmentsRepository.find({
-				where: {
-					userId: user.id,
-					roleId: role.id,
-				},
-			});
+			const assignments = (await listRoleAssignmentsByUserIdFromDatabase(db, user.id)).filter(a => a.roleId === role.id);
 			expect(assignments).toHaveLength(1);
 
 			expect(notificationService.createNotification).toHaveBeenCalled();
@@ -1184,12 +1190,7 @@ describe('RoleService', () => {
 			clock.uninstall();
 			await setTimeout(100);
 
-			const assignments = await roleAssignmentsRepository.find({
-				where: {
-					userId: user.id,
-					roleId: role.id,
-				},
-			});
+			const assignments = (await listRoleAssignmentsByUserIdFromDatabase(db, user.id)).filter(a => a.roleId === role.id);
 			expect(assignments).toHaveLength(1);
 
 			expect(notificationService.createNotification).not.toHaveBeenCalled();

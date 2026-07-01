@@ -45,7 +45,6 @@ export const DI = {
 	channelsRepository: Symbol('channelsRepository'),
 	webhooksRepository: Symbol('webhooksRepository'),
 	rolesRepository: Symbol('rolesRepository'),
-	roleAssignmentsRepository: Symbol('roleAssignmentsRepository'),
 	flashsRepository: Symbol('flashsRepository'),
 	chatMessagesRepository: Symbol('chatMessagesRepository'),
 	//#endregion

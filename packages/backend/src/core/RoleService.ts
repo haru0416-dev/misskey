@@ -10,14 +10,14 @@ import { ModuleRef } from '@nestjs/core';
 import type {
 	MiMeta,
 	MiRole,
-	MiRoleAssignment,
-	RoleAssignmentsRepository,
 	RolesRepository,
 	UsersRepository,
 } from '@/models/_.js';
 import { MemoryKVCache, MemorySingleCache } from '@/misc/cache.js';
 import type { MiUser } from '@/models/User.js';
+import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { Config } from '@/config.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { CacheService } from '@/core/CacheService.js';
@@ -30,6 +30,14 @@ import { ModerationLogService } from '@/core/ModerationLogService.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import { NotificationService } from '@/core/NotificationService.js';
+import {
+	createRoleAssignmentInDatabase,
+	deleteRoleAssignmentByIdFromDatabase,
+	deleteRoleAssignmentByUserIdAndRoleIdFromDatabase,
+	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
+	listRoleAssignmentsByRoleIdsFromDatabase,
+	listRoleAssignmentsByUserIdFromDatabase,
+} from '@/core/RoleAssignmentStore.js';
 import type { OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 
 // misskey-js の rolePolicies と同期すべし
@@ -153,8 +161,8 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 		@Inject(DI.rolesRepository)
 		private rolesRepository: RolesRepository,
 
-		@Inject(DI.roleAssignmentsRepository)
-		private roleAssignmentsRepository: RoleAssignmentsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 		private userEntityService: UserEntityService,
@@ -335,7 +343,7 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	@bindThis
 	public async getUserAssigns(userId: MiUser['id']) {
 		const now = Date.now();
-		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => this.roleAssignmentsRepository.findBy({ userId }));
+		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => listRoleAssignmentsByUserIdFromDatabase(this.db, userId));
 		// 期限切れのロールを除外
 		assigns = assigns.filter(a => a.expiresAt == null || (a.expiresAt.getTime() > now));
 		return assigns;
@@ -357,7 +365,7 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	@bindThis
 	public async getUserBadgeRoles(userId: MiUser['id']) {
 		const now = Date.now();
-		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => this.roleAssignmentsRepository.findBy({ userId }));
+		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => listRoleAssignmentsByUserIdFromDatabase(this.db, userId));
 		// 期限切れのロールを除外
 		assigns = assigns.filter(a => a.expiresAt == null || (a.expiresAt.getTime() > now));
 		const roles = await this.rolesCache.fetch(() => this.rolesRepository.findBy({}));
@@ -498,7 +506,7 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 			: roles.filter(r => r.isModerator);
 
 		const assigns = moderatorRoles.length > 0
-			? await this.roleAssignmentsRepository.findBy({ roleId: In(moderatorRoles.map(r => r.id)) })
+			? await listRoleAssignmentsByRoleIdsFromDatabase(this.db, moderatorRoles.map(r => r.id))
 			: [];
 
 		// Setを経由して重複を除去（ユーザIDは重複する可能性があるので）
@@ -538,9 +546,9 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	public async getAdministratorIds(): Promise<MiUser['id'][]> {
 		const roles = await this.rolesCache.fetch(() => this.rolesRepository.findBy({}));
 		const administratorRoles = roles.filter(r => r.isAdministrator);
-		const assigns = administratorRoles.length > 0 ? await this.roleAssignmentsRepository.findBy({
-			roleId: In(administratorRoles.map(r => r.id)),
-		}) : [];
+		const assigns = administratorRoles.length > 0
+			? await listRoleAssignmentsByRoleIdsFromDatabase(this.db, administratorRoles.map(r => r.id))
+			: [];
 		// TODO: isRootなアカウントも含める
 		// Setを経由して重複を除去（ユーザIDは重複する可能性があるので）
 		return [...new Set(assigns.map(a => a.userId))].sort((x, y) => x.localeCompare(y));
@@ -561,23 +569,17 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 		const role = await this.rolesRepository.findOneByOrFail({ id: roleId });
 
-		const existing = await this.roleAssignmentsRepository.findOneBy({
-			roleId: roleId,
-			userId: userId,
-		});
+		const existing = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 
 		if (existing) {
 			if (existing.expiresAt && (existing.expiresAt.getTime() < now)) {
-				await this.roleAssignmentsRepository.delete({
-					roleId: roleId,
-					userId: userId,
-				});
+				await deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 			} else {
 				throw new RoleService.AlreadyAssignedError();
 			}
 		}
 
-		const created = await this.roleAssignmentsRepository.insertOne({
+		const created = await createRoleAssignmentInDatabase(this.db, {
 			id: this.idService.gen(now),
 			expiresAt: expiresAt,
 			roleId: roleId,
@@ -614,18 +616,15 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	public async unassign(userId: MiUser['id'], roleId: MiRole['id'], moderator?: MiUser): Promise<void> {
 		const now = new Date();
 
-		const existing = await this.roleAssignmentsRepository.findOneBy({ roleId, userId });
+		const existing = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 		if (existing == null) {
 			throw new RoleService.NotAssignedError();
 		} else if (existing.expiresAt && (existing.expiresAt.getTime() < now.getTime())) {
-			await this.roleAssignmentsRepository.delete({
-				roleId: roleId,
-				userId: userId,
-			});
+			await deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 			throw new RoleService.NotAssignedError();
 		}
 
-		await this.roleAssignmentsRepository.delete(existing.id);
+		await deleteRoleAssignmentByIdFromDatabase(this.db, existing.id);
 
 		this.rolesRepository.update(roleId, {
 			lastUsedAt: now,

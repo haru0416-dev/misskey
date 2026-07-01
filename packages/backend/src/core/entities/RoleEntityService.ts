@@ -4,9 +4,8 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { RoleAssignmentsRepository, RolesRepository } from '@/models/_.js';
+import type { RolesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiRole } from '@/models/Role.js';
@@ -14,6 +13,8 @@ import { bindThis } from '@/decorators.js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
 import { Packed } from '@/misc/json-schema.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 
 @Injectable()
 export class RoleEntityService {
@@ -21,8 +22,8 @@ export class RoleEntityService {
 		@Inject(DI.rolesRepository)
 		private rolesRepository: RolesRepository,
 
-		@Inject(DI.roleAssignmentsRepository)
-		private roleAssignmentsRepository: RoleAssignmentsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -35,14 +36,7 @@ export class RoleEntityService {
 	): Promise<Packed<'Role'>> {
 		const role = typeof src === 'object' ? src : await this.rolesRepository.findOneByOrFail({ id: src });
 
-		const assignedCount = await this.roleAssignmentsRepository.createQueryBuilder('assign')
-			.where('assign.roleId = :roleId', { roleId: role.id })
-			.andWhere(new Brackets(qb => {
-				qb
-					.where('assign.expiresAt IS NULL')
-					.orWhere('assign.expiresAt > :now', { now: new Date() });
-			}))
-			.getCount();
+		const assignedCount = await countActiveRoleAssignmentsByRoleIdFromDatabase(this.db, role.id);
 
 		const policies = { ...role.policies };
 		for (const [k, v] of Object.entries(DEFAULT_POLICIES)) {
@@ -84,4 +78,3 @@ export class RoleEntityService {
 		return Promise.all(roles.map(x => this.pack(x, me)));
 	}
 }
-

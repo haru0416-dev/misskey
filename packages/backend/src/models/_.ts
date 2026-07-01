@@ -34,7 +34,6 @@ import { MiPage } from '@/models/Page.js';
 import { MiPoll } from '@/models/Poll.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
 import { MiRole } from '@/models/Role.js';
-import { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserList } from '@/models/UserList.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
@@ -84,7 +83,6 @@ export {
 	MiWebhook,
 	MiChannel,
 	MiRole,
-	MiRoleAssignment,
 	MiFlash,
 	MiChatMessage,
 };
@@ -117,6 +115,5 @@ export type UserSecurityKeysRepository = Repository<MiUserSecurityKey> & MiRepos
 export type WebhooksRepository = Repository<MiWebhook> & MiRepository<MiWebhook>;
 export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>;
 export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;
-export type RoleAssignmentsRepository = Repository<MiRoleAssignment> & MiRepository<MiRoleAssignment>;
 export type FlashsRepository = Repository<MiFlash> & MiRepository<MiFlash>;
 export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<MiChatMessage>;
