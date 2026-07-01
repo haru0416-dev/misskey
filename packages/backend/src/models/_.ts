@@ -12,7 +12,6 @@ import { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import { MiAccessToken } from '@/models/AccessToken.js';
 import { MiAnnouncement } from '@/models/Announcement.js';
 import { MiAntenna } from '@/models/Antenna.js';
-import { MiApp } from '@/models/App.js';
 import { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 import { MiBlocking } from '@/models/Blocking.js';
 import { MiChannel } from '@/models/Channel.js';
@@ -56,7 +55,6 @@ export {
 	MiAccessToken,
 	MiAnnouncement,
 	MiAntenna,
-	MiApp,
 	MiAvatarDecoration,
 	MiBlocking,
 	MiClip,
@@ -87,7 +85,6 @@ export {
 
 export type AccessTokensRepository = Repository<MiAccessToken> & MiRepository<MiAccessToken>;
 export type AntennasRepository = Repository<MiAntenna> & MiRepository<MiAntenna>;
-export type AppsRepository = Repository<MiApp> & MiRepository<MiApp>;
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
 export type ClipsRepository = Repository<MiClip> & MiRepository<MiClip>;
 export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;

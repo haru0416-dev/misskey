@@ -6,11 +6,12 @@
 import * as crypto from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AppsRepository, AccessTokensRepository } from '@/models/_.js';
+import type { AccessTokensRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { DI } from '@/di-symbols.js';
 import { fetchAuthSessionByTokenFromDatabase, updateAuthSessionUserIdInDatabase } from '@/core/AuthSessionStore.js';
+import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
@@ -41,9 +42,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.appsRepository)
-		private appsRepository: AppsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -71,7 +69,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			if (!exist) {
-				const app = await this.appsRepository.findOneByOrFail({ id: session.appId });
+				const app = await fetchAppByIdOrFailFromDatabase(this.drizzle, session.appId);
 
 				// Generate Hash
 				const sha256 = crypto.createHash('sha256');

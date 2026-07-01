@@ -166,6 +166,34 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('app', () => {
+		test('app/create したアプリを app/show と my/apps で取得できる', async () => {
+			const created = await api('app/create', {
+				name: 'test app',
+				description: 'test app description',
+				permission: ['read:account'],
+				callbackUrl: null,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, 'test app');
+
+			const shown = await api('app/show', { appId: created.body.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.name, 'test app');
+			assert.strictEqual(shown.body.callbackUrl, null);
+			assert.strictEqual(shown.body.secret, undefined);
+
+			const notFound = await api('app/show', { appId: '0000000000000000' });
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.code, 'NO_SUCH_APP');
+
+			const mine = await api('my/apps', { limit: 100 }, alice);
+			assert.strictEqual(mine.status, 200);
+			assert.ok(mine.body.some(app => app.id === created.body.id));
+		});
+	});
+
 	describe('i/update', () => {
 		test('アカウント設定を更新できる', async () => {
 			const myName = '大室櫻子';

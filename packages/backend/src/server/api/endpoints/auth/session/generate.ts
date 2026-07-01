@@ -6,11 +6,11 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AppsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { createAuthSessionInDatabase } from '@/core/AuthSessionStore.js';
+import { fetchAppBySecretFromDatabase } from '@/core/AppStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
@@ -58,9 +58,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.appsRepository)
-		private appsRepository: AppsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -68,9 +65,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Lookup app
-			const app = await this.appsRepository.findOneBy({
-				secret: ps.appSecret,
-			});
+			const app = await fetchAppBySecretFromDatabase(this.drizzle, ps.appSecret);
 
 			if (app == null) {
 				throw new ApiError(meta.errors.noSuchApp);

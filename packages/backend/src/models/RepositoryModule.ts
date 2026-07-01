@@ -8,7 +8,6 @@ import { DI } from '@/di-symbols.js';
 import {
 	MiAccessToken,
 	MiAntenna,
-	MiApp,
 	MiBlocking,
 	MiChannel,
 	MiClip,
@@ -47,12 +46,6 @@ const $usersRepository: Provider = {
 const $notesRepository: Provider = {
 	provide: DI.notesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiNote).extend(miRepository as MiRepository<MiNote>),
-	inject: [DI.db],
-};
-
-const $appsRepository: Provider = {
-	provide: DI.appsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiApp).extend(miRepository as MiRepository<MiApp>),
 	inject: [DI.db],
 };
 
@@ -199,7 +192,6 @@ const $rolesRepository: Provider = {
 	providers: [
 		$usersRepository,
 		$notesRepository,
-		$appsRepository,
 		$noteReactionsRepository,
 		$pollsRepository,
 		$userProfilesRepository,
@@ -227,7 +219,6 @@ const $rolesRepository: Provider = {
 	exports: [
 		$usersRepository,
 		$notesRepository,
-		$appsRepository,
 		$noteReactionsRepository,
 		$pollsRepository,
 		$userProfilesRepository,
