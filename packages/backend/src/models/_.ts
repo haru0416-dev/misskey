@@ -59,7 +59,6 @@ import { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserList } from '@/models/UserList.js';
-import { MiUserListFavorite } from '@/models/UserListFavorite.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
 import { MiUserNotePining } from '@/models/UserNotePining.js';
 import { MiUserProfile } from '@/models/UserProfile.js';
@@ -119,7 +118,6 @@ export {
 	MiRegistrationTicket,
 	MiUser,
 	MiUserList,
-	MiUserListFavorite,
 	MiUserListMembership,
 	MiUserNotePining,
 	MiUserProfile,
@@ -178,7 +176,6 @@ export type PollVotesRepository = Repository<MiPollVote> & MiRepository<MiPollVo
 export type RegistrationTicketsRepository = Repository<MiRegistrationTicket> & MiRepository<MiRegistrationTicket>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
-export type UserListFavoritesRepository = Repository<MiUserListFavorite> & MiRepository<MiUserListFavorite>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
 export type UserNotePiningsRepository = Repository<MiUserNotePining> & MiRepository<MiUserNotePining>;
 export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;

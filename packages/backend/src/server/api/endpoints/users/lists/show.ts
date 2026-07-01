@@ -4,10 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserListsRepository, UserListFavoritesRepository } from '@/models/_.js';
+import type { UserListsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserListEntityService } from '@/core/entities/UserListEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -68,8 +70,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		@Inject(DI.userListsRepository)
 		private userListsRepository: UserListsRepository,
 
-		@Inject(DI.userListFavoritesRepository)
-		private userListFavoritesRepository: UserListFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userListEntityService: UserListEntityService,
 	) {
@@ -89,16 +91,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			if (ps.forPublic && userList.isPublic) {
-				additionalProperties.likedCount = await this.userListFavoritesRepository.countBy({
-					userListId: ps.listId,
-				});
+				additionalProperties.likedCount = await countUserListFavoritesFromDatabase(this.drizzle, ps.listId);
 				if (me !== null) {
-					additionalProperties.isLiked = await this.userListFavoritesRepository.exists({
-						where: {
-							userId: me.id,
-							userListId: ps.listId,
-						},
-					});
+					additionalProperties.isLiked = await userListFavoriteExistsInDatabase(this.drizzle, me.id, ps.listId);
 				} else {
 					additionalProperties.isLiked = false;
 				}

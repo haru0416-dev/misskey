@@ -53,7 +53,6 @@ import {
 	MiSystemWebhook,
 	MiUser,
 	MiUserList,
-	MiUserListFavorite,
 	MiUserListMembership,
 	MiUserNotePining,
 	MiUserProfile,
@@ -148,12 +147,6 @@ const $userSecurityKeysRepository: Provider = {
 const $userListsRepository: Provider = {
 	provide: DI.userListsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserList).extend(miRepository as MiRepository<MiUserList>),
-	inject: [DI.db],
-};
-
-const $userListFavoritesRepository: Provider = {
-	provide: DI.userListFavoritesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserListFavorite).extend(miRepository as MiRepository<MiUserListFavorite>),
 	inject: [DI.db],
 };
 
@@ -414,7 +407,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$userProfilesRepository,
 		$userSecurityKeysRepository,
 		$userListsRepository,
-		$userListFavoritesRepository,
 		$userListMembershipsRepository,
 		$userNotePiningsRepository,
 		$followingsRepository,
@@ -471,7 +463,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$userProfilesRepository,
 		$userSecurityKeysRepository,
 		$userListsRepository,
-		$userListFavoritesRepository,
 		$userListMembershipsRepository,
 		$userNotePiningsRepository,
 		$followingsRepository,
