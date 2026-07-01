@@ -5,10 +5,13 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { GalleryLikesRepository, GalleryPostsRepository } from '@/models/_.js';
+import type { GalleryPostsRepository } from '@/models/_.js';
 import { FeaturedService, GALLERY_POSTS_RANKING_WINDOW } from '@/core/FeaturedService.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
+import { createGalleryLikeInDatabase, galleryLikeExistsInDatabase } from '@/core/GalleryLikeStore.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -55,8 +58,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.galleryPostsRepository)
 		private galleryPostsRepository: GalleryPostsRepository,
 
-		@Inject(DI.galleryLikesRepository)
-		private galleryLikesRepository: GalleryLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private featuredService: FeaturedService,
 		private idService: IdService,
@@ -72,23 +75,25 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// if already liked
-			const exist = await this.galleryLikesRepository.exists({
-				where: {
-					postId: post.id,
-					userId: me.id,
-				},
-			});
+			const exist = await galleryLikeExistsInDatabase(this.drizzle, me.id, post.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyLiked);
 			}
 
 			// Create like
-			await this.galleryLikesRepository.insert({
-				id: this.idService.gen(),
-				postId: post.id,
-				userId: me.id,
-			});
+			try {
+				await createGalleryLikeInDatabase(this.drizzle, {
+					id: this.idService.gen(),
+					postId: post.id,
+					userId: me.id,
+				});
+			} catch (error) {
+				if (isDuplicateKeyValueDatabaseError(error)) {
+					throw new ApiError(meta.errors.alreadyLiked);
+				}
+				throw error;
+			}
 
 			// ランキング更新
 			if (Date.now() - this.idService.parse(post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {

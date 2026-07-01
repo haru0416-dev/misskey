@@ -27,7 +27,6 @@ import {
 	MiFlashLike,
 	MiFollowing,
 	MiFollowRequest,
-	MiGalleryLike,
 	MiGalleryPost,
 	MiHashtag,
 	MiInstance,
@@ -260,12 +259,6 @@ const $galleryPostsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $galleryLikesRepository: Provider = {
-	provide: DI.galleryLikesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiGalleryLike).extend(miRepository as MiRepository<MiGalleryLike>),
-	inject: [DI.db],
-};
-
 const $clipsRepository: Provider = {
 	provide: DI.clipsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiClip).extend(miRepository as MiRepository<MiClip>),
@@ -398,7 +391,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
-		$galleryLikesRepository,
 		$clipsRepository,
 		$clipNotesRepository,
 		$antennasRepository,
@@ -450,7 +442,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
-		$galleryLikesRepository,
 		$clipsRepository,
 		$clipNotesRepository,
 		$antennasRepository,

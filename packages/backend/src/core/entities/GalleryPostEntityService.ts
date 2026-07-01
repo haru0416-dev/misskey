@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { GalleryLikesRepository, GalleryPostsRepository } from '@/models/_.js';
+import type { GalleryPostsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -13,6 +13,8 @@ import type { MiUser } from '@/models/User.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { galleryLikeExistsInDatabase } from '@/core/GalleryLikeStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
 
@@ -22,8 +24,8 @@ export class GalleryPostEntityService {
 		@Inject(DI.galleryPostsRepository)
 		private galleryPostsRepository: GalleryPostsRepository,
 
-		@Inject(DI.galleryLikesRepository)
-		private galleryLikesRepository: GalleryLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
@@ -56,7 +58,7 @@ export class GalleryPostEntityService {
 			tags: post.tags.length > 0 ? post.tags : undefined,
 			isSensitive: post.isSensitive,
 			likedCount: post.likedCount,
-			isLiked: meId ? await this.galleryLikesRepository.exists({ where: { postId: post.id, userId: meId } }) : undefined,
+			isLiked: meId ? await galleryLikeExistsInDatabase(this.drizzle, meId, post.id) : undefined,
 		});
 	}
 
@@ -71,4 +73,3 @@ export class GalleryPostEntityService {
 		return Promise.all(posts.map(post => this.pack(post, me, { packedUser: _userMap.get(post.userId) })));
 	}
 }
-

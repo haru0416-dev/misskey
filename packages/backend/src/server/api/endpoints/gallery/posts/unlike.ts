@@ -5,10 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { GalleryPostsRepository, GalleryLikesRepository } from '@/models/_.js';
+import type { GalleryPostsRepository } from '@/models/_.js';
 import { FeaturedService, GALLERY_POSTS_RANKING_WINDOW } from '@/core/FeaturedService.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
+import { deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase } from '@/core/GalleryLikeStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -49,8 +51,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.galleryPostsRepository)
 		private galleryPostsRepository: GalleryPostsRepository,
 
-		@Inject(DI.galleryLikesRepository)
-		private galleryLikesRepository: GalleryLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private featuredService: FeaturedService,
 		private idService: IdService,
@@ -61,17 +63,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.noSuchPost);
 			}
 
-			const exist = await this.galleryLikesRepository.findOneBy({
-				postId: post.id,
-				userId: me.id,
-			});
+			const exist = await fetchGalleryLikeFromDatabase(this.drizzle, me.id, post.id);
 
 			if (exist == null) {
 				throw new ApiError(meta.errors.notLiked);
 			}
 
 			// Delete like
-			await this.galleryLikesRepository.delete(exist.id);
+			await deleteGalleryLikeByIdFromDatabase(this.drizzle, exist.id);
 
 			// ランキング更新
 			if (Date.now() - this.idService.parse(post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {
