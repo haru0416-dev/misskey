@@ -12,6 +12,7 @@ import { usedUsername } from '@/db/schema/used-username.js';
 import { deserializeUser } from '@/core/SignupStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { MiSystemAccount } from '@/models/SystemAccount.js';
 
 type SystemAccountCreateData = {
@@ -24,6 +25,12 @@ type SystemAccountCreateData = {
 	passwordHash: string;
 	publicKey: string;
 	privateKey: string;
+};
+
+type SystemAccountProfileUpdateData = {
+	userId: MiUser['id'];
+	name?: MiUser['name'];
+	description?: MiUserProfile['description'];
 };
 
 export async function listSystemAccountsFromDatabase(db: MiDrizzleDatabase): Promise<MiSystemAccount[]> {
@@ -138,4 +145,36 @@ export async function createOrFetchSystemAccountInDatabase(db: MiDrizzleDatabase
 	});
 
 	return deserializeUser(account) as MiLocalUser;
+}
+
+export async function updateSystemAccountUserInDatabase(db: MiDrizzleDatabase, data: SystemAccountProfileUpdateData): Promise<MiLocalUser> {
+	const user = await db.transaction(async (tx) => {
+		if (data.name !== undefined) {
+			await tx
+				.update(userTable)
+				.set({ name: data.name })
+				.where(eq(userTable.id, data.userId));
+		}
+
+		if (data.description !== undefined) {
+			await tx
+				.update(userProfile)
+				.set({ description: data.description })
+				.where(eq(userProfile.userId, data.userId));
+		}
+
+		const [updated] = await tx
+			.select()
+			.from(userTable)
+			.where(eq(userTable.id, data.userId))
+			.limit(1);
+
+		if (!updated) {
+			throw new Error('System account user was not found after update');
+		}
+
+		return updated;
+	});
+
+	return deserializeUser(user) as MiLocalUser;
 }

@@ -61,7 +61,6 @@ import {
 	MiRoleAssignment,
 	MiSignin,
 	MiSwSubscription,
-	MiSystemAccount,
 	MiSystemWebhook,
 	MiUser,
 	MiUserIp,
@@ -280,12 +279,6 @@ const $blockingsRepository: Provider = {
 const $swSubscriptionsRepository: Provider = {
 	provide: DI.swSubscriptionsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiSwSubscription).extend(miRepository as MiRepository<MiSwSubscription>),
-	inject: [DI.db],
-};
-
-const $systemAccountsRepository: Provider = {
-	provide: DI.systemAccountsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiSystemAccount).extend(miRepository as MiRepository<MiSystemAccount>),
 	inject: [DI.db],
 };
 
@@ -559,7 +552,6 @@ const $chatApprovalsRepository: Provider = {
 		$renoteMutingsRepository,
 		$blockingsRepository,
 		$swSubscriptionsRepository,
-		$systemAccountsRepository,
 		$hashtagsRepository,
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,
@@ -634,7 +626,6 @@ const $chatApprovalsRepository: Provider = {
 		$renoteMutingsRepository,
 		$blockingsRepository,
 		$swSubscriptionsRepository,
-		$systemAccountsRepository,
 		$hashtagsRepository,
 		$abuseUserReportsRepository,
 		$abuseReportNotificationRecipientRepository,

@@ -10,9 +10,9 @@ import * as Redis from 'ioredis';
 import bcrypt from 'bcryptjs';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { createOrFetchSystemAccountInDatabase, fetchSystemAccountUserFromDatabase, listSystemAccountsFromDatabase } from '@/core/SystemAccountStore.js';
-import type { MiSystemAccount, UsersRepository } from '@/models/_.js';
-import type { MiMeta, UserProfilesRepository } from '@/models/_.js';
+import { createOrFetchSystemAccountInDatabase, fetchSystemAccountUserFromDatabase, listSystemAccountsFromDatabase, updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiSystemAccount } from '@/models/SystemAccount.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { MemoryKVCache } from '@/misc/cache.js';
@@ -37,12 +37,6 @@ export class SystemAccountService implements OnApplicationShutdown {
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
 
 		private idService: IdService,
 	) {
@@ -143,21 +137,11 @@ export class SystemAccountService implements OnApplicationShutdown {
 	}): Promise<MiLocalUser> {
 		const user = await this.fetch(type);
 
-		const updates = {} as Partial<MiUser>;
-		if (extra.name !== undefined) updates.name = extra.name;
-
-		if (Object.keys(updates).length > 0) {
-			await this.usersRepository.update(user.id, updates);
-		}
-
-		const profileUpdates = {} as Partial<MiUserProfile>;
-		if (extra.description !== undefined) profileUpdates.description = extra.description;
-
-		if (Object.keys(profileUpdates).length > 0) {
-			await this.userProfilesRepository.update(user.id, profileUpdates);
-		}
-
-		const updated = await this.usersRepository.findOneByOrFail({ id: user.id }) as MiLocalUser;
+		const updated = await updateSystemAccountUserInDatabase(this.drizzle, {
+			userId: user.id,
+			name: extra.name,
+			description: extra.description,
+		});
 		this.cache.set(type, updated);
 
 		return updated;

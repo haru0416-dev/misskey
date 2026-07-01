@@ -66,7 +66,6 @@ import { MiRole } from '@/models/Role.js';
 import { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { MiSignin } from '@/models/Signin.js';
 import { MiSwSubscription } from '@/models/SwSubscription.js';
-import { MiSystemAccount } from '@/models/SystemAccount.js';
 import { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserIp } from '@/models/UserIp.js';
@@ -141,7 +140,6 @@ export {
 	MiRelay,
 	MiSignin,
 	MiSwSubscription,
-	MiSystemAccount,
 	MiUser,
 	MiUserIp,
 	MiUserKeypair,
@@ -218,7 +216,6 @@ export type RegistryItemsRepository = Repository<MiRegistryItem> & MiRepository<
 export type RelaysRepository = Repository<MiRelay> & MiRepository<MiRelay>;
 export type SigninsRepository = Repository<MiSignin> & MiRepository<MiSignin>;
 export type SwSubscriptionsRepository = Repository<MiSwSubscription> & MiRepository<MiSwSubscription>;
-export type SystemAccountsRepository = Repository<MiSystemAccount> & MiRepository<MiSystemAccount>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserIpsRepository = Repository<MiUserIp> & MiRepository<MiUserIp>;
 export type UserKeypairsRepository = Repository<MiUserKeypair> & MiRepository<MiUserKeypair>;
