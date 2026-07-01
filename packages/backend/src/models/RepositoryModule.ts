@@ -9,7 +9,6 @@ import {
 	MiAbuseReportNotificationRecipient,
 	MiAbuseUserReport,
 	MiAccessToken,
-	MiAd,
 	MiAnnouncement,
 	MiAntenna,
 	MiApp,
@@ -258,12 +257,6 @@ const $systemWebhooksRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $adsRepository: Provider = {
-	provide: DI.adsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiAd).extend(miRepository as MiRepository<MiAd>),
-	inject: [DI.db],
-};
-
 const $flashsRepository: Provider = {
 	provide: DI.flashsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiFlash).extend(miRepository as MiRepository<MiFlash>),
@@ -343,7 +336,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$channelsRepository,
 		$webhooksRepository,
 		$systemWebhooksRepository,
-		$adsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
 		$flashsRepository,
@@ -387,7 +379,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$channelsRepository,
 		$webhooksRepository,
 		$systemWebhooksRepository,
-		$adsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
 		$flashsRepository,
