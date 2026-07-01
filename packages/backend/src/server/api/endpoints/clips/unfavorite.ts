@@ -4,9 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { ClipsRepository, ClipFavoritesRepository } from '@/models/_.js';
+import type { ClipsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { deleteClipFavoriteByIdFromDatabase, fetchClipFavoriteFromDatabase } from '@/core/ClipFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -47,8 +49,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.clipsRepository)
 		private clipsRepository: ClipsRepository,
 
-		@Inject(DI.clipFavoritesRepository)
-		private clipFavoritesRepository: ClipFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const clip = await this.clipsRepository.findOneBy({ id: ps.clipId });
@@ -56,16 +58,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.noSuchClip);
 			}
 
-			const exist = await this.clipFavoritesRepository.findOneBy({
-				clipId: clip.id,
-				userId: me.id,
-			});
+			const exist = await fetchClipFavoriteFromDatabase(this.drizzle, me.id, clip.id);
 
 			if (exist == null) {
 				throw new ApiError(meta.errors.notFavorited);
 			}
 
-			await this.clipFavoritesRepository.delete(exist.id);
+			await deleteClipFavoriteByIdFromDatabase(this.drizzle, exist.id);
 		});
 	}
 }

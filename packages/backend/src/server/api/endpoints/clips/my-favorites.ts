@@ -4,10 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ClipFavoritesRepository } from '@/models/_.js';
+import type { ClipsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
+import { fetchFavoriteClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiClip } from '@/models/Clip.js';
 
 export const meta = {
 	tags: ['account', 'clip'],
@@ -37,20 +41,28 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipFavoritesRepository)
-		private clipFavoritesRepository: ClipFavoritesRepository,
+		@Inject(DI.clipsRepository)
+		private clipsRepository: ClipsRepository,
+
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private clipEntityService: ClipEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.clipFavoritesRepository.createQueryBuilder('favorite')
-				.andWhere('favorite.userId = :meId', { meId: me.id })
-				.leftJoinAndSelect('favorite.clip', 'clip');
+			const clipIds = await fetchFavoriteClipIdsFromDatabase(this.drizzle, me.id);
+			if (clipIds.length === 0) {
+				return [];
+			}
 
-			const favorites = await query
-				.getMany();
+			const clipById = await this.clipsRepository.findBy({ id: In(clipIds) })
+				.then(clips => new Map(clips.map(clip => [clip.id, clip])));
 
-			return this.clipEntityService.packMany(favorites.map(x => x.clip!), me);
+			const clips = clipIds
+				.map(id => clipById.get(id))
+				.filter((clip): clip is MiClip => clip != null);
+
+			return this.clipEntityService.packMany(clips, me);
 		});
 	}
 }

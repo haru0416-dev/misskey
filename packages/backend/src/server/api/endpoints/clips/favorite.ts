@@ -4,10 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { ClipsRepository, ClipFavoritesRepository } from '@/models/_.js';
+import type { ClipsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { clipFavoriteExistsInDatabase, createClipFavoriteInDatabase } from '@/core/ClipFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -48,8 +50,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.clipsRepository)
 		private clipsRepository: ClipsRepository,
 
-		@Inject(DI.clipFavoritesRepository)
-		private clipFavoritesRepository: ClipFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -62,18 +64,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.noSuchClip);
 			}
 
-			const exist = await this.clipFavoritesRepository.exists({
-				where: {
-					clipId: clip.id,
-					userId: me.id,
-				},
-			});
+			const exist = await clipFavoriteExistsInDatabase(this.drizzle, me.id, clip.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyFavorited);
 			}
 
-			await this.clipFavoritesRepository.insert({
+			await createClipFavoriteInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				clipId: clip.id,
 				userId: me.id,

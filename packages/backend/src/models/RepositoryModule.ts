@@ -19,7 +19,6 @@ import {
 	MiChannel,
 	MiChannelFollowing,
 	MiClip,
-	MiClipFavorite,
 	MiClipNote,
 	MiDriveFile,
 	MiDriveFolder,
@@ -286,12 +285,6 @@ const $clipNotesRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $clipFavoritesRepository: Provider = {
-	provide: DI.clipFavoritesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiClipFavorite).extend(miRepository as MiRepository<MiClipFavorite>),
-	inject: [DI.db],
-};
-
 const $antennasRepository: Provider = {
 	provide: DI.antennasRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiAntenna).extend(miRepository as MiRepository<MiAntenna>),
@@ -416,7 +409,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$galleryLikesRepository,
 		$clipsRepository,
 		$clipNotesRepository,
-		$clipFavoritesRepository,
 		$antennasRepository,
 		$channelsRepository,
 		$channelFollowingsRepository,
@@ -470,7 +462,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$galleryLikesRepository,
 		$clipsRepository,
 		$clipNotesRepository,
-		$clipFavoritesRepository,
 		$antennasRepository,
 		$channelsRepository,
 		$channelFollowingsRepository,
