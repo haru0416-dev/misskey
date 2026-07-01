@@ -79,7 +79,6 @@ export {
 
 export type AntennasRepository = Repository<MiAntenna> & MiRepository<MiAntenna>;
 export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
-export type ClipsRepository = Repository<MiClip> & MiRepository<MiClip>;
 export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;
 export type EmojisRepository = Repository<MiEmoji> & MiRepository<MiEmoji>;
 export type FollowingsRepository = Repository<MiFollowing> & MiRepository<MiFollowing>;

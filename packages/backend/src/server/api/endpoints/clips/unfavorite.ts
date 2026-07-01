@@ -4,10 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { ClipsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { deleteClipFavoriteByIdFromDatabase, fetchClipFavoriteFromDatabase } from '@/core/ClipFavoriteStore.js';
+import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
@@ -46,14 +46,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const clip = await this.clipsRepository.findOneBy({ id: ps.clipId });
+			const clip = await fetchClipByIdFromDatabase(this.drizzle, ps.clipId);
 			if (clip == null) {
 				throw new ApiError(meta.errors.noSuchClip);
 			}

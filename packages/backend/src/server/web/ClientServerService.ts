@@ -23,7 +23,6 @@ import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import type {
 	ChannelsRepository,
-	ClipsRepository,
 	FlashsRepository,
 	GalleryPostsRepository,
 	MiMeta,
@@ -39,6 +38,7 @@ import { bindThis } from '@/decorators.js';
 import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
+import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
 import { UrlPreviewService } from './UrlPreviewService.js';
@@ -96,9 +96,6 @@ export class ClientServerService {
 
 		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
-
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
 
 		@Inject(DI.pagesRepository)
 		private pagesRepository: PagesRepository,
@@ -670,9 +667,7 @@ export class ClientServerService {
 
 		// Clip
 		fastify.get<{ Params: { clip: string; } }>('/clips/:clip', async (request, reply) => {
-			const clip = await this.clipsRepository.findOneBy({
-				id: request.params.clip,
-			});
+			const clip = await fetchClipByIdFromDatabase(this.drizzle, request.params.clip);
 
 			if (clip && clip.isPublic) {
 				const _clip = await this.clipEntityService.pack(clip);
@@ -820,9 +815,7 @@ export class ClientServerService {
 		fastify.get<{ Params: { clip: string; } }>('/embed/clips/:clip', async (request, reply) => {
 			reply.removeHeader('X-Frame-Options');
 
-			const clip = await this.clipsRepository.findOneBy({
-				id: request.params.clip,
-			});
+			const clip = await fetchClipByIdFromDatabase(this.drizzle, request.params.clip);
 
 			if (clip == null) return;
 

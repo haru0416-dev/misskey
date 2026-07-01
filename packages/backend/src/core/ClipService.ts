@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { ClipsRepository, MiNote, MiClip, NotesRepository } from '@/models/_.js';
+import type { MiNote, MiClip, NotesRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -15,6 +15,13 @@ import {
 	createClipNoteInDatabase,
 	deleteClipNoteInDatabase,
 } from '@/core/ClipNoteStore.js';
+import {
+	countClipsByUserIdFromDatabase,
+	createClipInDatabase,
+	deleteClipInDatabase,
+	fetchClipByIdAndUserIdFromDatabase,
+	updateClipInDatabase,
+} from '@/core/ClipStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
 
@@ -47,9 +54,6 @@ export class ClipService {
 	public static TooManyClipsError = class extends Error {};
 
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -63,14 +67,12 @@ export class ClipService {
 
 	@bindThis
 	public async create(me: MiLocalUser, name: string, isPublic: boolean, description: string | null): Promise<MiClip> {
-		const currentCount = await this.clipsRepository.countBy({
-			userId: me.id,
-		});
+		const currentCount = await countClipsByUserIdFromDatabase(this.db, me.id);
 		if (currentCount >= (await this.roleService.getUserPolicies(me.id)).clipLimit) {
 			throw new ClipService.TooManyClipsError();
 		}
 
-		const clip = await this.clipsRepository.insertOne({
+		const clip = await createClipInDatabase(this.db, {
 			id: this.idService.gen(),
 			userId: me.id,
 			name: name,
@@ -83,16 +85,13 @@ export class ClipService {
 
 	@bindThis
 	public async update(me: MiLocalUser, clipId: MiClip['id'], name: string | undefined, isPublic: boolean | undefined, description: string | null | undefined): Promise<void> {
-		const clip = await this.clipsRepository.findOneBy({
-			id: clipId,
-			userId: me.id,
-		});
+		const clip = await fetchClipByIdAndUserIdFromDatabase(this.db, clipId, me.id);
 
 		if (clip == null) {
 			throw new ClipService.NoSuchClipError();
 		}
 
-		await this.clipsRepository.update(clip.id, {
+		await updateClipInDatabase(this.db, clip.id, {
 			name: name,
 			description: description,
 			isPublic: isPublic,
@@ -101,24 +100,18 @@ export class ClipService {
 
 	@bindThis
 	public async delete(me: MiLocalUser, clipId: MiClip['id']): Promise<void> {
-		const clip = await this.clipsRepository.findOneBy({
-			id: clipId,
-			userId: me.id,
-		});
+		const clip = await fetchClipByIdAndUserIdFromDatabase(this.db, clipId, me.id);
 
 		if (clip == null) {
 			throw new ClipService.NoSuchClipError();
 		}
 
-		await this.clipsRepository.delete(clip.id);
+		await deleteClipInDatabase(this.db, clip.id);
 	}
 
 	@bindThis
 	public async addNote(me: MiLocalUser, clipId: MiClip['id'], noteId: MiNote['id']): Promise<void> {
-		const clip = await this.clipsRepository.findOneBy({
-			id: clipId,
-			userId: me.id,
-		});
+		const clip = await fetchClipByIdAndUserIdFromDatabase(this.db, clipId, me.id);
 
 		if (clip == null) {
 			throw new ClipService.NoSuchClipError();
@@ -152,7 +145,7 @@ export class ClipService {
 			throw e;
 		}
 
-		this.clipsRepository.update(clip.id, {
+		updateClipInDatabase(this.db, clip.id, {
 			lastClippedAt: new Date(),
 		});
 
@@ -161,10 +154,7 @@ export class ClipService {
 
 	@bindThis
 	public async removeNote(me: MiLocalUser, clipId: MiClip['id'], noteId: MiNote['id']): Promise<void> {
-		const clip = await this.clipsRepository.findOneBy({
-			id: clipId,
-			userId: me.id,
-		});
+		const clip = await fetchClipByIdAndUserIdFromDatabase(this.db, clipId, me.id);
 
 		if (clip == null) {
 			throw new ClipService.NoSuchClipError();

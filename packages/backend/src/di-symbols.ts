@@ -31,7 +31,6 @@ export const DI = {
 	blockingsRepository: Symbol('blockingsRepository'),
 	pagesRepository: Symbol('pagesRepository'),
 	galleryPostsRepository: Symbol('galleryPostsRepository'),
-	clipsRepository: Symbol('clipsRepository'),
 	antennasRepository: Symbol('antennasRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	rolesRepository: Symbol('rolesRepository'),

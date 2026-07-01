@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { ClipsRepository, MiUser } from '@/models/_.js';
+import type { MiUser } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -14,15 +14,13 @@ import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { countClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
 import { clipFavoriteExistsInDatabase, countClipFavoritesFromDatabase } from '@/core/ClipFavoriteStore.js';
+import { fetchClipByIdOrFailFromDatabase } from '@/core/ClipStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 
 @Injectable()
 export class ClipEntityService {
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -40,7 +38,7 @@ export class ClipEntityService {
 		},
 	): Promise<Packed<'Clip'>> {
 		const meId = me ? me.id : null;
-		const clip = typeof src === 'object' ? src : await this.clipsRepository.findOneByOrFail({ id: src });
+		const clip = typeof src === 'object' ? src : await fetchClipByIdOrFailFromDatabase(this.drizzle, src);
 
 		return await awaitAll({
 			id: clip.id,

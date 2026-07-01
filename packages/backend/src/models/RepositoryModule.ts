@@ -9,7 +9,6 @@ import {
 	MiAntenna,
 	MiBlocking,
 	MiChannel,
-	MiClip,
 	MiDriveFile,
 	MiEmoji,
 	MiFlash,
@@ -115,12 +114,6 @@ const $galleryPostsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $clipsRepository: Provider = {
-	provide: DI.clipsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiClip).extend(miRepository as MiRepository<MiClip>),
-	inject: [DI.db],
-};
-
 const $antennasRepository: Provider = {
 	provide: DI.antennasRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiAntenna).extend(miRepository as MiRepository<MiAntenna>),
@@ -162,7 +155,6 @@ const $rolesRepository: Provider = {
 		$blockingsRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
-		$clipsRepository,
 		$antennasRepository,
 		$channelsRepository,
 		$rolesRepository,
@@ -183,7 +175,6 @@ const $rolesRepository: Provider = {
 		$blockingsRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
-		$clipsRepository,
 		$antennasRepository,
 		$channelsRepository,
 		$rolesRepository,

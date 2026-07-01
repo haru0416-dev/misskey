@@ -8,7 +8,7 @@ import { Writable } from 'node:stream';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { ClipsRepository, MiClip, MiUser, NotesRepository, UsersRepository } from '@/models/_.js';
+import type { MiClip, MiUser, NotesRepository, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -21,6 +21,7 @@ import { NotificationService } from '@/core/NotificationService.js';
 import { QueryService } from '@/core/QueryService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
+import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/ClipStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
@@ -37,9 +38,6 @@ export class ExportClipsProcessorService {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
-
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -99,21 +97,13 @@ export class ExportClipsProcessorService {
 		let exportedClipsCount = 0;
 		let cursor: MiClip['id'] | null = null;
 
-		const total = await this.clipsRepository.countBy({
-			userId: user.id,
-		});
+		const total = await countClipsByUserIdFromDatabase(this.db, user.id);
 
 		while (true) {
-			const query = this.clipsRepository.createQueryBuilder('clip')
-				.where('clip.userId = :userId', { userId: user.id })
-				.orderBy('clip.id', 'ASC')
-				.take(100);
-
-			if (cursor) {
-				query.andWhere('clip.id > :cursor', { cursor });
-			}
-
-			const clips = await query.getMany();
+			const clips = await listClipsByUserIdFromDatabase(this.db, user.id, {
+				afterId: cursor,
+				limit: 100,
+			});
 
 			if (clips.length === 0) {
 				job.updateProgress(100);
