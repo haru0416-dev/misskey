@@ -63,7 +63,6 @@ import {
 	MiSwSubscription,
 	MiSystemAccount,
 	MiSystemWebhook,
-	MiUsedUsername,
 	MiUser,
 	MiUserIp,
 	MiUserKeypair,
@@ -215,12 +214,6 @@ const $userNotePiningsRepository: Provider = {
 const $userIpsRepository: Provider = {
 	provide: DI.userIpsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserIp).extend(miRepository as MiRepository<MiUserIp>),
-	inject: [DI.db],
-};
-
-const $usedUsernamesRepository: Provider = {
-	provide: DI.usedUsernamesRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUsedUsername).extend(miRepository as MiRepository<MiUsedUsername>),
 	inject: [DI.db],
 };
 
@@ -555,7 +548,6 @@ const $chatApprovalsRepository: Provider = {
 		$userListMembershipsRepository,
 		$userNotePiningsRepository,
 		$userIpsRepository,
-		$usedUsernamesRepository,
 		$followingsRepository,
 		$followRequestsRepository,
 		$instancesRepository,
@@ -631,7 +623,6 @@ const $chatApprovalsRepository: Provider = {
 		$userListMembershipsRepository,
 		$userNotePiningsRepository,
 		$userIpsRepository,
-		$usedUsernamesRepository,
 		$followingsRepository,
 		$followRequestsRepository,
 		$instancesRepository,
