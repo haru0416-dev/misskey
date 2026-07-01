@@ -31,7 +31,6 @@ import {
 	MiUserList,
 	MiUserListMembership,
 	MiUserProfile,
-	MiWebhook,
 } from './_.js';
 import type { Provider } from '@nestjs/common';
 import type { DataSource } from 'typeorm';
@@ -162,12 +161,6 @@ const $channelsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $webhooksRepository: Provider = {
-	provide: DI.webhooksRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiWebhook).extend(miRepository as MiRepository<MiWebhook>),
-	inject: [DI.db],
-};
-
 const $flashsRepository: Provider = {
 	provide: DI.flashsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiFlash).extend(miRepository as MiRepository<MiFlash>),
@@ -204,7 +197,6 @@ const $rolesRepository: Provider = {
 		$clipsRepository,
 		$antennasRepository,
 		$channelsRepository,
-		$webhooksRepository,
 		$rolesRepository,
 		$flashsRepository,
 	],
@@ -230,7 +222,6 @@ const $rolesRepository: Provider = {
 		$clipsRepository,
 		$antennasRepository,
 		$channelsRepository,
-		$webhooksRepository,
 		$rolesRepository,
 		$flashsRepository,
 	],

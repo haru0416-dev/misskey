@@ -38,7 +38,6 @@ export const DI = {
 	clipsRepository: Symbol('clipsRepository'),
 	antennasRepository: Symbol('antennasRepository'),
 	channelsRepository: Symbol('channelsRepository'),
-	webhooksRepository: Symbol('webhooksRepository'),
 	rolesRepository: Symbol('rolesRepository'),
 	flashsRepository: Symbol('flashsRepository'),
 	//#endregion
