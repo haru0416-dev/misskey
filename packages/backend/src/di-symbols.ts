@@ -48,7 +48,6 @@ export const DI = {
 	antennasRepository: Symbol('antennasRepository'),
 	channelsRepository: Symbol('channelsRepository'),
 	webhooksRepository: Symbol('webhooksRepository'),
-	systemWebhooksRepository: Symbol('systemWebhooksRepository'),
 	rolesRepository: Symbol('rolesRepository'),
 	roleAssignmentsRepository: Symbol('roleAssignmentsRepository'),
 	flashsRepository: Symbol('flashsRepository'),

@@ -11,7 +11,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { randomString } from '../utils.js';
 import { MiUser } from '@/models/User.js';
 import { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
-import { SystemWebhooksRepository, UsersRepository } from '@/models/_.js';
+import { UsersRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
@@ -20,6 +20,12 @@ import { DI } from '@/di-symbols.js';
 import { QueueService } from '@/core/QueueService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
+import { systemWebhook } from '@/db/schema/system-webhook.js';
+import {
+	createSystemWebhookInDatabase,
+	fetchSystemWebhookByIdFromDatabase,
+} from '@/core/SystemWebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 describe('SystemWebhookService', () => {
 	let app: TestingModule;
@@ -28,7 +34,7 @@ describe('SystemWebhookService', () => {
 	// --------------------------------------------------------------------------------------
 
 	let usersRepository: UsersRepository;
-	let systemWebhooksRepository: SystemWebhooksRepository;
+	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let queueService: Mocked<QueueService>;
 
@@ -48,16 +54,18 @@ describe('SystemWebhookService', () => {
 	}
 
 	async function createWebhook(data: Partial<MiSystemWebhook> = {}) {
-		return systemWebhooksRepository
-			.insert({
-				id: idService.gen(),
-				name: randomString(),
-				on: ['abuseReport'],
-				url: 'https://example.com',
-				secret: randomString(),
-				...data,
-			})
-			.then(x => systemWebhooksRepository.findOneByOrFail(x.identifiers[0]));
+		return createSystemWebhookInDatabase(db, {
+			id: idService.gen(),
+			isActive: data.isActive ?? true,
+			updatedAt: data.updatedAt ?? new Date(),
+			latestSentAt: data.latestSentAt ?? null,
+			latestStatus: data.latestStatus ?? null,
+			name: randomString(),
+			on: ['abuseReport'],
+			url: 'https://example.com',
+			secret: randomString(),
+			...data,
+		});
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -84,7 +92,7 @@ describe('SystemWebhookService', () => {
 			.compile();
 
 		usersRepository = app.get(DI.usersRepository);
-		systemWebhooksRepository = app.get(DI.systemWebhooksRepository);
+		db = app.get(DI.drizzle);
 
 		service = app.get(SystemWebhookService);
 		idService = app.get(IdService);
@@ -102,8 +110,8 @@ describe('SystemWebhookService', () => {
 	}
 
 	async function afterEachImpl() {
+		await db.delete(systemWebhook);
 		await usersRepository.createQueryBuilder().delete().execute();
-		await systemWebhooksRepository.createQueryBuilder().delete().execute();
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -293,7 +301,7 @@ describe('SystemWebhookService', () => {
 
 				await service.deleteSystemWebhook(webhook.id, root);
 
-				await expect(systemWebhooksRepository.findOneBy({ id: webhook.id })).resolves.toBeNull();
+				await expect(fetchSystemWebhookByIdFromDatabase(db, webhook.id)).resolves.toBeNull();
 			});
 		});
 	});

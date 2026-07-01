@@ -36,7 +36,6 @@ import {
 	miRepository,
 	MiRole,
 	MiRoleAssignment,
-	MiSystemWebhook,
 	MiUser,
 	MiUserList,
 	MiUserListMembership,
@@ -244,12 +243,6 @@ const $webhooksRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $systemWebhooksRepository: Provider = {
-	provide: DI.systemWebhooksRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiSystemWebhook).extend(miRepository as MiRepository<MiSystemWebhook>),
-	inject: [DI.db],
-};
-
 const $flashsRepository: Provider = {
 	provide: DI.flashsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiFlash).extend(miRepository as MiRepository<MiFlash>),
@@ -327,7 +320,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$antennasRepository,
 		$channelsRepository,
 		$webhooksRepository,
-		$systemWebhooksRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
 		$flashsRepository,
@@ -369,7 +361,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$antennasRepository,
 		$channelsRepository,
 		$webhooksRepository,
-		$systemWebhooksRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
 		$flashsRepository,

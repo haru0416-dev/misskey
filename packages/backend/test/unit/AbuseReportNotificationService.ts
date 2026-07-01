@@ -10,12 +10,11 @@ import { randomString } from '../utils.js';
 import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
 import {
 	MiAbuseUserReport,
-	MiSystemWebhook,
 	MiUser,
-	SystemWebhooksRepository,
 	UserProfilesRepository,
 	UsersRepository,
 } from '@/models/_.js';
+import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalModule } from '@/GlobalModule.js';
@@ -28,10 +27,12 @@ import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { abuseReportNotificationRecipient } from '@/db/schema/abuse-report-notification-recipient.js';
+import { systemWebhook } from '@/db/schema/system-webhook.js';
 import {
 	createAbuseReportNotificationRecipientInDatabase,
 	fetchAbuseReportNotificationRecipientByIdFromDatabase,
 } from '@/core/AbuseReportNotificationRecipientStore.js';
+import { createSystemWebhookInDatabase } from '@/core/SystemWebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 process.env.NODE_ENV = 'test';
@@ -44,7 +45,6 @@ describe('AbuseReportNotificationService', () => {
 
 	let usersRepository: UsersRepository;
 	let userProfilesRepository: UserProfilesRepository;
-	let systemWebhooksRepository: SystemWebhooksRepository;
 	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let roleService: Mocked<RoleService>;
@@ -77,16 +77,18 @@ describe('AbuseReportNotificationService', () => {
 	}
 
 	async function createWebhook(data: Partial<MiSystemWebhook> = {}) {
-		return systemWebhooksRepository
-			.insert({
-				id: idService.gen(),
-				name: randomString(),
-				on: ['abuseReport'],
-				url: 'https://example.com',
-				secret: randomString(),
-				...data,
-			})
-			.then(x => systemWebhooksRepository.findOneByOrFail(x.identifiers[0]));
+		return createSystemWebhookInDatabase(db, {
+			id: idService.gen(),
+			isActive: data.isActive ?? true,
+			updatedAt: data.updatedAt ?? new Date(),
+			latestSentAt: data.latestSentAt ?? null,
+			latestStatus: data.latestStatus ?? null,
+			name: randomString(),
+			on: ['abuseReport'],
+			url: 'https://example.com',
+			secret: randomString(),
+			...data,
+		});
 	}
 
 	async function createRecipient(data: Partial<MiAbuseReportNotificationRecipient> = {}) {
@@ -142,7 +144,6 @@ describe('AbuseReportNotificationService', () => {
 
 		usersRepository = app.get(DI.usersRepository);
 		userProfilesRepository = app.get(DI.userProfilesRepository);
-		systemWebhooksRepository = app.get(DI.systemWebhooksRepository);
 		db = app.get(DI.drizzle);
 
 		service = app.get(AbuseReportNotificationService);
@@ -169,7 +170,7 @@ describe('AbuseReportNotificationService', () => {
 		webhookService.enqueueSystemWebhook.mockClear();
 
 		await db.delete(abuseReportNotificationRecipient);
-		await systemWebhooksRepository.createQueryBuilder().delete().execute();
+		await db.delete(systemWebhook);
 		await userProfilesRepository.createQueryBuilder().delete().execute();
 		await usersRepository.createQueryBuilder().delete().execute();
 	});
