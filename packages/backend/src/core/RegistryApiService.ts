@@ -5,18 +5,26 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { MiRegistryItem, RegistryItemsRepository } from '@/models/_.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
+import type { MiRegistryItem } from '@/models/RegistryItem.js';
 import type { MiUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { bindThis } from '@/decorators.js';
+import {
+	deleteRegistryItemFromDatabase,
+	fetchRegistryItemFromDatabase,
+	listRegistryItemsOfScopeFromDatabase,
+	listRegistryKeysOfScopeFromDatabase,
+	listRegistryScopeAndDomainsFromDatabase,
+	setRegistryItemInDatabase,
+} from '@/core/RegistryItemStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class RegistryApiService {
 	constructor(
-		@Inject(DI.registryItemsRepository)
-		private registryItemsRepository: RegistryItemsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
@@ -26,35 +34,17 @@ export class RegistryApiService {
 	@bindThis
 	public async set(userId: MiUser['id'], domain: string | null, scope: string[], key: string, value: any) {
 		// TODO: 作成できるキーの数を制限する
+		const itemDomain = domain || null;
 
-		const query = this.registryItemsRepository.createQueryBuilder('item');
-		if (domain) {
-			query.where('item.domain = :domain', { domain: domain });
-		} else {
-			query.where('item.domain IS NULL');
-		}
-		query.andWhere('item.userId = :userId', { userId: userId });
-		query.andWhere('item.key = :key', { key: key });
-		query.andWhere('item.scope = :scope', { scope: scope });
-
-		const existingItem = await query.getOne();
-
-		if (existingItem) {
-			await this.registryItemsRepository.update(existingItem.id, {
-				updatedAt: new Date(),
-				value: value,
-			});
-		} else {
-			await this.registryItemsRepository.insert({
-				id: this.idService.gen(),
-				updatedAt: new Date(),
-				userId: userId,
-				domain: domain,
-				scope: scope,
-				key: key,
-				value: value,
-			});
-		}
+		await setRegistryItemInDatabase(this.drizzle, {
+			id: this.idService.gen(),
+			updatedAt: new Date(),
+			userId: userId,
+			domain: itemDomain,
+			scope: scope,
+			key: key,
+			value: value,
+		});
 
 		if (domain == null) {
 			// TODO: サードパーティアプリが傍受出来てしまうのでどうにかする
@@ -68,49 +58,22 @@ export class RegistryApiService {
 
 	@bindThis
 	public async getItem(userId: MiUser['id'], domain: string | null, scope: string[], key: string): Promise<MiRegistryItem | null> {
-		const query = this.registryItemsRepository.createQueryBuilder('item')
-			.where(domain == null ? 'item.domain IS NULL' : 'item.domain = :domain', { domain: domain })
-			.andWhere('item.userId = :userId', { userId: userId })
-			.andWhere('item.key = :key', { key: key })
-			.andWhere('item.scope = :scope', { scope: scope });
-
-		const item = await query.getOne();
-
-		return item;
+		return fetchRegistryItemFromDatabase(this.drizzle, userId, domain, scope, key);
 	}
 
 	@bindThis
 	public async getAllItemsOfScope(userId: MiUser['id'], domain: string | null, scope: string[]): Promise<MiRegistryItem[]> {
-		const query = this.registryItemsRepository.createQueryBuilder('item');
-		query.where(domain == null ? 'item.domain IS NULL' : 'item.domain = :domain', { domain: domain });
-		query.andWhere('item.userId = :userId', { userId: userId });
-		query.andWhere('item.scope = :scope', { scope: scope });
-
-		const items = await query.getMany();
-
-		return items;
+		return listRegistryItemsOfScopeFromDatabase(this.drizzle, userId, domain, scope);
 	}
 
 	@bindThis
 	public async getAllKeysOfScope(userId: MiUser['id'], domain: string | null, scope: string[]): Promise<string[]> {
-		const query = this.registryItemsRepository.createQueryBuilder('item');
-		query.select('item.key');
-		query.where(domain == null ? 'item.domain IS NULL' : 'item.domain = :domain', { domain: domain });
-		query.andWhere('item.userId = :userId', { userId: userId });
-		query.andWhere('item.scope = :scope', { scope: scope });
-
-		const items = await query.getMany();
-
-		return items.map(x => x.key);
+		return listRegistryKeysOfScopeFromDatabase(this.drizzle, userId, domain, scope);
 	}
 
 	@bindThis
 	public async getAllScopeAndDomains(userId: MiUser['id']): Promise<{ domain: string | null; scopes: string[][] }[]> {
-		const query = this.registryItemsRepository.createQueryBuilder('item')
-			.select(['item.scope', 'item.domain'])
-			.where('item.userId = :userId', { userId: userId });
-
-		const items = await query.getMany();
+		const items = await listRegistryScopeAndDomainsFromDatabase(this.drizzle, userId);
 
 		const res = [] as { domain: string | null; scopes: string[][] }[];
 
@@ -132,16 +95,6 @@ export class RegistryApiService {
 
 	@bindThis
 	public async remove(userId: MiUser['id'], domain: string | null, scope: string[], key: string) {
-		const query = this.registryItemsRepository.createQueryBuilder().delete();
-		if (domain) {
-			query.where('domain = :domain', { domain: domain });
-		} else {
-			query.where('domain IS NULL');
-		}
-		query.andWhere('userId = :userId', { userId: userId });
-		query.andWhere('key = :key', { key: key });
-		query.andWhere('scope = :scope', { scope: scope });
-
-		await query.execute();
+		await deleteRegistryItemFromDatabase(this.drizzle, userId, domain || null, scope, key);
 	}
 }

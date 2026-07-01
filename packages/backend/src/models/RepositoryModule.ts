@@ -46,7 +46,6 @@ import {
 	MiPoll,
 	MiPollVote,
 	MiRegistrationTicket,
-	MiRegistryItem,
 	MiRenoteMuting,
 	MiRepository,
 	miRepository,
@@ -360,12 +359,6 @@ const $channelMutingRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $registryItemsRepository: Provider = {
-	provide: DI.registryItemsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiRegistryItem).extend(miRepository as MiRepository<MiRegistryItem>),
-	inject: [DI.db],
-};
-
 const $webhooksRepository: Provider = {
 	provide: DI.webhooksRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiWebhook).extend(miRepository as MiRepository<MiWebhook>),
@@ -483,7 +476,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$channelFollowingsRepository,
 		$channelFavoritesRepository,
 		$channelMutingRepository,
-		$registryItemsRepository,
 		$webhooksRepository,
 		$systemWebhooksRepository,
 		$adsRepository,
@@ -545,7 +537,6 @@ const $chatRoomInvitationsRepository: Provider = {
 		$channelFollowingsRepository,
 		$channelFavoritesRepository,
 		$channelMutingRepository,
-		$registryItemsRepository,
 		$webhooksRepository,
 		$systemWebhooksRepository,
 		$adsRepository,

@@ -54,7 +54,6 @@ import { MiPageLike } from '@/models/PageLike.js';
 import { MiPoll } from '@/models/Poll.js';
 import { MiPollVote } from '@/models/PollVote.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
-import { MiRegistryItem } from '@/models/RegistryItem.js';
 import { MiRenoteMuting } from '@/models/RenoteMuting.js';
 import { MiRole } from '@/models/Role.js';
 import { MiRoleAssignment } from '@/models/RoleAssignment.js';
@@ -123,7 +122,6 @@ export {
 	MiPoll,
 	MiPollVote,
 	MiRegistrationTicket,
-	MiRegistryItem,
 	MiSignin,
 	MiSwSubscription,
 	MiUser,
@@ -187,7 +185,6 @@ export type PageLikesRepository = Repository<MiPageLike> & MiRepository<MiPageLi
 export type PollsRepository = Repository<MiPoll> & MiRepository<MiPoll>;
 export type PollVotesRepository = Repository<MiPollVote> & MiRepository<MiPollVote>;
 export type RegistrationTicketsRepository = Repository<MiRegistrationTicket> & MiRepository<MiRegistrationTicket>;
-export type RegistryItemsRepository = Repository<MiRegistryItem> & MiRepository<MiRegistryItem>;
 export type SigninsRepository = Repository<MiSignin> & MiRepository<MiSignin>;
 export type SwSubscriptionsRepository = Repository<MiSwSubscription> & MiRepository<MiSwSubscription>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
