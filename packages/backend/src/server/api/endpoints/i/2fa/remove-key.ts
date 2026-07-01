@@ -6,12 +6,17 @@
 import bcrypt from 'bcryptjs';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UserProfilesRepository, UserSecurityKeysRepository } from '@/models/_.js';
+import type { UserProfilesRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	countUserSecurityKeysByUserIdFromDatabase,
+	deleteUserSecurityKeyByIdAndUserIdFromDatabase,
+} from '@/core/UserSecurityKeyStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -40,8 +45,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
@@ -72,22 +77,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// Make sure we only delete the user's own creds
-			await this.userSecurityKeysRepository.delete({
-				userId: me.id,
-				id: ps.credentialId,
-			});
+			await deleteUserSecurityKeyByIdAndUserIdFromDatabase(this.db, ps.credentialId, me.id);
 
 			// 使われているキーがなくなったらパスワードレスログインをやめる
-			const keyCount = await this.userSecurityKeysRepository.count({
-				where: {
-					userId: me.id,
-				},
-				select: {
-					id: true,
-					name: true,
-					lastUsed: true,
-				},
-			});
+			const keyCount = await countUserSecurityKeysByUserIdFromDatabase(this.db, me.id);
 
 			if (keyCount === 0) {
 				await this.userProfilesRepository.update(me.id, {

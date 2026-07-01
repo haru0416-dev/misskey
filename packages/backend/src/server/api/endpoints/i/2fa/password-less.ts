@@ -6,10 +6,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import type { UserProfilesRepository, UserSecurityKeysRepository } from '@/models/_.js';
+import type { UserProfilesRepository } from '@/models/_.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '../../../error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countUserSecurityKeysByUserIdFromDatabase } from '@/core/UserSecurityKeyStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -39,8 +41,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
 
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private globalEventService: GlobalEventService,
@@ -48,16 +50,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			if (ps.value === true) {
 				// セキュリティキーがなければパスワードレスを有効にはできない
-				const keyCount = await this.userSecurityKeysRepository.count({
-					where: {
-						userId: me.id,
-					},
-					select: {
-						id: true,
-						name: true,
-						lastUsed: true,
-					},
-				});
+				const keyCount = await countUserSecurityKeysByUserIdFromDatabase(this.db, me.id);
 
 				if (keyCount === 0) {
 					await this.userProfilesRepository.update(me.id, {

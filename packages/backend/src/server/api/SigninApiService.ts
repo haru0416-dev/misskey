@@ -11,7 +11,6 @@ import { DI } from '@/di-symbols.js';
 import type {
 	MiMeta,
 	UserProfilesRepository,
-	UserSecurityKeysRepository,
 	UsersRepository,
 } from '@/models/_.js';
 import type Logger from '@/logger.js';
@@ -25,6 +24,7 @@ import { UserAuthService } from '@/core/UserAuthService.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { countUserSecurityKeysByUserIdFromDatabase } from '@/core/UserSecurityKeyStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
 import { getRequestIp } from '@/server/api/get-request-ip.js';
@@ -49,9 +49,6 @@ export class SigninApiService {
 
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -145,7 +142,7 @@ export class SigninApiService {
 		}
 
 		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
-		const securityKeysAvailable = await this.userSecurityKeysRepository.countBy({ userId: user.id }).then(result => result >= 1);
+		const securityKeysAvailable = await countUserSecurityKeysByUserIdFromDatabase(this.drizzle, user.id).then(result => result >= 1);
 
 		if (password == null) {
 			reply.code(200);

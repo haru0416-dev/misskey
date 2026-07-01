@@ -9,10 +9,12 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
-import type { UserProfilesRepository, UserSecurityKeysRepository } from '@/models/_.js';
+import type { UserProfilesRepository } from '@/models/_.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { ApiError } from '@/server/api/error.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -62,8 +64,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
 
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private webAuthnService: WebAuthnService,
 		private userAuthService: UserAuthService,
@@ -98,7 +100,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			const keyInfo = await this.webAuthnService.verifyRegistration(me.id, ps.credential);
 			const keyId = keyInfo.credentialID;
 
-			await this.userSecurityKeysRepository.insert({
+			await createUserSecurityKeyInDatabase(this.db, {
 				id: keyId,
 				userId: me.id,
 				name: ps.name,

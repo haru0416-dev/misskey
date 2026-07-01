@@ -38,7 +38,6 @@ import { MiUser } from '@/models/User.js';
 import { MiUserList } from '@/models/UserList.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
 import { MiUserProfile } from '@/models/UserProfile.js';
-import { MiUserSecurityKey } from '@/models/UserSecurityKey.js';
 import { MiWebhook } from '@/models/Webhook.js';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 
@@ -79,7 +78,6 @@ export {
 	MiUserList,
 	MiUserListMembership,
 	MiUserProfile,
-	MiUserSecurityKey,
 	MiWebhook,
 	MiChannel,
 	MiRole,
@@ -110,7 +108,6 @@ export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
 export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;
-export type UserSecurityKeysRepository = Repository<MiUserSecurityKey> & MiRepository<MiUserSecurityKey>;
 export type WebhooksRepository = Repository<MiWebhook> & MiRepository<MiWebhook>;
 export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>;
 export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;

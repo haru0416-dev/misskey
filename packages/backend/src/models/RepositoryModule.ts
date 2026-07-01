@@ -34,7 +34,6 @@ import {
 	MiUserList,
 	MiUserListMembership,
 	MiUserProfile,
-	MiUserSecurityKey,
 	MiWebhook,
 } from './_.js';
 import type { Provider } from '@nestjs/common';
@@ -79,12 +78,6 @@ const $pollsRepository: Provider = {
 const $userProfilesRepository: Provider = {
 	provide: DI.userProfilesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserProfile).extend(miRepository as MiRepository<MiUserProfile>),
-	inject: [DI.db],
-};
-
-const $userSecurityKeysRepository: Provider = {
-	provide: DI.userSecurityKeysRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiUserSecurityKey).extend(miRepository as MiRepository<MiUserSecurityKey>),
 	inject: [DI.db],
 };
 
@@ -218,7 +211,6 @@ const $rolesRepository: Provider = {
 		$noteReactionsRepository,
 		$pollsRepository,
 		$userProfilesRepository,
-		$userSecurityKeysRepository,
 		$userListsRepository,
 		$userListMembershipsRepository,
 		$followingsRepository,
@@ -248,7 +240,6 @@ const $rolesRepository: Provider = {
 		$noteReactionsRepository,
 		$pollsRepository,
 		$userProfilesRepository,
-		$userSecurityKeysRepository,
 		$userListsRepository,
 		$userListMembershipsRepository,
 		$followingsRepository,

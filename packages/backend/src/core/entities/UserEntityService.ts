@@ -33,7 +33,6 @@ import type {
 	MutingsRepository,
 	NotesRepository,
 	UserProfilesRepository,
-	UserSecurityKeysRepository,
 	UsersRepository,
 } from '@/models/_.js';
 import type { MiUserNotePining } from '@/models/UserNotePining.js';
@@ -46,6 +45,10 @@ import {
 	listUserNotePiningsByUserIdFromDatabase,
 	listUserNotePiningsByUserIdsFromDatabase,
 } from '@/core/UserNotePiningStore.js';
+import {
+	countUserSecurityKeysByUserIdFromDatabase,
+	listUserSecurityKeySummariesByUserIdFromDatabase,
+} from '@/core/UserSecurityKeyStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -124,9 +127,6 @@ export class UserEntityService implements OnModuleInit {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
-
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
@@ -591,7 +591,7 @@ export class UserEntityService implements OnModuleInit {
 				twoFactorEnabled: profile!.twoFactorEnabled,
 				usePasswordLessLogin: profile!.usePasswordLessLogin,
 				securityKeys: profile!.twoFactorEnabled
-					? this.userSecurityKeysRepository.countBy({ userId: user.id }).then(result => result >= 1)
+					? countUserSecurityKeysByUserIdFromDatabase(this.drizzle, user.id).then(result => result >= 1)
 					: false,
 			} : {}),
 
@@ -638,16 +638,7 @@ export class UserEntityService implements OnModuleInit {
 				email: profile!.email,
 				emailVerified: profile!.emailVerified,
 				securityKeysList: profile!.twoFactorEnabled
-					? this.userSecurityKeysRepository.find({
-						where: {
-							userId: user.id,
-						},
-						select: {
-							id: true,
-							name: true,
-							lastUsed: true,
-						},
-					})
+					? listUserSecurityKeySummariesByUserIdFromDatabase(this.drizzle, user.id)
 					: [],
 			} : {}),
 
