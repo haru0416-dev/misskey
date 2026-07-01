@@ -9,7 +9,9 @@ import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { RegistrationTicketsRepository, UserProfilesRepository, UsersRepository, MiRegistrationTicket, MiMeta } from '@/models/_.js';
+import type { UserProfilesRepository, UsersRepository, MiMeta } from '@/models/_.js';
+import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
+import { fetchRegistrationTicketByCodeFromDatabase, fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import type { Config } from '@/config.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { IdService } from '@/core/IdService.js';
@@ -41,9 +43,6 @@ export class SignupApiService {
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.registrationTicketsRepository)
-		private registrationTicketsRepository: RegistrationTicketsRepository,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -127,7 +126,7 @@ export class SignupApiService {
 			}
 		}
 
-		let ticket: MiRegistrationTicket | null = null;
+		let ticket: RegistrationTicketRow | null = null;
 
 		// テスト時はこの機構は障害となるため無効にする
 		if (process.env.NODE_ENV !== 'test' && this.meta.disableRegistration) {
@@ -136,9 +135,7 @@ export class SignupApiService {
 				return;
 			}
 
-			ticket = await this.registrationTicketsRepository.findOneBy({
-				code: invitationCode,
-			});
+			ticket = await fetchRegistrationTicketByCodeFromDatabase(this.drizzle, invitationCode);
 
 			if (ticket == null || ticket.usedById != null) {
 				reply.code(400);
@@ -153,7 +150,7 @@ export class SignupApiService {
 			// メアド認証が有効の場合
 			if (this.meta.emailRequiredForSignup) {
 				// メアド認証済みならエラー
-				if (ticket.usedBy) {
+				if (ticket.usedById) {
 					reply.code(400);
 					return;
 				}
@@ -205,7 +202,7 @@ export class SignupApiService {
 				`To complete signup, please click this link: ${link}`);
 
 			if (ticket) {
-				await this.registrationTicketsRepository.update(ticket.id, {
+				await updateRegistrationTicketInDatabase(this.drizzle, ticket.id, {
 					usedAt: new Date(),
 					pendingUserId: pendingUser.id,
 				});
@@ -225,9 +222,8 @@ export class SignupApiService {
 				});
 
 				if (ticket) {
-					await this.registrationTicketsRepository.update(ticket.id, {
+					await updateRegistrationTicketInDatabase(this.drizzle, ticket.id, {
 						usedAt: new Date(),
-						usedBy: account,
 						usedById: account.id,
 					});
 				}
@@ -270,10 +266,9 @@ export class SignupApiService {
 				emailVerifyCode: null,
 			});
 
-			const ticket = await this.registrationTicketsRepository.findOneBy({ pendingUserId: pendingUser.id });
+			const ticket = await fetchRegistrationTicketByPendingUserIdFromDatabase(this.drizzle, pendingUser.id);
 			if (ticket) {
-				await this.registrationTicketsRepository.update(ticket.id, {
-					usedBy: account,
+				await updateRegistrationTicketInDatabase(this.drizzle, ticket.id, {
 					usedById: account.id,
 					pendingUserId: null,
 				});

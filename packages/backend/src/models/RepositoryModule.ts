@@ -24,7 +24,6 @@ import {
 	MiNoteReaction,
 	MiPage,
 	MiPoll,
-	MiRegistrationTicket,
 	MiRepository,
 	miRepository,
 	MiRole,
@@ -127,12 +126,6 @@ const $blockingsRepository: Provider = {
 	inject: [DI.db],
 };
 
-const $registrationTicketsRepository: Provider = {
-	provide: DI.registrationTicketsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiRegistrationTicket).extend(miRepository as MiRepository<MiRegistrationTicket>),
-	inject: [DI.db],
-};
-
 const $accessTokensRepository: Provider = {
 	provide: DI.accessTokensRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiAccessToken).extend(miRepository as MiRepository<MiAccessToken>),
@@ -205,7 +198,6 @@ const $rolesRepository: Provider = {
 		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$registrationTicketsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,
@@ -232,7 +224,6 @@ const $rolesRepository: Provider = {
 		$driveFoldersRepository,
 		$mutingsRepository,
 		$blockingsRepository,
-		$registrationTicketsRepository,
 		$accessTokensRepository,
 		$pagesRepository,
 		$galleryPostsRepository,

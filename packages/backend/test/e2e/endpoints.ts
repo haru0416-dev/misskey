@@ -194,6 +194,51 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('invite', () => {
+		test('invite/create したコードを invite/list で取得でき、invite/delete で削除できる', async () => {
+			const inviterRole = await role(alice, {}, { canInvite: { priority: 0, useDefault: false, value: true } });
+			await api('admin/roles/assign', { userId: bob.id, roleId: inviterRole.id }, alice);
+			await api('admin/roles/assign', { userId: carol.id, roleId: inviterRole.id }, alice);
+
+			const created = await api('invite/create', {}, bob);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.used, false);
+			assert.strictEqual(created.body.usedAt, null);
+			assert.strictEqual(created.body.createdBy?.id, bob.id);
+
+			const limit = await api('invite/limit', {}, bob);
+			assert.strictEqual(limit.status, 200);
+			assert.strictEqual(limit.body.remaining, null);
+
+			const list = await api('invite/list', {}, bob);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some(ticket => ticket.id === created.body.id));
+
+			const deletedByStranger = await api('invite/delete', { inviteId: created.body.id }, carol);
+			assert.strictEqual(deletedByStranger.status, 400);
+			assert.strictEqual(castAsError(deletedByStranger.body as any).error.code, 'ACCESS_DENIED');
+
+			const deleted = await api('invite/delete', { inviteId: created.body.id }, bob);
+			assert.strictEqual(deleted.status, 204);
+
+			const listAfterDelete = await api('invite/list', {}, bob);
+			assert.strictEqual(listAfterDelete.status, 200);
+			assert.ok(!listAfterDelete.body.some(ticket => ticket.id === created.body.id));
+		});
+
+		test('admin/invite/create したコードを admin/invite/list で取得できる', async () => {
+			const created = await api('admin/invite/create', { count: 2 }, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.length, 2);
+
+			const list = await api('admin/invite/list', { type: 'unused' }, alice);
+			assert.strictEqual(list.status, 200);
+			for (const ticket of created.body) {
+				assert.ok(list.body.some(x => x.id === ticket.id));
+			}
+		});
+	});
+
 	describe('i/update', () => {
 		test('アカウント設定を更新できる', async () => {
 			const myName = '大室櫻子';

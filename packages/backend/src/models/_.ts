@@ -99,7 +99,6 @@ export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
 export type NoteReactionsRepository = Repository<MiNoteReaction> & MiRepository<MiNoteReaction>;
 export type PagesRepository = Repository<MiPage> & MiRepository<MiPage>;
 export type PollsRepository = Repository<MiPoll> & MiRepository<MiPoll>;
-export type RegistrationTicketsRepository = Repository<MiRegistrationTicket> & MiRepository<MiRegistrationTicket>;
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
