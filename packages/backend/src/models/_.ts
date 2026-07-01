@@ -57,7 +57,6 @@ import { MiPollVote } from '@/models/PollVote.js';
 import { MiRegistrationTicket } from '@/models/RegistrationTicket.js';
 import { MiRegistryItem } from '@/models/RegistryItem.js';
 import { MiRenoteMuting } from '@/models/RenoteMuting.js';
-import { MiRetentionAggregation } from '@/models/RetentionAggregation.js';
 import { MiRole } from '@/models/Role.js';
 import { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { MiSignin } from '@/models/Signin.js';
@@ -140,7 +139,6 @@ export {
 	MiWebhook,
 	MiSystemWebhook,
 	MiChannel,
-	MiRetentionAggregation,
 	MiRole,
 	MiRoleAssignment,
 	MiFlash,
@@ -208,7 +206,6 @@ export type UserSecurityKeysRepository = Repository<MiUserSecurityKey> & MiRepos
 export type WebhooksRepository = Repository<MiWebhook> & MiRepository<MiWebhook>;
 export type SystemWebhooksRepository = Repository<MiSystemWebhook> & MiRepository<MiWebhook>;
 export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>;
-export type RetentionAggregationsRepository = Repository<MiRetentionAggregation> & MiRepository<MiRetentionAggregation>;
 export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;
 export type RoleAssignmentsRepository = Repository<MiRoleAssignment> & MiRepository<MiRoleAssignment>;
 export type FlashsRepository = Repository<MiFlash> & MiRepository<MiFlash>;

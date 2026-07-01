@@ -4,9 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { RetentionAggregationsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { listLatestRetentionAggregations } from '@/core/RetentionAggregationStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['users'],
@@ -55,16 +56,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.retentionAggregationsRepository)
-		private retentionAggregationsRepository: RetentionAggregationsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const records = await this.retentionAggregationsRepository.find({
-				order: {
-					id: 'DESC',
-				},
-				take: 30,
-			});
+			const records = await listLatestRetentionAggregations(this.drizzle, 30);
 
 			return records.map(record => ({
 				createdAt: record.createdAt.toISOString(),
