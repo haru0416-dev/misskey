@@ -11,7 +11,7 @@ import type { MiBlocking } from '@/models/Blocking.js';
 import { QueueService } from '@/core/QueueService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
-import type { FollowRequestsRepository, BlockingsRepository, UserListsRepository, UserListMembershipsRepository } from '@/models/_.js';
+import type { BlockingsRepository, UserListsRepository, UserListMembershipsRepository } from '@/models/_.js';
 import Logger from '@/logger.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -20,6 +20,8 @@ import { UserWebhookService } from '@/core/UserWebhookService.js';
 import { bindThis } from '@/decorators.js';
 import { CacheService } from '@/core/CacheService.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
 
 @Injectable()
 export class UserBlockingService implements OnModuleInit {
@@ -29,8 +31,8 @@ export class UserBlockingService implements OnModuleInit {
 	constructor(
 		private moduleRef: ModuleRef,
 
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.blockingsRepository)
 		private blockingsRepository: BlockingsRepository,
@@ -93,19 +95,13 @@ export class UserBlockingService implements OnModuleInit {
 
 	@bindThis
 	private async cancelRequest(follower: MiUser, followee: MiUser, silent = false) {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (request == null) {
 			return;
 		}
 
-		await this.followRequestsRepository.delete({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (this.userEntityService.isLocalUser(followee)) {
 			this.userEntityService.pack(followee, followee, {

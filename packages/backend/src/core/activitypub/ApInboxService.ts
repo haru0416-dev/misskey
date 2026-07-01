@@ -24,7 +24,9 @@ import { UtilityService } from '@/core/UtilityService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { QueueService } from '@/core/QueueService.js';
-import type { UsersRepository, NotesRepository, FollowingsRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
+import type { UsersRepository, NotesRepository, FollowingsRepository, MiMeta } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
 import { bindThis } from '@/decorators.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -61,8 +63,8 @@ export class ApInboxService {
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
 
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private noteEntityService: NoteEntityService,
@@ -734,12 +736,7 @@ export class ApInboxService {
 			return 'skip: フォロー解除しようとしているユーザーはローカルユーザーではありません';
 		}
 
-		const requestExist = await this.followRequestsRepository.exists({
-			where: {
-				followerId: actor.id,
-				followeeId: followee.id,
-			},
-		});
+		const requestExist = await followRequestExistsInDatabase(this.db, actor.id, followee.id);
 
 		const isFollowing = await this.followingsRepository.exists({
 			where: {

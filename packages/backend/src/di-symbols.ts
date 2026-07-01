@@ -23,7 +23,6 @@ export const DI = {
 	userListsRepository: Symbol('userListsRepository'),
 	userListMembershipsRepository: Symbol('userListMembershipsRepository'),
 	followingsRepository: Symbol('followingsRepository'),
-	followRequestsRepository: Symbol('followRequestsRepository'),
 	instancesRepository: Symbol('instancesRepository'),
 	emojisRepository: Symbol('emojisRepository'),
 	driveFilesRepository: Symbol('driveFilesRepository'),

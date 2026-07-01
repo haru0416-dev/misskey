@@ -12,7 +12,6 @@ import {
 	MiDriveFile,
 	MiEmoji,
 	MiFollowing,
-	MiFollowRequest,
 	MiGalleryPost,
 	MiInstance,
 	MiMuting,
@@ -62,12 +61,6 @@ const $userListMembershipsRepository: Provider = {
 const $followingsRepository: Provider = {
 	provide: DI.followingsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiFollowing).extend(miRepository as MiRepository<MiFollowing>),
-	inject: [DI.db],
-};
-
-const $followRequestsRepository: Provider = {
-	provide: DI.followRequestsRepository,
-	useFactory: (db: DataSource) => db.getRepository(MiFollowRequest).extend(miRepository as MiRepository<MiFollowRequest>),
 	inject: [DI.db],
 };
 
@@ -140,7 +133,6 @@ const $rolesRepository: Provider = {
 		$userListsRepository,
 		$userListMembershipsRepository,
 		$followingsRepository,
-		$followRequestsRepository,
 		$instancesRepository,
 		$emojisRepository,
 		$driveFilesRepository,
@@ -159,7 +151,6 @@ const $rolesRepository: Provider = {
 		$userListsRepository,
 		$userListMembershipsRepository,
 		$followingsRepository,
-		$followRequestsRepository,
 		$instancesRepository,
 		$emojisRepository,
 		$driveFilesRepository,

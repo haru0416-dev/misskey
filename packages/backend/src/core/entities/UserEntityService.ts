@@ -26,7 +26,6 @@ import {
 import type {
 	BlockingsRepository,
 	FollowingsRepository,
-	FollowRequestsRepository,
 	MiFollowing,
 	MiMeta,
 	MiUserProfile,
@@ -41,6 +40,12 @@ import {
 	listUserMemoTextsByUserIdFromDatabase,
 } from '@/core/UserMemoStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import {
+	followRequestExistsByFolloweeIdInDatabase,
+	followRequestExistsInDatabase,
+	listFollowRequestFolloweeIdsByFollowerIdFromDatabase,
+	listFollowRequestFollowerIdsByFolloweeIdFromDatabase,
+} from '@/core/FollowRequestStore.js';
 import {
 	listUserNotePiningsByUserIdFromDatabase,
 	listUserNotePiningsByUserIdsFromDatabase,
@@ -131,9 +136,6 @@ export class UserEntityService implements OnModuleInit {
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
 
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
-
 		@Inject(DI.blockingsRepository)
 		private blockingsRepository: BlockingsRepository,
 
@@ -192,18 +194,8 @@ export class UserEntityService implements OnModuleInit {
 					followeeId: me,
 				},
 			}),
-			this.followRequestsRepository.exists({
-				where: {
-					followerId: me,
-					followeeId: target,
-				},
-			}),
-			this.followRequestsRepository.exists({
-				where: {
-					followerId: target,
-					followeeId: me,
-				},
-			}),
+			followRequestExistsInDatabase(this.drizzle, me, target),
+			followRequestExistsInDatabase(this.drizzle, target, me),
 			this.blockingsRepository.exists({
 				where: {
 					blockerId: me,
@@ -258,16 +250,8 @@ export class UserEntityService implements OnModuleInit {
 				.where('f.followeeId = :me', { me })
 				.getRawMany<{ f_followerId: string }>()
 				.then(it => it.map(it => it.f_followerId)),
-			this.followRequestsRepository.createQueryBuilder('f')
-				.select('f.followeeId')
-				.where('f.followerId = :me', { me })
-				.getRawMany<{ f_followeeId: string }>()
-				.then(it => it.map(it => it.f_followeeId)),
-			this.followRequestsRepository.createQueryBuilder('f')
-				.select('f.followerId')
-				.where('f.followeeId = :me', { me })
-				.getRawMany<{ f_followerId: string }>()
-				.then(it => it.map(it => it.f_followerId)),
+			listFollowRequestFolloweeIdsByFollowerIdFromDatabase(this.drizzle, me),
+			listFollowRequestFollowerIdsByFolloweeIdFromDatabase(this.drizzle, me),
 			this.blockingsRepository.createQueryBuilder('b')
 				.select('b.blockeeId')
 				.where('b.blockerId = :me', { me })
@@ -359,11 +343,7 @@ export class UserEntityService implements OnModuleInit {
 
 	@bindThis
 	public async getHasPendingReceivedFollowRequest(userId: MiUser['id']): Promise<boolean> {
-		const count = await this.followRequestsRepository.countBy({
-			followeeId: userId,
-		});
-
-		return count > 0;
+		return await followRequestExistsByFolloweeIdInDatabase(this.drizzle, userId);
 	}
 
 	@bindThis

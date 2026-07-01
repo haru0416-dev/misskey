@@ -13,7 +13,7 @@ import accepts from 'accepts';
 import vary from 'vary';
 import secureJson from 'secure-json-parse';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, NotesRepository, EmojisRepository, UserProfilesRepository, UsersRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
+import type { FollowingsRepository, NotesRepository, EmojisRepository, UserProfilesRepository, UsersRepository, MiMeta } from '@/models/_.js';
 import * as url from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -33,6 +33,7 @@ import * as Acct from '@/misc/acct.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
 import { fetchNoteReactionByIdFromDatabase } from '@/core/NoteReactionStore.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginOptions, FastifyBodyParser } from 'fastify';
 import type { FindOptionsWhere } from 'typeorm';
@@ -66,9 +67,6 @@ export class ActivityPubServerService {
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
 
 		private utilityService: UtilityService,
 		private userEntityService: UserEntityService,
@@ -889,9 +887,7 @@ export class ActivityPubServerService {
 			// This may be used before the follow is completed, so we do not
 			// check if the following exists and only check if the follow request exists.
 
-			const followRequest = await this.followRequestsRepository.findOneBy({
-				id: request.params.followRequestId,
-			});
+			const followRequest = await fetchFollowRequestByIdFromDatabase(this.db, request.params.followRequestId);
 
 			if (followRequest == null) {
 				reply.code(404);

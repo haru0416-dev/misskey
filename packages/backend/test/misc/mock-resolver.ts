@@ -12,7 +12,6 @@ import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { LoggerService } from '@/core/LoggerService.js';
 import type { UtilityService } from '@/core/UtilityService.js';
 import type {
-	FollowRequestsRepository,
 	MiMeta,
 	NotesRepository,
 	UsersRepository,
@@ -38,7 +37,6 @@ export class MockResolver extends Resolver {
 			{} as UsersRepository,
 			{} as NotesRepository,
 			{} as MiDrizzleDatabase,
-			{} as FollowRequestsRepository,
 			{} as UtilityService,
 			{} as SystemAccountService,
 			{} as ApRequestService,

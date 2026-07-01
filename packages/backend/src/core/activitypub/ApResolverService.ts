@@ -7,7 +7,6 @@ import { Inject, Injectable, Scope } from '@nestjs/common';
 import { IsNull, Not } from 'typeorm';
 import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import type {
-	FollowRequestsRepository,
 	MiMeta,
 	NotesRepository,
 	UsersRepository
@@ -23,6 +22,7 @@ import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { ICollection, IObject, IOrderedCollection } from './type.js';
 import { isCollectionOrOrderedCollection } from './type.js';
@@ -54,9 +54,6 @@ export class Resolver {
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
 
 		private utilityService: UtilityService,
 		private systemAccountService: SystemAccountService,
@@ -174,7 +171,7 @@ export class Resolver {
 				return fetchNoteReactionByIdOrFailFromDatabase(this.db, parsed.id).then(async reaction =>
 					this.apRendererService.addContext(await this.apRendererService.renderLike(reaction, { uri: null })));
 			case 'follows':
-				return this.followRequestsRepository.findOneBy({ id: parsed.id })
+				return fetchFollowRequestByIdFromDatabase(this.db, parsed.id)
 					.then(async followRequest => {
 						if (followRequest == null) throw new IdentifiableError('a9d946e5-d276-47f8-95fb-f04230289bb0', 'resolveLocal: invalid follow request ID');
 						const [follower, followee] = await Promise.all([

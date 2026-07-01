@@ -18,7 +18,7 @@ import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { UserWebhookService } from '@/core/UserWebhookService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, FollowRequestsRepository, InstancesRepository, MiMeta, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { FollowingsRepository, InstancesRepository, MiMeta, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { bindThis } from '@/decorators.js';
@@ -28,6 +28,15 @@ import type { Config } from '@/config.js';
 import { AccountMoveService } from '@/core/AccountMoveService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import type { ThinUser } from '@/queue/types.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	createFollowRequestInDatabase,
+	deleteFollowRequestByIdFromDatabase,
+	deleteFollowRequestFromDatabase,
+	fetchFollowRequestFromDatabase,
+	followRequestExistsInDatabase,
+	listAllFollowRequestsByFolloweeIdFromDatabase,
+} from '@/core/FollowRequestStore.js';
 import Logger from '../logger.js';
 
 const logger = new Logger('following/create');
@@ -67,8 +76,8 @@ export class UserFollowingService implements OnModuleInit {
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
 
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.instancesRepository)
 		private instancesRepository: InstancesRepository,
@@ -263,18 +272,10 @@ export class UserFollowingService implements OnModuleInit {
 
 		this.cacheService.userFollowingsCache.refresh(follower.id);
 
-		const requestExist = await this.followRequestsRepository.exists({
-			where: {
-				followeeId: followee.id,
-				followerId: follower.id,
-			},
-		});
+		const requestExist = await followRequestExistsInDatabase(this.db, follower.id, followee.id);
 
 		if (requestExist) {
-			await this.followRequestsRepository.delete({
-				followeeId: followee.id,
-				followerId: follower.id,
-			});
+			await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 		}
 
 		if (alreadyFollowed) return;
@@ -501,12 +502,9 @@ export class UserFollowingService implements OnModuleInit {
 		if (blocked) throw new Error('blocked');
 
 		// Remove old follow requests before creating a new one.
-		await this.followRequestsRepository.delete({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
-		const followRequest = await this.followRequestsRepository.insertOne({
+		const followRequest = await createFollowRequestInDatabase(this.db, {
 			id: this.idService.gen(),
 			followerId: follower.id,
 			followeeId: followee.id,
@@ -558,21 +556,13 @@ export class UserFollowingService implements OnModuleInit {
 			}
 		}
 
-		const requestExist = await this.followRequestsRepository.exists({
-			where: {
-				followeeId: followee.id,
-				followerId: follower.id,
-			},
-		});
+		const requestExist = await followRequestExistsInDatabase(this.db, follower.id, followee.id);
 
 		if (!requestExist) {
 			throw new IdentifiableError('17447091-ce07-46dd-b331-c1fd4f15b1e7', 'request not found');
 		}
 
-		await this.followRequestsRepository.delete({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		this.userEntityService.pack(followee.id, followee, {
 			schema: 'MeDetailed',
@@ -586,10 +576,7 @@ export class UserFollowingService implements OnModuleInit {
 		},
 		follower: MiUser,
 	): Promise<void> {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (request == null) {
 			throw new IdentifiableError('8884c2dd-5795-4ac9-b27e-6a01d38190f9', 'No follow request.');
@@ -612,9 +599,7 @@ export class UserFollowingService implements OnModuleInit {
 			id: MiUser['id']; host: MiUser['host']; uri: MiUser['host']; inbox: MiUser['inbox']; sharedInbox: MiUser['sharedInbox'];
 		},
 	): Promise<void> {
-		const requests = await this.followRequestsRepository.findBy({
-			followeeId: user.id,
-		});
+		const requests = await listAllFollowRequestsByFolloweeIdFromDatabase(this.db, user.id);
 
 		for (const request of requests) {
 			const follower = await this.usersRepository.findOneByOrFail({ id: request.followerId });
@@ -669,14 +654,11 @@ export class UserFollowingService implements OnModuleInit {
 	 */
 	@bindThis
 	private async removeFollowRequest(followee: Both, follower: Both): Promise<void> {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (!request) return;
 
-		await this.followRequestsRepository.delete(request.id);
+		await deleteFollowRequestByIdFromDatabase(this.db, request.id);
 	}
 
 	/**
@@ -707,10 +689,7 @@ export class UserFollowingService implements OnModuleInit {
 	 */
 	@bindThis
 	private async deliverReject(followee: Local, follower: Remote): Promise<void> {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		const content = this.apRendererService.addContext(this.apRendererService.renderReject(this.apRendererService.renderFollow(follower, followee, request?.requestId ?? undefined), followee));
 		this.queueService.deliver(followee, content, follower.inbox, false);

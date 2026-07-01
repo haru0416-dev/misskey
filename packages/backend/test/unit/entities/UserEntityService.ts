@@ -13,7 +13,7 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import {
 	BlockingsRepository,
-	FollowingsRepository, FollowRequestsRepository,
+	FollowingsRepository,
 	MiUserProfile, MutingsRepository,
 	UserProfilesRepository,
 	UsersRepository,
@@ -54,6 +54,7 @@ import { NotificationService } from '@/core/NotificationService.js';
 import { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import { ChatService } from '@/core/ChatService.js';
 import { renoteMuting } from '@/db/schema/renote-muting.js';
+import { followRequest } from '@/db/schema/follow-request.js';
 
 process.env.NODE_ENV = 'test';
 
@@ -65,7 +66,6 @@ describe('UserEntityService', () => {
 		let userProfileRepository: UserProfilesRepository;
 		let drizzle: MiDrizzleDatabase;
 		let followingRepository: FollowingsRepository;
-		let followingRequestRepository: FollowRequestsRepository;
 		let blockingRepository: BlockingsRepository;
 		let mutingRepository: MutingsRepository;
 
@@ -106,7 +106,7 @@ describe('UserEntityService', () => {
 		}
 
 		async function requestFollow(requester: MiUser, requestee: MiUser) {
-			await followingRequestRepository.insert({
+			await drizzle.insert(followRequest).values({
 				id: genAidx(Date.now()),
 				followerId: requester.id,
 				followeeId: requestee.id,
@@ -193,7 +193,6 @@ describe('UserEntityService', () => {
 			userProfileRepository = app.get<UserProfilesRepository>(DI.userProfilesRepository);
 			drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
 			followingRepository = app.get<FollowingsRepository>(DI.followingsRepository);
-			followingRequestRepository = app.get<FollowRequestsRepository>(DI.followRequestsRepository);
 			blockingRepository = app.get<BlockingsRepository>(DI.blockingsRepository);
 			mutingRepository = app.get<MutingsRepository>(DI.mutingsRepository);
 		});
