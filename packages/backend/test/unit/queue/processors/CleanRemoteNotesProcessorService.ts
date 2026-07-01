@@ -10,7 +10,6 @@ import {
 	type MiNote,
 	type MiUser,
 	type NotesRepository,
-	type NoteFavoritesRepository,
 	type NoteReactionsRepository,
 	type UsersRepository,
 	type UserProfilesRepository,
@@ -22,7 +21,9 @@ import { IdService } from '@/core/IdService.js';
 import { QueueLoggerService } from '@/queue/QueueLoggerService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { noteFavorite } from '@/db/schema/note-favorite.js';
 import { userNotePining } from '@/db/schema/user-note-pining.js';
+import { createNoteFavoriteInDatabase } from '@/core/NoteFavoriteStore.js';
 import { createUserNotePiningInDatabase } from '@/core/UserNotePiningStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
@@ -31,7 +32,6 @@ describe('CleanRemoteNotesProcessorService', () => {
 	let service: CleanRemoteNotesProcessorService;
 	let idService: IdService;
 	let notesRepository: NotesRepository;
-	let noteFavoritesRepository: NoteFavoritesRepository;
 	let noteReactionsRepository: NoteReactionsRepository;
 	let db: MiDrizzleDatabase;
 	let usersRepository: UsersRepository;
@@ -115,7 +115,6 @@ describe('CleanRemoteNotesProcessorService', () => {
 		service = app.get(CleanRemoteNotesProcessorService);
 		idService = app.get(IdService);
 		notesRepository = app.get(DI.notesRepository);
-		noteFavoritesRepository = app.get(DI.noteFavoritesRepository);
 		noteReactionsRepository = app.get(DI.noteReactionsRepository);
 		db = app.get(DI.drizzle);
 		usersRepository = app.get(DI.usersRepository);
@@ -142,8 +141,8 @@ describe('CleanRemoteNotesProcessorService', () => {
 		// Clean up test data
 		await Promise.all([
 			notesRepository.createQueryBuilder().delete().execute(),
+			db.delete(noteFavorite),
 			db.delete(userNotePining),
-			noteFavoritesRepository.createQueryBuilder().delete().execute(),
 			noteReactionsRepository.createQueryBuilder().delete().execute(),
 		]);
 	}, 60 * 1000);
@@ -233,7 +232,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// Favorite the note
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: olderRemoteNote.id,
@@ -395,7 +394,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			}, carol, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 2000);
 
 			// Favorite the reply note
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: replyNote.id,
@@ -474,7 +473,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// Should NOT be deleted: old remote note but favorited
 			const favoritedNote = await createNote({}, carol, oldTime);
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: favoritedNote.id,
@@ -1196,7 +1195,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 2) お気に入り保護
 			const favorited = await createNote({}, bob, oldTime - 1);
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: favorited.id,

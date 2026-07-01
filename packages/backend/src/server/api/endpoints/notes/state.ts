@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, NoteFavoritesRepository } from '@/models/_.js';
+import type { NotesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
+import { noteFavoriteExistsInDatabase } from '@/core/NoteFavoriteStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
@@ -48,26 +49,17 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.noteFavoritesRepository)
-		private noteFavoritesRepository: NoteFavoritesRepository,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const note = await this.notesRepository.findOneByOrFail({ id: ps.noteId });
 
 			const [favorite, threadMuting] = await Promise.all([
-				this.noteFavoritesRepository.count({
-					where: {
-						userId: me.id,
-						noteId: note.id,
-					},
-					take: 1,
-				}),
+				noteFavoriteExistsInDatabase(this.drizzle, me.id, note.id),
 				noteThreadMutingExistsInDatabase(this.drizzle, me.id, note.threadId ?? note.id),
 			]);
 
 			return {
-				isFavorited: favorite !== 0,
+				isFavorited: favorite,
 				isMutedThread: threadMuting,
 			};
 		});

@@ -4,11 +4,17 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NoteFavoritesRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
+import type { NotesRepository } from '@/models/_.js';
 import { NoteFavoriteEntityService } from '@/core/entities/NoteFavoriteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import {
+	listNoteFavoritesByUserIdFromDatabase,
+	resolveNoteFavoritePagination,
+} from '@/core/NoteFavoriteStore.js';
+import { IdService } from '@/core/IdService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['account', 'notes', 'favorites'],
@@ -43,22 +49,33 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.noteFavoritesRepository)
-		private noteFavoritesRepository: NoteFavoritesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
+		@Inject(DI.notesRepository)
+		private notesRepository: NotesRepository,
 
 		private noteFavoriteEntityService: NoteFavoriteEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.noteFavoritesRepository.createQueryBuilder('favorite'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('favorite.userId = :meId', { meId: me.id })
-				.leftJoinAndSelect('favorite.note', 'note');
+			const pagination = resolveNoteFavoritePagination(this.idService, ps);
+			const favorites = await listNoteFavoritesByUserIdFromDatabase(this.db, me.id, {
+				limit: ps.limit,
+				...pagination,
+			});
 
-			const favorites = await query
-				.limit(ps.limit)
-				.getMany();
+			const notes = favorites.length === 0
+				? []
+				: await this.notesRepository.findBy({ id: In(favorites.map(favorite => favorite.noteId)) });
+			const noteMap = new Map(notes.map(note => [note.id, note]));
 
-			return await this.noteFavoriteEntityService.packMany(favorites, me);
+			const packableFavorites = favorites.map(favorite => ({
+				...favorite,
+				note: noteMap.get(favorite.noteId) ?? null,
+			}));
+
+			return await this.noteFavoriteEntityService.packMany(packableFavorites, me);
 		});
 	}
 }

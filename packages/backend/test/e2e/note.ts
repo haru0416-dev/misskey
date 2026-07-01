@@ -43,6 +43,46 @@ describe('Note', () => {
 		assert.strictEqual(res.body.createdNote.text, post.text);
 	});
 
+	test('お気に入りを作成・取得・削除できる', async () => {
+		const note = await post(bob, {
+			text: 'favorite target',
+		});
+
+		const initialState = await api('notes/state', { noteId: note.id }, alice);
+		assert.strictEqual(initialState.status, 200);
+		assert.strictEqual(initialState.body.isFavorited, false);
+
+		const create = await api('notes/favorites/create', { noteId: note.id }, alice);
+		assert.strictEqual(create.status, 204);
+
+		const favoritedState = await api('notes/state', { noteId: note.id }, alice);
+		assert.strictEqual(favoritedState.status, 200);
+		assert.strictEqual(favoritedState.body.isFavorited, true);
+
+		const duplicate = await api('notes/favorites/create', { noteId: note.id }, alice);
+		assert.strictEqual(duplicate.status, 400);
+		assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FAVORITED');
+
+		const favorites = await api('i/favorites', { limit: 10 }, alice);
+		assert.strictEqual(favorites.status, 200);
+		assert.ok(favorites.body.some(favorite => favorite.noteId === note.id && favorite.note.text === 'favorite target'));
+
+		const remove = await api('notes/favorites/delete', { noteId: note.id }, alice);
+		assert.strictEqual(remove.status, 204);
+
+		const removedState = await api('notes/state', { noteId: note.id }, alice);
+		assert.strictEqual(removedState.status, 200);
+		assert.strictEqual(removedState.body.isFavorited, false);
+
+		const removedFavorites = await api('i/favorites', { limit: 10 }, alice);
+		assert.strictEqual(removedFavorites.status, 200);
+		assert.strictEqual(removedFavorites.body.some(favorite => favorite.noteId === note.id), false);
+
+		const duplicateRemove = await api('notes/favorites/delete', { noteId: note.id }, alice);
+		assert.strictEqual(duplicateRemove.status, 400);
+		assert.strictEqual(castAsError(duplicateRemove.body as any).error.code, 'NOT_FAVORITED');
+	});
+
 	test('ファイルを添付できる', async () => {
 		const file = await uploadUrl(alice, 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg');
 

@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { MiNoteFavorite, NoteFavoritesRepository, PollsRepository, MiUser, UsersRepository } from '@/models/_.js';
+import type { NotesRepository, PollsRepository, MiUser, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -18,6 +18,12 @@ import { IdService } from '@/core/IdService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { QueryService } from '@/core/QueryService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
+import {
+	countNoteFavoritesByUserIdFromDatabase,
+	listNoteFavoritesByUserIdFromDatabase,
+} from '@/core/NoteFavoriteStore.js';
+import type { NoteFavoriteRow } from '@/db/schema/note-favorite.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 import type { DbJobDataWithUser } from '../types.js';
@@ -33,8 +39,11 @@ export class ExportFavoritesProcessorService {
 		@Inject(DI.pollsRepository)
 		private pollsRepository: PollsRepository,
 
-		@Inject(DI.noteFavoritesRepository)
-		private noteFavoritesRepository: NoteFavoritesRepository,
+		@Inject(DI.notesRepository)
+		private notesRepository: NotesRepository,
+
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private queueLoggerService: QueueLoggerService,
@@ -78,27 +87,16 @@ export class ExportFavoritesProcessorService {
 			await write('[');
 
 			let exportedFavoritesCount = 0;
-			let cursor: MiNoteFavorite['id'] | null = null;
+			let cursor: NoteFavoriteRow['id'] | null = null;
 
-			const total = await this.noteFavoritesRepository.countBy({
-				userId: user.id,
-			});
+			const total = await countNoteFavoritesByUserIdFromDatabase(this.db, user.id);
 
 			while (true) {
-				const query = this.noteFavoritesRepository.createQueryBuilder('favorite')
-					.leftJoinAndSelect('favorite.note', 'note')
-					.leftJoinAndSelect('note.user', 'user')
-					.where('favorite.userId = :userId', { userId: user.id })
-					.orderBy('favorite.id', 'ASC')
-					.take(100);
-
-				if (cursor) {
-					query.andWhere('favorite.id > :cursor', { cursor });
-				}
-
-				this.queryService.generateVisibilityQuery(query, { id: user.id });
-
-				const favorites = await query.getMany() as (MiNoteFavorite & { note: MiNote & { user: MiUser } })[];
+				const favorites = await listNoteFavoritesByUserIdFromDatabase(this.db, user.id, {
+					limit: 100,
+					order: 'asc',
+					sinceId: cursor,
+				});
 
 				if (favorites.length === 0) {
 					job.updateProgress(100);
@@ -106,18 +104,35 @@ export class ExportFavoritesProcessorService {
 				}
 
 				cursor = favorites.at(-1)?.id ?? null;
+				const noteIds = favorites.map(favorite => favorite.noteId);
+				const noteQuery = this.notesRepository.createQueryBuilder('note')
+					.innerJoinAndSelect('note.user', 'user')
+					.where('note.id IN (:...noteIds)', { noteIds });
+
+				this.queryService.generateVisibilityQuery(noteQuery, { id: user.id });
+
+				const notes = await noteQuery.getMany() as (MiNote & { user: MiUser })[];
+				const noteMap = new Map(notes.map(note => [note.id, note]));
 
 				for (const favorite of favorites) {
-					const noteCreatedAt = this.idService.parse(favorite.note.id).date;
-					if (shouldHideNoteByTime(favorite.note.user.makeNotesHiddenBefore, noteCreatedAt)) {
+					const note = noteMap.get(favorite.noteId);
+					if (note == null) {
+						continue;
+					}
+
+					const noteCreatedAt = this.idService.parse(note.id).date;
+					if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) {
 						continue;
 					}
 
 					let poll: MiPoll | undefined;
-					if (favorite.note.hasPoll) {
-						poll = await this.pollsRepository.findOneByOrFail({ noteId: favorite.note.id });
+					if (note.hasPoll) {
+						poll = await this.pollsRepository.findOneByOrFail({ noteId: note.id });
 					}
-					const content = JSON.stringify(this.serialize(favorite, poll));
+					const content = JSON.stringify(this.serialize({
+						...favorite,
+						note,
+					}, poll));
 					const isFirst = exportedFavoritesCount === 0;
 					await write(isFirst ? content : ',\n' + content);
 					exportedFavoritesCount++;
@@ -145,7 +160,7 @@ export class ExportFavoritesProcessorService {
 		}
 	}
 
-	private serialize(favorite: MiNoteFavorite & { note: MiNote & { user: MiUser } }, poll: MiPoll | null = null): Record<string, unknown> {
+	private serialize(favorite: NoteFavoriteRow & { note: MiNote & { user: MiUser } }, poll: MiPoll | null = null): Record<string, unknown> {
 		return {
 			id: favorite.id,
 			createdAt: this.idService.parse(favorite.id).date.toISOString(),

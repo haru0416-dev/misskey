@@ -226,4 +226,33 @@ describe('export-clips', () => {
 		assert.strictEqual(exported[0].clipNotes[0].note.text, 'baz');
 		assert.strictEqual(exported[0].clipNotes[0].note.user.username, 'bob');
 	});
+
+	test('export favorites with notes', async () => {
+		const note1 = await post(alice, {
+			text: 'favorite1',
+		});
+
+		const note2 = await post(alice, {
+			text: 'favorite2',
+			poll: {
+				choices: ['sakura', 'izumi', 'ako'],
+			},
+		});
+
+		for (const note of [note1, note2]) {
+			const res = await api('notes/favorites/create', {
+				noteId: note.id,
+			}, alice);
+			assert.strictEqual(res.status, 204);
+		}
+
+		const exportRes = await api('i/export-favorites', {}, alice);
+		assert.strictEqual(exportRes.status, 204);
+
+		const exported = await pollFirstDriveFile();
+		assert.strictEqual(exported.length, 2);
+		assert.strictEqual(exported[0].note.text, 'favorite1');
+		assert.strictEqual(exported[1].note.text, 'favorite2');
+		assert.deepStrictEqual(exported[1].note.poll.choices[0], 'sakura');
+	});
 });
