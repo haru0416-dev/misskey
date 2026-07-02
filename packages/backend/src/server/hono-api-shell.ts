@@ -29,6 +29,7 @@ import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHo
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRetention } from './hono-api-retention.js';
+import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
@@ -479,6 +480,24 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			return jsonResponse(c, await handleHonoApiRetention(deps, body), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			});
+		});
+	});
+
+	app.post('/roles/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiRolesList(deps, body));
+		});
+	});
+
+	app.post('/roles/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiRolesShow(deps, body));
 		});
 	});
 

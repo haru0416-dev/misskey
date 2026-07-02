@@ -17,6 +17,8 @@ import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
+import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
+import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
@@ -774,6 +776,69 @@ describe('Endpoints', () => {
 			const mine = await api('my/apps', { limit: 100 }, alice);
 			assert.strictEqual(mine.status, 200);
 			assert.ok(mine.body.some(app => app.id === created.body.id));
+		});
+	});
+
+	describe('role endpoints', () => {
+		test('roles/list and roles/show return packed public role data', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const createdRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 1000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono public role ${now}`,
+				description: 'Hono role endpoint test',
+				color: '#2255aa',
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 4242,
+				policies: {},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now - 999),
+				userId: bob.id,
+				roleId: createdRole.id,
+				expiresAt: null,
+			});
+
+			const unauthorizedList = await api('roles/list', {});
+			assert.strictEqual(unauthorizedList.status, 401);
+			assert.strictEqual(castAsError(unauthorizedList.body as any).error.code, 'CREDENTIAL_REQUIRED');
+
+			const list = await api('roles/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const listedRole = list.body.find(item => item.id === createdRole.id);
+			assert.ok(listedRole);
+			assert.strictEqual(listedRole.name, createdRole.name);
+			assert.strictEqual(listedRole.description, createdRole.description);
+			assert.strictEqual(listedRole.color, createdRole.color);
+			assert.strictEqual(listedRole.isPublic, true);
+			assert.strictEqual(listedRole.isExplorable, true);
+			assert.strictEqual(listedRole.displayOrder, 4242);
+			assert.strictEqual(listedRole.usersCount, 1);
+			assert.strictEqual(listedRole.policies.canInvite.useDefault, true);
+
+			const shown = await api('roles/show', { roleId: createdRole.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, createdRole.id);
+			assert.strictEqual(shown.body.name, createdRole.name);
+			assert.strictEqual(shown.body.usersCount, 1);
+
+			const missing = await api('roles/show', { roleId: '000000000000000000000000' });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
 		});
 	});
 
