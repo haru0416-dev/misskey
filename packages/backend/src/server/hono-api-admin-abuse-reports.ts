@@ -3,13 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { randomUUID } from 'node:crypto';
 import { listAbuseReportNotificationRecipientsFromDatabase } from '@/core/AbuseReportNotificationRecipientStore.js';
-import { fetchAbuseUserReportByIdFromDatabase, listAbuseUserReportsFromDatabase, resolveAbuseUserReportInDatabase, resolveAbuseUserReportPagination, updateAbuseUserReportModerationNoteInDatabase } from '@/core/AbuseUserReportStore.js';
+import { fetchAbuseUserReportByIdFromDatabase, listAbuseUserReportsFromDatabase, markAbuseUserReportForwardedInDatabase, resolveAbuseUserReportInDatabase, resolveAbuseUserReportPagination, updateAbuseUserReportModerationNoteInDatabase } from '@/core/AbuseUserReportStore.js';
+import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
+import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
+import type { IActivity, IFlag, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
-import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { DeliverQueue, SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
 import type { SystemWebhookPayload } from '@/core/SystemWebhookService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -26,6 +32,7 @@ export type HonoApiAdminAbuseReportsDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
+	deliverQueue: DeliverQueue;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
 };
 
@@ -47,6 +54,14 @@ const adminUpdateAbuseUserReportParamDef = {
 	required: ['reportId'],
 } as const;
 
+const adminForwardAbuseUserReportParamDef = {
+	type: 'object',
+	properties: {
+		reportId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['reportId'],
+} as const;
+
 const adminAbuseUserReportsParamDef = {
 	type: 'object',
 	properties: {
@@ -64,6 +79,7 @@ const adminAbuseUserReportsParamDef = {
 
 type AdminResolveAbuseUserReportParams = SchemaType<typeof adminResolveAbuseUserReportParamDef>;
 type AdminUpdateAbuseUserReportParams = SchemaType<typeof adminUpdateAbuseUserReportParamDef>;
+type AdminForwardAbuseUserReportParams = SchemaType<typeof adminForwardAbuseUserReportParamDef>;
 type AdminAbuseUserReportsParams = SchemaType<typeof adminAbuseUserReportsParamDef> & {
 	state: string | null;
 	reporterOrigin: 'combined' | 'local' | 'remote';
@@ -103,6 +119,37 @@ function noSuchAbuseReportForUpdateError(): HonoApiError {
 		id: '15f51cf5-46d1-4b1d-a618-b35bcbed0662',
 		kind: 'server',
 	});
+}
+
+function noSuchAbuseReportForForwardError(): HonoApiError {
+	return new HonoApiError({
+		status: 404,
+		message: 'No such abuse report.',
+		code: 'NO_SUCH_ABUSE_REPORT',
+		id: '8763e21b-d9bc-40be-acf6-54c1a6986493',
+		kind: 'server',
+	});
+}
+
+function genLocalUserUri(config: Config, userId: MiLocalUser['id']): string {
+	return `${config.url}/users/${userId}`;
+}
+
+function renderFlag(config: Config, user: MiLocalUser, object: IObject | string, content: string): IFlag {
+	return {
+		type: 'Flag',
+		actor: genLocalUserUri(config, user.id),
+		content,
+		object,
+	};
+}
+
+function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
+	if (activity.id == null) {
+		activity.id = `${config.url}/${randomUUID()}`;
+	}
+
+	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
 }
 
 async function packAbuseReportForSystemWebhook(
@@ -192,6 +239,37 @@ export async function handleHonoApiAdminAbuseUserReports(
 	});
 
 	return await packAbuseUserReportsForHonoApi(deps, reports);
+}
+
+export async function handleHonoApiAdminForwardAbuseUserReport(
+	deps: HonoApiAdminAbuseReportsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminForwardAbuseUserReportParamDef, body) as AdminForwardAbuseUserReportParams;
+	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
+	if (report == null) throw noSuchAbuseReportForForwardError();
+
+	if (report.targetUserHost == null) {
+		throw new Error('The target user host is null.');
+	}
+
+	if (report.forwarded) {
+		throw new Error('The report has already been forwarded.');
+	}
+
+	await markAbuseUserReportForwardedInDatabase(deps.db, report.id);
+
+	const actor = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'actor');
+	const targetUser = await fetchUserByIdOrFailFromDatabase(deps.db, report.targetUserId);
+	const flag = renderFlag(deps.config, actor, targetUser.uri!, report.comment);
+	const content = addActivityContext(deps.config, flag);
+	enqueueDeliverJob(deps.deliverQueue, deps.config, actor, content as IActivity, targetUser.inbox, false);
+
+	await logModerationEventInDatabase(deps, me, 'forwardAbuseReport', {
+		reportId: report.id,
+		report,
+	});
 }
 
 export async function handleHonoApiAdminResolveAbuseUserReport(
