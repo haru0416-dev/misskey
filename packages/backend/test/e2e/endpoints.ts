@@ -5,6 +5,7 @@
 
 process.env.NODE_ENV = 'test';
 
+import { createHash } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
@@ -943,6 +944,84 @@ describe('Endpoints', () => {
 			const getBody = await get.json() as { title?: string; items?: { title?: string }[] };
 			assert.strictEqual(getBody.title, 'Hono RSS Feed');
 			assert.strictEqual(getBody.items?.[0].title, 'First entry');
+		});
+	});
+
+	describe('fetch-external-resources endpoint', () => {
+		let resourceServer: Server | undefined;
+		let resourceUrl: string;
+		const data = 'line 1\r\nline 2';
+
+		beforeAll(async () => {
+			resourceServer = createServer((req, res) => {
+				const responseBody = req.url === '/invalid'
+					? JSON.stringify({ type: 'text/plain' })
+					: JSON.stringify({ type: 'text/plain', data });
+
+				res.writeHead(200, {
+					'Content-Type': 'application/json; charset=utf-8',
+				});
+				res.end(responseBody);
+			});
+			await new Promise<void>((resolve, reject) => {
+				resourceServer!.once('error', reject);
+				resourceServer!.listen(0, '127.0.0.1', () => {
+					resourceServer!.off('error', reject);
+					resolve();
+				});
+			});
+			const address = resourceServer.address() as AddressInfo;
+			resourceUrl = `http://127.0.0.1:${address.port}`;
+		});
+
+		afterAll(async () => {
+			await new Promise<void>((resolve, reject) => {
+				if (resourceServer == null || !resourceServer.listening) {
+					resolve();
+					return;
+				}
+
+				resourceServer.close(error => error ? reject(error) : resolve());
+			});
+		});
+
+		test('fetches, validates, and returns hashed external resources', async () => {
+			const hash = createHash('sha512').update(data.replace(/\r\n/g, '\n')).digest('hex');
+
+			const res = await api('fetch-external-resources', {
+				url: `${resourceUrl}/valid`,
+				hash,
+			}, alice);
+
+			assert.strictEqual(res.status, 200);
+			assert.deepStrictEqual(res.body, {
+				type: 'text/plain',
+				data,
+			});
+		});
+
+		test('rejects third-party app tokens and mismatched resources', async () => {
+			const appToken = await createAppToken(alice, ['read:account']);
+			const appDenied = await api('fetch-external-resources', {
+				url: `${resourceUrl}/valid`,
+				hash: 'bad',
+			}, { token: appToken });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const mismatched = await api('fetch-external-resources', {
+				url: `${resourceUrl}/valid`,
+				hash: 'bad',
+			}, alice);
+			assert.strictEqual(mismatched.status, 400);
+			assert.strictEqual(castAsError(mismatched.body as any).error.code, 'EXT_RESOURCE_HASH_DIDNT_MATCH');
+
+			const invalid = await api('fetch-external-resources', {
+				url: `${resourceUrl}/invalid`,
+				hash: 'bad',
+			}, alice);
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(invalid.body as any).error.code, 'EXT_RESOURCE_RETURNED_INVALID_SCHEMA');
 		});
 	});
 

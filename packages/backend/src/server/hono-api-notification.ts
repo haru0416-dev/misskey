@@ -4,6 +4,7 @@
  */
 
 import { ReplyError, type Redis } from 'ioredis';
+import { setTimeout as delay } from 'node:timers/promises';
 import type { Config } from '@/config.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -99,11 +100,11 @@ function createSimpleNotification(
 
 		deps.publishMainStream?.(userId, 'notification', notification);
 
-		setTimeout(async () => {
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
 			deps.publishMainStream?.(userId, 'unreadNotification', notification);
-		}, 2000).unref();
+		}).catch(() => {}));
 	})());
 }
 
