@@ -22,7 +22,12 @@ import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoAp
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
-import { handleHonoApiDriveFilesCheckExistence } from './hono-api-drive.js';
+import {
+	handleHonoApiDriveFilesCheckExistence,
+	handleHonoApiDriveFolders,
+	handleHonoApiDriveFoldersFind,
+	handleHonoApiDriveFoldersShow,
+} from './hono-api-drive.js';
 import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
@@ -336,6 +341,39 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:drive');
 
 			return jsonResponse(c, await handleHonoApiDriveFilesCheckExistence(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/folders', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFolders(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/folders/find', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFoldersFind(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/folders/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFoldersShow(deps, auth.user, body));
 		});
 	});
 

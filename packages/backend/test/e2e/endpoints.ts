@@ -23,6 +23,7 @@ import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
@@ -1438,6 +1439,93 @@ describe('Endpoints', () => {
 			assert.strictEqual(missing.body, false);
 		});
 
+		test('drive/folders list, find, and show preserve ownership and detail fields', async () => {
+			const config = loadConfig();
+			const stamp = Date.now().toString(36);
+			const parent = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-parent-${stamp}`,
+				parentId: null,
+			});
+			const child = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-child-${stamp}`,
+				parentId: parent.id,
+			});
+			const rootChildName = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-child-${stamp}`,
+				parentId: null,
+			});
+			const otherUserFolder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-child-${stamp}`,
+				parentId: null,
+			});
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: createHash('md5').update(`hono-drive-folder-${stamp}`).digest('hex'),
+				name: 'hono-drive-folder.txt',
+				type: 'text/plain',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/hono-drive-folder-${stamp}`,
+				folderId: parent.id,
+			});
+
+			const rootList = await api('drive/folders', { folderId: null }, alice);
+			assert.strictEqual(rootList.status, 200);
+			assert.strictEqual((rootList.body as any[]).some(item => item.id === parent.id), true);
+			assert.strictEqual((rootList.body as any[]).some(item => item.id === rootChildName.id), true);
+			assert.strictEqual((rootList.body as any[]).some(item => item.id === otherUserFolder.id), false);
+
+			const childList = await api('drive/folders', { folderId: parent.id }, alice);
+			assert.strictEqual(childList.status, 200);
+			assert.deepStrictEqual((childList.body as any[]).map(item => item.id), [child.id]);
+
+			const childFind = await api('drive/folders/find', {
+				name: child.name,
+				parentId: parent.id,
+			}, alice);
+			assert.strictEqual(childFind.status, 200);
+			assert.deepStrictEqual((childFind.body as any[]).map(item => item.id), [child.id]);
+
+			const rootFind = await api('drive/folders/find', {
+				name: child.name,
+				parentId: null,
+			}, alice);
+			assert.strictEqual(rootFind.status, 200);
+			assert.strictEqual((rootFind.body as any[]).some(item => item.id === rootChildName.id), true);
+			assert.strictEqual((rootFind.body as any[]).some(item => item.id === child.id), false);
+			assert.strictEqual((rootFind.body as any[]).some(item => item.id === otherUserFolder.id), false);
+
+			const showParent = await api('drive/folders/show', { folderId: parent.id }, alice);
+			assert.strictEqual(showParent.status, 200);
+			const shownParent = showParent.body as any;
+			assert.strictEqual(shownParent.id, parent.id);
+			assert.strictEqual(shownParent.parentId, null);
+			assert.strictEqual(shownParent.foldersCount, 1);
+			assert.strictEqual(shownParent.filesCount, 1);
+			assert.strictEqual(typeof shownParent.createdAt, 'string');
+
+			const showChild = await api('drive/folders/show', { folderId: child.id }, alice);
+			assert.strictEqual(showChild.status, 200);
+			const shownChild = showChild.body as any;
+			assert.strictEqual(shownChild.id, child.id);
+			assert.ok(shownChild.parent);
+			assert.strictEqual(shownChild.parent.id, parent.id);
+
+			const otherUserShow = await api('drive/folders/show', { folderId: parent.id }, bob);
+			assert.strictEqual(otherUserShow.status, 400);
+			assert.strictEqual(castAsError(otherUserShow.body as any).error.id, 'd74ab9eb-bb09-4bba-bf24-fb58f761e1e9');
+		});
+
 		test('notes/drafts/count returns the caller draft count and rejects moved users', async () => {
 			const config = loadConfig();
 			const before = await api('notes/drafts/count', {}, alice);
@@ -1671,6 +1759,9 @@ describe('Endpoints', () => {
 
 			for (const [endpoint, params, token] of [
 				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
+				['drive/folders', {}, readAccountToken],
+				['drive/folders/find', { name: 'hono-denied-folder' }, readAccountToken],
+				['drive/folders/show', { folderId: genId(config) }, readAccountToken],
 				['notes/drafts/count', {}, readDriveToken],
 				['i/webhooks/list', {}, readDriveToken],
 				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
