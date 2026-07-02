@@ -15,6 +15,7 @@ import type { EmailService } from '@/core/EmailService.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
+import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from './hono-api-admin-stats.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
@@ -327,6 +328,56 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(c, await handleHonoApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body));
+		});
+	});
+
+	app.post('/admin/ad/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'write:admin:ad');
+
+			return jsonResponse(c, await handleHonoApiAdminAdCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/ad/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'write:admin:ad');
+
+			await handleHonoApiAdminAdDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/ad/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'read:admin:ad');
+
+			return jsonResponse(c, await handleHonoApiAdminAdList(deps, body));
+		});
+	});
+
+	app.post('/admin/ad/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'write:admin:ad');
+
+			await handleHonoApiAdminAdUpdate(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 

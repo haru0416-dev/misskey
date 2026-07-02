@@ -2478,6 +2478,91 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/ad', () => {
+		test('admin/ad は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
+			const now = Date.now();
+			const createPayload = {
+				url: 'https://example.test/ad',
+				memo: `hono-ad-${now}`,
+				place: 'square',
+				priority: 'middle',
+				ratio: 1,
+				expiresAt: now + 1000 * 60 * 60,
+				startsAt: now - 1000 * 60,
+				imageUrl: 'https://example.test/ad.png',
+				dayOfWeek: 0,
+				isSensitive: true,
+			};
+
+			const created = await api('admin/ad/create', createPayload, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.memo, createPayload.memo);
+			assert.strictEqual(created.body.isSensitive, true);
+
+			const list = await api('admin/ad/list', { limit: 20 }, alice);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some(ad => ad.id === created.body.id));
+
+			const updated = await api('admin/ad/update', {
+				id: created.body.id,
+				memo: `${createPayload.memo}-updated`,
+				ratio: 3,
+				isSensitive: false,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const updatedList = await api('admin/ad/list', { limit: 20 }, alice);
+			assert.strictEqual(updatedList.status, 200);
+			const updatedAd = updatedList.body.find(ad => ad.id === created.body.id);
+			assert.ok(updatedAd);
+			assert.strictEqual(updatedAd.memo, `${createPayload.memo}-updated`);
+			assert.strictEqual(updatedAd.ratio, 3);
+			assert.strictEqual(updatedAd.isSensitive, false);
+
+			const noSuch = await api('admin/ad/update', {
+				id: '0000000000000000',
+				memo: 'missing',
+			}, alice);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_AD');
+
+			const readToken = await createAppToken(alice, ['read:admin:ad']);
+			const scopeDenied = await api('admin/ad/create', createPayload, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoad${now.toString(36)}` });
+			const roleDenied = await api('admin/ad/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/ad/delete', { id: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/ad/list', { limit: 20 }, alice);
+			assert.strictEqual(afterDelete.status, 200);
+			assert.ok(!afterDelete.body.some(ad => ad.id === created.body.id));
+
+			const logTypes = ['createAd', 'updateAd', 'deleteAd'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
 	describe('admin database stats', () => {
 		test('admin/get-index-stats と admin/get-table-stats はDB統計を返し、scopeを維持する', async () => {
 			const indexes = await api('admin/get-index-stats', {}, alice);
