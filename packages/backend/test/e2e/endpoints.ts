@@ -20,6 +20,7 @@ import { createInstanceInDatabase } from '@/core/InstanceStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
+import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
@@ -732,6 +733,52 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body.context, 'string');
 			assert.strictEqual(typeof res.body.option.challenge, 'string');
+		});
+	});
+
+	describe('signin history endpoints', () => {
+		test('i/signin-history returns own signin records', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const older = await createSigninInDatabase(db, {
+				id: genId(config, now - 2000),
+				userId: alice.id,
+				ip: '192.0.2.10',
+				headers: { 'user-agent': 'hono-signin-history-older' },
+				success: true,
+			});
+			const newer = await createSigninInDatabase(db, {
+				id: genId(config, now - 1000),
+				userId: alice.id,
+				ip: '192.0.2.11',
+				headers: { 'user-agent': 'hono-signin-history-newer' },
+				success: false,
+			});
+			const otherUser = await createSigninInDatabase(db, {
+				id: genId(config, now),
+				userId: bob.id,
+				ip: '192.0.2.12',
+				headers: { 'user-agent': 'hono-signin-history-other' },
+				success: true,
+			});
+
+			const history = await api('i/signin-history', { limit: 20 }, alice);
+			assert.strictEqual(history.status, 200);
+			const newerIndex = history.body.findIndex(item => item.id === newer.id);
+			const olderIndex = history.body.findIndex(item => item.id === older.id);
+			assert.ok(newerIndex >= 0);
+			assert.ok(olderIndex >= 0);
+			assert.ok(newerIndex < olderIndex);
+			assert.strictEqual(history.body[newerIndex].createdAt, new Date(now - 1000).toISOString());
+			assert.strictEqual(history.body[newerIndex].ip, newer.ip);
+			assert.deepStrictEqual(history.body[newerIndex].headers, newer.headers);
+			assert.strictEqual(history.body[newerIndex].success, false);
+			assert.strictEqual(history.body.some(item => item.id === otherUser.id), false);
+
+			const afterOlder = await api('i/signin-history', { sinceId: older.id, limit: 20 }, alice);
+			assert.strictEqual(afterOlder.status, 200);
+			assert.strictEqual(afterOlder.body.some(item => item.id === newer.id), true);
+			assert.strictEqual(afterOlder.body.some(item => item.id === older.id), false);
 		});
 	});
 
