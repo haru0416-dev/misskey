@@ -70,6 +70,10 @@ export function assertCredential(auth: HonoApiAuthenticated): asserts auth is {
 	if (auth.user.isSuspended) throw userSuspendedError();
 }
 
+export function assertOptionalCredential(auth: HonoApiAuthenticated): void {
+	if (auth.user?.isSuspended) throw userSuspendedError();
+}
+
 export function assertTokenPermission(auth: { token: MiAccessToken | null }, permission: string): void {
 	if (auth.token != null && !auth.token.permission.includes(permission)) {
 		throw permissionDeniedError();

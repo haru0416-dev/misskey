@@ -13,6 +13,7 @@ import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
+export type UserDetailedNotMeHonoApiResponse = Record<string, unknown>;
 
 export type UserPackingDependencies = {
 	config: Config;
@@ -32,6 +33,65 @@ export function getHonoApiUserPolicies(config: Config, meta: MiMeta): RolePolici
 	return {
 		...policies,
 		maxFileSizeMb: Math.min(serverMaxFileSizeMb, policies.maxFileSizeMb),
+	};
+}
+
+export async function packUserDetailedNotMeForHonoApi(
+	deps: UserPackingDependencies,
+	user: MiUser,
+): Promise<UserDetailedNotMeHonoApiResponse> {
+	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
+
+	return {
+		id: user.id,
+		name: user.name,
+		username: user.username,
+		host: user.host,
+		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),
+		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
+		avatarDecorations: user.avatarDecorations,
+		isBot: user.isBot,
+		isCat: user.isCat,
+		requireSigninToViewContents: user.requireSigninToViewContents === false ? undefined : true,
+		makeNotesFollowersOnlyBefore: user.makeNotesFollowersOnlyBefore ?? undefined,
+		makeNotesHiddenBefore: user.makeNotesHiddenBefore ?? undefined,
+		instance: undefined,
+		emojis: {},
+		onlineStatus: getOnlineStatus(user),
+		badgeRoles: [],
+		url: profile.url,
+		uri: user.uri,
+		movedTo: null,
+		alsoKnownAs: user.alsoKnownAs,
+		createdAt: parseId(deps.config, user.id).date.toISOString(),
+		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
+		lastFetchedAt: user.lastFetchedAt ? user.lastFetchedAt.toISOString() : null,
+		bannerUrl: user.bannerId == null ? null : user.bannerUrl,
+		bannerBlurhash: user.bannerId == null ? null : user.bannerBlurhash,
+		isLocked: user.isLocked,
+		isSilenced: !policies.canPublicNote,
+		isSuspended: user.isSuspended,
+		description: profile.description,
+		location: profile.location,
+		birthday: profile.birthday,
+		lang: profile.lang,
+		fields: profile.fields,
+		verifiedLinks: profile.verifiedLinks,
+		followersCount: user.followersCount,
+		followingCount: user.followingCount,
+		notesCount: user.notesCount,
+		pinnedNoteIds: [],
+		pinnedNotes: [],
+		pinnedPageId: profile.pinnedPageId,
+		pinnedPage: null,
+		publicReactions: user.host == null ? profile.publicReactions : false,
+		followingVisibility: profile.followingVisibility,
+		followersVisibility: profile.followersVisibility,
+		chatScope: user.chatScope,
+		canChat: policies.chatAvailability === 'available',
+		roles: [],
+		memo: null,
 	};
 }
 

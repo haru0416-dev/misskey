@@ -9,7 +9,9 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
-import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from './hono-api-auth.js';
+import { assertCredential, assertOptionalCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
+import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } from './hono-api-app.js';
+import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiI } from './hono-api-i.js';
 import { handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
@@ -47,6 +49,17 @@ function jsonResponse(c: Context, body: unknown, status = 200): Response {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
+		},
+	});
+}
+
+function emptyResponse(c: Context): Response {
+	setApiHeaders(c);
+	return new Response(null, {
+		status: 204,
+		headers: {
+			'Access-Control-Allow-Origin': '*',
+			'Cache-Control': 'private, max-age=0, must-revalidate',
 		},
 	});
 }
@@ -95,6 +108,16 @@ async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Pro
 	}
 }
 
+async function authenticateOptionalRequest(
+	deps: ApiShellDependencies,
+	c: Context,
+	body: Record<string, unknown>,
+): Promise<HonoApiAuthenticated> {
+	const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+	assertOptionalCredential(auth);
+	return auth;
+}
+
 export function createApiShellApp(deps: ApiShellDependencies): Hono {
 	const app = new Hono();
 
@@ -123,6 +146,63 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/app/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiAppCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/app/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body));
+		});
+	});
+
+	app.post('/auth/session/generate', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiAuthSessionGenerate(deps, body));
+		});
+	});
+
+	app.post('/auth/session/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiAuthSessionShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/auth/session/userkey', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiAuthSessionUserkey(deps, body));
+		});
+	});
+
+	app.post('/auth/accept', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			await handleHonoApiAuthAccept(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
 	app.post('/i', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -142,6 +222,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertSecureCredential(auth);
 
 			return jsonResponse(c, await handleHonoApiMiauthGenToken(deps, auth.user, body));
+		});
+	});
+
+	app.post('/my/apps', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiMyApps(deps, auth.user, body));
 		});
 	});
 

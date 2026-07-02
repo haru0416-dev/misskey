@@ -9,8 +9,8 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { invalidParamError } from './hono-api-error.js';
 import { createTokenNotification, type HonoApiNotificationDependencies } from './hono-api-notification.js';
+import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiMiauthDependencies = HonoApiNotificationDependencies & {
 	config: Config;
@@ -25,55 +25,30 @@ type MiauthGenTokenBody = {
 	permission: string[];
 };
 
-function assertNullableString(value: unknown, name: string): asserts value is string | null {
-	if (value !== null && typeof value !== 'string') {
-		throw invalidParamError({ param: name, reason: 'must be string or null' });
-	}
-}
-
-function assertOptionalNullableString(value: unknown, name: string): asserts value is string | null | undefined {
-	if (value !== undefined) {
-		assertNullableString(value, name);
-	}
-}
-
-function parseMiauthGenTokenBody(body: Record<string, unknown>): MiauthGenTokenBody {
-	if (!Object.hasOwn(body, 'session')) {
-		throw invalidParamError({ param: '/required', reason: 'must have required property session' });
-	}
-
-	if (!Object.hasOwn(body, 'permission')) {
-		throw invalidParamError({ param: '/required', reason: 'must have required property permission' });
-	}
-
-	assertNullableString(body.session, '/properties/session');
-	assertOptionalNullableString(body.name, '/properties/name');
-	assertOptionalNullableString(body.description, '/properties/description');
-	assertOptionalNullableString(body.iconUrl, '/properties/iconUrl');
-
-	if (!Array.isArray(body.permission) || body.permission.some(permission => typeof permission !== 'string')) {
-		throw invalidParamError({ param: '/properties/permission', reason: 'must be array of strings' });
-	}
-
-	if (new Set(body.permission).size !== body.permission.length) {
-		throw invalidParamError({ param: '/properties/permission/uniqueItems', reason: 'must NOT have duplicate items' });
-	}
-
-	return {
-		session: body.session,
-		name: body.name,
-		description: body.description,
-		iconUrl: body.iconUrl,
-		permission: body.permission,
-	};
-}
+const miauthGenTokenParamDef = {
+	type: 'object',
+	properties: {
+		session: { type: 'string', nullable: true },
+		name: { type: 'string', nullable: true },
+		description: { type: 'string', nullable: true },
+		iconUrl: { type: 'string', nullable: true },
+		permission: {
+			type: 'array',
+			uniqueItems: true,
+			items: {
+				type: 'string',
+			},
+		},
+	},
+	required: ['session', 'permission'],
+} as const;
 
 export async function handleHonoApiMiauthGenToken(
 	deps: HonoApiMiauthDependencies,
 	user: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ token: string }> {
-	const params = parseMiauthGenTokenBody(body);
+	const params = parseHonoApiParams(miauthGenTokenParamDef, body) as MiauthGenTokenBody;
 	const accessToken = secureRndstr(32);
 	const now = new Date();
 
