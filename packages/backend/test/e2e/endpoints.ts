@@ -15,6 +15,7 @@ import { loadConfig } from '@/config.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import { createInstanceInDatabase } from '@/core/InstanceStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
@@ -322,6 +323,114 @@ describe('Endpoints', () => {
 			const detailByGet = await relativeFetch(`api/emoji?name=${emoji.name}`);
 			assert.strictEqual(detailByGet.status, 200);
 			assert.strictEqual(detailByGet.headers.get('cache-control'), 'public, max-age=3600');
+		});
+	});
+
+	describe('federation endpoints', () => {
+		test('instances, show-instance, and stats return packed federation instances', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const alpha = await createInstanceInDatabase(db, {
+				id: genId(config, now),
+				host: `hono-fed-alpha-${now}.example`,
+				firstRetrievedAt: new Date(now),
+				usersCount: 1000001,
+				notesCount: 2000001,
+				followingCount: 3000001,
+				followersCount: 4000001,
+				latestRequestReceivedAt: new Date(now + 1000),
+				isNotResponding: false,
+				suspensionState: 'none',
+				softwareName: 'misskey',
+				softwareVersion: '2024.5.0',
+				openRegistrations: true,
+				name: 'Hono Federation Alpha',
+				description: 'Hono federation endpoint test instance',
+				maintainerName: 'hono maintainer',
+				maintainerEmail: 'hono@example.com',
+				iconUrl: 'https://example.com/icon.png',
+				faviconUrl: null,
+				themeColor: '#86b300',
+				infoUpdatedAt: new Date(now + 2000),
+				moderationNote: 'hidden moderation note',
+			});
+			const beta = await createInstanceInDatabase(db, {
+				id: genId(config, now + 1),
+				host: `hono-fed-beta-${now}.example`,
+				firstRetrievedAt: new Date(now + 1),
+				usersCount: 1000002,
+				notesCount: 2000002,
+				followingCount: 5000001,
+				followersCount: 3000001,
+				latestRequestReceivedAt: null,
+				isNotResponding: true,
+				suspensionState: 'none',
+				softwareName: 'mastodon',
+				softwareVersion: '4.3.0',
+				openRegistrations: false,
+				name: 'Hono Federation Beta',
+				description: null,
+				maintainerName: null,
+				maintainerEmail: null,
+				iconUrl: null,
+				faviconUrl: 'https://example.com/favicon.ico',
+				themeColor: null,
+				infoUpdatedAt: null,
+				moderationNote: '',
+			});
+
+			const instancesQuery = new URLSearchParams({
+				limit: '10',
+				host: `hono-fed-alpha-${now}`,
+				sort: '+followers',
+			});
+			const instances = await relativeFetch(`api/federation/instances?${instancesQuery.toString()}`);
+			assert.strictEqual(instances.status, 200);
+			assert.strictEqual(instances.headers.get('cache-control'), 'public, max-age=3600');
+
+			const instancesBody = await instances.json() as {
+				id?: unknown;
+				host?: unknown;
+				name?: unknown;
+				followersCount?: unknown;
+				isSuspended?: unknown;
+				suspensionState?: unknown;
+				softwareName?: unknown;
+				infoUpdatedAt?: unknown;
+				latestRequestReceivedAt?: unknown;
+				moderationNote?: unknown;
+			}[];
+			const listedAlpha = instancesBody.find(instance => instance.id === alpha.id);
+			assert.ok(listedAlpha);
+			assert.strictEqual(listedAlpha.host, alpha.host);
+			assert.strictEqual(listedAlpha.name, alpha.name);
+			assert.strictEqual(listedAlpha.followersCount, alpha.followersCount);
+			assert.strictEqual(listedAlpha.isSuspended, false);
+			assert.strictEqual(listedAlpha.suspensionState, 'none');
+			assert.strictEqual(listedAlpha.softwareName, alpha.softwareName);
+			assert.strictEqual(listedAlpha.infoUpdatedAt, alpha.infoUpdatedAt?.toISOString());
+			assert.strictEqual(listedAlpha.latestRequestReceivedAt, alpha.latestRequestReceivedAt?.toISOString());
+			assert.strictEqual(listedAlpha.moderationNote, null);
+
+			const shown = await api('federation/show-instance', { host: alpha.host.toUpperCase() });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body?.id, alpha.id);
+			assert.strictEqual(shown.body?.host, alpha.host);
+
+			const stats = await relativeFetch('api/federation/stats?limit=1');
+			assert.strictEqual(stats.status, 200);
+			assert.strictEqual(stats.headers.get('cache-control'), 'public, max-age=3600');
+
+			const statsBody = await stats.json() as {
+				topSubInstances?: { id?: unknown }[];
+				topPubInstances?: { id?: unknown }[];
+				otherFollowersCount?: unknown;
+				otherFollowingCount?: unknown;
+			};
+			assert.strictEqual(statsBody.topSubInstances?.[0]?.id, alpha.id);
+			assert.strictEqual(statsBody.topPubInstances?.[0]?.id, beta.id);
+			assert.strictEqual(typeof statsBody.otherFollowersCount, 'number');
+			assert.strictEqual(typeof statsBody.otherFollowingCount, 'number');
 		});
 	});
 
