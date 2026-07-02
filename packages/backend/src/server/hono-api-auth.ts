@@ -11,7 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { isNativeUserToken } from '@/misc/token.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { accessDeniedError, authenticationFailedError, credentialRequiredError, permissionDeniedError, userSuspendedError } from './hono-api-error.js';
+import { accessDeniedError, accountMovedError, authenticationFailedError, credentialRequiredError, permissionDeniedError, userSuspendedError } from './hono-api-error.js';
 
 export type HonoApiAuthDependencies = {
 	db: MiDrizzleDatabase;
@@ -82,4 +82,8 @@ export function assertTokenPermission(auth: { token: MiAccessToken | null }, per
 
 export function assertSecureCredential(auth: { user: MiLocalUser; token: MiAccessToken | null }): void {
 	if (auth.token != null) throw accessDeniedError();
+}
+
+export function assertProhibitMoved(user: MiLocalUser): void {
+	if (user.movedToUri != null) throw accountMovedError();
 }
