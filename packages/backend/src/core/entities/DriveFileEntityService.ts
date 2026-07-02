@@ -4,9 +4,8 @@
  */
 
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
@@ -18,6 +17,8 @@ import { bindThis } from '@/decorators.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import { IdService } from '@/core/IdService.js';
 import { uniqueByKey } from '@/misc/unique-by-key.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchDriveFileByIdFromDatabase, fetchDriveFileByIdOrFailFromDatabase, listDriveFilesByIdsFromDatabase, sumDriveFileSizeByUserHostFromDatabase, sumDriveFileSizeByUserIdFromDatabase, sumLocalDriveFileSizeFromDatabase, sumRemoteDriveFileSizeFromDatabase } from '@/core/DriveFileStore.js';
 import { UtilityService } from '../UtilityService.js';
 import { VideoProcessingService } from '../VideoProcessingService.js';
 import { UserEntityService } from './UserEntityService.js';
@@ -38,8 +39,9 @@ export class DriveFileEntityService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
 
 		// 循環参照のため / for circular dependency
 		@Inject(forwardRef(() => UserEntityService))
@@ -141,50 +143,22 @@ export class DriveFileEntityService {
 	public async calcDriveUsageOf(user: MiUser['id'] | { id: MiUser['id'] }): Promise<number> {
 		const id = typeof user === 'object' ? user.id : user;
 
-		const { sum } = await this.driveFilesRepository
-			.createQueryBuilder('file')
-			.where('file.userId = :id', { id: id })
-			.andWhere('file.isLink = FALSE')
-			.select('SUM(file.size)', 'sum')
-			.getRawOne();
-
-		return parseInt(sum, 10) || 0;
+		return await sumDriveFileSizeByUserIdFromDatabase(this.db, id);
 	}
 
 	@bindThis
 	public async calcDriveUsageOfHost(host: string): Promise<number> {
-		const { sum } = await this.driveFilesRepository
-			.createQueryBuilder('file')
-			.where('file.userHost = :host', { host: this.utilityService.toPuny(host) })
-			.andWhere('file.isLink = FALSE')
-			.select('SUM(file.size)', 'sum')
-			.getRawOne();
-
-		return parseInt(sum, 10) || 0;
+		return await sumDriveFileSizeByUserHostFromDatabase(this.db, this.utilityService.toPuny(host));
 	}
 
 	@bindThis
 	public async calcDriveUsageOfLocal(): Promise<number> {
-		const { sum } = await this.driveFilesRepository
-			.createQueryBuilder('file')
-			.where('file.userHost IS NULL')
-			.andWhere('file.isLink = FALSE')
-			.select('SUM(file.size)', 'sum')
-			.getRawOne();
-
-		return parseInt(sum, 10) || 0;
+		return await sumLocalDriveFileSizeFromDatabase(this.db);
 	}
 
 	@bindThis
 	public async calcDriveUsageOfRemote(): Promise<number> {
-		const { sum } = await this.driveFilesRepository
-			.createQueryBuilder('file')
-			.where('file.userHost IS NOT NULL')
-			.andWhere('file.isLink = FALSE')
-			.select('SUM(file.size)', 'sum')
-			.getRawOne();
-
-		return parseInt(sum, 10) || 0;
+		return await sumRemoteDriveFileSizeFromDatabase(this.db);
 	}
 
 	@bindThis
@@ -197,7 +171,7 @@ export class DriveFileEntityService {
 			self: false,
 		}, options);
 
-		const file = typeof src === 'object' ? src : await this.driveFilesRepository.findOneByOrFail({ id: src });
+		const file = typeof src === 'object' ? src : await fetchDriveFileByIdOrFailFromDatabase(this.db, src);
 
 		return await awaitAll<Packed<'DriveFile'>>({
 			id: file.id,
@@ -235,7 +209,7 @@ export class DriveFileEntityService {
 			self: false,
 		}, options);
 
-		const file = typeof src === 'object' ? src : await this.driveFilesRepository.findOneBy({ id: src });
+		const file = typeof src === 'object' ? src : await fetchDriveFileByIdFromDatabase(this.db, src);
 		if (file == null) return null;
 
 		return await awaitAll<Packed<'DriveFile'>>({
@@ -309,7 +283,7 @@ export class DriveFileEntityService {
 		options?: PackOptions,
 	): Promise<Map<Packed<'DriveFile'>['id'], Packed<'DriveFile'> | null>> {
 		if (fileIds.length === 0) return new Map();
-		const files = await this.driveFilesRepository.findBy({ id: In(fileIds) });
+		const files = await listDriveFilesByIdsFromDatabase(this.db, fileIds);
 		const packedFiles = await this.packMany(files, options);
 		const map = new Map<Packed<'DriveFile'>['id'], Packed<'DriveFile'> | null>(packedFiles.map(f => [f.id, f]));
 		for (const id of fileIds) {

@@ -6,11 +6,12 @@
 import bcrypt from 'bcryptjs';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { ApiError } from '@/server/api/error.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	requireCredential: true,
@@ -55,20 +56,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private webAuthnService: WebAuthnService,
 		private userAuthService: UserAuthService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const token = ps.token;
-			const profile = await this.userProfilesRepository.findOne({
-				where: {
-					userId: me.id,
-				},
-				relations: { user: true },
-			});
+			const profile = await fetchUserProfileByUserIdFromDatabase(this.drizzle, me.id);
 
 			if (profile == null) {
 				throw new ApiError(meta.errors.userNotFound);
@@ -97,8 +93,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			return await this.webAuthnService.initiateRegistration(
 				me.id,
-				profile.user?.username ?? me.id,
-				profile.user?.name ?? undefined,
+				me.username,
+				me.name ?? undefined,
 			);
 		});
 	}

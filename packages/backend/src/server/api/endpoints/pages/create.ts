@@ -5,12 +5,15 @@
 
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { DriveFilesRepository, MiDriveFile, PagesRepository } from '@/models/_.js';
+import type { MiDriveFile } from '@/models/_.js';
 import { pageNameSchema } from '@/models/Page.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { PageEntityService } from '@/core/entities/PageEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { PageService } from '@/core/PageService.js';
+import { pageNameExistsForUserInDatabase } from '@/core/PageStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { ApiError } from '../../error.js';
 
@@ -72,11 +75,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private pageService: PageService,
 		private pageEntityService: PageEntityService,
@@ -84,24 +84,16 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			let eyeCatchingImage: MiDriveFile | null = null;
 			if (ps.eyeCatchingImageId != null) {
-				eyeCatchingImage = await this.driveFilesRepository.findOneBy({
-					id: ps.eyeCatchingImageId,
-					userId: me.id,
-				});
+				eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.eyeCatchingImageId, me.id);
 
 				if (eyeCatchingImage == null) {
 					throw new ApiError(meta.errors.noSuchFile);
 				}
 			}
 
-			await this.pagesRepository.findBy({
-				userId: me.id,
-				name: ps.name,
-			}).then(result => {
-				if (result.length > 0) {
-					throw new ApiError(meta.errors.nameAlreadyExists);
-				}
-			});
+			if (await pageNameExistsForUserInDatabase(this.drizzle, me.id, ps.name)) {
+				throw new ApiError(meta.errors.nameAlreadyExists);
+			}
 
 			try {
 				const page = await this.pageService.create(me, {

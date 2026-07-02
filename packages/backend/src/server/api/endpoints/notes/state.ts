@@ -4,9 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, NoteThreadMutingsRepository, NoteFavoritesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
+import { noteFavoriteExistsInDatabase } from '@/core/NoteFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -41,38 +44,20 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.noteThreadMutingsRepository)
-		private noteThreadMutingsRepository: NoteThreadMutingsRepository,
-
-		@Inject(DI.noteFavoritesRepository)
-		private noteFavoritesRepository: NoteFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const note = await this.notesRepository.findOneByOrFail({ id: ps.noteId });
+			const note = await fetchNoteByIdOrFailFromDatabase(this.drizzle, ps.noteId);
 
 			const [favorite, threadMuting] = await Promise.all([
-				this.noteFavoritesRepository.count({
-					where: {
-						userId: me.id,
-						noteId: note.id,
-					},
-					take: 1,
-				}),
-				this.noteThreadMutingsRepository.count({
-					where: {
-						userId: me.id,
-						threadId: note.threadId ?? note.id,
-					},
-					take: 1,
-				}),
+				noteFavoriteExistsInDatabase(this.drizzle, me.id, note.id),
+				noteThreadMutingExistsInDatabase(this.drizzle, me.id, note.threadId ?? note.id),
 			]);
 
 			return {
-				isFavorited: favorite !== 0,
-				isMutedThread: threadMuting !== 0,
+				isFavorited: favorite,
+				isMutedThread: threadMuting,
 			};
 		});
 	}

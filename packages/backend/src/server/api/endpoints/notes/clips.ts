@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { In } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { ClipNotesRepository, ClipsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/ClipNoteStore.js';
+import { listClipsByIdsFromDatabase } from '@/core/ClipStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -47,11 +48,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
-
-		@Inject(DI.clipNotesRepository)
-		private clipNotesRepository: ClipNotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private clipEntityService: ClipEntityService,
 		private getterService: GetterService,
@@ -62,14 +60,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 
-			const clipNotes = await this.clipNotesRepository.findBy({
-				noteId: note.id,
-			});
+			const clipIds = await listClipNoteClipIdsByNoteIdFromDatabase(this.db, note.id);
+			if (clipIds.length === 0) return [];
 
-			const clips = await this.clipsRepository.findBy({
-				id: In(clipNotes.map(x => x.clipId)),
-				isPublic: true,
-			});
+			const clips = await listClipsByIdsFromDatabase(this.db, clipIds, { isPublic: true });
 
 			return await this.clipEntityService.packMany(clips, me);
 		});

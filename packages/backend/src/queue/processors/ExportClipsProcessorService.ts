@@ -8,17 +8,23 @@ import { Writable } from 'node:stream';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { ClipNotesRepository, ClipsRepository, MiClip, MiClipNote, MiUser, PollsRepository, UsersRepository } from '@/models/_.js';
+import type { MiClip, MiUser } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiNote } from '@/models/Note.js';
+import type { MiClipNote } from '@/models/ClipNote.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { NotificationService } from '@/core/NotificationService.js';
-import { QueryService } from '@/core/QueryService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
+import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
+import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/ClipStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 import type { DbJobDataWithUser } from '../types.js';
@@ -28,21 +34,11 @@ export class ExportClipsProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
-
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
-
-		@Inject(DI.clipNotesRepository)
-		private clipNotesRepository: ClipNotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private queueLoggerService: QueueLoggerService,
-		private queryService: QueryService,
 		private idService: IdService,
 		private notificationService: NotificationService,
 	) {
@@ -53,7 +49,7 @@ export class ExportClipsProcessorService {
 	public async process(job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 		this.logger.info(`Exporting clips of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -95,21 +91,13 @@ export class ExportClipsProcessorService {
 		let exportedClipsCount = 0;
 		let cursor: MiClip['id'] | null = null;
 
-		const total = await this.clipsRepository.countBy({
-			userId: user.id,
-		});
+		const total = await countClipsByUserIdFromDatabase(this.db, user.id);
 
 		while (true) {
-			const query = this.clipsRepository.createQueryBuilder('clip')
-				.where('clip.userId = :userId', { userId: user.id })
-				.orderBy('clip.id', 'ASC')
-				.take(100);
-
-			if (cursor) {
-				query.andWhere('clip.id > :cursor', { cursor });
-			}
-
-			const clips = await query.getMany();
+			const clips = await listClipsByUserIdFromDatabase(this.db, user.id, {
+				afterId: cursor,
+				limit: 100,
+			});
 
 			if (clips.length === 0) {
 				job.updateProgress(100);
@@ -139,38 +127,39 @@ export class ExportClipsProcessorService {
 		let cursor: MiClipNote['id'] | null = null;
 
 		while (true) {
-			const query = this.clipNotesRepository.createQueryBuilder('clipNote')
-				.leftJoinAndSelect('clipNote.note', 'note')
-				.leftJoinAndSelect('note.user', 'user')
-				.where('clipNote.clipId = :clipId', { clipId })
-				.orderBy('clipNote.id', 'ASC')
-				.take(100);
-
-			if (cursor) {
-				query.andWhere('clipNote.id > :cursor', { cursor });
-			}
-
-			this.queryService.generateVisibilityQuery(query, { id: userId });
-
-			const clipNotes = await query.getMany() as (MiClipNote & { note: MiNote & { user: MiUser } })[];
+			const clipNotes = await listClipNotesByClipIdFromDatabase(this.db, clipId, {
+				afterId: cursor,
+				limit: 100,
+			});
 
 			if (clipNotes.length === 0) {
 				break;
 			}
 
 			cursor = clipNotes.at(-1)?.id ?? null;
+			const noteIds = clipNotes.map(clipNote => clipNote.noteId);
+			const notes = await listVisibleNotesWithUsersByIdsFromDatabase(this.db, noteIds, { id: userId });
+			const noteMap = new Map(notes.map(note => [note.id, note]));
 
 			for (const clipNote of clipNotes) {
-				const noteCreatedAt = this.idService.parse(clipNote.note.id).date;
-				if (shouldHideNoteByTime(clipNote.note.user.makeNotesHiddenBefore, noteCreatedAt)) {
+				const note = noteMap.get(clipNote.noteId);
+				if (note == null) {
+					continue;
+				}
+
+				const noteCreatedAt = this.idService.parse(note.id).date;
+				if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) {
 					continue;
 				}
 
 				let poll: MiPoll | undefined;
-				if (clipNote.note.hasPoll) {
-					poll = await this.pollsRepository.findOneByOrFail({ noteId: clipNote.note.id });
+				if (note.hasPoll) {
+					poll = await fetchPollByNoteIdOrFailFromDatabase(this.db, note.id);
 				}
-				const content = JSON.stringify(this.serializeClipNote(clipNote, poll));
+				const content = JSON.stringify(this.serializeClipNote({
+					...clipNote,
+					note,
+				}, poll));
 				const isFirst = exportedClipNotesCount === 0;
 				await writer.write(isFirst ? content : ',\n' + content);
 

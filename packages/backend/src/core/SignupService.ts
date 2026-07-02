@@ -6,14 +6,15 @@
 import { generateKeyPair } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
-import { DataSource, IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { MiMeta, UsedUsernamesRepository, UsersRepository } from '@/models/_.js';
-import { MiUser } from '@/models/User.js';
-import { MiUserProfile } from '@/models/UserProfile.js';
+import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
+import { isLocalUsernameTaken } from '@/core/UserStore.js';
+import { isUsedUsername } from '@/core/UsedUsernameStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
+import type { MiUserProfile } from '@/models/UserProfile.js';
 import { IdService } from '@/core/IdService.js';
-import { MiUserKeypair } from '@/models/UserKeypair.js';
-import { MiUsedUsername } from '@/models/UsedUsername.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
@@ -26,17 +27,11 @@ import { MetaService } from '@/core/MetaService.js';
 @Injectable()
 export class SignupService {
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
-
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.usedUsernamesRepository)
-		private usedUsernamesRepository: UsedUsernamesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private userService: UserService,
@@ -79,12 +74,12 @@ export class SignupService {
 		const secret = generateNativeUserToken();
 
 		// Check username duplication
-		if (await this.usersRepository.exists({ where: { usernameLower: username.toLowerCase(), host: IsNull() } })) {
+		if (await isLocalUsernameTaken(this.drizzle, username)) {
 			throw new Error('DUPLICATED_USERNAME');
 		}
 
 		// Check deleted username duplication
-		if (await this.usedUsernamesRepository.exists({ where: { username: username.toLowerCase() } })) {
+		if (await isUsedUsername(this.drizzle, username)) {
 			throw new Error('USED_USERNAME');
 		}
 
@@ -117,41 +112,23 @@ export class SignupService {
 				err ? rej(err) : res([publicKey, privateKey]),
 			));
 
-		let account!: MiUser;
+		const id = this.idService.gen();
+		const normalizedHost = this.utilityService.toPunyNullable(host);
+		const remoteUri = normalizedHost == null ? null : `https://${normalizedHost}/users/${username}`;
 
-		// Start transaction
-		await this.db.transaction(async transactionalEntityManager => {
-			const exist = await transactionalEntityManager.findOneBy(MiUser, {
-				usernameLower: username.toLowerCase(),
-				host: IsNull(),
-			});
-
-			if (exist) throw new Error(' the username is already used');
-
-			account = await transactionalEntityManager.save(new MiUser({
-				id: this.idService.gen(),
-				username: username,
-				usernameLower: username.toLowerCase(),
-				host: this.utilityService.toPunyNullable(host),
-				token: secret,
-			}));
-
-			await transactionalEntityManager.save(new MiUserKeypair({
-				publicKey: keyPair[0],
-				privateKey: keyPair[1],
-				userId: account.id,
-			}));
-
-			await transactionalEntityManager.save(new MiUserProfile({
-				userId: account.id,
-				autoAcceptFollowed: true,
-				password: hash,
-			}));
-
-			await transactionalEntityManager.save(new MiUsedUsername({
-				createdAt: new Date(),
-				username: username.toLowerCase(),
-			}));
+		const account = await createSignupAccountInDatabase(this.drizzle, {
+			id,
+			username,
+			usernameLower: username.toLowerCase(),
+			host: normalizedHost,
+			uri: remoteUri,
+			inbox: remoteUri == null ? null : `${remoteUri}/inbox`,
+			sharedInbox: normalizedHost == null ? null : `https://${normalizedHost}/inbox`,
+			followersUri: remoteUri == null ? null : `${remoteUri}/followers`,
+			token: secret,
+			passwordHash: hash ?? null,
+			publicKey: keyPair[0],
+			privateKey: keyPair[1],
 		});
 
 		this.usersChart.update(account, true);

@@ -5,21 +5,26 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { RenoteMutingsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
 import type { MiUser } from '@/models/User.js';
-import type { MiRenoteMuting } from '@/models/RenoteMuting.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { fetchRenoteMutingByIdOrFailFromDatabase } from '@/core/RenoteMutingStore.js';
+import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
+
+export type RenoteMutingPackable = RenoteMutingRow & {
+	mutee?: MiUser | null;
+};
 
 @Injectable()
 export class RenoteMutingEntityService {
 	constructor(
-		@Inject(DI.renoteMutingsRepository)
-		private renoteMutingsRepository: RenoteMutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -28,13 +33,13 @@ export class RenoteMutingEntityService {
 
 	@bindThis
 	public async pack(
-		src: MiRenoteMuting['id'] | MiRenoteMuting,
+		src: RenoteMutingRow['id'] | RenoteMutingPackable,
 		me?: { id: MiUser['id'] } | null | undefined,
 		hints?: {
 			packedMutee?: Packed<'UserDetailedNotMe'>
 		},
 	): Promise<Packed<'RenoteMuting'>> {
-		const muting = typeof src === 'object' ? src : await this.renoteMutingsRepository.findOneByOrFail({ id: src });
+		const muting = typeof src === 'object' ? src : await fetchRenoteMutingByIdOrFailFromDatabase(this.drizzle, src);
 
 		return await awaitAll({
 			id: muting.id,
@@ -48,7 +53,7 @@ export class RenoteMutingEntityService {
 
 	@bindThis
 	public async packMany(
-		mutings: MiRenoteMuting[],
+		mutings: RenoteMutingPackable[],
 		me: { id: MiUser['id'] },
 	) {
 		const _users = mutings.map(({ mutee, muteeId }) => mutee ?? muteeId);
@@ -57,4 +62,3 @@ export class RenoteMutingEntityService {
 		return Promise.all(mutings.map(muting => this.pack(muting, me, { packedMutee: _userMap.get(muting.muteeId) })));
 	}
 }
-

@@ -11,7 +11,8 @@ import {
 } from '@/core/entities/AbuseReportNotificationRecipientEntityService.js';
 import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
 import { DI } from '@/di-symbols.js';
-import type { UserProfilesRepository } from '@/models/_.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['admin', 'abuse-report', 'notification-recipient'],
@@ -82,14 +83,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
+
 		private abuseReportNotificationService: AbuseReportNotificationService,
 		private abuseReportNotificationRecipientEntityService: AbuseReportNotificationRecipientEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			if (ps.method === 'email') {
-				const userProfile = await this.userProfilesRepository.findOneBy({ userId: ps.userId });
+				const userProfile = ps.userId == null ? null : await fetchUserProfileByUserIdFromDatabase(this.drizzle, ps.userId);
 				if (!ps.userId || !userProfile) {
 					throw new ApiError(meta.errors.correlationCheckEmail);
 				}

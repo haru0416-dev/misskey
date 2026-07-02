@@ -8,7 +8,6 @@ process.env.NODE_ENV = 'test';
 import { afterAll, beforeAll, beforeEach, describe, expect, vi, test } from 'vitest';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
-import type { DriveFilesRepository, DriveFoldersRepository, UsersRepository } from '@/models/_.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
@@ -17,6 +16,12 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
+import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import type { UserInsert } from '@/db/schema/user.js';
+import type { DriveFileInsert } from '@/db/schema/drive-file.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const describeBenchmark = process.env.RUN_BENCHMARKS === '1' ? describe : describe.skip;
 
@@ -24,9 +29,7 @@ describe('DriveFileEntityService', () => {
 	let app: TestingModule;
 	let service: DriveFileEntityService;
 	let driveFolderEntityService: DriveFolderEntityService;
-	let driveFilesRepository: DriveFilesRepository;
-	let driveFoldersRepository: DriveFoldersRepository;
-	let usersRepository: UsersRepository;
+	let db: MiDrizzleDatabase;
 	let idCounter = 0;
 
 	const userEntityServiceMock = {
@@ -49,28 +52,26 @@ describe('DriveFileEntityService', () => {
 	const createUser = async () => {
 		const un = secureRndstr(16);
 		const id = nextId();
-		await usersRepository.insert({
+		return createUserInDatabase(db, {
 			id,
 			username: un,
 			usernameLower: un.toLowerCase(),
-		});
-		return usersRepository.findOneByOrFail({ id });
+		} satisfies UserInsert);
 	};
 
 	const createFolder = async (name: string, parentId: string | null) => {
 		const id = nextId();
-		await driveFoldersRepository.insert({
+		return createDriveFolderInDatabase(db, {
 			id,
 			name,
 			userId: null,
 			parentId,
 		});
-		return driveFoldersRepository.findOneByOrFail({ id });
 	};
 
 	const createFile = async (folderId: string | null, userId: string | null) => {
 		const id = nextId();
-		await driveFilesRepository.insert({
+		return createDriveFileInDatabase(db, {
 			id,
 			userId,
 			userHost: null,
@@ -98,8 +99,7 @@ describe('DriveFileEntityService', () => {
 			isLink: false,
 			requestHeaders: null,
 			requestIp: null,
-		});
-		return driveFilesRepository.findOneByOrFail({ id });
+		} satisfies DriveFileInsert);
 	};
 
 	beforeAll(async () => {
@@ -114,9 +114,7 @@ describe('DriveFileEntityService', () => {
 
 		service = app.get<DriveFileEntityService>(DriveFileEntityService);
 		driveFolderEntityService = app.get<DriveFolderEntityService>(DriveFolderEntityService);
-		driveFilesRepository = app.get<DriveFilesRepository>(DI.driveFilesRepository);
-		driveFoldersRepository = app.get<DriveFoldersRepository>(DI.driveFoldersRepository);
-		usersRepository = app.get<UsersRepository>(DI.usersRepository);
+		db = app.get<MiDrizzleDatabase>(DI.drizzle);
 	});
 
 	beforeEach(() => {

@@ -5,16 +5,22 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
-import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { RegistrationTicketsRepository, UsedUsernamesRepository, UserPendingsRepository, UserProfilesRepository, UsersRepository, MiRegistrationTicket, MiMeta } from '@/models/_.js';
+import { isUsedUsername } from '@/core/UsedUsernameStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiMeta } from '@/models/_.js';
+import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
+import { fetchRegistrationTicketByCodeFromDatabase, fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import type { Config } from '@/config.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { IdService } from '@/core/IdService.js';
 import { SignupService } from '@/core/SignupService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { EmailService } from '@/core/EmailService.js';
-import { MiLocalUser } from '@/models/User.js';
+import { createUserPendingInDatabase, deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
+import { isLocalUsernameTaken } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
 import { bindThis } from '@/decorators.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
@@ -30,20 +36,8 @@ export class SignupApiService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userPendingsRepository)
-		private userPendingsRepository: UserPendingsRepository,
-
-		@Inject(DI.usedUsernamesRepository)
-		private usedUsernamesRepository: UsedUsernamesRepository,
-
-		@Inject(DI.registrationTicketsRepository)
-		private registrationTicketsRepository: RegistrationTicketsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -127,7 +121,7 @@ export class SignupApiService {
 			}
 		}
 
-		let ticket: MiRegistrationTicket | null = null;
+		let ticket: RegistrationTicketRow | null = null;
 
 		// テスト時はこの機構は障害となるため無効にする
 		if (process.env.NODE_ENV !== 'test' && this.meta.disableRegistration) {
@@ -136,9 +130,7 @@ export class SignupApiService {
 				return;
 			}
 
-			ticket = await this.registrationTicketsRepository.findOneBy({
-				code: invitationCode,
-			});
+			ticket = await fetchRegistrationTicketByCodeFromDatabase(this.drizzle, invitationCode);
 
 			if (ticket == null || ticket.usedById != null) {
 				reply.code(400);
@@ -153,7 +145,7 @@ export class SignupApiService {
 			// メアド認証が有効の場合
 			if (this.meta.emailRequiredForSignup) {
 				// メアド認証済みならエラー
-				if (ticket.usedBy) {
+				if (ticket.usedById) {
 					reply.code(400);
 					return;
 				}
@@ -170,12 +162,12 @@ export class SignupApiService {
 		}
 
 		if (this.meta.emailRequiredForSignup) {
-			if (await this.usersRepository.exists({ where: { usernameLower: username.toLowerCase(), host: IsNull() } })) {
+			if (await isLocalUsernameTaken(this.drizzle, username)) {
 				throw new FastifyReplyError(400, 'DUPLICATED_USERNAME');
 			}
 
 			// Check deleted username duplication
-			if (await this.usedUsernamesRepository.exists({ where: { username: username.toLowerCase() } })) {
+			if (await isUsedUsername(this.drizzle, username)) {
 				throw new FastifyReplyError(400, 'USED_USERNAME');
 			}
 
@@ -190,7 +182,7 @@ export class SignupApiService {
 			const salt = await bcrypt.genSalt(8);
 			const hash = await bcrypt.hash(password, salt);
 
-			const pendingUser = await this.userPendingsRepository.insertOne({
+			const pendingUser = await createUserPendingInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				code,
 				email: emailAddress!,
@@ -205,7 +197,7 @@ export class SignupApiService {
 				`To complete signup, please click this link: ${link}`);
 
 			if (ticket) {
-				await this.registrationTicketsRepository.update(ticket.id, {
+				await updateRegistrationTicketInDatabase(this.drizzle, ticket.id, {
 					usedAt: new Date(),
 					pendingUserId: pendingUser.id,
 				});
@@ -225,9 +217,8 @@ export class SignupApiService {
 				});
 
 				if (ticket) {
-					await this.registrationTicketsRepository.update(ticket.id, {
+					await updateRegistrationTicketInDatabase(this.drizzle, ticket.id, {
 						usedAt: new Date(),
-						usedBy: account,
 						usedById: account.id,
 					});
 				}
@@ -249,7 +240,7 @@ export class SignupApiService {
 		const code = body['code'];
 
 		try {
-			const pendingUser = await this.userPendingsRepository.findOneByOrFail({ code });
+			const pendingUser = await fetchUserPendingByCodeFromDatabase(this.drizzle, code);
 
 			if (this.idService.parse(pendingUser.id).date.getTime() + (1000 * 60 * 30) < Date.now()) {
 				throw new FastifyReplyError(400, 'EXPIRED');
@@ -260,22 +251,19 @@ export class SignupApiService {
 				passwordHash: pendingUser.password,
 			});
 
-			this.userPendingsRepository.delete({
-				id: pendingUser.id,
-			});
+			await deleteUserPendingFromDatabase(this.drizzle, pendingUser.id);
 
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: account.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, account.id);
 
-			await this.userProfilesRepository.update({ userId: profile.userId }, {
+			await updateUserProfileInDatabase(this.drizzle, profile.userId, {
 				email: pendingUser.email,
 				emailVerified: true,
 				emailVerifyCode: null,
 			});
 
-			const ticket = await this.registrationTicketsRepository.findOneBy({ pendingUserId: pendingUser.id });
+			const ticket = await fetchRegistrationTicketByPendingUserIdFromDatabase(this.drizzle, pendingUser.id);
 			if (ticket) {
-				await this.registrationTicketsRepository.update(ticket.id, {
-					usedBy: account,
+				await updateRegistrationTicketInDatabase(this.drizzle, ticket.id, {
 					usedById: account.id,
 					pendingUserId: null,
 				});

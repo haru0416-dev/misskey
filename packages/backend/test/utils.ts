@@ -12,10 +12,10 @@ import WebSocket, { ClientOptions } from 'ws';
 import fetch, { Blob, FormData } from 'node-fetch';
 import type { RequestInit, Headers, Response } from 'node-fetch';
 import * as htmlParser from 'node-html-parser';
-import { DataSource } from 'typeorm';
 import Fastify from 'fastify';
-import { entities } from '@/postgres.js';
 import { loadConfig } from '@/config.js';
+import { createDrizzlePool } from '@/drizzle.js';
+import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import type * as misskey from 'misskey-js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
@@ -403,8 +403,9 @@ export function connectStream<C extends keyof misskey.Channels>(user: UserToken,
 	});
 }
 
-export const waitFire = async <C extends keyof misskey.Channels>(user: UserToken, channel: C, trgr: () => any, cond: (msg: Record<string, any>) => boolean, params?: misskey.Channels[C]['params']) => {
+export const waitFire = async <C extends keyof misskey.Channels>(user: UserToken, channel: C, trgr: () => any, cond: (msg: Record<string, any>) => boolean, params?: misskey.Channels[C]['params'], timeout = 3000) => {
 	let ws: WebSocket | undefined;
+	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	try {
 		let callback: (msg: Record<string, unknown>) => void;
@@ -421,10 +422,13 @@ export const waitFire = async <C extends keyof misskey.Channels>(user: UserToken
 
 		return await Promise.race([
 			receivedPromise,
-			new Promise<void>((r) => setTimeout(() => r(), 3000)).then(() => false),
+			new Promise<boolean>((resolve) => {
+				timer = setTimeout(() => resolve(false), timeout);
+			}),
 		]);
 	} finally {
-		if (ws) ws.close();
+		if (timer) clearTimeout(timer);
+		if (ws) ws.terminate();
 	}
 };
 
@@ -593,24 +597,22 @@ export async function testPaginationConsistency<Entity extends { id: string, cre
 	}
 }
 
-export async function initTestDb(justBorrow = false, initEntities?: any[]) {
+export async function initTestDb(justBorrow = false, _initEntities?: unknown[]) {
 	if (process.env.NODE_ENV !== 'test') throw new Error('NODE_ENV is not a test');
 
-	const db = new DataSource({
-		type: 'postgres',
-		host: config.db.host,
-		port: config.db.port,
-		username: config.db.user,
-		password: config.db.pass,
-		database: config.db.db,
-		synchronize: !justBorrow,
-		dropSchema: !justBorrow,
-		entities: initEntities ?? entities,
-	});
+	if (!justBorrow) {
+		const pool = createDrizzlePool(config);
+		try {
+			await resetDatabase(pool);
+			await runMigrations(pool);
+		} finally {
+			await pool.end();
+		}
+	}
 
-	await db.initialize();
-
-	return db;
+	return {
+		destroy: async () => {},
+	};
 }
 
 export async function sendEnvUpdateRequest(params: { key: string, value?: string }) {

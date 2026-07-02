@@ -4,18 +4,18 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import * as Redis from 'ioredis';
-import { Brackets } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NotesRepository, AntennasRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
+import { fetchAntennaByIdAndUserIdFromDatabase, updateAntennaInDatabase } from '@/core/AntennaStore.js';
+import type { MiMeta } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { IdService } from '@/core/IdService.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -60,15 +60,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private idService: IdService,
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
 		private fanoutTimelineService: FanoutTimelineService,
 		private globalEventService: GlobalEventService,
 		private channelMutingService: ChannelMutingService,
@@ -77,10 +76,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
 
-			const antenna = await this.antennasRepository.findOneBy({
-				id: ps.antennaId,
-				userId: me.id,
-			});
+			const antenna = await fetchAntennaByIdAndUserIdFromDatabase(this.db, ps.antennaId, me.id);
 
 			if (antenna == null) {
 				throw new ApiError(meta.errors.noSuchAntenna);
@@ -91,7 +87,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			antenna.isActive = true;
 			antenna.lastUsedAt = new Date();
-			trackPromise(this.antennasRepository.update(antenna.id, antenna));
+			trackPromise(updateAntennaInDatabase(this.db, antenna.id, {
+				isActive: antenna.isActive,
+				lastUsedAt: antenna.lastUsedAt,
+			}));
 
 			if (needPublishEvent) {
 				this.globalEventService.publishInternalEvent('antennaUpdated', antenna);
@@ -103,36 +102,20 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				return [];
 			}
 
-			const query = this.notesRepository.createQueryBuilder('note')
-				.where('note.id IN (:...noteIds)', { noteIds: noteIds })
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser');
-
 			// -- ミュートされたチャンネル対策
 			const mutingChannelIds = await this.channelMutingService
 				.list({ requestUserId: me.id }, { idOnly: true })
 				.then(x => x.map(x => x.id));
-			if (mutingChannelIds.length > 0) {
-				query.andWhere(new Brackets(qb => {
-					qb.orWhere('note.channelId IS NULL');
-					qb.orWhere('note.channelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-				}));
-				query.andWhere(new Brackets(qb => {
-					qb.orWhere('note.renoteChannelId IS NULL');
-					qb.orWhere('note.renoteChannelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-				}));
-			}
 
 			// NOTE: センシティブ除外の設定はこのエンドポイントでは無視する。
 			// https://github.com/misskey-dev/misskey/pull/15346#discussion_r1929950255
 
-			this.queryService.generateVisibilityQuery(query, me);
-			this.queryService.generateBaseNoteFilteringQuery(query, me);
-
-			const notes = await query.getMany();
+			const notes = await listFilteredTimelineNotesByIdsFromDatabase(this.db, {
+				ids: noteIds,
+				me,
+				blockedHosts: this.instanceMeta.blockedHosts,
+				mutingChannelIds,
+			});
 			if (sinceId != null && untilId == null) {
 				notes.sort((a, b) => a.id < b.id ? -1 : 1);
 			} else {

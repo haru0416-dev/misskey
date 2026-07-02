@@ -4,11 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull, Not } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AccessTokensRepository } from '@/models/_.js';
 import { AppEntityService } from '@/core/entities/AppEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { listAccessTokensWithAppByUserIdFromDatabase } from '@/core/AccessTokenStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	requireCredential: true,
@@ -63,23 +63,17 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private appEntityService: AppEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Get tokens
-			const tokens = await this.accessTokensRepository.find({
-				where: {
-					userId: me.id,
-					appId: Not(IsNull()),
-				},
-				take: ps.limit,
-				skip: ps.offset,
-				order: {
-					id: ps.sort === 'asc' ? 1 : -1,
-				},
+			const tokens = await listAccessTokensWithAppByUserIdFromDatabase(this.db, me.id, {
+				limit: ps.limit,
+				offset: ps.offset,
+				direction: ps.sort === 'asc' ? 'asc' : 'desc',
 			});
 
 			return await Promise.all(tokens.map(token => this.appEntityService.pack(token.appId!, me, {

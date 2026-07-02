@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { PagesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { PageEntityService } from '@/core/entities/PageEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { listFeaturedPagesFromDatabase } from '@/core/PageStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['pages'],
@@ -34,18 +35,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private pageEntityService: PageEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.pagesRepository.createQueryBuilder('page')
-				.where('page.visibility = \'public\'')
-				.andWhere('page.likedCount > 0')
-				.orderBy('page.likedCount', 'DESC');
-
-			const pages = await query.limit(10).getMany();
+			const pages = await listFeaturedPagesFromDatabase(this.drizzle);
 
 			return await this.pageEntityService.packMany(pages, me);
 		});

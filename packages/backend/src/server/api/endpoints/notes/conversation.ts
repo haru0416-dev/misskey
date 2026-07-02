@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import type { MiNote } from '@/models/Note.js';
-import type { NotesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -49,8 +50,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteEntityService: NoteEntityService,
 		private getterService: GetterService,
@@ -66,7 +67,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const get = async (id: any) => {
 				i++;
-				const p = await this.notesRepository.findOneBy({ id });
+				const p = await fetchNoteByIdFromDatabase(this.db, id);
 				if (p == null) return;
 
 				if (i > ps.offset!) {

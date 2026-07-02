@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, PagesRepository, PageLikesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -14,20 +13,18 @@ import type { MiPage } from '@/models/Page.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
+import { fetchPageByIdOrFailFromDatabase, updatePageContentInDatabase } from '@/core/PageStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
 
 @Injectable()
 export class PageEntityService {
 	constructor(
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
-
-		@Inject(DI.pageLikesRepository)
-		private pageLikesRepository: PageLikesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
@@ -44,16 +41,13 @@ export class PageEntityService {
 		},
 	): Promise<Packed<'Page'>> {
 		const meId = me ? me.id : null;
-		const page = typeof src === 'object' ? src : await this.pagesRepository.findOneByOrFail({ id: src });
+		const page = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(this.drizzle, src);
 
 		const attachedFiles: Promise<MiDriveFile | null>[] = [];
 		const collectFile = (xs: any[]) => {
 			for (const x of xs) {
 				if (x.type === 'image') {
-					attachedFiles.push(this.driveFilesRepository.findOneBy({
-						id: x.fileId,
-						userId: page.userId,
-					}));
+					attachedFiles.push(fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, x.fileId, page.userId));
 				}
 				if (x.children) {
 					collectFile(x.children);
@@ -83,9 +77,7 @@ export class PageEntityService {
 		};
 		migrate(page.content);
 		if (migrated) {
-			this.pagesRepository.update(page.id, {
-				content: page.content,
-			});
+			updatePageContentInDatabase(this.drizzle, page.id, page.content);
 		}
 
 		return await awaitAll({
@@ -107,7 +99,7 @@ export class PageEntityService {
 			eyeCatchingImage: page.eyeCatchingImageId ? await this.driveFileEntityService.pack(page.eyeCatchingImageId) : null,
 			attachedFiles: this.driveFileEntityService.packMany((await Promise.all(attachedFiles)).filter(x => x != null)),
 			likedCount: page.likedCount,
-			isLiked: meId ? await this.pageLikesRepository.exists({ where: { pageId: page.id, userId: meId } }) : undefined,
+			isLiked: meId ? await pageLikeExistsInDatabase(this.drizzle, meId, page.id) : undefined,
 		});
 	}
 
@@ -122,4 +114,3 @@ export class PageEntityService {
 		return Promise.all(pages.map(page => this.pack(page, me, { packedUser: _userMap.get(page.userId) })));
 	}
 }
-

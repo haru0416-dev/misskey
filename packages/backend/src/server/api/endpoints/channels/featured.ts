@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelsRepository } from '@/models/_.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listRecentlyActiveChannelsFromDatabase } from '@/core/ChannelStore.js';
 
 export const meta = {
 	tags: ['channels'],
@@ -34,18 +35,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private channelEntityService: ChannelEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.channelsRepository.createQueryBuilder('channel')
-				.where('channel.lastNotedAt IS NOT NULL')
-				.andWhere('channel.isArchived = FALSE')
-				.orderBy('channel.lastNotedAt', 'DESC');
-
-			const channels = await query.limit(10).getMany();
+			const channels = await listRecentlyActiveChannelsFromDatabase(this.db, 10);
 
 			return await Promise.all(channels.map(x => this.channelEntityService.pack(x, me)));
 		});

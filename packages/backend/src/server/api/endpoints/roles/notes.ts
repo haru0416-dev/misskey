@@ -4,16 +4,16 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import * as Redis from 'ioredis';
-import { Brackets } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NotesRepository, RolesRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
+import type { MiMeta } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { IdService } from '@/core/IdService.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchPublicRoleByIdFromDatabase } from '@/core/RoleStore.js';
+import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -57,18 +57,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.redisForTimelines)
-		private redisForTimelines: Redis.Redis,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.rolesRepository)
-		private rolesRepository: RolesRepository,
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private idService: IdService,
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
 		private fanoutTimelineService: FanoutTimelineService,
 		private channelMutingService: ChannelMutingService,
 	) {
@@ -76,10 +72,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
 
-			const role = await this.rolesRepository.findOneBy({
-				id: ps.roleId,
-				isPublic: true,
-			});
+			const role = await fetchPublicRoleByIdFromDatabase(this.db, ps.roleId);
 
 			if (role == null) {
 				throw new ApiError(meta.errors.noSuchRole);
@@ -95,34 +88,18 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				return [];
 			}
 
-			const query = this.notesRepository.createQueryBuilder('note')
-				.where('note.id IN (:...noteIds)', { noteIds: noteIds })
-				.andWhere('(note.visibility = \'public\')')
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser');
-
 			// -- ミュートされたチャンネル対策
 			const mutingChannelIds = await this.channelMutingService
 				.list({ requestUserId: me.id }, { idOnly: true })
 				.then(x => x.map(x => x.id));
-			if (mutingChannelIds.length > 0) {
-				query.andWhere(new Brackets(qb => {
-					qb.orWhere('note.channelId IS NULL');
-					qb.orWhere('note.channelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-				}));
-				query.andWhere(new Brackets(qb => {
-					qb.orWhere('note.renoteChannelId IS NULL');
-					qb.orWhere('note.renoteChannelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-				}));
-			}
 
-			this.queryService.generateVisibilityQuery(query, me);
-			this.queryService.generateBaseNoteFilteringQuery(query, me);
-
-			const notes = await query.getMany();
+			const notes = await listFilteredTimelineNotesByIdsFromDatabase(this.db, {
+				ids: noteIds,
+				me,
+				blockedHosts: this.instanceMeta.blockedHosts,
+				publicOnly: true,
+				mutingChannelIds,
+			});
 			notes.sort((a, b) => a.id > b.id ? -1 : 1);
 
 			return await this.noteEntityService.packMany(notes, me);

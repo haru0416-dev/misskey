@@ -5,11 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import type { MiUser, SystemWebhooksRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { GlobalEvents, GlobalEventService } from '@/core/GlobalEventService.js';
 import { MiSystemWebhook, type SystemWebhookEventType } from '@/models/SystemWebhook.js';
+import type { MiUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { QueueService } from '@/core/QueueService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
@@ -18,6 +18,14 @@ import Logger from '@/logger.js';
 import { Packed } from '@/misc/json-schema.js';
 import { AbuseReportResolveType } from '@/models/AbuseUserReport.js';
 import { ModeratorInactivityRemainingTime } from '@/queue/processors/CheckModeratorsActivityProcessorService.js';
+import {
+	createSystemWebhookInDatabase,
+	deleteSystemWebhookFromDatabase,
+	fetchSystemWebhookByIdOrFailFromDatabase,
+	listSystemWebhooksFromDatabase,
+	updateSystemWebhookInDatabase,
+} from '@/core/SystemWebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnApplicationShutdown } from '@nestjs/common';
 
 export type AbuseReportPayload = {
@@ -56,8 +64,8 @@ export class SystemWebhookService implements OnApplicationShutdown {
 	constructor(
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
-		@Inject(DI.systemWebhooksRepository)
-		private systemWebhooksRepository: SystemWebhooksRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 		private idService: IdService,
 		private queueService: QueueService,
 		private moderationLogService: ModerationLogService,
@@ -69,7 +77,7 @@ export class SystemWebhookService implements OnApplicationShutdown {
 	@bindThis
 	public async fetchActiveSystemWebhooks() {
 		if (!this.activeSystemWebhooksFetched) {
-			this.activeSystemWebhooks = await this.systemWebhooksRepository.findBy({
+			this.activeSystemWebhooks = await listSystemWebhooksFromDatabase(this.db, {
 				isActive: true,
 			});
 			this.activeSystemWebhooksFetched = true;
@@ -87,20 +95,7 @@ export class SystemWebhookService implements OnApplicationShutdown {
 		isActive?: MiSystemWebhook['isActive'];
 		on?: MiSystemWebhook['on'];
 	}): Promise<MiSystemWebhook[]> {
-		const query = this.systemWebhooksRepository.createQueryBuilder('systemWebhook');
-		if (params) {
-			if (params.ids && params.ids.length > 0) {
-				query.andWhere('systemWebhook.id IN (:...ids)', { ids: params.ids });
-			}
-			if (params.isActive !== undefined) {
-				query.andWhere('systemWebhook.isActive = :isActive', { isActive: params.isActive });
-			}
-			if (params.on && params.on.length > 0) {
-				query.andWhere(':on <@ systemWebhook.on', { on: params.on });
-			}
-		}
-
-		return query.getMany();
+		return listSystemWebhooksFromDatabase(this.db, params);
 	}
 
 	/**
@@ -118,12 +113,10 @@ export class SystemWebhookService implements OnApplicationShutdown {
 		updater: MiUser,
 	): Promise<MiSystemWebhook> {
 		const id = this.idService.gen();
-		await this.systemWebhooksRepository.insert({
+		const webhook = await createSystemWebhookInDatabase(this.db, {
 			...params,
 			id,
 		});
-
-		const webhook = await this.systemWebhooksRepository.findOneByOrFail({ id });
 		this.globalEventService.publishInternalEvent('systemWebhookCreated', webhook);
 		this.moderationLogService
 			.log(updater, 'createSystemWebhook', {
@@ -149,8 +142,8 @@ export class SystemWebhookService implements OnApplicationShutdown {
 		},
 		updater: MiUser,
 	): Promise<MiSystemWebhook> {
-		const beforeEntity = await this.systemWebhooksRepository.findOneByOrFail({ id: params.id });
-		await this.systemWebhooksRepository.update(beforeEntity.id, {
+		const beforeEntity = await fetchSystemWebhookByIdOrFailFromDatabase(this.db, params.id);
+		const afterEntity = await updateSystemWebhookInDatabase(this.db, beforeEntity.id, {
 			updatedAt: new Date(),
 			isActive: params.isActive,
 			name: params.name,
@@ -158,8 +151,10 @@ export class SystemWebhookService implements OnApplicationShutdown {
 			url: params.url,
 			secret: params.secret,
 		});
+		if (afterEntity == null) {
+			throw new Error(`System webhook ${beforeEntity.id} not found`);
+		}
 
-		const afterEntity = await this.systemWebhooksRepository.findOneByOrFail({ id: beforeEntity.id });
 		this.globalEventService.publishInternalEvent('systemWebhookUpdated', afterEntity);
 		this.moderationLogService
 			.log(updater, 'updateSystemWebhook', {
@@ -176,8 +171,8 @@ export class SystemWebhookService implements OnApplicationShutdown {
 	 */
 	@bindThis
 	public async deleteSystemWebhook(id: MiSystemWebhook['id'], updater: MiUser) {
-		const webhook = await this.systemWebhooksRepository.findOneByOrFail({ id });
-		await this.systemWebhooksRepository.delete(id);
+		const webhook = await fetchSystemWebhookByIdOrFailFromDatabase(this.db, id);
+		await deleteSystemWebhookFromDatabase(this.db, id);
 
 		this.globalEventService.publishInternalEvent('systemWebhookDeleted', webhook);
 		this.moderationLogService

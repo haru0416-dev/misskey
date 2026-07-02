@@ -4,8 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Not, IsNull } from 'typeorm';
-import type { FollowingsRepository, MiMeta, MiUser, UsersRepository } from '@/models/_.js';
+import type { MiMeta, MiUser } from '@/models/_.js';
 import { QueueService } from '@/core/QueueService.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
@@ -14,6 +13,9 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/UserStore.js';
 
 @Injectable()
 export class DeleteAccountService {
@@ -21,11 +23,8 @@ export class DeleteAccountService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private apRendererService: ApRendererService,
@@ -43,7 +42,7 @@ export class DeleteAccountService {
 	}, moderator?: MiUser): Promise<void> {
 		if (this.meta.rootUserId === user.id) throw new Error('cannot delete a root account');
 
-		const _user = await this.usersRepository.findOneByOrFail({ id: user.id });
+		const _user = await fetchUserByIdOrFailFromDatabase(this.db, user.id);
 
 		if (user.host === null && _user.username.includes('.')) {
 			throw new Error('cannot delete a system account');
@@ -62,24 +61,7 @@ export class DeleteAccountService {
 			// 知り得る全SharedInboxにDelete配信
 			const content = this.apRendererService.addContext(this.apRendererService.renderDelete(this.userEntityService.genLocalUserUri(user.id), user));
 
-			const queue: string[] = [];
-
-			const followings = await this.followingsRepository.find({
-				where: [
-					{ followerSharedInbox: Not(IsNull()) },
-					{ followeeSharedInbox: Not(IsNull()) },
-				],
-				select: {
-					followerSharedInbox: true,
-					followeeSharedInbox: true,
-				},
-			});
-
-			const inboxes = followings.map(x => x.followerSharedInbox ?? x.followeeSharedInbox);
-
-			for (const inbox of inboxes) {
-				if (inbox != null && !queue.includes(inbox)) queue.push(inbox);
-			}
+			const queue = await listSharedInboxesFromFollowingsInDatabase(this.db);
 
 			for (const inbox of queue) {
 				this.queueService.deliver(user, content, inbox, true);
@@ -95,9 +77,7 @@ export class DeleteAccountService {
 			});
 		}
 
-		await this.usersRepository.update(user.id, {
-			isDeleted: true,
-		});
+		await updateUserDeletedStateInDatabase(this.db, user.id, true);
 
 		this.globalEventService.publishInternalEvent('userChangeDeletedState', { id: user.id, isDeleted: true });
 	}

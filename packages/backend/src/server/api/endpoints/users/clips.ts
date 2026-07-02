@@ -4,11 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { ClipsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
+import { listClipsWithPaginationFromDatabase, resolveClipPagination } from '@/core/ClipStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['users', 'clips'],
@@ -42,20 +43,20 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private clipEntityService: ClipEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.clipsRepository.createQueryBuilder('clip'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('clip.userId = :userId', { userId: ps.userId })
-				.andWhere('clip.isPublic = true');
-
-			const clips = await query
-				.limit(ps.limit)
-				.getMany();
+			const pagination = resolveClipPagination(this.idService, ps);
+			const clips = await listClipsWithPaginationFromDatabase(this.db, {
+				userId: ps.userId,
+				isPublic: true,
+				limit: ps.limit,
+				...pagination,
+			});
 
 			return await this.clipEntityService.packMany(clips, me);
 		});

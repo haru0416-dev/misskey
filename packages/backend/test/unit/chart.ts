@@ -9,8 +9,8 @@ import * as assert from 'assert';
 import { describe, beforeEach, afterEach, afterAll, test } from 'vitest';
 import type { Mocked } from 'vitest';
 import * as lolex from '@sinonjs/fake-timers';
-import { DataSource } from 'typeorm';
 import * as Redis from 'ioredis';
+import Chart from '@/core/chart/core.js';
 import TestChart from '@/core/chart/charts/test.js';
 import TestGroupedChart from '@/core/chart/charts/test-grouped.js';
 import TestUniqueChart from '@/core/chart/charts/test-unique.js';
@@ -20,12 +20,16 @@ import { entity as TestGroupedChartEntity } from '@/core/chart/charts/entities/t
 import { entity as TestUniqueChartEntity } from '@/core/chart/charts/entities/test-unique.js';
 import { entity as TestIntersectionChartEntity } from '@/core/chart/charts/entities/test-intersection.js';
 import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import Logger from '@/logger.js';
 
 describe('Chart', () => {
 	const config = loadConfig();
 
-	let db: DataSource | undefined;
+	let drizzlePool: MiDrizzlePool | undefined;
+	let drizzle: MiDrizzleDatabase | undefined;
 	let redisClient = {
 		set: () => Promise.resolve('OK'),
 		get: () => Promise.resolve(null),
@@ -38,38 +42,27 @@ describe('Chart', () => {
 	let clock: lolex.Clock;
 
 	beforeEach(async () => {
-		if (db) db.destroy();
+		if (drizzlePool) await drizzlePool.end();
 
-		db = new DataSource({
-			type: 'postgres',
-			host: config.db.host,
-			port: config.db.port,
-			username: config.db.user,
-			password: config.db.pass,
-			database: config.db.db,
-			extra: {
-				statement_timeout: 1000 * 10,
-				...config.db.extra,
-			},
-			synchronize: true,
-			dropSchema: true,
-			maxQueryExecutionTime: 300,
-			entities: [
-				TestChartEntity.hour, TestChartEntity.day,
-				TestGroupedChartEntity.hour, TestGroupedChartEntity.day,
-				TestUniqueChartEntity.hour, TestUniqueChartEntity.day,
-				TestIntersectionChartEntity.hour, TestIntersectionChartEntity.day,
-			],
-			migrations: ['../../migration/*.js'],
-		});
-
-		await db.initialize();
+		drizzlePool = createDrizzlePool(config);
+		await resetDatabase(drizzlePool);
+		for (const entity of [
+			TestChartEntity.hour, TestChartEntity.day,
+			TestGroupedChartEntity.hour, TestGroupedChartEntity.day,
+			TestUniqueChartEntity.hour, TestUniqueChartEntity.day,
+			TestIntersectionChartEntity.hour, TestIntersectionChartEntity.day,
+		]) {
+			for (const statement of Chart.entityToCreateTableSql(entity)) {
+				await drizzlePool.query(statement);
+			}
+		}
+		drizzle = createDrizzleDatabase(drizzlePool, config);
 
 		const logger = new Logger('chart'); // TODO: モックにする
-		testChart = new TestChart(db, redisClient, logger);
-		testGroupedChart = new TestGroupedChart(db, redisClient, logger);
-		testUniqueChart = new TestUniqueChart(db, redisClient, logger);
-		testIntersectionChart = new TestIntersectionChart(db, redisClient, logger);
+		testChart = new TestChart(drizzle, redisClient, logger);
+		testGroupedChart = new TestGroupedChart(drizzle, redisClient, logger);
+		testUniqueChart = new TestUniqueChart(drizzle, redisClient, logger);
+		testIntersectionChart = new TestIntersectionChart(drizzle, redisClient, logger);
 
 		clock = lolex.install({
 			// https://github.com/sinonjs/sinon/issues/2620
@@ -84,7 +77,11 @@ describe('Chart', () => {
 	});
 
 	afterAll(async () => {
-		if (db) await db.destroy();
+		if (drizzlePool) {
+			await resetDatabase(drizzlePool);
+			await runMigrations(drizzlePool);
+			await drizzlePool.end();
+		}
 	});
 
 	test('Can updates', async () => {

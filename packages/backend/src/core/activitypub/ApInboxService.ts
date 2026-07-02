@@ -4,7 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import * as Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
@@ -24,7 +23,12 @@ import { UtilityService } from '@/core/UtilityService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { QueueService } from '@/core/QueueService.js';
-import type { UsersRepository, NotesRepository, FollowingsRepository, AbuseUserReportsRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
+import { followingExistsInDatabase } from '@/core/FollowingStore.js';
+import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/UserStore.js';
+import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/NoteStore.js';
 import { bindThis } from '@/decorators.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -52,17 +56,8 @@ export class ApInboxService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private noteEntityService: NoteEntityService,
@@ -386,7 +381,7 @@ export class ApInboxService {
 			return 'skip: ブロックしようとしているユーザーはローカルユーザーではありません';
 		}
 
-		await this.userBlockingService.block(await this.usersRepository.findOneByOrFail({ id: actor.id }), await this.usersRepository.findOneByOrFail({ id: blockee.id }));
+		await this.userBlockingService.block(await fetchUserByIdOrFailFromDatabase(this.db, actor.id), await fetchUserByIdOrFailFromDatabase(this.db, blockee.id));
 		return 'ok';
 	}
 
@@ -518,7 +513,7 @@ export class ApInboxService {
 			return `skip: delete actor ${actor.uri} !== ${uri}`;
 		}
 
-		if (!(await this.usersRepository.update({ id: actor.id, isDeleted: false }, { isDeleted: true })).affected) {
+		if (!await updateUserDeletedStateIfNotDeletedInDatabase(this.db, actor.id, true)) {
 			return 'skip: already deleted or actor not found';
 		}
 
@@ -563,8 +558,8 @@ export class ApInboxService {
 			.filter(uri => uri.startsWith(this.config.url + '/users/'))
 			.map(uri => uri.split('/').at(-1))
 			.filter(x => x != null);
-		const users = await this.usersRepository.findBy({
-			id: In(userIds),
+		const users = await listUsersByIdsFromDatabase(this.db, userIds, {
+			includeSuspended: true,
 		});
 		if (users.length < 1) return 'skip';
 
@@ -677,12 +672,7 @@ export class ApInboxService {
 			return 'skip: follower not found';
 		}
 
-		const isFollowing = await this.followingsRepository.exists({
-			where: {
-				followerId: follower.id,
-				followeeId: actor.id,
-			},
-		});
+		const isFollowing = await followingExistsInDatabase(this.db, follower.id, actor.id);
 
 		if (isFollowing) {
 			await this.userFollowingService.unfollow(follower, actor);
@@ -696,10 +686,7 @@ export class ApInboxService {
 	private async undoAnnounce(actor: MiRemoteUser, activity: IAnnounce): Promise<string> {
 		const uri = getApId(activity);
 
-		const note = await this.notesRepository.findOneBy({
-			uri,
-			userId: actor.id,
-		});
+		const note = await fetchNoteByUriAndUserIdFromDatabase(this.db, uri, actor.id);
 
 		if (!note) return 'skip: no such Announce';
 
@@ -719,7 +706,7 @@ export class ApInboxService {
 			return 'skip: ブロック解除しようとしているユーザーはローカルユーザーではありません';
 		}
 
-		await this.userBlockingService.unblock(await this.usersRepository.findOneByOrFail({ id: actor.id }), blockee);
+		await this.userBlockingService.unblock(await fetchUserByIdOrFailFromDatabase(this.db, actor.id), blockee);
 		return 'ok';
 	}
 
@@ -734,19 +721,9 @@ export class ApInboxService {
 			return 'skip: フォロー解除しようとしているユーザーはローカルユーザーではありません';
 		}
 
-		const requestExist = await this.followRequestsRepository.exists({
-			where: {
-				followerId: actor.id,
-				followeeId: followee.id,
-			},
-		});
+		const requestExist = await followRequestExistsInDatabase(this.db, actor.id, followee.id);
 
-		const isFollowing = await this.followingsRepository.exists({
-			where: {
-				followerId: actor.id,
-				followeeId: followee.id,
-			},
-		});
+		const isFollowing = await followingExistsInDatabase(this.db, actor.id, followee.id);
 
 		if (requestExist) {
 			await this.userFollowingService.cancelFollowRequest(followee, actor);

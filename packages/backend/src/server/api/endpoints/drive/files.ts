@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFilesRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listDriveFilesForUserFromDatabase } from '@/core/DriveFileStore.js';
 
 export const meta = {
 	tags: ['drive'],
@@ -46,40 +47,30 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFileEntityService: DriveFileEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.driveFilesRepository.createQueryBuilder('file'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('file.userId = :userId', { userId: me.id });
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			if (ps.folderId) {
-				query.andWhere('file.folderId = :folderId', { folderId: ps.folderId });
-			} else {
-				query.andWhere('file.folderId IS NULL');
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
 			}
 
-			if (ps.type) {
-				if (ps.type.endsWith('/*')) {
-					query.andWhere('file.type like :type', { type: ps.type.replace('/*', '/') + '%' });
-				} else {
-					query.andWhere('file.type = :type', { type: ps.type });
-				}
-			}
-
-			switch (ps.sort) {
-				case '+createdAt': query.orderBy('file.id', 'DESC'); break;
-				case '-createdAt': query.orderBy('file.id', 'ASC'); break;
-				case '+name': query.orderBy('file.name', 'DESC'); break;
-				case '-name': query.orderBy('file.name', 'ASC'); break;
-				case '+size': query.orderBy('file.size', 'DESC'); break;
-				case '-size': query.orderBy('file.size', 'ASC'); break;
-			}
-
-			const files = await query.limit(ps.limit).getMany();
+			const files = await listDriveFilesForUserFromDatabase(this.db, {
+				userId: me.id,
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				folderId: ps.folderId,
+				type: ps.type,
+				sort: ps.sort,
+			});
 
 			return await this.driveFileEntityService.packMany(files, { detail: false, self: true });
 		});

@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
 import * as Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
-import { MiMeta } from '@/models/Meta.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiMeta } from '@/models/Meta.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { bindThis } from '@/decorators.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
@@ -23,8 +24,8 @@ export class MetaService implements OnApplicationShutdown {
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
 
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private featuredService: FeaturedService,
 		private globalEventService: GlobalEventService,
@@ -67,67 +68,14 @@ export class MetaService implements OnApplicationShutdown {
 	public async fetch(noCache = false): Promise<MiMeta> {
 		if (!noCache && this.cache) return this.cache;
 
-		return await this.db.transaction(async transactionalEntityManager => {
-			// 過去のバグでレコードが複数出来てしまっている可能性があるので新しいIDを優先する
-			const metas = await transactionalEntityManager.find(MiMeta, {
-				order: {
-					id: 'DESC',
-				},
-			});
-
-			const meta = metas[0];
-
-			if (meta) {
-				this.cache = meta;
-				return meta;
-			} else {
-				// metaが空のときfetchMetaが同時に呼ばれるとここが同時に呼ばれてしまうことがあるのでフェイルセーフなupsertを使う
-				const saved = await transactionalEntityManager
-					.upsert(
-						MiMeta,
-						{
-							id: 'x',
-						},
-						['id'],
-					)
-					.then((x) => transactionalEntityManager.findOneByOrFail(MiMeta, x.identifiers[0]));
-
-				this.cache = saved;
-				return saved;
-			}
-		});
+		const meta = await fetchMetaFromDatabase(this.db);
+		this.cache = meta;
+		return meta;
 	}
 
 	@bindThis
 	public async update(data: Partial<MiMeta>): Promise<MiMeta> {
-		let before: MiMeta | undefined;
-
-		const updated = await this.db.transaction(async transactionalEntityManager => {
-			const metas = await transactionalEntityManager.find(MiMeta, {
-				order: {
-					id: 'DESC',
-				},
-			});
-
-			before = metas[0];
-
-			if (before) {
-				await transactionalEntityManager.update(MiMeta, before.id, data);
-			} else {
-				await transactionalEntityManager.save(MiMeta, {
-					...data,
-					id: 'x',
-				});
-			}
-
-			const afters = await transactionalEntityManager.find(MiMeta, {
-				order: {
-					id: 'DESC',
-				},
-			});
-
-			return afters[0];
-		});
+		const { before, after: updated } = await updateMetaInDatabase(this.db, data);
 
 		if (data.hiddenTags) {
 			process.nextTick(() => {

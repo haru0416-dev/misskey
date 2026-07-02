@@ -7,7 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
 import bcrypt from 'bcryptjs';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MiMeta, UserProfilesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { EmailService } from '@/core/EmailService.js';
 import type { Config } from '@/config.js';
@@ -15,6 +15,8 @@ import { DI } from '@/di-symbols.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -72,8 +74,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private emailService: EmailService,
@@ -82,7 +84,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const token = ps.token;
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: me.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, me.id);
 
 			if (profile.twoFactorEnabled) {
 				if (token == null) {
@@ -110,7 +112,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.emailRequired);
 			}
 
-			await this.userProfilesRepository.update(me.id, {
+			await updateUserProfileInDatabase(this.drizzle, me.id, {
 				email: ps.email,
 				emailVerified: false,
 				emailVerifyCode: null,
@@ -127,7 +129,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (ps.email != null) {
 				const code = secureRndstr(16, { chars: L_CHARS });
 
-				await this.userProfilesRepository.update(me.id, {
+				await updateUserProfileInDatabase(this.drizzle, me.id, {
 					emailVerifyCode: code,
 				});
 

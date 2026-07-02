@@ -5,13 +5,15 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { MiUser, type WebhooksRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { GlobalEvents } from '@/core/GlobalEventService.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { QueueService } from '@/core/QueueService.js';
+import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnApplicationShutdown } from '@nestjs/common';
 
 export type UserWebhookPayload<T extends WebhookEventTypes> =
@@ -33,8 +35,8 @@ export class UserWebhookService implements OnApplicationShutdown {
 	constructor(
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
-		@Inject(DI.webhooksRepository)
-		private webhooksRepository: WebhooksRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 		private queueService: QueueService,
 	) {
 		this.redisForSub.on('message', this.onMessage);
@@ -43,8 +45,8 @@ export class UserWebhookService implements OnApplicationShutdown {
 	@bindThis
 	public async getActiveWebhooks() {
 		if (!this.activeWebhooksFetched) {
-			this.activeWebhooks = await this.webhooksRepository.findBy({
-				active: true,
+			this.activeWebhooks = await listWebhooksFromDatabase(this.db, {
+				isActive: true,
 			});
 			this.activeWebhooksFetched = true;
 		}
@@ -61,20 +63,7 @@ export class UserWebhookService implements OnApplicationShutdown {
 		isActive?: MiWebhook['active'];
 		on?: MiWebhook['on'];
 	}): Promise<MiWebhook[]> {
-		const query = this.webhooksRepository.createQueryBuilder('webhook');
-		if (params) {
-			if (params.ids && params.ids.length > 0) {
-				query.andWhere('webhook.id IN (:...ids)', { ids: params.ids });
-			}
-			if (params.isActive !== undefined) {
-				query.andWhere('webhook.active = :isActive', { isActive: params.isActive });
-			}
-			if (params.on && params.on.length > 0) {
-				query.andWhere(':on <@ webhook.on', { on: params.on });
-			}
-		}
-
-		return query.getMany();
+		return listWebhooksFromDatabase(this.db, params);
 	}
 
 	/**

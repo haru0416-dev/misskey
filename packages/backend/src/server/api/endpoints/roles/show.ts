@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { RolesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { RoleEntityService } from '@/core/entities/RoleEntityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchPublicRoleByIdFromDatabase } from '@/core/RoleStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -41,16 +42,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.rolesRepository)
-		private rolesRepository: RolesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private roleEntityService: RoleEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const role = await this.rolesRepository.findOneBy({
-				id: ps.roleId,
-				isPublic: true,
-			});
+			const role = await fetchPublicRoleByIdFromDatabase(this.db, ps.roleId);
 
 			if (role == null) {
 				throw new ApiError(meta.errors.noSuchRole);

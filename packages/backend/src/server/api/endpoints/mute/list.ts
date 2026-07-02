@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MutingsRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { MutingEntityService } from '@/core/entities/MutingEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listMutingsByMuterIdWithPaginationFromDatabase, resolveMutingPagination } from '@/core/MutingStore.js';
 
 export const meta = {
 	tags: ['account'],
@@ -43,19 +44,17 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private mutingEntityService: MutingEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.mutingsRepository.createQueryBuilder('muting'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('muting.muterId = :meId', { meId: me.id });
-
-			const mutings = await query
-				.limit(ps.limit)
-				.getMany();
+			const mutings = await listMutingsByMuterIdWithPaginationFromDatabase(this.db, me.id, {
+				...resolveMutingPagination(this.idService, ps),
+				limit: ps.limit,
+			});
 
 			return await this.mutingEntityService.packMany(mutings, me);
 		});

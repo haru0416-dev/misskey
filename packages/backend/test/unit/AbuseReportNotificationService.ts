@@ -8,16 +8,10 @@ import type { Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomString } from '../utils.js';
 import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
-import {
-	AbuseReportNotificationRecipientRepository,
-	MiAbuseReportNotificationRecipient,
-	MiAbuseUserReport,
-	MiSystemWebhook,
-	MiUser,
-	SystemWebhooksRepository,
-	UserProfilesRepository,
-	UsersRepository,
-} from '@/models/_.js';
+import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
+import type { MiUser } from '@/models/User.js';
+import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
+import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { IdService } from '@/core/IdService.js';
@@ -26,9 +20,20 @@ import { RoleService } from '@/core/RoleService.js';
 import { MetaService } from '@/core/MetaService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { abuseReportNotificationRecipient } from '@/db/schema/abuse-report-notification-recipient.js';
+import { systemWebhook } from '@/db/schema/system-webhook.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import {
+	createAbuseReportNotificationRecipientInDatabase,
+	fetchAbuseReportNotificationRecipientByIdFromDatabase,
+} from '@/core/AbuseReportNotificationRecipientStore.js';
+import { createSystemWebhookInDatabase } from '@/core/SystemWebhookStore.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 process.env.NODE_ENV = 'test';
 
@@ -38,10 +43,7 @@ describe('AbuseReportNotificationService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	let usersRepository: UsersRepository;
-	let userProfilesRepository: UserProfilesRepository;
-	let systemWebhooksRepository: SystemWebhooksRepository;
-	let abuseReportNotificationRecipientRepository: AbuseReportNotificationRecipientRepository;
+	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let roleService: Mocked<RoleService>;
 	let emailService: Mocked<EmailService>;
@@ -57,15 +59,13 @@ describe('AbuseReportNotificationService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	async function createUser(data: Partial<MiUser> = {}) {
-		const user = await usersRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	async function createUser(data: Partial<UserInsert> & Pick<UserInsert, 'username' | 'usernameLower'>) {
+		const user = await createUserInDatabase(db, {
+			id: idService.gen(),
+			...data,
+		});
 
-		await userProfilesRepository.insert({
+		await createUserProfileInDatabase(db, {
 			userId: user.id,
 		});
 
@@ -73,27 +73,30 @@ describe('AbuseReportNotificationService', () => {
 	}
 
 	async function createWebhook(data: Partial<MiSystemWebhook> = {}) {
-		return systemWebhooksRepository
-			.insert({
-				id: idService.gen(),
-				name: randomString(),
-				on: ['abuseReport'],
-				url: 'https://example.com',
-				secret: randomString(),
-				...data,
-			})
-			.then(x => systemWebhooksRepository.findOneByOrFail(x.identifiers[0]));
+		return createSystemWebhookInDatabase(db, {
+			id: idService.gen(),
+			isActive: data.isActive ?? true,
+			updatedAt: data.updatedAt ?? new Date(),
+			latestSentAt: data.latestSentAt ?? null,
+			latestStatus: data.latestStatus ?? null,
+			name: randomString(),
+			on: ['abuseReport'],
+			url: 'https://example.com',
+			secret: randomString(),
+			...data,
+		});
 	}
 
 	async function createRecipient(data: Partial<MiAbuseReportNotificationRecipient> = {}) {
-		return abuseReportNotificationRecipientRepository
-			.insert({
-				id: idService.gen(),
-				isActive: true,
-				name: randomString(),
-				...data,
-			})
-			.then(x => abuseReportNotificationRecipientRepository.findOneByOrFail(x.identifiers[0]));
+		return createAbuseReportNotificationRecipientInDatabase(db, {
+			id: idService.gen(),
+			isActive: true,
+			name: randomString(),
+			method: 'email',
+			userId: null,
+			systemWebhookId: null,
+			...data,
+		});
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -135,10 +138,7 @@ describe('AbuseReportNotificationService', () => {
 			})
 			.compile();
 
-		usersRepository = app.get(DI.usersRepository);
-		userProfilesRepository = app.get(DI.userProfilesRepository);
-		systemWebhooksRepository = app.get(DI.systemWebhooksRepository);
-		abuseReportNotificationRecipientRepository = app.get(DI.abuseReportNotificationRecipientRepository);
+		db = app.get(DI.drizzle);
 
 		service = app.get(AbuseReportNotificationService);
 		idService = app.get(IdService);
@@ -163,10 +163,10 @@ describe('AbuseReportNotificationService', () => {
 		emailService.sendEmail.mockClear();
 		webhookService.enqueueSystemWebhook.mockClear();
 
-		await usersRepository.createQueryBuilder().delete().execute();
-		await userProfilesRepository.createQueryBuilder().delete().execute();
-		await systemWebhooksRepository.createQueryBuilder().delete().execute();
-		await abuseReportNotificationRecipientRepository.createQueryBuilder().delete().execute();
+		await db.delete(abuseReportNotificationRecipient);
+		await db.delete(systemWebhook);
+		await db.delete(userProfile);
+		await db.delete(user);
 	});
 
 	afterAll(async () => {
@@ -252,7 +252,7 @@ describe('AbuseReportNotificationService', () => {
 
 			await service.deleteRecipient(recipient1.id, root);
 
-			await expect(abuseReportNotificationRecipientRepository.findOneBy({ id: recipient1.id })).resolves.toBeNull();
+			await expect(fetchAbuseReportNotificationRecipientByIdFromDatabase(db, recipient1.id)).resolves.toBeNull();
 		});
 	});
 

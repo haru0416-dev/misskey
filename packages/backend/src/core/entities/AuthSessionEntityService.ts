@@ -5,18 +5,19 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { AuthSessionsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
-import type { MiAuthSession } from '@/models/AuthSession.js';
 import type { MiUser } from '@/models/User.js';
 import { bindThis } from '@/decorators.js';
+import { fetchAuthSessionByIdOrFailFromDatabase } from '@/core/AuthSessionStore.js';
+import type { AuthSessionRow } from '@/db/schema/auth-session.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { AppEntityService } from './AppEntityService.js';
 
 @Injectable()
 export class AuthSessionEntityService {
 	constructor(
-		@Inject(DI.authSessionsRepository)
-		private authSessionsRepository: AuthSessionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private appEntityService: AppEntityService,
 	) {
@@ -24,10 +25,10 @@ export class AuthSessionEntityService {
 
 	@bindThis
 	public async pack(
-		src: MiAuthSession['id'] | MiAuthSession,
+		src: AuthSessionRow['id'] | AuthSessionRow,
 		me?: { id: MiUser['id'] } | null | undefined,
 	) {
-		const session = typeof src === 'object' ? src : await this.authSessionsRepository.findOneByOrFail({ id: src });
+		const session = typeof src === 'object' ? src : await fetchAuthSessionByIdOrFailFromDatabase(this.drizzle, src);
 
 		return await awaitAll({
 			id: session.id,

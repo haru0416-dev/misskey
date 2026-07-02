@@ -4,25 +4,31 @@
  */
 
 import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common';
-import { Brackets, In, IsNull, Not } from 'typeorm';
 import * as Redis from 'ioredis';
 import sanitizeHtml from 'sanitize-html';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { GlobalEvents, GlobalEventService } from '@/core/GlobalEventService.js';
 import type {
-	AbuseReportNotificationRecipientRepository,
-	MiAbuseReportNotificationRecipient,
 	MiAbuseUserReport,
 	MiMeta,
 	MiUser,
 } from '@/models/_.js';
 import { EmailService } from '@/core/EmailService.js';
 import { RoleService } from '@/core/RoleService.js';
-import { RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
+import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import {
+	createAbuseReportNotificationRecipientInDatabase,
+	deleteAbuseReportNotificationRecipientsFromDatabase,
+	fetchAbuseReportNotificationRecipientByIdOrFailFromDatabase,
+	listAbuseReportNotificationRecipientsFromDatabase,
+	listUserAbuseReportNotificationRecipientsFromDatabase,
+	updateAbuseReportNotificationRecipientInDatabase,
+} from '@/core/AbuseReportNotificationRecipientStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { IdService } from './IdService.js';
 
 @Injectable()
@@ -31,8 +37,8 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.abuseReportNotificationRecipientRepository)
-		private abuseReportNotificationRecipientRepository: AbuseReportNotificationRecipientRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
@@ -201,33 +207,12 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 			joinSystemWebhook?: boolean,
 		},
 	): Promise<MiAbuseReportNotificationRecipient[]> {
-		const query = this.abuseReportNotificationRecipientRepository.createQueryBuilder('recipient');
-
-		if (opts?.joinUser) {
-			query.innerJoinAndSelect('user', 'user', 'recipient.userId = user.id');
-			query.innerJoinAndSelect('recipient.userProfile', 'userProfile');
-		}
-
-		if (opts?.joinSystemWebhook) {
-			query.innerJoinAndSelect('recipient.systemWebhook', 'systemWebhook');
-		}
-
-		if (params?.ids) {
-			query.andWhere({ id: In(params.ids) });
-		}
-
-		if (params?.method) {
-			query.andWhere(new Brackets(qb => {
-				if (params.method?.includes('email')) {
-					qb.orWhere({ method: 'email', userId: Not(IsNull()) });
-				}
-				if (params.method?.includes('webhook')) {
-					qb.orWhere({ method: 'webhook', userId: IsNull() });
-				}
-			}));
-		}
-
-		const recipients = await query.getMany();
+		const recipients = await listAbuseReportNotificationRecipientsFromDatabase(this.drizzle, {
+			ids: params?.ids,
+			method: params?.method,
+			joinUser: opts?.joinUser,
+			joinSystemWebhook: opts?.joinSystemWebhook,
+		});
 		if (recipients.length <= 0) {
 			return [];
 		}
@@ -276,17 +261,14 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 		},
 		updater: MiUser,
 	): Promise<MiAbuseReportNotificationRecipient> {
-		const id = this.idService.gen();
-		await this.abuseReportNotificationRecipientRepository.insert({
+		const created = await createAbuseReportNotificationRecipientInDatabase(this.drizzle, {
 			...params,
-			id,
+			id: this.idService.gen(),
 		});
-
-		const created = await this.abuseReportNotificationRecipientRepository.findOneByOrFail({ id: id });
 
 		this.moderationLogService
 			.log(updater, 'createAbuseReportNotificationRecipient', {
-				recipientId: id,
+				recipientId: created.id,
 				recipient: created,
 			});
 
@@ -308,9 +290,9 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 		},
 		updater: MiUser,
 	): Promise<MiAbuseReportNotificationRecipient> {
-		const beforeEntity = await this.abuseReportNotificationRecipientRepository.findOneByOrFail({ id: params.id });
+		const beforeEntity = await fetchAbuseReportNotificationRecipientByIdOrFailFromDatabase(this.drizzle, params.id);
 
-		await this.abuseReportNotificationRecipientRepository.update(params.id, {
+		const afterEntity = await updateAbuseReportNotificationRecipientInDatabase(this.drizzle, params.id, {
 			isActive: params.isActive,
 			updatedAt: new Date(),
 			name: params.name,
@@ -318,8 +300,9 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 			userId: params.userId,
 			systemWebhookId: params.systemWebhookId,
 		});
-
-		const afterEntity = await this.abuseReportNotificationRecipientRepository.findOneByOrFail({ id: params.id });
+		if (afterEntity == null) {
+			throw new Error(`Abuse report notification recipient ${params.id} not found`);
+		}
 
 		this.moderationLogService
 			.log(updater, 'updateAbuseReportNotificationRecipient', {
@@ -339,9 +322,9 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 		id: MiAbuseReportNotificationRecipient['id'],
 		updater: MiUser,
 	) {
-		const entity = await this.abuseReportNotificationRecipientRepository.findBy({ id });
+		const entity = await listAbuseReportNotificationRecipientsFromDatabase(this.drizzle, { ids: [id] });
 
-		await this.abuseReportNotificationRecipientRepository.delete(id);
+		await deleteAbuseReportNotificationRecipientsFromDatabase(this.drizzle, id);
 
 		this.moderationLogService
 			.log(updater, 'deleteAbuseReportNotificationRecipient', {
@@ -387,7 +370,7 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 
 		// モデレータ権限を持たない通知先をDBから削除する
 		if (unauthorizedUserRecipients.length > 0) {
-			await this.abuseReportNotificationRecipientRepository.delete(unauthorizedUserRecipients.map(it => it.id));
+			await deleteAbuseReportNotificationRecipientsFromDatabase(this.drizzle, unauthorizedUserRecipients.map(it => it.id));
 		}
 		const nonUserRecipients = recipients.filter(it => it.userId === null);
 		return [...nonUserRecipients, ...authorizedUserRecipients].sort((a, b) => a.id.localeCompare(b.id));
@@ -407,9 +390,7 @@ export class AbuseReportNotificationService implements OnApplicationShutdown {
 			case 'userRoleUnassigned': {
 				// 場合によってはキャッシュ更新よりも先にここが呼ばれてしまう可能性があるのでnextTickで遅延実行
 				process.nextTick(async () => {
-					const recipients = await this.abuseReportNotificationRecipientRepository.findBy({
-						userId: Not(IsNull()),
-					});
+					const recipients = await listUserAbuseReportNotificationRecipientsFromDatabase(this.drizzle);
 					await this.removeUnauthorizedRecipientUsers(recipients);
 				});
 				break;

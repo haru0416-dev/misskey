@@ -4,11 +4,13 @@
  */
 
 import * as fs from 'node:fs';
-import type { DriveFilesRepository, MiDriveFile } from '@/models/_.js';
+import type { MiDriveFile } from '@/models/_.js';
 import { createTemp } from '@/misc/create-temp.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import type { FileInfoService } from '@/core/FileInfoService.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchDriveFileByAccessKeyFromDatabase } from '@/core/DriveFileStore.js';
 
 export type DownloadedFileResult = {
 	kind: 'downloaded';
@@ -45,7 +47,7 @@ export type FileResolveResult =
 
 export class FileServerFileResolver {
 	constructor(
-		private driveFilesRepository: DriveFilesRepository,
+		private db: MiDrizzleDatabase,
 		private fileInfoService: FileInfoService,
 		private downloadService: DownloadService,
 		private internalStorageService: InternalStorageService,
@@ -72,11 +74,7 @@ export class FileServerFileResolver {
 
 	public async resolveFileByAccessKey(key: string): Promise<FileResolveResult> {
 		// Fetch drive file
-		const file = await this.driveFilesRepository.createQueryBuilder('file')
-			.where('file.accessKey = :accessKey', { accessKey: key })
-			.orWhere('file.thumbnailAccessKey = :thumbnailAccessKey', { thumbnailAccessKey: key })
-			.orWhere('file.webpublicAccessKey = :webpublicAccessKey', { webpublicAccessKey: key })
-			.getOne();
+		const file = await fetchDriveFileByAccessKeyFromDatabase(this.db, key);
 
 		if (file == null) return { kind: 'not-found' };
 

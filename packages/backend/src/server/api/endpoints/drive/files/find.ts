@@ -4,11 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listDriveFilesByNameUserIdAndFolderIdFromDatabase } from '@/core/DriveFileStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -42,16 +42,16 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFileEntityService: DriveFileEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const files = await this.driveFilesRepository.findBy({
+			const files = await listDriveFilesByNameUserIdAndFolderIdFromDatabase(this.db, {
 				name: ps.name,
 				userId: me.id,
-				folderId: ps.folderId ?? IsNull(),
+				folderId: ps.folderId ?? null,
 			});
 
 			return await this.driveFileEntityService.packMany(files, { self: true });

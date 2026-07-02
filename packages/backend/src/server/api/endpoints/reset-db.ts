@@ -4,7 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
 import * as Redis from 'ioredis';
 import { LoggerService } from '@/core/LoggerService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
@@ -12,6 +11,7 @@ import { DI } from '@/di-symbols.js';
 import { resetDb } from '@/misc/reset-db.js';
 import { MetaService } from '@/core/MetaService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
+import type { MiDrizzlePool } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['non-productive'],
@@ -34,8 +34,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzlePool)
+		private dbPool: MiDrizzlePool,
 
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
@@ -51,7 +51,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			logger.info('---- Resetting database...');
 
 			await this.redisClient.flushdb();
-			await resetDb(this.db);
+			await resetDb(this.dbPool);
 
 			// DIコンテナで管理しているmetaのインスタンスには上記のリセット処理が届かないため、
 			// 初期値を流して明示的にリフレッシュする

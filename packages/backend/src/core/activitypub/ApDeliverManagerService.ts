@@ -4,12 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull, Not } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository } from '@/models/_.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { QueueService } from '@/core/QueueService.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { bindThis } from '@/decorators.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import { ThinUser } from '@/queue/types.js';
@@ -40,15 +39,12 @@ class DeliverManager {
 
 	/**
 	 * Constructor
-	 * @param userEntityService
-	 * @param followingsRepository
 	 * @param queueService
 	 * @param actor Actor
 	 * @param activity Activity to deliver
 	 */
 	constructor(
-		private userEntityService: UserEntityService,
-		private followingsRepository: FollowingsRepository,
+		private db: MiDrizzleDatabase,
 		private queueService: QueueService,
 
 		actor: { id: MiUser['id']; host: null; },
@@ -115,16 +111,7 @@ class DeliverManager {
 			// followers deliver
 			// TODO: SELECT DISTINCT ON ("followerSharedInbox") "followerSharedInbox" みたいな問い合わせにすればよりパフォーマンス向上できそう
 			// ただ、sharedInboxがnullなリモートユーザーも稀におり、その対応ができなさそう？
-			const followers = await this.followingsRepository.find({
-				where: {
-					followeeId: this.actor.id,
-					followerHost: Not(IsNull()),
-				},
-				select: {
-					followerSharedInbox: true,
-					followerInbox: true,
-				},
-			});
+			const followers = await listFollowerInboxesByFolloweeIdFromDatabase(this.db, this.actor.id);
 
 			for (const following of followers) {
 				const inbox = following.followerSharedInbox ?? following.followerInbox;
@@ -151,10 +138,9 @@ class DeliverManager {
 @Injectable()
 export class ApDeliverManagerService {
 	constructor(
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
-		private userEntityService: UserEntityService,
 		private queueService: QueueService,
 	) {
 	}
@@ -167,8 +153,7 @@ export class ApDeliverManagerService {
 	@bindThis
 	public async deliverToFollowers(actor: { id: MiLocalUser['id']; host: null; }, activity: IActivity): Promise<void> {
 		const manager = new DeliverManager(
-			this.userEntityService,
-			this.followingsRepository,
+			this.db,
 			this.queueService,
 			actor,
 			activity,
@@ -186,8 +171,7 @@ export class ApDeliverManagerService {
 	@bindThis
 	public async deliverToUser(actor: { id: MiLocalUser['id']; host: null; }, activity: IActivity, to: MiRemoteUser): Promise<void> {
 		const manager = new DeliverManager(
-			this.userEntityService,
-			this.followingsRepository,
+			this.db,
 			this.queueService,
 			actor,
 			activity,
@@ -205,8 +189,7 @@ export class ApDeliverManagerService {
 	@bindThis
 	public async deliverToUsers(actor: { id: MiLocalUser['id']; host: null; }, activity: IActivity, targets: MiRemoteUser[]): Promise<void> {
 		const manager = new DeliverManager(
-			this.userEntityService,
-			this.followingsRepository,
+			this.db,
 			this.queueService,
 			actor,
 			activity,
@@ -218,8 +201,7 @@ export class ApDeliverManagerService {
 	@bindThis
 	public createDeliverManager(actor: { id: MiUser['id']; host: null; }, activity: IActivity | null): DeliverManager {
 		return new DeliverManager(
-			this.userEntityService,
-			this.followingsRepository,
+			this.db,
 			this.queueService,
 
 			actor,

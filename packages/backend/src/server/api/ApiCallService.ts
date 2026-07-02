@@ -12,10 +12,12 @@ import { getIpHash } from '@/misc/get-ip-hash.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type Logger from '@/logger.js';
-import type { MiMeta, UserIpsRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
+import { recordUserIpInDatabase } from '@/core/UserIpStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
 import { ApiError } from './error.js';
 import { RateLimiterService } from './RateLimiterService.js';
@@ -45,8 +47,8 @@ export class ApiCallService implements OnApplicationShutdown {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.userIpsRepository)
-		private userIpsRepository: UserIpsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private authenticateService: AuthenticateService,
 		private rateLimiterService: RateLimiterService,
@@ -283,14 +285,11 @@ export class ApiCallService implements OnApplicationShutdown {
 				ips.add(ip);
 			}
 
-			try {
-				this.userIpsRepository.createQueryBuilder().insert().values({
-					createdAt: new Date(),
-					userId: user.id,
-					ip: ip,
-				}).orIgnore(true).execute();
-			} catch {
-			}
+			void recordUserIpInDatabase(this.drizzle, {
+				createdAt: new Date(),
+				userId: user.id,
+				ip: ip,
+			}).catch(() => {});
 		}
 	}
 

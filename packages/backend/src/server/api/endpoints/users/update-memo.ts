@@ -6,9 +6,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { IdService } from '@/core/IdService.js';
-import type { UserMemoRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { deleteUserMemoFromDatabase, upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -43,8 +44,9 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userMemosRepository)
-		private userMemosRepository: UserMemoRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
+
 		private getterService: GetterService,
 		private idService: IdService,
 	) {
@@ -57,33 +59,16 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// 引数がnullか空文字であれば、パーソナルメモを削除する
 			if (ps.memo === '' || ps.memo == null) {
-				await this.userMemosRepository.delete({
-					userId: me.id,
-					targetUserId: target.id,
-				});
+				await deleteUserMemoFromDatabase(this.drizzle, me.id, target.id);
 				return;
 			}
 
-			// 以前に作成されたパーソナルメモがあるかどうか確認
-			const previousMemo = await this.userMemosRepository.findOneBy({
+			await upsertUserMemoInDatabase(this.drizzle, {
+				id: this.idService.gen(),
 				userId: me.id,
 				targetUserId: target.id,
+				memo: ps.memo,
 			});
-
-			if (!previousMemo) {
-				await this.userMemosRepository.insert({
-					id: this.idService.gen(),
-					userId: me.id,
-					targetUserId: target.id,
-					memo: ps.memo,
-				});
-			} else {
-				await this.userMemosRepository.update(previousMemo.id, {
-					userId: me.id,
-					targetUserId: target.id,
-					memo: ps.memo,
-				});
-			}
 		});
 	}
 }

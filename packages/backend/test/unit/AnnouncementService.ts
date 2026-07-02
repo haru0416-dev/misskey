@@ -12,51 +12,51 @@ import { Test } from '@nestjs/testing';
 import { GlobalModule } from '@/GlobalModule.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
-import type {
-	AnnouncementReadsRepository,
-	AnnouncementsRepository,
-	MiAnnouncement,
-	MiUser,
-	UsersRepository,
-} from '@/models/_.js';
+import { createAnnouncementInDatabase, fetchAnnouncementByIdOrFailFromDatabase } from '@/core/AnnouncementStore.js';
+import type { MiAnnouncement } from '@/models/Announcement.js';
+import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
+import { announcement, type AnnouncementInsert } from '@/db/schema/announcement.js';
+import { announcementRead } from '@/db/schema/announcement-read.js';
+import { meta as metaTable } from '@/db/schema/meta.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
 import type { TestingModule } from '@nestjs/testing';
 
 describe('AnnouncementService', () => {
 	let app: TestingModule;
 	let announcementService: AnnouncementService;
-	let usersRepository: UsersRepository;
-	let announcementsRepository: AnnouncementsRepository;
-	let announcementReadsRepository: AnnouncementReadsRepository;
+	let drizzle: MiDrizzleDatabase;
 	let globalEventService: Mocked<GlobalEventService>;
 	let moderationLogService: Mocked<ModerationLogService>;
 
-	function createUser(data: Partial<MiUser> = {}) {
+	function createUser(data: Partial<UserInsert> = {}) {
 		const un = secureRndstr(16);
-		return usersRepository.insert({
+		return createUserInDatabase(drizzle, {
 			id: genAidx(Date.now()),
 			username: un,
 			usernameLower: un.toLowerCase(),
 			...data,
-		})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+		});
 	}
 
 	function createAnnouncement(data: Partial<MiAnnouncement & { createdAt: Date }> = {}) {
-		return announcementsRepository.insert({
-			id: genAidx(data.createdAt?.getTime() ?? Date.now()),
+		const { createdAt, ...rest } = data;
+
+		return createAnnouncementInDatabase(drizzle, {
+			id: genAidx(createdAt?.getTime() ?? Date.now()),
 			updatedAt: null,
 			title: 'Title',
 			text: 'Text',
-			...data,
-		})
-			.then(x => announcementsRepository.findOneByOrFail(x.identifiers[0]));
+			...rest,
+		} as AnnouncementInsert);
 	}
 
 	beforeEach(async () => {
@@ -90,19 +90,17 @@ describe('AnnouncementService', () => {
 		app.enableShutdownHooks();
 
 		announcementService = app.get<AnnouncementService>(AnnouncementService);
-		usersRepository = app.get<UsersRepository>(DI.usersRepository);
-		announcementsRepository = app.get<AnnouncementsRepository>(DI.announcementsRepository);
-		announcementReadsRepository = app.get<AnnouncementReadsRepository>(DI.announcementReadsRepository);
+		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
 		globalEventService = app.get<GlobalEventService>(GlobalEventService) as Mocked<GlobalEventService>;
 		moderationLogService = app.get<ModerationLogService>(ModerationLogService) as Mocked<ModerationLogService>;
 	});
 
 	afterEach(async () => {
 		await Promise.all([
-			app.get(DI.metasRepository).createQueryBuilder().delete().execute(),
-			usersRepository.createQueryBuilder().delete().execute(),
-			announcementsRepository.createQueryBuilder().delete().execute(),
-			announcementReadsRepository.createQueryBuilder().delete().execute(),
+			drizzle.delete(metaTable),
+			drizzle.delete(announcementRead),
+			drizzle.delete(announcement),
+			drizzle.delete(user),
 		]);
 
 		await app.close();
@@ -199,8 +197,39 @@ describe('AnnouncementService', () => {
 		});
 	});
 
-	describe.todo('read', () => {
-		// TODO
+	describe('read', () => {
+		test('既読を作成する', async () => {
+			const user = await createUser();
+			const announcement = await createAnnouncement();
+
+			await announcementService.read(user, announcement.id);
+
+			const reads = await announcementService.getReads(user.id);
+			expect(reads).toHaveLength(1);
+			expect(reads[0].announcementId).toBe(announcement.id);
+		});
+
+		test('重複既読は無視する', async () => {
+			const user = await createUser();
+			const announcement = await createAnnouncement();
+
+			await announcementService.read(user, announcement.id);
+			await announcementService.read(user, announcement.id);
+
+			const reads = await announcementService.getReads(user.id);
+			expect(reads).toHaveLength(1);
+		});
+
+		test('ユーザー指定お知らせは既読時に非アクティブ化する', async () => {
+			const user = await createUser();
+			const announcement = await createAnnouncement({
+				userId: user.id,
+			});
+
+			await announcementService.read(user, announcement.id);
+
+			const result = await fetchAnnouncementByIdOrFailFromDatabase(drizzle, announcement.id);
+			expect(result.isActive).toBe(false);
+		});
 	});
 });
-

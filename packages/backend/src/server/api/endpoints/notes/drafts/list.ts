@@ -5,10 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MiNoteDraft, NoteDraftsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
-import { QueryService } from '@/core/QueryService.js';
 import { NoteDraftEntityService } from '@/core/entities/NoteDraftEntityService.js';
+import {
+	listNoteDraftsByUserIdFromDatabase,
+	resolveNoteDraftPagination,
+} from '@/core/NoteDraftStore.js';
+import { IdService } from '@/core/IdService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['notes', 'drafts'],
@@ -49,25 +53,18 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.noteDraftsRepository)
-		private noteDraftsRepository: NoteDraftsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
-		private queryService: QueryService,
+		private idService: IdService,
 		private noteDraftEntityService: NoteDraftEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery<MiNoteDraft>(this.noteDraftsRepository.createQueryBuilder('drafts'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('drafts.userId = :meId', { meId: me.id });
-
-			if (ps.scheduled === true) {
-				query.andWhere('drafts.isActuallyScheduled = true');
-			} else if (ps.scheduled === false) {
-				query.andWhere('drafts.isActuallyScheduled = false');
-			}
-
-			const drafts = await query
-				.limit(ps.limit)
-				.getMany();
+			const drafts = await listNoteDraftsByUserIdFromDatabase(this.db, me.id, {
+				limit: ps.limit,
+				scheduled: ps.scheduled,
+				...resolveNoteDraftPagination(this.idService, ps),
+			});
 
 			return await this.noteDraftEntityService.packMany(drafts, me);
 		});

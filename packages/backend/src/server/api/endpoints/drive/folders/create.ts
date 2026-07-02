@@ -6,11 +6,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFoldersRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
+import {
+	createDriveFolderInDatabase,
+	fetchDriveFolderByIdAndUserIdFromDatabase,
+} from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -52,8 +56,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFoldersRepository)
-		private driveFoldersRepository: DriveFoldersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFolderEntityService: DriveFolderEntityService,
 		private idService: IdService,
@@ -64,10 +68,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			let parent = null;
 			if (ps.parentId) {
 				// Fetch parent folder
-				parent = await this.driveFoldersRepository.findOneBy({
-					id: ps.parentId,
-					userId: me.id,
-				});
+				parent = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, ps.parentId, me.id);
 
 				if (parent == null) {
 					throw new ApiError(meta.errors.noSuchFolder);
@@ -75,7 +76,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// Create folder
-			const folder = await this.driveFoldersRepository.insertOne({
+			const folder = await createDriveFolderInDatabase(this.db, {
 				id: this.idService.gen(),
 				name: ps.name,
 				parentId: parent !== null ? parent.id : null,

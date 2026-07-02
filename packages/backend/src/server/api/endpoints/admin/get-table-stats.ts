@@ -4,9 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { sql } from 'drizzle-orm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	requireCredential: true,
@@ -48,19 +49,23 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async () => {
-			const sizes = await this.db.query(`
+			const sizes = await this.db.execute<{
+				table: string;
+				count: string;
+				size: string;
+			}>(sql`
 			SELECT relname AS "table", reltuples as "count", pg_total_relation_size(C.oid) AS "size"
 			FROM pg_class C LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
 			WHERE nspname NOT IN ('pg_catalog', 'information_schema')
 				AND C.relkind <> 'i'
 				AND nspname !~ '^pg_toast';`)
-				.then(recs => {
+				.then(result => {
 					const res = {} as Record<string, { count: number; size: number; }>;
-					for (const rec of recs) {
+					for (const rec of result.rows) {
 						res[rec.table] = {
 							count: parseInt(rec.count, 10),
 							size: parseInt(rec.size, 10),

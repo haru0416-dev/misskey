@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AdsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import { fetchAdByIdFromDatabase, updateAdInDatabase } from '@/core/AdStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -47,17 +48,17 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.adsRepository)
-		private adsRepository: AdsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private moderationLogService: ModerationLogService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const ad = await this.adsRepository.findOneBy({ id: ps.id });
+			const ad = await fetchAdByIdFromDatabase(this.drizzle, ps.id);
 
 			if (ad == null) throw new ApiError(meta.errors.noSuchAd);
 
-			await this.adsRepository.update(ad.id, {
+			const updatedAd = await updateAdInDatabase(this.drizzle, ad.id, {
 				url: ps.url,
 				place: ps.place,
 				priority: ps.priority,
@@ -69,8 +70,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				dayOfWeek: ps.dayOfWeek,
 				isSensitive: ps.isSensitive,
 			});
-
-			const updatedAd = await this.adsRepository.findOneByOrFail({ id: ad.id });
+			if (updatedAd == null) throw new ApiError(meta.errors.noSuchAd);
 
 			this.moderationLogService.log(me, 'updateAd', {
 				adId: ad.id,

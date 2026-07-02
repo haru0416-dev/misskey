@@ -4,11 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserListsRepository, UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserListEntityService } from '@/core/entities/UserListEntityService.js';
 import { ApiError } from '@/server/api/error.js';
 import { DI } from '@/di-symbols.js';
+import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['lists', 'account'],
@@ -58,29 +60,23 @@ export const paramDef = {
 @Injectable() // eslint-disable-next-line import/no-default-export
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userListEntityService: UserListEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			if (typeof ps.userId !== 'undefined') {
-				const user = await this.usersRepository.findOneBy({ id: ps.userId });
+				const user = await fetchUserByIdFromDatabase(this.db, ps.userId);
 				if (user === null) throw new ApiError(meta.errors.noSuchUser);
 				if (user.host !== null) throw new ApiError(meta.errors.remoteUser);
 			} else if (me === null) {
 				throw new ApiError(meta.errors.invalidParam);
 			}
 
-			const userLists = await this.userListsRepository.findBy(typeof ps.userId === 'undefined' && me !== null ? {
-				userId: me.id,
-			} : {
-				userId: ps.userId,
-				isPublic: true,
-			});
+			const userLists = typeof ps.userId === 'undefined'
+				? await listUserListsByUserIdFromDatabase(this.db, me!.id)
+				: await listUserListsByUserIdFromDatabase(this.db, ps.userId, { publicOnly: true });
 
 			return await Promise.all(userLists.map(x => this.userListEntityService.pack(x)));
 		});

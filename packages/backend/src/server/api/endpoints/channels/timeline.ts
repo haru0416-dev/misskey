@@ -5,17 +5,18 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelsRepository, MiMeta, NotesRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
+import type { MiMeta } from '@/models/_.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import ActiveUsersChart from '@/core/chart/charts/active-users.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
-import { MiLocalUser } from '@/models/User.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import { listChannelTimelineNotesFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
-import { Brackets } from 'typeorm';
 
 export const meta = {
 	tags: ['notes', 'channels'],
@@ -61,15 +62,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
 		private fanoutTimelineEndpointService: FanoutTimelineEndpointService,
 		private activeUsersChart: ActiveUsersChart,
 		private channelMutingService: ChannelMutingService,
@@ -78,9 +75,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
 
-			const channel = await this.channelsRepository.findOneBy({
-				id: ps.channelId,
-			});
+			const channel = await fetchChannelByIdFromDatabase(this.db, ps.channelId);
 
 			if (channel == null) {
 				throw new ApiError(meta.errors.noSuchChannel);
@@ -116,31 +111,22 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		channelId: string
 	}, me: MiLocalUser | null) {
 		//#region fallback to database
-		const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
-			.andWhere('note.channelId = :channelId', { channelId: ps.channelId })
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser')
-			.leftJoinAndSelect('note.channel', 'channel');
-
-		this.queryService.generateBaseNoteFilteringQuery(query, me);
-
+		let mutingChannelIds: string[] = [];
 		if (me) {
-			const mutingChannelIds = await this.channelMutingService
+			mutingChannelIds = await this.channelMutingService
 				.list({ requestUserId: me.id }, { idOnly: true })
 				.then(x => x.map(x => x.id).filter(x => x !== ps.channelId));
-			if (mutingChannelIds.length > 0) {
-				query.andWhere('note.channelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-				query.andWhere(new Brackets(qb => {
-					qb.orWhere('note.renoteChannelId IS NULL');
-					qb.orWhere('note.renoteChannelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-				}));
-			}
 		}
 		//#endregion
 
-		return await query.limit(ps.limit).getMany();
+		return await listChannelTimelineNotesFromDatabase(this.db, {
+			channelId: ps.channelId,
+			limit: ps.limit,
+			sinceId: ps.sinceId,
+			untilId: ps.untilId,
+			me,
+			blockedHosts: this.serverSettings.blockedHosts,
+			mutedChannelIds: mutingChannelIds,
+		});
 	}
 }

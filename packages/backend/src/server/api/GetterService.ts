@@ -5,21 +5,20 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { fetchNoteByIdFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { bindThis } from '@/decorators.js';
 
 @Injectable()
 export class GetterService {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 	) {
@@ -30,7 +29,7 @@ export class GetterService {
 	 */
 	@bindThis
 	public async getNote(noteId: MiNote['id']) {
-		const note = await this.notesRepository.findOneBy({ id: noteId });
+		const note = await fetchNoteByIdFromDatabase(this.db, noteId);
 
 		if (note == null) {
 			throw new IdentifiableError('9725d0ce-ba28-4dde-95a7-2cbb2c15de24', 'No such note.');
@@ -41,18 +40,7 @@ export class GetterService {
 
 	@bindThis
 	public async getNoteWithRelations(noteId: MiNote['id']) {
-		const note = await this.notesRepository.findOne({
-			where: { id: noteId },
-			relations: {
-				user: true,
-				reply: {
-					user: true,
-				},
-				renote: {
-					user: true,
-				},
-			},
-		});
+		const [note] = await listHydratedNotesByIdsFromDatabase(this.db, [noteId]);
 
 		if (note == null) {
 			throw new IdentifiableError('9725d0ce-ba28-4dde-95a7-2cbb2c15de24', 'No such note.');
@@ -66,7 +54,7 @@ export class GetterService {
 	 */
 	@bindThis
 	public async getUser(userId: MiUser['id']) {
-		const user = await this.usersRepository.findOneBy({ id: userId });
+		const user = await fetchUserByIdFromDatabase(this.db, userId);
 
 		if (user == null) {
 			throw new IdentifiableError('15348ddd-432d-49c2-8a5a-8069753becff', 'No such user.');
@@ -103,4 +91,3 @@ export class GetterService {
 		return user;
 	}
 }
-

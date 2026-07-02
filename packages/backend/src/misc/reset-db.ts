@@ -3,21 +3,31 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { DataSource } from 'typeorm';
+import type { MiDrizzlePool } from '@/drizzle.js';
 
-export async function resetDb(db: DataSource) {
+export async function resetDb(pool: MiDrizzlePool) {
 	const reset = async () => {
-		await db.transaction(async entityManager => {
-			const tables = await entityManager.query(`SELECT quote_ident(N.nspname) AS "schema", quote_ident(C.relname) AS "table"
+		const client = await pool.connect();
+		try {
+			await client.query('BEGIN');
+
+			const { rows: tables } = await client.query<{ schema: string; table: string; }>(`SELECT quote_ident(N.nspname) AS "schema", quote_ident(C.relname) AS "table"
 			FROM pg_class C LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
 			WHERE nspname NOT IN ('pg_catalog', 'information_schema')
 				AND C.relkind = 'r'
-				AND nspname !~ '^pg_toast';`) as { schema: string; table: string; }[];
+				AND nspname !~ '^pg_toast';`);
 
-			if (tables.length === 0) return;
+			if (tables.length !== 0) {
+				await client.query(`TRUNCATE TABLE ${tables.map(table => `${table.schema}.${table.table}`).join(', ')} RESTART IDENTITY CASCADE`);
+			}
 
-			await entityManager.query(`TRUNCATE TABLE ${tables.map(table => `${table.schema}.${table.table}`).join(', ')} RESTART IDENTITY CASCADE`);
-		});
+			await client.query('COMMIT');
+		} catch (err) {
+			await client.query('ROLLBACK').catch(() => undefined);
+			throw err;
+		} finally {
+			client.release();
+		}
 	};
 
 	for (let i = 1; i <= 3; i++) {

@@ -5,7 +5,8 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { RegistrationTicketsRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { deleteRegistrationTicketInDatabase, fetchRegistrationTicketByIdFromDatabase } from '@/core/RegistrationTicketStore.js';
 import { RoleService } from '@/core/RoleService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '../../error.js';
@@ -49,13 +50,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.registrationTicketsRepository)
-		private registrationTicketsRepository: RegistrationTicketsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const ticket = await this.registrationTicketsRepository.findOneBy({ id: ps.inviteId });
+			const ticket = await fetchRegistrationTicketByIdFromDatabase(this.db, ps.inviteId);
 			const isModerator = await this.roleService.isModerator(me);
 
 			if (ticket == null) {
@@ -70,7 +71,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.cantDelete);
 			}
 
-			await this.registrationTicketsRepository.delete(ticket.id);
+			await deleteRegistrationTicketInDatabase(this.db, ticket.id);
 		});
 	}
 }

@@ -4,12 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { RoleService } from '@/core/RoleService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listAdminUsersFromDatabase } from '@/core/UserStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -51,68 +52,43 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.usersRepository.createQueryBuilder('user');
+			let roleUserIds: string[] | null = null;
 
 			switch (ps.state) {
-				case 'available': query.where('user.isSuspended = FALSE'); break;
-				case 'alive': query.where('user.updatedAt > :date', { date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5) }); break;
-				case 'suspended': query.where('user.isSuspended = TRUE'); break;
 				case 'admin': {
-					const adminIds = await this.roleService.getAdministratorIds();
-					if (adminIds.length === 0) return [];
-					query.where('user.id IN (:...adminIds)', { adminIds: adminIds });
+					roleUserIds = await this.roleService.getAdministratorIds();
+					if (roleUserIds.length === 0) return [];
 					break;
 				}
 				case 'moderator': {
-					const moderatorIds = await this.roleService.getModeratorIds({ includeAdmins: false });
-					if (moderatorIds.length === 0) return [];
-					query.where('user.id IN (:...moderatorIds)', { moderatorIds: moderatorIds });
+					roleUserIds = await this.roleService.getModeratorIds({ includeAdmins: false });
+					if (roleUserIds.length === 0) return [];
 					break;
 				}
 				case 'adminOrModerator': {
-					const adminOrModeratorIds = await this.roleService.getModeratorIds({ includeAdmins: true });
-					if (adminOrModeratorIds.length === 0) return [];
-					query.where('user.id IN (:...adminOrModeratorIds)', { adminOrModeratorIds: adminOrModeratorIds });
+					roleUserIds = await this.roleService.getModeratorIds({ includeAdmins: true });
+					if (roleUserIds.length === 0) return [];
 					break;
 				}
 			}
 
-			switch (ps.origin) {
-				case 'local': query.andWhere('user.host IS NULL'); break;
-				case 'remote': query.andWhere('user.host IS NOT NULL'); break;
-			}
-
-			if (ps.username) {
-				query.andWhere('user.usernameLower like :username', { username: sqlLikeEscape(ps.username.toLowerCase()) + '%' });
-			}
-
-			if (ps.hostname) {
-				query.andWhere('user.host = :hostname', { hostname: ps.hostname.toLowerCase() });
-			}
-
-			switch (ps.sort) {
-				case '+follower': query.orderBy('user.followersCount', 'DESC'); break;
-				case '-follower': query.orderBy('user.followersCount', 'ASC'); break;
-				case '+createdAt': query.orderBy('user.id', 'DESC'); break;
-				case '-createdAt': query.orderBy('user.id', 'ASC'); break;
-				case '+updatedAt': query.orderBy('user.updatedAt', 'DESC', 'NULLS LAST'); break;
-				case '-updatedAt': query.orderBy('user.updatedAt', 'ASC', 'NULLS FIRST'); break;
-				case '+lastActiveDate': query.orderBy('user.lastActiveDate', 'DESC', 'NULLS LAST'); break;
-				case '-lastActiveDate': query.orderBy('user.lastActiveDate', 'ASC', 'NULLS FIRST'); break;
-				default: query.orderBy('user.id', 'ASC'); break;
-			}
-
-			query.limit(ps.limit);
-			query.offset(ps.offset);
-
-			const users = await query.getMany();
+			const users = await listAdminUsersFromDatabase(this.db, {
+				limit: ps.limit,
+				offset: ps.offset,
+				sort: ps.sort,
+				state: ps.state,
+				origin: ps.origin,
+				usernamePrefix: ps.username ? sqlLikeEscape(ps.username.toLowerCase()) + '%' : null,
+				hostname: ps.hostname,
+				roleUserIds,
+			});
 
 			return await this.userEntityService.packMany(users, me, { schema: 'UserDetailed' });
 		});

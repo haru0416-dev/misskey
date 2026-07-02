@@ -8,10 +8,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { afterAll, afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { FlashService } from '@/core/FlashService.js';
 import { IdService } from '@/core/IdService.js';
-import { FlashLikesRepository, FlashsRepository, MiFlash, MiUser, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import { flash, type FlashInsert } from '@/db/schema/flash.js';
+import { flashLike } from '@/db/schema/flash-like.js';
+import { createFlashInDatabase } from '@/core/FlashStore.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 describe('FlashService', () => {
 	let app: TestingModule;
@@ -19,10 +27,7 @@ describe('FlashService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	let flashsRepository: FlashsRepository;
-	let flashLikesRepository: FlashLikesRepository;
-	let usersRepository: UsersRepository;
-	let userProfilesRepository: UserProfilesRepository;
+	let drizzle: MiDrizzleDatabase;
 	let idService: IdService;
 
 	// --------------------------------------------------------------------------------------
@@ -33,8 +38,8 @@ describe('FlashService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	async function createFlash(data: Partial<MiFlash>) {
-		return flashsRepository.insert({
+	async function createFlash(data: Partial<FlashInsert>) {
+		return createFlashInDatabase(drizzle, {
 			id: idService.gen(),
 			updatedAt: new Date(),
 			userId: root.id,
@@ -44,18 +49,16 @@ describe('FlashService', () => {
 			permissions: [],
 			likedCount: 0,
 			...data,
-		}).then(x => flashsRepository.findOneByOrFail(x.identifiers[0]));
+		});
 	}
 
-	async function createUser(data: Partial<MiUser> = {}) {
-		const user = await usersRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	async function createUser(data: Partial<UserInsert> & Pick<UserInsert, 'username' | 'usernameLower'>) {
+		const user = await createUserInDatabase(drizzle, {
+			id: idService.gen(),
+			...data,
+		});
 
-		await userProfilesRepository.insert({
+		await createUserProfileInDatabase(drizzle, {
 			userId: user.id,
 		});
 
@@ -78,10 +81,7 @@ describe('FlashService', () => {
 
 		service = app.get(FlashService);
 
-		flashsRepository = app.get(DI.flashsRepository);
-		flashLikesRepository = app.get(DI.flashLikesRepository);
-		usersRepository = app.get(DI.usersRepository);
-		userProfilesRepository = app.get(DI.userProfilesRepository);
+		drizzle = app.get(DI.drizzle);
 		idService = app.get(IdService);
 
 		root = await createUser({ username: 'root', usernameLower: 'root' });
@@ -90,10 +90,10 @@ describe('FlashService', () => {
 	});
 
 	afterEach(async () => {
-		await usersRepository.createQueryBuilder().delete().execute();
-		await userProfilesRepository.createQueryBuilder().delete().execute();
-		await flashsRepository.createQueryBuilder().delete().execute();
-		await flashLikesRepository.createQueryBuilder().delete().execute();
+		await drizzle.delete(flashLike);
+		await drizzle.delete(flash);
+		await drizzle.delete(userProfile);
+		await drizzle.delete(user);
 	});
 
 	afterAll(async () => {

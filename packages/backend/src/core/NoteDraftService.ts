@@ -4,9 +4,9 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { MiNoteDraft, NoteDraftsRepository, MiNote, MiDriveFile, MiChannel, UsersRepository, DriveFilesRepository, NotesRepository, BlockingsRepository, ChannelsRepository } from '@/models/_.js';
+import type { MiNote, MiDriveFile, MiChannel } from '@/models/_.js';
+import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
@@ -15,29 +15,27 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { QueueService } from '@/core/QueueService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	countNoteDraftsByUserIdFromDatabase,
+	createNoteDraftInDatabase,
+	deleteNoteDraftByIdFromDatabase,
+	fetchNoteDraftByIdAndUserIdFromDatabase,
+	updateNoteDraftInDatabase,
+} from '@/core/NoteDraftStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
+import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 
 export type NoteDraftOptions = Omit<MiNoteDraft, 'id' | 'userId' | 'user' | 'reply' | 'renote' | 'channel'>;
 
 @Injectable()
 export class NoteDraftService {
 	constructor(
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.noteDraftsRepository)
-		private noteDraftsRepository: NoteDraftsRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private roleService: RoleService,
 		private idService: IdService,
@@ -48,12 +46,7 @@ export class NoteDraftService {
 
 	@bindThis
 	public async get(me: MiLocalUser, draftId: MiNoteDraft['id']): Promise<MiNoteDraft | null> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
-
-		return draft;
+		return fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 	}
 
 	@bindThis
@@ -61,18 +54,13 @@ export class NoteDraftService {
 		//#region check draft limit
 		const policies = await this.roleService.getUserPolicies(me.id);
 
-		const currentCount = await this.noteDraftsRepository.countBy({
-			userId: me.id,
-		});
+		const currentCount = await countNoteDraftsByUserIdFromDatabase(this.db, me.id);
 		if (currentCount >= policies.noteDraftLimit) {
 			throw new IdentifiableError('9ee33bbe-fde3-4c71-9b51-e50492c6b9c8', 'Too many drafts');
 		}
 
 		if (data.isActuallyScheduled) {
-			const currentScheduledCount = await this.noteDraftsRepository.countBy({
-				userId: me.id,
-				isActuallyScheduled: true,
-			});
+			const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(this.db, me.id, { isActuallyScheduled: true });
 			if (currentScheduledCount >= policies.scheduledNoteLimit) {
 				throw new IdentifiableError('c3275f19-4558-4c59-83e1-4f684b5fab66', 'Too many scheduled notes');
 			}
@@ -81,7 +69,7 @@ export class NoteDraftService {
 
 		await this.validate(me, data);
 
-		const draft = await this.noteDraftsRepository.insertOne({
+		const draft = await createNoteDraftInDatabase(this.db, {
 			...data,
 			id: this.idService.gen(),
 			userId: me.id,
@@ -96,10 +84,7 @@ export class NoteDraftService {
 
 	@bindThis
 	public async update(me: MiLocalUser, draftId: MiNoteDraft['id'], data: Partial<NoteDraftOptions>): Promise<MiNoteDraft> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
+		const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 
 		if (draft == null) {
 			throw new IdentifiableError('49cd6b9d-848e-41ee-b0b9-adaca711a6b1', 'No such note draft');
@@ -109,10 +94,7 @@ export class NoteDraftService {
 		const policies = await this.roleService.getUserPolicies(me.id);
 
 		if (!draft.isActuallyScheduled && data.isActuallyScheduled) {
-			const currentScheduledCount = await this.noteDraftsRepository.countBy({
-				userId: me.id,
-				isActuallyScheduled: true,
-			});
+			const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(this.db, me.id, { isActuallyScheduled: true });
 			if (currentScheduledCount >= policies.scheduledNoteLimit) {
 				throw new IdentifiableError('bacdf856-5c51-4159-b88a-804fa5103be5', 'Too many scheduled notes');
 			}
@@ -121,12 +103,7 @@ export class NoteDraftService {
 
 		await this.validate(me, data);
 
-		const updatedDraft = await this.noteDraftsRepository.createQueryBuilder().update()
-			.set(data)
-			.where('id = :id', { id: draftId })
-			.returning('*')
-			.execute()
-			.then((response) => response.raw[0]);
+		const updatedDraft = await updateNoteDraftInDatabase(this.db, draftId, data);
 
 		this.clearSchedule(draftId).then(() => {
 			if (updatedDraft.scheduledAt != null && updatedDraft.isActuallyScheduled) {
@@ -139,26 +116,20 @@ export class NoteDraftService {
 
 	@bindThis
 	public async delete(me: MiLocalUser, draftId: MiNoteDraft['id']): Promise<void> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
+		const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 
 		if (draft == null) {
 			throw new IdentifiableError('49cd6b9d-848e-41ee-b0b9-adaca711a6b1', 'No such note draft');
 		}
 
-		await this.noteDraftsRepository.delete(draft.id);
+		await deleteNoteDraftByIdFromDatabase(this.db, draft.id);
 
 		this.clearSchedule(draftId);
 	}
 
 	@bindThis
 	public async getDraft(me: MiLocalUser, draftId: MiNoteDraft['id']): Promise<MiNoteDraft> {
-		const draft = await this.noteDraftsRepository.findOneBy({
-			id: draftId,
-			userId: me.id,
-		});
+		const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(this.db, draftId, me.id);
 
 		if (draft == null) {
 			throw new IdentifiableError('49cd6b9d-848e-41ee-b0b9-adaca711a6b1', 'No such note draft');
@@ -189,9 +160,7 @@ export class NoteDraftService {
 		//#region visibleUsers
 		let _visibleUsers: MiUser[] = [];
 		if (data.visibleUserIds != null && data.visibleUserIds.length > 0) {
-			_visibleUsers = await this.usersRepository.findBy({
-				id: In(data.visibleUserIds),
-			});
+			_visibleUsers = await listUsersByIdsFromDatabase(this.db, data.visibleUserIds, { includeSuspended: true });
 		}
 		//#endregion
 
@@ -199,14 +168,7 @@ export class NoteDraftService {
 		let files: MiDriveFile[] = [];
 		const fileIds = data.fileIds ?? null;
 		if (fileIds != null && fileIds.length > 0) {
-			files = await this.driveFilesRepository.createQueryBuilder('file')
-				.where('file.userId = :userId AND file.id IN (:...fileIds)', {
-					userId: me.id,
-					fileIds: fileIds,
-				})
-				.orderBy('array_position(ARRAY[:...fileIds], "id"::text)')
-				.setParameters({ fileIds })
-				.getMany();
+			files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(this.db, fileIds, me.id);
 
 			if (files.length !== fileIds.length) {
 				throw new IdentifiableError('b6992544-63e7-67f0-fa7f-32444b1b5306', 'No such drive file');
@@ -217,7 +179,7 @@ export class NoteDraftService {
 		//#region renote
 		let renote: MiNote | null = null;
 		if (data.renoteId != null) {
-			renote = await this.notesRepository.findOneBy({ id: data.renoteId });
+			renote = await fetchNoteByIdFromDatabase(this.db, data.renoteId);
 
 			if (renote == null) {
 				throw new IdentifiableError('64929870-2540-4d11-af41-3b484d78c956', 'No such renote');
@@ -227,12 +189,7 @@ export class NoteDraftService {
 
 			// Check blocking
 			if (renote.userId !== me.id) {
-				const blockExist = await this.blockingsRepository.exists({
-					where: {
-						blockerId: renote.userId,
-						blockeeId: me.id,
-					},
-				});
+				const blockExist = await blockingExistsInDatabase(this.db, renote.userId, me.id);
 				if (blockExist) {
 					throw new IdentifiableError('075ca298-e6e7-485a-b570-51a128bb5168', 'You have been blocked by the user');
 				}
@@ -249,7 +206,7 @@ export class NoteDraftService {
 			if (renote.channelId && renote.channelId !== data.channelId) {
 				// チャンネルのノートに対しリノート要求がきたとき、チャンネル外へのリノート可否をチェック
 				// リノートのユースケースのうち、チャンネル内→チャンネル外は少数だと考えられるため、JOINはせず必要な時に都度取得する
-				const renoteChannel = await this.channelsRepository.findOneBy({ id: renote.channelId });
+				const renoteChannel = await fetchChannelByIdFromDatabase(this.db, renote.channelId);
 				if (renoteChannel == null) {
 					// リノートしたいノートが書き込まれているチャンネルがない
 					throw new IdentifiableError('6815399a-6f13-4069-b60d-ed5156249d12', 'No such channel');
@@ -265,7 +222,7 @@ export class NoteDraftService {
 		let reply: MiNote | null = null;
 		if (data.replyId != null) {
 			// Fetch reply
-			reply = await this.notesRepository.findOneBy({ id: data.replyId });
+			reply = await fetchNoteByIdFromDatabase(this.db, data.replyId);
 
 			if (reply == null) {
 				throw new IdentifiableError('c4721841-22fc-4bb7-ad3d-897ef1d375b5', 'No such reply');
@@ -279,12 +236,7 @@ export class NoteDraftService {
 
 			// Check blocking
 			if (reply.userId !== me.id) {
-				const blockExist = await this.blockingsRepository.exists({
-					where: {
-						blockerId: reply.userId,
-						blockeeId: me.id,
-					},
-				});
+				const blockExist = await blockingExistsInDatabase(this.db, reply.userId, me.id);
 				if (blockExist) {
 					throw new IdentifiableError('075ca298-e6e7-485a-b570-51a128bb5168', 'You have been blocked by the user');
 				}
@@ -295,9 +247,9 @@ export class NoteDraftService {
 		//#region channel
 		let channel: MiChannel | null = null;
 		if (data.channelId != null) {
-			channel = await this.channelsRepository.findOneBy({ id: data.channelId, isArchived: false });
+			channel = await fetchChannelByIdFromDatabase(this.db, data.channelId);
 
-			if (channel == null) {
+			if (channel == null || channel.isArchived) {
 				throw new IdentifiableError('6815399a-6f13-4069-b60d-ed5156249d12', 'No such channel');
 			}
 		}

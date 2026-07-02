@@ -4,11 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { PromoReadsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { createPromoReadInDatabase, isPromoReadExists } from '@/core/PromoReadStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -37,8 +38,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.promoReadsRepository)
-		private promoReadsRepository: PromoReadsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private getterService: GetterService,
@@ -49,18 +50,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 
-			const exist = await this.promoReadsRepository.exists({
-				where: {
-					noteId: note.id,
-					userId: me.id,
-				},
-			});
+			const exist = await isPromoReadExists(this.drizzle, me.id, note.id);
 
 			if (exist) {
 				return;
 			}
 
-			await this.promoReadsRepository.insert({
+			await createPromoReadInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				noteId: note.id,
 				userId: me.id,

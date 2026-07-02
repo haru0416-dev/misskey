@@ -7,8 +7,8 @@ import * as fs from 'node:fs';
 import { resolve } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Config } from '@/config.js';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { StatusError } from '@/misc/status-error.js';
 import type Logger from '@/logger.js';
 import { DownloadService } from '@/core/DownloadService.js';
@@ -37,8 +37,8 @@ export class FileServerService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private fileInfoService: FileInfoService,
 		private downloadService: DownloadService,
@@ -50,7 +50,7 @@ export class FileServerService {
 		this.logger = this.loggerService.getLogger('server', 'gray');
 		this.assets = resolve(this.config.rootDir, 'packages/backend/src/server/file/assets');
 		this.fileResolver = new FileServerFileResolver(
-			this.driveFilesRepository,
+			this.db,
 			this.fileInfoService,
 			this.downloadService,
 			this.internalStorageService,

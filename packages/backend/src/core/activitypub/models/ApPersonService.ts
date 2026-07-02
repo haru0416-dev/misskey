@@ -5,13 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import promiseLimit from 'promise-limit';
-import { DataSource } from 'typeorm';
 import { ModuleRef } from '@nestjs/core';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, InstancesRepository, MiMeta, UserProfilesRepository, UserPublickeysRepository, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
-import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
-import { MiUser } from '@/models/User.js';
+import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { truncate } from '@/misc/truncate.js';
 import type { CacheService } from '@/core/CacheService.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
@@ -24,12 +22,9 @@ import { toArray } from '@/misc/prelude/array.js';
 import type { GlobalEventService } from '@/core/GlobalEventService.js';
 import type { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import type { FetchInstanceMetadataService } from '@/core/FetchInstanceMetadataService.js';
-import { MiUserProfile } from '@/models/UserProfile.js';
-import { MiUserPublickey } from '@/models/UserPublickey.js';
 import type UsersChart from '@/core/chart/charts/users.js';
 import type InstanceChart from '@/core/chart/charts/instance.js';
 import type { HashtagService } from '@/core/HashtagService.js';
-import { MiUserNotePining } from '@/models/UserNotePining.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { UtilityService } from '@/core/UtilityService.js';
 import type { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -38,6 +33,20 @@ import { RoleService } from '@/core/RoleService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import type { AccountMoveService } from '@/core/AccountMoveService.js';
 import { checkHttps } from '@/misc/check-https.js';
+import { updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
+import { adjustInstanceUsersCountFromDatabase } from '@/core/InstanceStore.js';
+import { updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	fetchUserByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	fetchUserByUriFromDatabase,
+	updateUserIfNotDeletedInDatabase,
+	updateUserInDatabase,
+} from '@/core/UserStore.js';
+import { replaceUserNotePiningsInDatabase } from '@/core/UserNotePiningStore.js';
 import { getApId, getApType, getOneApHrefNullable, isActor, isCollection, isCollectionOrOrderedCollection, isPropertyValue } from '../type.js';
 import { extractApHashtags } from './tag.js';
 import type { OnModuleInit } from '@nestjs/common';
@@ -53,6 +62,10 @@ const nameLength = 128;
 const summaryLength = 2048;
 
 type Field = Record<'name' | 'value', string>;
+
+function serializeAlsoKnownAs(value: string[] | null | undefined): string | null | undefined {
+	return value == null ? value : value.join(',');
+}
 
 @Injectable()
 export class ApPersonService implements OnModuleInit {
@@ -85,23 +98,8 @@ export class ApPersonService implements OnModuleInit {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.db)
-		private db: DataSource,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userPublickeysRepository)
-		private userPublickeysRepository: UserPublickeysRepository,
-
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private roleService: RoleService,
 	) {
@@ -235,13 +233,13 @@ export class ApPersonService implements OnModuleInit {
 		// URIがこのサーバーを指しているならデータベースからフェッチ
 		if (uri.startsWith(`${this.config.url}/`)) {
 			const id = uri.split('/').pop();
-			const u = await this.usersRepository.findOneBy({ id }) as MiLocalUser | null;
+			const u = id == null ? null : await fetchUserByIdFromDatabase(this.drizzle, id) as MiLocalUser | null;
 			if (u) this.cacheService.uriPersonCache.set(uri, u);
 			return u;
 		}
 
 		//#region このサーバーに既に登録されていたらそれを返す
-		const exist = await this.usersRepository.findOneBy({ uri }) as MiLocalUser | MiRemoteUser | null;
+		const exist = await fetchUserByUriFromDatabase(this.drizzle, uri) as MiLocalUser | MiRemoteUser | null;
 
 		if (exist) {
 			this.cacheService.uriPersonCache.set(uri, exist);
@@ -348,6 +346,10 @@ export class ApPersonService implements OnModuleInit {
 			throw new Error('Refusing to create person without id');
 		}
 
+		if (person.preferredUsername == null) {
+			throw new Error('Refusing to create person without preferredUsername');
+		}
+
 		if (url && !checkHttps(url)) {
 			throw new Error('unexpected schema of person url: ' + url);
 		}
@@ -365,10 +367,18 @@ export class ApPersonService implements OnModuleInit {
 		//#endregion
 
 		try {
-			// Start transaction
-			await this.db.transaction(async transactionalEntityManager => {
-				user = await transactionalEntityManager.save(new MiUser({
-					id: this.idService.gen(),
+			const userId = this.idService.gen();
+			let _description: string | null = null;
+
+			if (person._misskey_summary) {
+				_description = truncate(person._misskey_summary, summaryLength);
+			} else if (person.summary) {
+				_description = this.apMfmService.htmlToMfm(truncate(person.summary, summaryLength), person.tag);
+			}
+
+			user = await createUserWithProfileAndPublickeyInDatabase(this.drizzle, {
+				user: {
+					id: userId,
 					avatarId: null,
 					bannerId: null,
 					lastFetchedAt: new Date(),
@@ -376,10 +386,10 @@ export class ApPersonService implements OnModuleInit {
 					isLocked: person.manuallyApprovesFollowers,
 					movedToUri: person.movedTo,
 					movedAt: person.movedTo ? new Date() : null,
-					alsoKnownAs: toArray(person.alsoKnownAs),
+					alsoKnownAs: serializeAlsoKnownAs(toArray(person.alsoKnownAs)),
 					isExplorable: person.discoverable,
 					username: person.preferredUsername,
-					usernameLower: person.preferredUsername?.toLowerCase(),
+					usernameLower: person.preferredUsername.toLowerCase(),
 					host,
 					inbox: person.inbox,
 					sharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
@@ -393,18 +403,9 @@ export class ApPersonService implements OnModuleInit {
 					makeNotesFollowersOnlyBefore: (person as any).makeNotesFollowersOnlyBefore ?? null,
 					makeNotesHiddenBefore: (person as any).makeNotesHiddenBefore ?? null,
 					emojis,
-				})) as MiRemoteUser;
-
-				let _description: string | null = null;
-
-				if (person._misskey_summary) {
-					_description = truncate(person._misskey_summary, summaryLength);
-				} else if (person.summary) {
-					_description = this.apMfmService.htmlToMfm(truncate(person.summary, summaryLength), person.tag);
-				}
-
-				await transactionalEntityManager.save(new MiUserProfile({
-					userId: user.id,
+				},
+				profile: {
+					userId,
 					description: _description,
 					followedMessage: person._misskey_followedMessage != null ? truncate(person._misskey_followedMessage, 256) : null,
 					url,
@@ -414,21 +415,18 @@ export class ApPersonService implements OnModuleInit {
 					birthday: bday?.[0] ?? null,
 					location: person['vcard:Address'] ?? null,
 					userHost: host,
-				}));
-
-				if (person.publicKey) {
-					await transactionalEntityManager.save(new MiUserPublickey({
-						userId: user.id,
-						keyId: person.publicKey.id,
-						keyPem: person.publicKey.publicKeyPem,
-					}));
-				}
-			});
+				},
+				publickey: person.publicKey ? {
+					userId,
+					keyId: person.publicKey.id,
+					keyPem: person.publicKey.publicKeyPem,
+				} : undefined,
+			}) as MiRemoteUser;
 		} catch (e) {
 			// duplicate key error
 			if (isDuplicateKeyValueError(e)) {
 				// /users/@a => /users/:id のように入力がaliasなときにエラーになることがあるのを対応
-				const u = await this.usersRepository.findOneBy({ uri: person.id });
+				const u = await fetchUserByUriFromDatabase(this.drizzle, person.id);
 				if (u == null) throw new Error('already registered');
 
 				user = u as MiRemoteUser;
@@ -445,8 +443,8 @@ export class ApPersonService implements OnModuleInit {
 
 		// Register host
 		if (this.meta.enableStatsForFederatedInstances) {
-			this.federatedInstanceService.fetchOrRegister(host).then(i => {
-				this.instancesRepository.increment({ id: i.id }, 'usersCount', 1);
+			this.federatedInstanceService.fetchOrRegister(host).then(async i => {
+				await adjustInstanceUsersCountFromDatabase(this.drizzle, i.id, 1);
 				if (this.meta.enableChartsForFederatedInstances) {
 					this.instanceChart.newUser(i.host);
 				}
@@ -462,7 +460,7 @@ export class ApPersonService implements OnModuleInit {
 		//#region アバターとヘッダー画像をフェッチ
 		try {
 			const updates = await this.resolveAvatarAndBanner(user, person.icon, person.image);
-			await this.usersRepository.update(user.id, updates);
+			await updateUserInDatabase(this.drizzle, user.id, updates);
 			user = { ...user, ...updates };
 
 			// Register to the cache
@@ -594,12 +592,15 @@ export class ApPersonService implements OnModuleInit {
 		if (moving) updates.movedAt = new Date();
 
 		// Update user
-		if (!(await this.usersRepository.update({ id: exist.id, isDeleted: false }, updates)).affected) {
+		if (!(await updateUserIfNotDeletedInDatabase(this.drizzle, exist.id, {
+			...updates,
+			alsoKnownAs: serializeAlsoKnownAs(updates.alsoKnownAs),
+		}))) {
 			return 'skip';
 		}
 
 		if (person.publicKey) {
-			await this.userPublickeysRepository.update({ userId: exist.id }, {
+			await updateUserPublickeyInDatabase(this.drizzle, exist.id, {
 				keyId: person.publicKey.id,
 				keyPem: person.publicKey.publicKeyPem,
 			});
@@ -613,7 +614,7 @@ export class ApPersonService implements OnModuleInit {
 			_description = this.apMfmService.htmlToMfm(truncate(person.summary, summaryLength), person.tag);
 		}
 
-		await this.userProfilesRepository.update({ userId: exist.id }, {
+		await updateUserProfileInDatabase(this.drizzle, exist.id, {
 			url,
 			fields,
 			description: _description,
@@ -630,10 +631,9 @@ export class ApPersonService implements OnModuleInit {
 		this.hashtagService.updateUsertags(exist, tags);
 
 		// 該当ユーザーが既にフォロワーになっていた場合はFollowingもアップデートする
-		await this.followingsRepository.update(
-			{ followerId: exist.id },
-			{ followerSharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null },
-		);
+		await updateFollowingsByFollowerIdInDatabase(this.drizzle, exist.id, {
+			followerSharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
+		});
 
 		await this.updateFeatured(exist.id, resolver).catch(err => this.logger.error(err));
 
@@ -701,7 +701,8 @@ export class ApPersonService implements OnModuleInit {
 
 	@bindThis
 	public async updateFeatured(userId: MiUser['id'], resolver?: Resolver): Promise<void> {
-		const user = await this.usersRepository.findOneByOrFail({ id: userId, isDeleted: false });
+		const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, userId);
+		if (user.isDeleted) throw new Error('user not found');
 		if (!this.userEntityService.isRemoteUser(user)) return;
 		if (!user.featured) return;
 
@@ -727,20 +728,20 @@ export class ApPersonService implements OnModuleInit {
 				sentFrom: new URL(user.uri),
 			}))));
 
-		await this.db.transaction(async transactionalEntityManager => {
-			await transactionalEntityManager.delete(MiUserNotePining, { userId: user.id });
+		const pinings = [];
 
-			// とりあえずidを別の時間で生成して順番を維持
-			let td = 0;
-			for (const note of featuredNotes.filter(x => x != null)) {
-				td -= 1000;
-				transactionalEntityManager.insert(MiUserNotePining, {
-					id: this.idService.gen(Date.now() + td),
-					userId: user.id,
-					noteId: note.id,
-				});
-			}
-		});
+		// とりあえずidを別の時間で生成して順番を維持
+		let td = 0;
+		for (const note of featuredNotes.filter(x => x != null)) {
+			td -= 1000;
+			pinings.push({
+				id: this.idService.gen(Date.now() + td),
+				userId: user.id,
+				noteId: note.id,
+			});
+		}
+
+		await replaceUserNotePiningsInDatabase(this.drizzle, user.id, pinings);
 	}
 
 	/**
@@ -759,7 +760,8 @@ export class ApPersonService implements OnModuleInit {
 
 		if (dst && this.userEntityService.isLocalUser(dst)) {
 			// targetがローカルユーザーだった場合データベースから引っ張ってくる
-			dst = await this.usersRepository.findOneByOrFail({ uri: src.movedToUri }) as MiLocalUser;
+			dst = await fetchUserByUriFromDatabase(this.drizzle, src.movedToUri) as MiLocalUser | null;
+			if (dst == null) throw new Error('user not found');
 		} else if (dst) {
 			if (movePreventUris.includes(src.movedToUri)) return 'skip: circular move';
 

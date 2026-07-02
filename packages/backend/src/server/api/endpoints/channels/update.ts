@@ -5,10 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFilesRepository, ChannelsRepository } from '@/models/_.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
+import { fetchChannelByIdFromDatabase, updateChannelInDatabase } from '@/core/ChannelStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -69,20 +71,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private channelEntityService: ChannelEntityService,
 
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const channel = await this.channelsRepository.findOneBy({
-				id: ps.channelId,
-			});
+			const channel = await fetchChannelByIdFromDatabase(this.drizzle, ps.channelId);
 
 			if (channel == null) {
 				throw new ApiError(meta.errors.noSuchChannel);
@@ -96,10 +93,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// eslint:disable-next-line:no-unnecessary-initializer
 			let banner = undefined;
 			if (ps.bannerId != null) {
-				banner = await this.driveFilesRepository.findOneBy({
-					id: ps.bannerId,
-					userId: me.id,
-				});
+				banner = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.bannerId, me.id);
 
 				if (banner == null) {
 					throw new ApiError(meta.errors.noSuchFile);
@@ -108,7 +102,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				banner = null;
 			}
 
-			await this.channelsRepository.update(channel.id, {
+			await updateChannelInDatabase(this.drizzle, channel.id, {
 				...(ps.name !== undefined ? { name: ps.name } : {}),
 				...(ps.description !== undefined ? { description: ps.description } : {}),
 				...(ps.pinnedNoteIds !== undefined ? { pinnedNoteIds: ps.pinnedNoteIds } : {}),

@@ -5,11 +5,15 @@
 
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { AccessTokensRepository, AppsRepository, UsersRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import { MemoryKVCache } from '@/misc/cache.js';
-import type { MiApp } from '@/models/App.js';
+import type { AppRow } from '@/db/schema/app.js';
+import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
+import { deserializeAccessToken } from '@/db/schema/access-token.js';
+import { fetchAccessTokenByHashOrTokenFromDatabase, updateAccessTokenLastUsedAtInDatabase } from '@/core/AccessTokenStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchLocalUserByNativeTokenFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { CacheService } from '@/core/CacheService.js';
 import { isNativeUserToken } from '@/misc/token.js';
 import { bindThis } from '@/decorators.js';
@@ -23,21 +27,15 @@ export class AuthenticationError extends Error {
 
 @Injectable()
 export class AuthenticateService implements OnApplicationShutdown {
-	private appCache: MemoryKVCache<MiApp>;
+	private appCache: MemoryKVCache<AppRow>;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
-
-		@Inject(DI.appsRepository)
-		private appsRepository: AppsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 	) {
-		this.appCache = new MemoryKVCache<MiApp>(1000 * 60 * 60 * 24 * 7); // 1w
+		this.appCache = new MemoryKVCache<AppRow>(1000 * 60 * 60 * 24 * 7); // 1w
 	}
 
 	@bindThis
@@ -48,7 +46,7 @@ export class AuthenticateService implements OnApplicationShutdown {
 
 		if (isNativeUserToken(token)) {
 			const user = await this.cacheService.localUserByNativeTokenCache.fetch(token,
-				() => this.usersRepository.findOneBy({ token }) as Promise<MiLocalUser | null>);
+				() => fetchLocalUserByNativeTokenFromDatabase(this.db, token));
 
 			if (user == null) {
 				throw new AuthenticationError('user not found');
@@ -56,37 +54,31 @@ export class AuthenticateService implements OnApplicationShutdown {
 
 			return [user, null];
 		} else {
-			const accessToken = await this.accessTokensRepository.findOne({
-				where: [{
-					hash: token.toLowerCase(), // app
-				}, {
-					token: token, // miauth
-				}],
-			});
+			const accessToken = await fetchAccessTokenByHashOrTokenFromDatabase(this.db, token.toLowerCase(), token);
 
 			if (accessToken == null) {
 				throw new AuthenticationError('invalid signature');
 			}
 
-			this.accessTokensRepository.update(accessToken.id, {
-				lastUsedAt: new Date(),
-			});
+			updateAccessTokenLastUsedAtInDatabase(this.db, accessToken.id, new Date());
 
 			const user = await this.cacheService.localUserByIdCache.fetch(accessToken.userId,
-				() => this.usersRepository.findOneBy({
-					id: accessToken.userId,
-				}) as Promise<MiLocalUser>);
+				async () => {
+					const user = await fetchLocalUserByIdFromDatabase(this.db, accessToken.userId);
+					if (user == null) throw new AuthenticationError('user not found');
+					return user;
+				});
 
 			if (accessToken.appId) {
 				const app = await this.appCache.fetch(accessToken.appId,
-					() => this.appsRepository.findOneByOrFail({ id: accessToken.appId! }));
+					() => fetchAppByIdOrFailFromDatabase(this.db, accessToken.appId!));
 
 				return [user, {
 					id: accessToken.id,
 					permission: app.permission,
 				} as MiAccessToken];
 			} else {
-				return [user, accessToken];
+				return [user, deserializeAccessToken(accessToken)];
 			}
 		}
 	}

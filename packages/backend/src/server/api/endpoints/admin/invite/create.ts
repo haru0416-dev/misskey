@@ -5,7 +5,8 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { RegistrationTicketsRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { InviteCodeEntityService } from '@/core/entities/InviteCodeEntityService.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
@@ -51,8 +52,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.registrationTicketsRepository)
-		private registrationTicketsRepository: RegistrationTicketsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private inviteCodeEntityService: InviteCodeEntityService,
 		private idService: IdService,
@@ -66,9 +67,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const ticketsPromises = [];
 
 			for (let i = 0; i < ps.count; i++) {
-				ticketsPromises.push(this.registrationTicketsRepository.insertOne({
+				ticketsPromises.push(createRegistrationTicketInDatabase(this.db, {
 					id: this.idService.gen(),
-					createdBy: me,
 					createdById: me.id,
 					expiresAt: ps.expiresAt ? new Date(ps.expiresAt) : null,
 					code: generateInviteCode(),

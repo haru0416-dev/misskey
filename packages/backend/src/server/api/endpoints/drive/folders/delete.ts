@@ -5,9 +5,15 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFoldersRepository, DriveFilesRepository } from '@/models/_.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
+import {
+	countDriveFoldersByParentIdFromDatabase,
+	deleteDriveFolderByIdFromDatabase,
+	fetchDriveFolderByIdAndUserIdFromDatabase,
+} from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countDriveFilesByFolderIdFromDatabase } from '@/core/DriveFileStore.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -43,35 +49,29 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.driveFoldersRepository)
-		private driveFoldersRepository: DriveFoldersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Get folder
-			const folder = await this.driveFoldersRepository.findOneBy({
-				id: ps.folderId,
-				userId: me.id,
-			});
+			const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, ps.folderId, me.id);
 
 			if (folder == null) {
 				throw new ApiError(meta.errors.noSuchFolder);
 			}
 
 			const [childFoldersCount, childFilesCount] = await Promise.all([
-				this.driveFoldersRepository.countBy({ parentId: folder.id }),
-				this.driveFilesRepository.countBy({ folderId: folder.id }),
+				countDriveFoldersByParentIdFromDatabase(this.db, folder.id),
+				countDriveFilesByFolderIdFromDatabase(this.db, folder.id),
 			]);
 
 			if (childFoldersCount !== 0 || childFilesCount !== 0) {
 				throw new ApiError(meta.errors.hasChildFilesOrFolders);
 			}
 
-			await this.driveFoldersRepository.delete(folder.id);
+			await deleteDriveFolderByIdFromDatabase(this.db, folder.id);
 
 			// Publish folderCreated event
 			this.globalEventService.publishDriveStream(me.id, 'folderDeleted', folder.id);

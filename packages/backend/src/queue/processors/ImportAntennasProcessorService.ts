@@ -5,11 +5,12 @@
 
 import { Injectable, Inject } from '@nestjs/common';
 import _Ajv from 'ajv';
+import { createAntennaInDatabase } from '@/core/AntennaStore.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import Logger from '@/logger.js';
-import type { AntennasRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { Schema, SchemaType } from '@/misc/json-schema.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
@@ -62,8 +63,8 @@ export class ImportAntennasProcessorService {
 	private logger: Logger;
 
 	constructor (
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private queueLoggerService: QueueLoggerService,
 		private idService: IdService,
@@ -82,7 +83,7 @@ export class ImportAntennasProcessorService {
 					this.logger.warn('Validation Failed');
 					continue;
 				}
-				const result = await this.antennasRepository.insertOne({
+				const result = await createAntennaInDatabase(this.db, {
 					id: this.idService.gen(now.getTime()),
 					lastUsedAt: now,
 					userId: job.data.user.id,

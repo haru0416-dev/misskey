@@ -5,26 +5,25 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
-import { IsNull } from 'typeorm';
 import * as Misskey from 'misskey-js';
 import { DI } from '@/di-symbols.js';
 import type {
 	MiMeta,
-	SigninsRepository,
-	UserProfilesRepository,
-	UserSecurityKeysRepository,
-	UsersRepository,
 } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import type { Config } from '@/config.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
-import type { MiLocalUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { bindThis } from '@/decorators.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
 import { CaptchaService } from '@/core/CaptchaService.js';
 import { LoggerService } from '@/core/LoggerService.js';
+import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { countUserSecurityKeysByUserIdFromDatabase } from '@/core/UserSecurityKeyStore.js';
+import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
 import { getRequestIp } from '@/server/api/get-request-ip.js';
 import { RateLimiterService } from './RateLimiterService.js';
@@ -43,17 +42,8 @@ export class SigninApiService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
-
-		@Inject(DI.signinsRepository)
-		private signinsRepository: SigninsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private loggerService: LoggerService,
 		private idService: IdService,
@@ -126,10 +116,7 @@ export class SigninApiService {
 		}
 
 		// Fetch user
-		const user = await this.usersRepository.findOneBy({
-			usernameLower: username.toLowerCase(),
-			host: IsNull(),
-		}) as MiLocalUser;
+		const user = await fetchLocalUserByUsernameFromDatabase(this.drizzle, username);
 
 		if (user == null) {
 			return error(404, {
@@ -143,8 +130,8 @@ export class SigninApiService {
 			});
 		}
 
-		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
-		const securityKeysAvailable = await this.userSecurityKeysRepository.countBy({ userId: user.id }).then(result => result >= 1);
+		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
+		const securityKeysAvailable = await countUserSecurityKeysByUserIdFromDatabase(this.drizzle, user.id).then(result => result >= 1);
 
 		if (password == null) {
 			reply.code(200);
@@ -171,7 +158,7 @@ export class SigninApiService {
 
 		const fail = async (status?: number, failure?: { id: string; }) => {
 			// Append signin history
-			await this.signinsRepository.insert({
+			await createSigninInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: user.id,
 				ip,

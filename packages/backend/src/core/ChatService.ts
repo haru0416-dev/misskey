@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { Brackets } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { QueueService } from '@/core/QueueService.js';
@@ -16,18 +15,61 @@ import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
 import { bindThis } from '@/decorators.js';
-import type { ChatApprovalsRepository, ChatMessagesRepository, ChatRoomInvitationsRepository, ChatRoomMembershipsRepository, ChatRoomsRepository, MiChatMessage, MiChatRoom, MiChatRoomMembership, MiDriveFile, MiUser, MutingsRepository, UsersRepository } from '@/models/_.js';
+import type { MiChatMessage, MiDriveFile, MiUser } from '@/models/_.js';
+import type { MiChatRoom } from '@/models/ChatRoom.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
-import { QueryService } from '@/core/QueryService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
-import { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
+import type { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
+import type { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
 import { Packed } from '@/misc/json-schema.js';
-import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/ChatApprovalStore.js';
+import {
+	addChatMessageReactionInDatabase,
+	createChatMessageInDatabase,
+	deleteChatMessageByIdFromDatabase,
+	fetchChatMessageByIdAndFromUserIdFromDatabase,
+	fetchChatMessageByIdFromDatabase,
+	fetchChatMessageByIdOrFailFromDatabase,
+	findLatestChatMessageForRoomsExcludingRoomsFromDatabase,
+	findLatestChatMessageForUserExcludingUsersFromDatabase,
+	listChatMessagesBetweenUsersFromDatabase,
+	listChatMessagesByRoomIdFromDatabase,
+	removeChatMessageReactionInDatabase,
+	resolveChatMessagePagination,
+	searchChatMessagesFromDatabase,
+} from '@/core/ChatMessageStore.js';
+import {
+	countChatRoomMembershipsByRoomIdFromDatabase,
+	createChatRoomInDatabase,
+	createChatRoomInvitationInDatabase,
+	deleteChatRoomByIdFromDatabase,
+	fetchChatRoomByIdAndOwnerIdFromDatabase,
+	fetchChatRoomByIdAndOwnerIdOrFailFromDatabase,
+	fetchChatRoomByIdFromDatabase,
+	fetchChatRoomByIdOrFailFromDatabase,
+	deleteChatRoomMembershipByIdFromDatabase,
+	fetchChatRoomInvitationFromDatabase,
+	fetchChatRoomInvitationOrFailFromDatabase,
+	fetchChatRoomMembershipFromDatabase,
+	fetchChatRoomMembershipOrFailFromDatabase,
+	joinChatRoomFromInvitationInDatabase,
+	listChatRoomInvitationsByRoomIdFromDatabase,
+	listChatRoomInvitationsByUserIdFromDatabase,
+	listChatRoomsByOwnerIdFromDatabase,
+	listChatRoomMembershipsByRoomIdFromDatabase,
+	listChatRoomMembershipsByUserIdFromDatabase,
+	resolveChatRoomRecordPagination,
+	updateChatRoomInDatabase,
+	updateChatRoomInvitationIgnoredFromDatabase,
+	updateChatRoomMembershipMuteFromDatabase,
+} from '@/core/ChatRoomStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const MAX_ROOM_MEMBERS = 50;
 const MAX_REACTIONS_PER_MESSAGE = 100;
@@ -56,26 +98,8 @@ export class ChatService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.chatMessagesRepository)
-		private chatMessagesRepository: ChatMessagesRepository,
-
-		@Inject(DI.chatApprovalsRepository)
-		private chatApprovalsRepository: ChatApprovalsRepository,
-
-		@Inject(DI.chatRoomsRepository)
-		private chatRoomsRepository: ChatRoomsRepository,
-
-		@Inject(DI.chatRoomInvitationsRepository)
-		private chatRoomInvitationsRepository: ChatRoomInvitationsRepository,
-
-		@Inject(DI.chatRoomMembershipsRepository)
-		private chatRoomMembershipsRepository: ChatRoomMembershipsRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private chatEntityService: ChatEntityService,
@@ -86,7 +110,6 @@ export class ChatService {
 		private pushNotificationService: PushNotificationService,
 		private notificationService: NotificationService,
 		private userBlockingService: UserBlockingService,
-		private queryService: QueryService,
 		private roleService: RoleService,
 		private userFollowingService: UserFollowingService,
 		private customEmojiService: CustomEmojiService,
@@ -138,17 +161,7 @@ export class ChatService {
 			throw new Error('yourself');
 		}
 
-		const approvals = await this.chatApprovalsRepository.createQueryBuilder('approval')
-			.where(new Brackets(qb => { // 自分が相手を許可しているか
-				qb.where('approval.userId = :fromUserId', { fromUserId: fromUser.id })
-					.andWhere('approval.otherId = :toUserId', { toUserId: toUser.id });
-			}))
-			.orWhere(new Brackets(qb => { // 相手が自分を許可しているか
-				qb.where('approval.userId = :toUserId', { toUserId: toUser.id })
-					.andWhere('approval.otherId = :fromUserId', { fromUserId: fromUser.id });
-			}))
-			.take(2)
-			.getMany();
+		const approvals = await listChatApprovalsBetweenUsers(this.drizzle, fromUser.id, toUser.id);
 
 		const otherApprovedMe = approvals.some(approval => approval.userId === toUser.id);
 		const iApprovedOther = approvals.some(approval => approval.userId === fromUser.id);
@@ -193,11 +206,11 @@ export class ChatService {
 			uri: params.uri ?? null,
 		} satisfies Partial<MiChatMessage>;
 
-		const inserted = await this.chatMessagesRepository.insertOne(message);
+		const inserted = await createChatMessageInDatabase(this.drizzle, message);
 
 		// 相手を許可しておく
 		if (!iApprovedOther) {
-			this.chatApprovalsRepository.insertOne({
+			await createChatApprovalInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: fromUser.id,
 				otherId: toUser.id,
@@ -245,7 +258,7 @@ export class ChatService {
 		file?: MiDriveFile | null;
 		uri?: string | null;
 	}): Promise<Packed<'ChatMessageLiteForRoom'>> {
-		const memberships = (await this.chatRoomMembershipsRepository.findBy({ roomId: toRoom.id })).map(m => ({
+		const memberships = (await listChatRoomMembershipsByRoomIdFromDatabase(this.drizzle, toRoom.id)).map(m => ({
 			userId: m.userId,
 			isMuted: m.isMuted,
 		})).concat({ // ownerはmembershipレコードを作らないため
@@ -269,7 +282,7 @@ export class ChatService {
 			uri: params.uri ?? null,
 		} satisfies Partial<MiChatMessage>;
 
-		const inserted = await this.chatMessagesRepository.insertOne(message);
+		const inserted = await createChatMessageInDatabase(this.drizzle, message);
 
 		const packedMessage = await this.chatEntityService.packMessageLiteForRoom(inserted);
 
@@ -343,12 +356,12 @@ export class ChatService {
 
 	@bindThis
 	public findMessageById(messageId: MiChatMessage['id']) {
-		return this.chatMessagesRepository.findOneBy({ id: messageId });
+		return fetchChatMessageByIdFromDatabase(this.drizzle, messageId);
 	}
 
 	@bindThis
 	public findMyMessageById(userId: MiUser['id'], messageId: MiChatMessage['id']) {
-		return this.chatMessagesRepository.findOneBy({ id: messageId, fromUserId: userId });
+		return fetchChatMessageByIdAndFromUserIdFromDatabase(this.drizzle, messageId, userId);
 	}
 
 	@bindThis
@@ -367,12 +380,12 @@ export class ChatService {
 
 	@bindThis
 	public async deleteMessage(message: MiChatMessage) {
-		await this.chatMessagesRepository.delete(message.id);
+		await deleteChatMessageByIdFromDatabase(this.drizzle, message.id);
 
 		if (message.toUserId) {
 			const [fromUser, toUser] = await Promise.all([
-				this.usersRepository.findOneByOrFail({ id: message.fromUserId }),
-				this.usersRepository.findOneByOrFail({ id: message.toUserId }),
+				fetchUserByIdOrFailFromDatabase(this.drizzle, message.fromUserId),
+				fetchUserByIdOrFailFromDatabase(this.drizzle, message.toUserId),
 			]);
 
 			if (this.userEntityService.isLocalUser(fromUser)) this.globalEventService.publishChatUserStream(message.fromUserId, message.toUserId, 'deleted', message.id);
@@ -389,36 +402,20 @@ export class ChatService {
 
 	@bindThis
 	public async userTimeline(meId: MiUser['id'], otherId: MiUser['id'], limit: number, sinceId?: MiChatMessage['id'] | null, untilId?: MiChatMessage['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatMessagesRepository.createQueryBuilder('message'), sinceId, untilId)
-			.andWhere(new Brackets(qb => {
-				qb
-					.where(new Brackets(qb => {
-						qb
-							.where('message.fromUserId = :meId')
-							.andWhere('message.toUserId = :otherId');
-					}))
-					.orWhere(new Brackets(qb => {
-						qb
-							.where('message.fromUserId = :otherId')
-							.andWhere('message.toUserId = :meId');
-					}));
-			}))
-			.setParameter('meId', meId)
-			.setParameter('otherId', otherId);
-
-		const messages = await query.take(limit).getMany();
+		const messages = await listChatMessagesBetweenUsersFromDatabase(this.drizzle, meId, otherId, {
+			limit,
+			...resolveChatMessagePagination(this.idService, { sinceId, untilId }),
+		});
 
 		return messages;
 	}
 
 	@bindThis
 	public async roomTimeline(roomId: MiChatRoom['id'], limit: number, sinceId?: MiChatMessage['id'] | null, untilId?: MiChatMessage['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatMessagesRepository.createQueryBuilder('message'), sinceId, untilId)
-			.andWhere('message.toRoomId = :roomId', { roomId })
-			.leftJoinAndSelect('message.file', 'file')
-			.leftJoinAndSelect('message.fromUser', 'fromUser');
-
-		const messages = await query.take(limit).getMany();
+		const messages = await listChatMessagesByRoomIdFromDatabase(this.drizzle, roomId, {
+			limit,
+			...resolveChatMessagePagination(this.idService, { sinceId, untilId }),
+		});
 
 		return messages;
 	}
@@ -427,32 +424,10 @@ export class ChatService {
 	public async userHistory(meId: MiUser['id'], limit: number): Promise<MiChatMessage[]> {
 		const history: MiChatMessage[] = [];
 
-		const mutingQuery = this.mutingsRepository.createQueryBuilder('muting')
-			.select('muting.muteeId')
-			.where('muting.muterId = :muterId', { muterId: meId });
-
 		for (let i = 0; i < limit; i++) {
 			const found = history.map(m => (m.fromUserId === meId) ? m.toUserId! : m.fromUserId!);
 
-			const query = this.chatMessagesRepository.createQueryBuilder('message')
-				.orderBy('message.id', 'DESC')
-				.where(new Brackets(qb => {
-					qb
-						.where('message.fromUserId = :meId', { meId: meId })
-						.orWhere('message.toUserId = :meId', { meId: meId });
-				}))
-				.andWhere('message.toRoomId IS NULL')
-				.andWhere(`message.fromUserId NOT IN (${ mutingQuery.getQuery() })`)
-				.andWhere(`message.toUserId NOT IN (${ mutingQuery.getQuery() })`);
-
-			if (found.length > 0) {
-				query.andWhere('message.fromUserId NOT IN (:...found)', { found: found });
-				query.andWhere('message.toUserId NOT IN (:...found)', { found: found });
-			}
-
-			query.setParameters(mutingQuery.getParameters());
-
-			const message = await query.getOne();
+			const message = await findLatestChatMessageForUserExcludingUsersFromDatabase(this.drizzle, meId, found);
 
 			if (message) {
 				history.push(message);
@@ -468,12 +443,8 @@ export class ChatService {
 	public async roomHistory(meId: MiUser['id'], limit: number): Promise<MiChatMessage[]> {
 		// TODO: 一回のクエリにまとめられるかも
 		const [memberRoomIds, ownedRoomIds] = await Promise.all([
-			this.chatRoomMembershipsRepository.findBy({
-				userId: meId,
-			}).then(xs => xs.map(x => x.roomId)),
-			this.chatRoomsRepository.findBy({
-				ownerId: meId,
-			}).then(xs => xs.map(x => x.id)),
+			listChatRoomMembershipsByUserIdFromDatabase(this.drizzle, meId).then(xs => xs.map(x => x.roomId)),
+			listChatRoomsByOwnerIdFromDatabase(this.drizzle, meId).then(xs => xs.map(x => x.id)),
 		]);
 
 		const roomIds = memberRoomIds.concat(ownedRoomIds);
@@ -487,15 +458,7 @@ export class ChatService {
 		for (let i = 0; i < limit; i++) {
 			const found = history.map(m => m.toRoomId!);
 
-			const query = this.chatMessagesRepository.createQueryBuilder('message')
-				.orderBy('message.id', 'DESC')
-				.where('message.toRoomId IN (:...roomIds)', { roomIds });
-
-			if (found.length > 0) {
-				query.andWhere('message.toRoomId NOT IN (:...found)', { found: found });
-			}
-
-			const message = await query.getOne();
+			const message = await findLatestChatMessageForRoomsExcludingRoomsFromDatabase(this.drizzle, roomIds, found);
 
 			if (message) {
 				history.push(message);
@@ -562,12 +525,12 @@ export class ChatService {
 	}>) {
 		const room = {
 			id: this.idService.gen(),
-			name: params.name,
-			description: params.description,
+			name: params.name ?? '',
+			description: params.description ?? '',
 			ownerId: owner.id,
-		} satisfies Partial<MiChatRoom>;
+		};
 
-		const created = await this.chatRoomsRepository.insertOne(room);
+		const created = await createChatRoomInDatabase(this.drizzle, room);
 
 		return created;
 	}
@@ -582,7 +545,7 @@ export class ChatService {
 			return true;
 		}
 
-		if (await this.chatRoomInvitationsRepository.findOneBy({ roomId: room.id, userId: meId })) {
+		if (await fetchChatRoomInvitationFromDatabase(this.drizzle, room.id, meId)) {
 			return true;
 		}
 
@@ -609,7 +572,7 @@ export class ChatService {
 
 	@bindThis
 	public async deleteRoom(room: MiChatRoom, deleter?: MiUser) {
-		const memberships = (await this.chatRoomMembershipsRepository.findBy({ roomId: room.id })).map(m => ({
+		const memberships = (await listChatRoomMembershipsByRoomIdFromDatabase(this.drizzle, room.id)).map(m => ({
 			userId: m.userId,
 		})).concat({ // ownerはmembershipレコードを作らないため
 			userId: room.ownerId,
@@ -623,7 +586,7 @@ export class ChatService {
 		}
 		await redisPipeline.exec();
 
-		await this.chatRoomsRepository.delete(room.id);
+		await deleteChatRoomByIdFromDatabase(this.drizzle, room.id);
 
 		if (deleter) {
 			const deleterIsModerator = await this.roleService.isModerator(deleter);
@@ -639,21 +602,18 @@ export class ChatService {
 
 	@bindThis
 	public async findMyRoomById(ownerId: MiUser['id'], roomId: MiChatRoom['id']) {
-		return this.chatRoomsRepository.findOneBy({ id: roomId, ownerId: ownerId });
+		return fetchChatRoomByIdAndOwnerIdFromDatabase(this.drizzle, roomId, ownerId);
 	}
 
 	@bindThis
 	public async findRoomById(roomId: MiChatRoom['id']) {
-		return this.chatRoomsRepository.findOne({
-			where: { id: roomId },
-			relations: { owner: true },
-		});
+		return fetchChatRoomByIdFromDatabase(this.drizzle, roomId);
 	}
 
 	@bindThis
 	public async isRoomMember(room: MiChatRoom, userId: MiUser['id']) {
 		if (room.ownerId === userId) return true;
-		const membership = await this.chatRoomMembershipsRepository.findOneBy({ roomId: room.id, userId });
+		const membership = await fetchChatRoomMembershipFromDatabase(this.drizzle, room.id, userId);
 		return membership != null;
 	}
 
@@ -663,18 +623,18 @@ export class ChatService {
 			throw new Error('yourself');
 		}
 
-		const room = await this.chatRoomsRepository.findOneByOrFail({ id: roomId, ownerId: inviterId });
+		const room = await fetchChatRoomByIdAndOwnerIdOrFailFromDatabase(this.drizzle, roomId, inviterId);
 
 		if (await this.isRoomMember(room, inviteeId)) {
 			throw new Error('already member');
 		}
 
-		const existingInvitation = await this.chatRoomInvitationsRepository.findOneBy({ roomId, userId: inviteeId });
+		const existingInvitation = await fetchChatRoomInvitationFromDatabase(this.drizzle, roomId, inviteeId);
 		if (existingInvitation) {
 			throw new Error('already invited');
 		}
 
-		const membershipsCount = await this.chatRoomMembershipsRepository.countBy({ roomId });
+		const membershipsCount = await countChatRoomMembershipsByRoomIdFromDatabase(this.drizzle, roomId);
 		if (membershipsCount >= MAX_ROOM_MEMBERS) {
 			throw new Error('room is full');
 		}
@@ -687,7 +647,7 @@ export class ChatService {
 			userId: inviteeId,
 		} satisfies Partial<MiChatRoomInvitation>;
 
-		const created = await this.chatRoomInvitationsRepository.insertOne(invitation);
+		const created = await createChatRoomInvitationInDatabase(this.drizzle, invitation);
 
 		this.notificationService.createNotification(inviteeId, 'chatRoomInvitationReceived', {
 			invitationId: invitation.id,
@@ -698,40 +658,40 @@ export class ChatService {
 
 	@bindThis
 	public async getSentRoomInvitationsWithPagination(roomId: MiChatRoom['id'], limit: number, sinceId?: MiChatRoomInvitation['id'] | null, untilId?: MiChatRoomInvitation['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatRoomInvitationsRepository.createQueryBuilder('invitation'), sinceId, untilId)
-			.andWhere('invitation.roomId = :roomId', { roomId });
-
-		const invitations = await query.take(limit).getMany();
+		const invitations = await listChatRoomInvitationsByRoomIdFromDatabase(this.drizzle, roomId, {
+			limit,
+			...resolveChatRoomRecordPagination({ sinceId, untilId }),
+		});
 
 		return invitations;
 	}
 
 	@bindThis
 	public async getOwnedRoomsWithPagination(ownerId: MiUser['id'], limit: number, sinceId?: MiChatRoom['id'] | null, untilId?: MiChatRoom['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatRoomsRepository.createQueryBuilder('room'), sinceId, untilId)
-			.andWhere('room.ownerId = :ownerId', { ownerId });
-
-		const rooms = await query.take(limit).getMany();
+		const rooms = await listChatRoomsByOwnerIdFromDatabase(this.drizzle, ownerId, {
+			limit,
+			...resolveChatRoomRecordPagination({ sinceId, untilId }),
+		});
 
 		return rooms;
 	}
 
 	@bindThis
 	public async getReceivedRoomInvitationsWithPagination(userId: MiUser['id'], limit: number, sinceId?: MiChatRoomInvitation['id'] | null, untilId?: MiChatRoomInvitation['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatRoomInvitationsRepository.createQueryBuilder('invitation'), sinceId, untilId)
-			.andWhere('invitation.userId = :userId', { userId })
-			.andWhere('invitation.ignored = FALSE');
-
-		const invitations = await query.take(limit).getMany();
+		const invitations = await listChatRoomInvitationsByUserIdFromDatabase(this.drizzle, userId, {
+			ignored: false,
+			limit,
+			...resolveChatRoomRecordPagination({ sinceId, untilId }),
+		});
 
 		return invitations;
 	}
 
 	@bindThis
 	public async joinToRoom(userId: MiUser['id'], roomId: MiChatRoom['id']) {
-		const invitation = await this.chatRoomInvitationsRepository.findOneByOrFail({ roomId, userId });
+		const invitation = await fetchChatRoomInvitationOrFailFromDatabase(this.drizzle, roomId, userId);
 
-		const membershipsCount = await this.chatRoomMembershipsRepository.countBy({ roomId });
+		const membershipsCount = await countChatRoomMembershipsByRoomIdFromDatabase(this.drizzle, roomId);
 		if (membershipsCount >= MAX_ROOM_MEMBERS) {
 			throw new Error('room is full');
 		}
@@ -742,21 +702,19 @@ export class ChatService {
 			userId: userId,
 		} satisfies Partial<MiChatRoomMembership>;
 
-		// TODO: transaction
-		await this.chatRoomMembershipsRepository.insertOne(membership);
-		await this.chatRoomInvitationsRepository.delete(invitation.id);
+		await joinChatRoomFromInvitationInDatabase(this.drizzle, membership, invitation.id);
 	}
 
 	@bindThis
 	public async ignoreRoomInvitation(userId: MiUser['id'], roomId: MiChatRoom['id']) {
-		const invitation = await this.chatRoomInvitationsRepository.findOneByOrFail({ roomId, userId });
-		await this.chatRoomInvitationsRepository.update(invitation.id, { ignored: true });
+		const invitation = await fetchChatRoomInvitationOrFailFromDatabase(this.drizzle, roomId, userId);
+		await updateChatRoomInvitationIgnoredFromDatabase(this.drizzle, invitation.id, true);
 	}
 
 	@bindThis
 	public async leaveRoom(userId: MiUser['id'], roomId: MiChatRoom['id']) {
-		const membership = await this.chatRoomMembershipsRepository.findOneByOrFail({ roomId, userId });
-		await this.chatRoomMembershipsRepository.delete(membership.id);
+		const membership = await fetchChatRoomMembershipOrFailFromDatabase(this.drizzle, roomId, userId);
+		await deleteChatRoomMembershipByIdFromDatabase(this.drizzle, membership.id);
 
 		// 未読フラグを消す (「既読にする」というわけでもないのでreadメソッドは使わないでおく)
 		const redisPipeline = this.redisClient.pipeline();
@@ -767,8 +725,8 @@ export class ChatService {
 
 	@bindThis
 	public async muteRoom(userId: MiUser['id'], roomId: MiChatRoom['id'], mute: boolean) {
-		const membership = await this.chatRoomMembershipsRepository.findOneByOrFail({ roomId, userId });
-		await this.chatRoomMembershipsRepository.update(membership.id, { isMuted: mute });
+		const membership = await fetchChatRoomMembershipOrFailFromDatabase(this.drizzle, roomId, userId);
+		await updateChatRoomMembershipMuteFromDatabase(this.drizzle, membership.id, mute);
 	}
 
 	@bindThis
@@ -776,22 +734,15 @@ export class ChatService {
 		name?: string;
 		description?: string;
 	}): Promise<MiChatRoom> {
-		return this.chatRoomsRepository.createQueryBuilder().update()
-			.set(params)
-			.where('id = :id', { id: room.id })
-			.returning('*')
-			.execute()
-			.then((response) => {
-				return response.raw[0];
-			});
+		return updateChatRoomInDatabase(this.drizzle, room.id, params);
 	}
 
 	@bindThis
 	public async getRoomMembershipsWithPagination(roomId: MiChatRoom['id'], limit: number, sinceId?: MiChatRoomMembership['id'] | null, untilId?: MiChatRoomMembership['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatRoomMembershipsRepository.createQueryBuilder('membership'), sinceId, untilId)
-			.andWhere('membership.roomId = :roomId', { roomId });
-
-		const memberships = await query.take(limit).getMany();
+		const memberships = await listChatRoomMembershipsByRoomIdFromDatabase(this.drizzle, roomId, {
+			limit,
+			...resolveChatRoomRecordPagination({ sinceId, untilId }),
+		});
 
 		return memberships;
 	}
@@ -801,56 +752,7 @@ export class ChatService {
 		userId?: MiUser['id'] | null;
 		roomId?: MiChatRoom['id'] | null;
 	}) {
-		const q = this.chatMessagesRepository.createQueryBuilder('message');
-
-		if (params.userId) {
-			q.andWhere(new Brackets(qb => {
-				qb
-					.where(new Brackets(qb => {
-						qb
-							.where('message.fromUserId = :meId')
-							.andWhere('message.toUserId = :otherId');
-					}))
-					.orWhere(new Brackets(qb => {
-						qb
-							.where('message.fromUserId = :otherId')
-							.andWhere('message.toUserId = :meId');
-					}));
-			}))
-				.setParameter('meId', meId)
-				.setParameter('otherId', params.userId);
-		} else if (params.roomId) {
-			q.where('message.toRoomId = :roomId', { roomId: params.roomId });
-		} else {
-			const membershipsQuery = this.chatRoomMembershipsRepository.createQueryBuilder('membership')
-				.select('membership.roomId')
-				.where('membership.userId = :meId', { meId: meId });
-
-			const ownedRoomsQuery = this.chatRoomsRepository.createQueryBuilder('room')
-				.select('room.id')
-				.where('room.ownerId = :meId', { meId });
-
-			q.andWhere(new Brackets(qb => {
-				qb
-					.where('message.fromUserId = :meId')
-					.orWhere('message.toUserId = :meId')
-					.orWhere(`message.toRoomId IN (${membershipsQuery.getQuery()})`)
-					.orWhere(`message.toRoomId IN (${ownedRoomsQuery.getQuery()})`);
-			}));
-
-			q.setParameters(membershipsQuery.getParameters());
-			q.setParameters(ownedRoomsQuery.getParameters());
-		}
-
-		q.andWhere('LOWER(message.text) LIKE :q', { q: `%${ sqlLikeEscape(query.toLowerCase()) }%` });
-
-		q.leftJoinAndSelect('message.file', 'file');
-		q.leftJoinAndSelect('message.fromUser', 'fromUser');
-		q.leftJoinAndSelect('message.toUser', 'toUser');
-		q.leftJoinAndSelect('message.toRoom', 'toRoom');
-		q.leftJoinAndSelect('toRoom.owner', 'toRoomOwner');
-
-		const messages = await q.orderBy('message.id', 'DESC').take(limit).getMany();
+		const messages = await searchChatMessagesFromDatabase(this.drizzle, meId, query, limit, params);
 
 		return messages;
 	}
@@ -874,7 +776,7 @@ export class ChatService {
 			}
 		}
 
-		const message = await this.chatMessagesRepository.findOneByOrFail({ id: messageId });
+		const message = await fetchChatMessageByIdOrFailFromDatabase(this.drizzle, messageId);
 
 		if (message.fromUserId === userId) {
 			throw new Error('cannot react to own message');
@@ -888,7 +790,7 @@ export class ChatService {
 			throw new Error('too many reactions');
 		}
 
-		const room = message.toRoomId ? await this.chatRoomsRepository.findOneByOrFail({ id: message.toRoomId }) : null;
+		const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(this.drizzle, message.toRoomId) : null;
 
 		if (room) {
 			if (!(await this.isRoomMember(room, userId))) {
@@ -896,12 +798,7 @@ export class ChatService {
 			}
 		}
 
-		await this.chatMessagesRepository.createQueryBuilder().update()
-			.set({
-				reactions: () => `array_append("reactions", '${userId}/${reaction}')`,
-			})
-			.where('id = :id', { id: message.id })
-			.execute();
+		await addChatMessageReactionInDatabase(this.drizzle, message.id, userId, reaction);
 
 		if (room) {
 			this.globalEventService.publishChatRoomStream(room.id, 'react', {
@@ -936,16 +833,11 @@ export class ChatService {
 
 		// NOTE: 自分のリアクションを(あれば)削除するだけなので諸々の権限チェックは必要なし
 
-		const message = await this.chatMessagesRepository.findOneByOrFail({ id: messageId });
+		const message = await fetchChatMessageByIdOrFailFromDatabase(this.drizzle, messageId);
 
-		const room = message.toRoomId ? await this.chatRoomsRepository.findOneByOrFail({ id: message.toRoomId }) : null;
+		const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(this.drizzle, message.toRoomId) : null;
 
-		await this.chatMessagesRepository.createQueryBuilder().update()
-			.set({
-				reactions: () => `array_remove("reactions", '${userId}/${reaction}')`,
-			})
-			.where('id = :id', { id: message.id })
-			.execute();
+		await removeChatMessageReactionInDatabase(this.drizzle, message.id, userId, reaction);
 
 		// TODO: 実際に削除が行われたときのみイベントを発行する
 
@@ -969,10 +861,10 @@ export class ChatService {
 
 	@bindThis
 	public async getMyMemberships(userId: MiUser['id'], limit: number, sinceId?: MiChatRoomMembership['id'] | null, untilId?: MiChatRoomMembership['id'] | null) {
-		const query = this.queryService.makePaginationQuery(this.chatRoomMembershipsRepository.createQueryBuilder('membership'), sinceId, untilId)
-			.andWhere('membership.userId = :userId', { userId });
-
-		const memberships = await query.take(limit).getMany();
+		const memberships = await listChatRoomMembershipsByUserIdFromDatabase(this.drizzle, userId, {
+			limit,
+			...resolveChatRoomRecordPagination({ sinceId, untilId }),
+		});
 
 		return memberships;
 	}

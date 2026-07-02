@@ -4,14 +4,14 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { Not, IsNull, DataSource } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Redis from 'ioredis';
 import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import type { UsersRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
+import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/UserStore.js';
 import Chart from '../core.js';
 import { ChartLoggerService } from '../ChartLoggerService.js';
 import { name, schema } from './entities/users.js';
@@ -23,14 +23,14 @@ import type { KVs } from '../core.js';
 @Injectable()
 export default class UsersChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private chartLoggerService: ChartLoggerService,
@@ -40,8 +40,8 @@ export default class UsersChart extends Chart<typeof schema> { // eslint-disable
 
 	protected async tickMajor(): Promise<Partial<KVs<typeof schema>>> {
 		const [localCount, remoteCount] = await Promise.all([
-			this.usersRepository.countBy({ host: IsNull() }),
-			this.usersRepository.countBy({ host: Not(IsNull()) }),
+			countUsersByHostFromDatabase(this.drizzle, null),
+			countUsersByHostNotNullFromDatabase(this.drizzle),
 		]);
 
 		return {

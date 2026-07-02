@@ -3,16 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { IsNull } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository, FollowingsRepository, UserProfilesRepository } from '@/models/_.js';
 import { birthdaySchema } from '@/models/User.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { FollowingEntityService } from '@/core/entities/FollowingEntityService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
+import { followingExistsInDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, resolveFollowingPagination } from '@/core/FollowingStore.js';
+import { IdService } from '@/core/IdService.js';
+import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -95,30 +97,24 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private followingEntityService: FollowingEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const user = await this.usersRepository.findOneBy('userId' in ps
-				? { id: ps.userId }
-				: { usernameLower: ps.username.toLowerCase(), host: this.utilityService.toPunyNullable(ps.host) ?? IsNull() });
+			const user = 'userId' in ps
+				? await fetchUserByIdFromDatabase(this.drizzle, ps.userId)
+				: await fetchUserByUsernameAndHostFromDatabase(this.drizzle, ps.username, this.utilityService.toPunyNullable(ps.host));
 
 			if (user == null) {
 				throw new ApiError(meta.errors.noSuchUser);
 			}
 
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 
 			if (profile.followingVisibility !== 'public' && !await this.roleService.isModerator(me)) {
 				if (profile.followingVisibility === 'private') {
@@ -129,12 +125,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					if (me == null) {
 						throw new ApiError(meta.errors.forbidden);
 					} else if (me.id !== user.id) {
-						const isFollowing = await this.followingsRepository.exists({
-							where: {
-								followeeId: user.id,
-								followerId: me.id,
-							},
-						});
+						const isFollowing = await followingExistsInDatabase(this.drizzle, me.id, user.id);
 						if (!isFollowing) {
 							throw new ApiError(meta.errors.forbidden);
 						}
@@ -142,27 +133,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			const query = this.queryService.makePaginationQuery(this.followingsRepository.createQueryBuilder('following'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('following.followerId = :userId', { userId: user.id })
-				.innerJoinAndSelect('following.followee', 'followee');
-
+			const pagination = resolveFollowingPagination(this.idService, ps);
+			const birthdayParam = ps.birthday;
+			const followings = birthdayParam
+				? await (async () => {
 			// @deprecated use get-following-users-by-birthday instead.
-			if (ps.birthday) {
-				query.innerJoin(this.userProfilesRepository.metadata.targetName, 'followeeProfile', 'followeeProfile.userId = following.followeeId');
-
-				try {
-					const birthday = ps.birthday.split('-');
-					birthday.shift(); // 年の部分を削除
-					// なぜか get_birthday_date() = :birthday だとインデックスが効かないので、BETWEEN で対応
-					query.andWhere('get_birthday_date(followeeProfile.birthday) BETWEEN :birthday AND :birthday', { birthday: parseInt(birthday.join('')) });
-				} catch (_) {
-					throw new ApiError(meta.errors.birthdayInvalid);
-				}
-			}
-
-			const followings = await query
-				.limit(ps.limit)
-				.getMany();
+					try {
+						const birthday = birthdayParam.split('-');
+						birthday.shift(); // 年の部分を削除
+						// なぜか get_birthday_date() = :birthday だとインデックスが効かないので、BETWEEN で対応
+						return await listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase(this.drizzle, user.id, parseInt(birthday.join('')), {
+							...pagination,
+							limit: ps.limit,
+						});
+					} catch (_) {
+						throw new ApiError(meta.errors.birthdayInvalid);
+					}
+				})()
+				: await listFollowingsByFollowerIdWithPaginationFromDatabase(this.drizzle, user.id, {
+					...pagination,
+					limit: ps.limit,
+				});
 
 			return await this.followingEntityService.packMany(followings, me, { populateFollowee: true });
 		});

@@ -4,11 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { DriveFilesRepository, UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -199,29 +201,22 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private roleService: RoleService,
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const file = await this.driveFilesRepository.findOneBy(
-				'fileId' in ps
-					? { id: ps.fileId }
-					: [{ url: ps.url }, { thumbnailUrl: ps.url }, { webpublicUrl: ps.url }],
-			);
+			const file = 'fileId' in ps
+				? await fetchDriveFileByIdFromDatabase(this.db, ps.fileId)
+				: await fetchDriveFileByUrlFromDatabase(this.db, ps.url);
 
 			if (file == null) {
 				throw new ApiError(meta.errors.noSuchFile);
 			}
 
-			const owner = file.userId ? await this.usersRepository.findOneByOrFail({
-				id: file.userId,
-			}) : null;
+			const owner = file.userId ? await fetchUserByIdOrFailFromDatabase(this.db, file.userId) : null;
 
 			const iAmModerator = await this.roleService.isModerator(me);
 			const ownerIsModerator = owner ? await this.roleService.isModerator(owner) : false;

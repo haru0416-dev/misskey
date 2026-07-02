@@ -5,13 +5,12 @@
 
 import { Global, Inject, Module } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { DataSource } from 'typeorm';
 import { Meilisearch } from 'meilisearch';
-import { MiMeta } from '@/models/Meta.js';
+import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { DI } from './di-symbols.js';
 import { Config, loadConfig } from './config.js';
-import { createPostgresDataSource } from './postgres.js';
-import { RepositoryModule } from './models/RepositoryModule.js';
+import { createDrizzleDatabase, createDrizzlePool } from './drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from './drizzle.js';
 import { allSettled } from './misc/promise-tracker.js';
 import { GlobalEvents } from './core/GlobalEventService.js';
 import type { Provider, OnApplicationShutdown } from '@nestjs/common';
@@ -21,18 +20,20 @@ const $config: Provider = {
 	useValue: loadConfig(),
 };
 
-const $db: Provider = {
-	provide: DI.db,
-	useFactory: async (config) => {
-		try {
-			const db = createPostgresDataSource(config);
-			return await db.initialize();
-		} catch (e) {
-			console.log(e);
-			throw e;
-		}
+const $drizzlePool: Provider = {
+	provide: DI.drizzlePool,
+	useFactory: (config: Config) => {
+		return createDrizzlePool(config);
 	},
 	inject: [DI.config],
+};
+
+const $drizzle: Provider = {
+	provide: DI.drizzle,
+	useFactory: (pool: MiDrizzlePool, config: Config) => {
+		return createDrizzleDatabase(pool, config);
+	},
+	inject: [DI.drizzlePool, DI.config],
 };
 
 const $meilisearch: Provider = {
@@ -73,9 +74,9 @@ const $redisForPub: Provider = {
 
 const $redisForSub: Provider = {
 	provide: DI.redisForSub,
-	useFactory: (config: Config) => {
+	useFactory: async (config: Config) => {
 		const redis = new Redis.Redis(config.redisForPubsub);
-		redis.subscribe(config.host);
+		await redis.subscribe(config.host);
 		return redis;
 	},
 	inject: [DI.config],
@@ -99,34 +100,8 @@ const $redisForReactions: Provider = {
 
 const $meta: Provider = {
 	provide: DI.meta,
-	useFactory: async (db: DataSource, redisForSub: Redis.Redis) => {
-		const meta = await db.transaction(async transactionalEntityManager => {
-			// 過去のバグでレコードが複数出来てしまっている可能性があるので新しいIDを優先する
-			const metas = await transactionalEntityManager.find(MiMeta, {
-				order: {
-					id: 'DESC',
-				},
-			});
-
-			const meta = metas[0];
-
-			if (meta) {
-				return meta;
-			} else {
-				// metaが空のときfetchMetaが同時に呼ばれるとここが同時に呼ばれてしまうことがあるのでフェイルセーフなupsertを使う
-				const saved = await transactionalEntityManager
-					.upsert(
-						MiMeta,
-						{
-							id: 'x',
-						},
-						['id'],
-					)
-					.then((x) => transactionalEntityManager.findOneByOrFail(MiMeta, x.identifiers[0]));
-
-				return saved;
-			}
-		});
+	useFactory: async (db: MiDrizzleDatabase, redisForSub: Redis.Redis) => {
+		const meta = await fetchMetaFromDatabase(db);
 
 		async function onMessage(_: string, data: string): Promise<void> {
 			const obj = JSON.parse(data);
@@ -151,18 +126,26 @@ const $meta: Provider = {
 
 		return meta;
 	},
-	inject: [DI.db, DI.redisForSub],
+	inject: [DI.drizzle, DI.redisForSub],
 };
+
+async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
+	try {
+		await redis.quit();
+	} catch {
+		redis.disconnect();
+	}
+}
 
 @Global()
 @Module({
-	imports: [RepositoryModule],
-	providers: [$config, $db, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions],
-	exports: [$config, $db, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions, RepositoryModule],
+	imports: [],
+	providers: [$config, $drizzlePool, $drizzle, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions],
+	exports: [$config, $drizzlePool, $drizzle, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions],
 })
 export class GlobalModule implements OnApplicationShutdown {
 	constructor(
-		@Inject(DI.db) private db: DataSource,
+		@Inject(DI.drizzlePool) private drizzlePool: MiDrizzlePool,
 		@Inject(DI.redis) private redisClient: Redis.Redis,
 		@Inject(DI.redisForPub) private redisForPub: Redis.Redis,
 		@Inject(DI.redisForSub) private redisForSub: Redis.Redis,
@@ -175,12 +158,12 @@ export class GlobalModule implements OnApplicationShutdown {
 		await allSettled();
 		// And then disconnect from DB
 		await Promise.all([
-			this.db.destroy(),
-			this.redisClient.disconnect(),
-			this.redisForPub.disconnect(),
-			this.redisForSub.disconnect(),
-			this.redisForTimelines.disconnect(),
-			this.redisForReactions.disconnect(),
+			this.drizzlePool.end(),
+			closeRedisConnection(this.redisClient),
+			closeRedisConnection(this.redisForPub),
+			closeRedisConnection(this.redisForSub),
+			closeRedisConnection(this.redisForTimelines),
+			closeRedisConnection(this.redisForReactions),
 		]);
 	}
 

@@ -13,18 +13,24 @@ import { SearchService } from '@/core/SearchService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
-import {
-	type BlockingsRepository,
-	type ChannelsRepository,
-	type FollowingsRepository,
-	type MutingsRepository,
-	type NotesRepository,
-	type UserProfilesRepository,
-	type UsersRepository,
-	type MiChannel,
-	type MiNote,
-	type MiUser,
-} from '@/models/_.js';
+import type { MiChannel } from '@/models/Channel.js';
+import type { MiNote } from '@/models/Note.js';
+import type { MiUser } from '@/models/User.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { blocking } from '@/db/schema/blocking.js';
+import { channel, type ChannelInsert } from '@/db/schema/channel.js';
+import { following } from '@/db/schema/following.js';
+import { muting } from '@/db/schema/muting.js';
+import { note, type NoteInsert } from '@/db/schema/note.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import { createBlockingInDatabase } from '@/core/BlockingStore.js';
+import { createChannelInDatabase } from '@/core/ChannelStore.js';
+import { createFollowingInDatabase } from '@/core/FollowingStore.js';
+import { createMutingInDatabase } from '@/core/MutingStore.js';
+import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 describe('SearchService', () => {
 	type TestContext = {
@@ -32,13 +38,7 @@ describe('SearchService', () => {
 		service: SearchService;
 		cacheService: CacheService;
 		idService: IdService;
-		mutingsRepository: MutingsRepository;
-		blockingsRepository: BlockingsRepository;
-		usersRepository: UsersRepository;
-		userProfilesRepository: UserProfilesRepository;
-		notesRepository: NotesRepository;
-		channelsRepository: ChannelsRepository;
-		followingsRepository: FollowingsRepository;
+		db: MiDrizzleDatabase;
 		indexer?: (note: MiNote) => Promise<void>;
 	};
 
@@ -86,74 +86,63 @@ describe('SearchService', () => {
 			service: app.get(SearchService),
 			cacheService: app.get(CacheService),
 			idService: app.get(IdService),
-			mutingsRepository: app.get(DI.mutingsRepository),
-			blockingsRepository: app.get(DI.blockingsRepository),
-			usersRepository: app.get(DI.usersRepository),
-			userProfilesRepository: app.get(DI.userProfilesRepository),
-			notesRepository: app.get(DI.notesRepository),
-			channelsRepository: app.get(DI.channelsRepository),
-			followingsRepository: app.get(DI.followingsRepository),
+			db: app.get(DI.drizzle),
 		};
 	}
 
 	async function cleanupContext(ctx: TestContext) {
-		await ctx.notesRepository.createQueryBuilder().delete().execute();
-		await ctx.mutingsRepository.createQueryBuilder().delete().execute();
-		await ctx.blockingsRepository.createQueryBuilder().delete().execute();
-		await ctx.followingsRepository.createQueryBuilder().delete().execute();
-		await ctx.channelsRepository.createQueryBuilder().delete().execute();
-		await ctx.userProfilesRepository.createQueryBuilder().delete().execute();
-		await ctx.usersRepository.createQueryBuilder().delete().execute();
+		await ctx.db.delete(note);
+		await ctx.db.delete(muting);
+		await ctx.db.delete(blocking);
+		await ctx.db.delete(following);
+		await ctx.db.delete(channel);
+		await ctx.db.delete(userProfile);
+		await ctx.db.delete(user);
 	}
 
-	async function createUser(ctx: TestContext, data: Partial<MiUser> = {}) {
+	async function createUser(ctx: TestContext, data: Partial<UserInsert> = {}) {
 		const id = ctx.idService.gen();
 		const username = data.username ?? `user_${id}`;
 		const usernameLower = data.usernameLower ?? username.toLowerCase();
 
-		const user = await ctx.usersRepository
-			.insert({
-				id,
-				username,
-				usernameLower,
-				...data,
-			})
-			.then(x => ctx.usersRepository.findOneByOrFail(x.identifiers[0]));
+		const user = await createUserInDatabase(ctx.db, {
+			id,
+			username,
+			usernameLower,
+			...data,
+		});
 
-		await ctx.userProfilesRepository.insert({
+		await createUserProfileInDatabase(ctx.db, {
 			userId: id,
 		});
 
 		return user;
 	}
 
-	async function createChannel(ctx: TestContext, user: MiUser, data: Partial<MiChannel> = {}) {
+	async function createChannel(ctx: TestContext, user: MiUser, data: Partial<ChannelInsert> = {}) {
 		const id = ctx.idService.gen();
-		const channel = await ctx.channelsRepository
-			.insert({
-				id,
-				userId: user.id,
-				name: data.name ?? `channel_${id}`,
-				...data,
-			})
-			.then(x => ctx.channelsRepository.findOneByOrFail(x.identifiers[0]));
+		const channel = await createChannelInDatabase(ctx.db, {
+			id,
+			userId: user.id,
+			name: data.name ?? `channel_${id}`,
+			...data,
+		});
 
 		return channel;
 	}
 
-	async function createNote(ctx: TestContext, user: MiUser, data: Partial<MiNote> = {}, time?: number) {
+	async function createNote(ctx: TestContext, user: MiUser, data: Partial<NoteInsert> = {}, time?: number) {
 		const id = time == null ? ctx.idService.gen() : ctx.idService.gen(time);
-		const note = await ctx.notesRepository
-			.insert({
-				id,
-				text: 'hello',
-				userId: user.id,
-				userHost: user.host,
-				visibility: 'public',
-				tags: [],
-				...data,
-			})
-			.then(x => ctx.notesRepository.findOneByOrFail(x.identifiers[0]));
+		await createNoteInDatabase(ctx.db, {
+			id,
+			text: 'hello',
+			userId: user.id,
+			userHost: user.host,
+			visibility: 'public',
+			tags: [],
+			...data,
+		});
+		const note = await fetchNoteByIdOrFailFromDatabase(ctx.db, id);
 
 		if (ctx.indexer) {
 			await ctx.indexer(note);
@@ -163,7 +152,7 @@ describe('SearchService', () => {
 	}
 
 	async function createFollowing(ctx: TestContext, follower: MiUser, followee: MiUser) {
-		await ctx.followingsRepository.insert({
+		await createFollowingInDatabase(ctx.db, {
 			id: ctx.idService.gen(),
 			followerId: follower.id,
 			followeeId: followee.id,
@@ -179,7 +168,7 @@ describe('SearchService', () => {
 	}
 
 	async function createMuting(ctx: TestContext, muter: MiUser, mutee: MiUser) {
-		await ctx.mutingsRepository.insert({
+		await createMutingInDatabase(ctx.db, {
 			id: ctx.idService.gen(),
 			muterId: muter.id,
 			muteeId: mutee.id,
@@ -188,7 +177,7 @@ describe('SearchService', () => {
 	}
 
 	async function createBlocking(ctx: TestContext, blocker: MiUser, blockee: MiUser) {
-		await ctx.blockingsRepository.insert({
+		await createBlockingInDatabase(ctx.db, {
 			id: ctx.idService.gen(),
 			blockerId: blocker.id,
 			blockeeId: blockee.id,

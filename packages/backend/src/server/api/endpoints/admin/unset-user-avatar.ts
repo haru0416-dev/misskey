@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -29,13 +30,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private moderationLogService: ModerationLogService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const user = await this.usersRepository.findOneBy({ id: ps.userId });
+			const user = await fetchUserByIdFromDatabase(this.db, ps.userId);
 
 			if (user == null) {
 				throw new Error('user not found');
@@ -43,8 +44,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			if (user.avatarId == null) return;
 
-			await this.usersRepository.update(user.id, {
-				avatar: null,
+			await updateUserInDatabase(this.db, user.id, {
 				avatarId: null,
 				avatarUrl: null,
 				avatarBlurhash: null,

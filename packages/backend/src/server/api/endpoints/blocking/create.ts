@@ -6,11 +6,13 @@
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UsersRepository, BlockingsRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -63,18 +65,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private getterService: GetterService,
 		private userBlockingService: UserBlockingService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const blocker = await this.usersRepository.findOneByOrFail({ id: me.id });
+			const blocker = await fetchUserByIdOrFailFromDatabase(this.db, me.id);
 
 			// 自分自身
 			if (me.id === ps.userId) {
@@ -88,12 +87,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// Check if already blocking
-			const exist = await this.blockingsRepository.exists({
-				where: {
-					blockerId: blocker.id,
-					blockeeId: blockee.id,
-				},
-			});
+			const exist = await blockingExistsInDatabase(this.db, blocker.id, blockee.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyBlocking);

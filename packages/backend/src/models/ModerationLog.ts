@@ -3,30 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { PrimaryColumn, Entity, Index, JoinColumn, Column, ManyToOne } from 'typeorm';
-import { id } from './util/id.js';
 import { MiUser } from './User.js';
 
-@Entity('moderation_log')
+const manualIndex = { unique: false, synchronize: false } as const;
+
 export class MiModerationLog {
-	@PrimaryColumn(id())
 	public id: string;
 
-	@Index()
-	@Column(id())
 	public userId: MiUser['id'];
 
-	@ManyToOne(() => MiUser, {
-		onDelete: 'CASCADE',
-	})
-	@JoinColumn()
 	public user: MiUser | null;
 
-	@Column('varchar', {
-		length: 128,
-	})
 	public type: string;
 
-	@Column('jsonb')
 	public info: Record<string, any>;
 }

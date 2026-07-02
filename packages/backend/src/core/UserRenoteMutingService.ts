@@ -4,21 +4,21 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
-import type { RenoteMutingsRepository } from '@/models/_.js';
-import type { MiRenoteMuting } from '@/models/RenoteMuting.js';
 
 import { IdService } from '@/core/IdService.js';
 import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { CacheService } from '@/core/CacheService.js';
+import { createRenoteMutingInDatabase, deleteRenoteMutingsByIdsFromDatabase } from '@/core/RenoteMutingStore.js';
+import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class UserRenoteMutingService {
 	constructor(
-		@Inject(DI.renoteMutingsRepository)
-		private renoteMutingsRepository: RenoteMutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private cacheService: CacheService,
@@ -27,7 +27,7 @@ export class UserRenoteMutingService {
 
 	@bindThis
 	public async mute(user: MiUser, target: MiUser, expiresAt: Date | null = null): Promise<void> {
-		await this.renoteMutingsRepository.insert({
+		await createRenoteMutingInDatabase(this.drizzle, {
 			id: this.idService.gen(),
 			muterId: user.id,
 			muteeId: target.id,
@@ -37,12 +37,10 @@ export class UserRenoteMutingService {
 	}
 
 	@bindThis
-	public async unmute(mutings: MiRenoteMuting[]): Promise<void> {
+	public async unmute(mutings: RenoteMutingRow[]): Promise<void> {
 		if (mutings.length === 0) return;
 
-		await this.renoteMutingsRepository.delete({
-			id: In(mutings.map(m => m.id)),
-		});
+		await deleteRenoteMutingsByIdsFromDatabase(this.drizzle, mutings.map(m => m.id));
 
 		const muterIds = [...new Set(mutings.map(m => m.muterId))];
 		for (const muterId of muterIds) {

@@ -6,12 +6,12 @@
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFilesRepository, GalleryPostsRepository } from '@/models/_.js';
-import { MiGalleryPost } from '@/models/GalleryPost.js';
-import type { MiDriveFile } from '@/models/DriveFile.js';
 import { IdService } from '@/core/IdService.js';
 import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { createGalleryPostInDatabase } from '@/core/GalleryPostStore.js';
+import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['gallery'],
@@ -54,28 +54,20 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private galleryPostEntityService: GalleryPostEntityService,
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const files = (await Promise.all(ps.fileIds.map(fileId =>
-				this.driveFilesRepository.findOneBy({
-					id: fileId,
-					userId: me.id,
-				}),
-			))).filter(x => x != null);
+			const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(this.drizzle, ps.fileIds, me.id);
 
 			if (files.length === 0) {
 				throw new Error();
 			}
 
-			const post = await this.galleryPostsRepository.insertOne(new MiGalleryPost({
+			const post = await createGalleryPostInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				updatedAt: new Date(),
 				title: ps.title,
@@ -83,7 +75,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				userId: me.id,
 				isSensitive: ps.isSensitive,
 				fileIds: files.map(file => file.id),
-			}));
+			});
 
 			return await this.galleryPostEntityService.pack(post, me);
 		});

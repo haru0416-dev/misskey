@@ -4,7 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { MetricsTime, type JobType } from 'bullmq';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -99,7 +99,7 @@ function parseRedisInfo(infoText: string): Record<string, string> {
 }
 
 @Injectable()
-export class QueueService {
+export class QueueService implements OnModuleInit {
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
@@ -115,8 +115,11 @@ export class QueueService {
 		@Inject('queue:userWebhookDeliver') public userWebhookDeliverQueue: UserWebhookDeliverQueue,
 		@Inject('queue:systemWebhookDeliver') public systemWebhookDeliverQueue: SystemWebhookDeliverQueue,
 	) {
+	}
+
+	public async onModuleInit(): Promise<void> {
 		for (const def of REPEATABLE_SYSTEM_JOB_DEF) {
-			this.systemQueue.upsertJobScheduler(def.name, {
+			await this.systemQueue.upsertJobScheduler(def.name, {
 				pattern: def.pattern,
 				immediately: false,
 			}, {
@@ -134,13 +137,12 @@ export class QueueService {
 		}
 
 		// 古いバージョンで作成され現在使われなくなったrepeatableジョブをクリーンアップ
-		this.systemQueue.getJobSchedulers().then(schedulers => {
-			for (const scheduler of schedulers) {
-				if (!REPEATABLE_SYSTEM_JOB_DEF.some(def => def.name === scheduler.key)) {
-					this.systemQueue.removeJobScheduler(scheduler.key);
-				}
+		const schedulers = await this.systemQueue.getJobSchedulers();
+		for (const scheduler of schedulers) {
+			if (!REPEATABLE_SYSTEM_JOB_DEF.some(def => def.name === scheduler.key)) {
+				await this.systemQueue.removeJobScheduler(scheduler.key);
 			}
-		});
+		}
 	}
 
 	@bindThis

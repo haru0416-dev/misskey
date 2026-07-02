@@ -4,10 +4,8 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In, IsNull } from 'typeorm';
 import { Feed } from 'feed';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, NotesRepository, UserProfilesRepository } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -16,6 +14,10 @@ import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { MfmService } from "@/core/MfmService.js";
 import { parse as mfmParse } from 'mfm-js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 
 @Injectable()
 export class FeedService {
@@ -23,14 +25,8 @@ export class FeedService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
@@ -46,17 +42,9 @@ export class FeedService {
 			name: user.name ?? user.username,
 		};
 
-		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, user.id);
 
-		const notes = await this.notesRepository.find({
-			where: {
-				userId: user.id,
-				renoteId: IsNull(),
-				visibility: In(['public', 'home']),
-			},
-			order: { id: -1 },
-			take: 20,
-		});
+		const notes = await listPublicFeedNotesByUserIdFromDatabase(this.db, user.id, 20);
 
 		const feed = new Feed({
 			id: author.link,
@@ -75,9 +63,7 @@ export class FeedService {
 		});
 
 		for (const note of notes) {
-			const files = note.fileIds.length > 0 ? await this.driveFilesRepository.findBy({
-				id: In(note.fileIds),
-			}) : [];
+			const files = note.fileIds.length > 0 ? await listDriveFilesByIdsFromDatabase(this.db, note.fileIds) : [];
 			const file = files.find(file => file.type.startsWith('image/'));
 			const text = note.text;
 

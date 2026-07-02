@@ -4,17 +4,18 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { MiSystemWebhook, SystemWebhooksRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { Packed } from '@/misc/json-schema.js';
+import { fetchSystemWebhookByIdOrFailFromDatabase, listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 
 @Injectable()
 export class SystemWebhookEntityService {
 	constructor(
-		@Inject(DI.systemWebhooksRepository)
-		private systemWebhooksRepository: SystemWebhooksRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 	}
 
@@ -27,7 +28,7 @@ export class SystemWebhookEntityService {
 	): Promise<Packed<'SystemWebhook'>> {
 		const webhook = typeof src === 'object'
 			? src
-			: opts?.webhooks.get(src) ?? await this.systemWebhooksRepository.findOneByOrFail({ id: src });
+			: opts?.webhooks.get(src) ?? await fetchSystemWebhookByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: webhook.id,
@@ -56,7 +57,7 @@ export class SystemWebhookEntityService {
 		const ids = src.filter((it): it is MiSystemWebhook['id'] => typeof it === 'string');
 		if (ids.length > 0) {
 			webhooks.push(
-				...await this.systemWebhooksRepository.findBy({ id: In(ids) }),
+				...await listSystemWebhooksFromDatabase(this.db, { ids }),
 			);
 		}
 
@@ -71,4 +72,3 @@ export class SystemWebhookEntityService {
 			.then(it => it.sort((a, b) => a.id.localeCompare(b.id)));
 	}
 }
-

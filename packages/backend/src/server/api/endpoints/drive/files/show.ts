@@ -4,12 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { MiDriveFile } from '@/models/DriveFile.js';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -64,18 +64,16 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFileEntityService: DriveFileEntityService,
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const file = await this.driveFilesRepository.findOneBy(
-				'fileId' in ps
-					? { id: ps.fileId }
-					: [{ url: ps.url }, { webpublicUrl: ps.url }, { thumbnailUrl: ps.url }],
-			);
+			const file = 'fileId' in ps
+				? await fetchDriveFileByIdFromDatabase(this.db, ps.fileId)
+				: await fetchDriveFileByUrlFromDatabase(this.db, ps.url);
 
 			if (file == null) {
 				throw new ApiError(meta.errors.noSuchFile);

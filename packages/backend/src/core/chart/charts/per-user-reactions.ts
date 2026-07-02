@@ -4,7 +4,7 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Redis from 'ioredis';
 import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
@@ -23,8 +23,8 @@ import type { KVs } from '../core.js';
 @Injectable()
 export default class PerUserReactionsChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,

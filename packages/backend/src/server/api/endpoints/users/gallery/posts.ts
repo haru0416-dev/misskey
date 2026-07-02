@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { GalleryPostsRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
+import { listGalleryPostsWithPaginationFromDatabase, resolveGalleryPostPagination } from '@/core/GalleryPostStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['users', 'gallery'],
@@ -42,19 +43,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private galleryPostEntityService: GalleryPostEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.galleryPostsRepository.createQueryBuilder('post'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('post.userId = :userId', { userId: ps.userId });
-
-			const posts = await query
-				.limit(ps.limit)
-				.getMany();
+			const pagination = resolveGalleryPostPagination(this.idService, ps);
+			const posts = await listGalleryPostsWithPaginationFromDatabase(this.drizzle, {
+				userId: ps.userId,
+				limit: ps.limit,
+				...pagination,
+			});
 
 			return await this.galleryPostEntityService.packMany(posts, me);
 		});

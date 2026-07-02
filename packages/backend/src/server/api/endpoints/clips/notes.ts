@@ -4,13 +4,15 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NotesRepository, ClipsRepository, ClipNotesRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
+import type { MiMeta } from '@/models/_.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listClipNotesFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -56,22 +58,17 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.clipNotesRepository)
-		private clipNotesRepository: ClipNotesRepository,
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const clip = await this.clipsRepository.findOneBy({
-				id: ps.clipId,
-			});
+			const clip = await fetchClipByIdFromDatabase(this.db, ps.clipId);
 
 			if (clip == null) {
 				throw new ApiError(meta.errors.noSuchClip);
@@ -81,37 +78,23 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.noSuchClip);
 			}
 
-			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.innerJoin(this.clipNotesRepository.metadata.targetName, 'clipNote', 'clipNote.noteId = note.id')
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser')
-				.andWhere('clipNote.clipId = :clipId', { clipId: clip.id });
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			this.queryService.generateVisibilityQuery(query, me);
-			this.queryService.generateBlockedHostQueryForNote(query);
-			// this.queryService.generateSuspendedUserQueryForNote(query); // To avoid problems with removing notes, ignoring suspended user for now
-			if (me) {
-				this.queryService.generateMutedUserQueryForNotes(query, me);
-				this.queryService.generateBlockedUserQueryForNotes(query, me);
-				this.queryService.generateMutedUserQueryForNotes(query, me, { noteColumn: 'renote' });
-				this.queryService.generateBlockedUserQueryForNotes(query, me, { noteColumn: 'renote' });
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
 			}
 
-			if (ps.search != null) {
-				for (const word of ps.search.trim().split(' ')) {
-					query.andWhere(new Brackets(qb => {
-						qb.orWhere('note.text ILIKE :search', { search: `%${sqlLikeEscape(word)}%` });
-						qb.orWhere('note.cw ILIKE :search', { search: `%${sqlLikeEscape(word)}%` });
-					}));
-				}
-			}
-
-			const notes = await query
-				.limit(ps.limit)
-				.getMany();
+			const notes = await listClipNotesFromDatabase(this.db, {
+				clipId: clip.id,
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				searchWords: ps.search != null ? ps.search.trim().split(' ').map(word => sqlLikeEscape(word)) : undefined,
+				me,
+				blockedHosts: this.instanceMeta.blockedHosts,
+			});
 
 			return await this.noteEntityService.packMany(notes, me);
 		});

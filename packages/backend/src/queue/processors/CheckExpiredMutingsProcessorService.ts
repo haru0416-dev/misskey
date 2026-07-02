@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { MutingsRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import { UserMutingService } from '@/core/UserMutingService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 
 @Injectable()
@@ -17,8 +18,8 @@ export class CheckExpiredMutingsProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userMutingService: UserMutingService,
 		private channelMutingService: ChannelMutingService,
@@ -31,11 +32,7 @@ export class CheckExpiredMutingsProcessorService {
 	public async process(): Promise<void> {
 		this.logger.info('Checking expired mutings...');
 
-		const expired = await this.mutingsRepository.createQueryBuilder('muting')
-			.where('muting.expiresAt IS NOT NULL')
-			.andWhere('muting.expiresAt < :now', { now: new Date() })
-			.innerJoinAndSelect('muting.mutee', 'mutee')
-			.getMany();
+		const expired = await listExpiredMutingsFromDatabase(this.db, new Date());
 
 		if (expired.length > 0) {
 			await this.userMutingService.unmute(expired);

@@ -6,14 +6,21 @@
 import { Inject, Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import * as Redis from 'ioredis';
 import { ModuleRef } from '@nestjs/core';
-import type { UserListMembershipsRepository } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
-import type { MiUserListMembership } from '@/models/UserListMembership.js';
 import { IdService } from '@/core/IdService.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	countUserListMembershipsByUserListIdInDatabase,
+	createUserListMembershipInDatabase,
+	deleteUserListMembershipInDatabase,
+	fetchUserListMembershipByUserIdAndUserListIdFromDatabase,
+	listUserListMembershipUserIdsByUserListIdFromDatabase,
+	updateUserListMembershipWithRepliesInDatabase,
+} from '@/core/UserListMembershipStore.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
 import { QueueService } from '@/core/QueueService.js';
@@ -37,8 +44,8 @@ export class UserListService implements OnApplicationShutdown, OnModuleInit {
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
 
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -49,10 +56,7 @@ export class UserListService implements OnApplicationShutdown, OnModuleInit {
 		this.membersCache = new RedisKVCache<Set<string>>(this.redisClient, 'userListMembers', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.userListMembershipsRepository.find({
-				where: { userListId: key },
-				select: { userId: true },
-			}).then(xs => new Set(xs.map(x => x.userId))),
+			fetcher: (key) => listUserListMembershipUserIdsByUserListIdFromDatabase(this.db, key).then(ids => new Set(ids)),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value)),
 			fromRedisConverter: (value) => new Set(JSON.parse(value)),
 		});
@@ -95,20 +99,18 @@ export class UserListService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async addMember(target: MiUser, list: MiUserList, me: MiUser, options: { withReplies?: boolean } = {}) {
-		const currentCount = await this.userListMembershipsRepository.countBy({
-			userListId: list.id,
-		});
+		const currentCount = await countUserListMembershipsByUserListIdInDatabase(this.db, list.id);
 		if (currentCount >= (await this.roleService.getUserPolicies(me.id)).userEachUserListsLimit) {
 			throw new UserListService.TooManyUsersError();
 		}
 
-		await this.userListMembershipsRepository.insert({
+		await createUserListMembershipInDatabase(this.db, {
 			id: this.idService.gen(),
 			userId: target.id,
 			userListId: list.id,
 			userListUserId: list.userId,
 			withReplies: options.withReplies ?? false,
-		} as MiUserListMembership);
+		});
 
 		this.globalEventService.publishInternalEvent('userListMemberAdded', { userListId: list.id, memberId: target.id });
 		this.globalEventService.publishUserListStream(list.id, 'userAdded', await this.userEntityService.pack(target));
@@ -122,10 +124,7 @@ export class UserListService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async removeMember(target: MiUser, list: MiUserList) {
-		await this.userListMembershipsRepository.delete({
-			userId: target.id,
-			userListId: list.id,
-		});
+		await deleteUserListMembershipInDatabase(this.db, target.id, list.id);
 
 		this.globalEventService.publishInternalEvent('userListMemberRemoved', { userListId: list.id, memberId: target.id });
 		this.globalEventService.publishUserListStream(list.id, 'userRemoved', await this.userEntityService.pack(target));
@@ -133,20 +132,13 @@ export class UserListService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async updateMembership(target: MiUser, list: MiUserList, options: { withReplies?: boolean }) {
-		const membership = await this.userListMembershipsRepository.findOneBy({
-			userId: target.id,
-			userListId: list.id,
-		});
+		const membership = await fetchUserListMembershipByUserIdAndUserListIdFromDatabase(this.db, target.id, list.id);
 
 		if (membership == null) {
 			throw new Error('User is not a member of the list');
 		}
 
-		await this.userListMembershipsRepository.update({
-			id: membership.id,
-		}, {
-			withReplies: options.withReplies,
-		});
+		await updateUserListMembershipWithRepliesInDatabase(this.db, membership.id, options.withReplies);
 	}
 
 	@bindThis

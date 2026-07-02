@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { BlockingsRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { BlockingEntityService } from '@/core/entities/BlockingEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listBlockingsByBlockerIdWithPaginationFromDatabase, resolveBlockingPagination } from '@/core/BlockingStore.js';
 
 export const meta = {
 	tags: ['account'],
@@ -43,19 +44,17 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private blockingEntityService: BlockingEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.blockingsRepository.createQueryBuilder('blocking'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('blocking.blockerId = :meId', { meId: me.id });
-
-			const blockings = await query
-				.limit(ps.limit)
-				.getMany();
+			const blockings = await listBlockingsByBlockerIdWithPaginationFromDatabase(this.db, me.id, {
+				...resolveBlockingPagination(this.idService, ps),
+				limit: ps.limit,
+			});
 
 			return await this.blockingEntityService.packMany(blockings, me);
 		});

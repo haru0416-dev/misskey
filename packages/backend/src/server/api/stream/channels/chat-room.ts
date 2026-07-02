@@ -9,9 +9,10 @@ import { bindThis } from '@/decorators.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import type { JsonObject } from '@/misc/json-value.js';
 import { ChatService } from '@/core/ChatService.js';
+import { fetchChatRoomByIdFromDatabase } from '@/core/ChatRoomStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import Channel, { type ChannelRequest } from '../channel.js';
 import { REQUEST } from '@nestjs/core';
-import type { ChatRoomsRepository } from '@/models/_.js';
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class ChatRoomChannel extends Channel {
@@ -25,8 +26,8 @@ export class ChatRoomChannel extends Channel {
 		@Inject(REQUEST)
 		request: ChannelRequest,
 
-		@Inject(DI.chatRoomsRepository)
-		private chatRoomsRepository: ChatRoomsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private chatService: ChatService,
 	) {
@@ -40,9 +41,7 @@ export class ChatRoomChannel extends Channel {
 
 		this.roomId = params.roomId;
 
-		const room = await this.chatRoomsRepository.findOneBy({
-			id: this.roomId,
-		});
+		const room = await fetchChatRoomByIdFromDatabase(this.db, this.roomId);
 
 		if (room == null) return false;
 		if (!(await this.chatService.hasPermissionToViewRoomTimeline(this.user.id, room))) return false;

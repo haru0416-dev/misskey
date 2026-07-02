@@ -4,13 +4,13 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { Not, IsNull, DataSource } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Redis from 'ioredis';
-import type { NotesRepository } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
+import { countNotesByUserHostFromDatabase, countNotesByUserHostNotNullFromDatabase } from '@/core/NoteStore.js';
 import Chart from '../core.js';
 import { ChartLoggerService } from '../ChartLoggerService.js';
 import { name, schema } from './entities/notes.js';
@@ -22,14 +22,14 @@ import type { KVs } from '../core.js';
 @Injectable()
 export default class NotesChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private chartLoggerService: ChartLoggerService,
 	) {
@@ -38,8 +38,8 @@ export default class NotesChart extends Chart<typeof schema> { // eslint-disable
 
 	protected async tickMajor(): Promise<Partial<KVs<typeof schema>>> {
 		const [localCount, remoteCount] = await Promise.all([
-			this.notesRepository.countBy({ userHost: IsNull() }),
-			this.notesRepository.countBy({ userHost: Not(IsNull()) }),
+			countNotesByUserHostFromDatabase(this.drizzle, null),
+			countNotesByUserHostNotNullFromDatabase(this.drizzle),
 		]);
 
 		return {

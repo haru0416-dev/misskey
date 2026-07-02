@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { MutingsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -13,13 +12,15 @@ import type { MiUser } from '@/models/User.js';
 import type { MiMuting } from '@/models/Muting.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchMutingByIdOrFailFromDatabase } from '@/core/MutingStore.js';
 import { UserEntityService } from './UserEntityService.js';
 
 @Injectable()
 export class MutingEntityService {
 	constructor(
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -34,7 +35,7 @@ export class MutingEntityService {
 			packedMutee?: Packed<'UserDetailedNotMe'>,
 		},
 	): Promise<Packed<'Muting'>> {
-		const muting = typeof src === 'object' ? src : await this.mutingsRepository.findOneByOrFail({ id: src });
+		const muting = typeof src === 'object' ? src : await fetchMutingByIdOrFailFromDatabase(this.drizzle, src);
 
 		return await awaitAll({
 			id: muting.id,
@@ -58,4 +59,3 @@ export class MutingEntityService {
 		return Promise.all(mutings.map(muting => this.pack(muting, me, { packedMutee: _userMap.get(muting.muteeId) })));
 	}
 }
-

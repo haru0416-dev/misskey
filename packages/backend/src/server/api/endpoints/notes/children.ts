@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listChildNotesFromDatabase } from '@/core/NoteStore.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -43,38 +44,32 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere(new Brackets(qb => {
-					qb
-						.where('note.replyId = :noteId', { noteId: ps.noteId })
-						.orWhere(new Brackets(qb => {
-							qb
-								.where('note.renoteId = :noteId', { noteId: ps.noteId })
-								.andWhere(new Brackets(qb => {
-									qb
-										.where('note.text IS NOT NULL')
-										.orWhere('note.fileIds != \'{}\'')
-										.orWhere('note.hasPoll = TRUE');
-								}));
-						}));
-				}))
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser');
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			this.queryService.generateVisibilityQuery(query, me);
-			this.queryService.generateBaseNoteFilteringQuery(query, me);
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
+			}
 
-			const notes = await query.limit(ps.limit).getMany();
+			const notes = await listChildNotesFromDatabase(this.db, {
+				noteId: ps.noteId,
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				me,
+				blockedHosts: this.instanceMeta.blockedHosts,
+			});
 
 			return await this.noteEntityService.packMany(notes, me);
 		});

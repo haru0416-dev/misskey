@@ -5,11 +5,13 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NotesRepository, DriveFilesRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import { listNotesByAttachedFileIdFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -56,31 +58,35 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
 		private roleService: RoleService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Fetch file
-			const file = await this.driveFilesRepository.findOneBy({
-				id: ps.fileId,
-				userId: await this.roleService.isModerator(me) ? undefined : me.id,
-			});
+			const isModerator = await this.roleService.isModerator(me);
+			const file = await fetchDriveFileByIdFromDatabase(this.db, ps.fileId);
 
-			if (file == null) {
+			if (file == null || (!isModerator && file.userId !== me.id)) {
 				throw new ApiError(meta.errors.noSuchFile);
 			}
 
-			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
-			query.andWhere(':file <@ note.fileIds', { file: [file.id] });
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			const notes = await query.limit(ps.limit).getMany();
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
+			}
+
+			const notes = await listNotesByAttachedFileIdFromDatabase(this.db, file.id, {
+				limit: ps.limit,
+				sinceId,
+				untilId,
+			});
 
 			return await this.noteEntityService.packMany(notes, me, {
 				detail: true,

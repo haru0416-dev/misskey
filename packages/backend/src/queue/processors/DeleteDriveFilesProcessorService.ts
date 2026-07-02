@@ -4,12 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { MoreThan } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, DriveFilesRepository, MiDriveFile } from '@/models/_.js';
+import type { MiDriveFile } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { bindThis } from '@/decorators.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countDriveFilesByUserIdFromDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 import type { DbJobDataWithUser } from '../types.js';
@@ -19,11 +21,8 @@ export class DeleteDriveFilesProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private queueLoggerService: QueueLoggerService,
@@ -35,7 +34,7 @@ export class DeleteDriveFilesProcessorService {
 	public async process(job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 		this.logger.info(`Deleting drive files of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -43,20 +42,12 @@ export class DeleteDriveFilesProcessorService {
 		let deletedCount = 0;
 		let cursor: MiDriveFile['id'] | null = null;
 
-		const total = await this.driveFilesRepository.countBy({
-			userId: user.id,
-		});
+		const total = await countDriveFilesByUserIdFromDatabase(this.db, user.id);
 
 		while (true) {
-			const files = await this.driveFilesRepository.find({
-				where: {
-					userId: user.id,
-					...(cursor ? { id: MoreThan(cursor) } : {}),
-				},
-				take: 100,
-				order: {
-					id: 1,
-				},
+			const files = await listDriveFilesByUserIdWithPaginationFromDatabase(this.db, user.id, {
+				limit: 100,
+				sinceId: cursor,
 			});
 
 			if (files.length === 0) {

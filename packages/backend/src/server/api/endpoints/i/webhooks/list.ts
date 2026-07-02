@@ -6,8 +6,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { webhookEventTypes } from '@/models/Webhook.js';
-import type { WebhooksRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { listWebhooksByUserIdFromDatabase } from '@/core/WebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 // TODO: UserWebhook schemaの適用
 export const meta = {
@@ -35,13 +36,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.webhooksRepository)
-		private webhooksRepository: WebhooksRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const webhooks = await this.webhooksRepository.findBy({
-				userId: me.id,
-			});
+			const webhooks = await listWebhooksByUserIdFromDatabase(this.db, me.id);
 
 			return webhooks.map(webhook => ({
 				id: webhook.id,
