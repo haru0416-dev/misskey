@@ -4,8 +4,8 @@
  */
 
 import * as fs from 'node:fs';
+import { createServer, type Server, type ServerResponse } from 'node:http';
 import * as path from 'node:path';
-import Fastify, { type FastifyInstance } from 'fastify';
 import type { Hono } from 'hono';
 import { describe, expect, test, beforeAll, afterAll, afterEach } from 'vitest';
 import sharp from 'sharp';
@@ -32,37 +32,70 @@ const dummyBuffer = fs.readFileSync(dummyPath);
 const svgBuffer = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"></svg>', 'utf8');
 const textBuffer = Buffer.from('dummy text', 'utf8');
 
+function sendBuffer(res: ServerResponse, type: string, buffer: Buffer): void {
+	res.writeHead(200, {
+		'Content-Type': type,
+		'Content-Length': String(buffer.length),
+	});
+	res.end(buffer);
+}
+
+async function listen(server: Server): Promise<string> {
+	await new Promise<void>((resolve, reject) => {
+		server.once('error', reject);
+		server.listen(0, '127.0.0.1', () => {
+			server.off('error', reject);
+			resolve();
+		});
+	});
+
+	const address = server.address();
+	if (address == null || typeof address === 'string') {
+		throw new Error('Remote fixture server did not bind to a TCP port');
+	}
+
+	return `http://127.0.0.1:${address.port}`;
+}
+
+async function close(server: Server): Promise<void> {
+	if (!server.listening) return;
+
+	await new Promise<void>((resolve, reject) => {
+		server.close(err => err ? reject(err) : resolve());
+	});
+}
+
 async function createRemoteFileServer() {
 	const flatPngBuffer = await sharp({
 		create: { width: 8, height: 8, channels: 3, background: { r: 0, g: 0, b: 0 } },
 	}).png().toBuffer();
-	const server = Fastify();
+	const server = createServer((req, res) => {
+		const pathname = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
 
-	server.get('/dummy.png', async (_request, reply) => {
-		reply.header('Content-Type', 'image/png');
-		reply.header('Content-Length', String(dummyBuffer.length));
-		return reply.send(dummyBuffer);
+		switch (pathname) {
+			case '/dummy.png':
+				sendBuffer(res, 'image/png', dummyBuffer);
+				return;
+
+			case '/dummy.svg':
+				sendBuffer(res, 'image/svg+xml', svgBuffer);
+				return;
+
+			case '/dummy.txt':
+				sendBuffer(res, 'text/plain', textBuffer);
+				return;
+
+			case '/flat.png':
+				sendBuffer(res, 'image/png', flatPngBuffer);
+				return;
+
+			default:
+				res.statusCode = 404;
+				res.end();
+		}
 	});
 
-	server.get('/dummy.svg', async (_request, reply) => {
-		reply.header('Content-Type', 'image/svg+xml');
-		reply.header('Content-Length', String(svgBuffer.length));
-		return reply.send(svgBuffer);
-	});
-
-	server.get('/dummy.txt', async (_request, reply) => {
-		reply.header('Content-Type', 'text/plain');
-		reply.header('Content-Length', String(textBuffer.length));
-		return reply.send(textBuffer);
-	});
-
-	server.get('/flat.png', async (_request, reply) => {
-		reply.header('Content-Type', 'image/png');
-		reply.header('Content-Length', String(flatPngBuffer.length));
-		return reply.send(flatPngBuffer);
-	});
-
-	const baseUrl = await server.listen({ port: 0, host: '127.0.0.1' });
+	const baseUrl = await listen(server);
 
 	return {
 		server,
@@ -99,7 +132,7 @@ describe('createFileServerApp', () => {
 	let internalStorageService: InternalStorageService;
 	let idService: IdService;
 	let config: Config;
-	let remoteServer: FastifyInstance;
+	let remoteServer: Server;
 	let remotePngUrl: string;
 	let remoteSvgUrl: string;
 	let remoteTextUrl: string;
@@ -232,7 +265,7 @@ describe('createFileServerApp', () => {
 	});
 
 	afterAll(async () => {
-		await remoteServer.close();
+		await close(remoteServer);
 		await drizzlePool.end();
 		if (createdFallbackAssets) {
 			fs.rmSync(fallbackAssetsDir, { recursive: true, force: true });

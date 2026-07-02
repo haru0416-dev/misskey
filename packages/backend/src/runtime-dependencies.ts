@@ -19,6 +19,10 @@ import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { ImageProcessingService } from '@/core/ImageProcessingService.js';
 import { InternalStorageService } from '@/core/InternalStorageService.js';
 import { LoggerService } from '@/core/LoggerService.js';
+import { EmailService } from '@/core/EmailService.js';
+import { UserAuthService } from '@/core/UserAuthService.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 
@@ -30,13 +34,17 @@ export type RuntimeDependencies = {
 	meilisearch: Meilisearch | null;
 	aiService: AiService;
 	downloadService: DownloadService;
+	emailService: EmailService;
 	fileInfoService: FileInfoService;
 	httpRequestService: HttpRequestService;
 	imageProcessingService: ImageProcessingService;
 	internalStorageService: InternalStorageService;
 	loggerService: LoggerService;
+	userAuthService: UserAuthService;
+	utilityService: UtilityService;
 	urlPreviewService: UrlPreviewService;
 	videoProcessingService: VideoProcessingService;
+	webAuthnService: WebAuthnService;
 	redis: Redis.Redis;
 	redisForPub: Redis.Redis;
 	redisForSub: Redis.Redis;
@@ -157,6 +165,10 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const imageProcessingService = new ImageProcessingService();
 	const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
 	const internalStorageService = new InternalStorageService(config);
+	const utilityService = new UtilityService(config, meta);
+	const emailService = new EmailService(config, meta, db, loggerService, utilityService, httpRequestService);
+	const userAuthService = new UserAuthService(redis, db);
+	const webAuthnService = new WebAuthnService(config, meta, redis, db);
 
 	return {
 		config,
@@ -166,13 +178,17 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		meilisearch,
 		aiService,
 		downloadService,
+		emailService,
 		fileInfoService,
 		httpRequestService,
 		imageProcessingService,
 		internalStorageService,
 		loggerService,
+		userAuthService,
+		utilityService,
 		urlPreviewService,
 		videoProcessingService,
+		webAuthnService,
 		redis,
 		redisForPub,
 		redisForSub,

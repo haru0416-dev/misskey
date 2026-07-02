@@ -11,6 +11,7 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
+import { createServer, type Server, type ServerResponse } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
 import {
 	AuthorizationCode,
@@ -21,7 +22,6 @@ import {
 } from 'simple-oauth2';
 import pkceChallenge from 'pkce-challenge';
 import * as htmlParser from 'node-html-parser';
-import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import { api, port, sendEnvUpdateRequest, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -30,6 +30,61 @@ const host = `http://127.0.0.1:${port}`;
 const clientPort = port + 1;
 const redirect_uri = `http://127.0.0.1:${clientPort}/redirect`;
 const redirect_uri2 = `http://127.0.0.1:${clientPort}/redirect2`;
+
+type ClientMetadataReply = {
+	header: (name: string, value: string) => ClientMetadataReply;
+	send: (body?: unknown) => void;
+};
+
+function createClientMetadataReply(res: ServerResponse): ClientMetadataReply {
+	const reply: ClientMetadataReply = {
+		header(name, value) {
+			if (!res.writableEnded) {
+				res.setHeader(name, value);
+			}
+			return reply;
+		},
+
+		send(body) {
+			if (res.writableEnded) return;
+
+			if (body == null) {
+				res.end();
+				return;
+			}
+
+			if (typeof body === 'string' || Buffer.isBuffer(body)) {
+				res.end(body);
+				return;
+			}
+
+			if (!res.hasHeader('content-type')) {
+				res.setHeader('content-type', 'application/json');
+			}
+			res.end(JSON.stringify(body));
+		},
+	};
+
+	return reply;
+}
+
+async function listen(server: Server, port: number): Promise<void> {
+	await new Promise<void>((resolve, reject) => {
+		server.once('error', reject);
+		server.listen(port, '127.0.0.1', () => {
+			server.off('error', reject);
+			resolve();
+		});
+	});
+}
+
+async function close(server: Server): Promise<void> {
+	if (!server.listening) return;
+
+	await new Promise<void>((resolve, reject) => {
+		server.close(err => err ? reject(err) : resolve());
+	});
+}
 
 const basicAuthParams: AuthorizationParamsExtended = {
 	redirect_uri,
@@ -155,22 +210,26 @@ async function assertDirectError(response: Response, status: number, error: stri
 }
 
 describe('OAuth', () => {
-	let fastify: FastifyInstance;
+	let clientServer: Server;
 
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
-	let sender: (reply: FastifyReply) => void;
+	let sender: (reply: ClientMetadataReply) => void;
 
 	beforeAll(async () => {
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 
-		fastify = Fastify();
-		fastify.get('/', async (request, reply) => {
-			sender(reply);
+		clientServer = createServer((_request, response) => {
+			try {
+				sender(createClientMetadataReply(response));
+			} catch (err) {
+				response.statusCode = 500;
+				response.end(err instanceof Error ? err.message : String(err));
+			}
 		});
-		await fastify.listen({ port: clientPort });
+		await listen(clientServer, clientPort);
 	}, 1000 * 60 * 2);
 
 	beforeEach(async () => {
@@ -185,7 +244,7 @@ describe('OAuth', () => {
 	});
 
 	afterAll(async () => {
-		await fastify.close();
+		await close(clientServer);
 	});
 
 	test('Full flow', async () => {
@@ -999,7 +1058,7 @@ describe('OAuth', () => {
 		// https://indieauth.spec.indieweb.org/20220212/#client-information-discovery
 		describe('HTML link client metadata (12 Feb 2022)', () => {
 			describe('Redirection', () => {
-				const tests: Record<string, (reply: FastifyReply) => void> = {
+				const tests: Record<string, (reply: ClientMetadataReply) => void> = {
 					'Read HTTP header': reply => {
 						reply.header('Link', '</redirect>; rel="redirect_uri"');
 						reply.send(`
