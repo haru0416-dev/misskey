@@ -21,6 +21,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { HonoApiError, signupValidationError } from './hono-api-error.js';
 import { completeHonoApiSignin, type HonoApiSigninDependencies, type HonoApiSigninFlowResult, type HonoApiSigninRequest } from './hono-api-signin.js';
 import { packMeDetailedForHonoApi } from './hono-api-user.js';
@@ -37,10 +38,7 @@ type SignupResponse = Record<string, unknown> & {
 	token: string;
 };
 
-export type SignupInternalEventPublisher = (
-	type: 'metaUpdated',
-	value: { before?: MiMeta; after: MiMeta },
-) => void;
+export type SignupInternalEventPublisher = HonoApiInternalEventPublisher;
 
 export type SignupDependencies = {
 	config: Config;

@@ -6,6 +6,7 @@
 import Limiter from 'ratelimiter';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
+import { rateLimitExceededError } from './hono-api-error.js';
 
 export type HonoApiRateLimitDependencies = {
 	config: Config;
@@ -17,6 +18,10 @@ export type HonoApiRateLimit = {
 	duration?: number;
 	max?: number;
 	minInterval?: number;
+};
+
+export type HonoApiEndpointRateLimit = Omit<HonoApiRateLimit, 'key'> & {
+	key?: string;
 };
 
 async function checkLimiter(options: Limiter.LimiterOption): Promise<Limiter.LimiterInfo> {
@@ -68,4 +73,19 @@ export async function isHonoApiRateLimited(
 	}
 
 	return false;
+}
+
+export async function assertHonoApiRateLimit(
+	deps: HonoApiRateLimitDependencies,
+	endpointName: string,
+	limitation: HonoApiEndpointRateLimit,
+	actor: string,
+	factor = 1,
+): Promise<void> {
+	if (await isHonoApiRateLimited(deps, {
+		...limitation,
+		key: limitation.key ?? endpointName,
+	}, actor, factor)) {
+		throw rateLimitExceededError();
+	}
 }
