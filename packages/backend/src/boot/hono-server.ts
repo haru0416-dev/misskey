@@ -69,7 +69,17 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			db: deps.db,
 			meilisearch: deps.meilisearch,
 		},
+		nodeinfo: {
+			config,
+			db: deps.db,
+			meta: deps.meta,
+		},
 		root: {
+			config,
+			db: deps.db,
+			meta: deps.meta,
+		},
+		wellKnown: {
 			config,
 			db: deps.db,
 			meta: deps.meta,

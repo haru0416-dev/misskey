@@ -7,7 +7,9 @@ import { Hono } from 'hono';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { createHealthApp, type HealthDependencies } from './health.js';
+import { createNodeinfoApp, type NodeinfoDependencies } from './hono-nodeinfo.js';
 import { createRootRoutes, type RootRouteDependencies } from './hono-root-routes.js';
+import { createWellKnownApp, type WellKnownDependencies } from './hono-well-known.js';
 
 export type HttpMiddlewareDependencies = {
 	config: Config;
@@ -17,7 +19,9 @@ export type HttpMiddlewareDependencies = {
 export type MisskeyHonoAppDependencies = {
 	http: HttpMiddlewareDependencies;
 	health: HealthDependencies;
+	nodeinfo: NodeinfoDependencies;
 	root: RootRouteDependencies;
+	wellKnown: WellKnownDependencies;
 };
 
 const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
@@ -71,6 +75,8 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 
 	registerHttpMiddleware(app, deps.http);
 	app.route('/healthz', createHealthApp(deps.health));
+	app.route('/', createNodeinfoApp(deps.nodeinfo));
+	app.route('/', createWellKnownApp(deps.wellKnown));
 	app.route('/', createRootRoutes(deps.root));
 
 	return app;
