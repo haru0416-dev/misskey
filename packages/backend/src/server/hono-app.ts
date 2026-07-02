@@ -8,7 +8,9 @@ import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { createHealthApp, type HealthDependencies } from './health.js';
 import { createNodeinfoApp, type NodeinfoDependencies } from './hono-nodeinfo.js';
+import { createOpenApiApp, type OpenApiDependencies } from './hono-openapi.js';
 import { createRootRoutes, type RootRouteDependencies } from './hono-root-routes.js';
+import { createStaticAssetsApp, type StaticAssetsDependencies } from './hono-static-assets.js';
 import { createWellKnownApp, type WellKnownDependencies } from './hono-well-known.js';
 
 export type HttpMiddlewareDependencies = {
@@ -20,7 +22,9 @@ export type MisskeyHonoAppDependencies = {
 	http: HttpMiddlewareDependencies;
 	health: HealthDependencies;
 	nodeinfo: NodeinfoDependencies;
+	openApi: OpenApiDependencies;
 	root: RootRouteDependencies;
+	staticAssets: StaticAssetsDependencies;
 	wellKnown: WellKnownDependencies;
 };
 
@@ -76,7 +80,9 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	registerHttpMiddleware(app, deps.http);
 	app.route('/healthz', createHealthApp(deps.health));
 	app.route('/', createNodeinfoApp(deps.nodeinfo));
+	app.route('/', createOpenApiApp(deps.openApi));
 	app.route('/', createWellKnownApp(deps.wellKnown));
+	app.route('/', createStaticAssetsApp(deps.staticAssets));
 	app.route('/', createRootRoutes(deps.root));
 
 	return app;

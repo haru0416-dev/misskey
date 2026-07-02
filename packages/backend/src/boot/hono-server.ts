@@ -74,10 +74,16 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			db: deps.db,
 			meta: deps.meta,
 		},
+		openApi: {
+			config,
+		},
 		root: {
 			config,
 			db: deps.db,
 			meta: deps.meta,
+		},
+		staticAssets: {
+			config,
 		},
 		wellKnown: {
 			config,
