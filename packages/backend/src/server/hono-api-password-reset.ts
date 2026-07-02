@@ -4,13 +4,15 @@
  */
 
 import type * as Redis from 'ioredis';
+import bcrypt from 'bcryptjs';
 import type { Config } from '@/config.js';
 import type { EmailService } from '@/core/EmailService.js';
-import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
+import { createPasswordResetRequestInDatabase, deletePasswordResetRequestFromDatabase, fetchPasswordResetRequestByTokenFromDatabase } from '@/core/PasswordResetRequestStore.js';
 import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
@@ -37,6 +39,20 @@ const requestResetPasswordParamDef = {
 type RequestResetPasswordParams = {
 	username: string;
 	email: string;
+};
+
+const resetPasswordParamDef = {
+	type: 'object',
+	properties: {
+		token: { type: 'string' },
+		password: { type: 'string' },
+	},
+	required: ['token', 'password'],
+} as const;
+
+type ResetPasswordParams = {
+	token: string;
+	password: string;
 };
 
 export async function handleHonoApiRequestResetPassword(
@@ -74,4 +90,25 @@ export async function handleHonoApiRequestResetPassword(
 	trackPromise(deps.emailService.sendEmail(params.email, 'Password reset requested',
 		`To reset password, please click this link:<br><a href="${link}">${link}</a>`,
 		`To reset password, please click this link: ${link}`));
+}
+
+export async function handleHonoApiResetPassword(
+	deps: HonoApiPasswordResetDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(resetPasswordParamDef, body) as ResetPasswordParams;
+	const req = await fetchPasswordResetRequestByTokenFromDatabase(deps.db, params.token);
+
+	if (Date.now() - parseId(deps.config, req.id).date.getTime() > 1000 * 60 * 30) {
+		throw new Error();
+	}
+
+	const salt = await bcrypt.genSalt(8);
+	const hash = await bcrypt.hash(params.password, salt);
+
+	await updateUserProfileInDatabase(deps.db, req.userId, {
+		password: hash,
+	});
+
+	await deletePasswordResetRequestFromDatabase(deps.db, req.id);
 }

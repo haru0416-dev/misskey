@@ -31,7 +31,7 @@ import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hon
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
-import { handleHonoApiRequestResetPassword } from './hono-api-password-reset.js';
+import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -537,6 +537,14 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			await handleHonoApiRequestResetPassword(deps, body, getRequestIp(c, deps.config));
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/reset-password', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await handleHonoApiResetPassword(deps, body);
 			return emptyResponse(c);
 		});
 	});

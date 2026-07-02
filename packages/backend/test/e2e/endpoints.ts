@@ -23,6 +23,7 @@ import { createInstanceInDatabase } from '@/core/InstanceStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
+import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
@@ -1071,6 +1072,28 @@ describe('Endpoints', () => {
 			} as any);
 			assert.strictEqual(invalid.status, 400);
 			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+		});
+	});
+
+	describe('reset-password endpoint', () => {
+		test('reset-password updates password and consumes reset token', async () => {
+			const config = loadConfig();
+			const token = `reset-token-${genId(config)}`;
+			await createPasswordResetRequestInDatabase(db, {
+				id: genId(config),
+				userId: carol.id,
+				token,
+			});
+
+			const reset = await api('reset-password', {
+				token,
+				password: 'new-reset-password',
+			});
+			assert.strictEqual(reset.status, 204);
+			assert.strictEqual(reset.body, null);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
+			assert.strictEqual(await bcrypt.compare('new-reset-password', profile.password!), true);
 		});
 	});
 
