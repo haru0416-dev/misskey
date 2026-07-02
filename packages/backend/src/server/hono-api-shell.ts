@@ -59,7 +59,7 @@ import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
-import { handleHonoApiPromoRead } from './hono-api-promo.js';
+import { handleHonoApiAdminPromoCreate, handleHonoApiPromoRead } from './hono-api-promo.js';
 import { assertHonoApiRateLimit } from './hono-api-rate-limit.js';
 import { handleHonoApiResetDb } from './hono-api-reset-db.js';
 import { getHonoApiRolePolicies, isHonoApiAdministrator, isHonoApiModerator } from './hono-api-role-policy.js';
@@ -776,6 +776,19 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminRelaysRemove(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/promo/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:promo');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminPromoCreate(deps, body);
 			return emptyResponse(c);
 		});
 	});

@@ -44,6 +44,7 @@ import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketSto
 import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
+import { isPromoNoteExists } from '@/core/PromoNoteStore.js';
 import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
@@ -1237,6 +1238,55 @@ describe('Endpoints', () => {
 	});
 
 	describe('promo/read endpoint', () => {
+		test('admin/promo/create はpromo note作成、重複、権限を維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'admin promo create target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const created = await api('admin/promo/create', { noteId, expiresAt: now + 60_000 }, alice);
+			assert.strictEqual(created.status, 204);
+			assert.strictEqual(await isPromoNoteExists(db, noteId), true);
+
+			const duplicate = await api('admin/promo/create', { noteId, expiresAt: now + 120_000 }, alice);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_PROMOTED');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, 'ae427aa2-7a41-484f-a18c-2c1104051604');
+
+			const missing = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'ee449fbe-af2a-453b-9cae-cf2fe7c895fc');
+
+			const writeToken = await createAppToken(alice, ['write:admin:promo']);
+			const tokenNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: tokenNoteId,
+				text: 'admin promo create token target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const createdWithToken = await api('admin/promo/create', { noteId: tokenNoteId, expiresAt: now + 60_000 }, { token: writeToken });
+			assert.strictEqual(createdWithToken.status, 204);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
+			const scopeDenied = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honopromo${now.toString(36)}` });
+			const roleDenied = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
 		test('promo/read records a promoted note as read idempotently', async () => {
 			const config = loadConfig();
 			const noteId = genId(config);
