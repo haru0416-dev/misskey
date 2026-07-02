@@ -16,7 +16,7 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
 import { bindThis } from '@/decorators.js';
-import { NodeinfoServerService } from './NodeinfoServerService.js';
+import { getNodeinfoLinks } from './nodeinfo-links.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 
@@ -32,7 +32,6 @@ export class WellKnownServerService {
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
-		private nodeinfoServerService: NodeinfoServerService,
 		private userEntityService: UserEntityService,
 		private oauth2ProviderService: OAuth2ProviderService,
 	) {
@@ -104,7 +103,7 @@ export class WellKnownServerService {
 				return;
 			}
 
-			return { links: this.nodeinfoServerService.getLinks() };
+			return { links: getNodeinfoLinks(this.config) };
 		});
 
 		fastify.get('/.well-known/oauth-authorization-server', async () => {

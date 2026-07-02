@@ -12,7 +12,7 @@ import * as Acct from '@/misc/acct.js';
 import { escapeAttribute, escapeValue } from '@/misc/prelude/xml.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
-import { getNodeinfoLinks } from './hono-nodeinfo.js';
+import { getNodeinfoLinks } from './nodeinfo-links.js';
 
 const webFingerPath = '/.well-known/webfinger';
 const jrd = 'application/jrd+json';

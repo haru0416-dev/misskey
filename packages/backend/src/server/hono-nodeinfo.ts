@@ -13,9 +13,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import type { MiMeta } from '@/models/_.js';
-
-const nodeinfo2_1path = '/nodeinfo/2.1';
-const nodeinfo2_0path = '/nodeinfo/2.0';
+import { nodeinfo2_0path, nodeinfo2_1path } from './nodeinfo-links.js';
 const nodeinfoHomepage = 'https://misskey-hub.net';
 
 export type NodeinfoDependencies = {
@@ -23,16 +21,6 @@ export type NodeinfoDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 };
-
-export function getNodeinfoLinks(config: Config): { rel: string; href: string }[] {
-	return [{
-		rel: 'http://nodeinfo.diaspora.software/ns/schema/2.1',
-		href: config.url + nodeinfo2_1path,
-	}, {
-		rel: 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-		href: config.url + nodeinfo2_0path,
-	}];
-}
 
 function nodeinfoHeaders(version: '2.0' | '2.1'): Headers {
 	return new Headers({
