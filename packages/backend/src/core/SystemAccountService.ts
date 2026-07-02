@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { OnApplicationShutdown } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import bcrypt from 'bcryptjs';
-import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { createOrFetchSystemAccountInDatabase, fetchSystemAccountUserFromDatabase, listSystemAccountsFromDatabase, updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
+import { listSystemAccountsFromDatabase, updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiSystemAccount } from '@/models/SystemAccount.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -18,9 +17,7 @@ import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
-import { generateNativeUserToken } from '@/misc/token.js';
 import { IdService } from '@/core/IdService.js';
-import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 
 export const SYSTEM_ACCOUNT_TYPES = ['actor', 'relay', 'proxy'] as const;
 
@@ -84,48 +81,12 @@ export class SystemAccountService implements OnApplicationShutdown {
 		const cached = this.cache.get(type);
 		if (cached) return cached;
 
-		const systemAccount = await fetchSystemAccountUserFromDatabase(this.drizzle, type);
-
-		if (systemAccount) {
-			this.cache.set(type, systemAccount);
-			return systemAccount;
-		} else {
-			const created = await this.createCorrespondingUser(type, {
-				username: `system.${type}`, // NOTE: (できれば避けたいが) . が含まれるかどうかでシステムアカウントかどうかを判定している処理もあるので変えないように
-				name: this.meta.name,
-			});
-			this.cache.set(type, created);
-			return created;
-		}
-	}
-
-	@bindThis
-	private async createCorrespondingUser(type: typeof SYSTEM_ACCOUNT_TYPES[number], extra: {
-		username: MiUser['username'];
-		name?: MiUser['name'];
-	}): Promise<MiLocalUser> {
-		const password = randomUUID();
-
-		// Generate hash of password
-		const salt = await bcrypt.genSalt(8);
-		const hash = await bcrypt.hash(password, salt);
-
-		// Generate secret
-		const secret = generateNativeUserToken();
-
-		const keyPair = await genRsaKeyPair();
-
-		const account = await createOrFetchSystemAccountInDatabase(this.drizzle, {
-			id: this.idService.gen(),
-			type,
-			username: extra.username,
-			usernameLower: extra.username.toLowerCase(),
-			name: extra.name ?? null,
-			token: secret,
-			passwordHash: hash,
-			publicKey: keyPair.publicKey,
-			privateKey: keyPair.privateKey,
-		});
+		const account = await fetchOrCreateSystemAccountInDatabase({
+			db: this.drizzle,
+			meta: this.meta,
+			genId: () => this.idService.gen(),
+		}, type);
+		this.cache.set(type, account);
 
 		return account;
 	}

@@ -23,6 +23,28 @@ import { EmailService } from '@/core/EmailService.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
+import {
+	createDbQueue,
+	createDeliverQueue,
+	createEndedPollNotificationQueue,
+	createInboxQueue,
+	createObjectStorageQueue,
+	createPostScheduledNoteQueue,
+	createRelationshipQueue,
+	createSystemQueue,
+	createSystemWebhookDeliverQueue,
+	createUserWebhookDeliverQueue,
+	type DbQueue,
+	type DeliverQueue,
+	type EndedPollNotificationQueue,
+	type InboxQueue,
+	type ObjectStorageQueue,
+	type PostScheduledNoteQueue,
+	type RelationshipQueue,
+	type SystemQueue,
+	type SystemWebhookDeliverQueue,
+	type UserWebhookDeliverQueue,
+} from '@/core/QueueModule.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 
@@ -45,6 +67,16 @@ export type RuntimeDependencies = {
 	urlPreviewService: UrlPreviewService;
 	videoProcessingService: VideoProcessingService;
 	webAuthnService: WebAuthnService;
+	systemQueue: SystemQueue;
+	endedPollNotificationQueue: EndedPollNotificationQueue;
+	postScheduledNoteQueue: PostScheduledNoteQueue;
+	deliverQueue: DeliverQueue;
+	inboxQueue: InboxQueue;
+	dbQueue: DbQueue;
+	relationshipQueue: RelationshipQueue;
+	objectStorageQueue: ObjectStorageQueue;
+	userWebhookDeliverQueue: UserWebhookDeliverQueue;
+	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
 	redis: Redis.Redis;
 	redisForPub: Redis.Redis;
 	redisForSub: Redis.Redis;
@@ -60,6 +92,16 @@ export type RuntimeResources = {
 	redisForSub: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
+	systemQueue?: SystemQueue;
+	endedPollNotificationQueue?: EndedPollNotificationQueue;
+	postScheduledNoteQueue?: PostScheduledNoteQueue;
+	deliverQueue?: DeliverQueue;
+	inboxQueue?: InboxQueue;
+	dbQueue?: DbQueue;
+	relationshipQueue?: RelationshipQueue;
+	objectStorageQueue?: ObjectStorageQueue;
+	userWebhookDeliverQueue?: UserWebhookDeliverQueue;
+	systemWebhookDeliverQueue?: SystemWebhookDeliverQueue;
 };
 
 export function createMeilisearchClient(config: Config): Meilisearch | null {
@@ -137,6 +179,16 @@ export async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
 export async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
 	await allSettled();
 	await Promise.all([
+		resources.systemQueue?.close(),
+		resources.endedPollNotificationQueue?.close(),
+		resources.postScheduledNoteQueue?.close(),
+		resources.deliverQueue?.close(),
+		resources.inboxQueue?.close(),
+		resources.dbQueue?.close(),
+		resources.relationshipQueue?.close(),
+		resources.objectStorageQueue?.close(),
+		resources.userWebhookDeliverQueue?.close(),
+		resources.systemWebhookDeliverQueue?.close(),
 		resources.drizzlePool.end(),
 		closeRedisConnection(resources.redis),
 		closeRedisConnection(resources.redisForPub),
@@ -154,6 +206,16 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const redisForSub = await createRedisForSub(config);
 	const redisForTimelines = createRedisForTimelines(config);
 	const redisForReactions = createRedisForReactions(config);
+	const systemQueue = createSystemQueue(config);
+	const endedPollNotificationQueue = createEndedPollNotificationQueue(config);
+	const postScheduledNoteQueue = createPostScheduledNoteQueue(config);
+	const deliverQueue = createDeliverQueue(config);
+	const inboxQueue = createInboxQueue(config);
+	const dbQueue = createDbQueue(config);
+	const relationshipQueue = createRelationshipQueue(config);
+	const objectStorageQueue = createObjectStorageQueue(config);
+	const userWebhookDeliverQueue = createUserWebhookDeliverQueue(config);
+	const systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config);
 	const meilisearch = createMeilisearchClient(config);
 	const meta = await fetchReactiveMeta(db, redisForSub);
 	const loggerService = new LoggerService();
@@ -189,13 +251,40 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		urlPreviewService,
 		videoProcessingService,
 		webAuthnService,
+		systemQueue,
+		endedPollNotificationQueue,
+		postScheduledNoteQueue,
+		deliverQueue,
+		inboxQueue,
+		dbQueue,
+		relationshipQueue,
+		objectStorageQueue,
+		userWebhookDeliverQueue,
+		systemWebhookDeliverQueue,
 		redis,
 		redisForPub,
 		redisForSub,
 		redisForTimelines,
 		redisForReactions,
 		dispose: async () => {
-			await disposeRuntimeResources({ drizzlePool, redis, redisForPub, redisForSub, redisForTimelines, redisForReactions });
+			await disposeRuntimeResources({
+				drizzlePool,
+				redis,
+				redisForPub,
+				redisForSub,
+				redisForTimelines,
+				redisForReactions,
+				systemQueue,
+				endedPollNotificationQueue,
+				postScheduledNoteQueue,
+				deliverQueue,
+				inboxQueue,
+				dbQueue,
+				relationshipQueue,
+				objectStorageQueue,
+				userWebhookDeliverQueue,
+				systemWebhookDeliverQueue,
+			});
 		},
 	};
 }
