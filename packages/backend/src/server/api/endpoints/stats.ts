@@ -4,12 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { InstancesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import NotesChart from '@/core/chart/charts/notes.js';
 import UsersChart from '@/core/chart/charts/users.js';
 import { countNoteReactionsFromDatabase } from '@/core/NoteReactionStore.js';
+import { countInstancesFromDatabase } from '@/core/InstanceStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 
@@ -71,11 +71,9 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	private reactionsCountCache: MemoryKVCache<number>;
+	private instancesCountCache: MemoryKVCache<number>;
 
 	constructor(
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -98,7 +96,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			] = await Promise.all([
 				this.reactionsCountCache.fetch('all', () => countNoteReactionsFromDatabase(this.db)),
 				//this.noteReactionsRepository.count({ where: { userHost: IsNull() }, cache: 3600000 }),
-				this.instancesRepository.count({ cache: 3600000 }),
+				this.instancesCountCache.fetch('all', () => countInstancesFromDatabase(this.db)),
 			]);
 
 			return {
@@ -114,6 +112,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			};
 		});
 
-		this.reactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1h, TypeORM の query result cache (`{ cache: 3600000 }`) 相当
+		this.reactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1h
+		this.instancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1h
 	}
 }

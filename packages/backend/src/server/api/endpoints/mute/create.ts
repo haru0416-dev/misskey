@@ -6,10 +6,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MutingsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { UserMutingService } from '@/core/UserMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -62,8 +63,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 		private userMutingService: UserMutingService,
@@ -83,12 +84,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// Check if already muting
-			const exist = await this.mutingsRepository.exists({
-				where: {
-					muterId: muter.id,
-					muteeId: mutee.id,
-				},
-			});
+			const exist = await mutingExistsInDatabase(this.db, muter.id, mutee.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyMuting);

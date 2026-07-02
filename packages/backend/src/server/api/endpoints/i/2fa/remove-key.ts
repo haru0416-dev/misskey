@@ -6,7 +6,6 @@
 import bcrypt from 'bcryptjs';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
@@ -17,6 +16,7 @@ import {
 	countUserSecurityKeysByUserIdFromDatabase,
 	deleteUserSecurityKeyByIdAndUserIdFromDatabase,
 } from '@/core/UserSecurityKeyStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -48,16 +48,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
 		private userEntityService: UserEntityService,
 		private userAuthService: UserAuthService,
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const token = ps.token;
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: me.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, me.id);
 
 			if (profile.twoFactorEnabled) {
 				if (token == null) {
@@ -83,7 +80,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const keyCount = await countUserSecurityKeysByUserIdFromDatabase(this.db, me.id);
 
 			if (keyCount === 0) {
-				await this.userProfilesRepository.update(me.id, {
+				await updateUserProfileInDatabase(this.db, me.id, {
 					usePasswordLessLogin: false,
 				});
 			}

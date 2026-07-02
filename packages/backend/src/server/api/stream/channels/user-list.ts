@@ -4,13 +4,13 @@
  */
 
 import { Inject, Injectable, Scope } from '@nestjs/common';
-import type { UserListsRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { NoteStreamingHidingService } from '../NoteStreamingHidingService.js';
 import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import { userListExistsByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { bindThis } from '@/decorators.js';
 import { isRenotePacked, isQuotePacked } from '@/misc/is-renote.js';
 import type { JsonObject } from '@/misc/json-value.js';
@@ -18,8 +18,8 @@ import Channel, { type ChannelRequest } from '../channel.js';
 import { REQUEST } from '@nestjs/core';
 
 type MembershipCacheEntry = {
-	// NOTE: 元のTypeORM実装は select: { userId: true } のみを指定しており withReplies を
-	// 取得していなかったため、値は常に undefined になっていた(既存挙動を保持するため踏襲)。
+	// NOTE: 既存実装は withReplies を取得していなかったため、値は常に undefined
+	// になっていた(既存挙動を保持するため踏襲)。
 	withReplies: boolean | undefined;
 };
 
@@ -35,9 +35,6 @@ export class UserListChannel extends Channel {
 	private withRenotes: boolean;
 
 	constructor(
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -60,12 +57,7 @@ export class UserListChannel extends Channel {
 		this.withRenotes = !!(params.withRenotes ?? true);
 
 		// Check existence and owner
-		const listExist = await this.userListsRepository.exists({
-			where: {
-				id: this.listId,
-				userId: this.user!.id,
-			},
-		});
+		const listExist = await userListExistsByIdAndUserIdFromDatabase(this.db, this.listId, this.user!.id);
 		if (!listExist) return false;
 
 		// Subscribe stream

@@ -11,16 +11,16 @@ import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { genAidx } from '@/misc/id/aidx.js';
-import {
-	BlockingsRepository,
-	FollowingsRepository,
-	MiUserProfile, MutingsRepository,
-	UserProfilesRepository,
-	UsersRepository,
-} from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { UserInsert } from '@/db/schema/user.js';
+import type { UserProfileInsert } from '@/db/schema/user-profile.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { createFollowingInDatabase } from '@/core/FollowingStore.js';
+import { createBlockingInDatabase } from '@/core/BlockingStore.js';
+import { createMutingInDatabase } from '@/core/MutingStore.js';
 import { AvatarDecorationService } from '@/core/AvatarDecorationService.js';
 import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
@@ -62,25 +62,18 @@ describe('UserEntityService', () => {
 	describe('pack/packMany', () => {
 		let app: TestingModule;
 		let service: UserEntityService;
-		let usersRepository: UsersRepository;
-		let userProfileRepository: UserProfilesRepository;
 		let drizzle: MiDrizzleDatabase;
-		let followingRepository: FollowingsRepository;
-		let blockingRepository: BlockingsRepository;
-		let mutingRepository: MutingsRepository;
 
-		async function createUser(userData: Partial<MiUser> = {}, profileData: Partial<MiUserProfile> = {}) {
+		async function createUser(userData: Partial<UserInsert> = {}, profileData: Partial<UserProfileInsert> = {}) {
 			const un = secureRndstr(16);
-			const user = await usersRepository
-				.insert({
-					...userData,
-					id: genAidx(Date.now()),
-					username: un,
-					usernameLower: un.toLowerCase(),
-				})
-				.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+			const user = await createUserInDatabase(drizzle, {
+				...userData,
+				id: genAidx(Date.now()),
+				username: un,
+				usernameLower: un.toLowerCase(),
+			});
 
-			await userProfileRepository.insert({
+			await createUserProfileInDatabase(drizzle, {
 				...profileData,
 				userId: user.id,
 			});
@@ -98,7 +91,7 @@ describe('UserEntityService', () => {
 		}
 
 		async function follow(follower: MiUser, followee: MiUser) {
-			await followingRepository.insert({
+			await createFollowingInDatabase(drizzle, {
 				id: genAidx(Date.now()),
 				followerId: follower.id,
 				followeeId: followee.id,
@@ -114,7 +107,7 @@ describe('UserEntityService', () => {
 		}
 
 		async function block(blocker: MiUser, blockee: MiUser) {
-			await blockingRepository.insert({
+			await createBlockingInDatabase(drizzle, {
 				id: genAidx(Date.now()),
 				blockerId: blocker.id,
 				blockeeId: blockee.id,
@@ -122,7 +115,7 @@ describe('UserEntityService', () => {
 		}
 
 		async function mute(mutant: MiUser, mutee: MiUser) {
-			await mutingRepository.insert({
+			await createMutingInDatabase(drizzle, {
 				id: genAidx(Date.now()),
 				muterId: mutant.id,
 				muteeId: mutee.id,
@@ -189,12 +182,7 @@ describe('UserEntityService', () => {
 			app.enableShutdownHooks();
 
 			service = app.get<UserEntityService>(UserEntityService);
-			usersRepository = app.get<UsersRepository>(DI.usersRepository);
-			userProfileRepository = app.get<UserProfilesRepository>(DI.userProfilesRepository);
 			drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
-			followingRepository = app.get<FollowingsRepository>(DI.followingsRepository);
-			blockingRepository = app.get<BlockingsRepository>(DI.blockingsRepository);
-			mutingRepository = app.get<MutingsRepository>(DI.mutingsRepository);
 		});
 
 		afterAll(async () => {

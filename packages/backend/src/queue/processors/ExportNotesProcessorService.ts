@@ -5,10 +5,8 @@
 
 import { ReadableStream, TextEncoderStream } from 'node:stream/web';
 import { Inject, Injectable } from '@nestjs/common';
-import { MoreThan } from 'typeorm';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -21,7 +19,9 @@ import { IdService } from '@/core/IdService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { JsonArrayStream } from '@/misc/JsonArrayStream.js';
 import { FileWriterStream } from '@/misc/FileWriterStream.js';
+import { countNotesByUserIdFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
@@ -30,7 +30,6 @@ import type { DbJobDataWithUser } from '../types.js';
 class NoteStream extends ReadableStream<Record<string, unknown>> {
 	constructor(
 		job: Bull.Job,
-		notesRepository: NotesRepository,
 		db: MiDrizzleDatabase,
 		driveFileEntityService: DriveFileEntityService,
 		idService: IdService,
@@ -39,7 +38,7 @@ class NoteStream extends ReadableStream<Record<string, unknown>> {
 		let exportedNotesCount = 0;
 		let cursor: MiNote['id'] | null = null;
 
-		const totalPromise = notesRepository.countBy({ userId });
+		const totalPromise = countNotesByUserIdFromDatabase(db, userId);
 
 		const serialize = (
 			note: MiNote,
@@ -65,13 +64,9 @@ class NoteStream extends ReadableStream<Record<string, unknown>> {
 
 		super({
 			async pull(controller): Promise<void> {
-				const notes = await notesRepository.find({
-					where: {
-						userId,
-						...(cursor !== null ? { id: MoreThan(cursor) } : {}),
-					},
-					take: 100, // 100件ずつ取得
-					order: { id: 1 },
+				const notes = await listNotesByUserIdWithPaginationFromDatabase(db, userId, {
+					limit: 100, // 100件ずつ取得
+					sinceId: cursor,
 				});
 
 				if (notes.length === 0) {
@@ -104,12 +99,6 @@ export class ExportNotesProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -126,7 +115,7 @@ export class ExportNotesProcessorService {
 	public async process(job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 		this.logger.info(`Exporting notes of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -140,7 +129,6 @@ export class ExportNotesProcessorService {
 			// メモリが足りなくならないようにストリームで処理する
 			await new NoteStream(
 				job,
-				this.notesRepository,
 				this.db,
 				this.driveFileEntityService,
 				this.idService,

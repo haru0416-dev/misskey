@@ -31,8 +31,8 @@ export type WebhookInsert = typeof webhook.$inferInsert;
 
 /**
  * webhook テーブルは `user` リレーションを持つが、既存コードはいずれの経路でも
- * eager load していない (TypeORM の findBy 系はデフォルトで relation を読み込まない) ため、
- * ここでも常に `user: null` を補って MiWebhook 形状に揃える。
+ * relation を読み込まないため、ここでも常に `user: null` を補って
+ * MiWebhook 形状に揃える。
  */
 export function deserializeWebhook(row: WebhookRow): MiWebhook {
 	return {

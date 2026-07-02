@@ -5,7 +5,6 @@
 
 export const DI = {
 	config: Symbol('config'),
-	db: Symbol('db'),
 	drizzle: Symbol('drizzle'),
 	drizzlePool: Symbol('drizzlePool'),
 	meta: Symbol('meta'),
@@ -15,18 +14,4 @@ export const DI = {
 	redisForSub: Symbol('redisForSub'),
 	redisForTimelines: Symbol('redisForTimelines'),
 	redisForReactions: Symbol('redisForReactions'),
-
-	//#region Repositories
-	usersRepository: Symbol('usersRepository'),
-	notesRepository: Symbol('notesRepository'),
-	userProfilesRepository: Symbol('userProfilesRepository'),
-	userListsRepository: Symbol('userListsRepository'),
-	followingsRepository: Symbol('followingsRepository'),
-	instancesRepository: Symbol('instancesRepository'),
-	driveFilesRepository: Symbol('driveFilesRepository'),
-	mutingsRepository: Symbol('mutingsRepository'),
-	blockingsRepository: Symbol('blockingsRepository'),
-	channelsRepository: Symbol('channelsRepository'),
-	rolesRepository: Symbol('rolesRepository'),
-	//#endregion
 };

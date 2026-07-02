@@ -9,7 +9,7 @@ import { user as userTable } from '@/db/schema/user.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import { usedUsername } from '@/db/schema/used-username.js';
-import { deserializeUser } from '@/core/SignupStore.js';
+import { deserializeUser } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';

@@ -4,10 +4,11 @@
  */
 
 import { and, eq, isNull } from 'drizzle-orm';
-import { user as userTable, type UserRow } from '@/db/schema/user.js';
+import { user as userTable } from '@/db/schema/user.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import { usedUsername } from '@/db/schema/used-username.js';
+import { deserializeUser } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -16,33 +17,15 @@ type SignupAccountInsert = {
 	username: MiUser['username'];
 	usernameLower: MiUser['username'];
 	host: MiUser['host'];
+	uri: MiUser['uri'];
+	inbox: MiUser['inbox'];
+	sharedInbox: MiUser['sharedInbox'];
+	followersUri: MiUser['followersUri'];
 	token: NonNullable<MiUser['token']>;
 	passwordHash: string | null;
 	publicKey: string;
 	privateKey: string;
 };
-
-export function deserializeUser(row: UserRow): MiUser {
-	return {
-		...row,
-		alsoKnownAs: row.alsoKnownAs == null || row.alsoKnownAs === '' ? null : row.alsoKnownAs.split(','),
-		avatar: null,
-		banner: null,
-	} as MiUser;
-}
-
-export async function isLocalUsernameTaken(db: MiDrizzleDatabase, username: string): Promise<boolean> {
-	const [row] = await db
-		.select({ id: userTable.id })
-		.from(userTable)
-		.where(and(
-			eq(userTable.usernameLower, username.toLowerCase()),
-			isNull(userTable.host),
-		))
-		.limit(1);
-
-	return row != null;
-}
 
 export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data: SignupAccountInsert): Promise<MiUser> {
 	const row = await db.transaction(async (tx) => {
@@ -66,6 +49,10 @@ export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data:
 				username: data.username,
 				usernameLower: data.usernameLower,
 				host: data.host,
+				uri: data.uri,
+				inbox: data.inbox,
+				sharedInbox: data.sharedInbox,
+				followersUri: data.followersUri,
 				token: data.token,
 			})
 			.returning();

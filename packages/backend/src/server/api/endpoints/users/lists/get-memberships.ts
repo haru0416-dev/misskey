@@ -4,12 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserListsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserListEntityService } from '@/core/entities/UserListEntityService.js';
 import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { listUserListMembershipsByUserListIdWithPaginationFromDatabase, resolveUserListMembershipPagination } from '@/core/UserListMembershipStore.js';
+import { fetchPublicUserListByIdFromDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { IdService } from '@/core/IdService.js';
 import { ApiError } from '../../../error.js';
 
@@ -75,9 +75,6 @@ export const paramDef = {
 @Injectable() // eslint-disable-next-line import/no-default-export
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -86,13 +83,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Fetch the list
-			const userList = await this.userListsRepository.findOneBy(!ps.forPublic && me !== null ? {
-				id: ps.listId,
-				userId: me.id,
-			} : {
-				id: ps.listId,
-				isPublic: true,
-			});
+			const userList = !ps.forPublic && me !== null
+				? await fetchUserListByIdAndUserIdFromDatabase(this.db, ps.listId, me.id)
+				: await fetchPublicUserListByIdFromDatabase(this.db, ps.listId);
 
 			if (userList == null) {
 				throw new ApiError(meta.errors.noSuchList);

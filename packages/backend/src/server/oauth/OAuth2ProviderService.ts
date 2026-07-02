@@ -25,10 +25,10 @@ import { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
-import type { UsersRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { createAccessTokenInDatabase, deleteAccessTokenByTokenFromDatabase } from '@/core/AccessTokenStore.js';
+import { fetchLocalUserByNativeTokenFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { MemoryKVCache } from '@/misc/cache.js';
@@ -408,8 +408,6 @@ export class OAuth2ProviderService implements OnApplicationShutdown {
 		private config: Config,
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
 		private idService: IdService,
 		private httpRequestService: HttpRequestService,
 		private cacheService: CacheService,
@@ -501,7 +499,7 @@ export class OAuth2ProviderService implements OnApplicationShutdown {
 
 	async #findUserByLoginToken(loginToken: string): Promise<MiLocalUser> {
 		const user = await this.cacheService.localUserByNativeTokenCache.fetch(loginToken,
-			() => this.usersRepository.findOneBy({ token: loginToken }) as Promise<MiLocalUser | null>);
+			() => fetchLocalUserByNativeTokenFromDatabase(this.db, loginToken));
 		if (!user) {
 			throw new InvalidRequestError('No such user');
 		}

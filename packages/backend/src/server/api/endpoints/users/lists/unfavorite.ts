@@ -5,10 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UserListsRepository } from '@/models/_.js';
 import { ApiError } from '@/server/api/error.js';
 import { DI } from '@/di-symbols.js';
 import { deleteUserListFavoriteByIdFromDatabase, fetchUserListFavoriteFromDatabase } from '@/core/UserListFavoriteStore.js';
+import { userListExistsByIdAndPublicFromDatabase } from '@/core/UserListStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
@@ -40,19 +40,11 @@ export const paramDef = {
 @Injectable() // eslint-disable-next-line import/no-default-export
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor (
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const userListExist = await this.userListsRepository.exists({
-				where: {
-					id: ps.listId,
-					isPublic: true,
-				},
-			});
+			const userListExist = await userListExistsByIdAndPublicFromDatabase(this.drizzle, ps.listId);
 
 			if (!userListExist) {
 				throw new ApiError(meta.errors.noSuchList);

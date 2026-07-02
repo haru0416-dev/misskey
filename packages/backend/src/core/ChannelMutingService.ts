@@ -5,9 +5,8 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { ChannelsRepository, UsersRepository, MiChannel, MiUser } from '@/models/_.js';
+import type { MiChannel, MiUser } from '@/models/_.js';
 import type { MiChannelMuting } from '@/models/ChannelMuting.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEvents, GlobalEventService } from '@/core/GlobalEventService.js';
@@ -15,6 +14,9 @@ import { bindThis } from '@/decorators.js';
 import { RedisKVCache } from '@/misc/cache.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import {
 	createChannelMutingInDatabase,
 	deleteChannelMutingFromDatabase,
@@ -34,10 +36,6 @@ export class ChannelMutingService {
 		private redisClient: Redis.Redis,
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 		private idService: IdService,
@@ -84,14 +82,24 @@ export class ChannelMutingService {
 			return [];
 		}
 
-		const relations = {
-			...(opts?.joinUser ? { user: true } : {}),
-			...(opts?.joinBannerFile ? { banner: true } : {}),
-		};
-		const channels = await this.channelsRepository.find({
-			where: { id: In(channelIds) },
-			...(Object.keys(relations).length > 0 ? { relations } : {}),
-		});
+		const channels = await listChannelsByIdsFromDatabase(this.drizzle, channelIds);
+
+		if (opts?.joinUser) {
+			const users = await listUsersByIdsFromDatabase(this.drizzle, channels.map(channel => channel.userId).filter(userId => userId != null), { includeSuspended: true });
+			const userById = new Map(users.map(user => [user.id, user]));
+			for (const channel of channels) {
+				channel.user = channel.userId == null ? null : userById.get(channel.userId) ?? null;
+			}
+		}
+
+		if (opts?.joinBannerFile) {
+			const files = await listDriveFilesByIdsFromDatabase(this.drizzle, channels.map(channel => channel.bannerId).filter(bannerId => bannerId != null));
+			const fileById = new Map(files.map(file => [file.id, file]));
+			for (const channel of channels) {
+				channel.banner = channel.bannerId == null ? null : fileById.get(channel.bannerId) ?? null;
+			}
+		}
+
 		const channelById = new Map(channels.map(channel => [channel.id, channel]));
 
 		return channelIds
@@ -122,7 +130,7 @@ export class ChannelMutingService {
 		}
 
 		if (opts?.joinUser) {
-			const users = await this.usersRepository.findBy({ id: In(mutings.map(muting => muting.userId)) });
+			const users = await listUsersByIdsFromDatabase(this.drizzle, mutings.map(muting => muting.userId), { includeSuspended: true });
 			const userById = new Map(users.map(user => [user.id, user]));
 			for (const muting of mutings) {
 				muting.user = userById.get(muting.userId) ?? null;
@@ -130,7 +138,7 @@ export class ChannelMutingService {
 		}
 
 		if (opts?.joinChannel) {
-			const channels = await this.channelsRepository.findBy({ id: In(mutings.map(muting => muting.channelId)) });
+			const channels = await listChannelsByIdsFromDatabase(this.drizzle, mutings.map(muting => muting.channelId));
 			const channelById = new Map(channels.map(channel => [channel.id, channel]));
 			for (const muting of mutings) {
 				muting.channel = channelById.get(muting.channelId) ?? null;

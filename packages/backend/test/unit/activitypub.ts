@@ -27,11 +27,13 @@ import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import { MiMeta, MiNote, UserProfilesRepository } from '@/models/_.js';
+import type { MiMeta, MiNote } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { DownloadService } from '@/core/DownloadService.js';
 import { genAidx } from '@/misc/id/aidx.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
@@ -94,7 +96,7 @@ async function createRandomRemoteUser(
 }
 
 describe('ActivityPub', () => {
-	let userProfilesRepository: UserProfilesRepository;
+	let db: MiDrizzleDatabase;
 	let imageService: ApImageService;
 	let noteService: ApNoteService;
 	let personService: ApPersonService;
@@ -147,7 +149,7 @@ describe('ActivityPub', () => {
 		await app.init();
 		app.enableShutdownHooks();
 
-		userProfilesRepository = app.get(DI.userProfilesRepository);
+		db = app.get(DI.drizzle);
 
 		noteService = app.get<ApNoteService>(ApNoteService);
 		personService = app.get<ApPersonService>(ApPersonService);
@@ -309,7 +311,7 @@ describe('ActivityPub', () => {
 			});
 
 			const user = await personService.createPerson(actor.id, resolver);
-			const userProfile = await userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const userProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
 
 			assert.deepStrictEqual(userProfile.followingVisibility, 'public');
 			assert.deepStrictEqual(userProfile.followersVisibility, 'public');
@@ -329,7 +331,7 @@ describe('ActivityPub', () => {
 			//resolver.register(actor.followers, { … });
 
 			const user = await personService.createPerson(actor.id, resolver);
-			const userProfile = await userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const userProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
 
 			assert.deepStrictEqual(userProfile.followingVisibility, 'private');
 			assert.deepStrictEqual(userProfile.followersVisibility, 'private');

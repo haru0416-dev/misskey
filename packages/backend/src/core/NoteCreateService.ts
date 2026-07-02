@@ -5,22 +5,21 @@
 
 import { setImmediate } from 'node:timers/promises';
 import * as mfm from 'mfm-js';
-import { In, DataSource, IsNull, LessThan } from 'typeorm';
 import * as Redis from 'ioredis';
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { extractMentions } from '@/misc/extract-mentions.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
-import { MiNote } from '@/models/Note.js';
-import type { BlockingsRepository, ChannelsRepository, DriveFilesRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiNote } from '@/models/Note.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiFollowing } from '@/models/Following.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiApp } from '@/models/App.js';
 import { concat } from '@/misc/prelude/array.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiUser, MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import type { IPoll } from '@/models/Poll.js';
-import { MiPoll } from '@/models/Poll.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import type { MiChannel } from '@/models/Channel.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
@@ -58,8 +57,34 @@ import { CollapsedQueue } from '@/misc/collapsed-queue.js';
 import { CacheService } from '@/core/CacheService.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { listFollowerUserIdsByChannelIdFromDatabase } from '@/core/ChannelFollowingStore.js';
+import { adjustInstanceNotesCountFromDatabase } from '@/core/InstanceStore.js';
 import { noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
 import { listUserListMembershipsForFanoutByUserIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import {
+	listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase,
+	listNotificationFollowerIdsByFolloweeIdFromDatabase,
+	updateFollowerHibernatedStateByFollowerIdsInDatabase,
+} from '@/core/FollowingStore.js';
+import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
+import {
+	countNotesByUserIdAndChannelIdFromDatabase,
+	createNoteInDatabase,
+	createNoteWithPollInDatabase,
+	fetchNoteByIdFromDatabase,
+	incrementNoteRenoteCountInDatabase,
+	incrementNoteRepliesCountInDatabase,
+} from '@/core/NoteStore.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchChannelByIdFromDatabase, incrementChannelNotesCountAndUpdateLastNotedAtInDatabase, incrementChannelUsersCountInDatabase } from '@/core/ChannelStore.js';
+import { listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
+import {
+	fetchUserByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	incrementUserNotesCountAndUpdatedAtInDatabase,
+	listUserIdsByIdsAndLastActiveBeforeFromDatabase,
+	listUsersByIdsFromDatabase,
+	updateUsersHibernatedStateInDatabase,
+} from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 type NotificationType = 'reply' | 'renote' | 'quote' | 'mention';
@@ -73,9 +98,7 @@ class NotificationManager {
 	}>;
 
 	constructor(
-		private mutingsRepository: MutingsRepository,
 		private notificationService: NotificationService,
-		private followingsRepository: FollowingsRepository,
 		notifier: { id: MiUser['id']; },
 		note: MiNote,
 	) {
@@ -125,10 +148,10 @@ class NotificationManager {
 			case 'followers': {
 			// TODO: フォロワー限定ノートにフォロワーではない人がメンションされた場合通知されるのが正しい挙動なのか確認（一部に挙動の不一致がありそう）。現状は通知されるためフィルタしない
 			// 	const targetUserIds = this.queue.map(x => x.target);
-			// 	const followers = await this.followingsRepository.find({
+			// 	const followers = await listFollowerIdsByFolloweeIdFromDatabase(...);
 			// 		where: {
 			// 			followeeId: this.note.userId,
-			// 			followerId: In(targetUserIds),
+			// 			followerId: targetUserIds,
 			// 			isFollowerHibernated: false,
 			// 		},
 			// 		select: ['followerId'],
@@ -206,41 +229,11 @@ export class NoteCreateService implements OnApplicationShutdown {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.db)
-		private db: DataSource,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
 		@Inject(DI.redisForTimelines)
 		private redisForTimelines: Redis.Redis,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
-
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
 
 		private userEntityService: UserEntityService,
 		private noteEntityService: NoteEntityService,
@@ -295,20 +288,19 @@ export class NoteCreateService implements OnApplicationShutdown {
 		apHashtags?: string[] | null;
 		apEmojis?: string[] | null;
 	}): Promise<MiNote> {
-		const visibleUsers = data.visibleUserIds.length > 0 ? await this.usersRepository.findBy({
-			id: In(data.visibleUserIds),
-		}) : [];
+		const visibleUsers = data.visibleUserIds.length > 0
+			? await listUsersByIdsFromDatabase(this.drizzle, data.visibleUserIds, { includeSuspended: true })
+			: [];
 
 		let files: MiDriveFile[] = [];
 		if (data.fileIds.length > 0) {
-			files = await this.driveFilesRepository.createQueryBuilder('file')
-				.where('file.userId = :userId AND file.id IN (:...fileIds)', {
-					userId: user.id,
-					fileIds: data.fileIds,
-				})
-				.orderBy('array_position(ARRAY[:...fileIds], "id"::text)')
-				.setParameters({ fileIds: data.fileIds })
-				.getMany();
+			const foundFiles = await listDriveFilesByIdsFromDatabase(this.drizzle, data.fileIds);
+			const fileMap = new Map(foundFiles
+				.filter(file => file.userId === user.id)
+				.map(file => [file.id, file]));
+			files = data.fileIds
+				.map(fileId => fileMap.get(fileId))
+				.filter((file): file is MiDriveFile => file != null);
 
 			if (files.length !== data.fileIds.length) {
 				throw new IdentifiableError('801c046c-5bf5-4234-ad2b-e78fc20a2ac7', 'No such file');
@@ -318,14 +310,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		let renote: MiNote | null = null;
 		if (data.renoteId != null) {
 			// Fetch renote to note
-			renote = await this.notesRepository.findOne({
-				where: { id: data.renoteId },
-				relations: {
-					user: true,
-					renote: true,
-					reply: true,
-				},
-			});
+			renote = await fetchNoteByIdFromDatabase(this.drizzle, data.renoteId);
 
 			if (renote == null) {
 				throw new IdentifiableError('53983c56-e163-45a6-942f-4ddc485d4290', 'No such renote target');
@@ -335,12 +320,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 			// Check blocking
 			if (renote.userId !== user.id) {
-				const blockExist = await this.blockingsRepository.exists({
-					where: {
-						blockerId: renote.userId,
-						blockeeId: user.id,
-					},
-				});
+				const blockExist = await blockingExistsInDatabase(this.drizzle, renote.userId, user.id);
 				if (blockExist) {
 					throw new IdentifiableError('2b4fe776-4414-4a2d-ae39-f3418b8fd4d3', 'You have been blocked by the user');
 				}
@@ -357,7 +337,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			if (renote.channelId && renote.channelId !== data.channelId) {
 				// チャンネルのノートに対しリノート要求がきたとき、チャンネル外へのリノート可否をチェック
 				// リノートのユースケースのうち、チャンネル内→チャンネル外は少数だと考えられるため、JOINはせず必要な時に都度取得する
-				const renoteChannel = await this.channelsRepository.findOneBy({ id: renote.channelId });
+				const renoteChannel = await fetchChannelByIdFromDatabase(this.drizzle, renote.channelId);
 				if (renoteChannel == null) {
 					// リノートしたいノートが書き込まれているチャンネルが無い
 					throw new IdentifiableError('b060f9a6-8909-4080-9e0b-94d9fa6f6a77', 'No such channel');
@@ -371,10 +351,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		let reply: MiNote | null = null;
 		if (data.replyId != null) {
 			// Fetch reply
-			reply = await this.notesRepository.findOne({
-				where: { id: data.replyId },
-				relations: { user: true },
-			});
+			reply = await fetchNoteByIdFromDatabase(this.drizzle, data.replyId);
 
 			if (reply == null) {
 				throw new IdentifiableError('60142edb-1519-408e-926d-4f108d27bee0', 'No such reply target');
@@ -388,12 +365,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 			// Check blocking
 			if (reply.userId !== user.id) {
-				const blockExist = await this.blockingsRepository.exists({
-					where: {
-						blockerId: reply.userId,
-						blockeeId: user.id,
-					},
-				});
+				const blockExist = await blockingExistsInDatabase(this.drizzle, reply.userId, user.id);
 				if (blockExist) {
 					throw new IdentifiableError('b0df6025-f2e8-44b4-a26a-17ad99104612', 'You have been blocked by the user');
 				}
@@ -410,9 +382,9 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 		let channel: MiChannel | null = null;
 		if (data.channelId != null) {
-			channel = await this.channelsRepository.findOneBy({ id: data.channelId, isArchived: false });
+			channel = await fetchChannelByIdFromDatabase(this.drizzle, data.channelId);
 
-			if (channel == null) {
+			if (channel == null || channel.isArchived) {
 				throw new IdentifiableError('bfa3905b-25f5-4894-b430-da331a490e4b', 'No such channel');
 			}
 		}
@@ -448,7 +420,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		// (クライアントサイドでやっても良い処理だと思うけどとりあえずサーバーサイドで)
 		if (data.reply && data.channel && data.reply.channelId !== data.channel.id) {
 			if (data.reply.channelId) {
-				data.channel = await this.channelsRepository.findOneBy({ id: data.reply.channelId });
+				data.channel = await fetchChannelByIdFromDatabase(this.drizzle, data.reply.channelId);
 			} else {
 				data.channel = null;
 			}
@@ -457,7 +429,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		// チャンネル内にリプライしたら対象のスコープに合わせる
 		// (クライアントサイドでやっても良い処理だと思うけどとりあえずサーバーサイドで)
 		if (data.reply && (data.channel == null) && data.reply.channelId) {
-			data.channel = await this.channelsRepository.findOneBy({ id: data.reply.channelId });
+			data.channel = await fetchChannelByIdFromDatabase(this.drizzle, data.reply.channelId);
 		}
 
 		if (data.createdAt == null) data.createdAt = new Date();
@@ -586,7 +558,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		tags = tags.filter(tag => Array.from(tag).length <= 128).splice(0, 32);
 
 		if (data.reply && (user.id !== data.reply.userId) && !mentionedUsers.some(u => u.id === data.reply!.userId)) {
-			mentionedUsers.push(await this.usersRepository.findOneByOrFail({ id: data.reply!.userId }));
+			mentionedUsers.push(await fetchUserByIdOrFailFromDatabase(this.drizzle, data.reply!.userId));
 		}
 
 		if (data.visibility === 'specified') {
@@ -599,7 +571,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			}
 
 			if (data.reply && !data.visibleUsers.some(x => x.id === data.reply!.userId)) {
-				data.visibleUsers.push(await this.usersRepository.findOneByOrFail({ id: data.reply!.userId }));
+				data.visibleUsers.push(await fetchUserByIdOrFailFromDatabase(this.drizzle, data.reply!.userId));
 			}
 		}
 
@@ -620,7 +592,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 	@bindThis
 	private async insertNote(user: { id: MiUser['id']; host: MiUser['host']; }, data: Option, tags: string[], emojis: string[], mentionedUsers: MinimumUser[]) {
-		const insert = new MiNote({
+		const insert: any = {
 			id: this.idService.gen(data.createdAt?.getTime()),
 			fileIds: data.files ? data.files.map(file => file.id) : [],
 			replyId: data.reply ? data.reply.id : null,
@@ -640,12 +612,20 @@ export class NoteCreateService implements OnApplicationShutdown {
 			userId: user.id,
 			localOnly: data.localOnly!,
 			reactionAcceptance: data.reactionAcceptance ?? null,
+			reactions: {},
+			reactionAndUserPairCache: [],
+			renoteCount: 0,
+			repliesCount: 0,
+			clippedCount: 0,
+			pageCount: 0,
 			visibility: data.visibility as any,
 			visibleUserIds: data.visibility === 'specified'
 				? data.visibleUsers
 					? data.visibleUsers.map(u => u.id)
 					: []
 				: [],
+			mentions: [],
+			mentionedRemoteUsers: '[]',
 
 			attachedFileTypes: data.files ? data.files.map(file => file.type) : [],
 
@@ -656,7 +636,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			renoteUserHost: data.renote ? data.renote.userHost : null,
 			renoteChannelId: data.renote ? data.renote.channelId : null,
 			userHost: user.host,
-		});
+		};
 
 		if (data.uri != null) insert.uri = data.uri;
 		if (data.url != null) insert.url = data.url;
@@ -664,7 +644,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		// Append mentions data
 		if (mentionedUsers.length > 0) {
 			insert.mentions = mentionedUsers.map(u => u.id);
-			const profiles = await this.userProfilesRepository.findBy({ userId: In(insert.mentions) });
+			const profiles = await listUserProfilesByUserIdsFromDatabase(this.drizzle, insert.mentions);
 			insert.mentionedRemoteUsers = JSON.stringify(mentionedUsers.filter(u => this.userEntityService.isRemoteUser(u)).map(u => {
 				const profile = profiles.find(p => p.userId === u.id);
 				const url = profile != null ? profile.url : null;
@@ -680,11 +660,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		// 投稿を作成
 		try {
 			if (insert.hasPoll) {
-				// Start transaction
-				await this.db.transaction(async transactionalEntityManager => {
-					await transactionalEntityManager.insert(MiNote, insert);
-
-					const poll = new MiPoll({
+				await createNoteWithPollInDatabase(this.drizzle, insert, {
 						noteId: insert.id,
 						choices: data.poll!.choices,
 						expiresAt: data.poll!.expiresAt,
@@ -694,19 +670,16 @@ export class NoteCreateService implements OnApplicationShutdown {
 						userId: user.id,
 						userHost: user.host,
 						channelId: insert.channelId,
-					});
-
-					await transactionalEntityManager.insert(MiPoll, poll);
 				});
 			} else {
-				await this.notesRepository.insert(insert);
+				await createNoteInDatabase(this.drizzle, insert);
 			}
 
 			return {
 				...insert,
 				reply: data.reply ?? null,
 				renote: data.renote ?? null,
-			};
+			} as MiNote;
 		} catch (e) {
 			// duplicate key error
 			if (isDuplicateKeyValueError(e)) {
@@ -766,21 +739,18 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 		if (data.reply == null) {
 			// TODO: キャッシュ
-			this.followingsRepository.findBy({
-				followeeId: user.id,
-				notify: 'normal',
-			}).then(async followings => {
+			listNotificationFollowerIdsByFolloweeIdFromDatabase(this.drizzle, user.id).then(async followerIds => {
 				if (note.visibility !== 'specified') {
 					const isPureRenote = this.isRenote(data) && !this.isQuote(data) ? true : false;
-					for (const following of followings) {
+					for (const followerId of followerIds) {
 						// TODO: ワードミュート考慮
 						let isRenoteMuted = false;
 						if (isPureRenote) {
-							const userIdsWhoMeMutingRenotes = await this.cacheService.renoteMutingsCache.fetch(following.followerId);
+							const userIdsWhoMeMutingRenotes = await this.cacheService.renoteMutingsCache.fetch(followerId);
 							isRenoteMuted = userIdsWhoMeMutingRenotes.has(user.id);
 						}
 						if (!isRenoteMuted) {
-							this.notificationService.createNotification(following.followerId, 'note', {
+							this.notificationService.createNotification(followerId, 'note', {
 								noteId: note.id,
 							}, user.id);
 						}
@@ -822,7 +792,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 			this.webhookService.enqueueUserWebhook(user.id, 'note', { note: noteObj });
 
-			const nm = new NotificationManager(this.mutingsRepository, this.notificationService, this.followingsRepository, user, note);
+			const nm = new NotificationManager(this.notificationService, user, note);
 
 			await this.createMentionedEvents(mentionedUsers, note, nm);
 
@@ -871,13 +841,13 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 					// 投稿がリプライかつ投稿者がローカルユーザーかつリプライ先の投稿の投稿者がリモートユーザーなら配送
 					if (data.reply && data.reply.userHost !== null) {
-						const u = await this.usersRepository.findOneBy({ id: data.reply.userId });
+						const u = await fetchUserByIdFromDatabase(this.drizzle, data.reply.userId);
 						if (u && this.userEntityService.isRemoteUser(u)) dm.addDirectRecipe(u);
 					}
 
 					// 投稿がRenoteかつ投稿者がローカルユーザーかつRenote元の投稿の投稿者がリモートユーザーなら配送
 					if (data.renote && data.renote.userHost !== null) {
-						const u = await this.usersRepository.findOneBy({ id: data.renote.userId });
+						const u = await fetchUserByIdFromDatabase(this.drizzle, data.renote.userId);
 						if (u && this.userEntityService.isRemoteUser(u)) dm.addDirectRecipe(u);
 					}
 
@@ -897,19 +867,13 @@ export class NoteCreateService implements OnApplicationShutdown {
 		}
 
 		if (data.channel) {
-			this.channelsRepository.increment({ id: data.channel.id }, 'notesCount', 1);
-			this.channelsRepository.update(data.channel.id, {
-				lastNotedAt: new Date(),
-			});
+			incrementChannelNotesCountAndUpdateLastNotedAtInDatabase(this.drizzle, data.channel.id, new Date());
 
-			this.notesRepository.countBy({
-				userId: user.id,
-				channelId: data.channel.id,
-			}).then(count => {
+			countNotesByUserIdAndChannelIdFromDatabase(this.drizzle, user.id, data.channel.id).then(count => {
 				// この処理が行われるのはノート作成後なので、ノートが一つしかなかったら最初の投稿だと判断できる
 				// TODO: とはいえノートを削除して何回も投稿すればその分だけインクリメントされる雑さもあるのでどうにかしたい
 				if (count === 1) {
-					this.channelsRepository.increment({ id: data.channel!.id }, 'usersCount', 1);
+					incrementChannelUsersCountInDatabase(this.drizzle, data.channel!.id);
 				}
 			});
 		}
@@ -937,12 +901,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 	@bindThis
 	private incRenoteCount(renote: MiNote) {
-		this.notesRepository.createQueryBuilder().update()
-			.set({
-				renoteCount: () => '"renoteCount" + 1',
-			})
-			.where('id = :id', { id: renote.id })
-			.execute();
+		incrementNoteRenoteCountInDatabase(this.drizzle, renote.id, 1);
 
 		// 30%の確率、3日以内に投稿されたノートの場合ハイライト用ランキング更新
 		if (Math.random() < 0.3 && (Date.now() - this.idService.parse(renote.id).date.getTime()) < 1000 * 60 * 60 * 24 * 3) {
@@ -982,7 +941,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 	@bindThis
 	private saveReply(reply: MiNote, note: MiNote) {
-		this.notesRepository.increment({ id: reply.id }, 'repliesCount', 1);
+		incrementNoteRepliesCountInDatabase(this.drizzle, reply.id, 1);
 	}
 
 	@bindThis
@@ -1005,13 +964,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 	@bindThis
 	private incNotesCountOfUser(user: { id: MiUser['id']; }) {
-		this.usersRepository.createQueryBuilder().update()
-			.set({
-				updatedAt: new Date(),
-				notesCount: () => '"notesCount" + 1',
-			})
-			.where('id = :id', { id: user.id })
-			.execute();
+		incrementUserNotesCountAndUpdatedAtInDatabase(this.drizzle, user.id, new Date());
 	}
 
 	@bindThis
@@ -1054,17 +1007,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			// TODO: キャッシュ？
 			// eslint-disable-next-line prefer-const
 			let [followings, userListMemberships] = await Promise.all([
-				this.followingsRepository.find({
-					where: {
-						followeeId: user.id,
-						followerHost: IsNull(),
-						isFollowerHibernated: false,
-					},
-					select: {
-						followerId: true,
-						withReplies: true,
-					},
-				}),
+				listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase(this.drizzle, user.id),
 				listUserListMembershipsForFanoutByUserIdFromDatabase(this.drizzle, user.id),
 			]);
 
@@ -1153,10 +1096,10 @@ export class NoteCreateService implements OnApplicationShutdown {
 	}
 
 	@bindThis
-	public async checkHibernation(followings: MiFollowing[]) {
+	public async checkHibernation(followings: Pick<MiFollowing, 'followerId'>[]) {
 		if (followings.length === 0) return;
 
-		const shuffle = (array: MiFollowing[]) => {
+		const shuffle = <T>(array: T[]) => {
 			for (let i = array.length - 1; i > 0; i--) {
 				const j = Math.floor(Math.random() * (i + 1));
 				[array[i], array[j]] = [array[j], array[i]];
@@ -1167,26 +1110,17 @@ export class NoteCreateService implements OnApplicationShutdown {
 		// ランダムに最大1000件サンプリング
 		const samples = shuffle(followings).slice(0, Math.min(followings.length, 1000));
 
-		const hibernatedUsers = await this.usersRepository.find({
-			where: {
-				id: In(samples.map(x => x.followerId)),
-				lastActiveDate: LessThan(new Date(Date.now() - (1000 * 60 * 60 * 24 * 50))),
-			},
-			select: { id: true },
-		});
+		const hibernatedUserIds = await listUserIdsByIdsAndLastActiveBeforeFromDatabase(
+			this.drizzle,
+			samples.map(x => x.followerId),
+			new Date(Date.now() - (1000 * 60 * 60 * 24 * 50)),
+		);
 
-		if (hibernatedUsers.length > 0) {
-			this.usersRepository.update({
-				id: In(hibernatedUsers.map(x => x.id)),
-			}, {
-				isHibernated: true,
-			});
-
-			this.followingsRepository.update({
-				followerId: In(hibernatedUsers.map(x => x.id)),
-			}, {
-				isFollowerHibernated: true,
-			});
+		if (hibernatedUserIds.length > 0) {
+			await Promise.all([
+				updateUsersHibernatedStateInDatabase(this.drizzle, hibernatedUserIds, true),
+				updateFollowerHibernatedStateByFollowerIdsInDatabase(this.drizzle, hibernatedUserIds, true),
+			]);
 		}
 	}
 
@@ -1214,7 +1148,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 	@bindThis
 	private async performUpdateNotesCount(id: MiNote['id'], incrBy: number) {
-		await this.instancesRepository.increment({ id: id }, 'notesCount', incrBy);
+		await adjustInstanceNotesCountFromDatabase(this.drizzle, id, incrBy);
 	}
 
 	@bindThis

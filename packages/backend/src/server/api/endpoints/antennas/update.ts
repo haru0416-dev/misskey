@@ -6,11 +6,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { fetchAntennaByIdAndUserIdFromDatabase, fetchAntennaByIdOrFailFromDatabase, updateAntennaInDatabase } from '@/core/AntennaStore.js';
-import type { UserListsRepository } from '@/models/_.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { AntennaEntityService } from '@/core/entities/AntennaEntityService.js';
 import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -85,9 +85,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
 		private antennaEntityService: AntennaEntityService,
 		private globalEventService: GlobalEventService,
 	) {
@@ -107,10 +104,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			let userList;
 
 			if ((ps.src === 'list' || antenna.src === 'list') && ps.userListId) {
-				userList = await this.userListsRepository.findOneBy({
-					id: ps.userListId,
-					userId: me.id,
-				});
+				userList = await fetchUserListByIdAndUserIdFromDatabase(this.db, ps.userListId, me.id);
 
 				if (userList == null) {
 					throw new ApiError(meta.errors.noSuchUserList);

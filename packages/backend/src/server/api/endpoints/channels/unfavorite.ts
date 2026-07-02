@@ -5,9 +5,9 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { deleteChannelFavoriteFromDatabase } from '@/core/ChannelFavoriteStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
@@ -40,16 +40,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const channel = await this.channelsRepository.findOneBy({
-				id: ps.channelId,
-			});
+			const channel = await fetchChannelByIdFromDatabase(this.drizzle, ps.channelId);
 
 			if (channel == null) {
 				throw new ApiError(meta.errors.noSuchChannel);

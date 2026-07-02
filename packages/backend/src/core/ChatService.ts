@@ -15,7 +15,7 @@ import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
 import { bindThis } from '@/decorators.js';
-import type { MiChatMessage, MiDriveFile, MiUser, UsersRepository } from '@/models/_.js';
+import type { MiChatMessage, MiDriveFile, MiUser } from '@/models/_.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -27,6 +27,7 @@ import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/ChatApprovalStore.js';
 import {
 	addChatMessageReactionInDatabase,
@@ -99,9 +100,6 @@ export class ChatService {
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
 
 		private userEntityService: UserEntityService,
 		private chatEntityService: ChatEntityService,
@@ -386,8 +384,8 @@ export class ChatService {
 
 		if (message.toUserId) {
 			const [fromUser, toUser] = await Promise.all([
-				this.usersRepository.findOneByOrFail({ id: message.fromUserId }),
-				this.usersRepository.findOneByOrFail({ id: message.toUserId }),
+				fetchUserByIdOrFailFromDatabase(this.drizzle, message.fromUserId),
+				fetchUserByIdOrFailFromDatabase(this.drizzle, message.toUserId),
 			]);
 
 			if (this.userEntityService.isLocalUser(fromUser)) this.globalEventService.publishChatUserStream(message.fromUserId, message.toUserId, 'deleted', message.id);

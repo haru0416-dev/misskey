@@ -4,9 +4,9 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { clip, type ClipInsert, type ClipRow } from '@/db/schema/clip.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiClip } from '@/models/Clip.js';
 import type { MiUser } from '@/models/User.js';
 

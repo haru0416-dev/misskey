@@ -68,6 +68,24 @@ export async function createUserNotePiningInDatabase(
 		.values(data);
 }
 
+export async function replaceUserNotePiningsInDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	data: UserNotePiningInsert[],
+): Promise<void> {
+	await db.transaction(async tx => {
+		await tx
+			.delete(userNotePining)
+			.where(eq(userNotePining.userId, userId));
+
+		if (data.length > 0) {
+			await tx
+				.insert(userNotePining)
+				.values(data);
+		}
+	});
+}
+
 export async function deleteUserNotePiningFromDatabase(
 	db: MiDrizzleDatabase,
 	data: {

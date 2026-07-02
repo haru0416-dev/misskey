@@ -37,8 +37,8 @@ export type AccessTokenInsert = typeof accessToken.$inferInsert;
 
 /**
  * access_token テーブルは `user`/`app` リレーションを持つが、既存コードはいずれの経路でも
- * eager load していない (TypeORM の findOne/insert 系はデフォルトで relation を読み込まない) ため、
- * ここでも常に `user: null, app: null` を補って MiAccessToken 形状に揃える。
+ * relation を読み込まないため、ここでも常に `user: null, app: null` を補って
+ * MiAccessToken 形状に揃える。
  */
 export function deserializeAccessToken(row: AccessTokenRow): MiAccessToken {
 	return {

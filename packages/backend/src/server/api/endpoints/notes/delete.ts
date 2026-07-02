@@ -5,12 +5,13 @@
 
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteDeleteService } from '@/core/NoteDeleteService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { RoleService } from '@/core/RoleService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -52,8 +53,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 		private roleService: RoleService,
@@ -70,7 +71,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// この操作を行うのが投稿者とは限らない(例えばモデレーター)ため
-			await this.noteDeleteService.delete(await this.usersRepository.findOneByOrFail({ id: note.userId }), note, false, me);
+			await this.noteDeleteService.delete(await fetchUserByIdOrFailFromDatabase(this.db, note.userId), note, false, me);
 		});
 	}
 }

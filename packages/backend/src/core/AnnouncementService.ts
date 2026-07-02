@@ -4,12 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { EntityNotFoundError } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { MiUser } from '@/models/User.js';
 import { MiAnnouncement } from '@/models/Announcement.js';
-import type { UsersRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { Packed } from '@/misc/json-schema.js';
 import { IdService } from '@/core/IdService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
@@ -27,15 +26,13 @@ import {
 import type { AnnouncementReadRow } from '@/db/schema/announcement-read.js';
 import type { AnnouncementInsert } from '@/db/schema/announcement.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 
 @Injectable()
 export class AnnouncementService {
 	constructor(
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
 
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
@@ -78,7 +75,7 @@ export class AnnouncementService {
 			});
 
 			if (moderator) {
-				const user = await this.usersRepository.findOneByOrFail({ id: values.userId });
+				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, values.userId);
 				this.moderationLogService.log(moderator, 'createUserAnnouncement', {
 					announcementId: announcement.id,
 					announcement: announcement,
@@ -126,7 +123,7 @@ export class AnnouncementService {
 
 		if (moderator) {
 			if (announcement.userId) {
-				const user = await this.usersRepository.findOneByOrFail({ id: announcement.userId });
+				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, announcement.userId);
 				this.moderationLogService.log(moderator, 'updateUserAnnouncement', {
 					announcementId: announcement.id,
 					before: announcement,
@@ -151,7 +148,7 @@ export class AnnouncementService {
 
 		if (moderator) {
 			if (announcement.userId) {
-				const user = await this.usersRepository.findOneByOrFail({ id: announcement.userId });
+				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, announcement.userId);
 				this.moderationLogService.log(moderator, 'deleteUserAnnouncement', {
 					announcementId: announcement.id,
 					announcement: announcement,

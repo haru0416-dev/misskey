@@ -4,12 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { deleteFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
@@ -49,9 +49,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		private moderationLogService: ModerationLogService,
 		private roleService: RoleService,
 	) {
@@ -69,7 +66,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			await deleteFlashInDatabase(this.drizzle, flash.id);
 
 			if (flash.userId !== me.id) {
-				const user = await this.usersRepository.findOneByOrFail({ id: flash.userId });
+				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, flash.userId);
 				this.moderationLogService.log(me, 'deleteFlash', {
 					flashId: flash.id,
 					flashUserId: flash.userId,

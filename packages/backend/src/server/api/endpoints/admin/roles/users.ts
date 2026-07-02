@@ -4,13 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { RolesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { listActiveRoleAssignmentsByRoleIdFromDatabase, resolveRoleAssignmentPagination } from '@/core/RoleAssignmentStore.js';
+import { fetchRoleByIdFromDatabase } from '@/core/RoleStore.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -59,9 +59,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.rolesRepository)
-		private rolesRepository: RolesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -69,9 +66,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const role = await this.rolesRepository.findOneBy({
-				id: ps.roleId,
-			});
+			const role = await fetchRoleByIdFromDatabase(this.db, ps.roleId);
 
 			if (role == null) {
 				throw new ApiError(meta.errors.noSuchRole);

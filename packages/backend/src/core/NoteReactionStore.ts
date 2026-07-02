@@ -4,9 +4,9 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { noteReaction, type NoteReactionInsert, type NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';

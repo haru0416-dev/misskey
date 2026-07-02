@@ -9,9 +9,8 @@ import { afterEach, beforeEach, afterAll, beforeAll, describe, test, expect, vi 
 import type { Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomString } from '../utils.js';
-import { MiUser } from '@/models/User.js';
+import type { MiUser } from '@/models/User.js';
 import { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
-import { UsersRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
@@ -21,10 +20,12 @@ import { QueueService } from '@/core/QueueService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { systemWebhook } from '@/db/schema/system-webhook.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
 import {
 	createSystemWebhookInDatabase,
 	fetchSystemWebhookByIdFromDatabase,
 } from '@/core/SystemWebhookStore.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 describe('SystemWebhookService', () => {
@@ -33,7 +34,6 @@ describe('SystemWebhookService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	let usersRepository: UsersRepository;
 	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let queueService: Mocked<QueueService>;
@@ -44,13 +44,11 @@ describe('SystemWebhookService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	async function createUser(data: Partial<MiUser> = {}) {
-		return await usersRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	async function createUser(data: Partial<UserInsert> & Pick<UserInsert, 'username' | 'usernameLower'>) {
+		return await createUserInDatabase(db, {
+			id: idService.gen(),
+			...data,
+		});
 	}
 
 	async function createWebhook(data: Partial<MiSystemWebhook> = {}) {
@@ -91,7 +89,6 @@ describe('SystemWebhookService', () => {
 			})
 			.compile();
 
-		usersRepository = app.get(DI.usersRepository);
 		db = app.get(DI.drizzle);
 
 		service = app.get(SystemWebhookService);
@@ -111,7 +108,7 @@ describe('SystemWebhookService', () => {
 
 	async function afterEachImpl() {
 		await db.delete(systemWebhook);
-		await usersRepository.createQueryBuilder().delete().execute();
+		await db.delete(user);
 	}
 
 	// --------------------------------------------------------------------------------------

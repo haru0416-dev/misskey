@@ -6,7 +6,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
-import type { MiAbuseUserReport, MiUser, UsersRepository } from '@/models/_.js';
+import type { MiAbuseUserReport, MiUser } from '@/models/_.js';
 import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
 import { QueueService } from '@/core/QueueService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -21,6 +21,7 @@ import {
 	resolveAbuseUserReportInDatabase,
 	updateAbuseUserReportModerationNoteInDatabase,
 } from '@/core/AbuseUserReportStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { IdService } from './IdService.js';
 
 @Injectable()
@@ -28,9 +29,6 @@ export class AbuseReportService {
 	constructor(
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
 
 		private idService: IdService,
 		private abuseReportNotificationService: AbuseReportNotificationService,
@@ -140,7 +138,7 @@ export class AbuseReportService {
 		await markAbuseUserReportForwardedInDatabase(this.db, report.id);
 
 		const actor = await this.systemAccountService.fetch('actor');
-		const targetUser = await this.usersRepository.findOneByOrFail({ id: report.targetUserId });
+		const targetUser = await fetchUserByIdOrFailFromDatabase(this.db, report.targetUserId);
 
 		const flag = this.apRendererService.renderFlag(actor, targetUser.uri!, report.comment);
 		const contextAssignedFlag = this.apRendererService.addContext(flag);

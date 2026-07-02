@@ -9,8 +9,8 @@ import { format as dateFormat } from 'date-fns';
 import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository } from '@/models/_.js';
 import { listLocalEmojisOrderedByIdFromDatabase } from '@/core/EmojiStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
@@ -30,9 +30,6 @@ export class ExportCustomEmojisProcessorService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -48,7 +45,7 @@ export class ExportCustomEmojisProcessorService {
 	public async process(job: Bull.Job): Promise<void> {
 		this.logger.info('Exporting custom emojis ...');
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}

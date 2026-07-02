@@ -4,9 +4,9 @@
  */
 
 import { and, asc, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { followRequest, type FollowRequestInsert, type FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiFollowRequest } from '@/models/FollowRequest.js';
 import type { MiUser } from '@/models/User.js';
 

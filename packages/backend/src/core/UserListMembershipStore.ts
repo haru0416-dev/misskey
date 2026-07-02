@@ -4,9 +4,9 @@
  */
 
 import { and, asc, count, desc, eq, gt, lt, type SQL } from 'drizzle-orm';
-import { UpdateValuesMissingError } from 'typeorm';
 import { userListMembership, type UserListMembershipInsert, type UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { UpdateValuesMissingError } from '@/misc/db-errors.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 
@@ -208,9 +208,8 @@ export async function deleteUserListMembershipInDatabase(
 }
 
 /**
- * NOTE: `withReplies` が undefined の場合は TypeORM の
- * `Repository.update()` が `UpdateValuesMissingError` を投げていた挙動を再現する
- * (更新対象カラムが存在しないため)。
+ * NOTE: `withReplies` が undefined の場合は更新対象カラムが存在しないため、
+ * 既存の `UpdateValuesMissingError` 挙動に揃える。
  */
 export async function updateUserListMembershipWithRepliesInDatabase(
 	db: MiDrizzleDatabase,

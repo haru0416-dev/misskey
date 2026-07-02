@@ -6,12 +6,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '../../../error.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countUserSecurityKeysByUserIdFromDatabase } from '@/core/UserSecurityKeyStore.js';
+import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -38,9 +38,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -53,7 +50,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				const keyCount = await countUserSecurityKeysByUserIdFromDatabase(this.db, me.id);
 
 				if (keyCount === 0) {
-					await this.userProfilesRepository.update(me.id, {
+					await updateUserProfileInDatabase(this.db, me.id, {
 						usePasswordLessLogin: false,
 					});
 
@@ -61,7 +58,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			await this.userProfilesRepository.update(me.id, {
+			await updateUserProfileInDatabase(this.db, me.id, {
 				usePasswordLessLogin: ps.value,
 			});
 

@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { MiMeta, NotesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
-import { QueryService } from '@/core/QueryService.js';
-import { MiLocalUser } from '@/models/User.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import { FanoutTimelineName } from '@/core/FanoutTimelineService.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
 
 export const meta = {
 	tags: ['users', 'notes'],
@@ -76,10 +76,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
 		private cacheService: CacheService,
 		private idService: IdService,
 		private fanoutTimelineEndpointService: FanoutTimelineEndpointService,
@@ -171,65 +171,18 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				.list({ requestUserId: me.id }, { idOnly: true })
 				.then(x => x.map(x => x.id))
 			: [];
-		const isSelf = me && (me.id === ps.userId);
 
-		const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
-			.andWhere('note.userId = :userId', { userId: ps.userId })
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('note.channel', 'channel')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser');
-
-		if (ps.withChannelNotes) {
-			query.andWhere(new Brackets(qb => {
-				if (mutingChannelIds.length > 0) {
-					qb.andWhere(new Brackets(qb2 => {
-						qb2.orWhere('note.channelId IS NULL');
-						qb2.orWhere('note.channelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-					}));
-				}
-
-				if (!isSelf) {
-					qb.andWhere(new Brackets(qb2 => {
-						qb2.orWhere('note.channelId IS NULL');
-						qb2.orWhere('channel.isSensitive = false');
-					}));
-				}
-			}));
-		} else {
-			query.andWhere('note.channelId IS NULL');
-		}
-
-		// -- ミュートされたチャンネルのリノート対策
-		if (mutingChannelIds.length > 0) {
-			query.andWhere(new Brackets(qb => {
-				qb.orWhere('note.renoteChannelId IS NULL');
-				qb.orWhere('note.renoteChannelId NOT IN (:...mutingChannelIds)', { mutingChannelIds });
-			}));
-		}
-
-		this.queryService.generateVisibilityQuery(query, me);
-		this.queryService.generateBaseNoteFilteringQuery(query, me, {
-			excludeAuthor: true,
-			excludeUserFromMute: ps.userId,
+		return await listUserTimelineNotesFromDatabase(this.db, {
+			userId: ps.userId,
+			limit: ps.limit,
+			sinceId: ps.sinceId,
+			untilId: ps.untilId,
+			withChannelNotes: ps.withChannelNotes,
+			withFiles: ps.withFiles,
+			withRenotes: ps.withRenotes,
+			me,
+			blockedHosts: this.serverSettings.blockedHosts,
+			mutingChannelIds,
 		});
-
-		if (ps.withFiles) {
-			query.andWhere('note.fileIds != \'{}\'');
-		}
-
-		if (ps.withRenotes === false) {
-			query.andWhere(new Brackets(qb => {
-				qb.orWhere('note.userId != :userId', { userId: ps.userId });
-				qb.orWhere('note.renoteId IS NULL');
-				qb.orWhere('note.text IS NOT NULL');
-				qb.orWhere('note.fileIds != \'{}\'');
-				qb.orWhere('0 < (SELECT COUNT(*) FROM poll WHERE poll."noteId" = note.id)');
-			}));
-		}
-
-		return await query.limit(ps.limit).getMany();
 	}
 }

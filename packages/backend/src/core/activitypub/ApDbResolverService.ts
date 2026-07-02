@@ -5,7 +5,6 @@
 
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import type { MiUserPublickey } from '@/models/UserPublickey.js';
@@ -13,7 +12,9 @@ import { CacheService } from '@/core/CacheService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import type { MiNote } from '@/models/Note.js';
 import { bindThis } from '@/decorators.js';
-import { MiLocalUser, MiRemoteUser } from '@/models/User.js';
+import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
+import { fetchNoteByIdFromDatabase, fetchNoteByUriFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByUriFromDatabase } from '@/core/UserStore.js';
 import { fetchUserPublickeyByKeyIdFromDatabase, fetchUserPublickeyByUserIdFromDatabase } from '@/core/UserPublickeyStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { getApId } from './type.js';
@@ -44,12 +45,6 @@ export class ApDbResolverService implements OnApplicationShutdown {
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -90,13 +85,9 @@ export class ApDbResolverService implements OnApplicationShutdown {
 		if (parsed.local) {
 			if (parsed.type !== 'notes') return null;
 
-			return await this.notesRepository.findOneBy({
-				id: parsed.id,
-			});
+			return await fetchNoteByIdFromDatabase(this.drizzle, parsed.id);
 		} else {
-			return await this.notesRepository.findOneBy({
-				uri: parsed.uri,
-			});
+			return await fetchNoteByUriFromDatabase(this.drizzle, parsed.uri);
 		}
 	}
 
@@ -110,14 +101,21 @@ export class ApDbResolverService implements OnApplicationShutdown {
 		if (parsed.local) {
 			if (parsed.type !== 'users') return null;
 
-			return await this.cacheService.userByIdCache.fetchMaybe(
+			const user = await this.cacheService.userByIdCache.fetchMaybe(
 				parsed.id,
-				() => this.usersRepository.findOneBy({ id: parsed.id, isDeleted: false }).then(x => x ?? undefined),
-			) as MiLocalUser | undefined ?? null;
+				async () => {
+					const user = await fetchUserByIdFromDatabase(this.drizzle, parsed.id);
+					return user == null || user.isDeleted ? undefined : user;
+				},
+			);
+			return user == null ? null : user as MiLocalUser;
 		} else {
 			return await this.cacheService.uriPersonCache.fetch(
 				parsed.uri,
-				() => this.usersRepository.findOneBy({ uri: parsed.uri, isDeleted: false }),
+				async () => {
+					const user = await fetchUserByUriFromDatabase(this.drizzle, parsed.uri);
+					return user == null || user.isDeleted ? null : user as MiRemoteUser;
+				},
 			) as MiRemoteUser | null;
 		}
 	}

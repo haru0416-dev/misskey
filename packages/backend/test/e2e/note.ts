@@ -3,19 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Repository } from "typeorm";
-
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import { describe, beforeAll, afterAll, test } from 'vitest';
-import { MiNote } from '@/models/Note.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
+import { loadConfig } from '@/config.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { api, castAsError, initTestDb, post, role, signup, uploadFile, uploadUrl } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Note', () => {
-	let Notes: Repository<MiNote>;
+	let db: MiDrizzleDatabase;
+	let pool: MiDrizzlePool | undefined;
 
 	let root: misskey.entities.SignupResponse;
 	let alice: misskey.entities.SignupResponse;
@@ -23,13 +24,19 @@ describe('Note', () => {
 	let tom: misskey.entities.SignupResponse;
 
 	beforeAll(async () => {
-		const connection = await initTestDb(true);
-		Notes = connection.getRepository(MiNote);
+		const config = loadConfig();
+		await initTestDb(true);
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		root = await signup({ username: 'root' });
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		tom = await signup({ username: 'tom', host: 'example.com' });
 	}, 1000 * 60 * 2);
+
+	afterAll(async () => {
+		await pool?.end();
+	});
 
 	test('投稿できる', async () => {
 		const post = {
@@ -378,7 +385,7 @@ describe('Note', () => {
 		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
 		assert.strictEqual(res.body.createdNote.text, post.text);
 
-		const noteDoc = await Notes.findOneBy({ id: res.body.createdNote.id });
+		const noteDoc = await fetchNoteByIdFromDatabase(db, res.body.createdNote.id);
 		assert.ok(noteDoc);
 		assert.deepStrictEqual(noteDoc.mentions, [bob.id]);
 	});
@@ -1006,7 +1013,7 @@ describe('Note', () => {
 			}, alice);
 
 			assert.strictEqual(deleteOneRes.status, 204);
-			let mainNote = await Notes.findOneBy({ id: mainNoteRes.body.createdNote.id });
+			let mainNote = await fetchNoteByIdFromDatabase(db, mainNoteRes.body.createdNote.id);
 			assert.ok(mainNote);
 			assert.strictEqual(mainNote.repliesCount, 1);
 
@@ -1015,7 +1022,7 @@ describe('Note', () => {
 			}, alice);
 
 			assert.strictEqual(deleteTwoRes.status, 204);
-			mainNote = await Notes.findOneBy({ id: mainNoteRes.body.createdNote.id });
+			mainNote = await fetchNoteByIdFromDatabase(db, mainNoteRes.body.createdNote.id);
 			assert.ok(mainNote);
 			assert.strictEqual(mainNote.repliesCount, 0);
 		});

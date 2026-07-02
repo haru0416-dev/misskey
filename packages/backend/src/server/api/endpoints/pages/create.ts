@@ -5,13 +5,14 @@
 
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { DriveFilesRepository, MiDriveFile } from '@/models/_.js';
+import type { MiDriveFile } from '@/models/_.js';
 import { pageNameSchema } from '@/models/Page.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { PageEntityService } from '@/core/entities/PageEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { PageService } from '@/core/PageService.js';
 import { pageNameExistsForUserInDatabase } from '@/core/PageStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { ApiError } from '../../error.js';
@@ -77,19 +78,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
 		private pageService: PageService,
 		private pageEntityService: PageEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			let eyeCatchingImage: MiDriveFile | null = null;
 			if (ps.eyeCatchingImageId != null) {
-				eyeCatchingImage = await this.driveFilesRepository.findOneBy({
-					id: ps.eyeCatchingImageId,
-					userId: me.id,
-				});
+				eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.eyeCatchingImageId, me.id);
 
 				if (eyeCatchingImage == null) {
 					throw new ApiError(meta.errors.noSuchFile);

@@ -8,11 +8,13 @@ import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { QueueService } from '@/core/QueueService.js';
-import type { DriveFilesRepository, UsersRepository, MiAntenna as _Antenna } from '@/models/_.js';
+import type { MiAntenna as _Antenna } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { RoleService } from '@/core/RoleService.js';
 import { DownloadService } from '@/core/DownloadService.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -60,23 +62,17 @@ export const paramDef = {
 @Injectable() // eslint-disable-next-line import/no-default-export
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor (
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
 
 		private roleService: RoleService,
 		private queueService: QueueService,
 		private downloadService: DownloadService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const userExist = await this.usersRepository.exists({ where: { id: me.id } });
-			if (!userExist) throw new ApiError(meta.errors.noSuchUser);
-			const file = await this.driveFilesRepository.findOneBy({ id: ps.fileId, userId: me.id });
+			const user = await fetchUserByIdFromDatabase(this.db, me.id);
+			if (user == null) throw new ApiError(meta.errors.noSuchUser);
+			const file = await fetchDriveFileByIdAndUserIdFromDatabase(this.db, ps.fileId, me.id);
 			if (file === null) throw new ApiError(meta.errors.noSuchFile);
 			if (file.size === 0) throw new ApiError(meta.errors.emptyFile);
 			const antennas: (_Antenna & { userListAccts: string[] | null })[] = JSON.parse(await this.downloadService.downloadTextFile(file.url));

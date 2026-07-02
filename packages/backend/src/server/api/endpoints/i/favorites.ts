@@ -4,11 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NotesRepository } from '@/models/_.js';
 import { NoteFavoriteEntityService } from '@/core/entities/NoteFavoriteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import {
 	listNoteFavoritesByUserIdFromDatabase,
 	resolveNoteFavoritePagination,
@@ -52,9 +51,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		private noteFavoriteEntityService: NoteFavoriteEntityService,
 		private idService: IdService,
 	) {
@@ -67,7 +63,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const notes = favorites.length === 0
 				? []
-				: await this.notesRepository.findBy({ id: In(favorites.map(favorite => favorite.noteId)) });
+				: await listNotesByIdsFromDatabase(this.db, favorites.map(favorite => favorite.noteId));
 			const noteMap = new Map(notes.map(note => [note.id, note]));
 
 			const packableFavorites = favorites.map(favorite => ({

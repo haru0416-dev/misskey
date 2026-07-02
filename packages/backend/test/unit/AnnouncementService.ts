@@ -13,15 +13,13 @@ import { GlobalModule } from '@/GlobalModule.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import { createAnnouncementInDatabase, fetchAnnouncementByIdOrFailFromDatabase } from '@/core/AnnouncementStore.js';
-import type {
-	MiAnnouncement,
-	MiUser,
-	UsersRepository,
-} from '@/models/_.js';
+import type { MiAnnouncement } from '@/models/Announcement.js';
+import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { announcement, type AnnouncementInsert } from '@/db/schema/announcement.js';
 import { announcementRead } from '@/db/schema/announcement-read.js';
 import { meta as metaTable } from '@/db/schema/meta.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { CacheService } from '@/core/CacheService.js';
@@ -29,25 +27,24 @@ import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
 import type { TestingModule } from '@nestjs/testing';
 
 describe('AnnouncementService', () => {
 	let app: TestingModule;
 	let announcementService: AnnouncementService;
-	let usersRepository: UsersRepository;
 	let drizzle: MiDrizzleDatabase;
 	let globalEventService: Mocked<GlobalEventService>;
 	let moderationLogService: Mocked<ModerationLogService>;
 
-	function createUser(data: Partial<MiUser> = {}) {
+	function createUser(data: Partial<UserInsert> = {}) {
 		const un = secureRndstr(16);
-		return usersRepository.insert({
+		return createUserInDatabase(drizzle, {
 			id: genAidx(Date.now()),
 			username: un,
 			usernameLower: un.toLowerCase(),
 			...data,
-		})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+		});
 	}
 
 	function createAnnouncement(data: Partial<MiAnnouncement & { createdAt: Date }> = {}) {
@@ -93,7 +90,6 @@ describe('AnnouncementService', () => {
 		app.enableShutdownHooks();
 
 		announcementService = app.get<AnnouncementService>(AnnouncementService);
-		usersRepository = app.get<UsersRepository>(DI.usersRepository);
 		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
 		globalEventService = app.get<GlobalEventService>(GlobalEventService) as Mocked<GlobalEventService>;
 		moderationLogService = app.get<ModerationLogService>(ModerationLogService) as Mocked<ModerationLogService>;
@@ -104,7 +100,7 @@ describe('AnnouncementService', () => {
 			drizzle.delete(metaTable),
 			drizzle.delete(announcementRead),
 			drizzle.delete(announcement),
-			usersRepository.createQueryBuilder().delete().execute(),
+			drizzle.delete(user),
 		]);
 
 		await app.close();

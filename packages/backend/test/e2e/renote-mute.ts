@@ -11,6 +11,8 @@ import { setTimeout } from 'node:timers/promises';
 import { api, post, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
+const STREAMING_NEGATIVE_TIMEOUT_MS = 500;
+
 describe('Renote Mute', () => {
 	// alice mutes carol
 	let alice: misskey.entities.SignupResponse;
@@ -88,6 +90,8 @@ describe('Renote Mute', () => {
 			alice, 'localTimeline',
 			() => api('notes/create', { renoteId: bobNote.id }, carol),
 			msg => msg.type === 'note' && msg.body.userId === carol.id,
+			undefined,
+			STREAMING_NEGATIVE_TIMEOUT_MS,
 		);
 
 		assert.strictEqual(fired, false);

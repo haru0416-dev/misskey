@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { InstancesRepository } from '@/models/_.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { DI } from '@/di-symbols.js';
 import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -32,15 +33,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private federatedInstanceService: FederatedInstanceService,
 		private moderationLogService: ModerationLogService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const instance = await this.instancesRepository.findOneBy({ host: this.utilityService.toPuny(ps.host) });
+			const instance = await fetchInstanceByHostFromDatabase(this.db, this.utilityService.toPuny(ps.host));
 
 			if (instance == null) {
 				throw new Error('instance not found');

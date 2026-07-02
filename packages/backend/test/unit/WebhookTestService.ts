@@ -11,13 +11,18 @@ import { WebhookTestService } from '@/core/WebhookTestService.js';
 import { UserWebhookPayload, UserWebhookService } from '@/core/UserWebhookService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { GlobalModule } from '@/GlobalModule.js';
-import { MiUser, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import type { MiWebhook } from '@/models/Webhook.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
 import { QueueService } from '@/core/QueueService.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 describe('WebhookTestService', () => {
 	let app: TestingModule;
@@ -25,8 +30,7 @@ describe('WebhookTestService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	let usersRepository: UsersRepository;
-	let userProfilesRepository: UserProfilesRepository;
+	let db: MiDrizzleDatabase;
 	let queueService: Mocked<QueueService>;
 	let userWebhookService: Mocked<UserWebhookService>;
 	let systemWebhookService: Mocked<SystemWebhookService>;
@@ -35,15 +39,13 @@ describe('WebhookTestService', () => {
 	let root: MiUser;
 	let alice: MiUser;
 
-	async function createUser(data: Partial<MiUser> = {}) {
-		const user = await usersRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	async function createUser(data: Partial<UserInsert> & Pick<UserInsert, 'username' | 'usernameLower'>) {
+		const user = await createUserInDatabase(db, {
+			id: idService.gen(),
+			...data,
+		});
 
-		await userProfilesRepository.insert({
+		await createUserProfileInDatabase(db, {
 			userId: user.id,
 		});
 
@@ -84,8 +86,7 @@ describe('WebhookTestService', () => {
 			],
 		}).compile();
 
-		usersRepository = app.get(DI.usersRepository);
-		userProfilesRepository = app.get(DI.userProfilesRepository);
+		db = app.get(DI.drizzle);
 
 		service = app.get(WebhookTestService);
 		idService = app.get(IdService);
@@ -114,8 +115,8 @@ describe('WebhookTestService', () => {
 		userWebhookService.fetchWebhooks.mockClear();
 		systemWebhookService.fetchSystemWebhooks.mockClear();
 
-		await usersRepository.createQueryBuilder().delete().execute();
-		await userProfilesRepository.createQueryBuilder().delete().execute();
+		await db.delete(userProfile);
+		await db.delete(user);
 	});
 
 	afterAll(async () => {

@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
@@ -13,6 +12,7 @@ import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ChatService } from '@/core/ChatService.js';
 import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/ChatMessageStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -57,9 +57,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -75,12 +72,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				await this.chatService.checkChatAvailability(me.id, 'read');
 			}
 
-			const file = await this.driveFilesRepository.findOneBy({
-				id: ps.fileId,
-				userId: isModerator ? undefined : me.id,
-			});
+			const file = await fetchDriveFileByIdFromDatabase(this.db, ps.fileId);
 
-			if (file == null) {
+			if (file == null || (!isModerator && file.userId !== me.id)) {
 				throw new ApiError(meta.errors.noSuchFile);
 			}
 

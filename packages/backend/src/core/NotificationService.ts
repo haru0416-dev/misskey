@@ -6,12 +6,12 @@
 import { setTimeout } from 'node:timers/promises';
 import * as Redis from 'ioredis';
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
-import { In } from 'typeorm';
 import { ReplyError } from 'ioredis';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNotification } from '@/models/Notification.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { bindThis } from '@/decorators.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
@@ -20,7 +20,7 @@ import { IdService } from '@/core/IdService.js';
 import { CacheService } from '@/core/CacheService.js';
 import type { Config } from '@/config.js';
 import { UserListService } from '@/core/UserListService.js';
-import { FilterUnionByProperty, groupedNotificationTypes, obsoleteNotificationTypes } from '@/types.js';
+import { FilterUnionByProperty } from '@/types.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 
 @Injectable()
@@ -34,8 +34,8 @@ export class NotificationService implements OnApplicationShutdown {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private notificationEntityService: NotificationEntityService,
 		private idService: IdService,
@@ -187,16 +187,16 @@ export class NotificationService implements OnApplicationShutdown {
 		// 2秒経っても(今回作成した)通知が既読にならなかったら「未読の通知がありますよ」イベントを発行する
 		// テスト通知の場合は即時発行
 		const interval = notification.type === 'test' ? 0 : 2000;
-		setTimeout(interval, 'unread notification', { signal: this.#shutdownController.signal }).then(async () => {
+		trackPromise(setTimeout(interval, 'unread notification', { signal: this.#shutdownController.signal }).then(async () => {
 			const latestReadNotificationId = await this.redisClient.get(`latestReadNotification:${notifieeId}`);
 			if (latestReadNotificationId && (latestReadNotificationId >= redisId)) return;
 
 			this.globalEventService.publishMainStream(notifieeId, 'unreadNotification', packed);
 			this.pushNotificationService.pushNotification(notifieeId, 'notification', packed);
 
-			if (type === 'follow') this.emailNotificationFollow(notifieeId, await this.usersRepository.findOneByOrFail({ id: notifierId! }));
-			if (type === 'receiveFollowRequest') this.emailNotificationReceiveFollowRequest(notifieeId, await this.usersRepository.findOneByOrFail({ id: notifierId! }));
-		}, () => { /* aborted, ignore it */ });
+			if (type === 'follow') this.emailNotificationFollow(notifieeId, await fetchUserByIdOrFailFromDatabase(this.db, notifierId!));
+			if (type === 'receiveFollowRequest') this.emailNotificationReceiveFollowRequest(notifieeId, await fetchUserByIdOrFailFromDatabase(this.db, notifierId!));
+		}, () => { /* aborted, ignore it */ }).catch(() => {}));
 
 		return notification;
 	}
@@ -275,7 +275,7 @@ export class NotificationService implements OnApplicationShutdown {
 		for (; ;) {
 			let notificationsRes: [id: string, fields: string[]][];
 
-			// sinceidのみの場合は古い順、そうでない場合は新しい順。 QueryService.makePaginationQueryも参照
+			// sinceidのみの場合は古い順、そうでない場合は新しい順。Store pagination helpers も参照
 			if (sinceTime && !untilTime) {
 				notificationsRes = await this.redisClient.xrange(
 					`notificationTimeline:${userId}`,

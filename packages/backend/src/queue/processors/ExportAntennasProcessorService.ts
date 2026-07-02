@@ -6,12 +6,12 @@
 import fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as DateFormat } from 'date-fns';
-import { In } from 'typeorm';
 import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { UsersRepository, MiUser } from '@/models/_.js';
+import type { MiUser } from '@/models/_.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { bindThis } from '@/decorators.js';
@@ -28,9 +28,6 @@ export class ExportAntennasProcessorService {
 	private logger: Logger;
 
 	constructor (
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -44,7 +41,7 @@ export class ExportAntennasProcessorService {
 
 	@bindThis
 	public async process(job: Bull.Job<DBExportAntennasData>): Promise<void> {
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -69,9 +66,7 @@ export class ExportAntennasProcessorService {
 				let users: MiUser[] | undefined;
 				if (antenna.userListId !== null) {
 					const memberIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(this.db, antenna.userListId);
-					users = await this.usersRepository.findBy({
-						id: In(memberIds),
-					});
+					users = await listUsersByIdsFromDatabase(this.db, memberIds, { includeSuspended: true });
 				}
 				write(JSON.stringify({
 					name: antenna.name,
@@ -109,4 +104,3 @@ export class ExportAntennasProcessorService {
 		}
 	}
 }
-

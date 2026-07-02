@@ -4,7 +4,7 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { userPublickey, type UserPublickeyRow } from '@/db/schema/user-publickey.js';
+import { userPublickey, type UserPublickeyInsert, type UserPublickeyRow } from '@/db/schema/user-publickey.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserPublickey } from '@/models/UserPublickey.js';
@@ -14,6 +14,19 @@ function deserializeUserPublickey(row: UserPublickeyRow): MiUserPublickey {
 		...row,
 		user: null,
 	} as MiUserPublickey;
+}
+
+export async function createUserPublickeyInDatabase(db: MiDrizzleDatabase, data: UserPublickeyInsert): Promise<MiUserPublickey> {
+	const [row] = await db
+		.insert(userPublickey)
+		.values(data)
+		.returning();
+
+	if (row == null) {
+		throw new Error('Failed to create user publickey');
+	}
+
+	return deserializeUserPublickey(row);
 }
 
 export async function fetchUserPublickeyByKeyIdFromDatabase(db: MiDrizzleDatabase, keyId: string): Promise<MiUserPublickey | null> {

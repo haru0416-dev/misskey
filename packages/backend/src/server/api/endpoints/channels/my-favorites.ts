@@ -4,14 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelsRepository } from '@/models/_.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { fetchFavoriteChannelIdsFromDatabase } from '@/core/ChannelFavoriteStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiChannel } from '@/models/Channel.js';
+import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
 
 export const meta = {
 	tags: ['channels', 'account'],
@@ -41,9 +40,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -55,7 +51,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				return [];
 			}
 
-			const channelById = await this.channelsRepository.findBy({ id: In(channelIds) })
+			const channelById = await listChannelsByIdsFromDatabase(this.drizzle, channelIds)
 				.then(channels => new Map(channels.map(channel => [channel.id, channel])));
 
 			const channels = channelIds

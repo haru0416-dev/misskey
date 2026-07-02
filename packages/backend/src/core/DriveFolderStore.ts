@@ -4,9 +4,9 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, isNull, lt, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { driveFolder, type DriveFolderInsert, type DriveFolderRow } from '@/db/schema/drive-folder.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiDriveFolder } from '@/models/DriveFolder.js';
 import type { MiUser } from '@/models/User.js';
 

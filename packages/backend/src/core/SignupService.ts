@@ -7,7 +7,8 @@ import { generateKeyPair } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { DI } from '@/di-symbols.js';
-import { createSignupAccountInDatabase, isLocalUsernameTaken } from '@/core/SignupStore.js';
+import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
+import { isLocalUsernameTaken } from '@/core/UserStore.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
@@ -111,11 +112,19 @@ export class SignupService {
 				err ? rej(err) : res([publicKey, privateKey]),
 			));
 
+		const id = this.idService.gen();
+		const normalizedHost = this.utilityService.toPunyNullable(host);
+		const remoteUri = normalizedHost == null ? null : `https://${normalizedHost}/users/${username}`;
+
 		const account = await createSignupAccountInDatabase(this.drizzle, {
-			id: this.idService.gen(),
+			id,
 			username,
 			usernameLower: username.toLowerCase(),
-			host: this.utilityService.toPunyNullable(host),
+			host: normalizedHost,
+			uri: remoteUri,
+			inbox: remoteUri == null ? null : `${remoteUri}/inbox`,
+			sharedInbox: normalizedHost == null ? null : `https://${normalizedHost}/inbox`,
+			followersUri: remoteUri == null ? null : `${remoteUri}/followers`,
 			token: secret,
 			passwordHash: hash ?? null,
 			publicKey: keyPair[0],

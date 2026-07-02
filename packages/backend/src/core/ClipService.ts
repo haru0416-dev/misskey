@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { MiNote, MiClip, NotesRepository } from '@/models/_.js';
+import type { MiNote, MiClip } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
+import { adjustNoteClippedCountInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import {
 	countClipNotesByClipIdFromDatabase,
 	createClipNoteInDatabase,
@@ -56,9 +57,6 @@ export class ClipService {
 	constructor(
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
 
 		private roleService: RoleService,
 		private idService: IdService,
@@ -122,7 +120,7 @@ export class ClipService {
 			throw new ClipService.TooManyClipNotesError();
 		}
 
-		const note = await this.notesRepository.findOneBy({ id: noteId });
+		const note = await fetchNoteByIdFromDatabase(this.db, noteId);
 		if (note == null) {
 			throw new ClipService.NoSuchNoteError();
 		}
@@ -149,7 +147,7 @@ export class ClipService {
 			lastClippedAt: new Date(),
 		});
 
-		this.notesRepository.increment({ id: noteId }, 'clippedCount', 1);
+		adjustNoteClippedCountInDatabase(this.db, noteId, 1);
 	}
 
 	@bindThis
@@ -160,7 +158,7 @@ export class ClipService {
 			throw new ClipService.NoSuchClipError();
 		}
 
-		const note = await this.notesRepository.findOneBy({ id: noteId });
+		const note = await fetchNoteByIdFromDatabase(this.db, noteId);
 
 		if (note == null) {
 			throw new ClipService.NoSuchNoteError();
@@ -171,6 +169,6 @@ export class ClipService {
 			clipId: clip.id,
 		});
 
-		this.notesRepository.decrement({ id: noteId }, 'clippedCount', 1);
+		adjustNoteClippedCountInDatabase(this.db, noteId, -1);
 	}
 }

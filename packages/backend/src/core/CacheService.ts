@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import type { BlockingsRepository, FollowingsRepository, MutingsRepository, MiUserProfile, UserProfilesRepository, UsersRepository, MiFollowing } from '@/models/_.js';
 import { MemoryKVCache, RedisKVCache } from '@/misc/cache.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { MiFollowing } from '@/models/Following.js';
+import type { MiUserProfile } from '@/models/UserProfile.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
@@ -15,6 +16,11 @@ import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import type { OnApplicationShutdown } from '@nestjs/common';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 
 @Injectable()
 export class CacheService implements OnApplicationShutdown {
@@ -39,21 +45,6 @@ export class CacheService implements OnApplicationShutdown {
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
 		private userEntityService: UserEntityService,
 	) {
 		//this.onMessage = this.onMessage.bind(this);
@@ -66,7 +57,7 @@ export class CacheService implements OnApplicationShutdown {
 		this.userProfileCache = new RedisKVCache<MiUserProfile>(this.redisClient, 'userProfile', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.userProfilesRepository.findOneByOrFail({ userId: key }),
+			fetcher: (key) => fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, key),
 			toRedisConverter: (value) => JSON.stringify(value),
 			fromRedisConverter: (value) => JSON.parse(value), // TODO: date型の考慮
 		});
@@ -74,10 +65,7 @@ export class CacheService implements OnApplicationShutdown {
 		this.userMutingsCache = new RedisKVCache<Set<string>>(this.redisClient, 'userMutings', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.mutingsRepository.find({
-				where: { muterId: key },
-				select: { muteeId: true },
-			}).then(xs => new Set(xs.map(x => x.muteeId))),
+			fetcher: (key) => listMuteeIdsByMuterIdFromDatabase(this.drizzle, key).then(xs => new Set(xs)),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value)),
 			fromRedisConverter: (value) => new Set(JSON.parse(value)),
 		});
@@ -85,10 +73,7 @@ export class CacheService implements OnApplicationShutdown {
 		this.userBlockingCache = new RedisKVCache<Set<string>>(this.redisClient, 'userBlocking', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.blockingsRepository.find({
-				where: { blockerId: key },
-				select: { blockeeId: true },
-			}).then(xs => new Set(xs.map(x => x.blockeeId))),
+			fetcher: (key) => listBlockeeIdsByBlockerIdFromDatabase(this.drizzle, key).then(xs => new Set(xs)),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value)),
 			fromRedisConverter: (value) => new Set(JSON.parse(value)),
 		});
@@ -96,10 +81,7 @@ export class CacheService implements OnApplicationShutdown {
 		this.userBlockedCache = new RedisKVCache<Set<string>>(this.redisClient, 'userBlocked', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.blockingsRepository.find({
-				where: { blockeeId: key },
-				select: { blockerId: true },
-			}).then(xs => new Set(xs.map(x => x.blockerId))),
+			fetcher: (key) => listBlockerIdsByBlockeeIdFromDatabase(this.drizzle, key).then(xs => new Set(xs)),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value)),
 			fromRedisConverter: (value) => new Set(JSON.parse(value)),
 		});
@@ -115,10 +97,7 @@ export class CacheService implements OnApplicationShutdown {
 		this.userFollowingsCache = new RedisKVCache<Record<string, Pick<MiFollowing, 'withReplies'> | undefined>>(this.redisClient, 'userFollowings', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.followingsRepository.find({
-				where: { followerId: key },
-				select: { followeeId: true, withReplies: true },
-			}).then(xs => {
+			fetcher: (key) => listFolloweeIdsWithRepliesByFollowerIdFromDatabase(this.drizzle, key).then(xs => {
 				const obj: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
 				for (const x of xs) {
 					obj[x.followeeId] = { withReplies: x.withReplies };
@@ -145,7 +124,7 @@ export class CacheService implements OnApplicationShutdown {
 				case 'userChangeDeletedState':
 				case 'remoteUserUpdated':
 				case 'localUserUpdated': {
-					const user = await this.usersRepository.findOneBy({ id: body.id });
+					const user = await fetchUserByIdFromDatabase(this.drizzle, body.id);
 					if (user == null) {
 						this.userByIdCache.delete(body.id);
 						this.localUserByIdCache.delete(body.id);
@@ -169,7 +148,8 @@ export class CacheService implements OnApplicationShutdown {
 					break;
 				}
 				case 'userTokenRegenerated': {
-					const user = await this.usersRepository.findOneByOrFail({ id: body.id }) as MiLocalUser;
+					const user = await fetchLocalUserByIdFromDatabase(this.drizzle, body.id);
+					if (user == null) throw new Error(`Local user ${body.id} not found`);
 					this.localUserByNativeTokenCache.delete(body.oldToken);
 					this.localUserByNativeTokenCache.set(body.newToken, user);
 					break;
@@ -190,7 +170,7 @@ export class CacheService implements OnApplicationShutdown {
 
 	@bindThis
 	public findUserById(userId: MiUser['id']) {
-		return this.userByIdCache.fetch(userId, () => this.usersRepository.findOneByOrFail({ id: userId }));
+		return this.userByIdCache.fetch(userId, () => fetchUserByIdOrFailFromDatabase(this.drizzle, userId));
 	}
 
 	@bindThis

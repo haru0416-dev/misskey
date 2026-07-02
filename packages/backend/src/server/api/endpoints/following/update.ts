@@ -6,11 +6,12 @@
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { FollowingsRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, updateFollowingByIdInDatabase } from '@/core/FollowingStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -65,8 +66,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private getterService: GetterService,
@@ -87,18 +88,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// Check not following
-			const exist = await this.followingsRepository.findOneBy({
-				followerId: follower.id,
-				followeeId: followee.id,
-			});
+			const exist = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(this.db, follower.id, followee.id);
 
 			if (exist == null) {
 				throw new ApiError(meta.errors.notFollowing);
 			}
 
-			await this.followingsRepository.update({
-				id: exist.id,
-			}, {
+			await updateFollowingByIdInDatabase(this.db, exist.id, {
 				notify: ps.notify != null ? (ps.notify === 'none' ? null : ps.notify) : undefined,
 				withReplies: ps.withReplies != null ? ps.withReplies : undefined,
 			});

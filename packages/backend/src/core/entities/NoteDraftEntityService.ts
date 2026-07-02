@@ -5,17 +5,17 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { EntityNotFoundError } from 'typeorm';
 import { DI } from '@/di-symbols.js';
+import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiUser, MiNote } from '@/models/_.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
-import type { ChannelsRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { DebounceLoader } from '@/misc/loader.js';
 import { IdService } from '@/core/IdService.js';
 import { fetchNoteDraftByIdOrFailFromDatabase } from '@/core/NoteDraftStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnModuleInit } from '@nestjs/common';
 import type { UserEntityService } from './UserEntityService.js';
@@ -35,9 +35,6 @@ export class NoteDraftEntityService implements OnModuleInit {
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
 	) {
 	}
 
@@ -88,7 +85,7 @@ export class NoteDraftEntityService implements OnModuleInit {
 		const channel = noteDraft.channelId
 			? noteDraft.channel
 				? noteDraft.channel
-				: await this.channelsRepository.findOneBy({ id: noteDraft.channelId })
+				: await fetchChannelByIdFromDatabase(this.db, noteDraft.channelId)
 			: null;
 
 		const packedFiles = options?._hint_?.packedFiles;
@@ -98,7 +95,7 @@ export class NoteDraftEntityService implements OnModuleInit {
 			try {
 				return await promise;
 			} catch (err) {
-				if (err instanceof EntityNotFoundError) {
+				if (isEntityNotFoundError(err)) {
 					return null;
 				}
 				throw err;

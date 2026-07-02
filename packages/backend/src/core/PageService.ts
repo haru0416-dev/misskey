@@ -4,14 +4,8 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import {
-	type NotesRepository,
-	type MiPage,
-	MiDriveFile,
-	type UsersRepository,
-} from '@/models/_.js';
+import type { MiPage, MiDriveFile } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
@@ -20,6 +14,8 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { createPageInDatabase, deletePageInDatabase, pageNameExistsForUserInDatabase, updatePageInDatabase } from '@/core/PageStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { adjustNotesPageCountInDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 
 export interface PageBody {
 	title: string;
@@ -39,12 +35,6 @@ export class PageService {
 	constructor(
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
 
 		private roleService: RoleService,
 		private moderationLogService: ModerationLogService,
@@ -80,7 +70,7 @@ export class PageService {
 
 		const referencedNotes = this.collectReferencedNotes(page.content);
 		if (referencedNotes.length > 0) {
-			await this.notesRepository.increment({ id: In(referencedNotes) }, 'pageCount', 1);
+			await adjustNotesPageCountInDatabase(this.drizzle, referencedNotes, 1);
 		}
 
 		return page;
@@ -127,10 +117,10 @@ export class PageService {
 			const addedNotes = afterReferencedNotes.filter(noteId => !beforeReferencedNotes.includes(noteId));
 
 			if (removedNotes.length > 0) {
-				await this.notesRepository.decrement({ id: In(removedNotes) }, 'pageCount', 1);
+				await adjustNotesPageCountInDatabase(this.drizzle, removedNotes, -1);
 			}
 			if (addedNotes.length > 0) {
-				await this.notesRepository.increment({ id: In(addedNotes) }, 'pageCount', 1);
+				await adjustNotesPageCountInDatabase(this.drizzle, addedNotes, 1);
 			}
 		}
 	}
@@ -151,7 +141,7 @@ export class PageService {
 		const { page } = result;
 
 		if (page.userId !== me.id) {
-			const user = await this.usersRepository.findOneByOrFail({ id: page.userId });
+			const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, page.userId);
 			this.moderationLogService.log(me, 'deletePage', {
 				pageId: page.id,
 				pageUserId: page.userId,
@@ -162,7 +152,7 @@ export class PageService {
 
 		const referencedNotes = this.collectReferencedNotes(page.content);
 		if (referencedNotes.length > 0) {
-			await this.notesRepository.decrement({ id: In(referencedNotes) }, 'pageCount', 1);
+			await adjustNotesPageCountInDatabase(this.drizzle, referencedNotes, -1);
 		}
 	}
 

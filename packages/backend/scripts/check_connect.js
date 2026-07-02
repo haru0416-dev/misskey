@@ -5,14 +5,17 @@
 
 import Redis from 'ioredis';
 import { loadConfig } from '../built/config.js';
-import { createPostgresDataSource } from '../built/postgres.js';
+import { createDrizzlePool } from '../built/drizzle.js';
 
 const config = loadConfig();
 
 async function connectToPostgres() {
-	const source = createPostgresDataSource(config);
-	await source.initialize();
-	await source.destroy();
+	const pool = createDrizzlePool(config);
+	try {
+		await pool.query('SELECT 1');
+	} finally {
+		await pool.end();
+	}
 }
 
 async function connectToRedis(redisOptions) {

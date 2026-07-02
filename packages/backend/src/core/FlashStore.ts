@@ -4,9 +4,9 @@
  */
 
 import { and, asc, desc, eq, gt, lt, or, sql, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { flash, type FlashInsert, type FlashRow } from '@/db/schema/flash.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { MiFlash, type FlashVisibility } from '@/models/Flash.js';
 import type { MiUser } from '@/models/User.js';

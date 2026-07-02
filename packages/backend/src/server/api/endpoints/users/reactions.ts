@@ -4,10 +4,9 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserProfilesRepository, NotesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { NoteReactionEntityService } from '@/core/entities/NoteReactionEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { CacheService } from '@/core/CacheService.js';
@@ -18,6 +17,8 @@ import { IdService } from '@/core/IdService.js';
 import { listNoteReactionsByUserIdFromDatabase, resolveNoteReactionPagination } from '@/core/NoteReactionStore.js';
 import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { listVisibleNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -67,19 +68,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
+
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private cacheService: CacheService,
 		private userEntityService: UserEntityService,
 		private noteReactionEntityService: NoteReactionEntityService,
-		private queryService: QueryService,
 		private roleService: RoleService,
 		private idService: IdService,
 	) {
@@ -92,7 +89,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					throw new ApiError(meta.errors.isRemoteUser);
 				}
 
-				const profile = await this.userProfilesRepository.findOneByOrFail({ userId: ps.userId });
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, ps.userId);
 				if ((me == null || me.id !== ps.userId) && !profile.publicReactions) {
 					throw new ApiError(meta.errors.reactionsNotPublic);
 				}
@@ -105,10 +102,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const userIdsWhoMeMuting = me ? await this.cacheService.userMutingsCache.fetch(me.id) : new Set<string>();
 
-			// note_reaction 側は自身のテーブルのみを Drizzle で取得し、visibility 等の判定が必要な
-			// note 側は従来通り TypeORM の queryService を使って(可視な note の id 集合を導出したうえで)
-			// フィルタする。SQL 1本の JOIN だった頃と同じく「limit に達するまで可視な reaction を探す」
-			// 挙動を維持するため、reaction をページ単位で取得しながら可視性判定を繰り返す。
 			const pagination = resolveNoteReactionPagination(this.idService, ps);
 			let sinceId = pagination.sinceId;
 			let untilId = pagination.untilId;
@@ -134,19 +127,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 
 				const noteIds = page.map(reaction => reaction.noteId);
-				const noteQuery = this.notesRepository.createQueryBuilder('note')
-					.andWhere('note.id IN (:...noteIds)', { noteIds })
-					.leftJoinAndSelect('note.user', 'user')
-					.leftJoinAndSelect('note.reply', 'reply')
-					.leftJoinAndSelect('note.renote', 'renote')
-					.leftJoinAndSelect('reply.user', 'replyUser')
-					.leftJoinAndSelect('renote.user', 'renoteUser');
-
-				this.queryService.generateVisibilityQuery(noteQuery, me);
-				this.queryService.generateBlockedHostQueryForNote(noteQuery);
-				this.queryService.generateSuspendedUserQueryForNote(noteQuery);
-
-				const notes = await noteQuery.getMany();
+				const notes = await listVisibleNotesByIdsFromDatabase(this.db, noteIds, {
+					me,
+					blockedHosts: this.instanceMeta.blockedHosts,
+				});
 				const noteMap = new Map(notes.map(note => [note.id, note]));
 
 				for (const reaction of page) {

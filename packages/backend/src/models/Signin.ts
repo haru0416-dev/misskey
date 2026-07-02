@@ -3,36 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { PrimaryColumn, Entity, Index, JoinColumn, Column, ManyToOne } from 'typeorm';
-import { id } from './util/id.js';
 import { MiUser } from './User.js';
 
 const manualIndex = { unique: false, synchronize: false } as const;
 
-@Entity('signin')
-@Index('IDX_SIGNIN_USER_ID_ID', ['userId', 'id'], manualIndex)
 export class MiSignin {
-	@PrimaryColumn(id())
 	public id: string;
 
-	@Index()
-	@Column(id())
 	public userId: MiUser['id'];
 
-	@ManyToOne(() => MiUser, {
-		onDelete: 'CASCADE',
-	})
-	@JoinColumn()
 	public user: MiUser | null;
 
-	@Column('varchar', {
-		length: 128,
-	})
 	public ip: string;
 
-	@Column('jsonb')
 	public headers: Record<string, any>;
 
-	@Column('boolean')
 	public success: boolean;
 }

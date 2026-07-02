@@ -6,27 +6,38 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeAll, test, expect } from 'vitest';
+import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // node-fetch only supports it's own Blob yet
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
-import { api, castAsError, initTestDb, post, role, signup, simpleGet, uploadFile } from '../utils.js';
+import { loadConfig } from '@/config.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { api, castAsError, post, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { MiUser } from '@/models/_.js';
 
 describe('Endpoints', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
 	let dave: misskey.entities.SignupResponse;
+	let db: MiDrizzleDatabase;
+	let pool: MiDrizzlePool | undefined;
 
 	beforeAll(async () => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		carol = await signup({ username: 'carol' });
 		dave = await signup({ username: 'dave' });
 		await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
 	}, 1000 * 60 * 2);
+
+	afterAll(async () => {
+		await pool?.end();
+	});
 
 	describe('signup', () => {
 		test('不正なユーザー名でアカウントが作成できない', async () => {
@@ -503,15 +514,12 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 
-			const connection = await initTestDb(true);
-			const Users = connection.getRepository(MiUser);
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.followersCount, 0);
 			assert.strictEqual(newBob.followingCount, 1);
-			const newAlice = await Users.findOneByOrFail({ id: alice.id });
+			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
 			assert.strictEqual(newAlice.followersCount, 1);
 			assert.strictEqual(newAlice.followingCount, 0);
-			connection.destroy();
 		});
 
 		test('既にフォローしている場合は怒る', async () => {
@@ -566,15 +574,12 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 
-			const connection = await initTestDb(true);
-			const Users = connection.getRepository(MiUser);
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.followersCount, 0);
 			assert.strictEqual(newBob.followingCount, 0);
-			const newAlice = await Users.findOneByOrFail({ id: alice.id });
+			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
 			assert.strictEqual(newAlice.followersCount, 0);
 			assert.strictEqual(newAlice.followingCount, 0);
-			connection.destroy();
 		});
 
 		test('フォローしていない場合は怒る', async () => {

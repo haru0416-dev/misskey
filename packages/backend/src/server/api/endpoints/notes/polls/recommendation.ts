@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { In } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
@@ -42,9 +41,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -60,14 +56,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			if (noteIds.length === 0) return [];
 
-			const notes = await this.notesRepository.find({
-				where: {
-					id: In(noteIds),
-				},
-				order: {
-					id: 'DESC',
-				},
-			});
+			const notes = await listNotesByIdsFromDatabase(this.db, noteIds);
+			notes.sort((a, b) => b.id.localeCompare(a.id));
 
 			return await this.noteEntityService.packMany(notes, me, {
 				detail: true,

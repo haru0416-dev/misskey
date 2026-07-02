@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, NotesRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
@@ -33,11 +33,13 @@ import { UtilityService } from '@/core/UtilityService.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { RoleService } from '@/core/RoleService.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { FeaturedService } from '@/core/FeaturedService.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import { PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
+import { decrementNoteReactionInDatabase, incrementNoteReactionInDatabase } from '@/core/NoteStore.js';
 
 const FALLBACK = '\u2764';
 
@@ -80,12 +82,6 @@ export class ReactionService {
 	constructor(
 		@Inject(DI.meta)
 		private meta: MiMeta,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -196,16 +192,12 @@ export class ReactionService {
 		if (this.meta.enableReactionsBuffering) {
 			await this.reactionsBufferingService.create(note.id, user.id, reaction, note.reactionAndUserPairCache);
 		} else {
-			const sql = `jsonb_set("reactions", '{${reaction}}', (COALESCE("reactions"->>'${reaction}', '0')::int + 1)::text::jsonb)`;
-			await this.notesRepository.createQueryBuilder().update()
-				.set({
-					reactions: () => sql,
-					...(note.reactionAndUserPairCache.length < PER_NOTE_REACTION_USER_PAIR_CACHE_MAX ? {
-						reactionAndUserPairCache: () => `array_append("reactionAndUserPairCache", '${user.id}/${reaction}')`,
-					} : {}),
-				})
-				.where('id = :id', { id: note.id })
-				.execute();
+			await incrementNoteReactionInDatabase(
+				this.db,
+				note.id,
+				reaction,
+				note.reactionAndUserPairCache.length < PER_NOTE_REACTION_USER_PAIR_CACHE_MAX ? `${user.id}/${reaction}` : null,
+			);
 		}
 
 		// 30%の確率、セルフではない、3日以内に投稿されたノートの場合ハイライト用ランキング更新
@@ -260,14 +252,14 @@ export class ReactionService {
 			const content = this.apRendererService.addContext(await this.apRendererService.renderLike(record, note));
 			const dm = this.apDeliverManagerService.createDeliverManager(user, content);
 			if (note.userHost !== null) {
-				const reactee = await this.usersRepository.findOneBy({ id: note.userId });
+				const reactee = await fetchUserByIdFromDatabase(this.db, note.userId);
 				dm.addDirectRecipe(reactee as MiRemoteUser);
 			}
 
 			if (['public', 'home', 'followers'].includes(note.visibility)) {
 				dm.addFollowersRecipe();
 			} else if (note.visibility === 'specified') {
-				const visibleUsers = await Promise.all(note.visibleUserIds.map(id => this.usersRepository.findOneBy({ id })));
+				const visibleUsers = await listUsersByIdsFromDatabase(this.db, note.visibleUserIds, { includeSuspended: true });
 				for (const u of visibleUsers.filter(u => u && this.userEntityService.isRemoteUser(u))) {
 					dm.addDirectRecipe(u as MiRemoteUser);
 				}
@@ -298,14 +290,7 @@ export class ReactionService {
 		if (this.meta.enableReactionsBuffering) {
 			await this.reactionsBufferingService.delete(note.id, user.id, exist.reaction);
 		} else {
-			const sql = `jsonb_set("reactions", '{${exist.reaction}}', (COALESCE("reactions"->>'${exist.reaction}', '0')::int - 1)::text::jsonb)`;
-			await this.notesRepository.createQueryBuilder().update()
-				.set({
-					reactions: () => sql,
-					reactionAndUserPairCache: () => `array_remove("reactionAndUserPairCache", '${user.id}/${exist.reaction}')`,
-				})
-				.where('id = :id', { id: note.id })
-				.execute();
+			await decrementNoteReactionInDatabase(this.db, note.id, exist.reaction, `${user.id}/${exist.reaction}`);
 		}
 
 		this.globalEventService.publishNoteStream(note, 'unreacted', {
@@ -318,7 +303,7 @@ export class ReactionService {
 			const content = this.apRendererService.addContext(this.apRendererService.renderUndo(await this.apRendererService.renderLike(exist, note), user));
 			const dm = this.apDeliverManagerService.createDeliverManager(user, content);
 			if (note.userHost !== null) {
-				const reactee = await this.usersRepository.findOneBy({ id: note.userId });
+				const reactee = await fetchUserByIdFromDatabase(this.db, note.userId);
 				dm.addDirectRecipe(reactee as MiRemoteUser);
 			}
 			dm.addFollowersRecipe();

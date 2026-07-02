@@ -11,7 +11,7 @@ import * as htmlParser from 'node-html-parser';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import * as Acct from '@/misc/acct.js';
-import type { UsersRepository, DriveFilesRepository, MiMeta, UserProfilesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { birthdaySchema, descriptionSchema, followedMessageSchema, locationSchema, nameSchema } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
@@ -35,6 +35,9 @@ import { safeForSql } from '@/misc/safe-for-sql.js';
 import { AvatarDecorationService } from '@/core/AvatarDecorationService.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
 import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
+import { appendVerifiedLinkToUserProfileInDatabase, fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase, type UserProfileUpdate } from '@/core/UserProfileStore.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/UserStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiLoggerService } from '../../ApiLoggerService.js';
 import { ApiError } from '../../error.js';
@@ -243,15 +246,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private instanceMeta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -270,13 +264,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private utilityService: UtilityService,
 	) {
 		super(meta, paramDef, async (ps, _user, token) => {
-			const user = await this.usersRepository.findOneByOrFail({ id: _user.id }) as MiLocalUser;
+			const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, _user.id) as MiLocalUser;
 			const isSecure = token == null;
 
-			const updates = {} as Partial<MiUser>;
-			const profileUpdates = {} as Partial<MiUserProfile>;
+			const updates: UserUpdate = {};
+			const profileUpdates: UserProfileUpdate = {};
 
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 			let policies: RolePolicies | null = null;
 
 			if (ps.name !== undefined) {
@@ -374,9 +368,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				policies ??= await this.roleService.getUserPolicies(user.id);
 				if (!policies.canUpdateBioMedia) throw new ApiError(meta.errors.restrictedByRole);
 
-				const avatar = await this.driveFilesRepository.findOneBy({ id: ps.avatarId });
+				const avatar = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.avatarId, user.id);
 
-				if (avatar == null || avatar.userId !== user.id) throw new ApiError(meta.errors.noSuchAvatar);
+				if (avatar == null) throw new ApiError(meta.errors.noSuchAvatar);
 				if (!avatar.type.startsWith('image/')) throw new ApiError(meta.errors.avatarNotAnImage);
 
 				updates.avatarId = avatar.id;
@@ -392,9 +386,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				policies ??= await this.roleService.getUserPolicies(user.id);
 				if (!policies.canUpdateBioMedia) throw new ApiError(meta.errors.restrictedByRole);
 
-				const banner = await this.driveFilesRepository.findOneBy({ id: ps.bannerId });
+				const banner = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.bannerId, user.id);
 
-				if (banner == null || banner.userId !== user.id) throw new ApiError(meta.errors.noSuchBanner);
+				if (banner == null) throw new ApiError(meta.errors.noSuchBanner);
 				if (!banner.type.startsWith('image/')) throw new ApiError(meta.errors.bannerNotAnImage);
 
 				updates.bannerId = banner.id;
@@ -473,7 +467,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					newAlsoKnownAs.add(toUrl);
 				}
 
-				updates.alsoKnownAs = newAlsoKnownAs.size > 0 ? Array.from(newAlsoKnownAs) : null;
+				updates.alsoKnownAs = newAlsoKnownAs.size > 0 ? Array.from(newAlsoKnownAs).join(',') : null;
 			}
 
 			//#region emojis/tags
@@ -527,11 +521,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			//#endregion
 
 			if (Object.keys(updates).length > 0) {
-				await this.usersRepository.update(user.id, updates);
+				await updateUserInDatabase(this.drizzle, user.id, updates);
 				this.globalEventService.publishInternalEvent('localUserUpdated', { id: user.id });
 			}
 
-			await this.userProfilesRepository.update(user.id, {
+			await updateUserProfileInDatabase(this.drizzle, user.id, {
 				...profileUpdates,
 				verifiedLinks: [],
 			});
@@ -541,7 +535,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				includeSecrets: isSecure,
 			});
 
-			const updatedProfile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const updatedProfile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 
 			this.cacheService.userProfileCache.set(user.id, updatedProfile);
 
@@ -582,12 +576,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const includesRelMeLinks = [...aEls, ...linkEls].some(link => link.attributes.rel?.split(/\s+/).includes('me') && link.attributes.href === myLink);
 
 			if (includesMyLink || includesRelMeLinks) {
-				await this.userProfilesRepository.createQueryBuilder('profile').update()
-					.where('userId = :userId', { userId: user.id })
-					.set({
-						verifiedLinks: () => `array_append("verifiedLinks", '${url}')`, // ここでSQLインジェクションされそうなのでとりあえず safeForSql で弾いている
-					})
-					.execute();
+				await appendVerifiedLinkToUserProfileInDatabase(this.drizzle, user.id, url);
 			}
 		} catch (_) {
 			// なにもしない

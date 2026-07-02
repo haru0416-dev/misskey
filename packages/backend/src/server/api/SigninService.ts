@@ -6,7 +6,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import * as Misskey from 'misskey-js';
 import { DI } from '@/di-symbols.js';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -15,6 +14,7 @@ import { bindThis } from '@/decorators.js';
 import { EmailService } from '@/core/EmailService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { getRequestIp } from '@/server/api/get-request-ip.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -24,9 +24,6 @@ export class SigninService {
 	constructor(
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
 
 		private signinEntityService: SigninEntityService,
 		private emailService: EmailService,
@@ -51,7 +48,7 @@ export class SigninService {
 
 			this.globalEventService.publishMainStream(user.id, 'signin', await this.signinEntityService.pack(record));
 
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 			if (profile.email && profile.emailVerified) {
 				this.emailService.sendEmail(profile.email, 'New login / ログインがありました',
 					'There is a new login. If you do not recognize this login, update the security status of your account, including changing your password. / 新しいログインがありました。このログインに心当たりがない場合は、パスワードを変更するなど、アカウントのセキュリティ状態を更新してください。',

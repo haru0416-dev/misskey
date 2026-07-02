@@ -4,9 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { MoreThan } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, NotesRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -16,6 +14,10 @@ import { bindThis } from '@/decorators.js';
 import { SearchService } from '@/core/SearchService.js';
 import { PageService } from '@/core/PageService.js';
 import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/PageStore.js';
+import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
+import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/NoteStore.js';
+import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
@@ -26,18 +28,6 @@ export class DeleteAccountProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -54,7 +44,7 @@ export class DeleteAccountProcessorService {
 	public async process(job: Bull.Job<DbUserDeleteJobData>): Promise<string | void> {
 		this.logger.info(`Deleting account of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.drizzle, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -63,16 +53,10 @@ export class DeleteAccountProcessorService {
 			let cursor: MiNote['id'] | null = null;
 
 			while (true) {
-				const notes = await this.notesRepository.find({
-					where: {
-						userId: user.id,
-						...(cursor ? { id: MoreThan(cursor) } : {}),
-					},
-					take: 100,
-					order: {
-						id: 1,
-					},
-				}) as MiNote[];
+				const notes = await listNotesByUserIdWithPaginationFromDatabase(this.drizzle, user.id, {
+					limit: 100,
+					sinceId: cursor,
+				});
 
 				if (notes.length === 0) {
 					break;
@@ -80,7 +64,7 @@ export class DeleteAccountProcessorService {
 
 				cursor = notes.at(-1)?.id ?? null;
 
-				await this.notesRepository.delete(notes.map(note => note.id));
+				await deleteNotesByIdsFromDatabase(this.drizzle, notes.map(note => note.id));
 
 				for (const note of notes) {
 					await this.searchService.unindexNote(note);
@@ -94,16 +78,10 @@ export class DeleteAccountProcessorService {
 			let cursor: MiDriveFile['id'] | null = null;
 
 			while (true) {
-				const files = await this.driveFilesRepository.find({
-					where: {
-						userId: user.id,
-						...(cursor ? { id: MoreThan(cursor) } : {}),
-					},
-					take: 10,
-					order: {
-						id: 1,
-					},
-				}) as MiDriveFile[];
+				const files = await listDriveFilesByUserIdWithPaginationFromDatabase(this.drizzle, user.id, {
+					limit: 10,
+					sinceId: cursor,
+				});
 
 				if (files.length === 0) {
 					break;
@@ -137,7 +115,7 @@ export class DeleteAccountProcessorService {
 		}
 
 		{ // Send email notification
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 			if (profile.email && profile.emailVerified) {
 				this.emailService.sendEmail(profile.email, 'Account deleted',
 					'Your account has been deleted.',
@@ -149,7 +127,7 @@ export class DeleteAccountProcessorService {
 		if (job.data.soft) {
 		// nop
 		} else {
-			await this.usersRepository.delete(job.data.user.id);
+			await deleteUserByIdFromDatabase(this.drizzle, job.data.user.id);
 		}
 
 		return 'Account deleted';

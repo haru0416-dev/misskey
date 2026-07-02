@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -16,6 +15,7 @@ import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { fetchPageByIdOrFailFromDatabase, updatePageContentInDatabase } from '@/core/PageStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
@@ -25,9 +25,6 @@ export class PageEntityService {
 	constructor(
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
 
 		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
@@ -50,10 +47,7 @@ export class PageEntityService {
 		const collectFile = (xs: any[]) => {
 			for (const x of xs) {
 				if (x.type === 'image') {
-					attachedFiles.push(this.driveFilesRepository.findOneBy({
-						id: x.fileId,
-						userId: page.userId,
-					}));
+					attachedFiles.push(fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, x.fileId, page.userId));
 				}
 				if (x.children) {
 					collectFile(x.children);

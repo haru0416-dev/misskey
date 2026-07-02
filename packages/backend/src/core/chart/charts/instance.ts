@@ -4,15 +4,18 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Redis from 'ioredis';
-import type { DriveFilesRepository, FollowingsRepository, UsersRepository, NotesRepository } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNote } from '@/models/Note.js';
 import { DI } from '@/di-symbols.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
+import { countFollowingsByFolloweeHostFromDatabase, countFollowingsByFollowerHostFromDatabase } from '@/core/FollowingStore.js';
+import { countNotesByUserHostFromDatabase } from '@/core/NoteStore.js';
+import { countUsersByHostFromDatabase } from '@/core/UserStore.js';
+import { countDriveFilesByUserHostFromDatabase } from '@/core/DriveFileStore.js';
 import Chart from '../core.js';
 import { ChartLoggerService } from '../ChartLoggerService.js';
 import { name, schema } from './entities/instance.js';
@@ -24,23 +27,14 @@ import type { KVs } from '../core.js';
 @Injectable()
 export default class InstanceChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private chartLoggerService: ChartLoggerService,
@@ -56,11 +50,11 @@ export default class InstanceChart extends Chart<typeof schema> { // eslint-disa
 			followersCount,
 			driveFiles,
 		] = await Promise.all([
-			this.notesRepository.countBy({ userHost: group }),
-			this.usersRepository.countBy({ host: group }),
-			this.followingsRepository.countBy({ followerHost: group }),
-			this.followingsRepository.countBy({ followeeHost: group }),
-			this.driveFilesRepository.countBy({ userHost: group }),
+			countNotesByUserHostFromDatabase(this.drizzle, group),
+			countUsersByHostFromDatabase(this.drizzle, group),
+			countFollowingsByFollowerHostFromDatabase(this.drizzle, group),
+			countFollowingsByFolloweeHostFromDatabase(this.drizzle, group),
+			countDriveFilesByUserHostFromDatabase(this.drizzle, group),
 		]);
 
 		return {

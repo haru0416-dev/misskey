@@ -5,11 +5,11 @@
 
 import bcrypt from 'bcryptjs';
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { deletePasswordResetRequestFromDatabase, fetchPasswordResetRequestByTokenFromDatabase } from '@/core/PasswordResetRequestStore.js';
+import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
@@ -36,9 +36,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -56,7 +53,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const salt = await bcrypt.genSalt(8);
 			const hash = await bcrypt.hash(ps.password, salt);
 
-			await this.userProfilesRepository.update(req.userId, {
+			await updateUserProfileInDatabase(this.drizzle, req.userId, {
 				password: hash,
 			});
 

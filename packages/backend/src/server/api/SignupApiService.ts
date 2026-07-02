@@ -5,11 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
-import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { UserProfilesRepository, UsersRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import { fetchRegistrationTicketByCodeFromDatabase, fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import type { Config } from '@/config.js';
@@ -19,7 +18,9 @@ import { SignupService } from '@/core/SignupService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { EmailService } from '@/core/EmailService.js';
 import { createUserPendingInDatabase, deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
-import { MiLocalUser } from '@/models/User.js';
+import { isLocalUsernameTaken } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
 import { bindThis } from '@/decorators.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
@@ -34,12 +35,6 @@ export class SignupApiService {
 
 		@Inject(DI.meta)
 		private meta: MiMeta,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -167,7 +162,7 @@ export class SignupApiService {
 		}
 
 		if (this.meta.emailRequiredForSignup) {
-			if (await this.usersRepository.exists({ where: { usernameLower: username.toLowerCase(), host: IsNull() } })) {
+			if (await isLocalUsernameTaken(this.drizzle, username)) {
 				throw new FastifyReplyError(400, 'DUPLICATED_USERNAME');
 			}
 
@@ -258,9 +253,9 @@ export class SignupApiService {
 
 			await deleteUserPendingFromDatabase(this.drizzle, pendingUser.id);
 
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: account.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, account.id);
 
-			await this.userProfilesRepository.update({ userId: profile.userId }, {
+			await updateUserProfileInDatabase(this.drizzle, profile.userId, {
 				email: pendingUser.email,
 				emailVerified: true,
 				emailVerifyCode: null,

@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { RolesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiRole } from '@/models/Role.js';
@@ -15,13 +14,11 @@ import { IdService } from '@/core/IdService.js';
 import { Packed } from '@/misc/json-schema.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { fetchRoleByIdOrFailFromDatabase } from '@/core/RoleStore.js';
 
 @Injectable()
 export class RoleEntityService {
 	constructor(
-		@Inject(DI.rolesRepository)
-		private rolesRepository: RolesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -34,7 +31,7 @@ export class RoleEntityService {
 		src: MiRole['id'] | MiRole,
 		me?: { id: MiUser['id'] } | null | undefined,
 	): Promise<Packed<'Role'>> {
-		const role = typeof src === 'object' ? src : await this.rolesRepository.findOneByOrFail({ id: src });
+		const role = typeof src === 'object' ? src : await fetchRoleByIdOrFailFromDatabase(this.db, src);
 
 		const assignedCount = await countActiveRoleAssignmentsByRoleIdFromDatabase(this.db, role.id);
 

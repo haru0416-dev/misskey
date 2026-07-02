@@ -9,7 +9,7 @@ import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiUser } from '@/models/User.js';
-import { deserializeUser } from './SignupStore.js';
+import { deserializeUser } from './UserStore.js';
 
 export type NoteDraftOrder = 'asc' | 'desc';
 type NoteDraftUpdate = Partial<Omit<NoteDraftInsert, 'id' | 'userId'>>;

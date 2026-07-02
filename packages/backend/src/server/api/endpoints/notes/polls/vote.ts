@@ -4,7 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository } from '@/models/_.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
@@ -17,6 +16,7 @@ import { DI } from '@/di-symbols.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
@@ -82,9 +82,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -158,7 +155,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// リモート投票の場合リプライ送信
 			if (note.userHost != null) {
-				const pollOwner = await this.usersRepository.findOneByOrFail({ id: note.userId }) as MiRemoteUser;
+				const pollOwner = await fetchUserByIdOrFailFromDatabase(this.db, note.userId) as MiRemoteUser;
 
 				this.queueService.deliver(me, this.apRendererService.addContext(await this.apRendererService.renderVote(me, vote, note, poll, pollOwner)), pollOwner.inbox, false);
 			}

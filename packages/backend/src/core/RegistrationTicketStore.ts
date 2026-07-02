@@ -133,7 +133,7 @@ function applyRegistrationTicketPaginationCondition(
 
 /**
  * invite/list 向け。sinceId/untilId/sinceDate/untilDate から実際に使うカーソルと並び順を解決する
- * (QueryService.makePaginationQuery と同じセマンティクス)。
+ * (旧 pagination query と同じセマンティクス)。
  */
 export function resolveRegistrationTicketPagination(
 	idService: { gen(time?: number): string },

@@ -5,7 +5,6 @@
 
 import { createPublicKey, randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import * as mfm from 'mfm-js';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
@@ -23,13 +22,17 @@ import { MfmService } from '@/core/MfmService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { IdService } from '@/core/IdService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { escapeHtml } from '@/misc/escape-html.js';
+import { fetchDriveFileByIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { JsonLdService } from './JsonLdService.js';
 import { ApMfmService } from './ApMfmService.js';
@@ -44,18 +47,6 @@ export class ApRendererService {
 
 		@Inject(DI.meta)
 		private meta: MiMeta,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -226,7 +217,7 @@ export class ApRendererService {
 	 */
 	@bindThis
 	public async renderFollowUser(id: MiUser['id']): Promise<string> {
-		const user = await this.usersRepository.findOneByOrFail({ id: id }) as MiPartialLocalUser | MiPartialRemoteUser;
+		const user = await fetchUserByIdOrFailFromDatabase(this.db, id) as MiPartialLocalUser | MiPartialRemoteUser;
 		return this.userEntityService.getUserUri(user);
 	}
 
@@ -360,7 +351,7 @@ export class ApRendererService {
 	public async renderNote(note: MiNote, dive = true): Promise<IPost> {
 		const getPromisedFiles = async (ids: string[]): Promise<MiDriveFile[]> => {
 			if (ids.length === 0) return [];
-			const items = await this.driveFilesRepository.findBy({ id: In(ids) });
+			const items = await listDriveFilesByIdsFromDatabase(this.db, ids);
 			return ids.map(id => items.find(item => item.id === id)).filter(x => x != null);
 		};
 
@@ -368,12 +359,12 @@ export class ApRendererService {
 		let inReplyToNote: MiNote | null;
 
 		if (note.replyId) {
-			inReplyToNote = await this.notesRepository.findOneBy({ id: note.replyId });
+			inReplyToNote = await fetchNoteByIdFromDatabase(this.db, note.replyId);
 
 			if (inReplyToNote != null) {
-				const inReplyToUserExist = await this.usersRepository.exists({ where: { id: inReplyToNote.userId } });
+				const inReplyToUser = await fetchUserByIdFromDatabase(this.db, inReplyToNote.userId);
 
-				if (inReplyToUserExist) {
+				if (inReplyToUser != null) {
 					if (inReplyToNote.uri) {
 						inReplyTo = inReplyToNote.uri;
 					} else {
@@ -392,7 +383,7 @@ export class ApRendererService {
 		let quote: string | undefined;
 
 		if (note.renoteId) {
-			const renote = await this.notesRepository.findOneBy({ id: note.renoteId });
+			const renote = await fetchNoteByIdFromDatabase(this.db, note.renoteId);
 
 			if (renote) {
 				quote = renote.uri ? renote.uri : `${this.config.url}/notes/${renote.id}`;
@@ -419,9 +410,7 @@ export class ApRendererService {
 			to = mentions;
 		}
 
-		const mentionedUsers = note.mentions.length > 0 ? await this.usersRepository.findBy({
-			id: In(note.mentions),
-		}) : [];
+		const mentionedUsers = note.mentions.length > 0 ? await listUsersByIdsFromDatabase(this.db, note.mentions, { includeSuspended: true }) : [];
 
 		const hashtagTags = note.tags.map(tag => this.renderHashtag(tag));
 		const mentionTags = mentionedUsers.map(u => this.renderMention(u as MiLocalUser | MiRemoteUser));
@@ -502,9 +491,9 @@ export class ApRendererService {
 		const isSystem = user.username.includes('.');
 
 		const [avatar, banner, profile] = await Promise.all([
-			user.avatarId ? this.driveFilesRepository.findOneBy({ id: user.avatarId }) : undefined,
-			user.bannerId ? this.driveFilesRepository.findOneBy({ id: user.bannerId }) : undefined,
-			this.userProfilesRepository.findOneByOrFail({ userId: user.id }),
+			user.avatarId ? fetchDriveFileByIdFromDatabase(this.db, user.avatarId) : undefined,
+			user.bannerId ? fetchDriveFileByIdFromDatabase(this.db, user.bannerId) : undefined,
+			fetchUserProfileByUserIdOrFailFromDatabase(this.db, user.id),
 		]);
 
 		const tryRewriteUrl = (maybeUrl: string) => {

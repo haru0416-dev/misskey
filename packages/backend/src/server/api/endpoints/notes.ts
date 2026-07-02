@@ -4,11 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listPublicNotesFromDatabase } from '@/core/NoteStore.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -44,48 +45,36 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('note.visibility = \'public\'')
-				.andWhere('note.localOnly = FALSE')
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser');
-
-			if (ps.local) {
-				query.andWhere('note.userHost IS NULL');
-			}
-
-			if (ps.reply !== undefined) {
-				query.andWhere(ps.reply ? 'note.replyId IS NOT NULL' : 'note.replyId IS NULL');
-			}
-
-			if (ps.renote !== undefined) {
-				query.andWhere(ps.renote ? 'note.renoteId IS NOT NULL' : 'note.renoteId IS NULL');
-			}
-
-			if (ps.withFiles !== undefined) {
-				query.andWhere(ps.withFiles ? 'note.fileIds != \'{}\'' : 'note.fileIds = \'{}\'');
-			}
-
-			if (ps.poll !== undefined) {
-				query.andWhere(ps.poll ? 'note.hasPoll = TRUE' : 'note.hasPoll = FALSE');
-			}
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
 			// TODO
 			//if (bot != undefined) {
 			//	query.isBot = bot;
 			//}
 
-			const notes = await query.limit(ps.limit).getMany();
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
+			}
+
+			const notes = await listPublicNotesFromDatabase(this.db, {
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				local: ps.local,
+				reply: ps.reply,
+				renote: ps.renote,
+				withFiles: ps.withFiles,
+				poll: ps.poll,
+			});
 
 			return await this.noteEntityService.packMany(notes);
 		});

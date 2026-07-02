@@ -11,11 +11,7 @@ import type { IObject } from '@/core/activitypub/type.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { LoggerService } from '@/core/LoggerService.js';
 import type { UtilityService } from '@/core/UtilityService.js';
-import type {
-	MiMeta,
-	NotesRepository,
-	UsersRepository,
-} from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { bindThis } from '@/decorators.js';
 import { Resolver } from '@/core/activitypub/ApResolverService.js';
@@ -34,8 +30,6 @@ export class MockResolver extends Resolver {
 		super(
 			{} as Config,
 			{} as MiMeta,
-			{} as UsersRepository,
-			{} as NotesRepository,
 			{} as MiDrizzleDatabase,
 			{} as UtilityService,
 			{} as SystemAccountService,

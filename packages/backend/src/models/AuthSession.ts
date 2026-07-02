@@ -3,43 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Entity, PrimaryColumn, Index, Column, ManyToOne, JoinColumn } from 'typeorm';
-import { id } from './util/id.js';
 import { MiUser } from './User.js';
 import { MiApp } from './App.js';
 
-@Entity('auth_session')
 export class MiAuthSession {
-	@PrimaryColumn(id())
 	public id: string;
 
-	@Index()
-	@Column('varchar', {
-		length: 128,
-	})
 	public token: string;
 
-	@Column({
-		...id(),
-		nullable: true,
-	})
-	@Index('IDX_AUTH_SESSION_USER_ID', { synchronize: false })
 	public userId: MiUser['id'] | null;
 
-	@ManyToOne(() => MiUser, {
-		onDelete: 'CASCADE',
-		nullable: true,
-	})
-	@JoinColumn()
 	public user: MiUser | null;
 
-	@Column(id())
-	@Index('IDX_AUTH_SESSION_APP_ID', { synchronize: false })
 	public appId: MiApp['id'];
 
-	@ManyToOne(() => MiApp, {
-		onDelete: 'CASCADE',
-	})
-	@JoinColumn()
 	public app: MiApp | null;
 }

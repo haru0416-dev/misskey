@@ -4,18 +4,18 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
-import type { MiMeta, MiUserList, NotesRepository, UserListsRepository } from '@/models/_.js';
-import { MiUserListMembership } from '@/models/UserListMembership.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import ActiveUsersChart from '@/core/chart/charts/active-users.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
-import { QueryService } from '@/core/QueryService.js';
-import { MiLocalUser } from '@/models/User.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import { listUserListTimelineNotesFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -72,34 +72,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteEntityService: NoteEntityService,
 		private activeUsersChart: ActiveUsersChart,
 		private idService: IdService,
 		private fanoutTimelineEndpointService: FanoutTimelineEndpointService,
-		private queryService: QueryService,
 		private channelMutingService: ChannelMutingService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
 
-			const list = await this.userListsRepository.findOneBy({
-				id: ps.listId,
-				userId: me.id,
-			});
+			const list = await fetchUserListByIdAndUserIdFromDatabase(this.db, ps.listId, me.id);
 
 			if (list == null) {
 				throw new ApiError(meta.errors.noSuchList);
 			}
 
 			if (!this.serverSettings.enableFanoutTimeline) {
-				const timeline = await this.getFromDb(list, {
+				const timeline = await this.getFromDb(list.id, {
 					untilId,
 					sinceId,
 					limit: ps.limit,
@@ -125,7 +118,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				redisTimelines: ps.withFiles ? [`userListTimelineWithFiles:${list.id}`] : [`userListTimeline:${list.id}`],
 				alwaysIncludeMyNotes: true,
 				excludePureRenotes: !ps.withRenotes,
-				dbFallback: async (untilId, sinceId, limit) => await this.getFromDb(list, {
+				dbFallback: async (untilId, sinceId, limit) => await this.getFromDb(list.id, {
 					untilId,
 					sinceId,
 					limit,
@@ -143,7 +136,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		});
 	}
 
-	private async getFromDb(list: MiUserList, ps: {
+	private async getFromDb(listId: string, ps: {
 		untilId: string | null,
 		sinceId: string | null,
 		limit: number,
@@ -154,96 +147,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		withRenotes: boolean,
 	}, me: MiLocalUser) {
 		//#region Construct query
-		const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
-			.innerJoin(MiUserListMembership, 'userListMemberships', 'userListMemberships.userId = note.userId')
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser')
-			.andWhere('userListMemberships.userListId = :userListId', { userListId: list.id })
-			.andWhere('note.channelId IS NULL') // チャンネルノートではない
-			.andWhere(new Brackets(qb => {
-				qb
-					.where('note.replyId IS NULL') // 返信ではない
-					.orWhere(new Brackets(qb => {
-						qb // 返信だけど投稿者自身への返信
-							.where('note.replyId IS NOT NULL')
-							.andWhere('note.replyUserId = note.userId');
-					}))
-					.orWhere(new Brackets(qb => {
-						qb // 返信だけど自分宛ての返信
-							.where('note.replyId IS NOT NULL')
-							.andWhere('note.replyUserId = :meId', { meId: me.id });
-					}))
-					.orWhere(new Brackets(qb => {
-						qb // 返信だけどwithRepliesがtrueの場合
-							.where('note.replyId IS NOT NULL')
-							.andWhere('userListMemberships.withReplies = true');
-					}));
-			}));
-
-		this.queryService.generateVisibilityQuery(query, me);
-		this.queryService.generateBaseNoteFilteringQuery(query, me);
-		this.queryService.generateMutedUserRenotesQueryForNotes(query, me);
-
 		// -- ミュートされたチャンネルのリノート対策
 		const mutedChannelIds = await this.channelMutingService
 			.list({ requestUserId: me.id }, { idOnly: true })
 			.then(x => x.map(x => x.id));
-		if (mutedChannelIds.length > 0) {
-			query.andWhere(new Brackets(qb => {
-				qb.orWhere('note.renoteChannelId IS NULL')
-					.orWhere('note.renoteChannelId NOT IN (:...mutedChannelIds)', { mutedChannelIds });
-			}));
-		}
 
-		if (ps.includeMyRenotes === false) {
-			query.andWhere(new Brackets(qb => {
-				qb.orWhere('note.userId != :meId', { meId: me.id });
-				qb.orWhere('note.renoteId IS NULL');
-				qb.orWhere('note.text IS NOT NULL');
-				qb.orWhere('note.fileIds != \'{}\'');
-				qb.orWhere('0 < (SELECT COUNT(*) FROM poll WHERE poll."noteId" = note.id)');
-			}));
-		}
-
-		if (ps.includeRenotedMyNotes === false) {
-			query.andWhere(new Brackets(qb => {
-				qb.orWhere('note.renoteUserId != :meId', { meId: me.id });
-				qb.orWhere('note.renoteId IS NULL');
-				qb.orWhere('note.text IS NOT NULL');
-				qb.orWhere('note.fileIds != \'{}\'');
-				qb.orWhere('0 < (SELECT COUNT(*) FROM poll WHERE poll."noteId" = note.id)');
-			}));
-		}
-
-		if (ps.includeLocalRenotes === false) {
-			query.andWhere(new Brackets(qb => {
-				qb.orWhere('note.renoteUserHost IS NOT NULL');
-				qb.orWhere('note.renoteId IS NULL');
-				qb.orWhere('note.text IS NOT NULL');
-				qb.orWhere('note.fileIds != \'{}\'');
-				qb.orWhere('0 < (SELECT COUNT(*) FROM poll WHERE poll."noteId" = note.id)');
-			}));
-		}
-
-		if (ps.withRenotes === false) {
-			query.andWhere(new Brackets(qb => {
-				qb.orWhere('note.renoteId IS NULL');
-				qb.orWhere(new Brackets(qb => {
-					qb.orWhere('note.text IS NOT NULL');
-					qb.orWhere('note.fileIds != \'{}\'');
-					qb.orWhere('0 < (SELECT COUNT(*) FROM poll WHERE poll."noteId" = note.id)');
-				}));
-			}));
-		}
-
-		if (ps.withFiles) {
-			query.andWhere('note.fileIds != \'{}\'');
-		}
+		const notes = await listUserListTimelineNotesFromDatabase(this.db, {
+			listId,
+			me,
+			mutedChannelIds,
+			limit: ps.limit,
+			sinceId: ps.sinceId,
+			untilId: ps.untilId,
+			includeMyRenotes: ps.includeMyRenotes,
+			includeRenotedMyNotes: ps.includeRenotedMyNotes,
+			includeLocalRenotes: ps.includeLocalRenotes,
+			withRenotes: ps.withRenotes,
+			withFiles: ps.withFiles,
+			blockedHosts: this.serverSettings.blockedHosts,
+		});
 		//#endregion
 
-		return await query.limit(ps.limit).getMany();
+		return notes;
 	}
 }

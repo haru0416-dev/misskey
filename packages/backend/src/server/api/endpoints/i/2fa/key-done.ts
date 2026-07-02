@@ -9,12 +9,12 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { ApiError } from '@/server/api/error.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -61,9 +61,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -74,7 +71,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const token = ps.token;
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: me.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, me.id);
 
 			if (profile.twoFactorEnabled) {
 				if (token == null) {

@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
 import { ApiError } from '@/server/api/error.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['channels', 'mute'],
@@ -44,13 +45,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
+
 		private channelMutingService: ChannelMutingService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Check if exists the channel
-			const targetChannel = await this.channelsRepository.findOneBy({ id: ps.channelId });
+			const targetChannel = await fetchChannelByIdFromDatabase(this.drizzle, ps.channelId);
 			if (!targetChannel) {
 				throw new ApiError(meta.errors.noSuchChannel);
 			}

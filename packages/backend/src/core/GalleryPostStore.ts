@@ -4,9 +4,9 @@
  */
 
 import { and, asc, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { galleryPost, type GalleryPostInsert, type GalleryPostRow } from '@/db/schema/gallery-post.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiUser } from '@/models/User.js';
 

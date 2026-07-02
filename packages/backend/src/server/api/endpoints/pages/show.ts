@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { IsNull } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository } from '@/models/_.js';
 import type { MiPage } from '@/models/Page.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { PageEntityService } from '@/core/entities/PageEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
 import { fetchPageByIdFromDatabase, fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
@@ -57,9 +56,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -71,10 +67,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if ('pageId' in ps) {
 				page = await fetchPageByIdFromDatabase(this.drizzle, ps.pageId);
 			} else {
-				const author = await this.usersRepository.findOneBy({
-					host: IsNull(),
-					usernameLower: ps.username.toLowerCase(),
-				});
+				const author = await fetchLocalUserByUsernameFromDatabase(this.drizzle, ps.username);
 				if (author) {
 					page = await fetchPageByNameAndUserIdFromDatabase(this.drizzle, ps.name, author.id);
 				}

@@ -8,7 +8,7 @@ import { Writable } from 'node:stream';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { MiClip, MiUser, NotesRepository, UsersRepository } from '@/models/_.js';
+import type { MiClip, MiUser } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -18,11 +18,12 @@ import type { MiClipNote } from '@/models/ClipNote.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { NotificationService } from '@/core/NotificationService.js';
-import { QueryService } from '@/core/QueryService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
 import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/ClipStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
@@ -33,18 +34,11 @@ export class ExportClipsProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private queueLoggerService: QueueLoggerService,
-		private queryService: QueryService,
 		private idService: IdService,
 		private notificationService: NotificationService,
 	) {
@@ -55,7 +49,7 @@ export class ExportClipsProcessorService {
 	public async process(job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 		this.logger.info(`Exporting clips of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -144,13 +138,7 @@ export class ExportClipsProcessorService {
 
 			cursor = clipNotes.at(-1)?.id ?? null;
 			const noteIds = clipNotes.map(clipNote => clipNote.noteId);
-			const noteQuery = this.notesRepository.createQueryBuilder('note')
-				.innerJoinAndSelect('note.user', 'user')
-				.where('note.id IN (:...noteIds)', { noteIds });
-
-			this.queryService.generateVisibilityQuery(noteQuery, { id: userId });
-
-			const notes = await noteQuery.getMany() as (MiNote & { user: MiUser })[];
+			const notes = await listVisibleNotesWithUsersByIdsFromDatabase(this.db, noteIds, { id: userId });
 			const noteMap = new Map(notes.map(note => [note.id, note]));
 
 			for (const clipNote of clipNotes) {

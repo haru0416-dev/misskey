@@ -4,13 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository, UserProfilesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
 import { RoleEntityService } from '@/core/entities/RoleEntityService.js';
 import { IdService } from '@/core/IdService.js';
 import { listSigninsByUserIdFromDatabase } from '@/core/SigninStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
 
@@ -196,12 +197,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -211,8 +206,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const [user, profile] = await Promise.all([
-				this.usersRepository.findOneBy({ id: ps.userId }),
-				this.userProfilesRepository.findOneBy({ userId: ps.userId }),
+				fetchUserByIdFromDatabase(this.drizzle, ps.userId),
+				fetchUserProfileByUserIdFromDatabase(this.drizzle, ps.userId),
 			]);
 
 			if (user == null || profile == null) {
@@ -222,7 +217,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const isModerator = await this.roleService.isModerator(user);
 			const isSilenced = !(await this.roleService.getUserPolicies(user.id)).canPublicNote;
 
-			const _me = await this.usersRepository.findOneByOrFail({ id: me.id });
+			const _me = await fetchUserByIdOrFailFromDatabase(this.drizzle, me.id);
 			if (!await this.roleService.isAdministrator(_me) && await this.roleService.isAdministrator(user)) {
 				throw new Error('cannot show info of admin');
 			}

@@ -4,13 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
-import type { ChannelsRepository } from '@/models/_.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listChannelsBySearchFromDatabase } from '@/core/ChannelStore.js';
+import { IdService } from '@/core/IdService.js';
 
 export const meta = {
 	tags: ['channels'],
@@ -45,31 +45,23 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
+		private idService: IdService,
 		private channelEntityService: ChannelEntityService,
-		private queryService: QueryService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.channelsRepository.createQueryBuilder('channel'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('channel.isArchived = FALSE');
-
-			if (ps.query !== '') {
-				if (ps.type === 'nameAndDescription') {
-					query.andWhere(new Brackets(qb => {
-						qb
-							.where('channel.name ILIKE :q', { q: `%${ sqlLikeEscape(ps.query) }%` })
-							.orWhere('channel.description ILIKE :q', { q: `%${ sqlLikeEscape(ps.query) }%` });
-					}));
-				} else {
-					query.andWhere('channel.name ILIKE :q', { q: `%${ sqlLikeEscape(ps.query) }%` });
-				}
-			}
-
-			const channels = await query
-				.limit(ps.limit)
-				.getMany();
+			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate) : null);
+			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate) : null);
+			const channels = await listChannelsBySearchFromDatabase(this.db, {
+				query: sqlLikeEscape(ps.query),
+				type: ps.type,
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				order: sinceId != null && untilId == null ? 'asc' : 'desc',
+			});
 
 			return await Promise.all(channels.map(x => this.channelEntityService.pack(x, me)));
 		});

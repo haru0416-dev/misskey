@@ -4,9 +4,9 @@
  */
 
 import { and, asc, desc, eq, isNotNull, or } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { accessToken, type AccessTokenInsert, type AccessTokenRow } from '@/db/schema/access-token.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiApp } from '@/models/App.js';
 import type { MiUser } from '@/models/User.js';

@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { RelayService } from '@/core/RelayService.js';
@@ -18,17 +17,13 @@ import { bindThis } from '@/decorators.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
 import { fetchPollByNoteIdFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class PollService {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -88,12 +83,12 @@ export class PollService {
 
 	@bindThis
 	public async deliverQuestionUpdate(noteId: MiNote['id']) {
-		const note = await this.notesRepository.findOneBy({ id: noteId });
+		const note = await fetchNoteByIdFromDatabase(this.db, noteId);
 		if (note == null) throw new Error('note not found');
 
 		if (note.localOnly) return;
 
-		const user = await this.usersRepository.findOneBy({ id: note.userId });
+		const user = await fetchUserByIdFromDatabase(this.db, note.userId);
 		if (user == null) throw new Error('note not found');
 
 		if (this.userEntityService.isLocalUser(user)) {

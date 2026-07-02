@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, NotesRepository } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { MiRemoteUser } from '@/models/User.js';
@@ -17,7 +16,9 @@ import { ApLoggerService } from '../ApLoggerService.js';
 import { ApResolverService } from '../ApResolverService.js';
 import type { Resolver } from '../ApResolverService.js';
 import type { IObject } from '../type.js';
+import { fetchNoteByUriFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdFromDatabase, updatePollVotesInDatabase } from '@/core/PollStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
@@ -27,12 +28,6 @@ export class ApQuestionService {
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -81,13 +76,13 @@ export class ApQuestionService {
 		if (this.utilityService.isUriLocal(uri)) throw new Error('uri points local');
 
 		//#region このサーバーに既に登録されているか
-		const note = await this.notesRepository.findOneBy({ uri });
+		const note = await fetchNoteByUriFromDatabase(this.db, uri);
 		if (note == null) throw new Error('Question is not registered');
 
 		const poll = await fetchPollByNoteIdFromDatabase(this.db, note.id);
 		if (poll == null) throw new Error('Question is not registered');
 
-		const user = await this.usersRepository.findOneBy({ id: poll.userId });
+		const user = await fetchUserByIdFromDatabase(this.db, poll.userId);
 		if (user == null) throw new Error('Question is not registered');
 		//#endregion
 

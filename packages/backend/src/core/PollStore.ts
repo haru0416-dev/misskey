@@ -4,9 +4,9 @@
  */
 
 import { and, desc, eq, gt, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
-import { poll, type PollRow } from '@/db/schema/poll.js';
+import { poll, type PollInsert, type PollRow } from '@/db/schema/poll.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiPoll } from '@/models/Poll.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -15,6 +15,15 @@ import type { MiUser } from '@/models/User.js';
 // MiPoll.note は必須プロパティなので他の移行済み Store と同様に as でキャストする。
 function deserializePoll(row: PollRow): MiPoll {
 	return row as MiPoll;
+}
+
+export async function createPollInDatabase(
+	db: MiDrizzleDatabase,
+	values: PollInsert,
+): Promise<void> {
+	await db
+		.insert(poll)
+		.values(values);
 }
 
 export async function fetchPollByNoteIdFromDatabase(
@@ -59,7 +68,7 @@ export async function updatePollVotesInDatabase(
 
 /**
  * 投票時に該当選択肢の得票数だけをインクリメントする。votes 配列を読み直して丸ごと書き戻すのではなく、
- * 元の TypeORM 実装と同じく SQL の配列添字更新構文 (`votes[n] = votes[n] + 1`) を使う。
+ * SQL の配列添字更新構文 (`votes[n] = votes[n] + 1`) を使う。
  */
 export async function incrementPollVoteInDatabase(
 	db: MiDrizzleDatabase,

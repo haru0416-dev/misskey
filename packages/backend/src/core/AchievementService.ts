@@ -4,9 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserProfilesRepository } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { bindThis } from '@/decorators.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
@@ -14,8 +15,8 @@ import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
 @Injectable()
 export class AchievementService {
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private notificationService: NotificationService,
 	) {
@@ -30,11 +31,11 @@ export class AchievementService {
 
 		const date = Date.now();
 
-		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: userId });
+		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, userId);
 
 		if (profile.achievements.some(a => a.name === type)) return;
 
-		await this.userProfilesRepository.update(userId, {
+		await updateUserProfileInDatabase(this.db, userId, {
 			achievements: [...profile.achievements, {
 				name: type,
 				unlockedAt: date,

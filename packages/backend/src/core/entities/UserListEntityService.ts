@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { UserListsRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
 import type { MiUserList } from '@/models/UserList.js';
@@ -13,15 +12,13 @@ import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import { fetchUserListByIdOrFailFromDatabase } from '@/core/UserListStore.js';
 import type { UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import { UserEntityService } from './UserEntityService.js';
 
 @Injectable()
 export class UserListEntityService {
 	constructor(
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -34,7 +31,7 @@ export class UserListEntityService {
 	public async pack(
 		src: MiUserList['id'] | MiUserList,
 	): Promise<Packed<'UserList'>> {
-		const userList = typeof src === 'object' ? src : await this.userListsRepository.findOneByOrFail({ id: src });
+		const userList = typeof src === 'object' ? src : await fetchUserListByIdOrFailFromDatabase(this.db, src);
 
 		const userIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(this.db, userList.id);
 
@@ -62,4 +59,3 @@ export class UserListEntityService {
 		})));
 	}
 }
-

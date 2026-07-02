@@ -9,14 +9,25 @@ import { Inject, Injectable } from '@nestjs/common';
 import sharp from 'sharp';
 import type { Sharp } from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
-import { In, IsNull } from 'typeorm';
 import { DeleteObjectCommandInput, PutObjectCommandInput, NoSuchKey } from '@aws-sdk/client-s3';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, UsersRepository, UserProfilesRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import {
 	fetchDriveFolderByIdAndUserIdFromDatabase,
 	fetchDriveFolderByIdAndUserIdOrFailFromDatabase,
 } from '@/core/DriveFolderStore.js';
+import {
+	createDriveFileInDatabase,
+	deleteDriveFileByIdInDatabase,
+	fetchDriveFileByIdFromDatabase,
+	fetchDriveFileByMd5AndUserIdFromDatabase,
+	fetchDriveFileByUriAndUserIdFromDatabase,
+	listDriveFileIdsExceedingUserCapacityFromDatabase,
+	updateDriveFileInDatabase,
+	updateDriveFilesFolderByIdsAndUserIdInDatabase,
+} from '@/core/DriveFileStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
 import Logger from '@/logger.js';
@@ -106,15 +117,6 @@ export class DriveService {
 
 		@Inject(DI.meta)
 		private meta: MiMeta,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -228,7 +230,7 @@ export class DriveService {
 			file.size = size;
 			file.storedInternal = false;
 
-			return await this.driveFilesRepository.insertOne(file);
+			return await createDriveFileInDatabase(this.db, file);
 		} else { // use internal storage
 			const accessKey = randomUUID();
 			const thumbnailAccessKey = 'thumbnail-' + randomUUID();
@@ -262,7 +264,7 @@ export class DriveService {
 			file.md5 = hash;
 			file.size = size;
 
-			return await this.driveFilesRepository.insertOne(file);
+			return await createDriveFileInDatabase(this.db, file);
 		}
 	}
 
@@ -417,27 +419,15 @@ export class DriveService {
 	// Expire oldest file (without avatar or banner) of remote user
 	@bindThis
 	private async expireOldFile(user: MiRemoteUser, driveCapacity: number) {
-		const q = this.driveFilesRepository.createQueryBuilder('file')
-			.where('file.userId = :userId', { userId: user.id })
-			.andWhere('file.isLink = FALSE');
-
-		if (user.avatarId) {
-			q.andWhere('file.id != :avatarId', { avatarId: user.avatarId });
-		}
-
-		if (user.bannerId) {
-			q.andWhere('file.id != :bannerId', { bannerId: user.bannerId });
-		}
-
-		//This selete is hard coded, be careful if change database schema
-		q.addSelect('SUM("file"."size") OVER (ORDER BY "file"."id" DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)', 'acc_usage');
-		q.orderBy('file.id', 'ASC');
-
-		const fileList = await q.getRawMany();
-		const exceedFileIds = fileList.filter((x: any) => x.acc_usage > driveCapacity).map((x: any) => x.file_id);
+		const exceedFileIds = await listDriveFileIdsExceedingUserCapacityFromDatabase(this.db, {
+			userId: user.id,
+			driveCapacity,
+			avatarId: user.avatarId,
+			bannerId: user.bannerId,
+		});
 
 		for (const fileId of exceedFileIds) {
-			const file = await this.driveFilesRepository.findOneBy({ id: fileId });
+			const file = await fetchDriveFileByIdFromDatabase(this.db, fileId);
 			if (file == null) continue;
 			this.deleteFile(file, true);
 		}
@@ -503,17 +493,14 @@ export class DriveService {
 
 		if (user && !force) {
 		// Check if there is a file with the same hash
-			const matched = await this.driveFilesRepository.findOneBy({
-				md5: info.md5,
-				userId: user.id,
-			});
+			const matched = await fetchDriveFileByMd5AndUserIdFromDatabase(this.db, info.md5, user.id);
 
 			if (matched) {
 				this.registerLogger.info(`file with same hash is found: ${matched.id}`);
 				if (sensitive && !matched.isSensitive) {
 					// The file is federated as sensitive for this time, but was federated as non-sensitive before.
 					// Therefore, update the file to sensitive.
-					await this.driveFilesRepository.update({ id: matched.id }, { isSensitive: true });
+					await updateDriveFileInDatabase(this.db, matched.id, { isSensitive: true });
 					matched.isSensitive = true;
 				}
 				return matched;
@@ -558,7 +545,7 @@ export class DriveService {
 					if (isLocalUser) {
 						throw new IdentifiableError('c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6', 'No free space.');
 					}
-					await this.expireOldFile(await this.usersRepository.findOneByOrFail({ id: user.id }) as MiRemoteUser, driveCapacity - info.size);
+					await this.expireOldFile(await fetchUserByIdOrFailFromDatabase(this.db, user.id) as MiRemoteUser, driveCapacity - info.size);
 				}
 			}
 		}
@@ -590,7 +577,7 @@ export class DriveService {
 			properties['orientation'] = info.orientation;
 		}
 
-		const profile = user ? await this.userProfilesRepository.findOneBy({ userId: user.id }) : null;
+		const profile = user ? await fetchUserProfileByUserIdFromDatabase(this.db, user.id) : null;
 
 		const folder = await fetchFolder();
 
@@ -641,16 +628,13 @@ export class DriveService {
 				file.type = info.type.mime;
 				file.storedInternal = false;
 
-				file = await this.driveFilesRepository.insertOne(file);
+				file = await createDriveFileInDatabase(this.db, file);
 			} catch (err) {
 			// duplicate key error (when already registered)
 				if (isDuplicateKeyValueError(err)) {
 					this.registerLogger.info(`already registered ${file.uri}`);
 
-					file = await this.driveFilesRepository.findOneBy({
-						uri: file.uri!,
-						userId: user ? user.id : IsNull(),
-					}) as MiDriveFile;
+					file = await fetchDriveFileByUriAndUserIdFromDatabase(this.db, file.uri!, user ? user.id : null) as MiDriveFile;
 				} else {
 					this.registerLogger.error(err as Error);
 					throw err;
@@ -703,7 +687,7 @@ export class DriveService {
 			}
 		}
 
-		await this.driveFilesRepository.update(file.id, values);
+		await updateDriveFileInDatabase(this.db, file.id, values);
 
 		const fileObj = await this.driveFileEntityService.pack(file.id, { self: true });
 
@@ -714,7 +698,7 @@ export class DriveService {
 
 		if (await this.roleService.isModerator(updater) && (file.userId !== updater.id)) {
 			if (values.isSensitive !== undefined && values.isSensitive !== file.isSensitive) {
-				const user = file.userId ? await this.usersRepository.findOneByOrFail({ id: file.userId }) : null;
+				const user = file.userId ? await fetchUserByIdOrFailFromDatabase(this.db, file.userId) : null;
 				if (values.isSensitive) {
 					this.moderationLogService.log(updater, 'markSensitiveDriveFile', {
 						fileId: file.id,
@@ -740,12 +724,7 @@ export class DriveService {
 	public async moveFiles(fileIds: MiDriveFile['id'][], folderId: MiDriveFolder['id'] | null, userId: MiUser['id']) {
 		const folder = folderId ? await fetchDriveFolderByIdAndUserIdOrFailFromDatabase(this.db, folderId, userId) : null;
 
-		await this.driveFilesRepository.update({
-			id: In(fileIds),
-			userId: userId,
-		}, {
-			folderId: folder ? folder.id : null,
-		});
+		await updateDriveFilesFolderByIdsAndUserIdInDatabase(this.db, fileIds, userId, folder ? folder.id : null);
 	}
 
 	@bindThis
@@ -810,7 +789,7 @@ export class DriveService {
 	private async deletePostProcess(file: MiDriveFile, isExpired = false, deleter?: MiUser) {
 		// リモートファイル期限切れ削除後は直リンクにする
 		if (isExpired && file.userHost !== null && file.uri != null) {
-			await this.driveFilesRepository.update(file.id, {
+			await updateDriveFileInDatabase(this.db, file.id, {
 				isLink: true,
 				url: file.uri,
 				thumbnailUrl: null,
@@ -822,7 +801,7 @@ export class DriveService {
 				webpublicAccessKey: 'webpublic-' + randomUUID(),
 			});
 		} else {
-			await this.driveFilesRepository.delete(file.id);
+			await deleteDriveFileByIdInDatabase(this.db, file.id);
 		}
 
 		this.driveChart.update(file, false);
@@ -840,7 +819,7 @@ export class DriveService {
 		}
 
 		if (deleter && await this.roleService.isModerator(deleter) && (file.userId !== deleter.id)) {
-			const user = file.userId ? await this.usersRepository.findOneByOrFail({ id: file.userId }) : null;
+			const user = file.userId ? await fetchUserByIdOrFailFromDatabase(this.db, file.userId) : null;
 			this.moderationLogService.log(deleter, 'deleteDriveFile', {
 				fileId: file.id,
 				fileUserId: file.userId,

@@ -4,12 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull, MoreThan, Not } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { MiDriveFile, DriveFilesRepository } from '@/models/_.js';
+import type { MiDriveFile } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { bindThis } from '@/decorators.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countRemoteCachedDriveFilesFromDatabase, listRemoteCachedDriveFilesWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 
@@ -18,8 +19,8 @@ export class CleanRemoteFilesProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private queueLoggerService: QueueLoggerService,
@@ -34,22 +35,12 @@ export class CleanRemoteFilesProcessorService {
 		let deletedCount = 0;
 		let cursor: MiDriveFile['id'] | null = null;
 
-		const total = await this.driveFilesRepository.countBy({
-			userHost: Not(IsNull()),
-			isLink: false,
-		});
+		const total = await countRemoteCachedDriveFilesFromDatabase(this.db);
 
 		while (true) {
-			const files = await this.driveFilesRepository.find({
-				where: {
-					userHost: Not(IsNull()),
-					isLink: false,
-					...(cursor ? { id: MoreThan(cursor) } : {}),
-				},
-				take: 8,
-				order: {
-					id: 1,
-				},
+			const files = await listRemoteCachedDriveFilesWithPaginationFromDatabase(this.db, {
+				limit: 8,
+				sinceId: cursor,
 			});
 
 			if (files.length === 0) {

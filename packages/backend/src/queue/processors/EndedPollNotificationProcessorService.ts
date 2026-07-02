@@ -5,11 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { CacheService } from '@/core/CacheService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { bindThis } from '@/decorators.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/PollVoteStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
@@ -21,9 +21,6 @@ export class EndedPollNotificationProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
@@ -36,7 +33,7 @@ export class EndedPollNotificationProcessorService {
 
 	@bindThis
 	public async process(job: Bull.Job<EndedPollNotificationJobData>): Promise<void> {
-		const note = await this.notesRepository.findOneBy({ id: job.data.noteId });
+		const note = await fetchNoteByIdFromDatabase(this.db, job.data.noteId);
 		if (note == null || !note.hasPoll) {
 			return;
 		}

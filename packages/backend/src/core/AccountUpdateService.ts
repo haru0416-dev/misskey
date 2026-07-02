@@ -5,8 +5,9 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { RelayService } from '@/core/RelayService.js';
 import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerService.js';
@@ -16,8 +17,8 @@ import { bindThis } from '@/decorators.js';
 @Injectable()
 export class AccountUpdateService {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private apRendererService: ApRendererService,
@@ -28,7 +29,7 @@ export class AccountUpdateService {
 
 	@bindThis
 	public async publishToFollowers(userId: MiUser['id']) {
-		const user = await this.usersRepository.findOneBy({ id: userId });
+		const user = await fetchUserByIdFromDatabase(this.db, userId);
 		if (user == null) throw new Error('user not found');
 
 		// フォロワーがリモートユーザーかつ投稿者がローカルユーザーならUpdateを配信

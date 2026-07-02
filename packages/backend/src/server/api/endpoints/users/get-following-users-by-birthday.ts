@@ -4,15 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type {
-	FollowingsRepository,
-	UserProfilesRepository,
-} from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import type { Packed } from '@/misc/json-schema.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listFollowingUsersByBirthdayDateFromDatabase } from '@/core/UserProfileStore.js';
 
 export const meta = {
 	tags: ['users'],
@@ -91,52 +88,34 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.followingsRepository
-				.createQueryBuilder('following')
-				.andWhere('following.followerId = :userId', { userId: me.id })
-				.innerJoin(this.userProfilesRepository.metadata.targetName, 'followeeProfile', 'followeeProfile.userId = following.followeeId');
-
+			let condition: Parameters<typeof listFollowingUsersByBirthdayDateFromDatabase>[2];
 			if (Object.hasOwn(ps.birthday, 'begin') && Object.hasOwn(ps.birthday, 'end')) {
 				const range = ps.birthday as { begin: { month: number; day: number }; end: { month: number; day: number }; };
 
 				// 誕生日は mmdd の形式の最大4桁の数字（例: 8月30日 → 830）でインデックスが効くようになっているので、その形式に変換
 				const begin = range.begin.month * 100 + range.begin.day;
 				const end = range.end.month * 100 + range.end.day;
-
-				if (begin <= end) {
-					query.andWhere('get_birthday_date(followeeProfile.birthday) BETWEEN :begin AND :end', { begin, end });
-				} else {
-					// 12/31 から 1/1 の範囲を取得するために OR で対応
-					query.andWhere(new Brackets(qb => {
-						qb.where('get_birthday_date(followeeProfile.birthday) BETWEEN :begin AND 1231', { begin });
-						qb.orWhere('get_birthday_date(followeeProfile.birthday) BETWEEN 101 AND :end', { end });
-					}));
-				}
+				condition = { type: 'range', begin, end };
 			} else {
 				const { month, day } = ps.birthday as { month: number; day: number };
 				// なぜか get_birthday_date() = :birthday だとインデックスが効かないので、BETWEEN で対応
-				query.andWhere('get_birthday_date(followeeProfile.birthday) BETWEEN :birthday AND :birthday', { birthday: month * 100 + day });
+				condition = { type: 'single', value: month * 100 + day };
 			}
 
-			query.select('following.followeeId', 'user_id');
-			query.addSelect('get_birthday_date(followeeProfile.birthday)', 'birthday_date');
-			query.orderBy('birthday_date', 'ASC');
-
-			const birthdayUsers = await query
-				.offset(ps.offset).limit(ps.limit)
-				.getRawMany<{ birthday_date: number; user_id: string }>();
+			const birthdayUsers = await listFollowingUsersByBirthdayDateFromDatabase(this.db, me.id, condition, {
+				offset: ps.offset,
+				limit: ps.limit,
+			});
 
 			const users = new Map<string, Packed<'UserLite'>>((
 				await this.userEntityService.packMany(
-					birthdayUsers.map(u => u.user_id),
+					birthdayUsers.map(u => u.userId),
 					me,
 					{ schema: 'UserLite' },
 				)
@@ -147,7 +126,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					const birthday = new Date();
 					birthday.setHours(0, 0, 0, 0);
 					// item.birthday_date は mmdd の形式の最大4桁の数字（例: 8月30日 → 830）で出力されるので、日付に戻してDateオブジェクトに設定
-					birthday.setMonth(Math.floor(item.birthday_date / 100) - 1, item.birthday_date % 100);
+					birthday.setMonth(Math.floor(item.birthdayDate / 100) - 1, item.birthdayDate % 100);
 
 					if (birthday.getTime() < new Date().setHours(0, 0, 0, 0)) {
 						birthday.setFullYear(new Date().getFullYear() + 1);
@@ -155,9 +134,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 					const birthdayStr = `${birthday.getFullYear()}-${(birthday.getMonth() + 1).toString().padStart(2, '0')}-${(birthday.getDate()).toString().padStart(2, '0')}`;
 					return {
-						id: item.user_id,
+						id: item.userId,
 						birthday: birthdayStr,
-						user: users.get(item.user_id),
+						user: users.get(item.userId),
 					};
 				})
 				.filter(item => item.user != null)

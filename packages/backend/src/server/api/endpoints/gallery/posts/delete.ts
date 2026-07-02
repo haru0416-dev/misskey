@@ -5,11 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { deleteGalleryPostByIdFromDatabase, fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
@@ -46,9 +46,6 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -69,7 +66,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			await deleteGalleryPostByIdFromDatabase(this.drizzle, post.id);
 
 			if (post.userId !== me.id) {
-				const user = await this.usersRepository.findOneByOrFail({ id: post.userId });
+				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, post.userId);
 				this.moderationLogService.log(me, 'deleteGalleryPost', {
 					postId: post.id,
 					postUserId: post.userId,

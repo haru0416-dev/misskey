@@ -8,8 +8,9 @@ import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { QueueService } from '@/core/QueueService.js';
 import { AccountMoveService } from '@/core/AccountMoveService.js';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -61,14 +62,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private queueService: QueueService,
 		private accountMoveService: AccountMoveService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const file = await this.driveFilesRepository.findOneBy({ id: ps.fileId, userId: me.id });
+			const file = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.fileId, me.id);
 
 			if (file == null) throw new ApiError(meta.errors.noSuchFile);
 			//if (!file.type.endsWith('/csv')) throw new ApiError(meta.errors.unexpectedFileType);

@@ -4,16 +4,20 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull, In, MoreThan, Not } from 'typeorm';
 
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import type { BlockingsRepository, FollowingsRepository, InstancesRepository, MiMeta, MutingsRepository, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { RelationshipJobData, ThinUser } from '@/queue/types.js';
 
 import { IdService } from '@/core/IdService.js';
+import { adjustInstanceFollowersCountFromDatabase } from '@/core/InstanceStore.js';
+import { listAllFollowingsByFollowerIdFromDatabase, listLocalFollowerFollowingsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { createMutingsInDatabase, listActiveMutingsByMuteeIdFromDatabase, listPermanentMuterIdsByMuteeIdFromDatabase } from '@/core/MutingStore.js';
+import { decrementUsersFollowersCountInDatabase, decrementUsersFollowingCountInDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { createUserListMembershipsInDatabase, listUserListMembershipsByUserIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { QueueService } from '@/core/QueueService.js';
@@ -37,21 +41,6 @@ export class AccountMoveService {
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
-
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -81,11 +70,17 @@ export class AccountMoveService {
 		const dstUri = this.userEntityService.getUserUri(dst);
 
 		// add movedToUri to indicate that the user has moved
-		const update = {} as Partial<MiLocalUser>;
-		update.alsoKnownAs = src.alsoKnownAs?.includes(dstUri) ? src.alsoKnownAs : src.alsoKnownAs?.concat([dstUri]) ?? [dstUri];
-		update.movedToUri = dstUri;
-		update.movedAt = new Date();
-		await this.usersRepository.update(src.id, update);
+		const alsoKnownAs = src.alsoKnownAs?.includes(dstUri) ? src.alsoKnownAs : src.alsoKnownAs?.concat([dstUri]) ?? [dstUri];
+		const update = {
+			alsoKnownAs,
+			movedToUri: dstUri,
+			movedAt: new Date(),
+		};
+		await updateUserInDatabase(this.db, src.id, {
+			alsoKnownAs: alsoKnownAs.join(','),
+			movedToUri: update.movedToUri,
+			movedAt: update.movedAt,
+		});
 		Object.assign(src, update);
 
 		// Update cache
@@ -105,9 +100,7 @@ export class AccountMoveService {
 		this.globalEventService.publishMainStream(src.id, 'meUpdated', iObj);
 
 		// Unfollow after 24 hours
-		const followings = await this.followingsRepository.findBy({
-			followerId: src.id,
-		});
+		const followings = await listAllFollowingsByFollowerIdFromDatabase(this.db, src.id);
 		this.queueService.createDelayedUnfollowJob(followings.map(following => ({
 			from: { id: src.id },
 			to: { id: following.followeeId },
@@ -135,10 +128,8 @@ export class AccountMoveService {
 
 		// follow the new account
 		const proxy = await this.systemAccountService.fetch('proxy');
-		const followings = await this.followingsRepository.findBy({
-			followeeId: src.id,
-			followerHost: IsNull(), // follower is local
-			followerId: Not(proxy.id),
+		const followings = await listLocalFollowerFollowingsByFolloweeIdFromDatabase(this.db, src.id, {
+			excludeFollowerIds: [proxy.id],
 		});
 		const followJobs = followings.map(following => ({
 			from: { id: following.followerId },
@@ -160,14 +151,13 @@ export class AccountMoveService {
 	public async copyBlocking(src: ThinUser, dst: ThinUser): Promise<void> {
 		// Followers shouldn't overlap with blockers, but the destination account, different from the blockee (i.e., old account), may have followed the local user before moving.
 		// So block the destination account here.
-		const srcBlockings = await this.blockingsRepository.findBy({ blockeeId: src.id });
-		const dstBlockings = await this.blockingsRepository.findBy({ blockeeId: dst.id });
-		const blockerIds = dstBlockings.map(blocking => blocking.blockerId);
+		const srcBlockerIds = await listBlockerIdsByBlockeeIdFromDatabase(this.db, src.id);
+		const dstBlockerIds = await listBlockerIdsByBlockeeIdFromDatabase(this.db, dst.id);
 		// reblock the destination account
 		const blockJobs: RelationshipJobData[] = [];
-		for (const blocking of srcBlockings) {
-			if (blockerIds.includes(blocking.blockerId)) continue; // skip if already blocked
-			blockJobs.push({ from: { id: blocking.blockerId }, to: { id: dst.id } });
+		for (const blockerId of srcBlockerIds) {
+			if (dstBlockerIds.includes(blockerId)) continue; // skip if already blocked
+			blockJobs.push({ from: { id: blockerId }, to: { id: dst.id } });
 		}
 		// no need to unblock the old account because it may be still functional
 		this.queueService.createBlockJob(blockJobs);
@@ -176,16 +166,11 @@ export class AccountMoveService {
 	@bindThis
 	public async copyMutings(src: ThinUser, dst: ThinUser): Promise<void> {
 		// Insert new mutings with the same values except mutee
-		const oldMutings = await this.mutingsRepository.findBy([
-			{ muteeId: src.id, expiresAt: IsNull() },
-			{ muteeId: src.id, expiresAt: MoreThan(new Date()) },
-		]);
+		const oldMutings = await listActiveMutingsByMuteeIdFromDatabase(this.db, src.id, new Date());
 		if (oldMutings.length === 0) return;
 
 		// Check if the destination account is already indefinitely muted by the muter
-		const existingMutingsMuterUserIds = await this.mutingsRepository.findBy(
-			{ muteeId: dst.id, expiresAt: IsNull() },
-		).then(mutings => mutings.map(muting => muting.muterId));
+		const existingMutingsMuterUserIds = await listPermanentMuterIdsByMuteeIdFromDatabase(this.db, dst.id);
 
 		const newMutings: Map<string, { muterId: string; muteeId: string; expiresAt: Date | null; }> = new Map();
 
@@ -206,7 +191,7 @@ export class AccountMoveService {
 		}
 
 		const arrayToInsert = Array.from(newMutings.entries()).map(entry => ({ ...entry[1], id: entry[0] }));
-		await this.mutingsRepository.insert(arrayToInsert);
+		await createMutingsInDatabase(this.db, arrayToInsert);
 	}
 
 	@bindThis
@@ -287,22 +272,22 @@ export class AccountMoveService {
 		if (localFollowerIds.length === 0) return;
 
 		// Set the old account's following and followers counts to 0.
-		await this.usersRepository.update({ id: oldAccount.id }, { followersCount: 0, followingCount: 0 });
+		await updateUserInDatabase(this.db, oldAccount.id, { followersCount: 0, followingCount: 0 });
 
 		// Decrease following counts of local followers by 1.
-		await this.usersRepository.decrement({ id: In(localFollowerIds) }, 'followingCount', 1);
+		await decrementUsersFollowingCountInDatabase(this.db, localFollowerIds, 1);
 
 		// Decrease follower counts of local followees by 1.
-		const oldFollowings = await this.followingsRepository.findBy({ followerId: oldAccount.id });
+		const oldFollowings = await listAllFollowingsByFollowerIdFromDatabase(this.db, oldAccount.id);
 		if (oldFollowings.length > 0) {
-			await this.usersRepository.decrement({ id: In(oldFollowings.map(following => following.followeeId)) }, 'followersCount', 1);
+			await decrementUsersFollowersCountInDatabase(this.db, oldFollowings.map(following => following.followeeId), 1);
 		}
 
 		// Update instance stats by decreasing remote followers count by the number of local followers who were following the old account.
 		if (this.meta.enableStatsForFederatedInstances) {
 			if (this.userEntityService.isRemoteUser(oldAccount)) {
 				this.federatedInstanceService.fetchOrRegister(oldAccount.host).then(async i => {
-					this.instancesRepository.decrement({ id: i.id }, 'followersCount', localFollowerIds.length);
+					await adjustInstanceFollowersCountFromDatabase(this.db, i.id, -localFollowerIds.length);
 					if (this.meta.enableChartsForFederatedInstances) {
 						this.instanceChart.updateFollowers(i.host, false);
 					}

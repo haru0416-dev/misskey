@@ -4,9 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, DriveFilesRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import type Logger from '@/logger.js';
 import * as Acct from '@/misc/acct.js';
 import { RemoteUserResolveService } from '@/core/RemoteUserResolveService.js';
@@ -23,11 +24,8 @@ export class ImportFollowingProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private queueService: QueueService,
 		private utilityService: UtilityService,
@@ -42,14 +40,12 @@ export class ImportFollowingProcessorService {
 	public async process(job: Bull.Job<DbUserImportJobData>): Promise<void> {
 		this.logger.info(`Importing following of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
 
-		const file = await this.driveFilesRepository.findOneBy({
-			id: job.data.fileId,
-		});
+		const file = await fetchDriveFileByIdFromDatabase(this.db, job.data.fileId);
 		if (file == null) {
 			return;
 		}
@@ -83,13 +79,11 @@ export class ImportFollowingProcessorService {
 
 			if (!host) return;
 
-			let target = this.utilityService.isSelfHost(host) ? await this.usersRepository.findOneBy({
-				host: IsNull(),
-				usernameLower: username.toLowerCase(),
-			}) : await this.usersRepository.findOneBy({
-				host: this.utilityService.toPuny(host),
-				usernameLower: username.toLowerCase(),
-			});
+			let target = await fetchUserByUsernameAndHostFromDatabase(
+				this.db,
+				username,
+				this.utilityService.isSelfHost(host) ? null : this.utilityService.toPuny(host),
+			);
 
 			if (host == null && target == null) return;
 

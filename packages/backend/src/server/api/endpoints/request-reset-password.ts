@@ -4,9 +4,7 @@
  */
 
 import ms from 'ms';
-import { IsNull } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { IdService } from '@/core/IdService.js';
 import type { Config } from '@/config.js';
@@ -14,6 +12,8 @@ import { DI } from '@/di-symbols.js';
 import { EmailService } from '@/core/EmailService.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
+import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
@@ -48,12 +48,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -61,17 +55,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private emailService: EmailService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const user = await this.usersRepository.findOneBy({
-				usernameLower: ps.username.toLowerCase(),
-				host: IsNull(),
-			});
+			const user = await fetchLocalUserByUsernameFromDatabase(this.drizzle, ps.username);
 
 			// 合致するユーザーが登録されていなかったら無視
 			if (user == null) {
 				return;
 			}
 
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 
 			// 合致するメアドが登録されていなかったら無視
 			if (profile.email !== ps.email) {

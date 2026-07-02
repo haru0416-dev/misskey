@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, MiUser, UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -16,13 +16,14 @@ import type { MiNote } from '@/models/Note.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { NotificationService } from '@/core/NotificationService.js';
-import { QueryService } from '@/core/QueryService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import {
 	countNoteFavoritesByUserIdFromDatabase,
 	listNoteFavoritesByUserIdFromDatabase,
 } from '@/core/NoteFavoriteStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
@@ -34,18 +35,11 @@ export class ExportFavoritesProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private queueLoggerService: QueueLoggerService,
-		private queryService: QueryService,
 		private idService: IdService,
 		private notificationService: NotificationService,
 	) {
@@ -56,7 +50,7 @@ export class ExportFavoritesProcessorService {
 	public async process(job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 		this.logger.info(`Exporting favorites of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -103,13 +97,7 @@ export class ExportFavoritesProcessorService {
 
 				cursor = favorites.at(-1)?.id ?? null;
 				const noteIds = favorites.map(favorite => favorite.noteId);
-				const noteQuery = this.notesRepository.createQueryBuilder('note')
-					.innerJoinAndSelect('note.user', 'user')
-					.where('note.id IN (:...noteIds)', { noteIds });
-
-				this.queryService.generateVisibilityQuery(noteQuery, { id: user.id });
-
-				const notes = await noteQuery.getMany() as (MiNote & { user: MiUser })[];
+				const notes = await listVisibleNotesWithUsersByIdsFromDatabase(this.db, noteIds, { id: user.id });
 				const noteMap = new Map(notes.map(note => [note.id, note]));
 
 				for (const favorite of favorites) {

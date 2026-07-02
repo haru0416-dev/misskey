@@ -9,7 +9,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as lolex from '@sinonjs/fake-timers';
 import { addHours, addSeconds, subDays, subHours, subSeconds } from 'date-fns';
 import { CheckModeratorsActivityProcessorService } from '@/queue/processors/CheckModeratorsActivityProcessorService.js';
-import { MiUser, MiUserProfile, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { IdService } from '@/core/IdService.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -21,6 +21,11 @@ import { EmailService } from '@/core/EmailService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
 import { SystemWebhookEventType } from '@/models/SystemWebhook.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { userProfile, type UserProfileInsert } from '@/db/schema/user-profile.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const baseDate = new Date(Date.UTC(2000, 11, 15, 12, 0, 0));
 
@@ -31,8 +36,7 @@ describe('CheckModeratorsActivityProcessorService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	let usersRepository: UsersRepository;
-	let userProfilesRepository: UserProfilesRepository;
+	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let roleService: Mocked<RoleService>;
 	let announcementService: Mocked<AnnouncementService>;
@@ -45,18 +49,16 @@ describe('CheckModeratorsActivityProcessorService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	async function createUser(data: Partial<MiUser> = {}, profile: Partial<MiUserProfile> = {}): Promise<MiUser> {
+	async function createUser(data: Partial<UserInsert> = {}, profile: Partial<UserProfileInsert> = {}): Promise<MiUser> {
 		const id = idService.gen();
-		const user = await usersRepository
-			.insert({
-				id: id,
-				username: `user_${id}`,
-				usernameLower: `user_${id}`.toLowerCase(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+		const user = await createUserInDatabase(db, {
+			id: id,
+			username: `user_${id}`,
+			usernameLower: `user_${id}`.toLowerCase(),
+			...data,
+		});
 
-		await userProfilesRepository.insert({
+		await createUserProfileInDatabase(db, {
 			userId: user.id,
 			...profile,
 		});
@@ -128,8 +130,7 @@ describe('CheckModeratorsActivityProcessorService', () => {
 			})
 			.compile();
 
-		usersRepository = app.get(DI.usersRepository);
-		userProfilesRepository = app.get(DI.userProfilesRepository);
+		db = app.get(DI.drizzle);
 
 		service = app.get(CheckModeratorsActivityProcessorService);
 		idService = app.get(IdService);
@@ -161,8 +162,8 @@ describe('CheckModeratorsActivityProcessorService', () => {
 
 	afterEach(async () => {
 		clock.uninstall();
-		await usersRepository.createQueryBuilder().delete().execute();
-		await userProfilesRepository.createQueryBuilder().delete().execute();
+		await db.delete(userProfile);
+		await db.delete(user);
 		roleService.getModerators.mockReset();
 		announcementService.create.mockReset();
 		emailService.sendEmail.mockReset();

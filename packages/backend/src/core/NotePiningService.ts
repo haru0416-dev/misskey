@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
@@ -22,6 +21,8 @@ import {
 	deleteUserNotePiningFromDatabase,
 	listUserNotePiningsByUserIdFromDatabase,
 } from '@/core/UserNotePiningStore.js';
+import { fetchNoteByIdAndUserIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
@@ -29,12 +30,6 @@ export class NotePiningService {
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -56,10 +51,7 @@ export class NotePiningService {
 	@bindThis
 	public async addPinned(user: { id: MiUser['id']; host: MiUser['host']; }, noteId: MiNote['id']) {
 	// Fetch pinee
-		const note = await this.notesRepository.findOneBy({
-			id: noteId,
-			userId: user.id,
-		});
+		const note = await fetchNoteByIdAndUserIdFromDatabase(this.db, noteId, user.id);
 
 		if (note == null) {
 			throw new IdentifiableError('70c4e51f-5bea-449c-a030-53bee3cce202', 'No such note.');
@@ -95,10 +87,7 @@ export class NotePiningService {
 	@bindThis
 	public async removePinned(user: { id: MiUser['id']; host: MiUser['host']; }, noteId: MiNote['id']) {
 	// Fetch unpinee
-		const note = await this.notesRepository.findOneBy({
-			id: noteId,
-			userId: user.id,
-		});
+		const note = await fetchNoteByIdAndUserIdFromDatabase(this.db, noteId, user.id);
 
 		if (note == null) {
 			throw new IdentifiableError('b302d4cf-c050-400a-bbb3-be208681f40c', 'No such note.');
@@ -117,7 +106,7 @@ export class NotePiningService {
 
 	@bindThis
 	public async deliverPinnedChange(userId: MiUser['id'], noteId: MiNote['id'], isAddition: boolean) {
-		const user = await this.usersRepository.findOneBy({ id: userId });
+		const user = await fetchUserByIdFromDatabase(this.db, userId);
 		if (user == null) throw new Error('user not found');
 
 		if (!this.userEntityService.isLocalUser(user)) return;

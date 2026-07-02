@@ -4,9 +4,9 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { emoji, type EmojiInsert } from '@/db/schema/emoji.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { MiEmoji } from '@/models/Emoji.js';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
@@ -362,7 +362,7 @@ export async function listRemoteEmojisPageFromDatabase(
 
 /**
  * CustomEmojiService.fetchEmojis 向け。admin向け絵文字検索。
- * TypeORM QueryBuilder時代のセマンティクス(LIKE ANY, aliasesのunnest部分一致, roleIdsのoverlapなど)を完全に再現する。
+ * 既存検索のセマンティクス(LIKE ANY, aliasesのunnest部分一致, roleIdsのoverlapなど)を完全に再現する。
  */
 export async function fetchEmojisFromDatabase(
 	db: MiDrizzleDatabase,

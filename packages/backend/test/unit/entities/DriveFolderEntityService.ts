@@ -8,7 +8,6 @@ process.env.NODE_ENV = 'test';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
@@ -16,6 +15,8 @@ import { DI } from '@/di-symbols.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
+import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import type { DriveFileInsert } from '@/db/schema/drive-file.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const describeBenchmark = process.env.RUN_BENCHMARKS === '1' ? describe : describe.skip;
@@ -24,7 +25,6 @@ describe('DriveFolderEntityService', () => {
 	let app: TestingModule;
 	let service: DriveFolderEntityService;
 	let db: MiDrizzleDatabase;
-	let driveFilesRepository: DriveFilesRepository;
 	let idCounter = 0;
 
 	const nextId = () => genAidx(Date.now() + (idCounter++));
@@ -41,7 +41,7 @@ describe('DriveFolderEntityService', () => {
 
 	const createFile = async (folderId: string | null) => {
 		const id = nextId();
-		await driveFilesRepository.insert({
+		await createDriveFileInDatabase(db, {
 			id,
 			userId: null,
 			userHost: null,
@@ -69,7 +69,7 @@ describe('DriveFolderEntityService', () => {
 			isLink: false,
 			requestHeaders: null,
 			requestIp: null,
-		});
+		} satisfies DriveFileInsert);
 	};
 
 	beforeAll(async () => {
@@ -81,7 +81,6 @@ describe('DriveFolderEntityService', () => {
 
 		service = app.get<DriveFolderEntityService>(DriveFolderEntityService);
 		db = app.get<MiDrizzleDatabase>(DI.drizzle);
-		driveFilesRepository = app.get<DriveFilesRepository>(DI.driveFilesRepository);
 	});
 
 	afterAll(async () => {

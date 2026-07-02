@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import {
-	FindOneOptions,
-	ObjectLiteral,
-	Repository,
-} from 'typeorm';
 import { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import { MiAccessToken } from '@/models/AccessToken.js';
 import { MiAnnouncement } from '@/models/Announcement.js';
@@ -35,17 +30,6 @@ import { MiUser } from '@/models/User.js';
 import { MiUserList } from '@/models/UserList.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
 import { MiUserProfile } from '@/models/UserProfile.js';
-import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
-
-export interface MiRepository<T extends ObjectLiteral> {
-	insertOne(this: Repository<T> & MiRepository<T>, entity: QueryDeepPartialEntity<T>, findOptions?: Pick<FindOneOptions<T>, 'relations'>): Promise<T>;
-}
-
-export const miRepository = {
-	async insertOne(entity, findOptions?) {
-		return await this.insert(entity).then(x => this.findOneOrFail({ where: x.identifiers[0], ...findOptions }));
-	},
-} satisfies MiRepository<ObjectLiteral>;
 
 export {
 	MiAbuseUserReport,
@@ -76,15 +60,3 @@ export {
 	MiFlash,
 	MiChatMessage,
 };
-
-export type BlockingsRepository = Repository<MiBlocking> & MiRepository<MiBlocking>;
-export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;
-export type FollowingsRepository = Repository<MiFollowing> & MiRepository<MiFollowing>;
-export type InstancesRepository = Repository<MiInstance> & MiRepository<MiInstance>;
-export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
-export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
-export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
-export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
-export type UserProfilesRepository = Repository<MiUserProfile> & MiRepository<MiUserProfile>;
-export type ChannelsRepository = Repository<MiChannel> & MiRepository<MiChannel>;
-export type RolesRepository = Repository<MiRole> & MiRepository<MiRole>;

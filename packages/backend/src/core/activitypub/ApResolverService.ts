@@ -4,12 +4,9 @@
  */
 
 import { Inject, Injectable, Scope } from '@nestjs/common';
-import { IsNull, Not } from 'typeorm';
 import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import type {
 	MiMeta,
-	NotesRepository,
-	UsersRepository
 } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
@@ -21,8 +18,10 @@ import type Logger from '@/logger.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
+import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchRemoteUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { ICollection, IObject, IOrderedCollection } from './type.js';
 import { isCollectionOrOrderedCollection } from './type.js';
@@ -45,12 +44,6 @@ export class Resolver {
 
 		@Inject(DI.meta)
 		private meta: MiMeta,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
 
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
@@ -148,7 +141,7 @@ export class Resolver {
 
 		switch (parsed.type) {
 			case 'notes':
-				return this.notesRepository.findOneByOrFail({ id: parsed.id })
+				return fetchNoteByIdOrFailFromDatabase(this.db, parsed.id)
 					.then(async note => {
 						if (parsed.rest === 'activity') {
 							// this refers to the create activity and not the note itself
@@ -158,12 +151,12 @@ export class Resolver {
 						}
 					});
 			case 'users':
-				return this.usersRepository.findOneByOrFail({ id: parsed.id })
+				return fetchUserByIdOrFailFromDatabase(this.db, parsed.id)
 					.then(user => this.apRendererService.renderPerson(user as MiLocalUser));
 			case 'questions':
 				// Polls are indexed by the note they are attached to.
 				return Promise.all([
-					this.notesRepository.findOneByOrFail({ id: parsed.id }),
+					fetchNoteByIdOrFailFromDatabase(this.db, parsed.id),
 					fetchPollByNoteIdOrFailFromDatabase(this.db, parsed.id),
 				])
 					.then(([note, poll]) => this.apRendererService.renderQuestion({ id: note.userId }, note, poll));
@@ -175,14 +168,8 @@ export class Resolver {
 					.then(async followRequest => {
 						if (followRequest == null) throw new IdentifiableError('a9d946e5-d276-47f8-95fb-f04230289bb0', 'resolveLocal: invalid follow request ID');
 						const [follower, followee] = await Promise.all([
-							this.usersRepository.findOneBy({
-								id: followRequest.followerId,
-								host: IsNull(),
-							}),
-							this.usersRepository.findOneBy({
-								id: followRequest.followeeId,
-								host: Not(IsNull()),
-							}),
+							fetchLocalUserByIdFromDatabase(this.db, followRequest.followerId),
+							fetchRemoteUserByIdFromDatabase(this.db, followRequest.followeeId),
 						]);
 						if (follower == null || followee == null) {
 							throw new IdentifiableError('06ae3170-1796-4d93-a697-2611ea6d83b6', 'resolveLocal: follower or followee does not exist');

@@ -4,9 +4,9 @@
  */
 
 import { and, asc, desc, eq, gt, inArray, lt, ne, sql, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { page, type PageInsert, type PageRow } from '@/db/schema/page.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiPage } from '@/models/Page.js';
 import type { MiUser } from '@/models/User.js';
 

@@ -4,11 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { fetchEmojiByIdOrFailFromDatabase, listEmojisByIdsFromDatabase } from '@/core/EmojiStore.js';
+import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/RoleStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiRole, RolesRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import { bindThis } from '@/decorators.js';
@@ -18,8 +17,6 @@ export class EmojiEntityService {
 	constructor(
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-		@Inject(DI.rolesRepository)
-		private rolesRepository: RolesRepository,
 	) {
 	}
 
@@ -80,12 +77,12 @@ export class EmojiEntityService {
 	public async packDetailedAdmin(
 		src: MiEmoji['id'] | MiEmoji,
 		hint?: {
-			roles?: Map<MiRole['id'], MiRole>
+			roles?: ReadonlyMap<RoleSummary['id'], RoleSummary>
 		},
 	): Promise<Packed<'EmojiDetailedAdmin'>> {
 		const emoji = typeof src === 'object' ? src : await fetchEmojiByIdOrFailFromDatabase(this.db, src);
 
-		const roles = Array.of<MiRole>();
+		const roles = Array.of<RoleSummary>();
 		if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
 			if (hint?.roles) {
 				const hintRoles = hint.roles;
@@ -96,7 +93,7 @@ export class EmojiEntityService {
 				);
 			} else {
 				roles.push(
-					...await this.rolesRepository.findBy({ id: In(emoji.roleIdsThatCanBeUsedThisEmojiAsReaction) }),
+					...await listRoleSummariesByIdsFromDatabase(this.db, emoji.roleIdsThatCanBeUsedThisEmojiAsReaction),
 				);
 			}
 
@@ -131,7 +128,7 @@ export class EmojiEntityService {
 	public async packDetailedAdminMany(
 		emojis: MiEmoji['id'][] | MiEmoji[],
 		hint?: {
-			roles?: Map<MiRole['id'], MiRole>
+			roles?: ReadonlyMap<RoleSummary['id'], RoleSummary>
 		},
 	): Promise<Packed<'EmojiDetailedAdmin'>[]> {
 		// IDのみの要素をピックアップし、DBからレコードを取り出して他の値を補完する
@@ -142,14 +139,14 @@ export class EmojiEntityService {
 		}
 
 		// 特定ロール専用の絵文字である場合、そのロール情報をあらかじめまとめて取得しておく（pack側で都度取得も出来るが負荷が高いので）
-		let hintRoles: Map<MiRole['id'], MiRole>;
+		let hintRoles: ReadonlyMap<RoleSummary['id'], RoleSummary>;
 		if (hint?.roles) {
 			hintRoles = hint.roles;
 		} else {
-			const roles = Array.of<MiRole>();
+			const roles = Array.of<RoleSummary>();
 			const roleIds = [...new Set(emojiEntities.flatMap(x => x.roleIdsThatCanBeUsedThisEmojiAsReaction))];
 			if (roleIds.length > 0) {
-				roles.push(...await this.rolesRepository.findBy({ id: In(roleIds) }));
+				roles.push(...await listRoleSummariesByIdsFromDatabase(this.db, roleIds));
 			}
 
 			hintRoles = new Map(roles.map(x => [x.id, x]));
@@ -158,4 +155,3 @@ export class EmojiEntityService {
 		return Promise.all(emojis.map(x => this.packDetailedAdmin(x, { roles: hintRoles })));
 	}
 }
-

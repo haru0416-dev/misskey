@@ -5,19 +5,16 @@
 
 import { randomUUID } from 'crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type {
-	UserProfilesRepository,
-	UsersRepository,
-} from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
-import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { MiUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { bindThis } from '@/decorators.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { fetchLocalUserByIdFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import Logger from '@/logger.js';
 import { LoggerService } from '@/core/LoggerService.js';
@@ -34,12 +31,6 @@ export class SigninWithPasskeyApiService {
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
 
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
@@ -148,10 +139,7 @@ export class SigninWithPasskeyApiService {
 		}
 
 		// Fetch user
-		const user = await this.usersRepository.findOneBy({
-			id: authorizedUserId,
-			host: IsNull(),
-		}) as MiLocalUser | null;
+		const user = await fetchLocalUserByIdFromDatabase(this.drizzle, authorizedUserId);
 
 		if (user == null) {
 			return error(403, {
@@ -165,7 +153,7 @@ export class SigninWithPasskeyApiService {
 			});
 		}
 
-		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 
 		// Authentication was successful, but passwordless login is not enabled
 		if (!profile.usePasswordLessLogin) {

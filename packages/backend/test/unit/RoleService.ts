@@ -14,16 +14,14 @@ import * as lolex from '@sinonjs/fake-timers';
 import type { TestingModule } from '@nestjs/testing';
 import { GlobalModule } from '@/GlobalModule.js';
 import { RoleService } from '@/core/RoleService.js';
-import {
-	MiMeta,
-	MiRole,
-	MiUser,
-	RolesRepository,
-	UsersRepository,
-} from '@/models/_.js';
+import type { MiMeta } from '@/models/Meta.js';
+import type { MiRole } from '@/models/Role.js';
+import type { MiUser } from '@/models/User.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { DI } from '@/di-symbols.js';
 import { meta as metaTable } from '@/db/schema/meta.js';
+import { role as roleTable } from '@/db/schema/role.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import {
 	createRoleAssignmentInDatabase,
@@ -31,8 +29,10 @@ import {
 	fetchRoleAssignmentByIdOrFailFromDatabase,
 	listRoleAssignmentsByUserIdFromDatabase,
 } from '@/core/RoleAssignmentStore.js';
+import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { MetaService } from '@/core/MetaService.js';
 import { genAidx } from '@/misc/id/aidx.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
 import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -44,32 +44,29 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 describe('RoleService', () => {
 	let app: TestingModule;
 	let roleService: RoleService;
-	let usersRepository: UsersRepository;
-	let rolesRepository: RolesRepository;
 	let db: MiDrizzleDatabase;
 	let meta: Mocked<MiMeta>;
 	let notificationService: Mocked<NotificationService>;
 	let clock: lolex.Clock;
 
-	async function createUser(data: Partial<MiUser> = {}) {
+	async function createUser(data: Partial<UserInsert> = {}) {
 		const un = secureRndstr(16);
-		const x = await usersRepository.insert({
+		return await createUserInDatabase(db, {
 			id: genAidx(Date.now()),
 			username: un,
 			usernameLower: un,
 			...data,
 		});
-		return await usersRepository.findOneByOrFail(x.identifiers[0]);
 	}
 
-	async function createRoot(data: Partial<MiUser> = {}) {
+	async function createRoot(data: Partial<UserInsert> = {}) {
 		const user = await createUser(data);
 		meta.rootUserId = user.id;
 		return user;
 	}
 
 	async function createRole(data: Partial<MiRole> = {}) {
-		const x = await rolesRepository.insert({
+		return await createRoleInDatabase(db, {
 			id: genAidx(Date.now()),
 			updatedAt: new Date(),
 			lastUsedAt: new Date(),
@@ -77,7 +74,6 @@ describe('RoleService', () => {
 			description: '',
 			...data,
 		});
-		return await rolesRepository.findOneByOrFail(x.identifiers[0]);
 	}
 
 	function createConditionalRole(condFormula: RoleCondFormulaValue, data: Partial<MiRole> = {}) {
@@ -156,8 +152,6 @@ describe('RoleService', () => {
 		app.enableShutdownHooks();
 
 		roleService = app.get<RoleService>(RoleService);
-		usersRepository = app.get<UsersRepository>(DI.usersRepository);
-		rolesRepository = app.get<RolesRepository>(DI.rolesRepository);
 		db = app.get<MiDrizzleDatabase>(DI.drizzle);
 
 		meta = app.get<MiMeta>(DI.meta) as Mocked<MiMeta>;
@@ -176,8 +170,8 @@ describe('RoleService', () => {
 		await db.delete(metaTable);
 		await deleteAllRoleAssignmentsFromDatabase(db);
 		await Promise.all([
-			usersRepository.createQueryBuilder().delete().execute(),
-			rolesRepository.createQueryBuilder().delete().execute(),
+			db.delete(user),
+			db.delete(roleTable),
 		]);
 
 		await app.close();

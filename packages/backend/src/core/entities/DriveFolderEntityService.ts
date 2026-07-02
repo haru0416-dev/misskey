@@ -5,11 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
 import type { DriveFolderRow } from '@/db/schema/drive-folder.js';
+import {
+	countDriveFilesByFolderIdFromDatabase,
+	countDriveFilesGroupedByFolderIdsFromDatabase,
+} from '@/core/DriveFileStore.js';
 import {
 	countChildDriveFoldersGroupedByParentIdsFromDatabase,
 	countDriveFoldersByParentIdFromDatabase,
@@ -27,9 +30,6 @@ export class DriveFolderEntityService {
 	constructor(
 		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
 
 		private idService: IdService,
 	) {
@@ -66,9 +66,7 @@ export class DriveFolderEntityService {
 				foldersCount: hint?.foldersCountMap?.get(folder.id)
 					?? countDriveFoldersByParentIdFromDatabase(this.db, folder.id),
 				filesCount: hint?.filesCountMap?.get(folder.id)
-					?? this.driveFilesRepository.countBy({
-						folderId: folder.id,
-					}),
+					?? countDriveFilesByFolderIdFromDatabase(this.db, folder.id),
 
 				...(folder.parentId ? {
 					parent: hint?.parentPacker
@@ -147,15 +145,10 @@ export class DriveFolderEntityService {
 			if (ids.length > 0) {
 				const folderCounts = await countChildDriveFoldersGroupedByParentIdsFromDatabase(this.db, ids);
 
-				const fileCounts = await this.driveFilesRepository.createQueryBuilder('file')
-					.select('file.folderId', 'folderId')
-					.addSelect('COUNT(*)', 'count')
-					.where('file.folderId IN (:...ids)', { ids })
-					.groupBy('file.folderId')
-					.getRawMany<{ folderId: string; count: string }>();
+				const fileCounts = await countDriveFilesGroupedByFolderIdsFromDatabase(this.db, ids);
 
 				foldersCountMap = new Map(folderCounts.map(row => [row.parentId, row.count]));
-				filesCountMap = new Map(fileCounts.map(row => [row.folderId, Number(row.count)]));
+				filesCountMap = new Map(fileCounts.map(row => [row.folderId, row.count]));
 			} else {
 				foldersCountMap = new Map();
 				filesCountMap = new Map();

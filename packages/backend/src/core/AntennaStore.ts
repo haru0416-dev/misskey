@@ -4,9 +4,9 @@
  */
 
 import { and, count, eq, inArray, lt, sql } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { antenna, type AntennaInsert, type AntennaRow } from '@/db/schema/antenna.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiAntenna } from '@/models/Antenna.js';
 import type { MiUser } from '@/models/User.js';
 

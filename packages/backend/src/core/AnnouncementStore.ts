@@ -4,10 +4,10 @@
  */
 
 import { and, asc, desc, eq, gt, isNull, lt, notInArray, or, type SQL } from 'drizzle-orm';
-import { EntityNotFoundError } from 'typeorm';
 import { announcement, type AnnouncementInsert, type AnnouncementRow } from '@/db/schema/announcement.js';
 import { announcementRead } from '@/db/schema/announcement-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiUser } from '@/models/User.js';
 
