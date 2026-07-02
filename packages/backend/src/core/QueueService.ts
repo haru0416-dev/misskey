@@ -15,6 +15,7 @@ import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import type { Antenna } from '@/server/api/endpoints/i/import-antennas.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
+import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { type SystemWebhookPayload } from '@/core/SystemWebhookService.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -147,38 +148,7 @@ export class QueueService implements OnModuleInit {
 
 	@bindThis
 	public deliver(user: ThinUser, content: IActivity | null, to: string | null, isSharedInbox: boolean) {
-		if (content == null) return null;
-		if (to == null) return null;
-
-		const contentBody = JSON.stringify(content);
-		const digest = ApRequestCreator.createDigest(contentBody);
-
-		const data: DeliverJobData = {
-			user: {
-				id: user.id,
-			},
-			content: contentBody,
-			digest,
-			to,
-			isSharedInbox,
-		};
-
-		const label = to.replace('https://', '').replace('/inbox', '');
-
-		return this.deliverQueue.add(label, data, {
-			attempts: this.config.deliverJobMaxAttempts ?? 12,
-			backoff: {
-				type: 'custom',
-			},
-			removeOnComplete: {
-				age: 3600 * 24 * 7, // keep up to 7 days
-				count: 30,
-			},
-			removeOnFail: {
-				age: 3600 * 24 * 7, // keep up to 7 days
-				count: 100,
-			},
-		});
+		return enqueueDeliverJob(this.deliverQueue, this.config, user, content, to, isSharedInbox);
 	}
 
 	/**

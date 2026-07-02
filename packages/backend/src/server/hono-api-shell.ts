@@ -12,14 +12,14 @@ import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { UserAuthService } from '@/core/UserAuthService.js';
 import type { WebAuthnService } from '@/core/WebAuthnService.js';
 import type { EmailService } from '@/core/EmailService.js';
-import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { DeliverQueue, SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
 import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
 import { handleHonoApiAdminAnnouncementsCreate, handleHonoApiAdminAnnouncementsDelete, handleHonoApiAdminAnnouncementsList, handleHonoApiAdminAnnouncementsUpdate } from './hono-api-admin-announcements.js';
 import { handleHonoApiAdminAvatarDecorationsCreate, handleHonoApiAdminAvatarDecorationsDelete, handleHonoApiAdminAvatarDecorationsList, handleHonoApiAdminAvatarDecorationsUpdate } from './hono-api-admin-avatar-decorations.js';
-import { handleHonoApiAdminRelaysList } from './hono-api-admin-relays.js';
+import { handleHonoApiAdminRelaysAdd, handleHonoApiAdminRelaysList, handleHonoApiAdminRelaysRemove } from './hono-api-admin-relays.js';
 import { handleHonoApiAdminRolesAssign, handleHonoApiAdminRolesCreate, handleHonoApiAdminRolesDelete, handleHonoApiAdminRolesList, handleHonoApiAdminRolesShow, handleHonoApiAdminRolesUnassign, handleHonoApiAdminRolesUpdate, handleHonoApiAdminRolesUpdateDefaultPolicies, handleHonoApiAdminRolesUsers } from './hono-api-admin-roles.js';
 import { handleHonoApiAdminServerInfo } from './hono-api-admin-server-info.js';
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from './hono-api-admin-stats.js';
@@ -94,6 +94,7 @@ export type ApiShellDependencies = {
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
+	deliverQueue: DeliverQueue;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
@@ -753,6 +754,31 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminRelaysList(deps, body));
+		});
+	});
+
+	app.post('/admin/relays/add', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:relays');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminRelaysAdd(deps, body));
+		});
+	});
+
+	app.post('/admin/relays/remove', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:relays');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminRelaysRemove(deps, body);
+			return emptyResponse(c);
 		});
 	});
 

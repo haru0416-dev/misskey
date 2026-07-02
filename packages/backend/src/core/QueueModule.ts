@@ -31,6 +31,10 @@ export type ObjectStorageQueue = Bull.Queue;
 export type UserWebhookDeliverQueue = Bull.Queue<UserWebhookDeliverJobData>;
 export type SystemWebhookDeliverQueue = Bull.Queue<SystemWebhookDeliverJobData>;
 
+export function createDeliverQueue(config: Config): DeliverQueue {
+	return new Bull.Queue(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
+}
+
 export function createSystemWebhookDeliverQueue(config: Config): SystemWebhookDeliverQueue {
 	return new Bull.Queue(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 }
@@ -55,7 +59,7 @@ const $postScheduledNote: Provider = {
 
 const $deliver: Provider = {
 	provide: 'queue:deliver',
-	useFactory: (config: Config) => new Bull.Queue(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER)),
+	useFactory: createDeliverQueue,
 	inject: [DI.config],
 };
 

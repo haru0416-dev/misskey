@@ -38,7 +38,7 @@ import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
-import { createRelayInDatabase } from '@/core/RelayStore.js';
+import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
@@ -59,7 +59,7 @@ import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -71,12 +71,14 @@ describe('Endpoints', () => {
 	let dave: misskey.entities.SignupResponse;
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
+	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 
 	beforeAll(async () => {
 		const config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
+		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
 		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -86,6 +88,7 @@ describe('Endpoints', () => {
 	}, 1000 * 60 * 2);
 
 	afterAll(async () => {
+		await deliverQueue?.close();
 		await systemWebhookDeliverQueue?.close();
 		await pool?.end();
 	});
@@ -2753,7 +2756,22 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('admin/relays/list', () => {
+	describe('admin/relays', () => {
+		async function findDeliverJob(inbox: string, type: 'Follow' | 'Undo'): Promise<Bull.Job<DeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				for (const job of jobs) {
+					if (job.data.to !== inbox) continue;
+
+					const content = JSON.parse(job.data.content) as { type?: unknown };
+					if (content.type === type) return job;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`deliver job was not found: ${inbox} ${type}`);
+		}
+
 		test('admin/relays/list はrelay一覧、moderator権限、token scopeを維持する', async () => {
 			const config = loadConfig();
 			const now = Date.now();
@@ -2796,6 +2814,68 @@ describe('Endpoints', () => {
 			const roleDenied = await api('admin/relays/list', {}, normalUser);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('admin/relays/add と admin/relays/remove はDB、deliver queue、権限を維持する', async () => {
+			const now = Date.now();
+			const inbox = `https://relay-write-${now}.example/inbox`;
+
+			const added = await api('admin/relays/add', { inbox }, alice);
+			assert.strictEqual(added.status, 200);
+			assert.strictEqual(added.body.inbox, inbox);
+			assert.strictEqual(added.body.status, 'requesting');
+			assert.strictEqual(typeof added.body.id, 'string');
+
+			const row = await fetchRelayByInboxFromDatabase(db, inbox);
+			assert.ok(row);
+			assert.strictEqual(row.id, added.body.id);
+
+			const followJob = await findDeliverJob(inbox, 'Follow');
+			assert.strictEqual(followJob.data.to, inbox);
+			assert.strictEqual(followJob.data.isSharedInbox, false);
+			assert.strictEqual(followJob.data.digest, `SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`);
+
+			const follow = JSON.parse(followJob.data.content) as any;
+			assert.strictEqual(follow.type, 'Follow');
+			assert.strictEqual(follow.id, `${origin}/activities/follow-relay/${added.body.id}`);
+			assert.strictEqual(follow.actor.startsWith(`${origin}/users/`), true);
+			assert.strictEqual(follow.object, 'https://www.w3.org/ns/activitystreams#Public');
+			assert.ok(follow['@context']);
+			await followJob.remove();
+
+			const invalidUrl = await api('admin/relays/add', { inbox: 'http://relay-invalid.example/inbox' }, alice);
+			assert.strictEqual(invalidUrl.status, 400);
+			assert.strictEqual(castAsError(invalidUrl.body as any).error.code, 'INVALID_URL');
+			assert.strictEqual(castAsError(invalidUrl.body as any).error.id, 'fb8c92d3-d4e5-44e7-b3d4-800d5cef8b2c');
+
+			const readToken = await createAppToken(alice, ['read:admin:relays']);
+			const scopeDenied = await api('admin/relays/add', { inbox: `https://relay-denied-${now}.example/inbox` }, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honorelayw${now.toString(36)}` });
+			const roleDenied = await api('admin/relays/add', { inbox: `https://relay-role-denied-${now}.example/inbox` }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const removed = await api('admin/relays/remove', { inbox }, alice);
+			assert.strictEqual(removed.status, 204);
+			assert.strictEqual(await fetchRelayByInboxFromDatabase(db, inbox), null);
+
+			const undoJob = await findDeliverJob(inbox, 'Undo');
+			assert.strictEqual(undoJob.data.to, inbox);
+			assert.strictEqual(undoJob.data.isSharedInbox, false);
+			assert.strictEqual(undoJob.data.digest, `SHA-256=${createHash('sha256').update(undoJob.data.content).digest('base64')}`);
+
+			const undo = JSON.parse(undoJob.data.content) as any;
+			assert.strictEqual(undo.type, 'Undo');
+			assert.strictEqual(undo.id, `${origin}/activities/follow-relay/${added.body.id}/undo`);
+			assert.strictEqual(undo.actor.startsWith(`${origin}/users/`), true);
+			assert.strictEqual(undo.object.type, 'Follow');
+			assert.strictEqual(undo.object.id, `${origin}/activities/follow-relay/${added.body.id}`);
+			assert.strictEqual(typeof undo.published, 'string');
+			assert.ok(undo['@context']);
+			await undoJob.remove();
 		});
 	});
 
