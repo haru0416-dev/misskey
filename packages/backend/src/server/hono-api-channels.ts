@@ -6,31 +6,43 @@
 import type { Config } from '@/config.js';
 import { fetchFavoriteChannelIdsFromDatabase, fetchFavoritedChannelIdsInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { fetchFollowingChannelIdsInDatabase, listChannelFollowingsByFollowerIdFromDatabase } from '@/core/ChannelFollowingStore.js';
-import { fetchMutedChannelIdsInDatabase } from '@/core/ChannelMutingStore.js';
+import {
+	channelMutingExistsInDatabase,
+	createChannelMutingInDatabase,
+	deleteChannelMutingFromDatabase,
+	fetchActiveMutedChannelIdsFromDatabase,
+	fetchMutedChannelIdsInDatabase,
+	updateChannelMutingExpirationInDatabase,
+} from '@/core/ChannelMutingStore.js';
 import {
 	listChannelsByIdsFromDatabase,
 	listChannelsBySearchFromDatabase,
 	listOwnedChannelsFromDatabase,
 	listRecentlyActiveChannelsFromDatabase,
 	resolveChannelPagination,
+	fetchChannelByIdFromDatabase,
 } from '@/core/ChannelStore.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser } from '@/models/User.js';
+import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
+import { HonoApiError } from './hono-api-error.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiChannelsDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
+	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
 type HonoApiPackedChannel = Packed<'Channel'>;
@@ -79,6 +91,81 @@ const emptyParamDef = {
 	properties: {},
 	required: [],
 } as const;
+
+const channelMuteCreateParamDef = {
+	type: 'object',
+	properties: {
+		channelId: { type: 'string', format: 'misskey:id' },
+		expiresAt: {
+			type: 'integer',
+			nullable: true,
+			description: 'A Unix Epoch timestamp that must lie in the future. `null` means an indefinite mute.',
+		},
+	},
+	required: ['channelId'],
+} as const;
+
+type ChannelMuteCreateParams = {
+	channelId: string;
+	expiresAt?: number | null;
+};
+
+const channelMuteDeleteParamDef = {
+	type: 'object',
+	properties: {
+		channelId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['channelId'],
+} as const;
+
+type ChannelMuteDeleteParams = {
+	channelId: string;
+};
+
+function channelMuteCreateNoSuchChannelError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such Channel.',
+		code: 'NO_SUCH_CHANNEL',
+		id: '7174361e-d58f-31d6-2e7c-6fb830786a3f',
+	});
+}
+
+function channelMuteCreateAlreadyMutingError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'You are already muting that user.',
+		code: 'ALREADY_MUTING_CHANNEL',
+		id: '5a251978-769a-da44-3e89-3931e43bb592',
+	});
+}
+
+function channelMuteCreateExpiresAtIsPastError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Cannot set past date to "expiresAt".',
+		code: 'EXPIRES_AT_IS_PAST',
+		id: '42b32236-df2c-a45f-fdbf-def67268f749',
+	});
+}
+
+function channelMuteDeleteNoSuchChannelError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such Channel.',
+		code: 'NO_SUCH_CHANNEL',
+		id: 'e7998769-6e94-d9c2-6b8f-94a527314aba',
+	});
+}
+
+function channelMuteDeleteNotMutingError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'You are not muting that channel.',
+		code: 'NOT_MUTING_CHANNEL',
+		id: '14d55962-6ea8-d990-1333-d6bef78dc2ab',
+	});
+}
 
 type ChannelPackHint = {
 	bannerFiles: Map<MiDriveFile['id'], MiDriveFile>;
@@ -233,6 +320,87 @@ export async function handleHonoApiChannelsMyFavorites(
 	const channels = channelIds
 		.map(id => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null);
+
+	return await packChannelsForHonoApi(deps, channels, me);
+}
+
+export async function handleHonoApiChannelsMuteCreate(
+	deps: HonoApiChannelsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(channelMuteCreateParamDef, body) as ChannelMuteCreateParams;
+	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
+	if (targetChannel == null) {
+		throw channelMuteCreateNoSuchChannelError();
+	}
+
+	const exists = await channelMutingExistsInDatabase(deps.db, me.id, targetChannel.id);
+	if (exists) {
+		throw channelMuteCreateAlreadyMutingError();
+	}
+
+	if (params.expiresAt && params.expiresAt <= Date.now()) {
+		throw channelMuteCreateExpiresAtIsPastError();
+	}
+
+	const expiresAt = params.expiresAt ? new Date(params.expiresAt) : null;
+	try {
+		await createChannelMutingInDatabase(deps.db, {
+			id: genId(deps.config),
+			userId: me.id,
+			channelId: targetChannel.id,
+			expiresAt,
+		});
+	} catch (err) {
+		if (!isDuplicateKeyValueDatabaseError(err)) throw err;
+		await updateChannelMutingExpirationInDatabase(deps.db, me.id, targetChannel.id, expiresAt);
+	}
+
+	deps.publishInternalEvent?.('muteChannel', {
+		userId: me.id,
+		channelId: targetChannel.id,
+	});
+}
+
+export async function handleHonoApiChannelsMuteDelete(
+	deps: HonoApiChannelsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(channelMuteDeleteParamDef, body) as ChannelMuteDeleteParams;
+	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
+	if (targetChannel == null) {
+		throw channelMuteDeleteNoSuchChannelError();
+	}
+
+	const exists = await channelMutingExistsInDatabase(deps.db, me.id, targetChannel.id);
+	if (!exists) {
+		throw channelMuteDeleteNotMutingError();
+	}
+
+	await deleteChannelMutingFromDatabase(deps.db, me.id, targetChannel.id);
+	deps.publishInternalEvent?.('unmuteChannel', {
+		userId: me.id,
+		channelId: targetChannel.id,
+	});
+}
+
+export async function handleHonoApiChannelsMuteList(
+	deps: HonoApiChannelsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<HonoApiPackedChannel[]> {
+	parseHonoApiParams(emptyParamDef, body);
+	const channelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	if (channelIds.length === 0) return [];
+
+	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds)
+		.then(channels => new Map(channels.map(channel => [channel.id, channel])));
+	const channels = channelIds
+		.map(id => channelById.get(id))
+		.filter((channel): channel is MiChannel => channel != null)
+		.sort((a, b) => a.id.localeCompare(b.id));
 
 	return await packChannelsForHonoApi(deps, channels, me);
 }

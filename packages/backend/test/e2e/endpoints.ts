@@ -20,7 +20,7 @@ import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.j
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
-import { createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
+import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
@@ -2694,6 +2694,124 @@ describe('Endpoints', () => {
 				assert.strictEqual(denied.status, 403, endpoint);
 				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
 			}
+		});
+	});
+
+	describe('Hono channel mute endpoints', () => {
+		test('create, list, and delete preserve channel mute behavior', async () => {
+			const config = loadConfig();
+			const stamp = Date.now().toString(36);
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-mute-${stamp}`,
+				description: 'hono mute target',
+				lastNotedAt: new Date('2024-01-04T00:00:00.000Z'),
+			});
+			const expiredTarget = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-expired-mute-${stamp}`,
+				description: 'hono expired mute target',
+				lastNotedAt: new Date('2024-01-05T00:00:00.000Z'),
+			});
+			await createChannelMutingInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				channelId: expiredTarget.id,
+				expiresAt: new Date(Date.now() - 60_000),
+			});
+
+			const created = await api('channels/mute/create', {
+				channelId: target.id,
+				expiresAt: Date.now() + 60_000,
+			}, alice);
+			assert.strictEqual(created.status, 204);
+			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), true);
+
+			const duplicate = await api('channels/mute/create', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
+
+			const expiredDuplicate = await api('channels/mute/create', {
+				channelId: expiredTarget.id,
+			}, alice);
+			assert.strictEqual(expiredDuplicate.status, 400);
+			assert.strictEqual(castAsError(expiredDuplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
+
+			const list = await api('channels/mute/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const mutedChannels = list.body as any[];
+			const muted = mutedChannels.find(channel => channel.id === target.id);
+			assert.ok(muted);
+			assert.strictEqual(muted.isMuting, true);
+			assert.strictEqual(mutedChannels.some(channel => channel.id === expiredTarget.id), false);
+
+			const deleted = await api('channels/mute/delete', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), false);
+
+			const missingDelete = await api('channels/mute/delete', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, '14d55962-6ea8-d990-1333-d6bef78dc2ab');
+		});
+
+		test('keeps legacy validation, permission, and moved-account errors', async () => {
+			const config = loadConfig();
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-mute-validation-${Date.now().toString(36)}`,
+				description: 'hono mute validation target',
+			});
+
+			const missingCreate = await api('channels/mute/create', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingCreate.status, 400);
+			assert.strictEqual(castAsError(missingCreate.body as any).error.id, '7174361e-d58f-31d6-2e7c-6fb830786a3f');
+
+			const missingDelete = await api('channels/mute/delete', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, 'e7998769-6e94-d9c2-6b8f-94a527314aba');
+
+			const pastExpiration = await api('channels/mute/create', {
+				channelId: target.id,
+				expiresAt: Date.now() - 60_000,
+			}, alice);
+			assert.strictEqual(pastExpiration.status, 400);
+			assert.strictEqual(castAsError(pastExpiration.body as any).error.id, '42b32236-df2c-a45f-fdbf-def67268f749');
+
+			const readToken = await createAppToken(alice, ['read:channels']);
+			const writeToken = await createAppToken(alice, ['write:channels']);
+			for (const endpoint of ['channels/mute/create', 'channels/mute/delete'] as const) {
+				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+
+			const listDenied = await api('channels/mute/list', {}, { token: writeToken });
+			assert.strictEqual(listDenied.status, 403);
+			assert.strictEqual(castAsError(listDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const movedUser = await signup({ username: `honomute${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+			const movedDenied = await api('channels/mute/create', {
+				channelId: target.id,
+			}, movedUser);
+			assert.strictEqual(movedDenied.status, 403);
+			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(await channelMutingExistsInDatabase(db, movedUser.id, target.id), false);
 		});
 	});
 
