@@ -2756,6 +2756,162 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/abuse-report/notification-recipient', () => {
+		test('admin/abuse-report/notification-recipient は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const name = `Hono abuse recipient ${suffix}`;
+			const emailUser = await signup({ username: `harn${suffix}` });
+			await updateUserProfileInDatabase(db, emailUser.id, {
+				email: `hono-recipient-${suffix}@example.test`,
+				emailVerified: true,
+			});
+			const moderatorRole = await role(alice, {
+				name: `Hono abuse recipient moderator ${suffix}`,
+				isModerator: true,
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: moderatorRole.id,
+				userId: emailUser.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const webhook = await api('admin/system-webhook/create', {
+				isActive: true,
+				name: `${name} webhook`,
+				on: ['abuseReport'],
+				url: 'https://example.test/abuse-recipient-webhook',
+			}, alice);
+			assert.strictEqual(webhook.status, 200);
+
+			const createdWebhookRecipient = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name,
+				method: 'webhook',
+				systemWebhookId: webhook.body.id,
+			}, alice);
+			assert.strictEqual(createdWebhookRecipient.status, 200);
+			assert.strictEqual(createdWebhookRecipient.body.isActive, true);
+			assert.strictEqual(createdWebhookRecipient.body.name, name);
+			assert.strictEqual(createdWebhookRecipient.body.method, 'webhook');
+			assert.strictEqual(createdWebhookRecipient.body.systemWebhookId, webhook.body.id);
+			assert.ok(createdWebhookRecipient.body.systemWebhook);
+			assert.strictEqual(createdWebhookRecipient.body.systemWebhook.id, webhook.body.id);
+
+			const createdEmailRecipient = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} email`,
+				method: 'email',
+				userId: emailUser.id,
+			}, alice);
+			assert.strictEqual(createdEmailRecipient.status, 200);
+			assert.strictEqual(createdEmailRecipient.body.method, 'email');
+			assert.strictEqual(createdEmailRecipient.body.userId, emailUser.id);
+			assert.ok(createdEmailRecipient.body.user);
+			assert.strictEqual(createdEmailRecipient.body.user.id, emailUser.id);
+
+			const listedWebhook = await api('admin/abuse-report/notification-recipient/list', { method: ['webhook'] }, alice);
+			assert.strictEqual(listedWebhook.status, 200);
+			assert.strictEqual(listedWebhook.body.some(recipient => recipient.id === createdWebhookRecipient.body.id), true);
+			assert.strictEqual(listedWebhook.body.some(recipient => recipient.id === createdEmailRecipient.body.id), false);
+
+			const listedEmail = await api('admin/abuse-report/notification-recipient/list', { method: ['email'] }, alice);
+			assert.strictEqual(listedEmail.status, 200);
+			assert.strictEqual(listedEmail.body.some(recipient => recipient.id === createdEmailRecipient.body.id), true);
+
+			const shown = await api('admin/abuse-report/notification-recipient/show', { id: createdWebhookRecipient.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, createdWebhookRecipient.body.id);
+			assert.ok(shown.body.systemWebhook);
+			assert.strictEqual(shown.body.systemWebhook.id, webhook.body.id);
+
+			const missing = await api('admin/abuse-report/notification-recipient/show', { id: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_RECIPIENT');
+
+			const updated = await api('admin/abuse-report/notification-recipient/update', {
+				id: createdWebhookRecipient.body.id,
+				isActive: false,
+				name: `${name} updated`,
+				method: 'email',
+				userId: emailUser.id,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.id, createdWebhookRecipient.body.id);
+			assert.strictEqual(updated.body.isActive, false);
+			assert.strictEqual(updated.body.name, `${name} updated`);
+			assert.strictEqual(updated.body.method, 'email');
+			assert.strictEqual(updated.body.userId, emailUser.id);
+			assert.strictEqual(updated.body.systemWebhookId, undefined);
+
+			const missingEmailUser = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} missing email user`,
+				method: 'email',
+			}, alice);
+			assert.strictEqual(missingEmailUser.status, 400);
+			assert.strictEqual(castAsError(missingEmailUser.body as any).error.code, 'CORRELATION_CHECK_EMAIL');
+
+			const unverifiedUser = await signup({ username: `hanu${suffix}` });
+			const unverifiedEmailUser = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} unverified email`,
+				method: 'email',
+				userId: unverifiedUser.id,
+			}, alice);
+			assert.strictEqual(unverifiedEmailUser.status, 400);
+			assert.strictEqual(castAsError(unverifiedEmailUser.body as any).error.code, 'EMAIL_ADDRESS_NOT_SET');
+
+			const missingWebhook = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} missing webhook`,
+				method: 'webhook',
+			}, alice);
+			assert.strictEqual(missingWebhook.status, 400);
+			assert.strictEqual(castAsError(missingWebhook.body as any).error.code, 'CORRELATION_CHECK_WEBHOOK');
+
+			const appToken = await createAppToken(alice, ['write:admin:roles']);
+			const secureDenied = await api('admin/abuse-report/notification-recipient/list', {}, { token: appToken });
+			assert.strictEqual(secureDenied.status, 400);
+			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const normalUser = await signup({ username: `hanr${suffix}` });
+			const roleDenied = await api('admin/abuse-report/notification-recipient/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deletedUpdated = await api('admin/abuse-report/notification-recipient/delete', { id: createdWebhookRecipient.body.id }, alice);
+			assert.strictEqual(deletedUpdated.status, 204);
+			const deletedEmail = await api('admin/abuse-report/notification-recipient/delete', { id: createdEmailRecipient.body.id }, alice);
+			assert.strictEqual(deletedEmail.status, 204);
+
+			const shownDeleted = await api('admin/abuse-report/notification-recipient/show', { id: createdWebhookRecipient.body.id }, alice);
+			assert.strictEqual(shownDeleted.status, 404);
+			assert.strictEqual(castAsError(shownDeleted.body as any).error.code, 'NO_SUCH_RECIPIENT');
+
+			const deletedWebhook = await api('admin/system-webhook/delete', { id: webhook.body.id }, alice);
+			assert.strictEqual(deletedWebhook.status, 204);
+
+			const logTypes = ['createAbuseReportNotificationRecipient', 'updateAbuseReportNotificationRecipient', 'deleteAbuseReportNotificationRecipient'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: createdWebhookRecipient.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
 	describe('admin/get-user-ips', () => {
 		test('admin/get-user-ips は最新30件、admin権限、token scopeを維持する', async () => {
 			const now = Date.now();

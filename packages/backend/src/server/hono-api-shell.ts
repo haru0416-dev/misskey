@@ -15,6 +15,7 @@ import type { EmailService } from '@/core/EmailService.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
+import { handleHonoApiAdminAbuseReportNotificationRecipientCreate, handleHonoApiAdminAbuseReportNotificationRecipientDelete, handleHonoApiAdminAbuseReportNotificationRecipientList, handleHonoApiAdminAbuseReportNotificationRecipientShow, handleHonoApiAdminAbuseReportNotificationRecipientUpdate } from './hono-api-admin-abuse-report-notification-recipient.js';
 import { handleHonoApiAdminAccountsFindByEmail } from './hono-api-admin-accounts.js';
 import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
 import { handleHonoApiAdminAnnouncementsCreate, handleHonoApiAdminAnnouncementsDelete, handleHonoApiAdminAnnouncementsList, handleHonoApiAdminAnnouncementsUpdate } from './hono-api-admin-announcements.js';
@@ -356,6 +357,67 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiAdmin(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminAccountsFindByEmail(deps, body));
+		});
+	});
+
+	app.post('/admin/abuse-report/notification-recipient/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminAbuseReportNotificationRecipientCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/abuse-report/notification-recipient/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminAbuseReportNotificationRecipientDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/abuse-report/notification-recipient/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminAbuseReportNotificationRecipientList(deps, body));
+		});
+	});
+
+	app.post('/admin/abuse-report/notification-recipient/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminAbuseReportNotificationRecipientShow(deps, body));
+		});
+	});
+
+	app.post('/admin/abuse-report/notification-recipient/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminAbuseReportNotificationRecipientUpdate(deps, auth.user, body));
 		});
 	});
 
