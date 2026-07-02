@@ -19,7 +19,7 @@ import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } fro
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiI } from './hono-api-i.js';
-import { handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
+import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
@@ -283,6 +283,12 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertSecureCredential(auth);
 
 			return jsonResponse(c, await handleHonoApiMiauthGenToken(deps, auth.user, body));
+		});
+	});
+
+	app.post('/miauth/:session/check', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiMiauthCheck(deps, c.req.param('session')));
 		});
 	});
 

@@ -13,7 +13,7 @@ import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { api, castAsError, post, role, signup, simpleGet, uploadFile } from '../utils.js';
+import { api, castAsError, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Endpoints', () => {
@@ -174,6 +174,33 @@ describe('Endpoints', () => {
 			});
 			assert.strictEqual(deleted.status, 400);
 			assert.strictEqual(castAsError(deleted.body as any).error.code, 'NO_SUCH_SESSION');
+		});
+	});
+
+	describe('miauth', () => {
+		test('session check returns issued token once', async () => {
+			const session = 'miauth-session-test';
+			const issued = await api('miauth/gen-token', {
+				session,
+				permission: ['read:account'],
+			}, alice);
+			assert.strictEqual(issued.status, 200);
+			assert.strictEqual(typeof issued.body.token, 'string');
+
+			const checked = await relativeFetch(`api/miauth/${session}/check`, {
+				method: 'POST',
+			});
+			assert.strictEqual(checked.status, 200);
+			const checkedBody = await checked.json() as { ok: boolean; token?: string; user?: { id?: string } };
+			assert.strictEqual(checkedBody.ok, true);
+			assert.strictEqual(checkedBody.token, issued.body.token);
+			assert.strictEqual(checkedBody.user?.id, alice.id);
+
+			const checkedAgain = await relativeFetch(`api/miauth/${session}/check`, {
+				method: 'POST',
+			});
+			assert.strictEqual(checkedAgain.status, 200);
+			assert.deepStrictEqual(await checkedAgain.json(), { ok: false });
 		});
 	});
 
