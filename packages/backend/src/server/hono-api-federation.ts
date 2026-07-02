@@ -4,23 +4,29 @@
  */
 
 import { domainToASCII } from 'node:url';
+import type * as Redis from 'ioredis';
 import semver from 'semver';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import type { RelationshipQueue } from '@/core/QueueModule.js';
 import {
 	fetchInstanceByHostFromDatabase,
 	listFederationInstancesFromDatabase,
 	listInstancesOrderByFollowersCountDescFromDatabase,
 	listInstancesOrderByFollowingCountDescFromDatabase,
+	updateInstanceInDatabase,
 } from '@/core/InstanceStore.js';
 import {
 	countFollowingsWithRemoteFolloweeHostFromDatabase,
 	countFollowingsWithRemoteFollowerHostFromDatabase,
+	listFollowingsByFollowerHostFromDatabase,
 } from '@/core/FollowingStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiInstance, MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
+import type { RelationshipJobData } from '@/queue/types.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -28,6 +34,11 @@ export type HonoApiFederationDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
+};
+
+export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies & {
+	redis: Redis.Redis;
+	relationshipQueue: RelationshipQueue;
 };
 
 const federationInstancesParamDef = {
@@ -76,6 +87,24 @@ const federationShowInstanceParamDef = {
 	required: ['host'],
 } as const;
 
+const adminFederationUpdateInstanceParamDef = {
+	type: 'object',
+	properties: {
+		host: { type: 'string' },
+		isSuspended: { type: 'boolean' },
+		moderationNote: { type: 'string' },
+	},
+	required: ['host'],
+} as const;
+
+const adminFederationHostParamDef = {
+	type: 'object',
+	properties: {
+		host: { type: 'string' },
+	},
+	required: ['host'],
+} as const;
+
 const federationStatsParamDef = {
 	type: 'object',
 	properties: {
@@ -86,6 +115,8 @@ const federationStatsParamDef = {
 
 type FederationInstancesParams = SchemaType<typeof federationInstancesParamDef>;
 type FederationShowInstanceParams = SchemaType<typeof federationShowInstanceParamDef>;
+type AdminFederationUpdateInstanceParams = SchemaType<typeof adminFederationUpdateInstanceParamDef>;
+type AdminFederationHostParams = SchemaType<typeof adminFederationHostParamDef>;
 type FederationStatsParams = SchemaType<typeof federationStatsParamDef>;
 type FederationInstancesSort =
 	| '+pubSub'
@@ -147,6 +178,41 @@ export function normalizeHonoApiFederationQuery(query: Record<string, string>): 
 
 function toPuny(host: string): string {
 	return domainToASCII(host.toLowerCase());
+}
+
+async function updateFederatedInstanceCache(
+	deps: HonoApiAdminFederationDependencies,
+	instance: MiInstance,
+): Promise<void> {
+	await deps.redis.set(
+		`kvcache:federatedInstance:${instance.host}`,
+		JSON.stringify(instance),
+		'EX',
+		60 * 30,
+	);
+}
+
+function toRelationshipJob(name: 'unfollow', data: RelationshipJobData) {
+	return {
+		name,
+		data: {
+			from: { id: data.from.id },
+			to: { id: data.to.id },
+			silent: data.silent,
+			requestId: data.requestId,
+			withReplies: data.withReplies,
+		},
+		opts: {
+			removeOnComplete: {
+				age: 3600 * 24 * 7,
+				count: 30,
+			},
+			removeOnFail: {
+				age: 3600 * 24 * 7,
+				count: 100,
+			},
+		},
+	};
 }
 
 function isHostMatched(targetHosts: string[], host: string): boolean {
@@ -273,6 +339,65 @@ export async function handleHonoApiFederationShowInstance(
 
 	const [packed] = await packHonoApiFederationInstances(deps, [found], user, deps.meta);
 	return packed ?? null;
+}
+
+export async function handleHonoApiAdminFederationUpdateInstance(
+	deps: HonoApiAdminFederationDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminFederationUpdateInstanceParamDef, body) as AdminFederationUpdateInstanceParams;
+	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
+
+	if (instance == null) {
+		throw new Error('instance not found');
+	}
+
+	const isSuspendedBefore = instance.suspensionState !== 'none';
+	let suspensionState: undefined | 'manuallySuspended' | 'none';
+
+	if (params.isSuspended != null && isSuspendedBefore !== params.isSuspended) {
+		suspensionState = params.isSuspended ? 'manuallySuspended' : 'none';
+	}
+
+	const updated = await updateInstanceInDatabase(deps.db, instance.id, {
+		suspensionState,
+		moderationNote: params.moderationNote,
+	});
+	await updateFederatedInstanceCache(deps, updated);
+
+	if (params.isSuspended != null && isSuspendedBefore !== params.isSuspended) {
+		await logModerationEventInDatabase(deps, me, params.isSuspended ? 'suspendRemoteInstance' : 'unsuspendRemoteInstance', {
+			id: instance.id,
+			host: instance.host,
+		});
+	}
+
+	if (params.moderationNote != null && instance.moderationNote !== params.moderationNote) {
+		await logModerationEventInDatabase(deps, me, 'updateRemoteInstanceNote', {
+			id: instance.id,
+			host: instance.host,
+			before: instance.moderationNote,
+			after: params.moderationNote,
+		});
+	}
+}
+
+export async function handleHonoApiAdminFederationRemoveAllFollowing(
+	deps: HonoApiAdminFederationDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminFederationHostParamDef, body) as AdminFederationHostParams;
+	const followings = await listFollowingsByFollowerHostFromDatabase(deps.db, params.host);
+	const jobs = followings.map(following => toRelationshipJob('unfollow', {
+		from: { id: following.followerId },
+		to: { id: following.followeeId },
+		silent: true,
+	}));
+
+	if (jobs.length > 0) {
+		await deps.relationshipQueue.addBulk(jobs);
+	}
 }
 
 export async function handleHonoApiFederationStats(

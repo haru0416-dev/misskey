@@ -32,7 +32,7 @@ import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
-import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
@@ -703,6 +703,125 @@ describe('Endpoints', () => {
 			assert.strictEqual(statsBody.topPubInstances?.[0]?.id, beta.id);
 			assert.strictEqual(typeof statsBody.otherFollowersCount, 'number');
 			assert.strictEqual(typeof statsBody.otherFollowingCount, 'number');
+		});
+
+		test('admin/federation/update-instance は suspension、moderationNote、cache、token scope、role、ログを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const host = `hono-admin-fed-${suffix}.example`;
+			const instance = await createInstanceInDatabase(db, {
+				id: genId(config, now),
+				host,
+				firstRetrievedAt: new Date(now),
+				suspensionState: 'none',
+				moderationNote: 'before update',
+			});
+
+			const suspended = await api('admin/federation/update-instance', {
+				host: host.toUpperCase(),
+				isSuspended: true,
+				moderationNote: `updated note ${suffix}`,
+			}, alice);
+			assert.strictEqual(suspended.status, 204);
+
+			let after = await fetchInstanceByHostFromDatabase(db, host);
+			assert.ok(after);
+			assert.strictEqual(after.suspensionState, 'manuallySuspended');
+			assert.strictEqual(after.moderationNote, `updated note ${suffix}`);
+
+			const redis = createRedisClient(config);
+			try {
+				const cached = await redis.get(`kvcache:federatedInstance:${host}`);
+				assert.ok(cached);
+				const cachedInstance = JSON.parse(cached);
+				assert.strictEqual(cachedInstance.id, instance.id);
+				assert.strictEqual(cachedInstance.suspensionState, 'manuallySuspended');
+				assert.strictEqual(cachedInstance.moderationNote, `updated note ${suffix}`);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			for (let i = 0; i < 10; i++) {
+				const [suspendLogs, noteLogs] = await Promise.all([
+					listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type: 'suspendRemoteInstance',
+						search: instance.id,
+					}),
+					listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type: 'updateRemoteInstanceNote',
+						search: instance.id,
+					}),
+				]);
+				if (suspendLogs.length > 0 && noteLogs.length > 0) {
+					assert.strictEqual(suspendLogs.some(log => (log.info as any).host === host), true);
+					assert.strictEqual(noteLogs.some(log => (log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('remote instance moderation logs were not found');
+			}
+
+			const token = await createAppToken(alice, ['write:admin:federation']);
+			const unsuspended = await api('admin/federation/update-instance', {
+				host,
+				isSuspended: false,
+			}, { token });
+			assert.strictEqual(unsuspended.status, 204);
+			after = await fetchInstanceByHostFromDatabase(db, host);
+			assert.ok(after);
+			assert.strictEqual(after.suspensionState, 'none');
+			assert.strictEqual(after.moderationNote, `updated note ${suffix}`);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/federation/update-instance', { host }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `haf${suffix}` });
+			const roleDenied = await api('admin/federation/update-instance', { host }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('admin/federation/remove-all-following は remote follower の unfollow job を作る', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const host = `hono-remove-following-${suffix}.example`;
+			const follower = await signup({ username: `hafr${suffix}` });
+			const followee = await signup({ username: `haft${suffix}` });
+			const following = await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: follower.id,
+				followeeId: followee.id,
+				followerHost: host,
+			});
+
+			const removed = await api('admin/federation/remove-all-following', { host }, alice);
+			assert.strictEqual(removed.status, 204);
+
+			let job: Bull.Job<RelationshipJobData> | undefined;
+			for (let i = 0; i < 10; i++) {
+				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				job = jobs.find(job =>
+					job.name === 'unfollow' &&
+					job.data.from.id === following.followerId &&
+					job.data.to.id === following.followeeId &&
+					job.data.silent === true);
+				if (job != null) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.ok(job);
+			await job.remove();
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/federation/remove-all-following', { host }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 		});
 	});
 
