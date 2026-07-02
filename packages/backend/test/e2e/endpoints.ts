@@ -18,9 +18,17 @@ import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
+import { channelFavoriteExistsInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { createChannelInDatabase } from '@/core/ChannelStore.js';
+import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
+import { createClipInDatabase } from '@/core/ClipStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
+import { createFlashInDatabase } from '@/core/FlashStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
+import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
+import { createPageInDatabase } from '@/core/PageStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
@@ -29,7 +37,9 @@ import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import { createUserListInDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
@@ -1241,6 +1251,157 @@ describe('Endpoints', () => {
 			const denied = await api('promo/read', { noteId }, { token: appToken });
 			assert.strictEqual(denied.status, 403);
 			assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+	});
+
+	describe('favorite and like endpoints', () => {
+		async function createFavoriteFixtures(prefix: string) {
+			const config = loadConfig();
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `${prefix}-list`,
+				isPublic: true,
+			});
+			const clip = await createClipInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `${prefix}-clip`,
+				isPublic: true,
+			});
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `${prefix}-channel`,
+			});
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `${prefix} page`,
+				name: `${prefix}-page`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `${prefix} flash`,
+				summary: '',
+				userId: alice.id,
+				script: '',
+				permissions: [],
+				visibility: 'public',
+			});
+
+			return { userList, clip, channel, page, flash };
+		}
+
+		test('users/lists favorite endpoints create, reject duplicates, and delete favorites', async () => {
+			const { userList } = await createFavoriteFixtures(`hono-favorite-list-${Date.now()}`);
+
+			const favorite = await api('users/lists/favorite', { listId: userList.id }, bob);
+			assert.strictEqual(favorite.status, 204);
+			assert.strictEqual(await userListFavoriteExistsInDatabase(db, bob.id, userList.id), true);
+
+			const duplicate = await api('users/lists/favorite', { listId: userList.id }, bob);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FAVORITED');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '6425bba0-985b-461e-af1b-518070e72081');
+
+			const unfavorite = await api('users/lists/unfavorite', { listId: userList.id }, bob);
+			assert.strictEqual(unfavorite.status, 204);
+			assert.strictEqual(await userListFavoriteExistsInDatabase(db, bob.id, userList.id), false);
+
+			const missingFavorite = await api('users/lists/unfavorite', { listId: userList.id }, bob);
+			assert.strictEqual(missingFavorite.status, 400);
+			assert.strictEqual(castAsError(missingFavorite.body as any).error.id, '835c4b27-463d-4cfa-969b-a9058678d465');
+		});
+
+		test('clip, channel, page, and flash endpoints keep lifecycle semantics', async () => {
+			const { clip, channel, page, flash } = await createFavoriteFixtures(`hono-favorite-${Date.now()}`);
+
+			const clipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
+			assert.strictEqual(clipFavorite.status, 204);
+			assert.strictEqual(await clipFavoriteExistsInDatabase(db, bob.id, clip.id), true);
+
+			const duplicateClipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
+			assert.strictEqual(duplicateClipFavorite.status, 400);
+			assert.strictEqual(castAsError(duplicateClipFavorite.body as any).error.id, '92658936-c625-4273-8326-2d790129256e');
+
+			const clipUnfavorite = await api('clips/unfavorite', { clipId: clip.id }, bob);
+			assert.strictEqual(clipUnfavorite.status, 204);
+			assert.strictEqual(await clipFavoriteExistsInDatabase(db, bob.id, clip.id), false);
+
+			const channelFavorite = await api('channels/favorite', { channelId: channel.id }, bob);
+			assert.strictEqual(channelFavorite.status, 204);
+			assert.strictEqual(await channelFavoriteExistsInDatabase(db, bob.id, channel.id), true);
+
+			const channelUnfavorite = await api('channels/unfavorite', { channelId: channel.id }, bob);
+			assert.strictEqual(channelUnfavorite.status, 204);
+			assert.strictEqual(await channelFavoriteExistsInDatabase(db, bob.id, channel.id), false);
+
+			const pageLike = await api('pages/like', { pageId: page.id }, bob);
+			assert.strictEqual(pageLike.status, 204);
+			assert.strictEqual(await pageLikeExistsInDatabase(db, bob.id, page.id), true);
+
+			const ownPageLike = await api('pages/like', { pageId: page.id }, alice);
+			assert.strictEqual(ownPageLike.status, 400);
+			assert.strictEqual(castAsError(ownPageLike.body as any).error.id, '28800466-e6db-40f2-8fae-bf9e82aa92b8');
+
+			const pageUnlike = await api('pages/unlike', { pageId: page.id }, bob);
+			assert.strictEqual(pageUnlike.status, 204);
+			assert.strictEqual(await pageLikeExistsInDatabase(db, bob.id, page.id), false);
+
+			const flashLike = await api('flash/like', { flashId: flash.id }, bob);
+			assert.strictEqual(flashLike.status, 204);
+			assert.strictEqual(await flashLikeExistsInDatabase(db, bob.id, flash.id), true);
+
+			const ownFlashLike = await api('flash/like', { flashId: flash.id }, alice);
+			assert.strictEqual(ownFlashLike.status, 400);
+			assert.strictEqual(castAsError(ownFlashLike.body as any).error.id, '3fd8a0e7-5955-4ba9-85bb-bf3e0c30e13b');
+
+			const flashUnlike = await api('flash/unlike', { flashId: flash.id }, bob);
+			assert.strictEqual(flashUnlike.status, 204);
+			assert.strictEqual(await flashLikeExistsInDatabase(db, bob.id, flash.id), false);
+		});
+
+		test('favorite and like endpoints require matching app token permissions', async () => {
+			const { userList, clip, channel, page, flash } = await createFavoriteFixtures(`hono-favorite-permission-${Date.now()}`);
+			const appToken = await createAppToken(bob, ['read:account']);
+
+			for (const [endpoint, params] of [
+				['users/lists/favorite', { listId: userList.id }],
+				['clips/favorite', { clipId: clip.id }],
+				['channels/favorite', { channelId: channel.id }],
+				['pages/like', { pageId: page.id }],
+				['flash/like', { flashId: flash.id }],
+			] as const) {
+				const denied = await api(endpoint, params as any, { token: appToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+		});
+
+		test('prohibitMoved endpoints reject moved users before side effects', async () => {
+			const { page } = await createFavoriteFixtures(`hono-favorite-moved-${Date.now()}`);
+			const movedUser = await signup({ username: `mvfav${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+
+			const denied = await api('pages/like', { pageId: page.id }, movedUser);
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+			assert.strictEqual(await pageLikeExistsInDatabase(db, movedUser.id, page.id), false);
 		});
 	});
 
