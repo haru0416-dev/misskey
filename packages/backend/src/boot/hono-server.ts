@@ -60,6 +60,9 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			config,
 			meta: deps.meta,
 		},
+		apiShell: {
+			db: deps.db,
+		},
 		file: {
 			config,
 			db: deps.db,

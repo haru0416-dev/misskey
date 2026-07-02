@@ -6,6 +6,7 @@
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
+import { createApiShellApp, type ApiShellDependencies } from './hono-api-shell.js';
 import { createHealthApp, type HealthDependencies } from './health.js';
 import { createFileServerApp, type FileServerDependencies } from './hono-file-server.js';
 import { createNodeinfoApp, type NodeinfoDependencies } from './hono-nodeinfo.js';
@@ -22,6 +23,7 @@ export type HttpMiddlewareDependencies = {
 
 export type MisskeyHonoAppDependencies = {
 	http: HttpMiddlewareDependencies;
+	apiShell: ApiShellDependencies;
 	file: FileServerDependencies;
 	health: HealthDependencies;
 	nodeinfo: NodeinfoDependencies;
@@ -82,6 +84,7 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	const app = new Hono();
 
 	registerHttpMiddleware(app, deps.http);
+	app.route('/api', createApiShellApp(deps.apiShell));
 	app.route('/healthz', createHealthApp(deps.health));
 	app.route('/', createNodeinfoApp(deps.nodeinfo));
 	app.route('/', createOpenApiApp(deps.openApi));
