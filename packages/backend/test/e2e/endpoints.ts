@@ -1056,6 +1056,85 @@ describe('Endpoints', () => {
 			assert.strictEqual(appDenied.status, 400);
 			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
 		});
+
+		test('sw registration lifecycle creates, updates, and unregisters subscriptions', async () => {
+			const endpoint = `https://push.example.test/lifecycle-${genId(loadConfig())}`;
+
+			const registered = await api('sw/register', {
+				endpoint,
+				auth: 'auth-1',
+				publickey: 'public-key-1',
+				sendReadMessage: true,
+			}, alice);
+			assert.strictEqual(registered.status, 200);
+			assert.strictEqual(registered.body.state, 'subscribed');
+			assert.strictEqual(registered.body.userId, alice.id);
+			assert.strictEqual(registered.body.endpoint, endpoint);
+			assert.strictEqual(registered.body.sendReadMessage, true);
+
+			const same = await api('sw/register', {
+				endpoint,
+				auth: 'auth-1',
+				publickey: 'public-key-1',
+				sendReadMessage: true,
+			}, alice);
+			assert.strictEqual(same.status, 200);
+			assert.strictEqual(same.body.state, 'already-subscribed');
+
+			const updated = await api('sw/update-registration', {
+				endpoint,
+				sendReadMessage: false,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.deepStrictEqual(updated.body, {
+				userId: alice.id,
+				endpoint,
+				sendReadMessage: false,
+			});
+
+			const missingUpdate = await api('sw/update-registration', {
+				endpoint,
+			}, bob);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.code, 'NO_SUCH_REGISTRATION');
+
+			const unregistered = await api('sw/unregister', { endpoint }, alice);
+			assert.strictEqual(unregistered.status, 204);
+			assert.strictEqual(unregistered.body, null);
+
+			const afterUnregister = await api('sw/show-registration', { endpoint }, alice);
+			assert.strictEqual(afterUnregister.status, 200);
+			assert.strictEqual(afterUnregister.body, null);
+		});
+
+		test('sw secure endpoints reject app tokens and unregister accepts anonymous requests', async () => {
+			const endpoint = `https://push.example.test/anonymous-${genId(loadConfig())}`;
+			await api('sw/register', {
+				endpoint,
+				auth: 'auth',
+				publickey: 'public-key',
+			}, alice);
+
+			const appToken = await createAppToken(alice, ['read:account']);
+			const appRegisterDenied = await api('sw/register', {
+				endpoint: `${endpoint}-app`,
+				auth: 'auth',
+				publickey: 'public-key',
+			}, { token: appToken });
+			assert.strictEqual(appRegisterDenied.status, 400);
+			assert.strictEqual(castAsError(appRegisterDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const appUpdateDenied = await api('sw/update-registration', { endpoint }, { token: appToken });
+			assert.strictEqual(appUpdateDenied.status, 400);
+			assert.strictEqual(castAsError(appUpdateDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const anonymousUnregister = await api('sw/unregister', { endpoint });
+			assert.strictEqual(anonymousUnregister.status, 204);
+
+			const afterAnonymousUnregister = await api('sw/show-registration', { endpoint }, alice);
+			assert.strictEqual(afterAnonymousUnregister.status, 200);
+			assert.strictEqual(afterAnonymousUnregister.body, null);
+		});
 	});
 
 	describe('request-reset-password endpoint', () => {

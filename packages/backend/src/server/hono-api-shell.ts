@@ -47,7 +47,7 @@ import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
-import { handleHonoApiSwShowRegistration } from './hono-api-sw.js';
+import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
 
 export type ApiShellDependencies = {
 	config: Config;
@@ -584,6 +584,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/sw/register', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiSwRegister(deps, auth.user, body));
+		});
+	});
+
 	app.post('/sw/show-registration', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -592,6 +603,27 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertSecureCredential(auth);
 
 			return jsonResponse(c, await handleHonoApiSwShowRegistration(deps, auth.user, body));
+		});
+	});
+
+	app.post('/sw/unregister', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			await handleHonoApiSwUnregister(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/sw/update-registration', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiSwUpdateRegistration(deps, auth.user, body));
 		});
 	});
 
