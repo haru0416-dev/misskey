@@ -141,6 +141,59 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('basic meta endpoints', () => {
+		test('ping returns current timestamp', async () => {
+			const before = Date.now();
+			const res = await api('ping', {});
+			const after = Date.now();
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(typeof res.body.pong, 'number');
+			assert.ok(res.body.pong >= before);
+			assert.ok(res.body.pong <= after);
+		});
+
+		test('server-info supports GET and cache header', async () => {
+			const res = await relativeFetch('api/server-info');
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
+
+			const body = await res.json() as {
+				machine: unknown;
+				cpu?: { model?: unknown; cores?: unknown };
+				mem?: { total?: unknown };
+				fs?: { total?: unknown; used?: unknown };
+			};
+			assert.strictEqual(typeof body.machine, 'string');
+			assert.strictEqual(typeof body.cpu?.model, 'string');
+			assert.strictEqual(typeof body.cpu?.cores, 'number');
+			assert.strictEqual(typeof body.mem?.total, 'number');
+			assert.strictEqual(typeof body.fs?.total, 'number');
+			assert.strictEqual(typeof body.fs?.used, 'number');
+		});
+
+		test('test endpoint validates params and applies defaults', async () => {
+			const res = await api('test', {
+				required: true,
+			});
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.required, true);
+			assert.strictEqual(res.body.default, 'hello');
+			assert.strictEqual(res.body.nullableDefault, 'hello');
+
+			const invalid = await relativeFetch('api/test', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ required: 'yes' }),
+			});
+
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(await invalid.json() as Record<string, unknown>).error.code, 'INVALID_PARAM');
+		});
+	});
+
 	describe('signin-flow', () => {
 		test('間違ったパスワードでサインインできない', async () => {
 			const res = await api('signin-flow', {

@@ -20,6 +20,7 @@ import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoAp
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import { handleHonoApiI } from './hono-api-i.js';
+import { handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
@@ -54,7 +55,7 @@ function setApiHeaders(c: Context): void {
 	c.header('Cache-Control', 'private, max-age=0, must-revalidate');
 }
 
-function jsonResponse(c: Context, body: unknown, status = 200): Response {
+function jsonResponse(c: Context, body: unknown, status = 200, headers: Record<string, string> = {}): Response {
 	setApiHeaders(c);
 	return new Response(JSON.stringify(body), {
 		status,
@@ -62,6 +63,7 @@ function jsonResponse(c: Context, body: unknown, status = 200): Response {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
+			...headers,
 		},
 	});
 }
@@ -311,6 +313,37 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiEndpoint(body));
+		});
+	});
+
+	app.post('/ping', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, handleHonoApiPing());
+		});
+	});
+
+	app.get('/server-info', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
+	app.post('/server-info', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
+	app.post('/test', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, handleHonoApiTest(body));
 		});
 	});
 
