@@ -74,7 +74,7 @@ describe('Endpoints', () => {
 	let dave: misskey.entities.SignupResponse;
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
-	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis'>> | undefined;
+	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
 	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
 	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
@@ -85,7 +85,7 @@ describe('Endpoints', () => {
 		const config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
-		dbQueue = new Bull.Queue<DbJobData<'importCustomEmojis'>>(QUEUE.DB, baseQueueOptions(config, QUEUE.DB));
+		dbQueue = new Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>>(QUEUE.DB, baseQueueOptions(config, QUEUE.DB));
 		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
 		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
 		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
@@ -438,6 +438,81 @@ describe('Endpoints', () => {
 				assert.ok(logs.some(log => (log.info as { after?: string | null }).after === description));
 			} finally {
 				await api('admin/update-proxy-account', { description: null }, alice);
+			}
+		});
+	});
+
+	describe('admin account deletion', () => {
+		test('admin/accounts/delete と admin/delete-account は削除状態、job、scope、roleを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const accountDeleteTarget = await signup({ username: `haad${suffix}` });
+			const accountTokenTarget = await signup({ username: `haat${suffix}` });
+			const deleteAccountTarget = await signup({ username: `hada${suffix}` });
+			const untouchedTarget = await signup({ username: `haua${suffix}` });
+			const targetIds = [accountDeleteTarget.id, accountTokenTarget.id, deleteAccountTarget.id, untouchedTarget.id];
+			const getDeleteAccountJobs = async (userId: string) => {
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				return jobs.filter(job => job.name === 'deleteAccount' && job.data.user.id === userId);
+			};
+			const waitDeleteAccountJob = async (userId: string) => {
+				for (let i = 0; i < 10; i++) {
+					const jobs = await getDeleteAccountJobs(userId);
+					if (jobs[0] != null) return jobs[0];
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.fail(`deleteAccount job was not found for ${userId}`);
+			};
+			const removeDeleteAccountJobs = async () => {
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				await Promise.all(jobs
+					.filter(job => job.name === 'deleteAccount' && targetIds.includes(job.data.user.id))
+					.map(job => job.remove()));
+			};
+
+			try {
+				const deletedByNative = await api('admin/accounts/delete', { userId: accountDeleteTarget.id }, alice);
+				assert.strictEqual(deletedByNative.status, 204);
+				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, accountDeleteTarget.id)).isDeleted, true);
+				const nativeJob = await waitDeleteAccountJob(accountDeleteTarget.id);
+				assert.strictEqual((nativeJob.data as DbJobData<'deleteAccount'>).soft, false);
+
+				const accountToken = await createAppToken(alice, ['write:admin:account']);
+				const deletedByToken = await api('admin/accounts/delete', { userId: accountTokenTarget.id }, { token: accountToken });
+				assert.strictEqual(deletedByToken.status, 204);
+				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, accountTokenTarget.id)).isDeleted, true);
+				const tokenJob = await waitDeleteAccountJob(accountTokenTarget.id);
+				assert.strictEqual((tokenJob.data as DbJobData<'deleteAccount'>).soft, false);
+
+				const deleteAccountToken = await createAppToken(alice, ['write:admin:delete-account']);
+				const deletedByDeleteAccount = await api('admin/delete-account', { userId: deleteAccountTarget.id }, { token: deleteAccountToken });
+				assert.strictEqual(deletedByDeleteAccount.status, 204);
+				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, deleteAccountTarget.id)).isDeleted, true);
+				const deleteAccountJob = await waitDeleteAccountJob(deleteAccountTarget.id);
+				assert.strictEqual((deleteAccountJob.data as DbJobData<'deleteAccount'>).soft, false);
+
+				const alreadyDeleted = await api('admin/delete-account', { userId: deleteAccountTarget.id }, alice);
+				assert.strictEqual(alreadyDeleted.status, 204);
+				assert.strictEqual((await getDeleteAccountJobs(deleteAccountTarget.id)).length, 1);
+
+				const wrongAccountScope = await createAppToken(alice, ['read:admin:account']);
+				const accountScopeDenied = await api('admin/accounts/delete', { userId: untouchedTarget.id }, { token: wrongAccountScope });
+				assert.strictEqual(accountScopeDenied.status, 403);
+				assert.strictEqual(castAsError(accountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const wrongDeleteAccountScope = await createAppToken(alice, ['write:admin:account']);
+				const deleteAccountScopeDenied = await api('admin/delete-account', { userId: untouchedTarget.id }, { token: wrongDeleteAccountScope });
+				assert.strictEqual(deleteAccountScopeDenied.status, 403);
+				assert.strictEqual(castAsError(deleteAccountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const accountRoleDenied = await api('admin/accounts/delete', { userId: untouchedTarget.id }, bob);
+				assert.strictEqual(accountRoleDenied.status, 403);
+				assert.strictEqual(castAsError(accountRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const deleteAccountRoleDenied = await api('admin/delete-account', { userId: untouchedTarget.id }, bob);
+				assert.strictEqual(deleteAccountRoleDenied.status, 403);
+				assert.strictEqual(castAsError(deleteAccountRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await removeDeleteAccountJobs();
 			}
 		});
 	});
@@ -1866,7 +1941,7 @@ describe('Endpoints', () => {
 			const removeImportJobs = async () => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
 				await Promise.all(jobs
-					.filter(job => job.name === 'importCustomEmojis' && job.data.fileId === fileId)
+					.filter(job => job.name === 'importCustomEmojis' && (job.data as DbJobData<'importCustomEmojis'>).fileId === fileId)
 					.map(job => job.remove()));
 			};
 
@@ -1874,15 +1949,15 @@ describe('Endpoints', () => {
 				const imported = await api('admin/emoji/import-zip', { fileId }, manager);
 				assert.strictEqual(imported.status, 204);
 
-				let job: Bull.Job<DbJobData<'importCustomEmojis'>> | undefined;
+				let job: Bull.Job<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 				for (let i = 0; i < 10; i++) {
 					const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-					job = jobs.find(job => job.name === 'importCustomEmojis' && job.data.fileId === fileId && job.data.user.id === manager.id);
+					job = jobs.find(job => job.name === 'importCustomEmojis' && (job.data as DbJobData<'importCustomEmojis'>).fileId === fileId && job.data.user.id === manager.id);
 					if (job != null) break;
 					await new Promise(resolve => setTimeout(resolve, 100));
 				}
 				assert.ok(job);
-				assert.deepStrictEqual(job.data, {
+				assert.deepStrictEqual(job.data as DbJobData<'importCustomEmojis'>, {
 					user: { id: manager.id },
 					fileId,
 				});
