@@ -3692,6 +3692,79 @@ describe('Endpoints', () => {
 	});
 
 	describe('Hono rate limited write endpoints', () => {
+		test('following/create は follow 作成、locked follow request、blocking、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const follower = await signup({ username: `hfc${suffix}` });
+			const followee = await signup({ username: `hfce${suffix}` });
+
+			const wrongWriteToken = await createAppToken(follower, ['read:following']);
+			const scopeDenied = await api('following/create', { userId: followee.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfFollow = await api('following/create', { userId: follower.id }, follower);
+			assert.strictEqual(selfFollow.status, 400);
+			assert.strictEqual(castAsError(selfFollow.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfFollow.body as any).error.id, '26fbe7bb-a331-4857-af17-205b426669a9');
+
+			const noSuch = await api('following/create', { userId: genId(config, now - 1000) }, follower);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
+
+			const created = await api('following/create', { userId: followee.id, withReplies: true }, follower);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.id, followee.id);
+
+			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
+			assert.ok(following);
+			assert.strictEqual(following.withReplies, true);
+
+			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
+			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
+			assert.strictEqual(refreshedFollower.followingCount, 1);
+			assert.strictEqual(refreshedFollowee.followersCount, 1);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {
+					[followee.id]: { withReplies: true },
+				});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const duplicate = await api('following/create', { userId: followee.id }, follower);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FOLLOWING');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '35387507-38c7-4cb9-9197-300b93783fa0');
+
+			const blocker = await signup({ username: `hfcb${suffix}` });
+			const blockedUser = await signup({ username: `hfcbu${suffix}` });
+			const block = await api('blocking/create', { userId: blockedUser.id }, blocker);
+			assert.strictEqual(block.status, 200);
+
+			const blocked = await api('following/create', { userId: blocker.id }, blockedUser);
+			assert.strictEqual(blocked.status, 400);
+			assert.strictEqual(castAsError(blocked.body as any).error.code, 'BLOCKED');
+			assert.strictEqual(castAsError(blocked.body as any).error.id, 'c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
+
+			const lockedFollowee = await signup({ username: `hfcl${suffix}` });
+			const requestFollower = await signup({ username: `hfcr${suffix}` });
+			await updateUserInDatabase(db, lockedFollowee.id, { isLocked: true });
+
+			const requested = await api('following/create', { userId: lockedFollowee.id, withReplies: false }, requestFollower);
+			assert.strictEqual(requested.status, 200);
+			assert.strictEqual(requested.body.id, lockedFollowee.id);
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id), null);
+
+			const followRequest = await fetchFollowRequestFromDatabase(db, requestFollower.id, lockedFollowee.id);
+			assert.ok(followRequest);
+			assert.strictEqual(followRequest.withReplies, false);
+		});
+
 		test('following/update-all updates only the caller followings', async () => {
 			const config = loadConfig();
 			await createFollowingInDatabase(db, {
