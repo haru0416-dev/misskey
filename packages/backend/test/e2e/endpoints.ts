@@ -2571,6 +2571,116 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/avatar-decorations', () => {
+		test('admin/avatar-decorations は作成、一覧、更新、削除、scope、ポリシー、ログを維持する', async () => {
+			const now = Date.now();
+			const manager = await signup({ username: `honoavmgr${now.toString(36)}` });
+			const config = loadConfig();
+			const managerRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `avatar manager ${now}`,
+				description: 'Hono avatar decoration admin role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: '7b29574c-ae8b-42b5-8127-3496ac6ea20c',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 0,
+				policies: {
+					canManageAvatarDecorations: { useDefault: false, priority: 0, value: true },
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: manager.id,
+				roleId: managerRole.id,
+				expiresAt: null,
+			});
+
+			const created = await api('admin/avatar-decorations/create', {
+				name: `hono-avatar-${now}`,
+				description: 'avatar decoration body',
+				url: 'https://example.test/avatar-decoration.png',
+				roleIdsThatCanBeUsedThisDecoration: [managerRole.id],
+				category: 'hono',
+			}, manager);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `hono-avatar-${now}`);
+			assert.strictEqual(created.body.category, 'hono');
+			assert.deepStrictEqual(created.body.roleIdsThatCanBeUsedThisDecoration, [managerRole.id]);
+
+			const list = await api('admin/avatar-decorations/list', {}, manager);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some(decoration => decoration.id === created.body.id));
+
+			const updated = await api('admin/avatar-decorations/update', {
+				id: created.body.id,
+				name: `hono-avatar-${now}-updated`,
+				description: 'updated body',
+				category: null,
+			}, manager);
+			assert.strictEqual(updated.status, 204);
+
+			const updatedList = await api('admin/avatar-decorations/list', {}, manager);
+			assert.strictEqual(updatedList.status, 200);
+			const updatedDecoration = updatedList.body.find(decoration => decoration.id === created.body.id);
+			assert.ok(updatedDecoration);
+			assert.strictEqual(updatedDecoration.name, `hono-avatar-${now}-updated`);
+			assert.strictEqual(updatedDecoration.description, 'updated body');
+			assert.strictEqual(updatedDecoration.category, null);
+
+			const readToken = await createAppToken(manager, ['read:admin:avatar-decorations']);
+			const scopeDenied = await api('admin/avatar-decorations/create', {
+				name: `hono-avatar-${now}-denied`,
+				description: 'avatar decoration body',
+				url: 'https://example.test/avatar-decoration.png',
+			}, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const policyDeniedUser = await signup({ username: `honoavden${now.toString(36)}` });
+			const policyDenied = await api('admin/avatar-decorations/list', {}, policyDeniedUser);
+			assert.strictEqual(policyDenied.status, 403);
+			assert.strictEqual(castAsError(policyDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/avatar-decorations/delete', { id: created.body.id }, manager);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/avatar-decorations/list', {}, manager);
+			assert.strictEqual(afterDelete.status, 200);
+			assert.ok(!afterDelete.body.some(decoration => decoration.id === created.body.id));
+
+			const logTypes = ['createAvatarDecoration', 'updateAvatarDecoration', 'deleteAvatarDecoration'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
 	describe('admin/ad', () => {
 		test('admin/ad は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
 			const now = Date.now();

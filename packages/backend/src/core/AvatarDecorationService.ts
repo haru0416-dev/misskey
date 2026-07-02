@@ -14,11 +14,14 @@ import { MemorySingleCache } from '@/misc/cache.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import {
-	createAvatarDecorationInDatabase,
-	deleteAvatarDecorationFromDatabase,
-	fetchAvatarDecorationFromDatabase,
+	createAvatarDecorationWithSideEffects,
+	deleteAvatarDecorationWithSideEffects,
+	updateAvatarDecorationWithSideEffects,
+	type AvatarDecorationCreateOptions,
+	type AvatarDecorationUpdateOptions,
+} from '@/core/AvatarDecorationLogic.js';
+import {
 	listAvatarDecorationsFromDatabase,
-	updateAvatarDecorationInDatabase,
 } from '@/core/AvatarDecorationStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
@@ -63,69 +66,30 @@ export class AvatarDecorationService implements OnApplicationShutdown {
 
 	@bindThis
 	public async create(options: Partial<MiAvatarDecoration>, moderator?: MiUser): Promise<MiAvatarDecoration> {
-		const created = await createAvatarDecorationInDatabase(this.drizzle, {
-			id: this.idService.gen(),
-			...options,
-			name: options.name!,
-			description: options.description!,
-			url: options.url!,
-		});
-
-		this.globalEventService.publishInternalEvent('avatarDecorationCreated', created);
-
-		if (moderator) {
-			this.moderationLogService.log(moderator, 'createAvatarDecoration', {
-				avatarDecorationId: created.id,
-				avatarDecoration: created,
-			});
-		}
-
-		return created;
+		return await createAvatarDecorationWithSideEffects({
+			db: this.drizzle,
+			genId: () => this.idService.gen(),
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, options as AvatarDecorationCreateOptions, moderator);
 	}
 
 	@bindThis
 	public async update(id: MiAvatarDecoration['id'], params: Partial<MiAvatarDecoration>, moderator?: MiUser): Promise<void> {
-		const avatarDecoration = await fetchAvatarDecorationFromDatabase(this.drizzle, id);
-		if (!avatarDecoration) {
-			throw new Error('Avatar decoration was not found');
-		}
-
-		const date = new Date();
-		const updated = await updateAvatarDecorationInDatabase(this.drizzle, avatarDecoration.id, {
-			updatedAt: date,
-			...params,
-		});
-		if (!updated) {
-			throw new Error('Avatar decoration was not found after update');
-		}
-
-		this.globalEventService.publishInternalEvent('avatarDecorationUpdated', updated);
-
-		if (moderator) {
-			this.moderationLogService.log(moderator, 'updateAvatarDecoration', {
-				avatarDecorationId: avatarDecoration.id,
-				before: avatarDecoration,
-				after: updated,
-			});
-		}
+		await updateAvatarDecorationWithSideEffects({
+			db: this.drizzle,
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, id, params as AvatarDecorationUpdateOptions, moderator);
 	}
 
 	@bindThis
 	public async delete(id: MiAvatarDecoration['id'], moderator?: MiUser): Promise<void> {
-		const avatarDecoration = await fetchAvatarDecorationFromDatabase(this.drizzle, id);
-		if (!avatarDecoration) {
-			throw new Error('Avatar decoration was not found');
-		}
-
-		await deleteAvatarDecorationFromDatabase(this.drizzle, avatarDecoration.id);
-		this.globalEventService.publishInternalEvent('avatarDecorationDeleted', avatarDecoration);
-
-		if (moderator) {
-			this.moderationLogService.log(moderator, 'deleteAvatarDecoration', {
-				avatarDecorationId: avatarDecoration.id,
-				avatarDecoration: avatarDecoration,
-			});
-		}
+		await deleteAvatarDecorationWithSideEffects({
+			db: this.drizzle,
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, id, moderator);
 	}
 
 	@bindThis
