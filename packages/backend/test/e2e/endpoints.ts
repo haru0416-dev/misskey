@@ -319,6 +319,43 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/accounts/find-by-email', () => {
+		test('admin/accounts/find-by-email はemail検索、admin権限、token scopeを維持する', async () => {
+			const now = Date.now();
+			const target = await signup({ username: `honoemail${now.toString(36)}` });
+			const email = `honoemail-${now}@example.test`;
+			await updateUserProfileInDatabase(db, target.id, {
+				email,
+				emailVerified: true,
+			});
+
+			const found = await api('admin/accounts/find-by-email', { email }, alice);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual(found.body.id, target.id);
+			assert.strictEqual(found.body.username, target.username);
+
+			const missing = await api('admin/accounts/find-by-email', { email: `missing-${now}@example.test` }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'USER_NOT_FOUND');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'cb865949-8af5-4062-a88c-ef55e8786d1d');
+
+			const readToken = await createAppToken(alice, ['read:admin:account']);
+			const foundWithToken = await api('admin/accounts/find-by-email', { email }, { token: readToken });
+			assert.strictEqual(foundWithToken.status, 200);
+			assert.strictEqual(foundWithToken.body.id, target.id);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
+			const scopeDenied = await api('admin/accounts/find-by-email', { email }, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hoem${now.toString(36)}` });
+			const roleDenied = await api('admin/accounts/find-by-email', { email }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
 	describe('emoji endpoints', () => {
 		test('emojis and emoji return packed local emoji data', async () => {
 			const config = loadConfig();
