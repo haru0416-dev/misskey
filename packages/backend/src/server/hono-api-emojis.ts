@@ -5,7 +5,9 @@
 
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
-import { deleteEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
+import { FILE_TYPE_IMAGE } from '@/const.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -62,6 +64,78 @@ const adminEmojiListRemoteParamDef = {
 		untilDate: { type: 'integer' },
 	},
 	required: [],
+} as const;
+
+const adminEmojiAddParamDef = {
+	type: 'object',
+	properties: {
+		name: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' },
+		fileId: { type: 'string', format: 'misskey:id' },
+		category: {
+			type: 'string',
+			nullable: true,
+			description: 'Use `null` to reset the category.',
+		},
+		aliases: {
+			type: 'array',
+			items: {
+				type: 'string',
+			},
+		},
+		license: { type: 'string', nullable: true },
+		isSensitive: { type: 'boolean' },
+		localOnly: { type: 'boolean' },
+		roleIdsThatCanBeUsedThisEmojiAsReaction: {
+			type: 'array',
+			items: {
+				type: 'string',
+			},
+		},
+	},
+	required: ['name', 'fileId'],
+} as const;
+
+const adminEmojiUpdateParamDef = {
+	allOf: [
+		{
+			anyOf: [
+				{
+					type: 'object',
+					properties: {
+						id: { type: 'string', format: 'misskey:id' },
+					},
+					required: ['id'],
+				},
+				{
+					type: 'object',
+					properties: {
+						name: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' },
+					},
+					required: ['name'],
+				},
+			],
+		},
+		{
+			type: 'object',
+			properties: {
+				fileId: { type: 'string', format: 'misskey:id' },
+				category: {
+					type: 'string',
+					nullable: true,
+					description: 'Use `null` to reset the category.',
+				},
+				aliases: { type: 'array', items: {
+					type: 'string',
+				} },
+				license: { type: 'string', nullable: true },
+				isSensitive: { type: 'boolean' },
+				localOnly: { type: 'boolean' },
+				roleIdsThatCanBeUsedThisEmojiAsReaction: { type: 'array', items: {
+					type: 'string',
+				} },
+			},
+		},
+	],
 } as const;
 
 const adminEmojiAliasesBulkParamDef = {
@@ -130,6 +204,18 @@ type EmojiParams = {
 };
 type AdminEmojiListParams = SchemaType<typeof adminEmojiListParamDef>;
 type AdminEmojiListRemoteParams = SchemaType<typeof adminEmojiListRemoteParamDef>;
+type AdminEmojiAddParams = SchemaType<typeof adminEmojiAddParamDef>;
+type AdminEmojiUpdateParams = {
+	id?: string;
+	name?: string;
+	fileId?: string;
+	category?: string | null;
+	aliases?: string[];
+	license?: string | null;
+	isSensitive?: boolean;
+	localOnly?: boolean;
+	roleIdsThatCanBeUsedThisEmojiAsReaction?: string[];
+};
 type AdminEmojiAliasesBulkParams = SchemaType<typeof adminEmojiAliasesBulkParamDef>;
 type AdminEmojiDeleteParams = SchemaType<typeof adminEmojiDeleteParamDef>;
 type AdminEmojiDeleteBulkParams = SchemaType<typeof adminEmojiDeleteBulkParamDef>;
@@ -238,6 +324,39 @@ function noSuchEmojiError(): HonoApiError {
 	});
 }
 
+function adminEmojiClientError(message: string, code: string, id: string): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message,
+		code,
+		id,
+	});
+}
+
+function adminNoSuchEmojiError(): HonoApiError {
+	return adminEmojiClientError('No such emoji.', 'NO_SUCH_EMOJI', '684dec9d-a8c2-4364-9aa8-456c49cb1dc8');
+}
+
+function adminAddNoSuchFileError(): HonoApiError {
+	return adminEmojiClientError('No such file.', 'NO_SUCH_FILE', 'fc46b5a4-6b92-4c33-ac66-b806659bb5cf');
+}
+
+function adminUpdateNoSuchFileError(): HonoApiError {
+	return adminEmojiClientError('No such file.', 'NO_SUCH_FILE', '14fb9fd9-0731-4e2f-aeb9-f09e4740333d');
+}
+
+function adminUnsupportedFileTypeError(): HonoApiError {
+	return adminEmojiClientError('Unsupported file type.', 'UNSUPPORTED_FILE_TYPE', 'f7599d96-8750-af68-1633-9575d625c1a7');
+}
+
+function adminDuplicateEmojiNameError(): HonoApiError {
+	return adminEmojiClientError('Duplicate name.', 'DUPLICATE_NAME', 'f7a3462c-4e6e-4069-8421-b9bd4f4c3975');
+}
+
+function adminSameNameEmojiExistsError(): HonoApiError {
+	return adminEmojiClientError('Emoji that have same name already exists.', 'SAME_NAME_EMOJI_EXISTS', '7180fe9d-1ee3-bff9-647d-fe9896d2ffb8');
+}
+
 async function refreshHonoApiLocalEmojisCache(deps: HonoApiEmojiDependencies): Promise<void> {
 	const emojis = await listLocalEmojisFromDatabase(deps.db);
 	await deps.redis.set(
@@ -276,6 +395,17 @@ async function publishHonoApiEmojiDeleted(
 
 	deps.publishBroadcastStream('emojiDeleted', {
 		emojis: emojis.map(packHonoEmojiDetailed),
+	});
+}
+
+async function publishHonoApiEmojiAdded(
+	deps: HonoApiEmojiDependencies,
+	emoji: MiEmoji,
+): Promise<void> {
+	if (deps.publishBroadcastStream == null) return;
+
+	deps.publishBroadcastStream('emojiAdded', {
+		emoji: packHonoEmojiDetailed(emoji),
 	});
 }
 
@@ -325,6 +455,43 @@ export async function handleHonoApiAdminEmojiList(
 	}
 
 	return emojis.map(packHonoEmojiDetailed);
+}
+
+export async function handleHonoApiAdminEmojiAdd(
+	deps: HonoApiEmojiDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'EmojiDetailed'>> {
+	const params = parseHonoApiParams(adminEmojiAddParamDef, body) as AdminEmojiAddParams;
+	const driveFile = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
+	if (driveFile == null) throw adminAddNoSuchFileError();
+	if (await emojiExistsWithLocalNameInDatabase(deps.db, params.name)) throw adminDuplicateEmojiNameError();
+	if (!FILE_TYPE_IMAGE.includes(driveFile.type)) throw adminUnsupportedFileTypeError();
+
+	const emoji = await insertEmojiInDatabase(deps.db, {
+		id: genId(deps.config),
+		updatedAt: new Date(),
+		name: params.name,
+		category: params.category ?? null,
+		host: null,
+		aliases: params.aliases ?? [],
+		originalUrl: driveFile.url,
+		publicUrl: driveFile.webpublicUrl ?? driveFile.url,
+		type: driveFile.webpublicType ?? driveFile.type,
+		license: params.license ?? null,
+		isSensitive: params.isSensitive ?? false,
+		localOnly: params.localOnly ?? false,
+		roleIdsThatCanBeUsedThisEmojiAsReaction: params.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [],
+	});
+
+	await refreshHonoApiLocalEmojisCache(deps);
+	await publishHonoApiEmojiAdded(deps, emoji);
+	await logModerationEventInDatabase(deps, me, 'addCustomEmoji', {
+		emojiId: emoji.id,
+		emoji,
+	});
+
+	return packHonoEmojiDetailed(emoji);
 }
 
 export async function handleHonoApiAdminEmojiAddAliasesBulk(
@@ -378,6 +545,59 @@ export async function handleHonoApiAdminEmojiDeleteBulk(
 
 	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiDeleted(deps, emojis);
+}
+
+export async function handleHonoApiAdminEmojiUpdate(
+	deps: HonoApiEmojiDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminEmojiUpdateParamDef, body) as AdminEmojiUpdateParams;
+	let driveFile;
+	if (params.fileId) {
+		driveFile = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
+		if (driveFile == null) throw adminUpdateNoSuchFileError();
+	}
+
+	const emoji = params.id != null
+		? await fetchEmojiByIdFromDatabase(deps.db, params.id)
+		: await fetchEmojiByNameAndHostFromDatabase(deps.db, params.name!, null);
+	if (emoji == null) throw adminNoSuchEmojiError();
+
+	const doNameUpdate = params.id != null && params.name != null && params.name !== emoji.name;
+	if (doNameUpdate && await emojiExistsWithLocalNameInDatabase(deps.db, params.name!)) {
+		throw adminSameNameEmojiExistsError();
+	}
+
+	await updateEmojiInDatabase(deps.db, emoji.id, {
+		updatedAt: new Date(),
+		name: params.name,
+		category: params.category,
+		aliases: params.aliases,
+		license: params.license,
+		isSensitive: params.isSensitive,
+		localOnly: params.localOnly,
+		originalUrl: driveFile != null ? driveFile.url : undefined,
+		publicUrl: driveFile != null ? (driveFile.webpublicUrl ?? driveFile.url) : undefined,
+		type: driveFile != null ? (driveFile.webpublicType ?? driveFile.type) : undefined,
+		roleIdsThatCanBeUsedThisEmojiAsReaction: params.roleIdsThatCanBeUsedThisEmojiAsReaction ?? undefined,
+	});
+
+	await refreshHonoApiLocalEmojisCache(deps);
+	const updated = await fetchEmojiByIdOrFailFromDatabase(deps.db, emoji.id);
+
+	if (doNameUpdate) {
+		await publishHonoApiEmojiDeleted(deps, [emoji]);
+		await publishHonoApiEmojiAdded(deps, updated);
+	} else {
+		await publishHonoApiEmojiUpdated(deps, [emoji.id]);
+	}
+
+	await logModerationEventInDatabase(deps, me, 'updateCustomEmoji', {
+		emojiId: emoji.id,
+		before: emoji,
+		after: updated,
+	});
 }
 
 export async function handleHonoApiAdminEmojiSetAliasesBulk(

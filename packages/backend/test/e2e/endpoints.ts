@@ -1379,6 +1379,152 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('admin/emoji/add と update はDB更新、cache、moderation log、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemw${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji write manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const addMd5 = createHash('md5').update(`hono-emoji-add-${suffix}`).digest('hex');
+			const addFile = await createDriveFileInDatabase(db, {
+				id: genId(config, now - 1000),
+				userId: manager.id,
+				userHost: null,
+				md5: addMd5,
+				name: `hono-emoji-add-${suffix}.png`,
+				type: 'image/png',
+				size: 101,
+				storedInternal: true,
+				url: `${origin}/files/${addMd5}`,
+			});
+			const updateMd5 = createHash('md5').update(`hono-emoji-update-${suffix}`).digest('hex');
+			const updateFile = await createDriveFileInDatabase(db, {
+				id: genId(config, now),
+				userId: manager.id,
+				userHost: null,
+				md5: updateMd5,
+				name: `hono-emoji-update-${suffix}.png`,
+				type: 'image/png',
+				size: 202,
+				storedInternal: true,
+				url: `${origin}/files/${updateMd5}`,
+			});
+
+			try {
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/add', {
+					name: `honoemoji_scope_${suffix}`,
+					fileId: addFile.id,
+				}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const added = await api('admin/emoji/add', {
+					name: `honoemoji_add_${suffix}`,
+					fileId: addFile.id,
+					category: `write_${suffix}`,
+					aliases: [`alias_${suffix}`],
+					license: `license ${suffix}`,
+					isSensitive: true,
+					localOnly: true,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+				}, manager);
+				assert.strictEqual(added.status, 200);
+				assert.strictEqual(added.body.name, `honoemoji_add_${suffix}`);
+				assert.strictEqual(added.body.url, addFile.url);
+				assert.strictEqual(added.body.category, `write_${suffix}`);
+				assert.deepStrictEqual(added.body.aliases, [`alias_${suffix}`]);
+				assert.strictEqual(added.body.license, `license ${suffix}`);
+				assert.strictEqual(added.body.isSensitive, true);
+				assert.strictEqual(added.body.localOnly, true);
+
+				const duplicate = await api('admin/emoji/add', {
+					name: `honoemoji_add_${suffix}`,
+					fileId: addFile.id,
+				}, manager);
+				assert.strictEqual(duplicate.status, 400);
+				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
+
+				const roleDenied = await api('admin/emoji/update', {
+					id: added.body.id,
+					category: `denied_${suffix}`,
+				}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const updated = await api('admin/emoji/update', {
+					id: added.body.id,
+					name: `honoemoji_updated_${suffix}`,
+					fileId: updateFile.id,
+					category: null,
+					aliases: [`updated_${suffix}`],
+					license: null,
+					isSensitive: false,
+					localOnly: false,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+				}, manager);
+				assert.strictEqual(updated.status, 204);
+
+				const after = await fetchEmojiByIdOrFailFromDatabase(db, added.body.id);
+				assert.strictEqual(after.name, `honoemoji_updated_${suffix}`);
+				assert.strictEqual(after.category, null);
+				assert.deepStrictEqual(after.aliases, [`updated_${suffix}`]);
+				assert.strictEqual(after.license, null);
+				assert.strictEqual(after.isSensitive, false);
+				assert.strictEqual(after.localOnly, false);
+				assert.strictEqual(after.originalUrl, updateFile.url);
+				assert.strictEqual(after.publicUrl, updateFile.url);
+				assert.strictEqual(after.type, updateFile.type);
+				assert.ok(after.updatedAt);
+
+				const renamedDuplicate = await api('admin/emoji/update', {
+					id: after.id,
+					name: after.name,
+				}, manager);
+				assert.strictEqual(renamedDuplicate.status, 204);
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					const cachedUpdated = cachedEmojis.find(emoji => emoji.id === after.id);
+					assert.ok(cachedUpdated);
+					assert.strictEqual(cachedUpdated.name, after.name);
+					assert.deepStrictEqual(cachedUpdated.aliases, [`updated_${suffix}`]);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 20,
+					order: 'desc',
+					userId: manager.id,
+					search: suffix,
+				});
+				assert.ok(logs.some(log => log.type === 'addCustomEmoji'));
+				assert.ok(logs.some(log => log.type === 'updateCustomEmoji'));
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
 		test('admin/emoji bulk metadata 更新は aliases、category、license、cache、scope、role policyを維持する', async () => {
 			const config = loadConfig();
 			const now = Date.now();
