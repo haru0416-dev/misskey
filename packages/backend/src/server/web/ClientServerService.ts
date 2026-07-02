@@ -53,10 +53,6 @@ import { GalleryPostPage } from './views/gallery-post.js';
 import { ChannelPage } from './views/channel.js';
 import { AnnouncementPage } from './views/announcement.js';
 import { BaseEmbed } from './views/base-embed.js';
-import { InfoCardPage } from './views/info-card.js';
-import { BiosPage } from './views/bios.js';
-import { CliPage } from './views/cli.js';
-import { FlushPage } from './views/flush.js';
 import { ErrorPage } from './views/error.js';
 
 import type { FastifyError, FastifyInstance, FastifyPluginOptions, FastifyReply } from 'fastify';
@@ -107,66 +103,6 @@ export class ClientServerService {
 		this.frontendViteOut = resolve(this.config.rootDir, 'built/_frontend_vite_');
 		this.frontendEmbedViteOut = resolve(this.config.rootDir, 'built/_frontend_embed_vite_');
 		this.tarball = resolve(this.config.rootDir, 'built/tarball');
-	}
-
-	@bindThis
-	private async manifestHandler(reply: FastifyReply) {
-		let manifest = {
-			// 空文字列の場合右辺を使いたいため
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			'short_name': this.meta.shortName || this.meta.name || this.config.host,
-			// 空文字列の場合右辺を使いたいため
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			'name': this.meta.name || this.config.host,
-			'start_url': '/',
-			'display': 'standalone',
-			'background_color': '#313a42',
-			// 空文字列の場合右辺を使いたいため
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			'theme_color': this.meta.themeColor || '#86b300',
-			'icons': [{
-				// 空文字列の場合右辺を使いたいため
-				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-				'src': this.meta.app192IconUrl || '/static-assets/icons/192.png',
-				'sizes': '192x192',
-				'type': 'image/png',
-				'purpose': 'maskable',
-			}, {
-				// 空文字列の場合右辺を使いたいため
-				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-				'src': this.meta.app512IconUrl || '/static-assets/icons/512.png',
-				'sizes': '512x512',
-				'type': 'image/png',
-				'purpose': 'maskable',
-			}, {
-				'src': '/static-assets/splash.png',
-				'sizes': '300x300',
-				'type': 'image/png',
-				'purpose': 'any',
-			}],
-			'share_target': {
-				'action': '/share/',
-				'method': 'GET',
-				'enctype': 'application/x-www-form-urlencoded',
-				'params': {
-					'title': 'title',
-					'text': 'text',
-					'url': 'url',
-				},
-			},
-			'shortcuts': [{
-				'name': 'Safemode',
-				'url': '/?safemode=true',
-			}],
-		};
-
-		manifest = {
-			...manifest,
-			...JSON.parse(this.meta.manifestJsonOverride === '' ? '{}' : this.meta.manifestJsonOverride),
-		};
-
-		reply.header('Cache-Control', 'max-age=300');
-		return (manifest);
 	}
 
 	@bindThis
@@ -343,61 +279,11 @@ export class ClientServerService {
 			});
 		});
 
-		// Manifest
-		fastify.get('/manifest.json', async (request, reply) => await this.manifestHandler(reply));
-
 		// Embed Javascript
 		fastify.get('/embed.js', async (request, reply) => {
 			return await reply.sendFile('/embed.js', this.staticAssets, {
 				maxAge: ms('1 day'),
 			});
-		});
-
-		fastify.get('/robots.txt', async (request, reply) => {
-			const disallowedPaths = [
-				'/settings',
-				'/admin',
-				'/custom-emojis-manager',
-				'/avatar-decorations',
-				'/share',
-				'/my',
-				'/api',
-				'/inbox',
-				'/oauth',
-				'/proxy',
-				'/url',
-			];
-
-			if (this.meta.ugcVisibilityForVisitor === 'none') {
-				disallowedPaths.push(
-					'/@',
-					'/notes',
-				);
-			}
-
-			let content = `User-agent: *\n`;
-			content += disallowedPaths.map((path) => `Disallow: ${path}`).join('\n') + '\n';
-			content += 'Allow: /\n';
-			content += '\n# todo: sitemap\n';
-
-			reply.header('Content-Type', 'text/plain; charset=utf-8');
-			return await reply.send(content);
-		});
-
-		// OpenSearch XML
-		fastify.get('/opensearch.xml', async (request, reply) => {
-			const name = this.meta.name ?? 'Misskey';
-			let content = '';
-			content += '<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">';
-			content += `<ShortName>${name}</ShortName>`;
-			content += `<Description>${name} Search</Description>`;
-			content += '<InputEncoding>UTF-8</InputEncoding>';
-			content += `<Image width="16" height="16" type="image/x-icon">${this.config.url}/favicon.ico</Image>`;
-			content += `<Url type="text/html" template="${this.config.url}/search?q={searchTerms}"/>`;
-			content += '</OpenSearchDescription>';
-
-			reply.header('Content-Type', 'application/opensearchdescription+xml');
-			return await reply.send(content);
 		});
 
 		//#endregion
@@ -775,54 +661,7 @@ export class ClientServerService {
 			}));
 		});
 
-		fastify.get('/_info_card_', async (request, reply) => {
-			reply.removeHeader('X-Frame-Options');
-
-			return await HtmlTemplateService.replyHtml(reply, InfoCardPage({
-				version: this.config.version,
-				config: this.config,
-				meta: this.meta,
-			}));
-		});
 		//#endregion
-
-		fastify.get('/bios', async (request, reply) => {
-			return await HtmlTemplateService.replyHtml(reply, BiosPage({
-				version: this.config.version,
-			}));
-		});
-
-		fastify.get('/cli', async (request, reply) => {
-			return await HtmlTemplateService.replyHtml(reply, CliPage({
-				version: this.config.version,
-			}));
-		});
-
-		fastify.get('/flush', async (request, reply) => {
-			let sendHeader = true;
-
-			if (request.headers['origin']) {
-				const originURL = new URL(request.headers['origin']);
-				if (originURL.protocol !== 'https:') { // Clear-Site-Data only supports https
-					sendHeader = false;
-				}
-				if (originURL.host !== configUrl.host) {
-					sendHeader = false;
-				}
-			}
-
-			if (sendHeader) {
-				reply.header('Clear-Site-Data', '"*"');
-			}
-			reply.header('Set-Cookie', 'http-flush-failed=1; Path=/flush; Max-Age=60');
-			return await HtmlTemplateService.replyHtml(reply, FlushPage());
-		});
-
-		// streamingに非WebSocketリクエストが来た場合にbase htmlをキャシュ付きで返すと、Proxy等でそのパスがキャッシュされておかしくなる
-		fastify.get('/streaming', async (request, reply) => {
-			reply.code(503);
-			reply.header('Cache-Control', 'private, max-age=0');
-		});
 
 		// Render base html for all requests
 		fastify.get('*', async (request, reply) => {
