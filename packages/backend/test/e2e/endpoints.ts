@@ -45,6 +45,7 @@ import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetReques
 import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
+import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
@@ -2501,6 +2502,102 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(missingDelete.body as any).error.code, 'NO_SUCH_ROLE');
 
 			const logTypes = ['createRole', 'updateRole', 'deleteRole'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/system-webhook', () => {
+		test('admin/system-webhook は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
+			const now = Date.now();
+			const name = `Hono system webhook ${now}`;
+			const created = await api('admin/system-webhook/create', {
+				isActive: true,
+				name,
+				on: ['abuseReport'],
+				url: 'https://example.test/system-webhook',
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.isActive, true);
+			assert.strictEqual(created.body.name, name);
+			assert.deepStrictEqual(created.body.on, ['abuseReport']);
+			assert.strictEqual(created.body.url, 'https://example.test/system-webhook');
+			assert.strictEqual(created.body.secret, '');
+
+			const createdInactive = await api('admin/system-webhook/create', {
+				isActive: false,
+				name: `${name} inactive`,
+				on: ['userCreated'],
+				url: 'https://example.test/system-webhook-inactive',
+				secret: 'secret',
+			}, alice);
+			assert.strictEqual(createdInactive.status, 200);
+
+			const listed = await api('admin/system-webhook/list', { on: ['abuseReport'] }, alice);
+			assert.strictEqual(listed.status, 200);
+			assert.strictEqual(listed.body.some(webhook => webhook.id === created.body.id), true);
+			assert.strictEqual(listed.body.some(webhook => webhook.id === createdInactive.body.id), false);
+
+			const listedInactive = await api('admin/system-webhook/list', { isActive: false }, alice);
+			assert.strictEqual(listedInactive.status, 200);
+			assert.strictEqual(listedInactive.body.some(webhook => webhook.id === createdInactive.body.id), true);
+
+			const shown = await api('admin/system-webhook/show', { id: created.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.name, name);
+
+			const missing = await api('admin/system-webhook/show', { id: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_SYSTEM_WEBHOOK');
+
+			const updated = await api('admin/system-webhook/update', {
+				id: created.body.id,
+				isActive: false,
+				name: `${name} updated`,
+				on: ['userCreated'],
+				url: 'https://example.test/system-webhook-updated',
+				secret: 'updated-secret',
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.id, created.body.id);
+			assert.strictEqual(updated.body.isActive, false);
+			assert.strictEqual(updated.body.name, `${name} updated`);
+			assert.deepStrictEqual(updated.body.on, ['userCreated']);
+			assert.strictEqual(updated.body.secret, 'updated-secret');
+
+			const appToken = await createAppToken(alice, ['write:admin:roles']);
+			const secureDenied = await api('admin/system-webhook/list', {}, { token: appToken });
+			assert.strictEqual(secureDenied.status, 400);
+			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const normalUser = await signup({ username: `hswh${now.toString(36)}` });
+			const roleDenied = await api('admin/system-webhook/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/system-webhook/delete', { id: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchSystemWebhookByIdFromDatabase(db, created.body.id), null);
+
+			const deletedInactive = await api('admin/system-webhook/delete', { id: createdInactive.body.id }, alice);
+			assert.strictEqual(deletedInactive.status, 204);
+
+			const logTypes = ['createSystemWebhook', 'updateSystemWebhook', 'deleteSystemWebhook'] as const;
 			const logged = new Set<string>();
 			for (let i = 0; i < 10; i++) {
 				for (const type of logTypes) {
