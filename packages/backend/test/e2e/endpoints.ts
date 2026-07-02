@@ -12,6 +12,8 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
+import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
+import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
@@ -320,6 +322,78 @@ describe('Endpoints', () => {
 			const detailByGet = await relativeFetch(`api/emoji?name=${emoji.name}`);
 			assert.strictEqual(detailByGet.status, 200);
 			assert.strictEqual(detailByGet.headers.get('cache-control'), 'public, max-age=3600');
+		});
+	});
+
+	describe('announcement endpoints', () => {
+		test('announcements list and show respect user-specific visibility', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const globalAnnouncement = await createAnnouncementInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: null,
+				title: 'Global announcement',
+				text: 'Visible to everyone',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				needConfirmationToRead: false,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: null,
+			});
+			const userAnnouncement = await createAnnouncementInDatabase(db, {
+				id: genId(config, now + 1),
+				updatedAt: null,
+				title: 'User announcement',
+				text: 'Visible to Alice only',
+				imageUrl: null,
+				icon: 'success',
+				display: 'banner',
+				needConfirmationToRead: true,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: alice.id,
+			});
+			await createAnnouncementReadInDatabase(db, {
+				id: genId(config, now + 2),
+				announcementId: globalAnnouncement.id,
+				userId: alice.id,
+			});
+
+			const anonymousList = await api('announcements', { limit: 10 });
+			assert.strictEqual(anonymousList.status, 200);
+			assert.ok(anonymousList.body.some(announcement => announcement.id === globalAnnouncement.id));
+			assert.ok(!anonymousList.body.some(announcement => announcement.id === userAnnouncement.id));
+
+			const aliceList = await api('announcements', { limit: 10 }, alice);
+			assert.strictEqual(aliceList.status, 200);
+			const listedGlobal = aliceList.body.find(announcement => announcement.id === globalAnnouncement.id);
+			const listedUser = aliceList.body.find(announcement => announcement.id === userAnnouncement.id);
+			assert.strictEqual(listedGlobal?.isRead, true);
+			assert.strictEqual(listedUser?.forYou, true);
+			assert.strictEqual(listedUser?.isRead, false);
+
+			const shownGlobal = await api('announcements/show', {
+				announcementId: globalAnnouncement.id,
+			});
+			assert.strictEqual(shownGlobal.status, 200);
+			assert.strictEqual(shownGlobal.body.title, globalAnnouncement.title);
+
+			const hiddenUser = await api('announcements/show', {
+				announcementId: userAnnouncement.id,
+			});
+			assert.strictEqual(hiddenUser.status, 404);
+			assert.strictEqual(castAsError(hiddenUser.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
+
+			const shownUser = await api('announcements/show', {
+				announcementId: userAnnouncement.id,
+			}, alice);
+			assert.strictEqual(shownUser.status, 200);
+			assert.strictEqual(shownUser.body.forYou, true);
+			assert.strictEqual(shownUser.body.needConfirmationToRead, true);
 		});
 	});
 
