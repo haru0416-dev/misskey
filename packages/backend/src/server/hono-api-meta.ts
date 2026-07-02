@@ -4,21 +4,31 @@
  */
 
 import * as os from 'node:os';
+import type * as Redis from 'ioredis';
+import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
 import { packMetaDetailed, packMetaLite } from '@/core/MetaEntityPacker.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
+import { adminUpdateMetaParamDef, buildAdminUpdateMetaPatch, type AdminUpdateMetaParams } from '@/server/api/AdminUpdateMetaLogic.js';
+import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiMetaDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
+	redis: Redis.Redis;
+	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
+
+const hashtagRankingWindow = 1000 * 60 * 60;
+const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
 const metaParamDef = {
 	type: 'object',
@@ -42,6 +52,45 @@ const testParamDef = {
 
 type MetaParams = SchemaType<typeof metaParamDef>;
 type TestParams = SchemaType<typeof testParamDef>;
+
+function currentFeaturedWindow(windowRange: number): number {
+	const passed = new Date().getTime() - featuredEpoc;
+	return Math.floor(passed / windowRange);
+}
+
+async function removeHiddenTagsFromFeaturedRanking(redis: Redis.Redis, tags: Set<string>): Promise<void> {
+	if (tags.size === 0) return;
+
+	const currentWindow = currentFeaturedWindow(hashtagRankingWindow);
+	const previousWindow = currentWindow - 1;
+	const pipeline = redis.pipeline();
+
+	for (const tag of tags) {
+		pipeline.zrem(`featuredHashtagsRanking:${currentWindow}`, tag);
+		pipeline.zrem(`featuredHashtagsRanking:${previousWindow}`, tag);
+	}
+
+	await pipeline.exec();
+}
+
+function scheduleHiddenTagsRankingRemoval(
+	deps: HonoApiMetaDependencies,
+	before: MiMeta | undefined,
+	hiddenTags: MiMeta['hiddenTags'] | undefined,
+): void {
+	if (hiddenTags === undefined) return;
+
+	process.nextTick(() => {
+		const tags = new Set<string>(hiddenTags);
+		if (before) {
+			for (const previousHiddenTag of before.hiddenTags) {
+				tags.delete(previousHiddenTag);
+			}
+		}
+
+		void removeHiddenTagsFromFeaturedRanking(deps.redis, tags);
+	});
+}
 
 export async function handleHonoApiMeta(
 	deps: HonoApiMetaDependencies,
@@ -193,6 +242,27 @@ export async function handleHonoApiAdminMeta(
 		remoteNotesCleaningMaxProcessingDurationInMinutes: instance.remoteNotesCleaningMaxProcessingDurationInMinutes,
 		showRoleBadgesOfRemoteUsers: instance.showRoleBadgesOfRemoteUsers,
 	};
+}
+
+export async function handleHonoApiAdminUpdateMeta(
+	deps: HonoApiMetaDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminUpdateMetaParamDef, body) as AdminUpdateMetaParams;
+	const before = await fetchMetaFromDatabase(deps.db);
+	const set = buildAdminUpdateMetaPatch(deps.meta, params);
+	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, set);
+
+	Object.assign(deps.meta, after);
+	deps.meta.rootUser = null;
+	deps.publishInternalEvent?.('metaUpdated', { before: updateBefore, after });
+	scheduleHiddenTagsRankingRemoval(deps, updateBefore, set.hiddenTags);
+
+	await logModerationEventInDatabase(deps, me, 'updateServerSettings', {
+		before,
+		after,
+	});
 }
 
 export function handleHonoApiPing(): { pong: number } {

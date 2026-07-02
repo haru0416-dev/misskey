@@ -61,7 +61,7 @@ import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHa
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
 import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
-import { handleHonoApiAdminMeta, handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
+import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta, handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
@@ -381,6 +381,19 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiAdmin(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminMeta(deps));
+		});
+	});
+
+	app.post('/admin/update-meta', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:meta');
+			await assertHonoApiAdmin(deps, auth);
+
+			await handleHonoApiAdminUpdateMeta(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 

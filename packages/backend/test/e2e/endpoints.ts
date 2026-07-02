@@ -308,6 +308,100 @@ describe('Endpoints', () => {
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
+
+		test('admin/update-meta は設定変換、scope、管理者権限、ログを維持する', async () => {
+			const before = await fetchMetaFromDatabase(db);
+			const now = Date.now().toString(36);
+			const updatedName = `hono meta ${now}`;
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:meta']);
+			const scopeDenied = await api('admin/update-meta', { name: updatedName }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const roleDenied = await api('admin/update-meta', { name: updatedName }, bob);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			try {
+				const writeToken = await createAppToken(alice, ['write:admin:meta']);
+				const updated = await api('admin/update-meta', {
+					name: updatedName,
+					disableRegistration: null,
+					pinnedUsers: ['@alice', ''],
+					hiddenTags: [`hono-meta-${now}`, ''],
+					blockedHosts: ['Blocked.Example', ''],
+					silencedHosts: ['zzz.example', 'aaa.example', 'aaa.example', 'Blocked.Example', ''],
+					mediaSilencedHosts: ['media.example', 'media.example', 'Blocked.Example', ''],
+					langs: ['ja-JP', ''],
+					mcaptchaSiteKey: `mcaptcha-${now}`,
+					googleAnalyticsMeasurementId: '',
+					sensitiveMediaDetectionApiUrl: '',
+					deeplAuthKey: '',
+					truemailInstance: '',
+					tosUrl: `https://example.com/tos-${now}`,
+					repositoryUrl: 'not a url',
+					summalyProxy: ` https://example.com/summary-${now} `,
+					clientOptions: {
+						entrancePageStyle: 'simple',
+						showTimelineForVisitor: false,
+					},
+					federationHosts: ['Remote.Example', ''],
+				}, { token: writeToken });
+				assert.strictEqual(updated.status, 204);
+
+				const after = await fetchMetaFromDatabase(db);
+				assert.strictEqual(after.name, updatedName);
+				assert.strictEqual(after.disableRegistration, before.disableRegistration);
+				assert.deepStrictEqual(after.pinnedUsers, ['@alice']);
+				assert.deepStrictEqual(after.hiddenTags, [`hono-meta-${now}`]);
+				assert.deepStrictEqual(after.blockedHosts, ['blocked.example']);
+				assert.deepStrictEqual(after.silencedHosts, ['Blocked.Example', 'aaa.example', 'zzz.example']);
+				assert.deepStrictEqual(after.mediaSilencedHosts, ['Blocked.Example', 'media.example']);
+				assert.deepStrictEqual(after.langs, ['ja-JP']);
+				assert.strictEqual(after.mcaptchaSitekey, `mcaptcha-${now}`);
+				assert.strictEqual(after.googleAnalyticsMeasurementId, null);
+				assert.strictEqual(after.sensitiveMediaDetectionApiUrl, null);
+				assert.strictEqual(after.deeplAuthKey, null);
+				assert.strictEqual(after.truemailInstance, null);
+				assert.strictEqual(after.termsOfServiceUrl, `https://example.com/tos-${now}`);
+				assert.strictEqual(after.repositoryUrl, null);
+				assert.strictEqual(after.urlPreviewSummaryProxyUrl, `https://example.com/summary-${now}`);
+				assert.strictEqual(after.clientOptions.entrancePageStyle, 'simple');
+				assert.strictEqual(after.clientOptions.showTimelineForVisitor, false);
+				assert.strictEqual(after.clientOptions.showActivitiesForVisitor, before.clientOptions.showActivitiesForVisitor);
+				assert.deepStrictEqual(after.federationHosts, ['remote.example']);
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateServerSettings',
+					userId: alice.id,
+					search: updatedName,
+				});
+				assert.ok(logs.length > 0);
+			} finally {
+				await api('admin/update-meta', {
+					name: before.name,
+					pinnedUsers: before.pinnedUsers,
+					hiddenTags: before.hiddenTags,
+					blockedHosts: before.blockedHosts,
+					silencedHosts: before.silencedHosts,
+					mediaSilencedHosts: before.mediaSilencedHosts,
+					langs: before.langs,
+					mcaptchaSiteKey: before.mcaptchaSitekey,
+					googleAnalyticsMeasurementId: before.googleAnalyticsMeasurementId,
+					sensitiveMediaDetectionApiUrl: before.sensitiveMediaDetectionApiUrl,
+					deeplAuthKey: before.deeplAuthKey,
+					truemailInstance: before.truemailInstance,
+					tosUrl: before.termsOfServiceUrl,
+					repositoryUrl: before.repositoryUrl,
+					urlPreviewSummaryProxyUrl: before.urlPreviewSummaryProxyUrl,
+					clientOptions: before.clientOptions,
+					federationHosts: before.federationHosts,
+				}, alice);
+			}
+		});
 	});
 
 	describe('admin/update-proxy-account', () => {
