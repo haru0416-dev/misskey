@@ -22,6 +22,7 @@ import { handleHonoApiI } from './hono-api-i.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
+import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 
 export type ApiShellDependencies = {
@@ -31,9 +32,9 @@ export type ApiShellDependencies = {
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
-	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication'>;
+	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
 	emailService: Pick<EmailService, 'sendEmail'>;
-	logger: Pick<Logger, 'error'>;
+	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: SignupInternalEventPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
@@ -94,6 +95,19 @@ function signinFlowResponse(c: Context, deps: ApiShellDependencies, result: Hono
 		status: result.status,
 		headers: {
 			...headers,
+			'Content-Type': 'application/json; charset=utf-8',
+		},
+	});
+}
+
+function signinWithPasskeyResponse(c: Context, deps: ApiShellDependencies, result: HonoApiSigninWithPasskeyResult): Response {
+	setApiHeaders(c);
+	return new Response(JSON.stringify(result.body), {
+		status: result.status,
+		headers: {
+			'Access-Control-Allow-Origin': deps.config.url,
+			'Access-Control-Allow-Credentials': 'true',
+			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
 		},
 	});
@@ -200,6 +214,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return signinFlowResponse(c, deps, await handleHonoApiSigninFlow(deps, {
+				body,
+				headers: c.req.raw.headers,
+				ip: getRequestIp(c, deps.config),
+			}));
+		});
+	});
+
+	app.post('/signin-with-passkey', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return signinWithPasskeyResponse(c, deps, await handleHonoApiSigninWithPasskey(deps, {
 				body,
 				headers: c.req.raw.headers,
 				ip: getRequestIp(c, deps.config),

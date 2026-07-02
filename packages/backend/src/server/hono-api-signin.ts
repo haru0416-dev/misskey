@@ -4,7 +4,6 @@
  */
 
 import bcrypt from 'bcryptjs';
-import Limiter from 'ratelimiter';
 import type * as Misskey from 'misskey-js';
 import type * as Redis from 'ioredis';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
@@ -27,6 +26,7 @@ import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type Logger from '@/logger.js';
 import { createLoginNotification, type HonoApiNotificationDependencies } from './hono-api-notification.js';
+import { isHonoApiRateLimited } from './hono-api-rate-limit.js';
 
 export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
 	config: Config;
@@ -35,9 +35,9 @@ export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
-	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication'>;
+	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
 	emailService: Pick<EmailService, 'sendEmail'>;
-	logger: Pick<Logger, 'error'>;
+	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
 export type HonoApiSigninRequest = {
@@ -46,7 +46,7 @@ export type HonoApiSigninRequest = {
 	ip: string;
 };
 
-type SigninFlowErrorBody = {
+export type HonoApiSigninErrorBody = {
 	error: {
 		message?: string;
 		code?: string;
@@ -56,7 +56,12 @@ type SigninFlowErrorBody = {
 
 export type HonoApiSigninFlowResult = {
 	status: number;
-	body?: Misskey.entities.SigninFlowResponse | SigninFlowErrorBody;
+	body?: Misskey.entities.SigninFlowResponse | HonoApiSigninErrorBody;
+};
+
+export type HonoApiSigninErrorResult = {
+	status: number;
+	body: HonoApiSigninErrorBody;
 };
 
 type CaptchaResponse = {
@@ -64,7 +69,7 @@ type CaptchaResponse = {
 	'error-codes'?: string[];
 };
 
-function error(status: number, id: string): HonoApiSigninFlowResult {
+export function honoApiSigninError(status: number, id: string): HonoApiSigninErrorResult {
 	return {
 		status,
 		body: {
@@ -73,7 +78,7 @@ function error(status: number, id: string): HonoApiSigninFlowResult {
 	};
 }
 
-function tooManyAuthenticationFailures(): HonoApiSigninFlowResult {
+export function tooManyAuthenticationFailures(): HonoApiSigninErrorResult {
 	return {
 		status: 429,
 		body: {
@@ -94,40 +99,13 @@ function headersObject(headers: Headers): Record<string, string> {
 	return result;
 }
 
-async function checkLimiter(options: Limiter.LimiterOption): Promise<Limiter.LimiterInfo> {
-	return await new Promise<Limiter.LimiterInfo>((resolve, reject) => {
-		new Limiter(options).get((err, info) => {
-			if (err) {
-				reject(err);
-				return;
-			}
-			resolve(info);
-		});
-	});
-}
-
 async function isSigninRateLimited(deps: HonoApiSigninDependencies, ip: string): Promise<boolean> {
-	if (!deps.config.enableIpRateLimit || process.env.NODE_ENV !== 'production') {
-		return false;
-	}
-
-	const actor = getIpHash(ip);
-	const minInterval = await checkLimiter({
-		id: `${actor}:signin:min`,
-		duration: 1000,
-		max: 1,
-		db: deps.redis,
-	});
-	if (minInterval.remaining === 0) return true;
-
-	const hourly = await checkLimiter({
-		id: `${actor}:signin`,
+	return await isHonoApiRateLimited(deps, {
+		key: 'signin',
 		duration: 60 * 60 * 1000,
 		max: 10,
-		db: deps.redis,
-	});
-
-	return hourly.remaining === 0;
+		minInterval: 1000,
+	}, getIpHash(ip));
 }
 
 async function getCaptchaResponse(
@@ -269,7 +247,7 @@ async function appendFailedSignin(
 	});
 }
 
-function completeSignin(
+export function completeHonoApiSignin(
 	deps: HonoApiSigninDependencies,
 	request: HonoApiSigninRequest,
 	user: MiLocalUser,
@@ -309,15 +287,15 @@ function completeSignin(
 	};
 }
 
-async function failSignin(
+export async function failHonoApiSignin(
 	deps: HonoApiSigninDependencies,
 	request: HonoApiSigninRequest,
 	user: MiLocalUser,
 	status: number,
 	id: string,
-): Promise<HonoApiSigninFlowResult> {
+): Promise<HonoApiSigninErrorResult> {
 	await appendFailedSignin(deps, request, user);
-	return error(status, id);
+	return honoApiSigninError(status, id);
 }
 
 export async function handleHonoApiSigninFlow(
@@ -344,11 +322,11 @@ export async function handleHonoApiSigninFlow(
 	const user = await fetchLocalUserByUsernameFromDatabase(deps.db, username);
 
 	if (user == null) {
-		return error(404, '6cc579cc-885d-43d8-95c2-b8c7fc963280');
+		return honoApiSigninError(404, '6cc579cc-885d-43d8-95c2-b8c7fc963280');
 	}
 
 	if (user.isSuspended) {
-		return error(403, 'e03a5f46-d309-4865-9b69-56282d94e1eb');
+		return honoApiSigninError(403, 'e03a5f46-d309-4865-9b69-56282d94e1eb');
 	}
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
@@ -388,39 +366,39 @@ export async function handleHonoApiSigninFlow(
 		}
 
 		if (same) {
-			return completeSignin(deps, request, user);
+			return completeHonoApiSignin(deps, request, user);
 		}
 
-		return await failSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+		return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 	}
 
 	if (token) {
 		if (!same) {
-			return await failSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+			return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 		}
 
 		try {
 			await deps.userAuthService.twoFactorAuthenticate(profile, token);
 		} catch {
-			return await failSignin(deps, request, user, 403, 'cdf1235b-ac71-46d4-a3a6-84ccce48df6f');
+			return await failHonoApiSignin(deps, request, user, 403, 'cdf1235b-ac71-46d4-a3a6-84ccce48df6f');
 		}
 
-		return completeSignin(deps, request, user);
+		return completeHonoApiSignin(deps, request, user);
 	} else if (body.credential) {
 		if (!same && !profile.usePasswordLessLogin) {
-			return await failSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+			return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 		}
 
 		const authorized = await deps.webAuthnService.verifyAuthentication(user.id, body.credential as AuthenticationResponseJSON);
 
 		if (authorized) {
-			return completeSignin(deps, request, user);
+			return completeHonoApiSignin(deps, request, user);
 		}
 
-		return await failSignin(deps, request, user, 403, '93b86c4b-72f9-40eb-9815-798928603d1e');
+		return await failHonoApiSignin(deps, request, user, 403, '93b86c4b-72f9-40eb-9815-798928603d1e');
 	} else if (securityKeysAvailable) {
 		if (!same && !profile.usePasswordLessLogin) {
-			return await failSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+			return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 		}
 
 		const authRequest = await deps.webAuthnService.initiateAuthentication(user.id);
@@ -436,7 +414,7 @@ export async function handleHonoApiSigninFlow(
 	}
 
 	if (!same || !profile.twoFactorEnabled) {
-		return await failSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+		return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 	}
 
 	return {

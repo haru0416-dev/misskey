@@ -111,6 +111,16 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('signin-with-passkey', () => {
+		test('パスキーサインインの challenge を開始できる', async () => {
+			const res = await api('signin-with-passkey', {});
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(typeof res.body.context, 'string');
+			assert.strictEqual(typeof res.body.option.challenge, 'string');
+		});
+	});
+
 	describe('auth/session', () => {
 		test('legacy auth session flow', async () => {
 			const app = await api('app/create', {
