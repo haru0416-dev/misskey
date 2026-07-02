@@ -2715,6 +2715,43 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/server-info', () => {
+		function assertAdminServerInfoBody(body: any): void {
+			assert.strictEqual(typeof body.machine, 'string');
+			assert.strictEqual(typeof body.os, 'string');
+			assert.strictEqual(typeof body.node, 'string');
+			assert.strictEqual(typeof body.psql, 'string');
+			assert.strictEqual(typeof body.redis, 'string');
+			assert.strictEqual(typeof body.cpu.model, 'string');
+			assert.strictEqual(typeof body.cpu.cores, 'number');
+			assert.strictEqual(typeof body.mem.total, 'number');
+			assert.strictEqual(typeof body.fs.total, 'number');
+			assert.strictEqual(typeof body.fs.used, 'number');
+			assert.strictEqual(typeof body.net.interface, 'string');
+		}
+
+		test('admin/server-info はサーバ情報、moderator権限、token scopeを維持する', async () => {
+			const listed = await api('admin/server-info', {}, alice);
+			assert.strictEqual(listed.status, 200);
+			assertAdminServerInfoBody(listed.body);
+
+			const readToken = await createAppToken(alice, ['read:admin:server-info']);
+			const listedWithApp = await api('admin/server-info', {}, { token: readToken });
+			assert.strictEqual(listedWithApp.status, 200);
+			assertAdminServerInfoBody(listedWithApp.body);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const scopeDenied = await api('admin/server-info', {}, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honosi${Date.now().toString(36)}` });
+			const roleDenied = await api('admin/server-info', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
 	describe('invite', () => {
 		test('invite/limit keeps role policy, token scope, and remaining count semantics', async () => {
 			const config = loadConfig();
