@@ -10,8 +10,8 @@ import type * as Redis from 'ioredis';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { createFollowRequestInDatabase, deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
-import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
-import { adjustInstanceFollowersCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
+import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
+import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
 import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
@@ -19,7 +19,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileSt
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import type { IActivity, IFollow, IObject } from '@/core/activitypub/type.js';
+import type { IActivity, IFollow, IObject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -57,6 +57,24 @@ const followingCreateParamDef = {
 	required: ['userId'],
 } as const;
 
+const followingUserIdParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['userId'],
+} as const;
+
+const followingUpdateParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		notify: { type: 'string', enum: ['normal', 'none'] },
+		withReplies: { type: 'boolean' },
+	},
+	required: ['userId'],
+} as const;
+
 const followingUpdateAllParamDef = {
 	type: 'object',
 	properties: {
@@ -67,6 +85,16 @@ const followingUpdateAllParamDef = {
 
 type FollowingCreateParams = {
 	userId: string;
+	withReplies?: boolean;
+};
+
+type FollowingUserIdParams = {
+	userId: string;
+};
+
+type FollowingUpdateParams = {
+	userId: string;
+	notify?: 'normal' | 'none';
 	withReplies?: boolean;
 };
 
@@ -98,6 +126,14 @@ function followingCreateNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
 }
 
+function followingDeleteNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', '5b12c78d-2b28-4dca-99d2-f56139b42ff8');
+}
+
+function followingUpdateNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', '14318698-f67e-492a-99da-5353a5ac52be');
+}
+
 function isLocalUser(user: MiUser): user is MiUser & { host: null } {
 	return user.host === null;
 }
@@ -123,6 +159,18 @@ function renderFollow(config: Config, follower: MiUser, followee: MiUser, reques
 	};
 }
 
+function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
+	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
+
+	return {
+		type: 'Undo',
+		...(id ? { id } : {}),
+		actor: genLocalUserUri(config, user.id),
+		object,
+		published: new Date().toISOString(),
+	};
+}
+
 function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
 		activity.id = `${config.url}/${randomUUID()}`;
@@ -131,9 +179,13 @@ function addActivityContext<T extends IObject>(config: Config, activity: T): T &
 	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
 }
 
-async function getTargetUserOrThrow(deps: HonoApiFollowingDependencies, userId: MiUser['id']): Promise<MiUser> {
+async function getTargetUserOrThrow(
+	deps: HonoApiFollowingDependencies,
+	userId: MiUser['id'],
+	errorFactory: () => HonoApiError = followingCreateNoSuchUserError,
+): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	if (user == null) throw followingCreateNoSuchUserError();
+	if (user == null) throw errorFactory();
 
 	return user;
 }
