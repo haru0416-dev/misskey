@@ -7,7 +7,6 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import sharp from 'sharp';
 import fastifyStatic from '@fastify/static';
 import fastifyProxy from '@fastify/http-proxy';
 import vary from 'vary';
@@ -59,15 +58,8 @@ import type { FastifyError, FastifyInstance, FastifyPluginOptions, FastifyReply 
 
 @Injectable()
 export class ClientServerService {
-	private readonly staticAssets: string;
-	private readonly clientAssets: string;
-	private readonly assets: string;
-	private readonly swAssets: string;
-	private readonly fluentEmojiDir: string;
-	private readonly twemojiDir: string;
 	private readonly frontendViteOut: string;
 	private readonly frontendEmbedViteOut: string;
-	private readonly tarball: string;
 
 	constructor(
 		@Inject(DI.config)
@@ -92,17 +84,8 @@ export class ClientServerService {
 		private clientLoggerService: ClientLoggerService,
 	) {
 		//this.createServer = this.createServer.bind(this);
-		const backendRootdir = resolve(this.config.rootDir, 'packages/backend');
-		const frontendRootdir = resolve(this.config.rootDir, 'packages/frontend');
-		this.staticAssets = resolve(backendRootdir, 'assets');
-		this.clientAssets = resolve(frontendRootdir, 'assets');
-		this.assets = resolve(this.config.rootDir, 'built/_frontend_dist_');
-		this.swAssets = resolve(this.config.rootDir, 'built/_sw_dist_');
-		this.fluentEmojiDir = resolve(backendRootdir, 'node_modules/@misskey-dev/emoji-assets/built/fluent-emoji');
-		this.twemojiDir = resolve(backendRootdir, 'node_modules/@misskey-dev/emoji-assets/built/twemoji');
 		this.frontendViteOut = resolve(this.config.rootDir, 'built/_frontend_vite_');
 		this.frontendEmbedViteOut = resolve(this.config.rootDir, 'built/_frontend_embed_vite_');
-		this.tarball = resolve(this.config.rootDir, 'built/tarball');
 	}
 
 	@bindThis
@@ -154,138 +137,6 @@ export class ClientServerService {
 				rewritePrefix: '/embed_vite',
 			});
 		}
-		//#endregion
-
-		//#region static assets
-
-		fastify.register(fastifyStatic, {
-			root: this.staticAssets,
-			prefix: '/static-assets/',
-			maxAge: ms('7 days'),
-			decorateReply: false,
-		});
-
-		fastify.register(fastifyStatic, {
-			root: this.clientAssets,
-			prefix: '/client-assets/',
-			maxAge: ms('7 days'),
-			decorateReply: false,
-		});
-
-		fastify.register(fastifyStatic, {
-			root: this.assets,
-			prefix: '/assets/',
-			maxAge: ms('7 days'),
-			decorateReply: false,
-		});
-
-		fastify.register((fastify, options, done) => {
-			fastify.register(fastifyStatic, {
-				root: this.tarball,
-				prefix: '/tarball/',
-				maxAge: ms('30 days'),
-				immutable: true,
-				decorateReply: false,
-			});
-			fastify.addHook('onRequest', handleRequestRedirectToOmitSearch);
-			done();
-		});
-
-		fastify.get('/favicon.ico', async (request, reply) => {
-			return reply.sendFile('/favicon.ico', this.staticAssets);
-		});
-
-		fastify.get('/apple-touch-icon.png', async (request, reply) => {
-			return reply.sendFile('/apple-touch-icon.png', this.staticAssets);
-		});
-
-		fastify.get<{ Params: { path: string } }>('/fluent-emoji/:path(.*)', async (request, reply) => {
-			const path = request.params.path;
-
-			if (!path.match(/^[0-9a-f-]+\.png$/)) {
-				reply.code(404);
-				return;
-			}
-
-			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
-
-			return reply.sendFile(path, this.fluentEmojiDir, {
-				maxAge: ms('30 days'),
-			});
-		});
-
-		fastify.get<{ Params: { path: string } }>('/twemoji/:path(.*)', async (request, reply) => {
-			const path = request.params.path;
-
-			if (!path.match(/^[0-9a-f-]+\.svg$/)) {
-				reply.code(404);
-				return;
-			}
-
-			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
-
-			return reply.sendFile(path, this.twemojiDir, {
-				maxAge: ms('30 days'),
-			});
-		});
-
-		fastify.get<{ Params: { path: string } }>('/twemoji-badge/:path(.*)', async (request, reply) => {
-			const path = request.params.path;
-
-			if (!path.match(/^[0-9a-f-]+\.png$/)) {
-				reply.code(404);
-				return;
-			}
-
-			const mask = await sharp(
-				`${this.twemojiDir}/${path.replace('.png', '')}.svg`,
-				{ density: 1000 },
-			)
-				.resize(488, 488)
-				.greyscale()
-				.normalise()
-				.linear(1.75, -(128 * 1.75) + 128) // 1.75x contrast
-				.flatten({ background: '#000' })
-				.extend({
-					top: 12,
-					bottom: 12,
-					left: 12,
-					right: 12,
-					background: '#000',
-				})
-				.toColorspace('b-w')
-				.png()
-				.toBuffer();
-
-			const buffer = await sharp({
-				create: { width: 512, height: 512, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
-			})
-				.pipelineColorspace('b-w')
-				.boolean(mask, 'eor')
-				.resize(96, 96)
-				.png()
-				.toBuffer();
-
-			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
-			reply.header('Cache-Control', 'max-age=2592000');
-			reply.header('Content-Type', 'image/png');
-			return buffer;
-		});
-
-		// ServiceWorker
-		fastify.get('/sw.js', async (request, reply) => {
-			return await reply.sendFile('/sw.js', this.swAssets, {
-				maxAge: ms('10 minutes'),
-			});
-		});
-
-		// Embed Javascript
-		fastify.get('/embed.js', async (request, reply) => {
-			return await reply.sendFile('/embed.js', this.staticAssets, {
-				maxAge: ms('1 day'),
-			});
-		});
-
 		//#endregion
 
 		const renderBase = async (reply: FastifyReply, data: Partial<Parameters<typeof BasePage>[0]> = {}) => {
