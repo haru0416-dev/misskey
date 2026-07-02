@@ -41,6 +41,7 @@ import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
+import { handleHonoApiMuteCreate, handleHonoApiMuteDelete, handleHonoApiMuteList, handleHonoApiRenoteMuteCreate, handleHonoApiRenoteMuteDelete, handleHonoApiRenoteMuteList } from './hono-api-account-mutes.js';
 import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono-api-error.js';
 import { handleHonoApiAdminEmojiAdd, handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiCopy, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiImportZip, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiAdminEmojiUpdate, handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
@@ -1827,6 +1828,78 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiAuthAccept(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/mute/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:mutes');
+
+			await handleHonoApiMuteCreate(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/mute/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:mutes');
+
+			await handleHonoApiMuteDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/mute/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:mutes');
+
+			return jsonResponse(c, await handleHonoApiMuteList(deps, auth.user, body));
+		});
+	});
+
+	app.post('/renote-mute/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:mutes');
+
+			await handleHonoApiRenoteMuteCreate(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/renote-mute/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:mutes');
+
+			await handleHonoApiRenoteMuteDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/renote-mute/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:mutes');
+
+			return jsonResponse(c, await handleHonoApiRenoteMuteList(deps, auth.user, body));
 		});
 	});
 

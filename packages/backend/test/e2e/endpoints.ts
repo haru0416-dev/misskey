@@ -35,11 +35,13 @@ import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromD
 import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
 import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
+import { fetchRenoteMutingFromDatabase } from '@/core/RenoteMutingStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
@@ -550,6 +552,109 @@ describe('Endpoints', () => {
 			}, bob);
 			assert.strictEqual(nonRootDenied.status, 400);
 			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
+		});
+	});
+
+	describe('account mute endpoints', () => {
+		test('mute と renote-mute はDB、cache、list、delete、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const muter = await signup({ username: `hmute${suffix}` });
+			const mutee = await signup({ username: `hmutee${suffix}` });
+			const renoteMutee = await signup({ username: `hrmutee${suffix}` });
+			const expiresAt = Date.now() + 1000 * 60 * 60;
+
+			const wrongWriteToken = await createAppToken(muter, ['read:mutes']);
+			const muteScopeDenied = await api('mute/create', { userId: mutee.id }, { token: wrongWriteToken });
+			assert.strictEqual(muteScopeDenied.status, 403);
+			assert.strictEqual(castAsError(muteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const created = await api('mute/create', { userId: mutee.id, expiresAt }, muter);
+			assert.strictEqual(created.status, 204);
+			const muting = await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id);
+			assert.ok(muting);
+			assert.strictEqual(muting.muterId, muter.id);
+			assert.strictEqual(muting.muteeId, mutee.id);
+			assert.strictEqual(muting.expiresAt?.getTime(), expiresAt);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userMutings:${muter.id}`) ?? '[]'), [mutee.id]);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const duplicate = await api('mute/create', { userId: mutee.id }, muter);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_MUTING');
+
+			const selfMute = await api('mute/create', { userId: muter.id }, muter);
+			assert.strictEqual(selfMute.status, 400);
+			assert.strictEqual(castAsError(selfMute.body as any).error.code, 'MUTEE_IS_YOURSELF');
+
+			const pastMuteTarget = await signup({ username: `hpmute${suffix}` });
+			const pastMute = await api('mute/create', { userId: pastMuteTarget.id, expiresAt: Date.now() - 1000 }, muter);
+			assert.strictEqual(pastMute.status, 204);
+			assert.strictEqual(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, pastMuteTarget.id), null);
+
+			const readToken = await createAppToken(muter, ['read:mutes']);
+			const list = await api('mute/list', { limit: 10 }, { token: readToken });
+			assert.strictEqual(list.status, 200);
+			const listed = (list.body as any[]).find(item => item.muteeId === mutee.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.id, muting.id);
+			assert.strictEqual(listed.mutee.id, mutee.id);
+			assert.strictEqual(listed.expiresAt, new Date(expiresAt).toISOString());
+
+			const wrongReadToken = await createAppToken(muter, ['write:mutes']);
+			const listScopeDenied = await api('mute/list', {}, { token: wrongReadToken });
+			assert.strictEqual(listScopeDenied.status, 403);
+			assert.strictEqual(castAsError(listScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const deleted = await api('mute/delete', { userId: mutee.id }, muter);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id), null);
+
+			const notMuting = await api('mute/delete', { userId: mutee.id }, muter);
+			assert.strictEqual(notMuting.status, 400);
+			assert.strictEqual(castAsError(notMuting.body as any).error.code, 'NOT_MUTING');
+
+			const renoteScopeDenied = await api('renote-mute/create', { userId: renoteMutee.id }, { token: wrongWriteToken });
+			assert.strictEqual(renoteScopeDenied.status, 403);
+			assert.strictEqual(castAsError(renoteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const renoteCreated = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteCreated.status, 204);
+			const renoteMuting = await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id);
+			assert.ok(renoteMuting);
+			assert.strictEqual(renoteMuting.muterId, muter.id);
+			assert.strictEqual(renoteMuting.muteeId, renoteMutee.id);
+
+			const redisAfterRenote = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redisAfterRenote.get(`kvcache:renoteMutings:${muter.id}`) ?? '[]'), [renoteMutee.id]);
+			} finally {
+				await closeRedisConnection(redisAfterRenote);
+			}
+
+			const renoteDuplicate = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteDuplicate.status, 400);
+			assert.strictEqual(castAsError(renoteDuplicate.body as any).error.code, 'ALREADY_MUTING');
+
+			const renoteList = await api('renote-mute/list', { limit: 10 }, { token: readToken });
+			assert.strictEqual(renoteList.status, 200);
+			const renoteListed = (renoteList.body as any[]).find(item => item.muteeId === renoteMutee.id);
+			assert.ok(renoteListed);
+			assert.strictEqual(renoteListed.id, renoteMuting.id);
+			assert.strictEqual(renoteListed.mutee.id, renoteMutee.id);
+
+			const renoteDeleted = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteDeleted.status, 204);
+			assert.strictEqual(await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id), null);
+
+			const renoteNotMuting = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteNotMuting.status, 400);
+			assert.strictEqual(castAsError(renoteNotMuting.body as any).error.code, 'NOT_MUTING');
 		});
 	});
 
