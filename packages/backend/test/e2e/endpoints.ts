@@ -194,6 +194,53 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('availability endpoints', () => {
+		test('username availability reflects existing local users', async () => {
+			const available = await api('username/available', {
+				username: 'availableuser',
+			});
+			assert.strictEqual(available.status, 200);
+			assert.strictEqual(available.body.available, true);
+
+			const taken = await api('username/available', {
+				username: alice.username,
+			});
+			assert.strictEqual(taken.status, 200);
+			assert.strictEqual(taken.body.available, false);
+
+			const invalid = await api('username/available', {
+				username: 'invalid.user',
+			});
+			assert.strictEqual(invalid.status, 400);
+		});
+
+		test('email address availability validates format', async () => {
+			const available = await api('email-address/available', {
+				emailAddress: 'available@example.com',
+			});
+			assert.strictEqual(available.status, 200);
+			assert.strictEqual(available.body.available, true);
+			assert.strictEqual(available.body.reason, null);
+
+			const invalid = await api('email-address/available', {
+				emailAddress: 'invalid-email',
+			});
+			assert.strictEqual(invalid.status, 200);
+			assert.strictEqual(invalid.body.available, false);
+			assert.strictEqual(invalid.body.reason, 'format');
+		});
+
+		test('online users count supports GET and cache header', async () => {
+			const res = await relativeFetch('api/get-online-users-count');
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
+
+			const body = await res.json() as { count?: unknown };
+			assert.strictEqual(typeof body.count, 'number');
+		});
+	});
+
 	describe('signin-flow', () => {
 		test('間違ったパスワードでサインインできない', async () => {
 			const res = await api('signin-flow', {

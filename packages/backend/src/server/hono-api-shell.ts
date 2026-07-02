@@ -15,6 +15,7 @@ import type { EmailService } from '@/core/EmailService.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
+import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
@@ -35,7 +36,7 @@ export type ApiShellDependencies = {
 	httpRequestService: HttpRequestService;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
-	emailService: Pick<EmailService, 'sendEmail'>;
+	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: SignupInternalEventPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
@@ -264,6 +265,13 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/email-address/available', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body));
+		});
+	});
+
 	app.post('/auth/session/generate', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -347,6 +355,23 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.get('/get-online-users-count', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
+	app.post('/get-online-users-count', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
 	app.post('/i', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -383,6 +408,13 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:account');
 
 			return jsonResponse(c, await handleHonoApiMyApps(deps, auth.user, body));
+		});
+	});
+
+	app.post('/username/available', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiUsernameAvailable(deps, body));
 		});
 	});
 
