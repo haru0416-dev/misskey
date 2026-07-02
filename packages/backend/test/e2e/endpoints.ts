@@ -829,6 +829,123 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/drive', () => {
+		test('admin/drive/files は filter、pagination、DriveFile packing、token scopeを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const fileType = 'application/x-hono-admin-drive';
+			const remoteHost = `hono-admin-drive-${suffix}.remote`;
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config, now - 2500),
+				userId: bob.id,
+				name: `hono-admin-drive-folder-${suffix}`,
+				parentId: null,
+			});
+			const firstMd5 = createHash('md5').update(`hono-admin-drive-list-first-${suffix}`).digest('hex');
+			const firstLocal = await createDriveFileInDatabase(db, {
+				id: genId(config, now - 2000),
+				userId: bob.id,
+				userHost: null,
+				md5: firstMd5,
+				name: `hono-admin-drive-list-first-${suffix}.bin`,
+				type: fileType,
+				size: 101,
+				blurhash: null,
+				properties: { width: 30, height: 40, orientation: 6 },
+				storedInternal: true,
+				url: `${origin}/files/${firstMd5}`,
+				thumbnailUrl: `${origin}/files/${firstMd5}.thumbnail`,
+				comment: `first local ${suffix}`,
+				folderId: folder.id,
+			});
+			const secondMd5 = createHash('md5').update(`hono-admin-drive-list-second-${suffix}`).digest('hex');
+			const secondLocal = await createDriveFileInDatabase(db, {
+				id: genId(config, now - 1000),
+				userId: bob.id,
+				userHost: null,
+				md5: secondMd5,
+				name: `hono-admin-drive-list-second-${suffix}.bin`,
+				type: fileType,
+				size: 202,
+				storedInternal: true,
+				url: `${origin}/files/${secondMd5}`,
+			});
+			const remoteMd5 = createHash('md5').update(`hono-admin-drive-list-remote-${suffix}`).digest('hex');
+			const remote = await createDriveFileInDatabase(db, {
+				id: genId(config, now),
+				userId: null,
+				userHost: remoteHost,
+				md5: remoteMd5,
+				name: `hono-admin-drive-list-remote-${suffix}.bin`,
+				type: fileType,
+				size: 303,
+				storedInternal: false,
+				url: `https://${remoteHost}/files/${remoteMd5}`,
+			});
+
+			const listed = await api('admin/drive/files', {
+				limit: 10,
+				sinceDate: now - 3000,
+				type: fileType,
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			const localFiles = listed.body as any[];
+			assert.deepStrictEqual(localFiles.map(file => file.id), [firstLocal.id, secondLocal.id]);
+			assert.strictEqual(typeof localFiles[0].createdAt, 'string');
+			assert.strictEqual(localFiles[0].name, firstLocal.name);
+			assert.strictEqual(localFiles[0].type, fileType);
+			assert.strictEqual(localFiles[0].md5, firstMd5);
+			assert.strictEqual(localFiles[0].size, 101);
+			assert.strictEqual(localFiles[0].isSensitive, false);
+			assert.strictEqual(localFiles[0].blurhash, null);
+			assert.deepStrictEqual(localFiles[0].properties, { width: 30, height: 40, orientation: 6 });
+			assert.strictEqual(localFiles[0].url, firstLocal.url);
+			assert.strictEqual(localFiles[0].thumbnailUrl, firstLocal.thumbnailUrl);
+			assert.strictEqual(localFiles[0].comment, `first local ${suffix}`);
+			assert.strictEqual(localFiles[0].folderId, folder.id);
+			assert.strictEqual(localFiles[0].folder.id, folder.id);
+			assert.strictEqual(localFiles[0].folder.name, folder.name);
+			assert.strictEqual(localFiles[0].folder.filesCount, 1);
+			assert.strictEqual(localFiles[0].userId, bob.id);
+			assert.strictEqual(localFiles[0].user.id, bob.id);
+
+			const byUser = await api('admin/drive/files', {
+				limit: 10,
+				sinceDate: now - 3000,
+				type: fileType,
+				userId: bob.id,
+			}, alice);
+			assert.strictEqual(byUser.status, 200);
+			assert.deepStrictEqual((byUser.body as any[]).map(file => file.id), [firstLocal.id, secondLocal.id]);
+
+			const remoteFiles = await api('admin/drive/files', {
+				limit: 10,
+				sinceDate: now - 3000,
+				type: fileType,
+				origin: 'remote',
+				hostname: remoteHost,
+			}, alice);
+			assert.strictEqual(remoteFiles.status, 200);
+			assert.deepStrictEqual((remoteFiles.body as any[]).map(file => file.id), [remote.id]);
+			assert.strictEqual((remoteFiles.body as any[])[0].userId, null);
+			assert.strictEqual((remoteFiles.body as any[])[0].user, null);
+
+			const token = await createAppToken(alice, ['read:admin:drive']);
+			const listedByToken = await api('admin/drive/files', {
+				limit: 1,
+				untilId: remote.id,
+				type: fileType,
+				origin: 'combined',
+			}, { token });
+			assert.strictEqual(listedByToken.status, 200);
+			assert.strictEqual((listedByToken.body as any[])[0].id, secondLocal.id);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:drive']);
+			const scopeDenied = await api('admin/drive/files', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+
 		test('admin/drive/show-file は fileId/url、秘匿 header、token scope、role、404を維持する', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);

@@ -3,13 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, listDriveFilesForAdminFromDatabase } from '@/core/DriveFileStore.js';
 import type { ObjectStorageQueue } from '@/core/QueueModule.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { SchemaType } from '@/misc/json-schema.js';
+import { isMimeImage } from '@/misc/is-mime-image.js';
+import { appendQuery, query } from '@/misc/prelude/url.js';
+import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
+import { packDriveFolderForHonoApi } from './hono-api-drive.js';
+import { packUserLiteManyForHonoApi } from './hono-api-user.js';
 import type { HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { HonoApiError } from './hono-api-error.js';
@@ -44,10 +49,35 @@ const adminDriveShowFileParamDef = {
 	],
 } as const;
 
+const adminDriveFilesParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		userId: { type: 'string', format: 'misskey:id', nullable: true },
+		type: { type: 'string', nullable: true, pattern: /^[a-zA-Z0-9\/\-*]+$/.toString().slice(1, -1) },
+		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'local' },
+		hostname: {
+			type: 'string',
+			nullable: true,
+			default: null,
+			description: 'The local host is represented with `null`.',
+		},
+	},
+	required: [],
+} as const;
+
 type AdminDriveShowFileParams = SchemaType<typeof adminDriveShowFileParamDef> & (
 	| { fileId: string }
 	| { url: string }
 );
+type AdminDriveFilesParams = SchemaType<typeof adminDriveFilesParamDef> & {
+	origin: 'combined' | 'local' | 'remote';
+	hostname: string | null;
+};
 
 type AdminDriveFileResponse = {
 	id: string;
@@ -89,6 +119,80 @@ function noSuchFileError(): HonoApiError {
 	});
 }
 
+function getProxiedUrl(deps: HonoApiAdminDriveDependencies, url: string, mode?: 'static' | 'avatar'): string {
+	return appendQuery(
+		`${deps.config.mediaProxy}/${mode ?? 'image'}.webp`,
+		query({
+			url,
+			...(mode ? { [mode]: '1' } : {}),
+		}),
+	);
+}
+
+function getExternalVideoThumbnailUrl(deps: HonoApiAdminDriveDependencies, url: string): string | null {
+	if (deps.config.videoThumbnailGenerator == null) return null;
+
+	return appendQuery(
+		`${deps.config.videoThumbnailGenerator}/thumbnail.webp`,
+		query({
+			thumbnail: '1',
+			url,
+		}),
+	);
+}
+
+function getAdminDriveFileThumbnailUrl(deps: HonoApiAdminDriveDependencies, file: MiDriveFile): string | null {
+	if (file.type.startsWith('video')) {
+		if (file.thumbnailUrl) return file.thumbnailUrl;
+
+		return getExternalVideoThumbnailUrl(deps, file.webpublicUrl ?? file.url);
+	} else if (file.uri != null && file.userHost != null && deps.config.externalMediaProxyEnabled) {
+		return getProxiedUrl(deps, file.uri, 'static');
+	}
+
+	if (file.uri != null && file.isLink && deps.meta.proxyRemoteFiles) {
+		return getProxiedUrl(deps, file.uri, 'static');
+	}
+
+	const url = file.webpublicUrl ?? file.url;
+
+	return file.thumbnailUrl ?? (isMimeImage(file.type, 'sharp-convertible-image') ? url : null);
+}
+
+async function packAdminDriveFilesForHonoApi(
+	deps: HonoApiAdminDriveDependencies,
+	files: MiDriveFile[],
+): Promise<Packed<'DriveFile'>[]> {
+	const userRefs = files.map(({ user, userId }) => user ?? userId).filter(x => x != null);
+	const uniqueUserRefs = Array.from(new Map(userRefs.map(user => [typeof user === 'string' ? user : user.id, user])).values());
+	const packedUsers = uniqueUserRefs.length > 0 ? await packUserLiteManyForHonoApi(deps, uniqueUserRefs) : [];
+	const userMap = new Map(packedUsers.map(user => [user.id, user]));
+
+	const folderRefs = files.map(({ folder, folderId }) => folder ?? folderId).filter(x => x != null);
+	const uniqueFolderRefs = Array.from(new Map(folderRefs.map(folder => [typeof folder === 'string' ? folder : folder.id, folder])).values());
+	const packedFolders = await Promise.all(uniqueFolderRefs.map(folder => packDriveFolderForHonoApi(deps, folder, { detail: true })));
+	const folderMap = new Map(packedFolders.map(folder => [folder.id, folder]));
+
+	return files.map(file => ({
+		id: file.id,
+		createdAt: parseId(deps.config, file.id).date.toISOString(),
+		name: file.name,
+		type: file.type,
+		md5: file.md5,
+		size: file.size,
+		isSensitive: file.isSensitive,
+		blurhash: file.blurhash,
+		properties: file.properties,
+		url: file.url,
+		thumbnailUrl: getAdminDriveFileThumbnailUrl(deps, file),
+		comment: file.comment,
+		folderId: file.folderId,
+		folder: file.folderId == null ? null : folderMap.get(file.folderId) ?? null,
+		userId: file.userId,
+		user: file.userId == null ? null : userMap.get(file.userId) ?? null,
+	}));
+}
+
 export async function handleHonoApiAdminDriveCleanRemoteFiles(
 	deps: HonoApiAdminDriveDependencies,
 	body: Record<string, unknown>,
@@ -105,6 +209,32 @@ export async function handleHonoApiAdminDriveCleanRemoteFiles(
 			count: 100,
 		},
 	});
+}
+
+export async function handleHonoApiAdminDriveFiles(
+	deps: HonoApiAdminDriveDependencies,
+	body: Record<string, unknown>,
+): Promise<Packed<'DriveFile'>[]> {
+	const params = parseHonoApiParams(adminDriveFilesParamDef, body) as AdminDriveFilesParams;
+	let sinceId = params.sinceId ?? null;
+	let untilId = params.untilId ?? null;
+
+	if (sinceId == null && untilId == null) {
+		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
+		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+	}
+
+	const files = await listDriveFilesForAdminFromDatabase(deps.db, {
+		limit: params.limit,
+		sinceId,
+		untilId,
+		userId: params.userId,
+		type: params.type,
+		origin: params.origin,
+		hostname: params.hostname,
+	});
+
+	return await packAdminDriveFilesForHonoApi(deps, files);
 }
 
 export async function handleHonoApiAdminDriveShowFile(

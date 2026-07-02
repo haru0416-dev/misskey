@@ -32,7 +32,7 @@ export type HonoApiDriveDependencies = {
 	publishDriveStream?: HonoApiDriveStreamPublisher;
 };
 
-type HonoApiPackedDriveFolder = Packed<'DriveFolder'>;
+export type HonoApiPackedDriveFolder = Packed<'DriveFolder'>;
 
 const driveFilesCheckExistenceParamDef = {
 	type: 'object',
@@ -199,7 +199,7 @@ function driveFoldersDeleteHasChildrenError(): HonoApiError {
 	});
 }
 
-async function packDriveFolderForHonoApi(
+export async function packDriveFolderForHonoApi(
 	deps: HonoApiDriveDependencies,
 	src: DriveFolderRow['id'] | DriveFolderRow,
 	options?: {
