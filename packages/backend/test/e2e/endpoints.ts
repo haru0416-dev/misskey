@@ -22,10 +22,12 @@ import { channelFavoriteExistsInDatabase } from '@/core/ChannelFavoriteStore.js'
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
+import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase } from '@/core/FlashStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
@@ -39,9 +41,10 @@ import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
-import { createUserListInDatabase } from '@/core/UserListStore.js';
+import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
+import { createWebhookInDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
@@ -1402,6 +1405,181 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
 			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
 			assert.strictEqual(await pageLikeExistsInDatabase(db, movedUser.id, page.id), false);
+		});
+	});
+
+	describe('Hono account data endpoints', () => {
+		test('drive/files/check-existence returns ownership-scoped md5 existence', async () => {
+			const config = loadConfig();
+			const md5 = createHash('md5').update(`hono-drive-${Date.now()}`).digest('hex');
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: 'hono-drive-check.txt',
+				type: 'text/plain',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+
+			const exists = await api('drive/files/check-existence', { md5 }, alice);
+			assert.strictEqual(exists.status, 200);
+			assert.strictEqual(exists.body, true);
+
+			const otherUser = await api('drive/files/check-existence', { md5 }, bob);
+			assert.strictEqual(otherUser.status, 200);
+			assert.strictEqual(otherUser.body, false);
+
+			const missing = await api('drive/files/check-existence', { md5: '0'.repeat(32) }, alice);
+			assert.strictEqual(missing.status, 200);
+			assert.strictEqual(missing.body, false);
+		});
+
+		test('notes/drafts/count returns the caller draft count and rejects moved users', async () => {
+			const config = loadConfig();
+			const before = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(before.status, 200);
+
+			await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'hono draft 1',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+			await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'hono draft 2',
+				visibility: 'home',
+				pollMultiple: false,
+			});
+			await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				text: 'other user draft',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+
+			const after = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(after.status, 200);
+			assert.strictEqual(after.body, (before.body as number) + 2);
+
+			const movedUser = await signup({ username: `mvdraft${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+
+			const denied = await api('notes/drafts/count', {}, movedUser);
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+		});
+
+		test('users/achievements returns profile achievements without credentials', async () => {
+			const achievements = [{
+				name: 'notes1' as const,
+				unlockedAt: Date.now(),
+			}];
+			await updateUserProfileInDatabase(db, alice.id, { achievements });
+
+			const res = await api('users/achievements', { userId: alice.id });
+			assert.strictEqual(res.status, 200);
+			assert.deepStrictEqual(res.body, achievements);
+		});
+
+		test('i/webhooks list and show return only the caller webhooks', async () => {
+			const config = loadConfig();
+			const latestSentAt = new Date('2024-01-02T03:04:05.000Z');
+			const webhook = await createWebhookInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: 'hono webhook',
+				on: ['mention', 'reply'],
+				url: 'https://example.com/hono-webhook',
+				secret: 'hono-secret',
+				active: true,
+				latestSentAt,
+				latestStatus: 204,
+			});
+			const otherWebhook = await createWebhookInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: 'other webhook',
+				on: ['follow'],
+				url: 'https://example.com/other-webhook',
+				secret: 'other-secret',
+				active: false,
+			});
+			const expected = {
+				id: webhook.id,
+				userId: alice.id,
+				name: webhook.name,
+				on: webhook.on,
+				url: webhook.url,
+				secret: webhook.secret,
+				active: webhook.active,
+				latestSentAt: latestSentAt.toISOString(),
+				latestStatus: webhook.latestStatus,
+			};
+
+			const list = await api('i/webhooks/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const listed = (list.body as any[]).find(item => item.id === webhook.id);
+			assert.deepStrictEqual(listed, expected);
+			assert.strictEqual((list.body as any[]).some(item => item.id === otherWebhook.id), false);
+
+			const show = await api('i/webhooks/show', { webhookId: webhook.id }, alice);
+			assert.strictEqual(show.status, 200);
+			assert.deepStrictEqual(show.body, expected);
+
+			const noSuch = await api('i/webhooks/show', { webhookId: otherWebhook.id }, alice);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '50f614d9-3047-4f7e-90d8-ad6b2d5fb098');
+		});
+
+		test('users/lists/delete removes only the caller list and preserves error id', async () => {
+			const config = loadConfig();
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-delete-list-${Date.now()}`,
+				isPublic: false,
+			});
+
+			const otherUser = await api('users/lists/delete', { listId: userList.id }, bob);
+			assert.strictEqual(otherUser.status, 400);
+			assert.strictEqual(castAsError(otherUser.body as any).error.id, '78436795-db79-42f5-b1e2-55ea2cf19166');
+			assert.notStrictEqual(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id), null);
+
+			const deleted = await api('users/lists/delete', { listId: userList.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id), null);
+
+			const missing = await api('users/lists/delete', { listId: userList.id }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '78436795-db79-42f5-b1e2-55ea2cf19166');
+		});
+
+		test('Hono account data endpoints require matching app token permissions', async () => {
+			const readAccountToken = await createAppToken(alice, ['read:account']);
+			const readDriveToken = await createAppToken(alice, ['read:drive']);
+			const config = loadConfig();
+
+			for (const [endpoint, params, token] of [
+				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
+				['notes/drafts/count', {}, readDriveToken],
+				['i/webhooks/list', {}, readDriveToken],
+				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
+				['users/lists/delete', { listId: genId(config) }, readAccountToken],
+			] as const) {
+				const denied = await api(endpoint, params as any, { token });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
 		});
 	});
 

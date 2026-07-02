@@ -22,6 +22,7 @@ import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoAp
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
+import { handleHonoApiDriveFilesCheckExistence } from './hono-api-drive.js';
 import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
@@ -31,6 +32,7 @@ import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
+import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiPromoRead } from './hono-api-promo.js';
@@ -51,7 +53,9 @@ import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-ap
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
+import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete } from './hono-api-users.js';
 import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
+import { handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow } from './hono-api-webhooks.js';
 
 export type ApiShellDependencies = {
 	config: Config;
@@ -317,6 +321,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body));
+		});
+	});
+
+	app.post('/drive/files/check-existence', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFilesCheckExistence(deps, auth.user, body));
 		});
 	});
 
@@ -933,6 +948,28 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/i/webhooks/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiIWebhooksList(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/webhooks/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiIWebhooksShow(deps, auth.user, body));
+		});
+	});
+
 	app.post('/miauth/gen-token', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -958,6 +995,37 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:account');
 
 			return jsonResponse(c, await handleHonoApiMyApps(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/drafts/count', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiNotesDraftsCount(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/achievements', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiUsersAchievements(deps, body));
+		});
+	});
+
+	app.post('/users/lists/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiUsersListsDelete(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 
