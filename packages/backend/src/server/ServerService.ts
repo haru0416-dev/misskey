@@ -22,7 +22,6 @@ import { StreamingApiServerService } from './api/StreamingApiServerService.js';
 import { WellKnownServerService } from './WellKnownServerService.js';
 import { FileServerService } from './FileServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
-import { OpenApiServerService } from './api/openapi/OpenApiServerService.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
 
 const _dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -40,7 +39,6 @@ export class ServerService implements OnApplicationShutdown {
 		private meta: MiMeta,
 
 		private apiServerService: ApiServerService,
-		private openApiServerService: OpenApiServerService,
 		private streamingApiServerService: StreamingApiServerService,
 		private activityPubServerService: ActivityPubServerService,
 		private wellKnownServerService: WellKnownServerService,
@@ -121,7 +119,6 @@ export class ServerService implements OnApplicationShutdown {
 		}
 
 		fastify.register(this.apiServerService.createServer, { prefix: '/api' });
-		fastify.register(this.openApiServerService.createServer);
 		fastify.register(this.fileServerService.createServer);
 		fastify.register(this.activityPubServerService.createServer);
 		fastify.register(this.wellKnownServerService.createServer);
