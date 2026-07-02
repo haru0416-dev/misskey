@@ -2916,8 +2916,8 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('admin/resolve-abuse-user-report', () => {
-		async function createReport(suffix: string) {
+	describe('admin/abuse-user-reports', () => {
+		async function createReport(suffix: string, values: Partial<Parameters<typeof createAbuseUserReportInDatabase>[1]> = {}) {
 			const config = loadConfig();
 			return await createAbuseUserReportInDatabase(db, {
 				id: genId(config),
@@ -2926,6 +2926,7 @@ describe('Endpoints', () => {
 				comment: `Hono abuse report ${suffix}`,
 				targetUserHost: null,
 				reporterHost: null,
+				...values,
 			});
 		}
 
@@ -2942,6 +2943,98 @@ describe('Endpoints', () => {
 
 			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
 		}
+
+		test('admin/abuse-user-reports は一覧、filter、token scope、roleを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const config = loadConfig();
+			const unresolved = await createReport(`${suffix}unresolved`, {
+				id: genId(config, now - 2000),
+				comment: `Hono abuse report list unresolved ${suffix}`,
+			});
+			const resolved = await createReport(`${suffix}resolved`, {
+				id: genId(config, now - 1000),
+				assigneeId: alice.id,
+				resolved: true,
+				resolvedAs: 'reject',
+				moderationNote: `resolved note ${suffix}`,
+				comment: `Hono abuse report list resolved ${suffix}`,
+			});
+			const remoteReporter = await createReport(`${suffix}remote`, {
+				id: genId(config, now),
+				reporterHost: 'remote.example',
+				comment: `Hono abuse report list remote ${suffix}`,
+			});
+
+			const listed = await api('admin/abuse-user-reports', {
+				limit: 10,
+				sinceDate: now - 3000,
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			const listedReports = listed.body as any[];
+			assert.deepStrictEqual(listedReports.slice(0, 3).map(report => report.id), [
+				unresolved.id,
+				resolved.id,
+				remoteReporter.id,
+			]);
+			const packedResolved = listedReports.find(report => report.id === resolved.id);
+			assert.strictEqual(packedResolved.comment, `Hono abuse report list resolved ${suffix}`);
+			assert.strictEqual(packedResolved.resolved, true);
+			assert.strictEqual(packedResolved.resolvedAs, 'reject');
+			assert.strictEqual(packedResolved.moderationNote, `resolved note ${suffix}`);
+			assert.strictEqual(packedResolved.reporterId, carol.id);
+			assert.strictEqual(packedResolved.targetUserId, bob.id);
+			assert.strictEqual(packedResolved.assigneeId, alice.id);
+			assert.strictEqual(packedResolved.reporter.id, carol.id);
+			assert.strictEqual(packedResolved.targetUser.id, bob.id);
+			assert.strictEqual(packedResolved.assignee.id, alice.id);
+			assert.strictEqual(typeof packedResolved.createdAt, 'string');
+
+			const unresolvedOnly = await api('admin/abuse-user-reports', {
+				state: 'unresolved',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, alice);
+			assert.strictEqual(unresolvedOnly.status, 200);
+			assert.strictEqual((unresolvedOnly.body as any[]).some(report => report.id === unresolved.id), true);
+			assert.strictEqual((unresolvedOnly.body as any[]).some(report => report.id === resolved.id), false);
+
+			const resolvedOnly = await api('admin/abuse-user-reports', {
+				state: 'resolved',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, alice);
+			assert.strictEqual(resolvedOnly.status, 200);
+			assert.strictEqual((resolvedOnly.body as any[]).some(report => report.id === resolved.id), true);
+			assert.strictEqual((resolvedOnly.body as any[]).some(report => report.id === unresolved.id), false);
+
+			const remoteReporters = await api('admin/abuse-user-reports', {
+				reporterOrigin: 'remote',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, alice);
+			assert.strictEqual(remoteReporters.status, 200);
+			assert.deepStrictEqual((remoteReporters.body as any[]).map(report => report.id), [remoteReporter.id]);
+
+			const token = await createAppToken(alice, ['read:admin:abuse-user-reports']);
+			const listedByToken = await api('admin/abuse-user-reports', {
+				state: 'resolved',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, { token });
+			assert.strictEqual(listedByToken.status, 200);
+			assert.strictEqual((listedByToken.body as any[]).some(report => report.id === resolved.id), true);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/abuse-user-reports', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hal${suffix}` });
+			const roleDenied = await api('admin/abuse-user-reports', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
 
 		test('admin/resolve-abuse-user-report は解決状態、token scope、role、ログ、404を維持する', async () => {
 			const now = Date.now();
