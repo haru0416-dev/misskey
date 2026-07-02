@@ -26,13 +26,13 @@ import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
-import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
 import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
-import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
-import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
@@ -52,7 +52,7 @@ import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { userIp } from '@/db/schema/user-ip.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
@@ -60,8 +60,9 @@ import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DeliverJobData, InboxJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -73,18 +74,22 @@ describe('Endpoints', () => {
 	let dave: misskey.entities.SignupResponse;
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
+	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
 	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
 	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
+	let objectStorageQueue: Bull.Queue<ObjectStorageJobData> | undefined;
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 
 	beforeAll(async () => {
 		const config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
+		dbQueue = new Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>>(QUEUE.DB, baseQueueOptions(config, QUEUE.DB));
 		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
 		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
 		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
+		objectStorageQueue = new Bull.Queue<ObjectStorageJobData>(QUEUE.OBJECT_STORAGE, baseQueueOptions(config, QUEUE.OBJECT_STORAGE));
 		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -94,9 +99,11 @@ describe('Endpoints', () => {
 	}, 1000 * 60 * 2);
 
 	afterAll(async () => {
+		await dbQueue?.close();
 		await deliverQueue?.close();
 		await inboxQueue?.close();
 		await relationshipQueue?.close();
+		await objectStorageQueue?.close();
 		await systemWebhookDeliverQueue?.close();
 		await pool?.end();
 	});
@@ -273,6 +280,276 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(invalid.status, 400);
 			assert.strictEqual(castAsError(await invalid.json() as Record<string, unknown>).error.code, 'INVALID_PARAM');
+		});
+	});
+
+	describe('admin/meta', () => {
+		test('admin/meta は設定値、proxy account、scope、管理者権限を維持する', async () => {
+			const meta = await fetchMetaFromDatabase(db);
+			const res = await api('admin/meta', {}, alice);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.uri, origin);
+			assert.strictEqual(typeof res.body.version, 'string');
+			assert.strictEqual(res.body.emailRequiredForSignup, meta.emailRequiredForSignup);
+			assert.strictEqual(res.body.federation, meta.federation);
+			assert.strictEqual(res.body.summalyProxy, meta.urlPreviewSummaryProxyUrl);
+			assert.strictEqual(typeof res.body.proxyAccountId, 'string');
+			assert.strictEqual((res.body.policies as { canPublicNote?: boolean }).canPublicNote, true);
+
+			const readToken = await createAppToken(alice, ['read:admin:meta']);
+			const byToken = await api('admin/meta', {}, { token: readToken });
+			assert.strictEqual(byToken.status, 200);
+			assert.strictEqual(byToken.body.proxyAccountId, res.body.proxyAccountId);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
+			const scopeDenied = await api('admin/meta', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const roleDenied = await api('admin/meta', {}, bob);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('admin/update-meta は設定変換、scope、管理者権限、ログを維持する', async () => {
+			const before = await fetchMetaFromDatabase(db);
+			const now = Date.now().toString(36);
+			const updatedName = `hono meta ${now}`;
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:meta']);
+			const scopeDenied = await api('admin/update-meta', { name: updatedName }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const roleDenied = await api('admin/update-meta', { name: updatedName }, bob);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			try {
+				const writeToken = await createAppToken(alice, ['write:admin:meta']);
+				const updated = await api('admin/update-meta', {
+					name: updatedName,
+					disableRegistration: null,
+					pinnedUsers: ['@alice', ''],
+					hiddenTags: [`hono-meta-${now}`, ''],
+					blockedHosts: ['Blocked.Example', ''],
+					silencedHosts: ['zzz.example', 'aaa.example', 'aaa.example', 'Blocked.Example', ''],
+					mediaSilencedHosts: ['media.example', 'media.example', 'Blocked.Example', ''],
+					langs: ['ja-JP', ''],
+					mcaptchaSiteKey: `mcaptcha-${now}`,
+					googleAnalyticsMeasurementId: '',
+					sensitiveMediaDetectionApiUrl: '',
+					deeplAuthKey: '',
+					truemailInstance: '',
+					tosUrl: `https://example.com/tos-${now}`,
+					repositoryUrl: 'not a url',
+					summalyProxy: ` https://example.com/summary-${now} `,
+					clientOptions: {
+						entrancePageStyle: 'simple',
+						showTimelineForVisitor: false,
+					},
+					federationHosts: ['Remote.Example', ''],
+				}, { token: writeToken });
+				assert.strictEqual(updated.status, 204);
+
+				const after = await fetchMetaFromDatabase(db);
+				assert.strictEqual(after.name, updatedName);
+				assert.strictEqual(after.disableRegistration, before.disableRegistration);
+				assert.deepStrictEqual(after.pinnedUsers, ['@alice']);
+				assert.deepStrictEqual(after.hiddenTags, [`hono-meta-${now}`]);
+				assert.deepStrictEqual(after.blockedHosts, ['blocked.example']);
+				assert.deepStrictEqual(after.silencedHosts, ['Blocked.Example', 'aaa.example', 'zzz.example']);
+				assert.deepStrictEqual(after.mediaSilencedHosts, ['Blocked.Example', 'media.example']);
+				assert.deepStrictEqual(after.langs, ['ja-JP']);
+				assert.strictEqual(after.mcaptchaSitekey, `mcaptcha-${now}`);
+				assert.strictEqual(after.googleAnalyticsMeasurementId, null);
+				assert.strictEqual(after.sensitiveMediaDetectionApiUrl, null);
+				assert.strictEqual(after.deeplAuthKey, null);
+				assert.strictEqual(after.truemailInstance, null);
+				assert.strictEqual(after.termsOfServiceUrl, `https://example.com/tos-${now}`);
+				assert.strictEqual(after.repositoryUrl, null);
+				assert.strictEqual(after.urlPreviewSummaryProxyUrl, `https://example.com/summary-${now}`);
+				assert.strictEqual(after.clientOptions.entrancePageStyle, 'simple');
+				assert.strictEqual(after.clientOptions.showTimelineForVisitor, false);
+				assert.strictEqual(after.clientOptions.showActivitiesForVisitor, before.clientOptions.showActivitiesForVisitor);
+				assert.deepStrictEqual(after.federationHosts, ['remote.example']);
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateServerSettings',
+					userId: alice.id,
+					search: updatedName,
+				});
+				assert.ok(logs.length > 0);
+			} finally {
+				await api('admin/update-meta', {
+					name: before.name,
+					pinnedUsers: before.pinnedUsers,
+					hiddenTags: before.hiddenTags,
+					blockedHosts: before.blockedHosts,
+					silencedHosts: before.silencedHosts,
+					mediaSilencedHosts: before.mediaSilencedHosts,
+					langs: before.langs,
+					mcaptchaSiteKey: before.mcaptchaSitekey,
+					googleAnalyticsMeasurementId: before.googleAnalyticsMeasurementId,
+					sensitiveMediaDetectionApiUrl: before.sensitiveMediaDetectionApiUrl,
+					deeplAuthKey: before.deeplAuthKey,
+					truemailInstance: before.truemailInstance,
+					tosUrl: before.termsOfServiceUrl,
+					repositoryUrl: before.repositoryUrl,
+					urlPreviewSummaryProxyUrl: before.urlPreviewSummaryProxyUrl,
+					clientOptions: before.clientOptions,
+					federationHosts: before.federationHosts,
+				}, alice);
+			}
+		});
+	});
+
+	describe('admin/update-proxy-account', () => {
+		test('admin/update-proxy-account は description 更新、scope、権限、ログを維持する', async () => {
+			const description = `hono proxy account ${Date.now().toString(36)}`;
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:account']);
+			const scopeDenied = await api('admin/update-proxy-account', { description }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const roleDenied = await api('admin/update-proxy-account', { description }, bob);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			try {
+				const updated = await api('admin/update-proxy-account', { description }, alice);
+				assert.strictEqual(updated.status, 200);
+				assert.strictEqual(typeof updated.body.id, 'string');
+				assert.strictEqual(updated.body.description, description);
+
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, updated.body.id);
+				assert.strictEqual(profile.description, description);
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 5,
+					order: 'desc',
+					type: 'updateProxyAccountDescription',
+					userId: alice.id,
+				});
+				assert.ok(logs.some(log => (log.info as { after?: string | null }).after === description));
+			} finally {
+				await api('admin/update-proxy-account', { description: null }, alice);
+			}
+		});
+	});
+
+	describe('admin account deletion', () => {
+		test('admin/accounts/delete と admin/delete-account は削除状態、job、scope、roleを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const accountDeleteTarget = await signup({ username: `haad${suffix}` });
+			const accountTokenTarget = await signup({ username: `haat${suffix}` });
+			const deleteAccountTarget = await signup({ username: `hada${suffix}` });
+			const untouchedTarget = await signup({ username: `haua${suffix}` });
+			const targetIds = [accountDeleteTarget.id, accountTokenTarget.id, deleteAccountTarget.id, untouchedTarget.id];
+			const getDeleteAccountJobs = async (userId: string) => {
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				return jobs.filter(job => job.name === 'deleteAccount' && job.data.user.id === userId);
+			};
+			const waitDeleteAccountJob = async (userId: string) => {
+				for (let i = 0; i < 10; i++) {
+					const jobs = await getDeleteAccountJobs(userId);
+					if (jobs[0] != null) return jobs[0];
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.fail(`deleteAccount job was not found for ${userId}`);
+			};
+			const removeDeleteAccountJobs = async () => {
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				await Promise.all(jobs
+					.filter(job => job.name === 'deleteAccount' && targetIds.includes(job.data.user.id))
+					.map(job => job.remove()));
+			};
+
+			try {
+				const deletedByNative = await api('admin/accounts/delete', { userId: accountDeleteTarget.id }, alice);
+				assert.strictEqual(deletedByNative.status, 204);
+				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, accountDeleteTarget.id)).isDeleted, true);
+				const nativeJob = await waitDeleteAccountJob(accountDeleteTarget.id);
+				assert.strictEqual((nativeJob.data as DbJobData<'deleteAccount'>).soft, false);
+
+				const accountToken = await createAppToken(alice, ['write:admin:account']);
+				const deletedByToken = await api('admin/accounts/delete', { userId: accountTokenTarget.id }, { token: accountToken });
+				assert.strictEqual(deletedByToken.status, 204);
+				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, accountTokenTarget.id)).isDeleted, true);
+				const tokenJob = await waitDeleteAccountJob(accountTokenTarget.id);
+				assert.strictEqual((tokenJob.data as DbJobData<'deleteAccount'>).soft, false);
+
+				const deleteAccountToken = await createAppToken(alice, ['write:admin:delete-account']);
+				const deletedByDeleteAccount = await api('admin/delete-account', { userId: deleteAccountTarget.id }, { token: deleteAccountToken });
+				assert.strictEqual(deletedByDeleteAccount.status, 204);
+				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, deleteAccountTarget.id)).isDeleted, true);
+				const deleteAccountJob = await waitDeleteAccountJob(deleteAccountTarget.id);
+				assert.strictEqual((deleteAccountJob.data as DbJobData<'deleteAccount'>).soft, false);
+
+				const alreadyDeleted = await api('admin/delete-account', { userId: deleteAccountTarget.id }, alice);
+				assert.strictEqual(alreadyDeleted.status, 204);
+				assert.strictEqual((await getDeleteAccountJobs(deleteAccountTarget.id)).length, 1);
+
+				const wrongAccountScope = await createAppToken(alice, ['read:admin:account']);
+				const accountScopeDenied = await api('admin/accounts/delete', { userId: untouchedTarget.id }, { token: wrongAccountScope });
+				assert.strictEqual(accountScopeDenied.status, 403);
+				assert.strictEqual(castAsError(accountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const wrongDeleteAccountScope = await createAppToken(alice, ['write:admin:account']);
+				const deleteAccountScopeDenied = await api('admin/delete-account', { userId: untouchedTarget.id }, { token: wrongDeleteAccountScope });
+				assert.strictEqual(deleteAccountScopeDenied.status, 403);
+				assert.strictEqual(castAsError(deleteAccountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const accountRoleDenied = await api('admin/accounts/delete', { userId: untouchedTarget.id }, bob);
+				assert.strictEqual(accountRoleDenied.status, 403);
+				assert.strictEqual(castAsError(accountRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const deleteAccountRoleDenied = await api('admin/delete-account', { userId: untouchedTarget.id }, bob);
+				assert.strictEqual(deleteAccountRoleDenied.status, 403);
+				assert.strictEqual(castAsError(deleteAccountRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await removeDeleteAccountJobs();
+			}
+		});
+	});
+
+	describe('admin/accounts/create', () => {
+		test('root native token のみアカウント作成でき、external token と非rootは拒否される', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const created = await api('admin/accounts/create', {
+				username: `hacreate${suffix}`,
+				password: 'test',
+				setupPassword: null,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.username, `hacreate${suffix}`);
+			assert.strictEqual(typeof (created.body as { token?: unknown }).token, 'string');
+
+			const user = await fetchUserByIdOrFailFromDatabase(db, created.body.id);
+			assert.strictEqual(user.username, `hacreate${suffix}`);
+			assert.strictEqual(user.host, null);
+
+			const token = await createAppToken(alice, ['write:admin:account']);
+			const appDenied = await api('admin/accounts/create', {
+				username: `hacreatet${suffix}`,
+				password: 'test',
+				setupPassword: null,
+			}, { token });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+			assert.strictEqual(castAsError(appDenied.body as any).error.id, '1fb7cb09-d46a-4fff-b8df-057708cce513');
+
+			const nonRootDenied = await api('admin/accounts/create', {
+				username: `hacreateb${suffix}`,
+				password: 'test',
+				setupPassword: null,
+			}, bob);
+			assert.strictEqual(nonRootDenied.status, 400);
+			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
 		});
 	});
 
@@ -703,6 +980,1285 @@ describe('Endpoints', () => {
 			assert.strictEqual(statsBody.topPubInstances?.[0]?.id, beta.id);
 			assert.strictEqual(typeof statsBody.otherFollowersCount, 'number');
 			assert.strictEqual(typeof statsBody.otherFollowingCount, 'number');
+		});
+
+		test('admin/federation/update-instance は suspension、moderationNote、cache、token scope、role、ログを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const host = `hono-admin-fed-${suffix}.example`;
+			const instance = await createInstanceInDatabase(db, {
+				id: genId(config, now),
+				host,
+				firstRetrievedAt: new Date(now),
+				suspensionState: 'none',
+				moderationNote: 'before update',
+			});
+
+			const suspended = await api('admin/federation/update-instance', {
+				host: host.toUpperCase(),
+				isSuspended: true,
+				moderationNote: `updated note ${suffix}`,
+			}, alice);
+			assert.strictEqual(suspended.status, 204);
+
+			let after = await fetchInstanceByHostFromDatabase(db, host);
+			assert.ok(after);
+			assert.strictEqual(after.suspensionState, 'manuallySuspended');
+			assert.strictEqual(after.moderationNote, `updated note ${suffix}`);
+
+			const redis = createRedisClient(config);
+			try {
+				const cached = await redis.get(`kvcache:federatedInstance:${host}`);
+				assert.ok(cached);
+				const cachedInstance = JSON.parse(cached);
+				assert.strictEqual(cachedInstance.id, instance.id);
+				assert.strictEqual(cachedInstance.suspensionState, 'manuallySuspended');
+				assert.strictEqual(cachedInstance.moderationNote, `updated note ${suffix}`);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			for (let i = 0; i < 10; i++) {
+				const [suspendLogs, noteLogs] = await Promise.all([
+					listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type: 'suspendRemoteInstance',
+						search: instance.id,
+					}),
+					listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type: 'updateRemoteInstanceNote',
+						search: instance.id,
+					}),
+				]);
+				if (suspendLogs.length > 0 && noteLogs.length > 0) {
+					assert.strictEqual(suspendLogs.some(log => (log.info as any).host === host), true);
+					assert.strictEqual(noteLogs.some(log => (log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('remote instance moderation logs were not found');
+			}
+
+			const token = await createAppToken(alice, ['write:admin:federation']);
+			const unsuspended = await api('admin/federation/update-instance', {
+				host,
+				isSuspended: false,
+			}, { token });
+			assert.strictEqual(unsuspended.status, 204);
+			after = await fetchInstanceByHostFromDatabase(db, host);
+			assert.ok(after);
+			assert.strictEqual(after.suspensionState, 'none');
+			assert.strictEqual(after.moderationNote, `updated note ${suffix}`);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/federation/update-instance', { host }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `haf${suffix}` });
+			const roleDenied = await api('admin/federation/update-instance', { host }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('admin/federation/refresh-remote-instance-metadata は即時応答、token scope、roleを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const host = `hono-refresh-fed-${suffix}.invalid`;
+			await createInstanceInDatabase(db, {
+				id: genId(config, now),
+				host,
+				firstRetrievedAt: new Date(now),
+			});
+
+			const refreshed = await api('admin/federation/refresh-remote-instance-metadata', {
+				host: host.toUpperCase(),
+			}, alice);
+			assert.strictEqual(refreshed.status, 204);
+
+			const token = await createAppToken(alice, ['write:admin:federation']);
+			const refreshedByToken = await api('admin/federation/refresh-remote-instance-metadata', {
+				host,
+			}, { token });
+			assert.strictEqual(refreshedByToken.status, 204);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/federation/refresh-remote-instance-metadata', { host }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `harf${suffix}` });
+			const roleDenied = await api('admin/federation/refresh-remote-instance-metadata', { host }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('admin/federation/remove-all-following は remote follower の unfollow job を作る', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const host = `hono-remove-following-${suffix}.example`;
+			const follower = await signup({ username: `hafr${suffix}` });
+			const followee = await signup({ username: `haft${suffix}` });
+			const following = await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: follower.id,
+				followeeId: followee.id,
+				followerHost: host,
+			});
+
+			const removed = await api('admin/federation/remove-all-following', { host }, alice);
+			assert.strictEqual(removed.status, 204);
+
+			let job: Bull.Job<RelationshipJobData> | undefined;
+			for (let i = 0; i < 10; i++) {
+				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				job = jobs.find(job =>
+					job.name === 'unfollow' &&
+					job.data.from.id === following.followerId &&
+					job.data.to.id === following.followeeId &&
+					job.data.silent === true);
+				if (job != null) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.ok(job);
+			await job.remove();
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/federation/remove-all-following', { host }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/drive', () => {
+		test('admin/drive/files は filter、pagination、DriveFile packing、token scopeを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const fileType = 'application/x-hono-admin-drive';
+			const remoteHost = `hono-admin-drive-${suffix}.remote`;
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config, now - 2500),
+				userId: bob.id,
+				name: `hono-admin-drive-folder-${suffix}`,
+				parentId: null,
+			});
+			const firstMd5 = createHash('md5').update(`hono-admin-drive-list-first-${suffix}`).digest('hex');
+			const firstLocal = await createDriveFileInDatabase(db, {
+				id: genId(config, now - 2000),
+				userId: bob.id,
+				userHost: null,
+				md5: firstMd5,
+				name: `hono-admin-drive-list-first-${suffix}.bin`,
+				type: fileType,
+				size: 101,
+				blurhash: null,
+				properties: { width: 30, height: 40, orientation: 6 },
+				storedInternal: true,
+				url: `${origin}/files/${firstMd5}`,
+				thumbnailUrl: `${origin}/files/${firstMd5}.thumbnail`,
+				comment: `first local ${suffix}`,
+				folderId: folder.id,
+			});
+			const secondMd5 = createHash('md5').update(`hono-admin-drive-list-second-${suffix}`).digest('hex');
+			const secondLocal = await createDriveFileInDatabase(db, {
+				id: genId(config, now - 1000),
+				userId: bob.id,
+				userHost: null,
+				md5: secondMd5,
+				name: `hono-admin-drive-list-second-${suffix}.bin`,
+				type: fileType,
+				size: 202,
+				storedInternal: true,
+				url: `${origin}/files/${secondMd5}`,
+			});
+			const remoteMd5 = createHash('md5').update(`hono-admin-drive-list-remote-${suffix}`).digest('hex');
+			const remote = await createDriveFileInDatabase(db, {
+				id: genId(config, now),
+				userId: null,
+				userHost: remoteHost,
+				md5: remoteMd5,
+				name: `hono-admin-drive-list-remote-${suffix}.bin`,
+				type: fileType,
+				size: 303,
+				storedInternal: false,
+				url: `https://${remoteHost}/files/${remoteMd5}`,
+			});
+
+			const listed = await api('admin/drive/files', {
+				limit: 10,
+				sinceDate: now - 3000,
+				type: fileType,
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			const localFiles = listed.body as any[];
+			assert.deepStrictEqual(localFiles.map(file => file.id), [firstLocal.id, secondLocal.id]);
+			assert.strictEqual(typeof localFiles[0].createdAt, 'string');
+			assert.strictEqual(localFiles[0].name, firstLocal.name);
+			assert.strictEqual(localFiles[0].type, fileType);
+			assert.strictEqual(localFiles[0].md5, firstMd5);
+			assert.strictEqual(localFiles[0].size, 101);
+			assert.strictEqual(localFiles[0].isSensitive, false);
+			assert.strictEqual(localFiles[0].blurhash, null);
+			assert.deepStrictEqual(localFiles[0].properties, { width: 30, height: 40, orientation: 6 });
+			assert.strictEqual(localFiles[0].url, firstLocal.url);
+			assert.strictEqual(localFiles[0].thumbnailUrl, firstLocal.thumbnailUrl);
+			assert.strictEqual(localFiles[0].comment, `first local ${suffix}`);
+			assert.strictEqual(localFiles[0].folderId, folder.id);
+			assert.strictEqual(localFiles[0].folder.id, folder.id);
+			assert.strictEqual(localFiles[0].folder.name, folder.name);
+			assert.strictEqual(localFiles[0].folder.filesCount, 1);
+			assert.strictEqual(localFiles[0].userId, bob.id);
+			assert.strictEqual(localFiles[0].user.id, bob.id);
+
+			const byUser = await api('admin/drive/files', {
+				limit: 10,
+				sinceDate: now - 3000,
+				type: fileType,
+				userId: bob.id,
+			}, alice);
+			assert.strictEqual(byUser.status, 200);
+			assert.deepStrictEqual((byUser.body as any[]).map(file => file.id), [firstLocal.id, secondLocal.id]);
+
+			const remoteFiles = await api('admin/drive/files', {
+				limit: 10,
+				sinceDate: now - 3000,
+				type: fileType,
+				origin: 'remote',
+				hostname: remoteHost,
+			}, alice);
+			assert.strictEqual(remoteFiles.status, 200);
+			assert.deepStrictEqual((remoteFiles.body as any[]).map(file => file.id), [remote.id]);
+			assert.strictEqual((remoteFiles.body as any[])[0].userId, null);
+			assert.strictEqual((remoteFiles.body as any[])[0].user, null);
+
+			const token = await createAppToken(alice, ['read:admin:drive']);
+			const listedByToken = await api('admin/drive/files', {
+				limit: 1,
+				untilId: remote.id,
+				type: fileType,
+				origin: 'combined',
+			}, { token });
+			assert.strictEqual(listedByToken.status, 200);
+			assert.strictEqual((listedByToken.body as any[])[0].id, secondLocal.id);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:drive']);
+			const scopeDenied = await api('admin/drive/files', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+
+		test('admin/drive/show-file は fileId/url、秘匿 header、token scope、role、404を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const bobMd5 = createHash('md5').update(`hono-admin-drive-bob-${suffix}`).digest('hex');
+			const bobFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userHost: null,
+				md5: bobMd5,
+				name: `hono-admin-drive-bob-${suffix}.png`,
+				type: 'image/png',
+				size: 123,
+				comment: `admin drive show ${suffix}`,
+				blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+				properties: { width: 10, height: 20 },
+				storedInternal: true,
+				url: `${origin}/files/${bobMd5}`,
+				thumbnailUrl: `${origin}/files/${bobMd5}.thumbnail`,
+				webpublicUrl: `${origin}/files/${bobMd5}.webpublic`,
+				accessKey: `access-${suffix}`,
+				thumbnailAccessKey: `thumbnail-${suffix}`,
+				webpublicAccessKey: `webpublic-${suffix}`,
+				webpublicType: 'image/webp',
+				uri: `https://remote.example/files/${bobMd5}`,
+				src: `https://source.example/files/${bobMd5}`,
+				isSensitive: true,
+				maybeSensitive: true,
+				maybePorn: false,
+				isLink: true,
+				requestIp: '192.0.2.10',
+				requestHeaders: { authorization: 'secret', 'user-agent': 'test-agent' },
+			});
+			const aliceMd5 = createHash('md5').update(`hono-admin-drive-alice-${suffix}`).digest('hex');
+			const aliceFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: aliceMd5,
+				name: `hono-admin-drive-alice-${suffix}.png`,
+				type: 'image/png',
+				size: 456,
+				storedInternal: true,
+				url: `${origin}/files/${aliceMd5}`,
+				requestIp: '192.0.2.11',
+				requestHeaders: { authorization: 'root-secret' },
+			});
+
+			const shown = await api('admin/drive/show-file', { fileId: bobFile.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, bobFile.id);
+			assert.strictEqual(typeof shown.body.createdAt, 'string');
+			assert.strictEqual(shown.body.userId, bob.id);
+			assert.strictEqual(shown.body.md5, bobMd5);
+			assert.strictEqual(shown.body.name, bobFile.name);
+			assert.strictEqual(shown.body.type, bobFile.type);
+			assert.strictEqual(shown.body.size, bobFile.size);
+			assert.strictEqual(shown.body.comment, bobFile.comment);
+			assert.strictEqual(shown.body.blurhash, bobFile.blurhash);
+			assert.deepStrictEqual(shown.body.properties, { width: 10, height: 20 });
+			assert.strictEqual(shown.body.storedInternal, true);
+			assert.strictEqual(shown.body.url, bobFile.url);
+			assert.strictEqual(shown.body.thumbnailUrl, bobFile.thumbnailUrl);
+			assert.strictEqual(shown.body.webpublicUrl, bobFile.webpublicUrl);
+			assert.strictEqual(shown.body.accessKey, bobFile.accessKey);
+			assert.strictEqual(shown.body.thumbnailAccessKey, bobFile.thumbnailAccessKey);
+			assert.strictEqual(shown.body.webpublicAccessKey, bobFile.webpublicAccessKey);
+			assert.strictEqual((shown.body as any).webpublicType, bobFile.webpublicType);
+			assert.strictEqual(shown.body.uri, bobFile.uri);
+			assert.strictEqual(shown.body.src, bobFile.src);
+			assert.strictEqual(shown.body.isSensitive, true);
+			assert.strictEqual(shown.body.maybeSensitive, true);
+			assert.strictEqual(shown.body.maybePorn, false);
+			assert.strictEqual(shown.body.isLink, true);
+			assert.strictEqual(shown.body.requestIp, '192.0.2.10');
+			assert.deepStrictEqual(shown.body.requestHeaders, { authorization: 'secret', 'user-agent': 'test-agent' });
+
+			const shownByUrl = await api('admin/drive/show-file', { url: bobFile.url }, alice);
+			assert.strictEqual(shownByUrl.status, 200);
+			assert.strictEqual(shownByUrl.body.id, bobFile.id);
+
+			const ownedByModerator = await api('admin/drive/show-file', { fileId: aliceFile.id }, alice);
+			assert.strictEqual(ownedByModerator.status, 200);
+			assert.strictEqual(ownedByModerator.body.requestIp, '192.0.2.11');
+			assert.strictEqual(ownedByModerator.body.requestHeaders, null);
+
+			const token = await createAppToken(alice, ['read:admin:drive']);
+			const shownByToken = await api('admin/drive/show-file', { fileId: bobFile.id }, { token });
+			assert.strictEqual(shownByToken.status, 200);
+			assert.strictEqual(shownByToken.body.id, bobFile.id);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:drive']);
+			const scopeDenied = await api('admin/drive/show-file', { fileId: bobFile.id }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hads${suffix}` });
+			const roleDenied = await api('admin/drive/show-file', { fileId: bobFile.id }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/drive/show-file', { fileId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_FILE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'caf3ca38-c6e5-472e-a30c-b05377dcc240');
+		});
+
+		test('admin/drive/clean-remote-files は objectStorage queue job と権限を維持する', async () => {
+			const cleaned = await api('admin/drive/clean-remote-files', {}, alice);
+			assert.strictEqual(cleaned.status, 204);
+
+			let job: Bull.Job<ObjectStorageJobData> | undefined;
+			for (let i = 0; i < 10; i++) {
+				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				job = jobs.find(job => job.name === 'cleanRemoteFiles');
+				if (job != null) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.ok(job);
+			await job.remove();
+
+			const token = await createAppToken(alice, ['write:admin:drive']);
+			const cleanedByToken = await api('admin/drive/clean-remote-files', {}, { token });
+			assert.strictEqual(cleanedByToken.status, 204);
+			const tokenJobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			await Promise.all(tokenJobs.filter(job => job.name === 'cleanRemoteFiles').map(job => job.remove()));
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
+			const scopeDenied = await api('admin/drive/clean-remote-files', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+
+		test('admin drive deletion endpoints は DB削除、objectStorage job、scope、roleを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const remoteHost = `hono-drive-delete-${suffix}.remote`;
+			const makeFile = async (params: {
+				seed: string;
+				userId: string | null;
+				userHost: string | null;
+			}) => {
+				const md5 = createHash('md5').update(`hono-drive-delete-${params.seed}-${suffix}`).digest('hex');
+				return await createDriveFileInDatabase(db, {
+					id: genId(config),
+					userId: params.userId,
+					userHost: params.userHost,
+					md5,
+					name: `hono-drive-delete-${params.seed}-${suffix}.bin`,
+					type: 'application/octet-stream',
+					size: 256,
+					comment: null,
+					blurhash: null,
+					properties: {},
+					storedInternal: false,
+					url: `${origin}/files/hono-drive-delete-${params.seed}-${suffix}`,
+					thumbnailUrl: null,
+					webpublicUrl: null,
+					webpublicType: null,
+					accessKey: `hono-drive-delete-${params.seed}-${suffix}`,
+					thumbnailAccessKey: null,
+					webpublicAccessKey: null,
+					uri: null,
+					src: null,
+					folderId: null,
+					isSensitive: false,
+					maybeSensitive: false,
+					maybePorn: false,
+					isLink: false,
+					requestHeaders: null,
+					requestIp: null,
+				});
+			};
+
+			const orphan = await makeFile({ seed: 'orphan', userId: null, userHost: null });
+			const userFile = await makeFile({ seed: 'user', userId: bob.id, userHost: null });
+			const remoteFile = await makeFile({ seed: 'remote', userId: null, userHost: remoteHost });
+			const targetIds = [orphan.id, userFile.id, remoteFile.id];
+			const targetKeys = [orphan.accessKey!, userFile.accessKey!, remoteFile.accessKey!];
+			const waitDeleted = async (fileId: string) => {
+				for (let i = 0; i < 10; i++) {
+					if (await fetchDriveFileByIdFromDatabase(db, fileId) == null) return;
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.fail(`drive file was not deleted: ${fileId}`);
+			};
+			const waitDeleteObjectStorageJob = async (key: string) => {
+				for (let i = 0; i < 10; i++) {
+					const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+					const job = jobs.find(job => job.name === 'deleteFile' && (job.data as { key: string }).key === key);
+					if (job != null) return job;
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.fail(`deleteFile objectStorage job was not found: ${key}`);
+			};
+			const removeObjectStorageJobs = async () => {
+				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				await Promise.all(jobs
+					.filter(job => job.name === 'deleteFile' && targetKeys.includes((job.data as { key: string }).key))
+					.map(job => job.remove()));
+			};
+
+			try {
+				const cleaned = await api('admin/drive/cleanup', {}, alice);
+				assert.strictEqual(cleaned.status, 204);
+				const userDeleted = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, alice);
+				assert.strictEqual(userDeleted.status, 204);
+				const remoteDeleted = await api('admin/federation/delete-all-files', { host: remoteHost }, alice);
+				assert.strictEqual(remoteDeleted.status, 204);
+
+				await Promise.all(targetIds.map(waitDeleted));
+				const jobs = await Promise.all(targetKeys.map(waitDeleteObjectStorageJob));
+				assert.deepStrictEqual(jobs.map(job => job.data.key).sort(), targetKeys.sort());
+
+				const driveToken = await createAppToken(alice, ['write:admin:drive']);
+				const cleanupByToken = await api('admin/drive/cleanup', {}, { token: driveToken });
+				assert.strictEqual(cleanupByToken.status, 204);
+
+				const deleteFilesToken = await createAppToken(alice, ['write:admin:delete-all-files-of-a-user']);
+				const userDeleteByToken = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, { token: deleteFilesToken });
+				assert.strictEqual(userDeleteByToken.status, 204);
+
+				const federationToken = await createAppToken(alice, ['write:admin:federation']);
+				const federationDeleteByToken = await api('admin/federation/delete-all-files', { host: remoteHost }, { token: federationToken });
+				assert.strictEqual(federationDeleteByToken.status, 204);
+
+				const driveScopeDeniedToken = await createAppToken(alice, ['read:admin:drive']);
+				const cleanupScopeDenied = await api('admin/drive/cleanup', {}, { token: driveScopeDeniedToken });
+				assert.strictEqual(cleanupScopeDenied.status, 403);
+				assert.strictEqual(castAsError(cleanupScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const userDeleteScopeDeniedToken = await createAppToken(alice, ['write:admin:account']);
+				const userDeleteScopeDenied = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, { token: userDeleteScopeDeniedToken });
+				assert.strictEqual(userDeleteScopeDenied.status, 403);
+				assert.strictEqual(castAsError(userDeleteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const federationScopeDeniedToken = await createAppToken(alice, ['write:admin:user-note']);
+				const federationScopeDenied = await api('admin/federation/delete-all-files', { host: remoteHost }, { token: federationScopeDeniedToken });
+				assert.strictEqual(federationScopeDenied.status, 403);
+				assert.strictEqual(castAsError(federationScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const cleanupRoleDenied = await api('admin/drive/cleanup', {}, bob);
+				assert.strictEqual(cleanupRoleDenied.status, 403);
+				assert.strictEqual(castAsError(cleanupRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const userDeleteRoleDenied = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, bob);
+				assert.strictEqual(userDeleteRoleDenied.status, 403);
+				assert.strictEqual(castAsError(userDeleteRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const federationRoleDenied = await api('admin/federation/delete-all-files', { host: remoteHost }, bob);
+				assert.strictEqual(federationRoleDenied.status, 403);
+				assert.strictEqual(castAsError(federationRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await removeObjectStorageJobs();
+			}
+		});
+	});
+
+	describe('admin/emoji', () => {
+		test('admin/emoji/list と list-remote は filter、pagination、packing、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haem${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const localFirst = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 2000),
+				name: `honoemoji_first_${suffix}`,
+				host: null,
+				aliases: [`alias_${suffix}`],
+				category: `category_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/first-original.webp`,
+				publicUrl: '',
+				license: `license ${suffix}`,
+				isSensitive: true,
+				localOnly: true,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const localSecond = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `honoemoji_second_${suffix}`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/second-original.webp`,
+				publicUrl: `${origin}/emoji/${suffix}/second-public.webp`,
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const remoteHost = `hono-emoji-${suffix}.example`;
+			const remoteOlder = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1500),
+				name: `remote_old_${suffix}`,
+				host: remoteHost,
+				aliases: [],
+				category: `remote_${suffix}`,
+				originalUrl: `https://${remoteHost}/emoji/old.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const remoteNewer = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 500),
+				name: `remote_new_${suffix}`,
+				host: remoteHost,
+				aliases: [],
+				category: `remote_${suffix}`,
+				originalUrl: `https://${remoteHost}/emoji/new-original.webp`,
+				publicUrl: `https://${remoteHost}/emoji/new-public.webp`,
+				license: `remote license ${suffix}`,
+				isSensitive: true,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const listed = await api('admin/emoji/list', {
+					limit: 10,
+					query: suffix,
+					sinceDate: now - 3000,
+				}, manager);
+				assert.strictEqual(listed.status, 200);
+				const localEmojis = listed.body as any[];
+				assert.deepStrictEqual(localEmojis.map(emoji => emoji.id), [localFirst.id, localSecond.id]);
+				assert.strictEqual(localEmojis[0].name, localFirst.name);
+				assert.deepStrictEqual(localEmojis[0].aliases, [`alias_${suffix}`]);
+				assert.strictEqual(localEmojis[0].category, `category_${suffix}`);
+				assert.strictEqual(localEmojis[0].url, localFirst.originalUrl);
+				assert.strictEqual(localEmojis[0].license, `license ${suffix}`);
+				assert.strictEqual(localEmojis[0].isSensitive, true);
+				assert.strictEqual(localEmojis[0].localOnly, true);
+				assert.deepStrictEqual(localEmojis[0].roleIdsThatCanBeUsedThisEmojiAsReaction, []);
+				assert.strictEqual(localEmojis[1].url, localSecond.publicUrl);
+
+				const listedByColonQuery = await api('admin/emoji/list', {
+					limit: 10,
+					query: `:${localFirst.name}:`,
+					sinceDate: now - 3000,
+				}, manager);
+				assert.strictEqual(listedByColonQuery.status, 200);
+				assert.deepStrictEqual((listedByColonQuery.body as any[]).map(emoji => emoji.id), [localFirst.id]);
+
+				const remoteListed = await api('admin/emoji/list-remote', {
+					limit: 10,
+					query: 'remote_',
+					host: remoteHost.toUpperCase(),
+					sinceDate: now - 3000,
+				}, manager);
+				assert.strictEqual(remoteListed.status, 200);
+				const remoteEmojis = remoteListed.body as any[];
+				assert.deepStrictEqual(remoteEmojis.map(emoji => emoji.id), [remoteNewer.id, remoteOlder.id]);
+				assert.strictEqual(remoteEmojis[0].host, remoteHost);
+				assert.strictEqual(remoteEmojis[0].url, remoteNewer.publicUrl);
+				assert.strictEqual(remoteEmojis[0].license, `remote license ${suffix}`);
+				assert.strictEqual(remoteEmojis[0].isSensitive, true);
+
+				const readToken = await createAppToken(manager, ['read:admin:emoji']);
+				const byToken = await api('admin/emoji/list-remote', {
+					limit: 1,
+					query: 'remote_',
+					host: remoteHost,
+				}, { token: readToken });
+				assert.strictEqual(byToken.status, 200);
+				assert.deepStrictEqual((byToken.body as any[]).map(emoji => emoji.id), [remoteNewer.id]);
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
+				const scopeDenied = await api('admin/emoji/list', {}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/list', {}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji/add と update はDB更新、cache、moderation log、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemw${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji write manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const addMd5 = createHash('md5').update(`hono-emoji-add-${suffix}`).digest('hex');
+			const addFile = await createDriveFileInDatabase(db, {
+				id: genId(config, now - 1000),
+				userId: manager.id,
+				userHost: null,
+				md5: addMd5,
+				name: `hono-emoji-add-${suffix}.png`,
+				type: 'image/png',
+				size: 101,
+				storedInternal: true,
+				url: `${origin}/files/${addMd5}`,
+			});
+			const updateMd5 = createHash('md5').update(`hono-emoji-update-${suffix}`).digest('hex');
+			const updateFile = await createDriveFileInDatabase(db, {
+				id: genId(config, now),
+				userId: manager.id,
+				userHost: null,
+				md5: updateMd5,
+				name: `hono-emoji-update-${suffix}.png`,
+				type: 'image/png',
+				size: 202,
+				storedInternal: true,
+				url: `${origin}/files/${updateMd5}`,
+			});
+
+			try {
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/add', {
+					name: `honoemoji_scope_${suffix}`,
+					fileId: addFile.id,
+				}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const added = await api('admin/emoji/add', {
+					name: `honoemoji_add_${suffix}`,
+					fileId: addFile.id,
+					category: `write_${suffix}`,
+					aliases: [`alias_${suffix}`],
+					license: `license ${suffix}`,
+					isSensitive: true,
+					localOnly: true,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+				}, manager);
+				assert.strictEqual(added.status, 200);
+				assert.strictEqual(added.body.name, `honoemoji_add_${suffix}`);
+				assert.strictEqual(added.body.url, addFile.url);
+				assert.strictEqual(added.body.category, `write_${suffix}`);
+				assert.deepStrictEqual(added.body.aliases, [`alias_${suffix}`]);
+				assert.strictEqual(added.body.license, `license ${suffix}`);
+				assert.strictEqual(added.body.isSensitive, true);
+				assert.strictEqual(added.body.localOnly, true);
+
+				const duplicate = await api('admin/emoji/add', {
+					name: `honoemoji_add_${suffix}`,
+					fileId: addFile.id,
+				}, manager);
+				assert.strictEqual(duplicate.status, 400);
+				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
+
+				const roleDenied = await api('admin/emoji/update', {
+					id: added.body.id,
+					category: `denied_${suffix}`,
+				}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const updated = await api('admin/emoji/update', {
+					id: added.body.id,
+					name: `honoemoji_updated_${suffix}`,
+					fileId: updateFile.id,
+					category: null,
+					aliases: [`updated_${suffix}`],
+					license: null,
+					isSensitive: false,
+					localOnly: false,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+				}, manager);
+				assert.strictEqual(updated.status, 204);
+
+				const after = await fetchEmojiByIdOrFailFromDatabase(db, added.body.id);
+				assert.strictEqual(after.name, `honoemoji_updated_${suffix}`);
+				assert.strictEqual(after.category, null);
+				assert.deepStrictEqual(after.aliases, [`updated_${suffix}`]);
+				assert.strictEqual(after.license, null);
+				assert.strictEqual(after.isSensitive, false);
+				assert.strictEqual(after.localOnly, false);
+				assert.strictEqual(after.originalUrl, updateFile.url);
+				assert.strictEqual(after.publicUrl, updateFile.url);
+				assert.strictEqual(after.type, updateFile.type);
+				assert.ok(after.updatedAt);
+
+				const renamedDuplicate = await api('admin/emoji/update', {
+					id: after.id,
+					name: after.name,
+				}, manager);
+				assert.strictEqual(renamedDuplicate.status, 204);
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					const cachedUpdated = cachedEmojis.find(emoji => emoji.id === after.id);
+					assert.ok(cachedUpdated);
+					assert.strictEqual(cachedUpdated.name, after.name);
+					assert.deepStrictEqual(cachedUpdated.aliases, [`updated_${suffix}`]);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 20,
+					order: 'desc',
+					userId: manager.id,
+					search: suffix,
+				});
+				assert.ok(logs.some(log => log.type === 'addCustomEmoji'));
+				assert.ok(logs.some(log => log.type === 'updateCustomEmoji'));
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji/copy は remote emoji を Drive に取り込み、local emoji、cache、log、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemc${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji copy manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64');
+			let imageServer: Server | undefined;
+			await new Promise<void>((resolve) => {
+				imageServer = createServer((_req, res) => {
+					res.writeHead(200, {
+						'Content-Type': 'image/png',
+						'Content-Disposition': `inline; filename="honoemoji_copy_${suffix}.png"`,
+					});
+					res.end(png);
+				});
+				imageServer.listen(0, '127.0.0.1', () => resolve());
+			});
+			const address = imageServer!.address() as AddressInfo;
+			const imageUrl = `http://127.0.0.1:${address.port}/honoemoji_copy_${suffix}.png`;
+
+			const remote = await insertEmojiInDatabase(db, {
+				id: genId(config, now),
+				name: `honoemoji_copy_${suffix}`,
+				host: `copy-${suffix}.remote`,
+				aliases: [`copy_alias_${suffix}`],
+				category: `copy_category_${suffix}`,
+				originalUrl: imageUrl,
+				publicUrl: '',
+				license: `copy license ${suffix}`,
+				isSensitive: true,
+				localOnly: true,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/copy', { emojiId: remote.id }, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/copy', { emojiId: remote.id }, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const copied = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
+				assert.strictEqual(copied.status, 200);
+				const copiedBody = copied.body as any;
+				assert.strictEqual(copiedBody.name, remote.name);
+				assert.strictEqual(copiedBody.host, null);
+				assert.deepStrictEqual(copiedBody.aliases, [`copy_alias_${suffix}`]);
+				assert.strictEqual(copiedBody.category, `copy_category_${suffix}`);
+				assert.strictEqual(copiedBody.license, `copy license ${suffix}`);
+				assert.strictEqual(copiedBody.isSensitive, true);
+				assert.strictEqual(copiedBody.localOnly, true);
+
+				const copiedEmoji = await fetchEmojiByIdOrFailFromDatabase(db, copiedBody.id);
+				assert.strictEqual(copiedEmoji.host, null);
+				assert.strictEqual(copiedEmoji.name, remote.name);
+				assert.notStrictEqual(copiedEmoji.originalUrl, remote.originalUrl);
+				assert.strictEqual(copiedEmoji.publicUrl, copiedEmoji.originalUrl);
+				assert.strictEqual(copiedEmoji.type, 'image/png');
+
+				const driveFile = await fetchDriveFileByUrlFromDatabase(db, copiedEmoji.originalUrl);
+				assert.ok(driveFile);
+				assert.strictEqual(driveFile.userId, null);
+				assert.strictEqual(driveFile.userHost, null);
+				assert.strictEqual(driveFile.src, imageUrl);
+				assert.strictEqual(driveFile.type, 'image/png');
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					const cachedCopied = cachedEmojis.find(emoji => emoji.id === copiedEmoji.id);
+					assert.ok(cachedCopied);
+					assert.strictEqual(cachedCopied.name, remote.name);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'addCustomEmoji',
+					userId: manager.id,
+					search: suffix,
+				});
+				assert.ok(logs.some(log => (log.info as any).emojiId === copiedEmoji.id));
+
+				const duplicate = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
+				assert.strictEqual(duplicate.status, 400);
+				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
+			} finally {
+				await new Promise<void>((resolve, reject) => {
+					imageServer?.close(err => err ? reject(err) : resolve());
+				});
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji bulk metadata 更新は aliases、category、license、cache、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemb${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji bulk manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const first = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `honoemoji_bulk_first_${suffix}`,
+				host: null,
+				aliases: [`base_${suffix}`],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/bulk-first.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const second = await insertEmojiInDatabase(db, {
+				id: genId(config, now),
+				name: `honoemoji_bulk_second_${suffix}`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/bulk-second.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const addAliases = await api('admin/emoji/add-aliases-bulk', {
+					ids: [first.id, second.id],
+					aliases: [`added_${suffix}`, `base_${suffix}`],
+				}, manager);
+				assert.strictEqual(addAliases.status, 204);
+
+				let afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				let afterSecond = await fetchEmojiByIdOrFailFromDatabase(db, second.id);
+				assert.deepStrictEqual(afterFirst.aliases, [`base_${suffix}`, `added_${suffix}`]);
+				assert.deepStrictEqual(afterSecond.aliases, [`added_${suffix}`, `base_${suffix}`]);
+
+				const removeAliases = await api('admin/emoji/remove-aliases-bulk', {
+					ids: [first.id],
+					aliases: [`base_${suffix}`],
+				}, manager);
+				assert.strictEqual(removeAliases.status, 204);
+				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				assert.deepStrictEqual(afterFirst.aliases, [`added_${suffix}`]);
+
+				const setAliases = await api('admin/emoji/set-aliases-bulk', {
+					ids: [second.id],
+					aliases: [`final_${suffix}`],
+				}, manager);
+				assert.strictEqual(setAliases.status, 204);
+
+				const setCategory = await api('admin/emoji/set-category-bulk', {
+					ids: [first.id, second.id],
+					category: `bulk_category_${suffix}`,
+				}, manager);
+				assert.strictEqual(setCategory.status, 204);
+
+				const setLicense = await api('admin/emoji/set-license-bulk', {
+					ids: [first.id, second.id],
+					license: `bulk license ${suffix}`,
+				}, manager);
+				assert.strictEqual(setLicense.status, 204);
+
+				const resetLicense = await api('admin/emoji/set-license-bulk', {
+					ids: [second.id],
+					license: null,
+				}, manager);
+				assert.strictEqual(resetLicense.status, 204);
+
+				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				afterSecond = await fetchEmojiByIdOrFailFromDatabase(db, second.id);
+				assert.deepStrictEqual(afterFirst.aliases, [`added_${suffix}`]);
+				assert.deepStrictEqual(afterSecond.aliases, [`final_${suffix}`]);
+				assert.strictEqual(afterFirst.category, `bulk_category_${suffix}`);
+				assert.strictEqual(afterSecond.category, `bulk_category_${suffix}`);
+				assert.strictEqual(afterFirst.license, `bulk license ${suffix}`);
+				assert.strictEqual(afterSecond.license, null);
+				assert.ok(afterFirst.updatedAt);
+				assert.ok(afterSecond.updatedAt);
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					const cachedFirst = cachedEmojis.find(emoji => emoji.id === first.id);
+					const cachedSecond = cachedEmojis.find(emoji => emoji.id === second.id);
+					assert.ok(cachedFirst);
+					assert.ok(cachedSecond);
+					assert.deepStrictEqual(cachedFirst.aliases, [`added_${suffix}`]);
+					assert.deepStrictEqual(cachedSecond.aliases, [`final_${suffix}`]);
+					assert.strictEqual(cachedFirst.category, `bulk_category_${suffix}`);
+					assert.strictEqual(cachedSecond.license, null);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				const token = await createAppToken(manager, ['write:admin:emoji']);
+				const tokenUpdated = await api('admin/emoji/set-category-bulk', {
+					ids: [first.id],
+					category: null,
+				}, { token });
+				assert.strictEqual(tokenUpdated.status, 204);
+				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				assert.strictEqual(afterFirst.category, null);
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/set-aliases-bulk', {
+					ids: [first.id],
+					aliases: [],
+				}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/set-category-bulk', {
+					ids: [first.id],
+					category: `denied_${suffix}`,
+				}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji/delete と delete-bulk はDB削除、cache、moderation log、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemd${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji delete manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const single = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 2000),
+				name: `honoemoji_delete_single_${suffix}`,
+				host: null,
+				aliases: [],
+				category: `delete_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/delete-single.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const bulkFirst = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `honoemoji_delete_bulk_first_${suffix}`,
+				host: null,
+				aliases: [],
+				category: `delete_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/delete-bulk-first.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const bulkSecond = await insertEmojiInDatabase(db, {
+				id: genId(config, now),
+				name: `honoemoji_delete_bulk_second_${suffix}`,
+				host: null,
+				aliases: [],
+				category: `delete_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/delete-bulk-second.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const deleted = await api('admin/emoji/delete', { id: single.id }, manager);
+				assert.strictEqual(deleted.status, 204);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, single.id), null);
+
+				const deletedBulk = await api('admin/emoji/delete-bulk', {
+					ids: [bulkFirst.id, bulkSecond.id],
+				}, manager);
+				assert.strictEqual(deletedBulk.status, 204);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkFirst.id), null);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkSecond.id), null);
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === single.id), false);
+					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === bulkFirst.id), false);
+					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === bulkSecond.id), false);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				for (let i = 0; i < 10; i++) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type: 'deleteCustomEmoji',
+						search: suffix,
+					});
+					if (logs.length >= 3) {
+						assert.strictEqual(logs.some(log => (log.info as any).emojiId === single.id), true);
+						assert.strictEqual(logs.some(log => (log.info as any).emojiId === bulkFirst.id), true);
+						assert.strictEqual(logs.some(log => (log.info as any).emojiId === bulkSecond.id), true);
+						break;
+					}
+					await new Promise(resolve => setTimeout(resolve, 100));
+					if (i === 9) assert.fail('deleteCustomEmoji moderation logs were not found');
+				}
+
+				const tokenTarget = await insertEmojiInDatabase(db, {
+					id: genId(config, now + 1000),
+					name: `honoemoji_delete_token_${suffix}`,
+					host: null,
+					aliases: [],
+					category: null,
+					originalUrl: `${origin}/emoji/${suffix}/delete-token.webp`,
+					publicUrl: '',
+					license: null,
+					isSensitive: false,
+					localOnly: false,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+				});
+				const token = await createAppToken(manager, ['write:admin:emoji']);
+				const deletedByToken = await api('admin/emoji/delete', { id: tokenTarget.id }, { token });
+				assert.strictEqual(deletedByToken.status, 204);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, tokenTarget.id), null);
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/delete-bulk', {
+					ids: [tokenTarget.id],
+				}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/delete', { id: tokenTarget.id }, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji/import-zip は import job、secure credential、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemi${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji import manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const fileId = genId(config, now);
+			const removeImportJobs = async () => {
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				await Promise.all(jobs
+					.filter(job => job.name === 'importCustomEmojis' && (job.data as DbJobData<'importCustomEmojis'>).fileId === fileId)
+					.map(job => job.remove()));
+			};
+
+			try {
+				const imported = await api('admin/emoji/import-zip', { fileId }, manager);
+				assert.strictEqual(imported.status, 204);
+
+				let job: Bull.Job<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
+				for (let i = 0; i < 10; i++) {
+					const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+					job = jobs.find(job => job.name === 'importCustomEmojis' && (job.data as DbJobData<'importCustomEmojis'>).fileId === fileId && job.data.user.id === manager.id);
+					if (job != null) break;
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.ok(job);
+				assert.deepStrictEqual(job.data as DbJobData<'importCustomEmojis'>, {
+					user: { id: manager.id },
+					fileId,
+				});
+
+				const token = await createAppToken(manager, ['write:admin:emoji']);
+				const appDenied = await api('admin/emoji/import-zip', { fileId: genId(config, now + 1) }, { token });
+				assert.strictEqual(appDenied.status, 400);
+				assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+
+				const roleDenied = await api('admin/emoji/import-zip', { fileId: genId(config, now + 2) }, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await removeImportJobs();
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
 		});
 	});
 
@@ -2944,6 +4500,24 @@ describe('Endpoints', () => {
 			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
 		}
 
+		async function findDeliverJob(
+			inbox: string,
+			type: 'Flag',
+		): Promise<Bull.Job<DeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				for (const job of jobs) {
+					if (job.data.to !== inbox) continue;
+
+					const content = JSON.parse(job.data.content) as { type?: unknown };
+					if (content.type === type) return job;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`deliver job was not found: ${inbox} ${type}`);
+		}
+
 		test('admin/abuse-user-reports は一覧、filter、token scope、roleを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
@@ -3119,6 +4693,110 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('admin/forward-abuse-user-report は配送、forwarded、token scope、role、ログ、404を維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const config = loadConfig();
+			const targetId = genId(config, now - 1000);
+			const targetHost = `hono-abuse-forward-${suffix}.example`;
+			const targetInbox = `https://${targetHost}/inbox`;
+			const targetUri = `https://${targetHost}/users/${targetId}`;
+			const target = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: targetId,
+					username: `haft${suffix}`,
+					usernameLower: `haft${suffix}`,
+					host: targetHost,
+					inbox: targetInbox,
+					uri: targetUri,
+				},
+				profile: {
+					userId: targetId,
+					userHost: targetHost,
+				},
+			});
+			const report = await createReport(`${suffix}forward`, {
+				id: genId(config, now),
+				targetUserId: target.id,
+				targetUserHost: targetHost,
+				comment: `Hono abuse report forward ${suffix}`,
+			});
+
+			const forwarded = await api('admin/forward-abuse-user-report', {
+				reportId: report.id,
+			}, alice);
+			assert.strictEqual(forwarded.status, 204);
+
+			const after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.forwarded, true);
+
+			const deliverJob = await findDeliverJob(targetInbox, 'Flag');
+			assert.strictEqual(deliverJob.data.to, targetInbox);
+			assert.strictEqual(deliverJob.data.isSharedInbox, false);
+			assert.strictEqual(deliverJob.data.digest, `SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`);
+			const flag = JSON.parse(deliverJob.data.content) as any;
+			assert.strictEqual(flag.type, 'Flag');
+			assert.strictEqual(flag.actor.startsWith(`${origin}/users/`), true);
+			assert.strictEqual(flag.object, targetUri);
+			assert.strictEqual(flag.content, `Hono abuse report forward ${suffix}`);
+			assert.ok(flag.id.startsWith(`${origin}/`));
+			assert.ok(flag['@context']);
+			await deliverJob.remove();
+
+			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
+			const tokenReport = await createReport(`${suffix}forwardtoken`, {
+				id: genId(config, now + 1000),
+				targetUserId: target.id,
+				targetUserHost: targetHost,
+				comment: `Hono abuse report forward token ${suffix}`,
+			});
+			const forwardedByToken = await api('admin/forward-abuse-user-report', {
+				reportId: tokenReport.id,
+			}, { token });
+			assert.strictEqual(forwardedByToken.status, 204);
+
+			const afterToken = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
+			assert.strictEqual(afterToken.forwarded, true);
+			const tokenDeliverJob = await findDeliverJob(targetInbox, 'Flag');
+			await tokenDeliverJob.remove();
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/forward-abuse-user-report', {
+				reportId: report.id,
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hafr${suffix}` });
+			const roleDenied = await api('admin/forward-abuse-user-report', {
+				reportId: report.id,
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/forward-abuse-user-report', {
+				reportId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '8763e21b-d9bc-40be-acf6-54c1a6986493');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'forwardAbuseReport',
+					search: report.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('forwardAbuseReport moderation log was not found');
+			}
+		});
+
 		test('admin/update-abuse-user-report は moderationNote 更新、token scope、role、ログ、404を維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
@@ -3182,6 +4860,131 @@ describe('Endpoints', () => {
 				await new Promise(resolve => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('updateAbuseReportNote moderation log was not found');
 			}
+		});
+	});
+
+	describe('admin/show-user', () => {
+		test('admin/show-user と admin/show-users は詳細、filter、token scope、roleを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const config = loadConfig();
+			const target = await signup({ username: `hashow${suffix}` });
+			await updateUserProfileInDatabase(db, target.id, {
+				email: `hashow-${suffix}@example.test`,
+				emailVerified: true,
+				followedMessage: `followed ${suffix}`,
+				moderationNote: `moderation ${suffix}`,
+				mutedWords: [`mute${suffix}`, ['deep', suffix]],
+				mutedInstances: [`muted-${suffix}.example`],
+				notificationRecieveConfig: {
+					follow: {
+						type: 'normal',
+					},
+				} as any,
+				autoAcceptFollowed: true,
+				noCrawle: true,
+				preventAiLearning: false,
+				alwaysMarkNsfw: true,
+				autoSensitive: true,
+				carefulBot: true,
+				injectFeaturedNote: false,
+				receiveAnnouncementEmail: false,
+			});
+			await updateUserInDatabase(db, target.id, {
+				isSuspended: true,
+				isHibernated: true,
+				lastActiveDate: new Date(now - 1234),
+			});
+			const showRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono show user role ${suffix}`,
+				description: 'show user role',
+				color: '#2266aa',
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: '018d87a0-7f78-48b4-9ee8-1e22e6f73089',
+					type: 'isRemote',
+				},
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: true,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 4242,
+				policies: {
+					canPublicNote: {
+						useDefault: false,
+						priority: 0,
+						value: false,
+					},
+				},
+			});
+			const assign = await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: target.id,
+				roleId: showRole.id,
+				expiresAt: new Date(now + 60 * 1000),
+			});
+			const signin = await createSigninInDatabase(db, {
+				id: genId(config, now + 2),
+				userId: target.id,
+				ip: `10.0.0.${Number.parseInt(suffix.slice(-2), 36) % 200}`,
+				headers: {
+					'user-agent': `hono-show-${suffix}`,
+				},
+				success: true,
+			});
+
+			const shown = await api('admin/show-user', { userId: target.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.email, `hashow-${suffix}@example.test`);
+			assert.strictEqual(shown.body.emailVerified, true);
+			assert.strictEqual(shown.body.followedMessage, `followed ${suffix}`);
+			assert.strictEqual(shown.body.moderationNote, `moderation ${suffix}`);
+			assert.deepStrictEqual(shown.body.mutedInstances, [`muted-${suffix}.example`]);
+			assert.strictEqual(shown.body.isModerator, true);
+			assert.strictEqual(shown.body.isSilenced, true);
+			assert.strictEqual(shown.body.isSuspended, true);
+			assert.strictEqual(shown.body.isHibernated, true);
+			assert.strictEqual(shown.body.lastActiveDate, new Date(now - 1234).toISOString());
+			assert.strictEqual(shown.body.policies.canPublicNote, false);
+			assert.ok(shown.body.roles.some(item => item.id === showRole.id && item.name === showRole.name && item.usersCount === 1));
+			assert.ok(shown.body.roleAssigns.some(item => item.roleId === showRole.id && item.createdAt === parseId(config, assign.id).date.toISOString() && item.expiresAt === assign.expiresAt?.toISOString()));
+			assert.ok(shown.body.signins.some(item => item.id === signin.id && item.ip === signin.ip && item.success === true));
+
+			const listed = await api('admin/show-users', {
+				state: 'moderator',
+				username: target.username.slice(0, 6),
+				limit: 10,
+				sort: '+createdAt',
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			const listedTarget = listed.body.find(item => item.id === target.id);
+			assert.ok(listedTarget);
+			assert.strictEqual(listedTarget.username, target.username);
+			assert.strictEqual(listedTarget.moderationNote, `moderation ${suffix}`);
+			assert.strictEqual(listedTarget.isSilenced, true);
+			assert.ok(listedTarget.roles.some(item => item.id === showRole.id && item.displayOrder === 4242));
+
+			const token = await createAppToken(alice, ['read:admin:show-user']);
+			const shownByToken = await api('admin/show-user', { userId: target.id }, { token });
+			assert.strictEqual(shownByToken.status, 200);
+			assert.strictEqual(shownByToken.body.email, `hashow-${suffix}@example.test`);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const scopeDenied = await api('admin/show-users', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hashown${suffix}` });
+			const roleDenied = await api('admin/show-user', { userId: target.id }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 	});
 

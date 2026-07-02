@@ -8,16 +8,22 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
+import type { DownloadService } from '@/core/DownloadService.js';
+import type { FileInfoService } from '@/core/FileInfoService.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { ImageProcessingService } from '@/core/ImageProcessingService.js';
+import type { InternalStorageService } from '@/core/InternalStorageService.js';
+import type { S3Service } from '@/core/S3Service.js';
 import type { UserAuthService } from '@/core/UserAuthService.js';
+import type { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import type { WebAuthnService } from '@/core/WebAuthnService.js';
 import type { EmailService } from '@/core/EmailService.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
-import { handleHonoApiAdminAbuseUserReports, handleHonoApiAdminResolveAbuseUserReport, handleHonoApiAdminUpdateAbuseUserReport } from './hono-api-admin-abuse-reports.js';
+import { handleHonoApiAdminAbuseUserReports, handleHonoApiAdminForwardAbuseUserReport, handleHonoApiAdminResolveAbuseUserReport, handleHonoApiAdminUpdateAbuseUserReport } from './hono-api-admin-abuse-reports.js';
 import { handleHonoApiAdminAbuseReportNotificationRecipientCreate, handleHonoApiAdminAbuseReportNotificationRecipientDelete, handleHonoApiAdminAbuseReportNotificationRecipientList, handleHonoApiAdminAbuseReportNotificationRecipientShow, handleHonoApiAdminAbuseReportNotificationRecipientUpdate } from './hono-api-admin-abuse-report-notification-recipient.js';
-import { handleHonoApiAdminAccountsFindByEmail } from './hono-api-admin-accounts.js';
+import { handleHonoApiAdminAccountsCreate, handleHonoApiAdminAccountsDelete, handleHonoApiAdminAccountsFindByEmail, handleHonoApiAdminDeleteAccount, handleHonoApiAdminUpdateProxyAccount } from './hono-api-admin-accounts.js';
 import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
 import { handleHonoApiAdminAnnouncementsCreate, handleHonoApiAdminAnnouncementsDelete, handleHonoApiAdminAnnouncementsList, handleHonoApiAdminAnnouncementsUpdate } from './hono-api-admin-announcements.js';
 import { handleHonoApiAdminAvatarDecorationsCreate, handleHonoApiAdminAvatarDecorationsDelete, handleHonoApiAdminAvatarDecorationsList, handleHonoApiAdminAvatarDecorationsUpdate } from './hono-api-admin-avatar-decorations.js';
@@ -30,12 +36,13 @@ import { handleHonoApiAdminSystemWebhookCreate, handleHonoApiAdminSystemWebhookD
 import { handleHonoApiAdminGetUserIps } from './hono-api-admin-user-ips.js';
 import { handleHonoApiAdminResetPassword, handleHonoApiAdminUnsetMfa, handleHonoApiAdminUnsetUserAvatar, handleHonoApiAdminUnsetUserBanner, handleHonoApiAdminUpdateUserNote } from './hono-api-admin-user-maintenance.js';
 import { handleHonoApiAdminSuspendUser, handleHonoApiAdminUnsuspendUser } from './hono-api-admin-user-suspension.js';
+import { handleHonoApiAdminShowUser, handleHonoApiAdminShowUsers } from './hono-api-admin-users.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono-api-error.js';
-import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
+import { handleHonoApiAdminEmojiAdd, handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiCopy, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiImportZip, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiAdminEmojiUpdate, handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import {
 	handleHonoApiDriveFilesCheckExistence,
@@ -46,20 +53,21 @@ import {
 	handleHonoApiDriveFoldersShow,
 	handleHonoApiDriveFoldersUpdate,
 } from './hono-api-drive.js';
-import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
+import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
 import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
 import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from './hono-api-captcha.js';
 import { handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats, type HonoApiAdminQueueDependencies } from './hono-api-admin-queue.js';
+import { handleHonoApiAdminDeleteAllFilesOfAUser, handleHonoApiAdminDriveCleanRemoteFiles, handleHonoApiAdminDriveCleanup, handleHonoApiAdminDriveFiles, handleHonoApiAdminDriveShowFile } from './hono-api-admin-drive.js';
 import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
 import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
-import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
+import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta, handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
@@ -96,8 +104,14 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	dbPool: MiDrizzlePool;
 	meta: MiMeta;
 	redis: Redis.Redis;
+	downloadService: Pick<DownloadService, 'downloadUrl'>;
+	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 	httpRequestService: HttpRequestService;
+	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
+	internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
+	s3Service: Pick<S3Service, 'upload'>;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
+	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
@@ -273,6 +287,12 @@ async function assertHonoApiCanManageAvatarDecorations(deps: ApiShellDependencie
 	}
 }
 
+async function assertHonoApiCanManageCustomEmojis(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
+	if (!(await getHonoApiRolePolicies(deps, auth.user)).canManageCustomEmojis) {
+		throw rolePermissionDeniedError();
+	}
+}
+
 export function createApiShellApp(deps: ApiShellDependencies): Hono {
 	const app = new Hono();
 
@@ -352,6 +372,16 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/admin/accounts/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertOptionalCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiAdminAccountsCreate(deps, auth, body));
+		});
+	});
+
 	app.post('/admin/accounts/find-by-email', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -361,6 +391,69 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiAdmin(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminAccountsFindByEmail(deps, body));
+		});
+	});
+
+	app.post('/admin/meta', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:meta');
+			await assertHonoApiAdmin(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminMeta(deps));
+		});
+	});
+
+	app.post('/admin/update-meta', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:meta');
+			await assertHonoApiAdmin(deps, auth);
+
+			await handleHonoApiAdminUpdateMeta(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/update-proxy-account', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:account');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminUpdateProxyAccount(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/accounts/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:account');
+			await assertHonoApiAdmin(deps, auth);
+
+			await handleHonoApiAdminAccountsDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/delete-account', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:delete-account');
+			await assertHonoApiAdmin(deps, auth);
+
+			await handleHonoApiAdminDeleteAccount(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 
@@ -434,6 +527,19 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminResolveAbuseUserReport(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/forward-abuse-user-report', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:resolve-abuse-user-report');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminForwardAbuseUserReport(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});
@@ -848,6 +954,30 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/admin/show-user', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:show-user');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminShowUser(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/show-users', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:show-user');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminShowUsers(deps, auth.user, body));
+		});
+	});
+
 	app.post('/admin/server-info', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -894,6 +1024,121 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiAdminRelaysRemove(deps, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/federation/update-instance', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:federation');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminFederationUpdateInstance(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/federation/refresh-remote-instance-metadata', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:federation');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminFederationRefreshRemoteInstanceMetadata(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/federation/remove-all-following', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:federation');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminFederationRemoveAllFollowing(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/federation/delete-all-files', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:federation');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminFederationDeleteAllFiles(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/drive/clean-remote-files', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:drive');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminDriveCleanRemoteFiles(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/drive/cleanup', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:drive');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminDriveCleanup(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/delete-all-files-of-a-user', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:delete-all-files-of-a-user');
+			await assertHonoApiAdmin(deps, auth);
+
+			await handleHonoApiAdminDeleteAllFilesOfAUser(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/drive/files', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:drive');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminDriveFiles(deps, body));
+		});
+	});
+
+	app.post('/admin/drive/show-file', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:drive');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminDriveShowFile(deps, auth.user, body));
 		});
 	});
 
@@ -1378,6 +1623,171 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			});
+		});
+	});
+
+	app.post('/admin/emoji/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminEmojiList(deps, body));
+		});
+	});
+
+	app.post('/admin/emoji/list-remote', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminEmojiListRemote(deps, body));
+		});
+	});
+
+	app.post('/admin/emoji/add', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminEmojiAdd(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/emoji/copy', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminEmojiCopy(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/emoji/add-aliases-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiAddAliasesBulk(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/remove-aliases-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiRemoveAliasesBulk(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/set-aliases-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiSetAliasesBulk(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/set-category-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiSetCategoryBulk(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/set-license-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiSetLicenseBulk(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/delete-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiDeleteBulk(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/import-zip', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiImportZip(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiUpdate(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 
