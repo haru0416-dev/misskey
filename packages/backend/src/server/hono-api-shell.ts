@@ -32,6 +32,7 @@ import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHo
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
+import { handleHonoApiPromoRead } from './hono-api-promo.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -514,6 +515,18 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			await jsonBody(c);
 			return jsonResponse(c, handleHonoApiPing());
+		});
+	});
+
+	app.post('/promo/read', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiPromoRead(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 

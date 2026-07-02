@@ -20,10 +20,12 @@ import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.j
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
+import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
@@ -1196,6 +1198,49 @@ describe('Endpoints', () => {
 			const missing = await api('verify-email', { code: 'missing-code' });
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_CODE');
+		});
+	});
+
+	describe('promo/read endpoint', () => {
+		test('promo/read records a promoted note as read idempotently', async () => {
+			const config = loadConfig();
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'promo read target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const read = await api('promo/read', { noteId }, bob);
+			assert.strictEqual(read.status, 204);
+			assert.strictEqual(read.body, null);
+			assert.strictEqual(await isPromoReadExists(db, bob.id, noteId), true);
+
+			const duplicate = await api('promo/read', { noteId }, bob);
+			assert.strictEqual(duplicate.status, 204);
+
+			const missing = await api('promo/read', { noteId: genId(config) }, bob);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+		});
+
+		test('promo/read requires write account permission for app tokens', async () => {
+			const config = loadConfig();
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'promo read app token target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const appToken = await createAppToken(bob, ['read:account']);
+
+			const denied = await api('promo/read', { noteId }, { token: appToken });
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED');
 		});
 	});
 
