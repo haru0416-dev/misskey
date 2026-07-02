@@ -16,13 +16,13 @@ import { parseMeidgFull } from '@/misc/id/meidg.js';
 import { parseObjectIdFull } from '@/misc/id/object-id.js';
 import { parseUlidFull } from '@/misc/id/ulid.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
+import type { Packed } from '@/misc/json-schema.js';
+import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
+import { packHonoApiRole } from './hono-api-roles.js';
+import type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 
-export type HonoApiMainStreamPublisher = (
-	userId: MiUser['id'],
-	type: 'notification' | 'unreadNotification' | 'signin' | 'registryUpdated' | 'meUpdated',
-	value: unknown,
-) => void;
+export type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 
 export type HonoApiNotificationDependencies = {
 	config: Config;
@@ -45,6 +45,22 @@ type LoginNotification = {
 
 type HonoSimpleNotification = CreateTokenNotification | LoginNotification;
 
+type RoleAssignedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'roleAssigned';
+	roleId: string;
+};
+
+type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification;
+
+type HonoPackedRoleAssignedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'roleAssigned';
+	role: Packed<'Role'>;
+};
+
 function parseIdFull(config: Config, id: string): { date: number; additional: bigint } {
 	switch (config.id.toLowerCase()) {
 		case 'aid': return parseAidFull(id);
@@ -65,7 +81,7 @@ function toXListId(config: Config, id: string): string {
 async function xaddNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
-	notification: HonoSimpleNotification,
+	notification: HonoStoredNotification,
 ): Promise<string> {
 	while (true) {
 		try {
@@ -114,4 +130,37 @@ export function createTokenNotification(deps: HonoApiNotificationDependencies, u
 
 export function createLoginNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
 	createSimpleNotification(deps, userId, 'login');
+}
+
+export function createRoleAssignedNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	role: MiRole,
+): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.roleAssigned?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'roleAssigned',
+			roleId: role.id,
+		} satisfies RoleAssignedNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+		const packed = {
+			id: notification.id,
+			createdAt: notification.createdAt,
+			type: notification.type,
+			role: await packHonoApiRole(deps, role),
+		} satisfies HonoPackedRoleAssignedNotification;
+
+		deps.publishMainStream?.(userId, 'notification', packed);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', packed);
+		}).catch(() => {}));
+	})());
 }

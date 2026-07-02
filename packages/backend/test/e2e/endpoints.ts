@@ -31,12 +31,15 @@ import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
+import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
-import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
+import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
+import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
 import { isPromoReadExists } from '@/core/PromoReadStore.js';
@@ -2192,11 +2195,452 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/roles', () => {
+		test('admin/roles は作成、一覧、表示、scope、権限、ログを維持する', async () => {
+			const now = Date.now();
+			const config = loadConfig();
+			const createPayload = {
+				name: `Hono admin role ${now}`,
+				description: 'Hono admin role endpoint test',
+				color: '#3366cc',
+				iconUrl: null,
+				target: 'manual' as const,
+				condFormula: {
+					id: '018d87a0-7f78-48b4-9ee8-1e22e6f73089',
+					type: 'isRemote',
+				} as any,
+				isPublic: true,
+				isModerator: false,
+				isAdministrator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: true,
+				canEditMembersByModerator: false,
+				displayOrder: 313,
+				policies: {
+					canInvite: { useDefault: false, priority: 0, value: true },
+				},
+			};
+
+			const created = await api('admin/roles/create', createPayload, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, createPayload.name);
+			assert.strictEqual(created.body.description, createPayload.description);
+			assert.strictEqual(created.body.color, createPayload.color);
+			assert.strictEqual(created.body.isPublic, true);
+			assert.strictEqual(created.body.isExplorable, true);
+			assert.strictEqual(created.body.preserveAssignmentOnMoveAccount, true);
+			assert.strictEqual(created.body.displayOrder, createPayload.displayOrder);
+			assert.strictEqual(created.body.usersCount, 0);
+			assert.strictEqual(created.body.policies.canInvite.useDefault, false);
+			assert.strictEqual(created.body.policies.canInvite.value, true);
+
+			const list = await api('admin/roles/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const listedRole = list.body.find(item => item.id === created.body.id);
+			assert.ok(listedRole);
+			assert.strictEqual(listedRole.name, createPayload.name);
+			assert.strictEqual(listedRole.usersCount, 0);
+
+			const shown = await api('admin/roles/show', { roleId: created.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.name, createPayload.name);
+			assert.strictEqual(shown.body.policies.canInvite.value, true);
+
+			const updated = await api('admin/roles/update', {
+				roleId: created.body.id,
+				name: `Hono admin role updated ${now}`,
+				description: 'updated role description',
+				color: null,
+				isPublic: false,
+				preserveAssignmentOnMoveAccount: false,
+				displayOrder: 314,
+				policies: {
+					canInvite: { useDefault: false, priority: 0, value: false },
+				} as any,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const afterUpdate = await api('admin/roles/show', { roleId: created.body.id }, alice);
+			assert.strictEqual(afterUpdate.status, 200);
+			assert.strictEqual(afterUpdate.body.name, `Hono admin role updated ${now}`);
+			assert.strictEqual(afterUpdate.body.description, 'updated role description');
+			assert.strictEqual(afterUpdate.body.color, null);
+			assert.strictEqual(afterUpdate.body.isPublic, false);
+			assert.strictEqual(afterUpdate.body.displayOrder, 314);
+			assert.strictEqual(afterUpdate.body.policies.canInvite.value, false);
+
+			const missingUpdate = await api('admin/roles/update', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const missing = await api('admin/roles/show', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const readToken = await createAppToken(alice, ['read:admin:roles']);
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1000),
+				userId: bob.id,
+				roleId: created.body.id,
+				expiresAt: null,
+			});
+			const carolRoleAssignment = await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1001),
+				userId: carol.id,
+				roleId: created.body.id,
+				expiresAt: new Date(now + 60 * 1000),
+			});
+			const users = await api('admin/roles/users', {
+				roleId: created.body.id,
+				limit: 1,
+			}, { token: readToken });
+			assert.strictEqual(users.status, 200);
+			assert.strictEqual(users.body.length, 1);
+			assert.strictEqual(users.body[0].id, carolRoleAssignment.id);
+			assert.strictEqual(users.body[0].user.id, carol.id);
+			assert.strictEqual(users.body[0].user.username, carol.username);
+			assert.strictEqual(users.body[0].expiresAt, new Date(now + 60 * 1000).toISOString());
+
+			const missingUsersRole = await api('admin/roles/users', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missingUsersRole.status, 400);
+			assert.strictEqual(castAsError(missingUsersRole.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const assignTarget = await signup({ username: `hrolasg${now.toString(36)}` });
+			const assignableRole = await api('admin/roles/create', {
+				...createPayload,
+				name: `Hono admin assign role ${now}`,
+				isPublic: true,
+				canEditMembersByModerator: true,
+			}, alice);
+			assert.strictEqual(assignableRole.status, 200);
+
+			const scopeDenied = await api('admin/roles/create', {
+				...createPayload,
+				name: `Hono admin role denied ${now}`,
+			}, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			const assignScopeDenied = await api('admin/roles/assign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+			}, { token: readToken });
+			assert.strictEqual(assignScopeDenied.status, 403);
+			assert.strictEqual(castAsError(assignScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const assignExpiresAt = now + 60 * 60 * 1000;
+			const assigned = await api('admin/roles/assign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+				expiresAt: assignExpiresAt,
+			}, alice);
+			assert.strictEqual(assigned.status, 204, JSON.stringify(assigned.body));
+			const assignment = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id);
+			assert.ok(assignment);
+			assert.strictEqual(assignment.expiresAt?.toISOString(), new Date(assignExpiresAt).toISOString());
+
+			const redis = createRedisClient(config);
+			try {
+				await new Promise(resolve => setTimeout(resolve, 100));
+				const entries = await redis.xrevrange(`notificationTimeline:${assignTarget.id}`, '+', '-', 'COUNT', 10);
+				const notifications = entries.map(([, values]) => {
+					const dataIndex = values.findIndex(value => value === 'data');
+					return JSON.parse(values[dataIndex + 1]!) as { type?: string; roleId?: string };
+				});
+				const roleAssignedNotification = notifications.find(notification =>
+					notification.type === 'roleAssigned' && notification.roleId === assignableRole.body.id);
+				assert.ok(roleAssignedNotification);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const normalUser = await signup({ username: `honorole${now.toString(36)}` });
+			const roleDenied = await api('admin/roles/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			const usersRoleDenied = await api('admin/roles/users', { roleId: created.body.id }, normalUser);
+			assert.strictEqual(usersRoleDenied.status, 403);
+			assert.strictEqual(castAsError(usersRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			const assignRoleDenied = await api('admin/roles/assign', { roleId: assignableRole.body.id, userId: assignTarget.id }, normalUser);
+			assert.strictEqual(assignRoleDenied.status, 403);
+			assert.strictEqual(castAsError(assignRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const moderatorRole = await createRoleInDatabase(db, {
+				id: genId(config, now + 2000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono moderator role ${now}`,
+				description: 'Hono moderator role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'a6a0035c-2910-4dac-9b35-f226c07d63ab',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: true,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: true,
+				displayOrder: 1,
+				policies: {},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 2001),
+				userId: normalUser.id,
+				roleId: moderatorRole.id,
+				expiresAt: null,
+			});
+			const accessDenied = await api('admin/roles/assign', {
+				roleId: created.body.id,
+				userId: assignTarget.id,
+			}, normalUser);
+			assert.strictEqual(accessDenied.status, 400);
+			assert.strictEqual(castAsError(accessDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const unassigned = await api('admin/roles/unassign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+			}, alice);
+			assert.strictEqual(unassigned.status, 204);
+			assert.strictEqual(await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id), null);
+
+			const unassignedAgain = await api('admin/roles/unassign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+			}, alice);
+			assert.strictEqual(unassignedAgain.status, 400);
+			assert.strictEqual(castAsError(unassignedAgain.body as any).error.code, 'NOT_ASSIGNED');
+
+			const missingAssignUser = await api('admin/roles/assign', {
+				roleId: assignableRole.body.id,
+				userId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingAssignUser.status, 400);
+			assert.strictEqual(castAsError(missingAssignUser.body as any).error.code, 'NO_SUCH_USER');
+			const missingUnassignRole = await api('admin/roles/unassign', {
+				roleId: '000000000000000000000000',
+				userId: assignTarget.id,
+			}, alice);
+			assert.strictEqual(missingUnassignRole.status, 400);
+			assert.strictEqual(castAsError(missingUnassignRole.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const defaultPolicyUser = await signup({ username: `honorolepol${now.toString(36)}` });
+			const beforeMeta = await fetchMetaFromDatabase(db);
+			try {
+				const updatedDefaultPolicies = await api('admin/roles/update-default-policies', {
+					policies: {
+						...beforeMeta.policies,
+						canInvite: true,
+						inviteLimit: 2,
+						inviteLimitCycle: 60,
+						inviteExpirationTime: 0,
+					} as any,
+				}, alice);
+				assert.strictEqual(updatedDefaultPolicies.status, 204);
+
+				const afterMeta = await fetchMetaFromDatabase(db);
+				assert.strictEqual(afterMeta.policies.canInvite, true);
+				assert.strictEqual(afterMeta.policies.inviteLimit, 2);
+
+				const inviteLimit = await api('invite/limit', {}, defaultPolicyUser);
+				assert.strictEqual(inviteLimit.status, 200);
+				assert.strictEqual(inviteLimit.body.remaining, 2);
+
+				const updateDefaultScopeDenied = await api('admin/roles/update-default-policies', {
+					policies: afterMeta.policies as any,
+				}, { token: readToken });
+				assert.strictEqual(updateDefaultScopeDenied.status, 403);
+				assert.strictEqual(castAsError(updateDefaultScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateServerSettings',
+					search: 'canInvite',
+				});
+				assert.ok(logs.length > 0);
+			} finally {
+				await api('admin/roles/update-default-policies', { policies: beforeMeta.policies as any }, alice);
+			}
+
+			const assignmentLogTypes = ['assignRole', 'unassignRole'] as const;
+			const assignmentLogged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of assignmentLogTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: assignableRole.body.id,
+					});
+					if (logs.length > 0) assignmentLogged.add(type);
+				}
+				if (assignmentLogged.size === assignmentLogTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...assignmentLogged].sort(), [...assignmentLogTypes].sort());
+
+			const deletedAssignableRole = await api('admin/roles/delete', { roleId: assignableRole.body.id }, alice);
+			assert.strictEqual(deletedAssignableRole.status, 204);
+
+			const deleted = await api('admin/roles/delete', { roleId: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/roles/show', { roleId: created.body.id }, alice);
+			assert.strictEqual(afterDelete.status, 400);
+			assert.strictEqual(castAsError(afterDelete.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const missingDelete = await api('admin/roles/delete', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const logTypes = ['createRole', 'updateRole', 'deleteRole'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
 	describe('invite', () => {
+		test('invite/limit keeps role policy, token scope, and remaining count semantics', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const inviter = await signup({ username: `honoinv${now.toString(36)}` });
+			const deniedUser = await signup({ username: `honoinvdeny${now.toString(36)}` });
+			const inviterRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono invite role ${now}`,
+				description: 'Hono invite role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {
+					canInvite: {
+						useDefault: false,
+						priority: 1,
+						value: true,
+					},
+					inviteLimit: {
+						useDefault: false,
+						priority: 1,
+						value: 2,
+					},
+					inviteLimitCycle: {
+						useDefault: false,
+						priority: 1,
+						value: 60,
+					},
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: inviter.id,
+				roleId: inviterRole.id,
+				expiresAt: null,
+			});
+			await createRegistrationTicketInDatabase(db, {
+				id: genId(config, now - 1000),
+				code: `hono-invite-recent-${now}`,
+				createdById: inviter.id,
+			});
+			await createRegistrationTicketInDatabase(db, {
+				id: genId(config, now - (1000 * 60 * 120)),
+				code: `hono-invite-old-${now}`,
+				createdById: inviter.id,
+			});
+
+			const allowed = await api('invite/limit', {}, inviter);
+			assert.strictEqual(allowed.status, 200);
+			assert.strictEqual(allowed.body.remaining, 1);
+
+			const roleDenied = await api('invite/limit', {}, deniedUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			assert.strictEqual(castAsError(roleDenied.body as any).error.id, 'c3d38592-54c0-429d-be96-5636b0431a61');
+
+			const readAccountToken = await createAppToken(inviter, ['read:account']);
+			const scopeDenied = await api('invite/limit', {}, { token: readAccountToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+
 		test('invite/create したコードを invite/list で取得でき、invite/delete で削除できる', async () => {
-			const inviterRole = await role(alice, {}, { canInvite: { priority: 0, useDefault: false, value: true } });
-			await api('admin/roles/assign', { userId: bob.id, roleId: inviterRole.id }, alice);
-			await api('admin/roles/assign', { userId: carol.id, roleId: inviterRole.id }, alice);
+			const config = loadConfig();
+			const now = Date.now();
+			const inviterRole = await createRoleInDatabase(db, {
+				id: genId(config, now + 10),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Invite role ${now}`,
+				description: 'Invite role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {
+					canInvite: {
+						priority: 0,
+						useDefault: false,
+						value: true,
+					},
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 11),
+				userId: bob.id,
+				roleId: inviterRole.id,
+				expiresAt: null,
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 12),
+				userId: carol.id,
+				roleId: inviterRole.id,
+				expiresAt: null,
+			});
 
 			const created = await api('invite/create', {}, bob);
 			assert.strictEqual(created.status, 200);
@@ -2225,15 +2669,450 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/invite/create したコードを admin/invite/list で取得できる', async () => {
-			const created = await api('admin/invite/create', { count: 2 }, alice);
+			const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString();
+			const created = await api('admin/invite/create', { count: 2, expiresAt }, alice);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.length, 2);
+			assert.strictEqual(created.body[0].createdBy?.id, alice.id);
+			assert.strictEqual(created.body[0].used, false);
+			assert.strictEqual(created.body[0].usedAt, null);
+			assert.strictEqual(created.body[0].expiresAt, expiresAt);
 
 			const list = await api('admin/invite/list', { type: 'unused' }, alice);
 			assert.strictEqual(list.status, 200);
 			for (const ticket of created.body) {
 				assert.ok(list.body.some(x => x.id === ticket.id));
 			}
+
+			const invalidDate = await api('admin/invite/create', { expiresAt: 'invalid-date' }, alice);
+			assert.strictEqual(invalidDate.status, 400);
+			assert.strictEqual(castAsError(invalidDate.body as any).error.code, 'INVALID_DATE_TIME');
+			assert.strictEqual(castAsError(invalidDate.body as any).error.id, 'f1380b15-3760-4c6c-a1db-5c3aaf1cbd49');
+
+			const readAdminInviteToken = await createAppToken(alice, ['read:admin:invite-codes']);
+			const scopeDenied = await api('admin/invite/create', {}, { token: readAdminInviteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoadmininv${Date.now().toString(36)}` });
+			const moderatorDenied = await api('admin/invite/list', {}, normalUser);
+			assert.strictEqual(moderatorDenied.status, 403);
+			assert.strictEqual(castAsError(moderatorDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			let logged = false;
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'createInvitation',
+					userId: alice.id,
+				});
+				logged = logs.some(log => {
+					const info = log.info as { invitations?: { id?: string }[] };
+					return info.invitations?.some(ticket => ticket.id === created.body[0].id) === true;
+				});
+				if (logged) break;
+				await new Promise(resolve => setTimeout(resolve, 10));
+			}
+			assert.ok(logged);
+		});
+	});
+
+	describe('admin/show-moderation-logs', () => {
+		test('admin/show-moderation-logs は検索、ユーザー pack、権限を維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const marker = `hono moderation log ${now}`;
+			const id = genId(config, now);
+			await createModerationLogInDatabase(db, {
+				id,
+				userId: alice.id,
+				type: 'updateUserNote',
+				info: {
+					userId: bob.id,
+					before: '',
+					after: marker,
+				},
+			});
+
+			const list = await api('admin/show-moderation-logs', {
+				type: 'updateUserNote',
+				userId: alice.id,
+				search: marker,
+			}, alice);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body.length, 1);
+			assert.strictEqual(list.body[0].id, id);
+			assert.strictEqual(list.body[0].createdAt, new Date(now).toISOString());
+			assert.strictEqual(list.body[0].type, 'updateUserNote');
+			assert.strictEqual(list.body[0].info.after, marker);
+			assert.strictEqual(list.body[0].userId, alice.id);
+			assert.strictEqual(list.body[0].user.id, alice.id);
+			assert.strictEqual(list.body[0].user.username, alice.username);
+
+			const scopeDeniedToken = await createAppToken(alice, ['read:admin:server-info']);
+			const scopeDenied = await api('admin/show-moderation-logs', {}, { token: scopeDeniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honomodlog${now.toString(36)}` });
+			const adminDenied = await api('admin/show-moderation-logs', {}, normalUser);
+			assert.strictEqual(adminDenied.status, 403);
+			assert.strictEqual(castAsError(adminDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/captcha', () => {
+		test('admin/captcha/current と admin/captcha/save は設定取得、保存、scope、権限を維持する', async () => {
+			const initial = await api('admin/captcha/current', {}, alice);
+			assert.strictEqual(initial.status, 200);
+			assert.strictEqual(typeof initial.body.provider, 'string');
+			assert.ok(initial.body.hcaptcha);
+			assert.ok(initial.body.mcaptcha);
+			assert.ok(initial.body.recaptcha);
+			assert.ok(initial.body.turnstile);
+
+			try {
+				const invalid = await api('admin/captcha/save', {
+					provider: 'testcaptcha',
+				}, alice);
+				assert.strictEqual(invalid.status, 400);
+				assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAMETERS');
+
+				const saved = await api('admin/captcha/save', {
+					provider: 'testcaptcha',
+					captchaResult: 'testcaptcha-passed',
+				}, alice);
+				assert.strictEqual(saved.status, 204);
+
+				const current = await api('admin/captcha/current', {}, alice);
+				assert.strictEqual(current.status, 200);
+				assert.strictEqual(current.body.provider, 'testcaptcha');
+			} finally {
+				await api('admin/captcha/save', { provider: 'none' }, alice);
+			}
+
+			const readToken = await createAppToken(alice, ['read:admin:meta']);
+			const scopeDenied = await api('admin/captcha/save', { provider: 'none' }, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honocaptcha${Date.now().toString(36)}` });
+			const roleDenied = await api('admin/captcha/current', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/announcements', () => {
+		test('admin/announcements は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
+			const now = Date.now();
+			const title = `hono-announcement-${now}`;
+			const created = await api('admin/announcements/create', {
+				title,
+				text: 'announcement body',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				forExistingUsers: false,
+				silence: false,
+				needConfirmationToRead: true,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.title, title);
+			assert.strictEqual(created.body.imageUrl, null);
+			assert.strictEqual((created.body as any).needConfirmationToRead, true);
+
+			const list = await api('admin/announcements/list', { limit: 20, status: 'active' }, alice);
+			assert.strictEqual(list.status, 200);
+			const listed = list.body.find(announcement => announcement.id === created.body.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.title, title);
+			assert.strictEqual(listed.reads, 0);
+			assert.strictEqual(listed.isActive, true);
+
+			const updated = await api('admin/announcements/update', {
+				id: created.body.id,
+				title: `${title}-updated`,
+				text: 'updated body',
+				imageUrl: '',
+				isActive: false,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const updatedList = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
+			assert.strictEqual(updatedList.status, 200);
+			const updatedAnnouncement = updatedList.body.find(announcement => announcement.id === created.body.id);
+			assert.ok(updatedAnnouncement);
+			assert.strictEqual(updatedAnnouncement.title, `${title}-updated`);
+			assert.strictEqual(updatedAnnouncement.text, 'updated body');
+			assert.strictEqual(updatedAnnouncement.imageUrl, null);
+			assert.strictEqual(updatedAnnouncement.isActive, false);
+
+			const noSuch = await api('admin/announcements/update', {
+				id: '0000000000000000',
+				title: 'missing',
+			}, alice);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
+
+			const readToken = await createAppToken(alice, ['read:admin:announcements']);
+			const scopeDenied = await api('admin/announcements/create', {
+				title,
+				text: 'announcement body',
+				imageUrl: null,
+			}, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoannounce${now.toString(36)}` });
+			const roleDenied = await api('admin/announcements/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/announcements/delete', { id: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
+			assert.strictEqual(afterDelete.status, 200);
+			assert.ok(!afterDelete.body.some(announcement => announcement.id === created.body.id));
+
+			const logTypes = ['createGlobalAnnouncement', 'updateGlobalAnnouncement', 'deleteGlobalAnnouncement'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/avatar-decorations', () => {
+		test('admin/avatar-decorations は作成、一覧、更新、削除、scope、ポリシー、ログを維持する', async () => {
+			const now = Date.now();
+			const manager = await signup({ username: `honoavmgr${now.toString(36)}` });
+			const config = loadConfig();
+			const managerRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `avatar manager ${now}`,
+				description: 'Hono avatar decoration admin role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: '7b29574c-ae8b-42b5-8127-3496ac6ea20c',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 0,
+				policies: {
+					canManageAvatarDecorations: { useDefault: false, priority: 0, value: true },
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: manager.id,
+				roleId: managerRole.id,
+				expiresAt: null,
+			});
+
+			const created = await api('admin/avatar-decorations/create', {
+				name: `hono-avatar-${now}`,
+				description: 'avatar decoration body',
+				url: 'https://example.test/avatar-decoration.png',
+				roleIdsThatCanBeUsedThisDecoration: [managerRole.id],
+				category: 'hono',
+			}, manager);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `hono-avatar-${now}`);
+			assert.strictEqual(created.body.category, 'hono');
+			assert.deepStrictEqual(created.body.roleIdsThatCanBeUsedThisDecoration, [managerRole.id]);
+
+			const list = await api('admin/avatar-decorations/list', {}, manager);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some(decoration => decoration.id === created.body.id));
+
+			const updated = await api('admin/avatar-decorations/update', {
+				id: created.body.id,
+				name: `hono-avatar-${now}-updated`,
+				description: 'updated body',
+				category: null,
+			}, manager);
+			assert.strictEqual(updated.status, 204);
+
+			const updatedList = await api('admin/avatar-decorations/list', {}, manager);
+			assert.strictEqual(updatedList.status, 200);
+			const updatedDecoration = updatedList.body.find(decoration => decoration.id === created.body.id);
+			assert.ok(updatedDecoration);
+			assert.strictEqual(updatedDecoration.name, `hono-avatar-${now}-updated`);
+			assert.strictEqual(updatedDecoration.description, 'updated body');
+			assert.strictEqual(updatedDecoration.category, null);
+
+			const readToken = await createAppToken(manager, ['read:admin:avatar-decorations']);
+			const scopeDenied = await api('admin/avatar-decorations/create', {
+				name: `hono-avatar-${now}-denied`,
+				description: 'avatar decoration body',
+				url: 'https://example.test/avatar-decoration.png',
+			}, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const policyDeniedUser = await signup({ username: `honoavden${now.toString(36)}` });
+			const policyDenied = await api('admin/avatar-decorations/list', {}, policyDeniedUser);
+			assert.strictEqual(policyDenied.status, 403);
+			assert.strictEqual(castAsError(policyDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/avatar-decorations/delete', { id: created.body.id }, manager);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/avatar-decorations/list', {}, manager);
+			assert.strictEqual(afterDelete.status, 200);
+			assert.ok(!afterDelete.body.some(decoration => decoration.id === created.body.id));
+
+			const logTypes = ['createAvatarDecoration', 'updateAvatarDecoration', 'deleteAvatarDecoration'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/ad', () => {
+		test('admin/ad は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
+			const now = Date.now();
+			const createPayload = {
+				url: 'https://example.test/ad',
+				memo: `hono-ad-${now}`,
+				place: 'square',
+				priority: 'middle',
+				ratio: 1,
+				expiresAt: now + 1000 * 60 * 60,
+				startsAt: now - 1000 * 60,
+				imageUrl: 'https://example.test/ad.png',
+				dayOfWeek: 0,
+				isSensitive: true,
+			};
+
+			const created = await api('admin/ad/create', createPayload, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.memo, createPayload.memo);
+			assert.strictEqual(created.body.isSensitive, true);
+
+			const list = await api('admin/ad/list', { limit: 20 }, alice);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some(ad => ad.id === created.body.id));
+
+			const updated = await api('admin/ad/update', {
+				id: created.body.id,
+				memo: `${createPayload.memo}-updated`,
+				ratio: 3,
+				isSensitive: false,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const updatedList = await api('admin/ad/list', { limit: 20 }, alice);
+			assert.strictEqual(updatedList.status, 200);
+			const updatedAd = updatedList.body.find(ad => ad.id === created.body.id);
+			assert.ok(updatedAd);
+			assert.strictEqual(updatedAd.memo, `${createPayload.memo}-updated`);
+			assert.strictEqual(updatedAd.ratio, 3);
+			assert.strictEqual(updatedAd.isSensitive, false);
+
+			const noSuch = await api('admin/ad/update', {
+				id: '0000000000000000',
+				memo: 'missing',
+			}, alice);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_AD');
+
+			const readToken = await createAppToken(alice, ['read:admin:ad']);
+			const scopeDenied = await api('admin/ad/create', createPayload, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoad${now.toString(36)}` });
+			const roleDenied = await api('admin/ad/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/ad/delete', { id: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/ad/list', { limit: 20 }, alice);
+			assert.strictEqual(afterDelete.status, 200);
+			assert.ok(!afterDelete.body.some(ad => ad.id === created.body.id));
+
+			const logTypes = ['createAd', 'updateAd', 'deleteAd'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin database stats', () => {
+		test('admin/get-index-stats と admin/get-table-stats はDB統計を返し、scopeを維持する', async () => {
+			const indexes = await api('admin/get-index-stats', {}, alice);
+			assert.strictEqual(indexes.status, 200);
+			assert.ok(Array.isArray(indexes.body));
+			assert.ok(indexes.body.some(row => typeof row.tablename === 'string' && typeof row.indexname === 'string'));
+
+			const tables = await api('admin/get-table-stats', {}, alice);
+			assert.strictEqual(tables.status, 200);
+			assert.ok(Object.keys(tables.body).length > 0);
+			assert.ok(Object.values(tables.body).some(row => typeof row.count === 'number' && typeof row.size === 'number'));
+
+			const indexToken = await createAppToken(alice, ['read:admin:index-stats']);
+			const tableScopeDenied = await api('admin/get-table-stats', {}, { token: indexToken });
+			assert.strictEqual(tableScopeDenied.status, 403);
+			assert.strictEqual(castAsError(tableScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honostats${Date.now().toString(36)}` });
+			const roleDenied = await api('admin/get-table-stats', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 	});
 

@@ -187,3 +187,14 @@ export async function isHonoApiModerator(
 	const roles = await getHonoApiUserRoles(deps, user);
 	return roles.some(role => role.isModerator || role.isAdministrator);
 }
+
+export async function isHonoApiAdministrator(
+	deps: HonoApiRolePolicyDependencies,
+	user: MiUser | null,
+): Promise<boolean> {
+	if (user == null) return false;
+	if (deps.meta.rootUserId === user.id) return true;
+
+	const roles = await getHonoApiUserRoles(deps, user);
+	return roles.some(role => role.isAdministrator);
+}

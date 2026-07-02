@@ -6,30 +6,26 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import type { MiUser } from '@/models/User.js';
-import { IdService } from '@/core/IdService.js';
 import { bindThis } from '@/decorators.js';
-import { createModerationLogInDatabase } from '@/core/ModerationLogStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { ModerationLogPayloads } from '@/types.js';
 import { moderationLogTypes } from '@/types.js';
+import type { Config } from '@/config.js';
+import { logModerationEventInDatabase } from './ModerationLogLogic.js';
 
 @Injectable()
 export class ModerationLogService {
 	constructor(
+		@Inject(DI.config)
+		private config: Config,
+
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
 	) {
 	}
 
 	@bindThis
 	public async log<T extends typeof moderationLogTypes[number]>(moderator: { id: MiUser['id'] }, type: T, info?: ModerationLogPayloads[T]) {
-		await createModerationLogInDatabase(this.drizzle, {
-			id: this.idService.gen(),
-			userId: moderator.id,
-			type: type,
-			info: (info as any) ?? {},
-		});
+		await logModerationEventInDatabase({ config: this.config, db: this.drizzle }, moderator, type, info);
 	}
 }
