@@ -35,7 +35,7 @@ const iSigninHistoryParamDef = {
 
 type ISigninHistoryParams = SchemaType<typeof iSigninHistoryParamDef>;
 
-function packHonoApiSignin(
+export function packHonoApiSignin(
 	deps: HonoApiIDependencies,
 	src: MiSignin,
 ): {

@@ -34,7 +34,7 @@ type SignupBody = {
 	emailAddress?: unknown;
 };
 
-type SignupResponse = Record<string, unknown> & {
+export type SignupResponse = Record<string, unknown> & {
 	token: string;
 };
 
@@ -111,19 +111,20 @@ async function assignRootUserIfMissing(deps: SignupDependencies, userId: MiUser[
 	deps.publishInternalEvent?.('metaUpdated', { before, after });
 }
 
-async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
+export async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
 	return {
 		...await packMeDetailedForHonoApi(deps, user, { includeSecrets: true }),
 		token,
 	};
 }
 
-async function createLocalSignupAccount(
+export async function createLocalSignupAccount(
 	deps: SignupDependencies,
 	params: {
 		username: string;
 		passwordHash: string | null;
 		host: string | null;
+		ignorePreservedUsernames?: boolean;
 	},
 ): Promise<{
 	account: MiUser;
@@ -139,7 +140,7 @@ async function createLocalSignupAccount(
 		throw signupValidationError('USED_USERNAME');
 	}
 
-	if (deps.meta.rootUserId != null) {
+	if (!params.ignorePreservedUsernames && deps.meta.rootUserId != null) {
 		if (deps.meta.preservedUsernames.map(x => x.toLowerCase()).includes(usernameLower)) {
 			throw signupValidationError('USED_USERNAME');
 		}
