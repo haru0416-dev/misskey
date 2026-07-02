@@ -17,7 +17,7 @@ import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
 import { handleHonoApiAdminAbuseUserReports, handleHonoApiAdminResolveAbuseUserReport, handleHonoApiAdminUpdateAbuseUserReport } from './hono-api-admin-abuse-reports.js';
 import { handleHonoApiAdminAbuseReportNotificationRecipientCreate, handleHonoApiAdminAbuseReportNotificationRecipientDelete, handleHonoApiAdminAbuseReportNotificationRecipientList, handleHonoApiAdminAbuseReportNotificationRecipientShow, handleHonoApiAdminAbuseReportNotificationRecipientUpdate } from './hono-api-admin-abuse-report-notification-recipient.js';
-import { handleHonoApiAdminAccountsFindByEmail } from './hono-api-admin-accounts.js';
+import { handleHonoApiAdminAccountsFindByEmail, handleHonoApiAdminUpdateProxyAccount } from './hono-api-admin-accounts.js';
 import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
 import { handleHonoApiAdminAnnouncementsCreate, handleHonoApiAdminAnnouncementsDelete, handleHonoApiAdminAnnouncementsList, handleHonoApiAdminAnnouncementsUpdate } from './hono-api-admin-announcements.js';
 import { handleHonoApiAdminAvatarDecorationsCreate, handleHonoApiAdminAvatarDecorationsDelete, handleHonoApiAdminAvatarDecorationsList, handleHonoApiAdminAvatarDecorationsUpdate } from './hono-api-admin-avatar-decorations.js';
@@ -374,6 +374,18 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiAdmin(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminMeta(deps));
+		});
+	});
+
+	app.post('/admin/update-proxy-account', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:account');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminUpdateProxyAccount(deps, auth.user, body));
 		});
 	});
 

@@ -309,6 +309,41 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/update-proxy-account', () => {
+		test('admin/update-proxy-account は description 更新、scope、権限、ログを維持する', async () => {
+			const description = `hono proxy account ${Date.now().toString(36)}`;
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:account']);
+			const scopeDenied = await api('admin/update-proxy-account', { description }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const roleDenied = await api('admin/update-proxy-account', { description }, bob);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			try {
+				const updated = await api('admin/update-proxy-account', { description }, alice);
+				assert.strictEqual(updated.status, 200);
+				assert.strictEqual(typeof updated.body.id, 'string');
+				assert.strictEqual(updated.body.description, description);
+
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, updated.body.id);
+				assert.strictEqual(profile.description, description);
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 5,
+					order: 'desc',
+					type: 'updateProxyAccountDescription',
+					userId: alice.id,
+				});
+				assert.ok(logs.some(log => (log.info as { after?: string | null }).after === description));
+			} finally {
+				await api('admin/update-proxy-account', { description: null }, alice);
+			}
+		});
+	});
+
 	describe('availability endpoints', () => {
 		test('username availability reflects existing local users', async () => {
 			const available = await api('username/available', {

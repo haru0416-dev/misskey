@@ -3,11 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
+import { updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
 import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import { descriptionSchema } from '@/models/User.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
-import { packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
+import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiAdminAccountsDependencies = UserPackingDependencies;
@@ -20,7 +25,15 @@ const adminAccountsFindByEmailParamDef = {
 	required: ['email'],
 } as const;
 
+const adminUpdateProxyAccountParamDef = {
+	type: 'object',
+	properties: {
+		description: { ...descriptionSchema, nullable: true },
+	},
+} as const;
+
 type AdminAccountsFindByEmailParams = SchemaType<typeof adminAccountsFindByEmailParamDef>;
+type AdminUpdateProxyAccountParams = SchemaType<typeof adminUpdateProxyAccountParamDef>;
 
 function userNotFoundError(): HonoApiError {
 	return new HonoApiError({
@@ -43,4 +56,28 @@ export async function handleHonoApiAdminAccountsFindByEmail(
 	}
 
 	return await packUserDetailedNotMeForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, profile.userId));
+}
+
+export async function handleHonoApiAdminUpdateProxyAccount(
+	deps: HonoApiAdminAccountsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<MeDetailedHonoApiResponse> {
+	const params = parseHonoApiParams(adminUpdateProxyAccountParamDef, body) as AdminUpdateProxyAccountParams;
+	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy');
+	const updated = await updateSystemAccountUserInDatabase(deps.db, {
+		userId: proxy.id,
+		description: params.description,
+	});
+
+	if (params.description !== undefined) {
+		void logModerationEventInDatabase(deps, me, 'updateProxyAccountDescription', {
+			before: null,
+			after: params.description,
+		});
+	}
+
+	return await packMeDetailedForHonoApi(deps, updated, {
+		includeSecrets: false,
+	});
 }
