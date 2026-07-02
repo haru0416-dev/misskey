@@ -7,6 +7,7 @@
 - Enhance: データベースインデックスを追加し、一部のサーバー処理のパフォーマンスと重複登録耐性を改善
 - Enhance: バックエンドのデータベースアクセスを TypeORM から Drizzle に移行
 - Fix: Hono サーバーでクライアントのベース HTML を返せるように
+- Fix: Hono サーバーでユーザーの Atom/RSS/JSON feed を返せるように
 
 ## 2026.6.1
 

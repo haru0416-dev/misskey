@@ -38,7 +38,6 @@ import { fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
 import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { FeedService } from './FeedService.js';
 import { ClientLoggerService } from './ClientLoggerService.js';
 import { HtmlTemplateService } from './HtmlTemplateService.js';
 
@@ -79,7 +78,6 @@ export class ClientServerService {
 		private clipEntityService: ClipEntityService,
 		private channelEntityService: ChannelEntityService,
 		private announcementEntityService: AnnouncementEntityService,
-		private feedService: FeedService,
 		private htmlTemplateService: HtmlTemplateService,
 		private clientLoggerService: ClientLoggerService,
 	) {
@@ -149,58 +147,6 @@ export class ClientServerService {
 				...data,
 			}));
 		};
-
-		const getFeed = async (acct: string) => {
-			const { username, host } = Acct.parse(acct);
-			const user = await fetchUserByUsernameAndHostFromDatabase(this.drizzle, username, host ?? null);
-
-			return user && !user.isSuspended && !user.requireSigninToViewContents && (await this.feedService.packFeed(user));
-		};
-
-		// Atom
-		fastify.get<{ Params: { user?: string; } }>('/@:user.atom', async (request, reply) => {
-			if (request.params.user == null) return await renderBase(reply);
-
-			const feed = await getFeed(request.params.user);
-
-			if (feed) {
-				reply.header('Content-Type', 'application/atom+xml; charset=utf-8');
-				return feed.atom1();
-			} else {
-				reply.code(404);
-				return;
-			}
-		});
-
-		// RSS
-		fastify.get<{ Params: { user?: string; } }>('/@:user.rss', async (request, reply) => {
-			if (request.params.user == null) return await renderBase(reply);
-
-			const feed = await getFeed(request.params.user);
-
-			if (feed) {
-				reply.header('Content-Type', 'application/rss+xml; charset=utf-8');
-				return feed.rss2();
-			} else {
-				reply.code(404);
-				return;
-			}
-		});
-
-		// JSON
-		fastify.get<{ Params: { user?: string; } }>('/@:user.json', async (request, reply) => {
-			if (request.params.user == null) return await renderBase(reply);
-
-			const feed = await getFeed(request.params.user);
-
-			if (feed) {
-				reply.header('Content-Type', 'application/json; charset=utf-8');
-				return feed.json1();
-			} else {
-				reply.code(404);
-				return;
-			}
-		});
 
 		//#region SSR
 		// User

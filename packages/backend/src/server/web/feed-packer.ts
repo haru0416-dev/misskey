@@ -1,0 +1,77 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Feed } from 'feed';
+import { parse as mfmParse } from 'mfm-js';
+import type { Config } from '@/config.js';
+import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
+import { mfmToHtml } from '@/core/MfmToHtml.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
+import { parseId } from '@/misc/id/parse-id.js';
+
+export type FeedPackerDependencies = {
+	config: Config;
+	db: MiDrizzleDatabase;
+	meta: MiMeta;
+};
+
+function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
+	if ((user.host == null || user.host === config.host) && user.username.includes('.') && meta.iconUrl) {
+		return meta.iconUrl;
+	}
+
+	return `${config.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.host}`;
+}
+
+export async function packFeed(
+	deps: FeedPackerDependencies,
+	user: MiUser,
+): Promise<Feed> {
+	const author = {
+		link: `${deps.config.url}/@${user.username}`,
+		name: user.name ?? user.username,
+	};
+
+	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+	const notes = await listPublicFeedNotesByUserIdFromDatabase(deps.db, user.id, 20);
+
+	const feed = new Feed({
+		id: author.link,
+		title: `${author.name} (@${user.username}@${deps.config.host})`,
+		updated: notes.length !== 0 ? parseId(deps.config, notes[0].id).date : undefined,
+		generator: 'Misskey',
+		description: `${user.notesCount} Notes, ${profile.followingVisibility === 'public' ? user.followingCount : '?'} Following, ${profile.followersVisibility === 'public' ? user.followersCount : '?'} Followers${profile.description ? ` · ${profile.description}` : ''}`,
+		link: author.link,
+		image: (user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),
+		feedLinks: {
+			json: `${author.link}.json`,
+			atom: `${author.link}.atom`,
+		},
+		author,
+		copyright: user.name ?? user.username,
+	});
+
+	for (const note of notes) {
+		const files = note.fileIds.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, note.fileIds) : [];
+		const file = files.find(file => file.type.startsWith('image/'));
+		const text = note.text;
+
+		feed.addItem({
+			title: `New note by ${author.name}`,
+			link: `${deps.config.url}/notes/${note.id}`,
+			date: parseId(deps.config, note.id).date,
+			description: note.cw ?? undefined,
+			content: text ? mfmToHtml(deps.config, mfmParse(text), JSON.parse(note.mentionedRemoteUsers)) ?? undefined : undefined,
+			image: file ? getDriveFilePublicUrl(file, deps) : undefined,
+		});
+	}
+
+	return feed;
+}
