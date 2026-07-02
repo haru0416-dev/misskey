@@ -1,11 +1,13 @@
+import type { Server } from 'node:http';
 import { portToPid } from 'pid-port';
 import fkill from 'fkill';
-import Fastify from 'fastify';
+import { Hono } from 'hono';
 import { NestFactory } from '@nestjs/core';
 import { MainModule } from '@/MainModule.js';
 import { ServerService } from '@/server/ServerService.js';
 import { loadConfig } from '@/config.js';
 import { NestLogger } from '@/NestLogger.js';
+import { createHonoNodeServer } from '@/server/hono-node-server.js';
 import { INestApplicationContext } from '@nestjs/common';
 
 const config = loadConfig();
@@ -15,12 +17,14 @@ process.env.NODE_ENV = 'test';
 
 let app: INestApplicationContext;
 let serverService: ServerService;
+let controllerServer: Server | undefined;
 
 /**
  * テスト用のサーバインスタンスを起動する
  */
 export async function setup() {
 	await killTestServer();
+	await stopControllerEndpoints();
 
 	console.log('starting application...');
 
@@ -44,6 +48,7 @@ export async function setup() {
 export async function teardown() {
 	await serverService.dispose();
 	await app.close();
+	await stopControllerEndpoints();
 	await killTestServer();
 }
 
@@ -67,22 +72,22 @@ async function killTestServer() {
  * @param port
  */
 async function startControllerEndpoints(port = config.port + 1000) {
-	const fastify = Fastify();
+	const controller = new Hono();
 
-	fastify.post<{ Body: { key?: string, value?: string } }>('/env', async (req, res) => {
-		console.log(req.body);
-		const key = req.body['key'];
+	controller.post('/env', async (c) => {
+		const body = await c.req.json<{ key?: string, value?: string }>().catch(() => ({}));
+		console.log(body);
+		const key = body.key;
 		if (!key) {
-			res.code(400).send({ success: false });
-			return;
+			return c.json({ success: false }, 400);
 		}
 
-		process.env[key] = req.body['value'];
+		process.env[key] = body.value;
 
-		res.code(200).send({ success: true });
+		return c.json({ success: true });
 	});
 
-	fastify.post<{ Body: { key?: string, value?: string } }>('/env-reset', async (req, res) => {
+	controller.post('/env-reset', async (c) => {
 		process.env = JSON.parse(originEnv);
 
 		await serverService.dispose();
@@ -98,8 +103,24 @@ async function startControllerEndpoints(port = config.port + 1000) {
 		serverService = app.get(ServerService);
 		await serverService.launch();
 
-		res.code(200).send({ success: true });
+		return c.json({ success: true });
 	});
 
-	await fastify.listen({ port: port, host: 'localhost' });
+	controllerServer = createHonoNodeServer({ app: controller });
+	await new Promise<void>((resolve, reject) => {
+		controllerServer!.once('error', reject);
+		controllerServer!.listen(port, 'localhost', () => {
+			controllerServer!.off('error', reject);
+			resolve();
+		});
+	});
+}
+
+async function stopControllerEndpoints() {
+	if (!controllerServer) return;
+
+	await new Promise<void>((resolve, reject) => {
+		controllerServer!.close(err => err ? reject(err) : resolve());
+	});
+	controllerServer = undefined;
 }
