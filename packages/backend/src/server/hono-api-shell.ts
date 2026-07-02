@@ -27,6 +27,8 @@ import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, 
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
+import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
+import { handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
@@ -36,6 +38,7 @@ import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiPromoRead } from './hono-api-promo.js';
+import { assertHonoApiRateLimit } from './hono-api-rate-limit.js';
 import { handleHonoApiResetDb } from './hono-api-reset-db.js';
 import {
 	handleHonoApiRegistryGet,
@@ -568,6 +571,39 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'write:flash-likes');
 
 			await handleHonoApiFlashUnlike(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/flash/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:flash');
+			await assertHonoApiRateLimit(deps, 'flash/update', {
+				duration: 60 * 60 * 1000,
+				max: 300,
+			}, auth.user.id);
+
+			await handleHonoApiFlashUpdate(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/following/update-all', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:following');
+			await assertHonoApiRateLimit(deps, 'following/update-all', {
+				duration: 60 * 60 * 1000,
+				max: 10,
+			}, auth.user.id);
+
+			await handleHonoApiFollowingUpdateAll(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});

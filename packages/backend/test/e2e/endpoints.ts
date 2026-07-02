@@ -25,7 +25,8 @@ import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
-import { createFlashInDatabase } from '@/core/FlashStore.js';
+import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
+import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
@@ -1577,6 +1578,147 @@ describe('Endpoints', () => {
 				['users/lists/delete', { listId: genId(config) }, readAccountToken],
 			] as const) {
 				const denied = await api(endpoint, params as any, { token });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+		});
+	});
+
+	describe('Hono rate limited write endpoints', () => {
+		test('following/update-all updates only the caller followings', async () => {
+			const config = loadConfig();
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: alice.id,
+				followeeId: bob.id,
+				notify: 'normal',
+				withReplies: false,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: alice.id,
+				followeeId: carol.id,
+				notify: 'normal',
+				withReplies: false,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: bob.id,
+				followeeId: alice.id,
+				notify: 'normal',
+				withReplies: false,
+			});
+
+			const res = await api('following/update-all', {
+				notify: 'none',
+				withReplies: true,
+			}, alice);
+			assert.strictEqual(res.status, 204);
+
+			const aliceToBob = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, alice.id, bob.id);
+			const aliceToCarol = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, alice.id, carol.id);
+			const bobToAlice = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, bob.id, alice.id);
+			assert.strictEqual(aliceToBob?.notify, null);
+			assert.strictEqual(aliceToBob?.withReplies, true);
+			assert.strictEqual(aliceToCarol?.notify, null);
+			assert.strictEqual(aliceToCarol?.withReplies, true);
+			assert.strictEqual(bobToAlice?.notify, 'normal');
+			assert.strictEqual(bobToAlice?.withReplies, false);
+		});
+
+		test('flash/update updates own flash and preserves ownership errors', async () => {
+			const config = loadConfig();
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'old title',
+				summary: 'old summary',
+				userId: alice.id,
+				script: 'old script',
+				permissions: [],
+				visibility: 'public',
+			});
+			const otherFlash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'other title',
+				summary: 'other summary',
+				userId: bob.id,
+				script: 'other script',
+				permissions: [],
+				visibility: 'public',
+			});
+
+			const updated = await api('flash/update', {
+				flashId: flash.id,
+				title: 'new title',
+				summary: 'new summary',
+				script: 'new script',
+				permissions: ['read:account'],
+				visibility: 'private',
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const fetched = await fetchFlashByIdFromDatabase(db, flash.id);
+			assert.strictEqual(fetched?.title, 'new title');
+			assert.strictEqual(fetched?.summary, 'new summary');
+			assert.strictEqual(fetched?.script, 'new script');
+			assert.deepStrictEqual(fetched?.permissions, ['read:account']);
+			assert.strictEqual(fetched?.visibility, 'private');
+
+			const denied = await api('flash/update', { flashId: otherFlash.id, title: 'bad update' }, alice);
+			assert.strictEqual(denied.status, 400);
+			assert.strictEqual(castAsError(denied.body as any).error.id, '08e60c88-5948-478e-a132-02ec701d67b2');
+
+			const missing = await api('flash/update', { flashId: genId(config) }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '611e13d2-309e-419a-a5e4-e0422da39b02');
+		});
+
+		test('flash/update rejects moved users before side effects', async () => {
+			const config = loadConfig();
+			const movedUser = await signup({ username: `mvflash${Date.now().toString(36)}` });
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'moved title',
+				summary: 'moved summary',
+				userId: movedUser.id,
+				script: 'moved script',
+				permissions: [],
+				visibility: 'public',
+			});
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+
+			const denied = await api('flash/update', { flashId: flash.id, title: 'updated by moved user' }, movedUser);
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+
+			const unchanged = await fetchFlashByIdFromDatabase(db, flash.id);
+			assert.strictEqual(unchanged?.title, 'moved title');
+		});
+
+		test('Hono rate limited write endpoints require matching app token permissions', async () => {
+			const config = loadConfig();
+			const readAccountToken = await createAppToken(alice, ['read:account']);
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'permission title',
+				summary: 'permission summary',
+				userId: alice.id,
+				script: 'permission script',
+				permissions: [],
+				visibility: 'public',
+			});
+
+			for (const [endpoint, params] of [
+				['following/update-all', { notify: 'normal' }],
+				['flash/update', { flashId: flash.id, title: 'denied update' }],
+			] as const) {
+				const denied = await api(endpoint, params as any, { token: readAccountToken });
 				assert.strictEqual(denied.status, 403, endpoint);
 				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
 			}
