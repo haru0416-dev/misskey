@@ -35,7 +35,7 @@ import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, h
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono-api-error.js';
-import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
+import { handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import {
 	handleHonoApiDriveFilesCheckExistence,
@@ -270,6 +270,12 @@ async function assertHonoApiAdmin(deps: ApiShellDependencies, auth: { user: NonN
 
 async function assertHonoApiCanManageAvatarDecorations(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
 	if (!(await getHonoApiRolePolicies(deps, auth.user)).canManageAvatarDecorations) {
+		throw rolePermissionDeniedError();
+	}
+}
+
+async function assertHonoApiCanManageCustomEmojis(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
+	if (!(await getHonoApiRolePolicies(deps, auth.user)).canManageCustomEmojis) {
 		throw rolePermissionDeniedError();
 	}
 }
@@ -1466,6 +1472,30 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			});
+		});
+	});
+
+	app.post('/admin/emoji/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminEmojiList(deps, body));
+		});
+	});
+
+	app.post('/admin/emoji/list-remote', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminEmojiListRemote(deps, body));
 		});
 	});
 

@@ -1144,6 +1144,147 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/emoji', () => {
+		test('admin/emoji/list と list-remote は filter、pagination、packing、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haem${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const localFirst = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 2000),
+				name: `honoemoji_first_${suffix}`,
+				host: null,
+				aliases: [`alias_${suffix}`],
+				category: `category_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/first-original.webp`,
+				publicUrl: '',
+				license: `license ${suffix}`,
+				isSensitive: true,
+				localOnly: true,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const localSecond = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `honoemoji_second_${suffix}`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/second-original.webp`,
+				publicUrl: `${origin}/emoji/${suffix}/second-public.webp`,
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const remoteHost = `hono-emoji-${suffix}.example`;
+			const remoteOlder = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1500),
+				name: `remote_old_${suffix}`,
+				host: remoteHost,
+				aliases: [],
+				category: `remote_${suffix}`,
+				originalUrl: `https://${remoteHost}/emoji/old.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const remoteNewer = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 500),
+				name: `remote_new_${suffix}`,
+				host: remoteHost,
+				aliases: [],
+				category: `remote_${suffix}`,
+				originalUrl: `https://${remoteHost}/emoji/new-original.webp`,
+				publicUrl: `https://${remoteHost}/emoji/new-public.webp`,
+				license: `remote license ${suffix}`,
+				isSensitive: true,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const listed = await api('admin/emoji/list', {
+					limit: 10,
+					query: suffix,
+					sinceDate: now - 3000,
+				}, manager);
+				assert.strictEqual(listed.status, 200);
+				const localEmojis = listed.body as any[];
+				assert.deepStrictEqual(localEmojis.map(emoji => emoji.id), [localFirst.id, localSecond.id]);
+				assert.strictEqual(localEmojis[0].name, localFirst.name);
+				assert.deepStrictEqual(localEmojis[0].aliases, [`alias_${suffix}`]);
+				assert.strictEqual(localEmojis[0].category, `category_${suffix}`);
+				assert.strictEqual(localEmojis[0].url, localFirst.originalUrl);
+				assert.strictEqual(localEmojis[0].license, `license ${suffix}`);
+				assert.strictEqual(localEmojis[0].isSensitive, true);
+				assert.strictEqual(localEmojis[0].localOnly, true);
+				assert.deepStrictEqual(localEmojis[0].roleIdsThatCanBeUsedThisEmojiAsReaction, []);
+				assert.strictEqual(localEmojis[1].url, localSecond.publicUrl);
+
+				const listedByColonQuery = await api('admin/emoji/list', {
+					limit: 10,
+					query: `:${localFirst.name}:`,
+					sinceDate: now - 3000,
+				}, manager);
+				assert.strictEqual(listedByColonQuery.status, 200);
+				assert.deepStrictEqual((listedByColonQuery.body as any[]).map(emoji => emoji.id), [localFirst.id]);
+
+				const remoteListed = await api('admin/emoji/list-remote', {
+					limit: 10,
+					query: 'remote_',
+					host: remoteHost.toUpperCase(),
+					sinceDate: now - 3000,
+				}, manager);
+				assert.strictEqual(remoteListed.status, 200);
+				const remoteEmojis = remoteListed.body as any[];
+				assert.deepStrictEqual(remoteEmojis.map(emoji => emoji.id), [remoteNewer.id, remoteOlder.id]);
+				assert.strictEqual(remoteEmojis[0].host, remoteHost);
+				assert.strictEqual(remoteEmojis[0].url, remoteNewer.publicUrl);
+				assert.strictEqual(remoteEmojis[0].license, `remote license ${suffix}`);
+				assert.strictEqual(remoteEmojis[0].isSensitive, true);
+
+				const readToken = await createAppToken(manager, ['read:admin:emoji']);
+				const byToken = await api('admin/emoji/list-remote', {
+					limit: 1,
+					query: 'remote_',
+					host: remoteHost,
+				}, { token: readToken });
+				assert.strictEqual(byToken.status, 200);
+				assert.deepStrictEqual((byToken.body as any[]).map(emoji => emoji.id), [remoteNewer.id]);
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
+				const scopeDenied = await api('admin/emoji/list', {}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/list', {}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+	});
+
 	describe('announcement endpoints', () => {
 		test('announcements list and show respect user-specific visibility', async () => {
 			const config = loadConfig();
