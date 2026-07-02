@@ -6,7 +6,7 @@
 import { Hono, type Context } from 'hono';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { UserAuthService } from '@/core/UserAuthService.js';
@@ -33,6 +33,7 @@ import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-ap
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiPromoRead } from './hono-api-promo.js';
+import { handleHonoApiResetDb } from './hono-api-reset-db.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -54,6 +55,7 @@ import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
 export type ApiShellDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
+	dbPool: MiDrizzlePool;
 	meta: MiMeta;
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
@@ -559,6 +561,14 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			await handleHonoApiResetPassword(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/reset-db', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await handleHonoApiResetDb(deps, body);
 			return emptyResponse(c);
 		});
 	});
