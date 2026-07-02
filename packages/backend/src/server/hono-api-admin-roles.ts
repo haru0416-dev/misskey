@@ -11,6 +11,10 @@ import {
 	type RoleUpdateOptions,
 } from '@/core/RoleLogic.js';
 import {
+	listActiveRoleAssignmentsByRoleIdFromDatabase,
+	resolveRoleAssignmentPagination,
+} from '@/core/RoleAssignmentStore.js';
+import {
 	fetchRoleByIdFromDatabase,
 	listRolesOrderByLastUsedAtDescFromDatabase,
 } from '@/core/RoleStore.js';
@@ -19,6 +23,7 @@ import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -26,6 +31,7 @@ import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 import { packHonoApiRole } from './hono-api-roles.js';
+import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from './hono-api-user.js';
 
 export type HonoApiAdminRoleDependencies = {
 	config: Config;
@@ -129,11 +135,32 @@ const adminRolesUpdateDefaultPoliciesParamDef = {
 	required: ['policies'],
 } as const;
 
+const adminRolesUsersParamDef = {
+	type: 'object',
+	properties: {
+		roleId: { type: 'string', format: 'misskey:id' },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+	},
+	required: ['roleId'],
+} as const;
+
 type AdminRolesCreateParams = SchemaType<typeof adminRolesCreateParamDef>;
 type AdminRolesDeleteParams = SchemaType<typeof adminRolesDeleteParamDef>;
 type AdminRolesShowParams = SchemaType<typeof adminRolesShowParamDef>;
 type AdminRolesUpdateParams = SchemaType<typeof adminRolesUpdateParamDef>;
 type AdminRolesUpdateDefaultPoliciesParams = SchemaType<typeof adminRolesUpdateDefaultPoliciesParamDef>;
+type AdminRolesUsersParams = SchemaType<typeof adminRolesUsersParamDef>;
+
+type AdminRoleUser = {
+	id: string;
+	createdAt: string;
+	user: UserDetailedNotMeHonoApiResponse;
+	expiresAt: string | null;
+};
 
 function noSuchRoleError(id: string): HonoApiError {
 	return new HonoApiError({
@@ -263,4 +290,30 @@ export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
 		before: before.policies,
 		after: after.policies,
 	});
+}
+
+export async function handleHonoApiAdminRolesUsers(
+	deps: HonoApiAdminRoleDependencies,
+	body: Record<string, unknown>,
+): Promise<AdminRoleUser[]> {
+	const params = parseHonoApiParams(adminRolesUsersParamDef, body) as AdminRolesUsersParams;
+	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
+	if (role == null) throw noSuchRoleError('224eff5e-2488-4b18-b3e7-f50d94421648');
+
+	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
+		limit: params.limit,
+		...resolveRoleAssignmentPagination({
+			gen: (time?: number) => genId(deps.config, time),
+		}, params),
+	});
+
+	const packedUsers = await packUserDetailedNotMeManyForHonoApi(deps, assigns.map(assign => assign.userId));
+	const userById = new Map(packedUsers.map(user => [user.id, user]));
+
+	return assigns.map(assign => ({
+		id: assign.id,
+		createdAt: parseId(deps.config, assign.id).date.toISOString(),
+		user: userById.get(assign.userId)!,
+		expiresAt: assign.expiresAt?.toISOString() ?? null,
+	}));
 }

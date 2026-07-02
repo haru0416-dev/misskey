@@ -2198,6 +2198,7 @@ describe('Endpoints', () => {
 	describe('admin/roles', () => {
 		test('admin/roles は作成、一覧、表示、scope、権限、ログを維持する', async () => {
 			const now = Date.now();
+			const config = loadConfig();
 			const createPayload = {
 				name: `Hono admin role ${now}`,
 				description: 'Hono admin role endpoint test',
@@ -2279,6 +2280,33 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
 
 			const readToken = await createAppToken(alice, ['read:admin:roles']);
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1000),
+				userId: bob.id,
+				roleId: created.body.id,
+				expiresAt: null,
+			});
+			const carolRoleAssignment = await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1001),
+				userId: carol.id,
+				roleId: created.body.id,
+				expiresAt: new Date(now + 60 * 1000),
+			});
+			const users = await api('admin/roles/users', {
+				roleId: created.body.id,
+				limit: 1,
+			}, { token: readToken });
+			assert.strictEqual(users.status, 200);
+			assert.strictEqual(users.body.length, 1);
+			assert.strictEqual(users.body[0].id, carolRoleAssignment.id);
+			assert.strictEqual(users.body[0].user.id, carol.id);
+			assert.strictEqual(users.body[0].user.username, carol.username);
+			assert.strictEqual(users.body[0].expiresAt, new Date(now + 60 * 1000).toISOString());
+
+			const missingUsersRole = await api('admin/roles/users', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missingUsersRole.status, 400);
+			assert.strictEqual(castAsError(missingUsersRole.body as any).error.code, 'NO_SUCH_ROLE');
+
 			const scopeDenied = await api('admin/roles/create', {
 				...createPayload,
 				name: `Hono admin role denied ${now}`,
@@ -2290,6 +2318,9 @@ describe('Endpoints', () => {
 			const roleDenied = await api('admin/roles/list', {}, normalUser);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			const usersRoleDenied = await api('admin/roles/users', { roleId: created.body.id }, normalUser);
+			assert.strictEqual(usersRoleDenied.status, 403);
+			assert.strictEqual(castAsError(usersRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
 			const defaultPolicyUser = await signup({ username: `honorolepol${now.toString(36)}` });
 			const beforeMeta = await fetchMetaFromDatabase(db);
