@@ -5,8 +5,8 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { Hono } from 'hono';
 import { describe, expect, test, beforeAll, afterAll, afterEach } from 'vitest';
 import sharp from 'sharp';
 import { initTestDb, randomString } from '../../utils.js';
@@ -20,7 +20,7 @@ import { IdService } from '@/core/IdService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { loadConfig, type Config } from '@/config.js';
-import { FileServerService } from '@/server/FileServerService.js';
+import { createFileServerApp } from '@/server/hono-file-server.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { driveFile, type DriveFileInsert } from '@/db/schema/drive-file.js';
@@ -73,16 +73,32 @@ async function createRemoteFileServer() {
 	};
 }
 
-describe('FileServerService', () => {
+type InjectOptions = {
+	method: string;
+	url: string;
+	headers?: Record<string, string>;
+};
+
+async function inject(app: Hono, options: InjectOptions) {
+	const response = await app.request(options.url, {
+		method: options.method,
+		headers: options.headers,
+	});
+
+	return {
+		statusCode: response.status,
+		headers: Object.fromEntries(response.headers.entries()) as Record<string, string>,
+	};
+}
+
+describe('createFileServerApp', () => {
 	let drizzlePool: MiDrizzlePool;
 	let drizzle: MiDrizzleDatabase;
-	let fastify: FastifyInstance;
-	let externalFastify: FastifyInstance;
+	let app: Hono;
+	let externalApp: Hono;
 	let internalStorageService: InternalStorageService;
 	let idService: IdService;
 	let config: Config;
-	let fileServerService: FileServerService;
-	let externalFileServerService: FileServerService;
 	let remoteServer: FastifyInstance;
 	let remotePngUrl: string;
 	let remoteSvgUrl: string;
@@ -161,47 +177,32 @@ describe('FileServerService', () => {
 		const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
 		internalStorageService = new InternalStorageService(config);
 		idService = new IdService(config);
-		fileServerService = new FileServerService(
+		app = createFileServerApp({
 			config,
-			drizzle,
+			db: drizzle,
 			fileInfoService,
 			downloadService,
 			imageProcessingService,
 			videoProcessingService,
 			internalStorageService,
-			loggerService,
-		);
-
-		fastify = Fastify();
-		await fastify.register(fastifyStatic, {
-			root: path.resolve('src/server/assets'),
-			serve: false,
+			logger: loggerService.getLogger('server', 'gray'),
 		});
-		fileServerService.createServer(fastify, {}, () => {});
-		await fastify.ready();
 
 		const externalConfig = {
 			...config,
 			mediaProxy: 'https://media-proxy.test',
 			externalMediaProxyEnabled: true,
 		} as Config;
-		externalFileServerService = new FileServerService(
-			externalConfig,
-			drizzle,
+		externalApp = createFileServerApp({
+			config: externalConfig,
+			db: drizzle,
 			fileInfoService,
 			downloadService,
 			imageProcessingService,
 			videoProcessingService,
 			internalStorageService,
-			loggerService,
-		);
-		externalFastify = Fastify();
-		await externalFastify.register(fastifyStatic, {
-			root: path.resolve('src/server/assets'),
-			serve: false,
+			logger: loggerService.getLogger('server', 'gray'),
 		});
-		externalFileServerService.createServer(externalFastify, {}, () => {});
-		await externalFastify.ready();
 
 		const remoteServerInfo = await createRemoteFileServer();
 		remoteServer = remoteServerInfo.server;
@@ -231,8 +232,6 @@ describe('FileServerService', () => {
 	});
 
 	afterAll(async () => {
-		await fastify.close();
-		await externalFastify.close();
 		await remoteServer.close();
 		await drizzlePool.end();
 		if (createdFallbackAssets) {
@@ -246,7 +245,7 @@ describe('FileServerService', () => {
 			process.env.NODE_ENV = 'test';
 
 			try {
-				const res = await fastify.inject({
+				const res = await inject(app, {
 					method: 'GET',
 					url: '/files/app-default.jpg',
 				});
@@ -266,7 +265,7 @@ describe('FileServerService', () => {
 			process.env.NODE_ENV = 'development';
 
 			try {
-				const res = await fastify.inject({
+				const res = await inject(app, {
 					method: 'GET',
 					url: '/files/app-default.jpg',
 				});
@@ -279,7 +278,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /files/app-default.jpg?x=1 クエリを除去してリダイレクトする', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: '/files/app-default.jpg?x=1',
 			});
@@ -294,7 +293,7 @@ describe('FileServerService', () => {
 		test('GET /files/:key 404 のときダミー画像を返す', async () => {
 			const accessKey = randomString();
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 			});
@@ -312,7 +311,7 @@ describe('FileServerService', () => {
 				isLink: false,
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 			});
@@ -334,7 +333,7 @@ describe('FileServerService', () => {
 				isLink: false,
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 				headers: {
@@ -359,7 +358,7 @@ describe('FileServerService', () => {
 				isLink: false,
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 				headers: {
@@ -385,7 +384,7 @@ describe('FileServerService', () => {
 				name: 'sample.png',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${thumbnailKey}`,
 				headers: {
@@ -413,7 +412,7 @@ describe('FileServerService', () => {
 				name: 'sample.png',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${thumbnailKey}`,
 			});
@@ -436,7 +435,7 @@ describe('FileServerService', () => {
 				name: 'sample.png',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${webpublicKey}`,
 			});
@@ -457,7 +456,7 @@ describe('FileServerService', () => {
 				type: 'application/x-msdownload',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 			});
@@ -474,7 +473,7 @@ describe('FileServerService', () => {
 				isLink: false,
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 			});
@@ -493,7 +492,7 @@ describe('FileServerService', () => {
 				name: 'remote.png',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 			});
@@ -515,7 +514,7 @@ describe('FileServerService', () => {
 				name: 'remote.png',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${accessKey}`,
 				headers: {
@@ -543,7 +542,7 @@ describe('FileServerService', () => {
 				name: 'remote.png',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${thumbnailKey}`,
 			});
@@ -567,7 +566,7 @@ describe('FileServerService', () => {
 				type: 'image/svg+xml',
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${webpublicKey}`,
 			});
@@ -580,7 +579,7 @@ describe('FileServerService', () => {
 
 	describe('GET /files/:key/*', () => {
 		test('GET /files/:key/* 正規の /files/:key にリダイレクトする', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: '/files/testkey/extra/path',
 			});
@@ -593,7 +592,7 @@ describe('FileServerService', () => {
 
 	describe('GET /proxy/:url*', () => {
 		test('GET /proxy/:url* 外部メディアプロキシへリダイレクトする', async () => {
-			const res = await externalFastify.inject({
+			const res = await inject(externalApp, {
 				method: 'GET',
 				url: '/proxy/path-part?url=https%3A%2F%2Fexample.com%2Fimg.png&static=1',
 			});
@@ -607,7 +606,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* misskey User-Agent を拒否する', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: '/proxy/any?url=https%3A%2F%2Fexample.com%2Fimg.png',
 				headers: {
@@ -620,7 +619,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* origin 指定時は User-Agent 必須を検証する', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: '/proxy/any?url=https%3A%2F%2Fexample.com%2Fimg.png&origin=1',
 				headers: {
@@ -635,7 +634,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* emoji 指定で非画像は 404 を返す', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remoteTextUrl)}&emoji=1`,
 				headers: {
@@ -648,7 +647,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* 非画像は 403 を返す', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remoteTextUrl)}`,
 				headers: {
@@ -661,7 +660,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* emoji static で webp を返す', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remotePngUrl)}&emoji=1&static=1`,
 				headers: {
@@ -676,7 +675,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* avatar static で webp を返す', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remotePngUrl)}&avatar=1&static=1`,
 				headers: {
@@ -691,7 +690,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* static で webp を返す', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remotePngUrl)}&static=1`,
 				headers: {
@@ -706,7 +705,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* preview で webp を返す', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remotePngUrl)}&preview=1`,
 				headers: {
@@ -721,7 +720,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* svg を webp に変換する', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remoteSvgUrl)}`,
 				headers: {
@@ -736,7 +735,7 @@ describe('FileServerService', () => {
 		});
 
 		test('GET /proxy/:url* badge で低エントロピー画像は 404 を返す', async () => {
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(remoteFlatPngUrl)}&badge=1`,
 				headers: {
@@ -757,7 +756,7 @@ describe('FileServerService', () => {
 				isLink: false,
 			});
 
-			const res = await fastify.inject({
+			const res = await inject(app, {
 				method: 'GET',
 				url: `/proxy/any?url=${encodeURIComponent(`${config.url}/files/${accessKey}`)}&origin=1`,
 				headers: {

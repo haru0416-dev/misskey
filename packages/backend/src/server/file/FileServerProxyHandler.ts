@@ -15,7 +15,7 @@ import { isMimeImage } from '@/misc/is-mime-image.js';
 import { IImageStreamable, ImageProcessingService, webpDefault } from '@/core/ImageProcessingService.js';
 import { createRangeStream, attachStreamCleanup, needsCleanup } from './FileServerUtils.js';
 import type { DownloadedFileResult, FileResolveResult, FileServerFileResolver } from './FileServerFileResolver.js';
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import { getFileServerHeader, type FileServerReply, type FileServerRequest } from './FileServerTypes.js';
 
 type ProxySource = DownloadedFileResult | FileResolveResult;
 type CleanupableFile = ProxySource & { cleanup: () => void };
@@ -38,7 +38,7 @@ export class FileServerProxyHandler {
 		private imageProcessingService: ImageProcessingService,
 	) {}
 
-	public async handle(request: FastifyRequest<{ Params: { url: string }; Querystring: ProxyQuery }>, reply: FastifyReply) {
+	public async handle(request: FileServerRequest<{ url: string }, ProxyQuery>, reply: FileServerReply) {
 		const url = 'url' in request.query ? request.query.url : 'https://' + request.params.url;
 
 		if (typeof url !== 'string') {
@@ -95,8 +95,8 @@ export class FileServerProxyHandler {
 	 * 外部メディアプロキシにリダイレクトする
 	 */
 	private async redirectToExternalProxy(
-		request: FastifyRequest<{ Params: { url: string }; Querystring: ProxyQuery }>,
-		reply: FastifyReply,
+		request: FileServerRequest<{ url: string }, ProxyQuery>,
+		reply: FileServerReply,
 	) {
 		reply.header('Cache-Control', 'public, max-age=259200'); // 3 days
 
@@ -112,11 +112,12 @@ export class FileServerProxyHandler {
 	/**
 	 * User-Agent を検証する
 	 */
-	private validateUserAgent(request: FastifyRequest): void {
-		if (!request.headers['user-agent']) {
+	private validateUserAgent(request: FileServerRequest): void {
+		const userAgent = getFileServerHeader(request.headers, 'user-agent');
+		if (!userAgent) {
 			throw new StatusError('User-Agent is required', 400, 'User-Agent is required');
 		}
-		if (request.headers['user-agent'].toLowerCase().indexOf('misskey/') !== -1) {
+		if (userAgent.toLowerCase().indexOf('misskey/') !== -1) {
 			throw new StatusError('Refusing to proxy a request from another proxy', 403, 'Proxy is recursive');
 		}
 	}
@@ -126,8 +127,8 @@ export class FileServerProxyHandler {
 	 */
 	private async processImage(
 		file: AvailableFile,
-		request: FastifyRequest<{ Params: { url: string }; Querystring: ProxyQuery }>,
-		reply: FastifyReply,
+		request: FileServerRequest<{ url: string }, ProxyQuery>,
+		reply: FileServerReply,
 	): Promise<IImageStreamable> {
 		const query = request.query;
 
@@ -234,11 +235,12 @@ export class FileServerProxyHandler {
 	 */
 	private createDefaultStream(
 		file: AvailableFile,
-		request: FastifyRequest,
-		reply: FastifyReply,
+		request: FileServerRequest,
+		reply: FileServerReply,
 	): IImageStreamable {
-		if (request.headers.range && 'file' in file && file.file.size > 0) {
-			const { stream, start, end, chunksize } = createRangeStream(request.headers.range as string, file.file.size, file.path);
+		const range = getFileServerHeader(request.headers, 'range');
+		if (range && 'file' in file && file.file.size > 0) {
+			const { stream, start, end, chunksize } = createRangeStream(range, file.file.size, file.path);
 
 			reply.header('Content-Range', `bytes ${start}-${end}/${file.file.size}`);
 			reply.header('Accept-Ranges', 'bytes');

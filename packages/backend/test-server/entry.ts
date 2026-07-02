@@ -1,49 +1,40 @@
+import type { Server } from 'node:http';
 import { portToPid } from 'pid-port';
-import fkill from 'fkill';
-import Fastify from 'fastify';
-import { NestFactory } from '@nestjs/core';
-import { MainModule } from '@/MainModule.js';
-import { ServerService } from '@/server/ServerService.js';
+import { Hono } from 'hono';
 import { loadConfig } from '@/config.js';
-import { NestLogger } from '@/NestLogger.js';
-import { INestApplicationContext } from '@nestjs/common';
+import { createHonoNodeServer } from '@/server/hono-node-server.js';
+import { server as startServer } from '@/boot/common.js';
+import type { HonoServerRuntime } from '@/boot/hono-server.js';
 
 const config = loadConfig();
 const originEnv = JSON.stringify(process.env);
 
 process.env.NODE_ENV = 'test';
 
-let app: INestApplicationContext;
-let serverService: ServerService;
+let runtime: HonoServerRuntime | undefined;
+let controllerServer: Server | undefined;
 
 /**
  * テスト用のサーバインスタンスを起動する
  */
 export async function setup() {
 	await killTestServer();
-
-	console.log('starting application...');
-
-	app = await NestFactory.createApplicationContext(MainModule, {
-		logger: new NestLogger(),
-	});
-	serverService = app.get(ServerService);
-	await serverService.launch();
+	await stopControllerEndpoints();
 
 	await startControllerEndpoints();
 
 	// ジョブキューは必要な時にテストコード側で起動する
 	// ジョブキューが動くとテスト結果の確認に支障が出ることがあるので意図的に動かさないでいる
 
-	console.log('application initialized.');
+	console.log('controller initialized.');
 }
 
 /**
  * テスト用のサーバインスタンスを停止する
  */
 export async function teardown() {
-	await serverService.dispose();
-	await app.close();
+	await stopApplication();
+	await stopControllerEndpoints();
 	await killTestServer();
 }
 
@@ -51,15 +42,44 @@ export async function teardown() {
  * 既に重複したポートで待ち受けしているサーバがある場合はkillする
  */
 async function killTestServer() {
-	//
 	try {
 		const pid = await portToPid(config.port);
 		if (pid) {
-			await fkill(pid, { force: true });
+			process.kill(pid, 'SIGTERM');
+			if (!await waitForPortToClose(config.port, 5000)) {
+				process.kill(pid, 'SIGKILL');
+				await waitForPortToClose(config.port, 5000);
+			}
 		}
 	} catch {
 		// NOP;
 	}
+}
+
+async function waitForPortToClose(port: number, timeout: number): Promise<boolean> {
+	const deadline = Date.now() + timeout;
+	while (Date.now() < deadline) {
+		const pid = await portToPid(port).catch(() => undefined);
+		if (!pid) return true;
+		await new Promise(resolve => setTimeout(resolve, 100));
+	}
+
+	return false;
+}
+
+async function startApplication() {
+	console.log('starting application...');
+
+	runtime = await startServer();
+
+	console.log('application initialized.');
+}
+
+async function stopApplication() {
+	if (!runtime) return;
+
+	await runtime.dispose();
+	runtime = undefined;
 }
 
 /**
@@ -67,39 +87,46 @@ async function killTestServer() {
  * @param port
  */
 async function startControllerEndpoints(port = config.port + 1000) {
-	const fastify = Fastify();
+	const controller = new Hono();
 
-	fastify.post<{ Body: { key?: string, value?: string } }>('/env', async (req, res) => {
-		console.log(req.body);
-		const key = req.body['key'];
+	controller.post('/env', async (c) => {
+		const body = await c.req.json<{ key?: string, value?: string }>().catch(() => ({}));
+		console.log(body);
+		const key = body.key;
 		if (!key) {
-			res.code(400).send({ success: false });
-			return;
+			return c.json({ success: false }, 400);
 		}
 
-		process.env[key] = req.body['value'];
+		process.env[key] = body.value;
 
-		res.code(200).send({ success: true });
+		return c.json({ success: true });
 	});
 
-	fastify.post<{ Body: { key?: string, value?: string } }>('/env-reset', async (req, res) => {
+	controller.post('/env-reset', async (c) => {
 		process.env = JSON.parse(originEnv);
 
-		await serverService.dispose();
-		await app.close();
-
+		await stopApplication();
 		await killTestServer();
+		await startApplication();
 
-		console.log('starting application...');
-
-		app = await NestFactory.createApplicationContext(MainModule, {
-			logger: new NestLogger(),
-		});
-		serverService = app.get(ServerService);
-		await serverService.launch();
-
-		res.code(200).send({ success: true });
+		return c.json({ success: true });
 	});
 
-	await fastify.listen({ port: port, host: 'localhost' });
+	controllerServer = createHonoNodeServer({ app: controller });
+	await new Promise<void>((resolve, reject) => {
+		controllerServer!.once('error', reject);
+		controllerServer!.listen(port, 'localhost', () => {
+			controllerServer!.off('error', reject);
+			resolve();
+		});
+	});
+}
+
+async function stopControllerEndpoints() {
+	if (!controllerServer) return;
+
+	await new Promise<void>((resolve, reject) => {
+		controllerServer!.close(err => err ? reject(err) : resolve());
+	});
+	controllerServer = undefined;
 }

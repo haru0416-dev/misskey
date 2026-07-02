@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import { FILE_TYPE_BROWSERSAFE } from '@/const.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import type { IImageStreamable } from '@/core/ImageProcessingService.js';
-import type { FastifyReply } from 'fastify';
+import type { FileServerReply } from './FileServerTypes.js';
 
 export type RangeStream = {
 	stream: fs.ReadStream;
@@ -61,7 +61,7 @@ export function getSafeContentType(mime: string): string {
  * Range ヘッダーがない場合は通常のストリームを返す
  */
 export function handleRangeRequest(
-	reply: FastifyReply,
+	reply: FileServerReply,
 	rangeHeader: string | undefined,
 	size: number,
 	path: string,
@@ -88,7 +88,7 @@ export type FileResponseOptions = {
  * ファイルレスポンス用の共通ヘッダーを設定する
  */
 export function setFileResponseHeaders(
-	reply: FastifyReply,
+	reply: FileServerReply,
 	options: FileResponseOptions,
 ): void {
 	reply.header('Content-Type', getSafeContentType(options.mime));

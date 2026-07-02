@@ -7,7 +7,6 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import sharp from 'sharp';
 import fastifyStatic from '@fastify/static';
 import fastifyProxy from '@fastify/http-proxy';
 import vary from 'vary';
@@ -40,7 +39,6 @@ import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByU
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
-import { UrlPreviewService } from './UrlPreviewService.js';
 import { ClientLoggerService } from './ClientLoggerService.js';
 import { HtmlTemplateService } from './HtmlTemplateService.js';
 
@@ -54,25 +52,14 @@ import { GalleryPostPage } from './views/gallery-post.js';
 import { ChannelPage } from './views/channel.js';
 import { AnnouncementPage } from './views/announcement.js';
 import { BaseEmbed } from './views/base-embed.js';
-import { InfoCardPage } from './views/info-card.js';
-import { BiosPage } from './views/bios.js';
-import { CliPage } from './views/cli.js';
-import { FlushPage } from './views/flush.js';
 import { ErrorPage } from './views/error.js';
 
 import type { FastifyError, FastifyInstance, FastifyPluginOptions, FastifyReply } from 'fastify';
 
 @Injectable()
 export class ClientServerService {
-	private readonly staticAssets: string;
-	private readonly clientAssets: string;
-	private readonly assets: string;
-	private readonly swAssets: string;
-	private readonly fluentEmojiDir: string;
-	private readonly twemojiDir: string;
 	private readonly frontendViteOut: string;
 	private readonly frontendEmbedViteOut: string;
-	private readonly tarball: string;
 
 	constructor(
 		@Inject(DI.config)
@@ -92,83 +79,13 @@ export class ClientServerService {
 		private clipEntityService: ClipEntityService,
 		private channelEntityService: ChannelEntityService,
 		private announcementEntityService: AnnouncementEntityService,
-		private urlPreviewService: UrlPreviewService,
 		private feedService: FeedService,
 		private htmlTemplateService: HtmlTemplateService,
 		private clientLoggerService: ClientLoggerService,
 	) {
 		//this.createServer = this.createServer.bind(this);
-		const backendRootdir = resolve(this.config.rootDir, 'packages/backend');
-		const frontendRootdir = resolve(this.config.rootDir, 'packages/frontend');
-		this.staticAssets = resolve(backendRootdir, 'assets');
-		this.clientAssets = resolve(frontendRootdir, 'assets');
-		this.assets = resolve(this.config.rootDir, 'built/_frontend_dist_');
-		this.swAssets = resolve(this.config.rootDir, 'built/_sw_dist_');
-		this.fluentEmojiDir = resolve(backendRootdir, 'node_modules/@misskey-dev/emoji-assets/built/fluent-emoji');
-		this.twemojiDir = resolve(backendRootdir, 'node_modules/@misskey-dev/emoji-assets/built/twemoji');
 		this.frontendViteOut = resolve(this.config.rootDir, 'built/_frontend_vite_');
 		this.frontendEmbedViteOut = resolve(this.config.rootDir, 'built/_frontend_embed_vite_');
-		this.tarball = resolve(this.config.rootDir, 'built/tarball');
-	}
-
-	@bindThis
-	private async manifestHandler(reply: FastifyReply) {
-		let manifest = {
-			// 空文字列の場合右辺を使いたいため
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			'short_name': this.meta.shortName || this.meta.name || this.config.host,
-			// 空文字列の場合右辺を使いたいため
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			'name': this.meta.name || this.config.host,
-			'start_url': '/',
-			'display': 'standalone',
-			'background_color': '#313a42',
-			// 空文字列の場合右辺を使いたいため
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			'theme_color': this.meta.themeColor || '#86b300',
-			'icons': [{
-				// 空文字列の場合右辺を使いたいため
-				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-				'src': this.meta.app192IconUrl || '/static-assets/icons/192.png',
-				'sizes': '192x192',
-				'type': 'image/png',
-				'purpose': 'maskable',
-			}, {
-				// 空文字列の場合右辺を使いたいため
-				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-				'src': this.meta.app512IconUrl || '/static-assets/icons/512.png',
-				'sizes': '512x512',
-				'type': 'image/png',
-				'purpose': 'maskable',
-			}, {
-				'src': '/static-assets/splash.png',
-				'sizes': '300x300',
-				'type': 'image/png',
-				'purpose': 'any',
-			}],
-			'share_target': {
-				'action': '/share/',
-				'method': 'GET',
-				'enctype': 'application/x-www-form-urlencoded',
-				'params': {
-					'title': 'title',
-					'text': 'text',
-					'url': 'url',
-				},
-			},
-			'shortcuts': [{
-				'name': 'Safemode',
-				'url': '/?safemode=true',
-			}],
-		};
-
-		manifest = {
-			...manifest,
-			...JSON.parse(this.meta.manifestJsonOverride === '' ? '{}' : this.meta.manifestJsonOverride),
-		};
-
-		reply.header('Cache-Control', 'max-age=300');
-		return (manifest);
 	}
 
 	@bindThis
@@ -222,188 +139,6 @@ export class ClientServerService {
 		}
 		//#endregion
 
-		//#region static assets
-
-		fastify.register(fastifyStatic, {
-			root: this.staticAssets,
-			prefix: '/static-assets/',
-			maxAge: ms('7 days'),
-			decorateReply: false,
-		});
-
-		fastify.register(fastifyStatic, {
-			root: this.clientAssets,
-			prefix: '/client-assets/',
-			maxAge: ms('7 days'),
-			decorateReply: false,
-		});
-
-		fastify.register(fastifyStatic, {
-			root: this.assets,
-			prefix: '/assets/',
-			maxAge: ms('7 days'),
-			decorateReply: false,
-		});
-
-		fastify.register((fastify, options, done) => {
-			fastify.register(fastifyStatic, {
-				root: this.tarball,
-				prefix: '/tarball/',
-				maxAge: ms('30 days'),
-				immutable: true,
-				decorateReply: false,
-			});
-			fastify.addHook('onRequest', handleRequestRedirectToOmitSearch);
-			done();
-		});
-
-		fastify.get('/favicon.ico', async (request, reply) => {
-			return reply.sendFile('/favicon.ico', this.staticAssets);
-		});
-
-		fastify.get('/apple-touch-icon.png', async (request, reply) => {
-			return reply.sendFile('/apple-touch-icon.png', this.staticAssets);
-		});
-
-		fastify.get<{ Params: { path: string } }>('/fluent-emoji/:path(.*)', async (request, reply) => {
-			const path = request.params.path;
-
-			if (!path.match(/^[0-9a-f-]+\.png$/)) {
-				reply.code(404);
-				return;
-			}
-
-			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
-
-			return reply.sendFile(path, this.fluentEmojiDir, {
-				maxAge: ms('30 days'),
-			});
-		});
-
-		fastify.get<{ Params: { path: string } }>('/twemoji/:path(.*)', async (request, reply) => {
-			const path = request.params.path;
-
-			if (!path.match(/^[0-9a-f-]+\.svg$/)) {
-				reply.code(404);
-				return;
-			}
-
-			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
-
-			return reply.sendFile(path, this.twemojiDir, {
-				maxAge: ms('30 days'),
-			});
-		});
-
-		fastify.get<{ Params: { path: string } }>('/twemoji-badge/:path(.*)', async (request, reply) => {
-			const path = request.params.path;
-
-			if (!path.match(/^[0-9a-f-]+\.png$/)) {
-				reply.code(404);
-				return;
-			}
-
-			const mask = await sharp(
-				`${this.twemojiDir}/${path.replace('.png', '')}.svg`,
-				{ density: 1000 },
-			)
-				.resize(488, 488)
-				.greyscale()
-				.normalise()
-				.linear(1.75, -(128 * 1.75) + 128) // 1.75x contrast
-				.flatten({ background: '#000' })
-				.extend({
-					top: 12,
-					bottom: 12,
-					left: 12,
-					right: 12,
-					background: '#000',
-				})
-				.toColorspace('b-w')
-				.png()
-				.toBuffer();
-
-			const buffer = await sharp({
-				create: { width: 512, height: 512, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
-			})
-				.pipelineColorspace('b-w')
-				.boolean(mask, 'eor')
-				.resize(96, 96)
-				.png()
-				.toBuffer();
-
-			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
-			reply.header('Cache-Control', 'max-age=2592000');
-			reply.header('Content-Type', 'image/png');
-			return buffer;
-		});
-
-		// ServiceWorker
-		fastify.get('/sw.js', async (request, reply) => {
-			return await reply.sendFile('/sw.js', this.swAssets, {
-				maxAge: ms('10 minutes'),
-			});
-		});
-
-		// Manifest
-		fastify.get('/manifest.json', async (request, reply) => await this.manifestHandler(reply));
-
-		// Embed Javascript
-		fastify.get('/embed.js', async (request, reply) => {
-			return await reply.sendFile('/embed.js', this.staticAssets, {
-				maxAge: ms('1 day'),
-			});
-		});
-
-		fastify.get('/robots.txt', async (request, reply) => {
-			const disallowedPaths = [
-				'/settings',
-				'/admin',
-				'/custom-emojis-manager',
-				'/avatar-decorations',
-				'/share',
-				'/my',
-				'/api',
-				'/inbox',
-				'/oauth',
-				'/proxy',
-				'/url',
-			];
-
-			if (this.meta.ugcVisibilityForVisitor === 'none') {
-				disallowedPaths.push(
-					'/@',
-					'/notes',
-				);
-			}
-
-			let content = `User-agent: *\n`;
-			content += disallowedPaths.map((path) => `Disallow: ${path}`).join('\n') + '\n';
-			content += 'Allow: /\n';
-			content += '\n# todo: sitemap\n';
-
-			reply.header('Content-Type', 'text/plain; charset=utf-8');
-			return await reply.send(content);
-		});
-
-		// OpenSearch XML
-		fastify.get('/opensearch.xml', async (request, reply) => {
-			const name = this.meta.name ?? 'Misskey';
-			let content = '';
-			content += '<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">';
-			content += `<ShortName>${name}</ShortName>`;
-			content += `<Description>${name} Search</Description>`;
-			content += '<InputEncoding>UTF-8</InputEncoding>';
-			content += `<Image width="16" height="16" type="image/x-icon">${this.config.url}/favicon.ico</Image>`;
-			content += `<Url type="text/html" template="${this.config.url}/search?q={searchTerms}"/>`;
-			content += '</OpenSearchDescription>';
-
-			reply.header('Content-Type', 'application/opensearchdescription+xml');
-			return await reply.send(content);
-		});
-
-		//#endregion
-
 		const renderBase = async (reply: FastifyReply, data: Partial<Parameters<typeof BasePage>[0]> = {}) => {
 			reply.header('Cache-Control', 'public, max-age=30');
 			return await HtmlTemplateService.replyHtml(reply, BasePage({
@@ -414,9 +149,6 @@ export class ClientServerService {
 				...data,
 			}));
 		};
-
-		// URL preview endpoint
-		fastify.get<{ Querystring: { url: string; lang: string; } }>('/url', (request, reply) => this.urlPreviewService.handle(request, reply));
 
 		const getFeed = async (acct: string) => {
 			const { username, host } = Acct.parse(acct);
@@ -780,54 +512,7 @@ export class ClientServerService {
 			}));
 		});
 
-		fastify.get('/_info_card_', async (request, reply) => {
-			reply.removeHeader('X-Frame-Options');
-
-			return await HtmlTemplateService.replyHtml(reply, InfoCardPage({
-				version: this.config.version,
-				config: this.config,
-				meta: this.meta,
-			}));
-		});
 		//#endregion
-
-		fastify.get('/bios', async (request, reply) => {
-			return await HtmlTemplateService.replyHtml(reply, BiosPage({
-				version: this.config.version,
-			}));
-		});
-
-		fastify.get('/cli', async (request, reply) => {
-			return await HtmlTemplateService.replyHtml(reply, CliPage({
-				version: this.config.version,
-			}));
-		});
-
-		fastify.get('/flush', async (request, reply) => {
-			let sendHeader = true;
-
-			if (request.headers['origin']) {
-				const originURL = new URL(request.headers['origin']);
-				if (originURL.protocol !== 'https:') { // Clear-Site-Data only supports https
-					sendHeader = false;
-				}
-				if (originURL.host !== configUrl.host) {
-					sendHeader = false;
-				}
-			}
-
-			if (sendHeader) {
-				reply.header('Clear-Site-Data', '"*"');
-			}
-			reply.header('Set-Cookie', 'http-flush-failed=1; Path=/flush; Max-Age=60');
-			return await HtmlTemplateService.replyHtml(reply, FlushPage());
-		});
-
-		// streamingに非WebSocketリクエストが来た場合にbase htmlをキャシュ付きで返すと、Proxy等でそのパスがキャッシュされておかしくなる
-		fastify.get('/streaming', async (request, reply) => {
-			reply.code(503);
-			reply.header('Cache-Control', 'private, max-age=0');
-		});
 
 		// Render base html for all requests
 		fastify.get('*', async (request, reply) => {
