@@ -2912,6 +2912,132 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/user-maintenance', () => {
+		test('admin/reset-password と unset 系 endpoint は DB 更新、token scope、role、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const target = await signup({ username: `haum${suffix}` });
+			const config = loadConfig();
+			const avatarMd5 = createHash('md5').update(`hono-admin-avatar-${suffix}`).digest('hex');
+			const bannerMd5 = createHash('md5').update(`hono-admin-banner-${suffix}`).digest('hex');
+			const avatarFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: target.id,
+				userHost: null,
+				md5: avatarMd5,
+				name: `avatar-${suffix}.png`,
+				type: 'image/png',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${avatarMd5}`,
+			});
+			const bannerFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: target.id,
+				userHost: null,
+				md5: bannerMd5,
+				name: `banner-${suffix}.png`,
+				type: 'image/png',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${bannerMd5}`,
+			});
+
+			await updateUserProfileInDatabase(db, target.id, {
+				password: await bcrypt.hash('old-password', 8),
+				twoFactorSecret: 'two-factor-secret',
+				twoFactorBackupSecret: ['backup-code'],
+				twoFactorEnabled: true,
+				usePasswordLessLogin: true,
+			});
+			await updateUserInDatabase(db, target.id, {
+				avatarId: avatarFile.id,
+				avatarUrl: 'https://example.test/avatar.png',
+				avatarBlurhash: 'avatar-blurhash',
+				bannerId: bannerFile.id,
+				bannerUrl: 'https://example.test/banner.png',
+				bannerBlurhash: 'banner-blurhash',
+			});
+
+			const reset = await api('admin/reset-password', { userId: target.id }, alice);
+			assert.strictEqual(reset.status, 200);
+			assert.strictEqual(reset.body.password.length, 8);
+			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(await bcrypt.compare(reset.body.password, profile.password!), true);
+
+			const resetToken = await createAppToken(alice, ['write:admin:reset-password']);
+			const resetByToken = await api('admin/reset-password', { userId: target.id }, { token: resetToken });
+			assert.strictEqual(resetByToken.status, 200);
+			assert.strictEqual(resetByToken.body.password.length, 8);
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(await bcrypt.compare(resetByToken.body.password, profile.password!), true);
+
+			const noSuchReset = await api('admin/reset-password', { userId: '000000000000000000000000' }, alice);
+			assert.strictEqual(noSuchReset.status, 400);
+			assert.strictEqual(castAsError(noSuchReset.body as any).error.code, 'NO_SUCH_USER');
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:unset-mfa']);
+			const scopeDenied = await api('admin/reset-password', { userId: target.id }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hanm${suffix}` });
+			const roleDenied = await api('admin/reset-password', { userId: target.id }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const unsetMfa = await api('admin/unset-mfa', { userId: target.id }, alice);
+			assert.strictEqual(unsetMfa.status, 204);
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(profile.twoFactorSecret, null);
+			assert.strictEqual(profile.twoFactorBackupSecret, null);
+			assert.strictEqual(profile.twoFactorEnabled, false);
+			assert.strictEqual(profile.usePasswordLessLogin, false);
+
+			const noSuchUnsetMfa = await api('admin/unset-mfa', { userId: '000000000000000000000000' }, alice);
+			assert.strictEqual(noSuchUnsetMfa.status, 400);
+			assert.strictEqual(castAsError(noSuchUnsetMfa.body as any).error.code, 'NO_SUCH_USER');
+
+			const unsetAvatar = await api('admin/unset-user-avatar', { userId: target.id }, alice);
+			assert.strictEqual(unsetAvatar.status, 204);
+			let user = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(user.avatarId, null);
+			assert.strictEqual(user.avatarUrl, null);
+			assert.strictEqual(user.avatarBlurhash, null);
+
+			const unsetAvatarAgain = await api('admin/unset-user-avatar', { userId: target.id }, alice);
+			assert.strictEqual(unsetAvatarAgain.status, 204);
+
+			const unsetBanner = await api('admin/unset-user-banner', { userId: target.id }, alice);
+			assert.strictEqual(unsetBanner.status, 204);
+			user = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(user.bannerId, null);
+			assert.strictEqual(user.bannerUrl, null);
+			assert.strictEqual(user.bannerBlurhash, null);
+
+			const unsetBannerAgain = await api('admin/unset-user-banner', { userId: target.id }, alice);
+			assert.strictEqual(unsetBannerAgain.status, 204);
+
+			const logTypes = ['resetPassword', 'unsetMfa', 'unsetUserAvatar', 'unsetUserBanner'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: target.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
 	describe('admin/get-user-ips', () => {
 		test('admin/get-user-ips は最新30件、admin権限、token scopeを維持する', async () => {
 			const now = Date.now();

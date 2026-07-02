@@ -26,6 +26,7 @@ import { handleHonoApiAdminServerInfo } from './hono-api-admin-server-info.js';
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from './hono-api-admin-stats.js';
 import { handleHonoApiAdminSystemWebhookCreate, handleHonoApiAdminSystemWebhookDelete, handleHonoApiAdminSystemWebhookList, handleHonoApiAdminSystemWebhookShow, handleHonoApiAdminSystemWebhookTest, handleHonoApiAdminSystemWebhookUpdate } from './hono-api-admin-system-webhooks.js';
 import { handleHonoApiAdminGetUserIps } from './hono-api-admin-user-ips.js';
+import { handleHonoApiAdminResetPassword, handleHonoApiAdminUnsetMfa, handleHonoApiAdminUnsetUserAvatar, handleHonoApiAdminUnsetUserBanner } from './hono-api-admin-user-maintenance.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
@@ -864,6 +865,57 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminPromoCreate(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/reset-password', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:reset-password');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminResetPassword(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/unset-mfa', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:unset-mfa');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminUnsetMfa(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/unset-user-avatar', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:unset-user-avatar');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminUnsetUserAvatar(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/unset-user-banner', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:unset-user-banner');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminUnsetUserBanner(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});
