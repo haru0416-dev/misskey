@@ -7,7 +7,6 @@ import { Module } from '@nestjs/common';
 import { EndpointsModule } from '@/server/api/EndpointsModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { ApiCallService } from './api/ApiCallService.js';
-import { FileServerService } from './FileServerService.js';
 import { ServerService } from './ServerService.js';
 import { GetterService } from './api/GetterService.js';
 import { ActivityPubServerService } from './ActivityPubServerService.js';
@@ -56,7 +55,6 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		HtmlTemplateService,
 		FeedService,
 		ActivityPubServerService,
-		FileServerService,
 		ServerService,
 		GetterService,
 		MainStreamConnection,
