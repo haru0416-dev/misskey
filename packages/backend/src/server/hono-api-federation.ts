@@ -16,15 +16,12 @@ import {
 	countFollowingsWithRemoteFolloweeHostFromDatabase,
 	countFollowingsWithRemoteFollowerHostFromDatabase,
 } from '@/core/FollowingStore.js';
-import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
-import type { MiInstance, MiMeta, MiRole } from '@/models/_.js';
-import type { RoleCondFormulaValue } from '@/models/Role.js';
-import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { MiInstance, MiMeta } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
+import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiFederationDependencies = {
@@ -180,86 +177,6 @@ function isDeliverSuspendedSoftware(meta: MiMeta, software: Pick<MiInstance, 'so
 	return meta.deliverSuspendedSoftware.some(x =>
 		x.software === software.softwareName &&
 		semver.satisfies(software.softwareVersion!, x.versionRange, { includePrerelease: true }));
-}
-
-function evaluateRoleCondition(
-	deps: HonoApiFederationDependencies,
-	user: MiUser,
-	assignedRoles: MiRole[],
-	value: RoleCondFormulaValue,
-): boolean {
-	try {
-		switch (value.type) {
-			case 'and':
-				return value.values.every(v => evaluateRoleCondition(deps, user, assignedRoles, v));
-			case 'or':
-				return value.values.some(v => evaluateRoleCondition(deps, user, assignedRoles, v));
-			case 'not':
-				return !evaluateRoleCondition(deps, user, assignedRoles, value.value);
-			case 'roleAssignedTo':
-				return assignedRoles.some(role => role.id === value.roleId);
-			case 'isLocal':
-				return user.host == null;
-			case 'isRemote':
-				return user.host != null;
-			case 'isSuspended':
-				return user.isSuspended;
-			case 'isLocked':
-				return user.isLocked;
-			case 'isBot':
-				return user.isBot;
-			case 'isCat':
-				return user.isCat;
-			case 'isExplorable':
-				return user.isExplorable;
-			case 'createdLessThan':
-				return parseId(deps.config, user.id).date.getTime() > Date.now() - (value.sec * 1000);
-			case 'createdMoreThan':
-				return parseId(deps.config, user.id).date.getTime() < Date.now() - (value.sec * 1000);
-			case 'followersLessThanOrEq':
-				return user.followersCount <= value.value;
-			case 'followersMoreThanOrEq':
-				return user.followersCount >= value.value;
-			case 'followingLessThanOrEq':
-				return user.followingCount <= value.value;
-			case 'followingMoreThanOrEq':
-				return user.followingCount >= value.value;
-			case 'notesLessThanOrEq':
-				return user.notesCount <= value.value;
-			case 'notesMoreThanOrEq':
-				return user.notesCount >= value.value;
-			default:
-				return false;
-		}
-	} catch {
-		return false;
-	}
-}
-
-async function isHonoApiModerator(
-	deps: HonoApiFederationDependencies,
-	user: MiLocalUser | null,
-): Promise<boolean> {
-	if (user == null) return false;
-	if (deps.meta.rootUserId === user.id) return true;
-
-	const [roles, assignments] = await Promise.all([
-		listRolesFromDatabase(deps.db),
-		listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id),
-	]);
-	const now = Date.now();
-	const activeAssignedRoleIds = new Set(assignments
-		.filter(assignment => assignment.expiresAt == null || assignment.expiresAt.getTime() > now)
-		.map(assignment => assignment.roleId));
-	const assignedRoles = roles.filter(role => activeAssignedRoleIds.has(role.id));
-	const userRoles = [
-		...assignedRoles,
-		...roles.filter(role =>
-			role.target === 'conditional' &&
-			evaluateRoleCondition(deps, user, assignedRoles, role.condFormula)),
-	];
-
-	return userRoles.some(role => role.isModerator || role.isAdministrator);
 }
 
 function packHonoApiFederationInstance(

@@ -121,6 +121,16 @@ export function permissionDeniedError(): HonoApiError {
 	});
 }
 
+export function rolePermissionDeniedError(): HonoApiError {
+	return new HonoApiError({
+		status: 403,
+		message: 'Role permission denied.',
+		code: 'ROLE_PERMISSION_DENIED',
+		id: 'c3d38592-54c0-429d-be96-5636b0431a61',
+		kind: 'permission',
+	});
+}
+
 export function accessDeniedError(): HonoApiError {
 	return new HonoApiError({
 		status: 400,
