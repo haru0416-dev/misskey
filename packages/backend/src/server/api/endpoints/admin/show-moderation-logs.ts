@@ -5,11 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ModerationLogsRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
 import { ModerationLogEntityService } from '@/core/entities/ModerationLogEntityService.js';
-import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { IdService } from '@/core/IdService.js';
+import { listModerationLogsFromDatabase, type ModerationLogOrder } from '@/core/ModerationLogStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -76,29 +76,44 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.moderationLogsRepository)
-		private moderationLogsRepository: ModerationLogsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private moderationLogEntityService: ModerationLogEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.moderationLogsRepository.createQueryBuilder('log'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
+			let sinceId: string | null = null;
+			let untilId: string | null = null;
+			let order: ModerationLogOrder = 'desc';
 
-			if (ps.type != null) {
-				query.andWhere('log.type = :type', { type: ps.type });
+			if (ps.sinceId && ps.untilId) {
+				sinceId = ps.sinceId;
+				untilId = ps.untilId;
+			} else if (ps.sinceId) {
+				sinceId = ps.sinceId;
+				order = 'asc';
+			} else if (ps.untilId) {
+				untilId = ps.untilId;
+			} else if (ps.sinceDate && ps.untilDate) {
+				sinceId = this.idService.gen(ps.sinceDate);
+				untilId = this.idService.gen(ps.untilDate);
+			} else if (ps.sinceDate) {
+				sinceId = this.idService.gen(ps.sinceDate);
+				order = 'asc';
+			} else if (ps.untilDate) {
+				untilId = this.idService.gen(ps.untilDate);
 			}
 
-			if (ps.userId != null) {
-				query.andWhere('log.userId = :userId', { userId: ps.userId });
-			}
-
-			if (ps.search != null) {
-				const escapedSearch = sqlLikeEscape(ps.search);
-				query.andWhere('log.info::text ILIKE :search', { search: `%${escapedSearch}%` });
-			}
-
-			const logs = await query.limit(ps.limit).getMany();
+			const logs = await listModerationLogsFromDatabase(this.drizzle, {
+				limit: ps.limit,
+				order,
+				sinceId,
+				untilId,
+				type: ps.type,
+				userId: ps.userId,
+				search: ps.search,
+			});
 
 			return await this.moderationLogEntityService.packMany(logs);
 		});

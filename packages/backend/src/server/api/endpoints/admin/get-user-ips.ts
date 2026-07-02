@@ -4,10 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserIpsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
-import { IdService } from '@/core/IdService.js';
+import { listUserIpsFromDatabase } from '@/core/UserIpStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -47,17 +47,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userIpsRepository)
-		private userIpsRepository: UserIpsRepository,
-
-		private idService: IdService,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const ips = await this.userIpsRepository.find({
-				where: { userId: ps.userId },
-				order: { id: 'DESC' },
-				take: 30,
-			});
+			const ips = await listUserIpsFromDatabase(this.drizzle, ps.userId, 30);
 
 			return ips.map(x => ({
 				ip: x.ip,

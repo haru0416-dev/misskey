@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { GalleryPostsRepository } from '@/models/_.js';
 import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -41,15 +42,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private galleryPostEntityService: GalleryPostEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const post = await this.galleryPostsRepository.findOneBy({
-				id: ps.postId,
-			});
+			const post = await fetchGalleryPostByIdFromDatabase(this.drizzle, ps.postId);
 
 			if (post == null) {
 				throw new ApiError(meta.errors.noSuchPost);

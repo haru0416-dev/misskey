@@ -6,10 +6,12 @@
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFilesRepository, GalleryPostsRepository } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchGalleryPostByIdOrFailFromDatabase, updateGalleryPostByIdAndUserIdInDatabase } from '@/core/GalleryPostStore.js';
+import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['gallery'],
@@ -53,11 +55,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private galleryPostEntityService: GalleryPostEntityService,
 	) {
@@ -65,22 +64,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			let files: Array<MiDriveFile> | undefined;
 
 			if (ps.fileIds) {
-				files = (await Promise.all(ps.fileIds.map(fileId =>
-					this.driveFilesRepository.findOneBy({
-						id: fileId,
-						userId: me.id,
-					}),
-				))).filter(x => x != null);
+				files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(this.drizzle, ps.fileIds, me.id);
 
 				if (files.length === 0) {
 					throw new Error();
 				}
 			}
 
-			await this.galleryPostsRepository.update({
-				id: ps.postId,
-				userId: me.id,
-			}, {
+			await updateGalleryPostByIdAndUserIdInDatabase(this.drizzle, ps.postId, me.id, {
 				updatedAt: new Date(),
 				title: ps.title,
 				description: ps.description,
@@ -88,7 +79,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				fileIds: files ? files.map(file => file.id) : undefined,
 			});
 
-			const post = await this.galleryPostsRepository.findOneByOrFail({ id: ps.postId });
+			const post = await fetchGalleryPostByIdOrFailFromDatabase(this.drizzle, ps.postId);
 
 			return await this.galleryPostEntityService.pack(post, me);
 		});

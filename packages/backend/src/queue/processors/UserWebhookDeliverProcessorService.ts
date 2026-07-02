@@ -6,12 +6,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import * as Bull from 'bullmq';
 import { DI } from '@/di-symbols.js';
-import type { WebhooksRepository } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { StatusError } from '@/misc/status-error.js';
 import { bindThis } from '@/decorators.js';
+import { updateWebhookInDatabase } from '@/core/WebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import { UserWebhookDeliverJobData } from '../types.js';
 
@@ -23,8 +24,8 @@ export class UserWebhookDeliverProcessorService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.webhooksRepository)
-		private webhooksRepository: WebhooksRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private httpRequestService: HttpRequestService,
 		private queueLoggerService: QueueLoggerService,
@@ -57,14 +58,14 @@ export class UserWebhookDeliverProcessorService {
 				}),
 			});
 
-			this.webhooksRepository.update({ id: job.data.webhookId }, {
+			updateWebhookInDatabase(this.db, job.data.webhookId, {
 				latestSentAt: new Date(),
 				latestStatus: res.status,
 			});
 
 			return 'Success';
 		} catch (res) {
-			this.webhooksRepository.update({ id: job.data.webhookId }, {
+			updateWebhookInDatabase(this.db, job.data.webhookId, {
 				latestSentAt: new Date(),
 				latestStatus: res instanceof StatusError ? res.statusCode : 1,
 			});

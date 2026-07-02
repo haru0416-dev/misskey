@@ -6,9 +6,12 @@
 import fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { format as DateFormat } from 'date-fns';
-import { In } from 'typeorm';
+import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository, UsersRepository, UserListMembershipsRepository, MiUser } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiUser } from '@/models/_.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { bindThis } from '@/decorators.js';
@@ -25,14 +28,8 @@ export class ExportAntennasProcessorService {
 	private logger: Logger;
 
 	constructor (
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.antennasRepository)
-		private antennsRepository: AntennasRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveService: DriveService,
 		private utilityService: UtilityService,
@@ -44,7 +41,7 @@ export class ExportAntennasProcessorService {
 
 	@bindThis
 	public async process(job: Bull.Job<DBExportAntennasData>): Promise<void> {
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -63,15 +60,13 @@ export class ExportAntennasProcessorService {
 			});
 		};
 		try {
-			const antennas = await this.antennsRepository.findBy({ userId: job.data.user.id });
+			const antennas = await listAntennasByUserIdFromDatabase(this.db, job.data.user.id);
 			write('[');
 			for (const [index, antenna] of antennas.entries()) {
 				let users: MiUser[] | undefined;
 				if (antenna.userListId !== null) {
-					const memberships = await this.userListMembershipsRepository.findBy({ userListId: antenna.userListId });
-					users = await this.usersRepository.findBy({
-						id: In(memberships.map(j => j.userId)),
-					});
+					const memberIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(this.db, antenna.userListId);
+					users = await listUsersByIdsFromDatabase(this.db, memberIds, { includeSuspended: true });
 				}
 				write(JSON.stringify({
 					name: antenna.name,
@@ -109,4 +104,3 @@ export class ExportAntennasProcessorService {
 		}
 	}
 }
-

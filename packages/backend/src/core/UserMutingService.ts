@@ -4,19 +4,20 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
-import type { MutingsRepository, MiMuting } from '@/models/_.js';
+import type { MiMuting } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { CacheService } from '@/core/CacheService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { createMutingInDatabase, deleteMutingsByIdsFromDatabase } from '@/core/MutingStore.js';
 
 @Injectable()
 export class UserMutingService {
 	constructor(
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private cacheService: CacheService,
@@ -25,7 +26,7 @@ export class UserMutingService {
 
 	@bindThis
 	public async mute(user: MiUser, target: MiUser, expiresAt: Date | null = null): Promise<void> {
-		await this.mutingsRepository.insert({
+		await createMutingInDatabase(this.db, {
 			id: this.idService.gen(),
 			expiresAt: expiresAt ?? null,
 			muterId: user.id,
@@ -39,9 +40,7 @@ export class UserMutingService {
 	public async unmute(mutings: MiMuting[]): Promise<void> {
 		if (mutings.length === 0) return;
 
-		await this.mutingsRepository.delete({
-			id: In(mutings.map(m => m.id)),
-		});
+		await deleteMutingsByIdsFromDatabase(this.db, mutings.map(m => m.id));
 
 		const muterIds = [...new Set(mutings.map(m => m.muterId))];
 		for (const muterId of muterIds) {

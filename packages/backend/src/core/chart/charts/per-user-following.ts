@@ -4,14 +4,14 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { Not, IsNull, DataSource } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Redis from 'ioredis';
 import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import type { FollowingsRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
+import { countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase, countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase } from '@/core/FollowingStore.js';
 import Chart from '../core.js';
 import { ChartLoggerService } from '../ChartLoggerService.js';
 import { name, schema } from './entities/per-user-following.js';
@@ -23,14 +23,14 @@ import type { KVs } from '../core.js';
 @Injectable()
 export default class PerUserFollowingChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private chartLoggerService: ChartLoggerService,
@@ -45,10 +45,10 @@ export default class PerUserFollowingChart extends Chart<typeof schema> { // esl
 			remoteFollowingsCount,
 			remoteFollowersCount,
 		] = await Promise.all([
-			this.followingsRepository.countBy({ followerId: group, followeeHost: IsNull() }),
-			this.followingsRepository.countBy({ followeeId: group, followerHost: IsNull() }),
-			this.followingsRepository.countBy({ followerId: group, followeeHost: Not(IsNull()) }),
-			this.followingsRepository.countBy({ followeeId: group, followerHost: Not(IsNull()) }),
+			countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase(this.drizzle, group, false),
+			countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase(this.drizzle, group, false),
+			countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase(this.drizzle, group, true),
+			countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase(this.drizzle, group, true),
 		]);
 
 		return {

@@ -6,8 +6,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
-import type { DriveFilesRepository, MiEmoji } from '@/models/_.js';
+import type { MiEmoji } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -82,15 +84,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private customEmojiService: CustomEmojiService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			let driveFile;
 			if (ps.fileId) {
-				driveFile = await this.driveFilesRepository.findOneBy({ id: ps.fileId });
+				driveFile = await fetchDriveFileByIdFromDatabase(this.drizzle, ps.fileId);
 				if (driveFile == null) throw new ApiError(meta.errors.noSuchFile);
 			}
 

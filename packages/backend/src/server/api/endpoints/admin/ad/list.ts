@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AdsRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
+import { listAdsFromDatabase } from '@/core/AdStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -41,22 +42,31 @@ export const paramDef = {
 	required: [],
 } as const;
 
+type AdListParams = {
+	limit: number;
+	sinceId?: string | null;
+	untilId?: string | null;
+	sinceDate?: number | null;
+	untilDate?: number | null;
+	publishing?: boolean | null;
+};
+
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.adsRepository)
-		private adsRepository: AdsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.adsRepository.createQueryBuilder('ad'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
-			if (ps.publishing === true) {
-				query.andWhere('ad.expiresAt > :now', { now: new Date() }).andWhere('ad.startsAt <= :now', { now: new Date() });
-			} else if (ps.publishing === false) {
-				query.andWhere('ad.expiresAt <= :now', { now: new Date() }).orWhere('ad.startsAt > :now', { now: new Date() });
-			}
-			const ads = await query.limit(ps.limit).getMany();
+			const { sinceId, untilId } = this.resolvePagination(ps);
+			const ads = await listAdsFromDatabase(this.drizzle, {
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				publishing: ps.publishing,
+			});
 
 			return ads.map(ad => ({
 				id: ad.id,
@@ -72,5 +82,23 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				ratio: ad.ratio,
 			}));
 		});
+	}
+
+	private resolvePagination(ps: AdListParams) {
+		if (ps.sinceId && ps.untilId) {
+			return { sinceId: ps.sinceId, untilId: ps.untilId };
+		} else if (ps.sinceId) {
+			return { sinceId: ps.sinceId, untilId: null };
+		} else if (ps.untilId) {
+			return { sinceId: null, untilId: ps.untilId };
+		} else if (ps.sinceDate && ps.untilDate) {
+			return { sinceId: this.idService.gen(ps.sinceDate), untilId: this.idService.gen(ps.untilDate) };
+		} else if (ps.sinceDate) {
+			return { sinceId: this.idService.gen(ps.sinceDate), untilId: null };
+		} else if (ps.untilDate) {
+			return { sinceId: null, untilId: this.idService.gen(ps.untilDate) };
+		} else {
+			return { sinceId: null, untilId: null };
+		}
 	}
 }

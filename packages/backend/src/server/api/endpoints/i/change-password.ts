@@ -6,9 +6,10 @@
 import bcrypt from 'bcryptjs';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	requireCredential: true,
@@ -29,14 +30,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userAuthService: UserAuthService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const token = ps.token;
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: me.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, me.id);
 
 			if (profile.twoFactorEnabled) {
 				if (token == null) {
@@ -60,7 +61,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const salt = await bcrypt.genSalt(8);
 			const hash = await bcrypt.hash(ps.newPassword, salt);
 
-			await this.userProfilesRepository.update(me.id, {
+			await updateUserProfileInDatabase(this.drizzle, me.id, {
 				password: hash,
 			});
 		});

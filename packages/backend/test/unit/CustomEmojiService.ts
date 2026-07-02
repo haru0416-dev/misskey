@@ -13,14 +13,15 @@ import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { DI } from '@/di-symbols.js';
 import { GlobalModule } from '@/GlobalModule.js';
-import { EmojisRepository } from '@/models/_.js';
+import { emoji, type EmojiInsert } from '@/db/schema/emoji.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { MiEmoji } from '@/models/Emoji.js';
 
 describe('CustomEmojiService', () => {
 	let app: TestingModule;
 	let service: CustomEmojiService;
 
-	let emojisRepository: EmojisRepository;
+	let drizzle: MiDrizzleDatabase;
 	let idService: IdService;
 
 	beforeAll(async () => {
@@ -42,7 +43,7 @@ describe('CustomEmojiService', () => {
 		app.enableShutdownHooks();
 
 		service = app.get<CustomEmojiService>(CustomEmojiService);
-		emojisRepository = app.get<EmojisRepository>(DI.emojisRepository);
+		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
 		idService = app.get<IdService>(IdService);
 	});
 
@@ -50,11 +51,11 @@ describe('CustomEmojiService', () => {
 		async function insert(data: Partial<MiEmoji>[]) {
 			for (const d of data) {
 				const id = idService.gen();
-				await emojisRepository.insert({
+				await drizzle.insert(emoji).values({
 					id: id,
 					updatedAt: new Date(),
 					...d,
-				});
+				} as EmojiInsert);
 			}
 		}
 
@@ -86,7 +87,7 @@ describe('CustomEmojiService', () => {
 		}
 
 		afterEach(async () => {
-			await emojisRepository.createQueryBuilder().delete().execute();
+			await drizzle.delete(emoji);
 		});
 
 		describe('単独', () => {

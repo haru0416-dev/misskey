@@ -10,12 +10,12 @@
  */
 
 import * as nestedProperty from 'nested-property';
-import { EntitySchema, LessThan, Between } from 'typeorm';
+import { createHash } from 'node:crypto';
+import { sql, type SQL } from 'drizzle-orm';
 import { dateUTC, isTimeSame, isTimeBefore, subtractTime, addTime } from '@/misc/prelude/time.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
-import { MiRepository, miRepository } from '@/models/_.js';
-import type { DataSource, Repository } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const COLUMN_PREFIX = '___' as const;
 const UNIQUE_TEMP_COLUMN_PREFIX = 'unique_temp___' as const;
@@ -31,6 +31,21 @@ type Schema = Record<string, {
 	// previousな値を引き継ぐかどうか
 	accumulate?: boolean;
 }>;
+
+type ChartColumnDefinition = {
+	type: 'integer' | 'bigint' | 'smallint' | 'varchar';
+	array?: boolean;
+	default?: string | number;
+	generated?: boolean;
+	length?: number;
+};
+
+export type ChartEntity = {
+	name: string;
+	tableName: string;
+	columns: Record<string, ChartColumnDefinition>;
+	uniqueColumns: string[];
+};
 
 type KeyToColumnName<T extends string> = T extends `${infer R1}.${infer R2}` ? `${R1}${typeof COLUMN_DELIMITER}${KeyToColumnName<R2>}` : T;
 
@@ -61,6 +76,27 @@ const camelToSnake = (str: string): string => {
 };
 
 const removeDuplicates = (array: any[]) => Array.from(new Set(array));
+
+const quoteIdentifier = (value: string): string => `"${value.replaceAll('"', '""')}"`;
+
+const identifierSql = (value: string): SQL => sql.raw(quoteIdentifier(value));
+
+const hashedRelationName = (prefix: string, ...parts: string[]): string => {
+	const hash = createHash('sha1').update(parts.join('\0')).digest('hex').slice(0, 32);
+	return `${prefix}_${hash}`;
+};
+
+const arrayValueSql = (value: unknown[]): SQL => {
+	return sql`ARRAY[${sql.join(value.map(item => sql`${item}`), sql`, `)}]::varchar[]`;
+};
+
+const assignmentValueSql = (value: number | SQL | unknown[]): SQL => {
+	if (Array.isArray(value)) {
+		return arrayValueSql(value);
+	}
+
+	return sql`${value}`;
+};
 
 type Commit<S extends Schema> = {
 	[K in keyof S]?: S[K]['uniqueIncrement'] extends true ? string[] : number;
@@ -145,11 +181,9 @@ export default abstract class Chart<T extends Schema> {
 		diff: Commit<T>;
 		group: string | null;
 	}[] = [];
-	// ↓にしたいけどfindOneとかで型エラーになる
-	//private repositoryForHour: Repository<RawRecord<T>> & MiRepository<RawRecord<T>>;
-	//private repositoryForDay: Repository<RawRecord<T>> & MiRepository<RawRecord<T>>;
-	private repositoryForHour: Repository<{ id: number; group?: string | null; date: number; }> & MiRepository<{ id: number; group?: string | null; date: number; }>;
-	private repositoryForDay: Repository<{ id: number; group?: string | null; date: number; }> & MiRepository<{ id: number; group?: string | null; date: number; }>;
+	private tableForHour: string;
+	private tableForDay: string;
+	private chartDb: MiDrizzleDatabase;
 
 	/**
 	 * 1日に一回程度実行されれば良いような計算処理を入れる(主にCASCADE削除などアプリケーション側で感知できない変動によるズレの修正用)
@@ -161,8 +195,8 @@ export default abstract class Chart<T extends Schema> {
 	 */
 	protected abstract tickMinor(group: string | null): Promise<Partial<KVs<T>>>;
 
-	private static convertSchemaToColumnDefinitions(schema: Schema): Record<string, { type: string; array?: boolean; default?: any; }> {
-		const columns = {} as Record<string, { type: string; array?: boolean; default?: any; }>;
+	private static convertSchemaToColumnDefinitions(schema: Schema): Record<string, ChartColumnDefinition> {
+		const columns = {} as Record<string, ChartColumnDefinition>;
 		for (const [k, v] of Object.entries(schema)) {
 			const name = k.replaceAll('.', COLUMN_DELIMITER);
 			const type = v.range === 'big' ? 'bigint' : v.range === 'small' ? 'smallint' : 'integer';
@@ -206,11 +240,42 @@ export default abstract class Chart<T extends Schema> {
 		return Chart.parseDate(new Date());
 	}
 
+	private static defaultValueSql(value: string | number): string {
+		return typeof value === 'number' ? value.toString() : `'${value.replaceAll('\'', '\'\'')}'`;
+	}
+
+	private static columnDefinitionSql(name: string, definition: ChartColumnDefinition): string {
+		const type =
+			definition.generated ? 'SERIAL' :
+			definition.array ? `${definition.type}[]` :
+			definition.type === 'varchar' && definition.length != null ? `character varying(${definition.length})` :
+			definition.type;
+		const defaultValue = definition.default == null ? '' : ` DEFAULT ${Chart.defaultValueSql(definition.default)}`;
+
+		return `${quoteIdentifier(name)} ${type} NOT NULL${defaultValue}`;
+	}
+
+	public static entityToCreateTableSql(entity: ChartEntity): string[] {
+		const uniqueColumns = entity.uniqueColumns.map(column => quoteIdentifier(column)).join(', ');
+		const tableName = quoteIdentifier(entity.tableName);
+		const columns = Object.entries(entity.columns).map(([name, definition]) => Chart.columnDefinitionSql(name, definition));
+		const relationKey = [entity.tableName, ...entity.uniqueColumns].join(':');
+
+		return [
+			`CREATE TABLE ${tableName} (${[
+				...columns,
+				`CONSTRAINT ${quoteIdentifier(hashedRelationName('UQ', relationKey))} UNIQUE (${uniqueColumns})`,
+				`CONSTRAINT ${quoteIdentifier(hashedRelationName('PK', entity.tableName, 'id'))} PRIMARY KEY ("id")`,
+			].join(', ')})`,
+			`CREATE UNIQUE INDEX ${quoteIdentifier(hashedRelationName('IDX', relationKey))} ON ${tableName} (${uniqueColumns})`,
+		];
+	}
+
 	public static schemaToEntity(name: string, schema: Schema, grouped = false): {
-		hour: EntitySchema,
-		day: EntitySchema,
+		hour: ChartEntity,
+		day: ChartEntity,
 	} {
-		const createEntity = (span: 'hour' | 'day'): EntitySchema => new EntitySchema({
+		const createEntity = (span: 'hour' | 'day'): ChartEntity => ({
 			name:
 				span === 'hour' ? `ChartX${name}` :
 				span === 'day' ? `ChartDayX${name}` :
@@ -222,7 +287,6 @@ export default abstract class Chart<T extends Schema> {
 			columns: {
 				id: {
 					type: 'integer',
-					primary: true,
 					generated: true,
 				},
 				date: {
@@ -236,22 +300,7 @@ export default abstract class Chart<T extends Schema> {
 				} : {}),
 				...Chart.convertSchemaToColumnDefinitions(schema),
 			},
-			indices: [{
-				columns: grouped ? ['date', 'group'] : ['date'],
-				unique: true,
-			}],
-			uniques: [{
-				columns: grouped ? ['date', 'group'] : ['date'],
-			}],
-			relations: {
-				/* TODO
-					group: {
-						target: () => Foo,
-						type: 'many-to-one',
-						onDelete: 'CASCADE',
-					},
-				*/
-			},
+			uniqueColumns: grouped ? ['date', 'group'] : ['date'],
 		});
 
 		return {
@@ -263,7 +312,7 @@ export default abstract class Chart<T extends Schema> {
 	private lock: (key: string) => Promise<() => void>;
 
 	constructor(
-		db: DataSource,
+		db: MiDrizzleDatabase,
 		lock: (key: string) => Promise<() => void>,
 		logger: Logger,
 		name: string,
@@ -274,10 +323,66 @@ export default abstract class Chart<T extends Schema> {
 		this.schema = schema;
 		this.lock = lock;
 		this.logger = logger;
+		this.chartDb = db;
 
-		const { hour, day } = Chart.schemaToEntity(name, schema, grouped);
-		this.repositoryForHour = db.getRepository<{ id: number; group?: string | null; date: number; }>(hour).extend(miRepository as MiRepository<{ id: number; group?: string | null; date: number; }>);
-		this.repositoryForDay = db.getRepository<{ id: number; group?: string | null; date: number; }>(day).extend(miRepository as MiRepository<{ id: number; group?: string | null; date: number; }>);
+		this.tableForHour = `__chart__${camelToSnake(name)}`;
+		this.tableForDay = `__chart_day__${camelToSnake(name)}`;
+	}
+
+	private getTable(span: 'hour' | 'day'): string {
+		return span === 'hour' ? this.tableForHour : this.tableForDay;
+	}
+
+	private groupCondition(group: string | null): SQL {
+		return group ? sql`AND "group" = ${group}` : sql``;
+	}
+
+	private async getLogByDate(group: string | null, span: 'hour' | 'day', date: number): Promise<RawRecord<T> | null> {
+		const result = await this.chartDb.execute(sql`
+			SELECT *
+			FROM ${identifierSql(this.getTable(span))}
+			WHERE "date" = ${date}
+				${this.groupCondition(group)}
+			LIMIT 1
+		`);
+
+		return result.rows[0] as RawRecord<T> | undefined ?? null;
+	}
+
+	private async insertLog(span: 'hour' | 'day', values: Record<string, number | string | null | unknown[]>): Promise<RawRecord<T>> {
+		const entries = Object.entries(values);
+		const result = await this.chartDb.execute(sql`
+			INSERT INTO ${identifierSql(this.getTable(span))}
+				(${sql.join(entries.map(([column]) => identifierSql(column)), sql`, `)})
+			VALUES
+				(${sql.join(entries.map(([, value]) => sql`${value}`), sql`, `)})
+			RETURNING *
+		`);
+
+		return result.rows[0] as RawRecord<T>;
+	}
+
+	private async updateLogById(span: 'hour' | 'day', id: number, values: Record<string, number | SQL | unknown[]>): Promise<void> {
+		const entries = Object.entries(values);
+		if (entries.length === 0) return;
+
+		await this.chartDb.execute(sql`
+			UPDATE ${identifierSql(this.getTable(span))}
+			SET ${sql.join(entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`), sql`, `)}
+			WHERE "id" = ${id}
+		`);
+	}
+
+	private async updateLogsByDateRange(span: 'hour' | 'day', gt: number, lt: number, values: Record<string, unknown[]>): Promise<void> {
+		const entries = Object.entries(values);
+		if (entries.length === 0) return;
+
+		await this.chartDb.execute(sql`
+			UPDATE ${identifierSql(this.getTable(span))}
+			SET ${sql.join(entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`), sql`, `)}
+			WHERE "date" > ${gt}
+				AND "date" < ${lt}
+		`);
 	}
 
 	@bindThis
@@ -304,19 +409,14 @@ export default abstract class Chart<T extends Schema> {
 
 	@bindThis
 	private getLatestLog(group: string | null, span: 'hour' | 'day'): Promise<RawRecord<T> | null> {
-		const repository =
-			span === 'hour' ? this.repositoryForHour :
-			span === 'day' ? this.repositoryForDay :
-			new Error('not happen') as never;
-
-		return repository.findOne({
-			where: group ? {
-				group: group,
-			} : {},
-			order: {
-				date: -1,
-			},
-		}).then(x => x ?? null) as Promise<RawRecord<T> | null>;
+		return this.chartDb.execute(sql`
+			SELECT *
+			FROM ${identifierSql(this.getTable(span))}
+			WHERE TRUE
+				${this.groupCondition(group)}
+			ORDER BY "date" DESC
+			LIMIT 1
+		`).then(result => result.rows[0] as RawRecord<T> | undefined ?? null);
 	}
 
 	/**
@@ -331,16 +431,8 @@ export default abstract class Chart<T extends Schema> {
 			span === 'day' ? [y, m, d] :
 			new Error('not happen') as never);
 
-		const repository =
-			span === 'hour' ? this.repositoryForHour :
-			span === 'day' ? this.repositoryForDay :
-			new Error('not happen') as never;
-
 		// 現在(=今のHour or Day)のログ
-		const currentLog = await repository.findOneBy({
-			date: Chart.dateToTimestamp(current),
-			...(group ? { group: group } : {}),
-		}) as RawRecord<T> | undefined;
+		const currentLog = await this.getLogByDate(group, span, Chart.dateToTimestamp(current));
 
 		// ログがあればそれを返して終了
 		if (currentLog != null) {
@@ -377,10 +469,7 @@ export default abstract class Chart<T extends Schema> {
 		const unlock = await this.lock(lockKey);
 		try {
 			// ロック内でもう1回チェックする
-			const currentLog = await repository.findOneBy({
-				date: date,
-				...(group ? { group: group } : {}),
-			}) as RawRecord<T> | undefined;
+			const currentLog = await this.getLogByDate(group, span, date);
 
 			// ログがあればそれを返して終了
 			if (currentLog != null) return currentLog;
@@ -392,11 +481,11 @@ export default abstract class Chart<T extends Schema> {
 			}
 
 			// 新規ログ挿入
-			log = await repository.insertOne({
+			log = await this.insertLog(span, {
 				date: date,
 				...(group ? { group: group } : {}),
 				...columns,
-			}) as RawRecord<T>;
+			});
 
 			this.logger.info(`${this.name + (group ? `:${group}` : '')}(${span}): New commit created`);
 
@@ -445,22 +534,21 @@ export default abstract class Chart<T extends Schema> {
 				}
 			}
 
-			const queryForHour: Record<keyof RawRecord<T>, number | (() => string)> = {} as any;
-			const queryForDay: Record<keyof RawRecord<T>, number | (() => string)> = {} as any;
+			const queryForHour: Record<string, number | SQL> = {};
+			const queryForDay: Record<string, number | SQL> = {};
 			for (const [k, v] of Object.entries(finalDiffs)) {
 				if (typeof v === 'number') {
 					const name = COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as string & keyof Columns<T>;
-					if (v > 0) queryForHour[name] = () => `"${name}" + ${v}`;
-					if (v < 0) queryForHour[name] = () => `"${name}" - ${Math.abs(v)}`;
-					if (v > 0) queryForDay[name] = () => `"${name}" + ${v}`;
-					if (v < 0) queryForDay[name] = () => `"${name}" - ${Math.abs(v)}`;
+					if (v > 0) queryForHour[name] = sql`${identifierSql(name)} + ${v}`;
+					if (v < 0) queryForHour[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
+					if (v > 0) queryForDay[name] = sql`${identifierSql(name)} + ${v}`;
+					if (v < 0) queryForDay[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
 				} else if (Array.isArray(v) && v.length > 0) { // ユニークインクリメント
 					const tempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as string & keyof TempColumnsForUnique<T>;
-					// TODO: item をSQLエスケープ
-					const itemsForHour = v.filter(item => !(logHour[tempColumnName] as unknown as string[]).includes(item)).map(item => `"${item}"`);
-					const itemsForDay = v.filter(item => !(logDay[tempColumnName] as unknown as string[]).includes(item)).map(item => `"${item}"`);
-					if (itemsForHour.length > 0) queryForHour[tempColumnName] = () => `array_cat("${tempColumnName}", '{${itemsForHour.join(',')}}'::varchar[])`;
-					if (itemsForDay.length > 0) queryForDay[tempColumnName] = () => `array_cat("${tempColumnName}", '{${itemsForDay.join(',')}}'::varchar[])`;
+					const itemsForHour = v.filter(item => !(logHour[tempColumnName] as unknown as string[]).includes(item));
+					const itemsForDay = v.filter(item => !(logDay[tempColumnName] as unknown as string[]).includes(item));
+					if (itemsForHour.length > 0) queryForHour[tempColumnName] = sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForHour)})`;
+					if (itemsForDay.length > 0) queryForDay[tempColumnName] = sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForDay)})`;
 				}
 			}
 
@@ -507,16 +595,8 @@ export default abstract class Chart<T extends Schema> {
 
 			// ログ更新
 			await Promise.all([
-				this.repositoryForHour.createQueryBuilder()
-					.update()
-					.set(queryForHour as any)
-					.where('id = :id', { id: logHour.id })
-					.execute(),
-				this.repositoryForDay.createQueryBuilder()
-					.update()
-					.set(queryForDay as any)
-					.where('id = :id', { id: logDay.id })
-					.execute(),
+				this.updateLogById('hour', logHour.id, queryForHour),
+				this.updateLogById('day', logDay.id, queryForDay),
 			]);
 
 			this.logger.info(`${this.name + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
@@ -552,16 +632,8 @@ export default abstract class Chart<T extends Schema> {
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
 			await Promise.all([
-				this.repositoryForHour.createQueryBuilder()
-					.update()
-					.set(columns)
-					.where('id = :id', { id: logHour.id })
-					.execute(),
-				this.repositoryForDay.createQueryBuilder()
-					.update()
-					.set(columns)
-					.where('id = :id', { id: logDay.id })
-					.execute(),
+				this.updateLogById('hour', logHour.id, columns),
+				this.updateLogById('day', logDay.id, columns),
 			]);
 		};
 
@@ -598,18 +670,8 @@ export default abstract class Chart<T extends Schema> {
 		}
 
 		await Promise.all([
-			this.repositoryForHour.createQueryBuilder()
-				.update()
-				.set(columns)
-				.where('date > :gt', { gt })
-				.andWhere('date < :lt', { lt })
-				.execute(),
-			this.repositoryForDay.createQueryBuilder()
-				.update()
-				.set(columns)
-				.where('date > :gt', { gt })
-				.andWhere('date < :lt', { lt })
-				.execute(),
+			this.updateLogsByDateRange('hour', gt, lt, columns),
+			this.updateLogsByDateRange('day', gt, lt, columns),
 		]);
 	}
 
@@ -625,34 +687,20 @@ export default abstract class Chart<T extends Schema> {
 			span === 'hour' ? subtractTime(cursor ? dateUTC([y2, m2, d2, h2]) : dateUTC([y, m, d, h]), amount - 1, 'hour') :
 			new Error('not happen') as never;
 
-		const repository =
-			span === 'hour' ? this.repositoryForHour :
-			span === 'day' ? this.repositoryForDay :
-			new Error('not happen') as never;
-
 		// ログ取得
-		let logs = await repository.find({
-			where: {
-				date: Between(Chart.dateToTimestamp(gt), Chart.dateToTimestamp(lt)),
-				...(group ? { group: group } : {}),
-			},
-			order: {
-				date: -1,
-			},
-		}) as RawRecord<T>[];
+		let logs = (await this.chartDb.execute(sql`
+			SELECT *
+			FROM ${identifierSql(this.getTable(span))}
+			WHERE "date" BETWEEN ${Chart.dateToTimestamp(gt)} AND ${Chart.dateToTimestamp(lt)}
+				${this.groupCondition(group)}
+			ORDER BY "date" DESC
+		`)).rows as RawRecord<T>[];
 
 		// 要求された範囲にログがひとつもなかったら
 		if (logs.length === 0) {
 			// もっとも新しいログを持ってくる
 			// (すくなくともひとつログが無いと補間できないため)
-			const recentLog = await repository.findOne({
-				where: group ? {
-					group: group,
-				} : {},
-				order: {
-					date: -1,
-				},
-			}) as RawRecord<T> | undefined;
+			const recentLog = await this.getLatestLog(group, span);
 
 			if (recentLog) {
 				logs = [recentLog];
@@ -662,15 +710,14 @@ export default abstract class Chart<T extends Schema> {
 		} else if (!isTimeSame(new Date(logs.at(-1)!.date * 1000), gt)) {
 			// 要求された範囲の最も古い箇所時点での最も新しいログを持ってきて末尾に追加する
 			// (補間できないため)
-			const outdatedLog = await repository.findOne({
-				where: {
-					date: LessThan(Chart.dateToTimestamp(gt)),
-					...(group ? { group: group } : {}),
-				},
-				order: {
-					date: -1,
-				},
-			}) as RawRecord<T> | undefined;
+			const outdatedLog = (await this.chartDb.execute(sql`
+				SELECT *
+				FROM ${identifierSql(this.getTable(span))}
+				WHERE "date" < ${Chart.dateToTimestamp(gt)}
+					${this.groupCondition(group)}
+				ORDER BY "date" DESC
+				LIMIT 1
+			`)).rows[0] as RawRecord<T> | undefined;
 
 			if (outdatedLog) {
 				logs.push(outdatedLog);

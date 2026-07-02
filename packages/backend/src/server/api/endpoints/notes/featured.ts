@@ -4,14 +4,15 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { FeaturedService } from '@/core/FeaturedService.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { CacheService } from '@/core/CacheService.js';
-import { QueryService } from '@/core/QueryService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listFeaturedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -47,13 +48,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	private globalNotesRankingCacheLastFetchedAt = 0;
 
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private cacheService: CacheService,
 		private noteEntityService: NoteEntityService,
 		private featuredService: FeaturedService,
-		private queryService: QueryService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			let noteIds: string[];
@@ -87,19 +90,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				this.cacheService.userBlockedCache.fetch(me.id),
 			]) : [new Set<string>(), new Set<string>()];
 
-			const query = this.notesRepository.createQueryBuilder('note')
-				.where('note.id IN (:...noteIds)', { noteIds: noteIds })
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser')
-				.leftJoinAndSelect('note.channel', 'channel');
-
-			this.queryService.generateBlockedHostQueryForNote(query);
-			this.queryService.generateSuspendedUserQueryForNote(query);
-
-			const notes = (await query.getMany()).filter(note => {
+			const notes = (await listFeaturedNotesByIdsFromDatabase(this.db, noteIds, this.instanceMeta.blockedHosts)).filter(note => {
 				if (me && isUserRelated(note, userIdsWhoBlockingMe)) return false;
 				if (me && isUserRelated(note, userIdsWhoMeMuting)) return false;
 

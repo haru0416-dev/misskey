@@ -5,8 +5,8 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NotesRepository, UsersRepository, PollsRepository, PollVotesRepository, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
+import type { MiUser } from '@/models/User.js';
 import { RelayService } from '@/core/RelayService.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -15,21 +15,17 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerService.js';
 import { bindThis } from '@/decorators.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
+import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchPollByNoteIdFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class PollService {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
-
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -43,7 +39,7 @@ export class PollService {
 
 	@bindThis
 	public async vote(user: MiUser, note: MiNote, choice: number) {
-		const poll = await this.pollsRepository.findOneBy({ noteId: note.id });
+		const poll = await fetchPollByNoteIdFromDatabase(this.db, note.id);
 
 		if (poll == null) throw new Error('poll not found');
 
@@ -59,10 +55,7 @@ export class PollService {
 		}
 
 		// if already voted
-		const exist = await this.pollVotesRepository.findBy({
-			noteId: note.id,
-			userId: user.id,
-		});
+		const exist = await listPollVotesByNoteAndUserFromDatabase(this.db, note.id, user.id);
 
 		if (poll.multiple) {
 			if (exist.some(x => x.choice === choice)) {
@@ -72,7 +65,7 @@ export class PollService {
 			throw new Error('already voted');
 		}
 
-		await this.pollVotesRepository.insert({
+		await createPollVoteInDatabase(this.db, {
 			id: this.idService.gen(),
 			noteId: note.id,
 			userId: user.id,
@@ -80,8 +73,7 @@ export class PollService {
 		});
 
 		// Increment votes count
-		const index = choice + 1; // In SQL, array index is 1 based
-		await this.pollsRepository.query(`UPDATE poll SET votes[${index}] = votes[${index}] + 1 WHERE "noteId" = '${poll.noteId}'`);
+		await incrementPollVoteInDatabase(this.db, poll.noteId, choice);
 
 		this.globalEventService.publishNoteStream(note, 'pollVoted', {
 			choice: choice,
@@ -91,12 +83,12 @@ export class PollService {
 
 	@bindThis
 	public async deliverQuestionUpdate(noteId: MiNote['id']) {
-		const note = await this.notesRepository.findOneBy({ id: noteId });
+		const note = await fetchNoteByIdFromDatabase(this.db, noteId);
 		if (note == null) throw new Error('note not found');
 
 		if (note.localOnly) return;
 
-		const user = await this.usersRepository.findOneBy({ id: note.userId });
+		const user = await fetchUserByIdFromDatabase(this.db, note.userId);
 		if (user == null) throw new Error('note not found');
 
 		if (this.userEntityService.isLocalUser(user)) {

@@ -15,7 +15,7 @@ export function trackPromise(promise: Promise<unknown>) {
 	}
 	const ref = new WeakRef(promise);
 	promiseRefs.add(ref);
-	promise.finally(() => promiseRefs.delete(ref));
+	promise.finally(() => promiseRefs.delete(ref)).catch(() => {});
 }
 
 export async function allSettled(): Promise<void> {

@@ -5,9 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelFavoritesRepository, ChannelsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
+import { createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -39,24 +41,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-
-		@Inject(DI.channelFavoritesRepository)
-		private channelFavoritesRepository: ChannelFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const channel = await this.channelsRepository.findOneBy({
-				id: ps.channelId,
-			});
+			const channel = await fetchChannelByIdFromDatabase(this.drizzle, ps.channelId);
 
 			if (channel == null) {
 				throw new ApiError(meta.errors.noSuchChannel);
 			}
 
-			await this.channelFavoritesRepository.insert({
+			await createChannelFavoriteInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: me.id,
 				channelId: channel.id,

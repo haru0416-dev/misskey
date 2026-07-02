@@ -4,13 +4,15 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserListsRepository, UserListMembershipsRepository, BlockingsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
-import type { MiUserList } from '@/models/UserList.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { UserListEntityService } from '@/core/entities/UserListEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
+import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
+import { countUserListsByUserIdFromDatabase, createUserListInDatabase, userListExistsByIdAndPublicFromDatabase } from '@/core/UserListStore.js';
 import { ApiError } from '@/server/api/error.js';
 import { RoleService } from '@/core/RoleService.js';
 import { UserListService } from '@/core/UserListService.js';
@@ -74,14 +76,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userListService: UserListService,
 		private userListEntityService: UserListEntityService,
@@ -90,29 +86,20 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const listExist = await this.userListsRepository.exists({
-				where: {
-					id: ps.listId,
-					isPublic: true,
-				},
-			});
+			const listExist = await userListExistsByIdAndPublicFromDatabase(this.db, ps.listId);
 			if (!listExist) throw new ApiError(meta.errors.noSuchList);
-			const currentCount = await this.userListsRepository.countBy({
-				userId: me.id,
-			});
+			const currentCount = await countUserListsByUserIdFromDatabase(this.db, me.id);
 			if (currentCount >= (await this.roleService.getUserPolicies(me.id)).userListLimit) {
 				throw new ApiError(meta.errors.tooManyUserLists);
 			}
 
-			const userList = await this.userListsRepository.insertOne({
+			const userList = await createUserListInDatabase(this.db, {
 				id: this.idService.gen(),
 				userId: me.id,
 				name: ps.name,
-			} as MiUserList);
+			});
 
-			const users = (await this.userListMembershipsRepository.findBy({
-				userListId: ps.listId,
-			})).map(x => x.userId);
+			const users = await listUserListMembershipUserIdsByUserListIdFromDatabase(this.db, ps.listId);
 
 			for (const user of users) {
 				const currentUser = await this.getterService.getUser(user).catch(err => {
@@ -121,23 +108,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				});
 
 				if (currentUser.id !== me.id) {
-					const blockExist = await this.blockingsRepository.exists({
-						where: {
-							blockerId: currentUser.id,
-							blockeeId: me.id,
-						},
-					});
+					const blockExist = await blockingExistsInDatabase(this.db, currentUser.id, me.id);
 					if (blockExist) {
 						throw new ApiError(meta.errors.youHaveBeenBlocked);
 					}
 				}
 
-				const exist = await this.userListMembershipsRepository.exists({
-					where: {
-						userListId: userList.id,
-						userId: currentUser.id,
-					},
-				});
+				const exist = await userListMembershipExistsInDatabase(this.db, currentUser.id, userList.id);
 
 				if (exist) {
 					throw new ApiError(meta.errors.alreadyAdded);
@@ -156,4 +133,3 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		});
 	}
 }
-

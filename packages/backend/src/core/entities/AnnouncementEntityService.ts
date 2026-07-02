@@ -5,19 +5,19 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { AnnouncementsRepository, AnnouncementReadsRepository, MiAnnouncement, MiUser } from '@/models/_.js';
+import type { MiAnnouncement, MiUser } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { announcementReadExistsInDatabase } from '@/core/AnnouncementReadStore.js';
+import { fetchAnnouncementByIdOrFailFromDatabase } from '@/core/AnnouncementStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class AnnouncementEntityService {
 	constructor(
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
-
-		@Inject(DI.announcementReadsRepository)
-		private announcementReadsRepository: AnnouncementReadsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -30,17 +30,10 @@ export class AnnouncementEntityService {
 	): Promise<Packed<'Announcement'>> {
 		const announcement = typeof src === 'object'
 			? src
-			: await this.announcementsRepository.findOneByOrFail({
-				id: src,
-			}) as MiAnnouncement & { isRead?: boolean | null };
+			: await fetchAnnouncementByIdOrFailFromDatabase(this.drizzle, src) as MiAnnouncement & { isRead?: boolean | null };
 
 		if (me && announcement.isRead === undefined) {
-			announcement.isRead = await this.announcementReadsRepository
-				.countBy({
-					announcementId: announcement.id,
-					userId: me.id,
-				})
-				.then((count: number) => count > 0);
+			announcement.isRead = await announcementReadExistsInDatabase(this.drizzle, me.id, announcement.id);
 		}
 
 		return {

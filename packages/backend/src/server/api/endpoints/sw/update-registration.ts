@@ -4,10 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { SwSubscriptionsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
+import {
+	fetchSwSubscriptionFromDatabase,
+	updateSwSubscriptionInDatabase,
+} from '@/core/SwSubscriptionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -57,16 +61,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.swSubscriptionsRepository)
-		private swSubscriptionsRepository: SwSubscriptionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private pushNotificationService: PushNotificationService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const swSubscription = await this.swSubscriptionsRepository.findOneBy({
-				userId: me.id,
-				endpoint: ps.endpoint,
-			});
+			const swSubscription = await fetchSwSubscriptionFromDatabase(this.drizzle, me.id, ps.endpoint);
 
 			if (swSubscription === null) {
 				throw new ApiError(meta.errors.noSuchRegistration);
@@ -76,7 +77,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				swSubscription.sendReadMessage = ps.sendReadMessage;
 			}
 
-			await this.swSubscriptionsRepository.update(swSubscription.id, {
+			await updateSwSubscriptionInDatabase(this.drizzle, swSubscription.id, {
 				sendReadMessage: swSubscription.sendReadMessage,
 			});
 

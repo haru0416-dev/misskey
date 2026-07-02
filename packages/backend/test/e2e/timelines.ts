@@ -14,7 +14,7 @@ import { setTimeout } from 'node:timers/promises';
 import { entities } from 'misskey-js';
 import { Redis } from 'ioredis';
 import { SignupResponse, Note } from 'misskey-js/entities.js';
-import { api, initTestDb, post, randomString, sendEnvUpdateRequest, signup, uploadUrl, UserToken } from '../utils.js';
+import { api, initTestDb, post, randomString, sendEnvUpdateRequest, signup, uploadFile, UserToken } from '../utils.js';
 import { loadConfig } from '@/config.js';
 
 function genHost() {
@@ -23,6 +23,7 @@ function genHost() {
 
 let redisForTimelines: Redis;
 let root: SignupResponse;
+const TIMELINE_PROPAGATION_DELAY_MS = 50;
 
 async function renote(noteId: string, user: UserToken): Promise<entities.Note> {
 	return await api('notes/create', { renoteId: noteId }, user).then((it) => it.body.createdNote);
@@ -38,6 +39,13 @@ async function followChannel(channelId: string, user: UserToken) {
 
 async function muteChannel(channelId: string, user: UserToken) {
 	await api('channels/mute/create', { channelId }, user);
+}
+
+async function uploadTimelineFile(user: UserToken): Promise<entities.DriveFile> {
+	const res = await uploadFile(user, { path: '192.png' });
+	assert.strictEqual(res.status, 200);
+	assert.ok(res.body);
+	return res.body;
 }
 
 async function createList(name: string, user: UserToken): Promise<entities.UsersListsCreateResponse> {
@@ -103,7 +111,7 @@ describe('Timelines', () => {
 		'Timelines (enableFanoutTimeline: $enableFanoutTimeline)',
 		({ enableFanoutTimeline }) => {
 			function waitForPushToTl() {
-				return setTimeout(250);
+				return setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 			}
 
 			beforeAll(
@@ -134,7 +142,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi' });
 					const carolNote = await post(carol, { text: 'hi' });
 
@@ -156,7 +164,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
 					const carolNote = await post(carol, { text: 'hi' });
 
@@ -179,7 +187,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -204,7 +212,7 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -227,7 +235,7 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, {
 						text: 'hi',
@@ -256,7 +264,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -283,7 +291,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, alice);
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -310,7 +318,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/create', { userId: alice.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -334,7 +342,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/create', { userId: carol.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, {
 						text: 'hi',
@@ -361,7 +369,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: bobNote1.id });
 
@@ -385,7 +393,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -429,7 +437,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { renoteId: carolNote.id });
 
@@ -451,7 +459,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi' });
 					const carolNote = await post(carol, { text: 'hi' });
 
@@ -480,10 +488,10 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const [bobFile, carolFile] = await Promise.all([
-						uploadUrl(bob, 'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png'),
-						uploadUrl(carol, 'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png'),
+						uploadTimelineFile(bob),
+						uploadTimelineFile(carol),
 					]);
 					const bobNote = await post(bob, { fileIds: [bobFile.id] });
 					const carolNote = await post(carol, { fileIds: [carolFile.id] });
@@ -513,7 +521,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { renoteId: carolNote.id });
 
@@ -541,7 +549,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
 
@@ -569,7 +577,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [carol.id] });
 
 					await waitForPushToTl();
@@ -587,7 +595,7 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
 
@@ -611,7 +619,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -634,7 +642,7 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', renoteId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
@@ -662,7 +670,7 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', replyId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
@@ -727,10 +735,10 @@ describe('Timelines', () => {
 						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 						await api('following/create', { userId: bob.id }, alice);
-						await setTimeout(250);
+						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 						const [bobFile, carolFile] = await Promise.all([
-							uploadUrl(bob, 'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png'),
-							uploadUrl(carol, 'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png'),
+							uploadTimelineFile(bob),
+							uploadTimelineFile(carol),
 						]);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [bobFile.id] });
@@ -766,7 +774,7 @@ describe('Timelines', () => {
 
 					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
 
 					await waitForPushToTl();
@@ -799,7 +807,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [alice.id] });
 
 					await waitForPushToTl();
@@ -832,7 +840,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [carol.id] });
 
 					await waitForPushToTl();
@@ -1566,7 +1574,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'home' });
 					const bobNote = await post(bob, { text: 'hi' });
 
@@ -1588,7 +1596,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi' });
 
@@ -1611,7 +1619,7 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
 
@@ -1635,7 +1643,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -1657,7 +1665,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol, dave] = await Promise.all([signup(), signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', renoteId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
@@ -1684,7 +1692,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol, dave] = await Promise.all([signup(), signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', replyId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
@@ -1713,7 +1721,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -1736,7 +1744,7 @@ describe('Timelines', () => {
 
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -1775,10 +1783,7 @@ describe('Timelines', () => {
 					async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 
-						const file = await uploadUrl(
-							bob,
-							'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png',
-						);
+						const file = await uploadTimelineFile(bob);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
 
@@ -2156,7 +2161,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
 
 					await waitForPushToTl();
@@ -2176,7 +2181,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -2200,7 +2205,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -2228,7 +2233,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, alice);
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -2256,7 +2261,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/create', { userId: alice.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -2351,7 +2356,7 @@ describe('Timelines', () => {
 
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -2390,10 +2395,7 @@ describe('Timelines', () => {
 					async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 
-						const file = await uploadUrl(
-							bob,
-							'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png',
-						);
+						const file = await uploadTimelineFile(bob);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
 
@@ -2757,7 +2759,7 @@ describe('Timelines', () => {
 
 						await api('admin/suspend-user', { userId: carol.id }, root);
 						await api('admin/suspend-user', { userId: dave.id }, root);
-						await setTimeout(250);
+						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					});
 
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
@@ -2784,7 +2786,7 @@ describe('Timelines', () => {
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
 						await api('admin/unsuspend-user', { userId: carol.id }, root);
 						await api('admin/unsuspend-user', { userId: dave.id }, root);
-						await setTimeout(250);
+						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2832,7 +2834,7 @@ describe('Timelines', () => {
 
 						await api('admin/suspend-user', { userId: carol.id }, root);
 						await api('admin/suspend-user', { userId: elle.id }, root);
-						await setTimeout(250);
+						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					});
 
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
@@ -2855,7 +2857,7 @@ describe('Timelines', () => {
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
 						await api('admin/unsuspend-user', { userId: carol.id }, root);
 						await api('admin/unsuspend-user', { userId: elle.id }, root);
-						await setTimeout(250);
+						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2881,7 +2883,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi' });
 
 					await waitForPushToTl();
@@ -2899,7 +2901,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
 
 					await waitForPushToTl();
@@ -2917,7 +2919,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
 
 					await waitForPushToTl();
@@ -2935,7 +2937,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -2954,7 +2956,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: bobNote1.id });
 
@@ -2978,7 +2980,7 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: false }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
@@ -2998,7 +3000,7 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: false }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -3018,7 +3020,7 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: true }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
@@ -3038,7 +3040,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
 
 					await waitForPushToTl();
@@ -3057,7 +3059,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
 
 					await waitForPushToTl();
@@ -3076,7 +3078,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: alice.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
 
 					await waitForPushToTl();
@@ -3096,7 +3098,7 @@ describe('Timelines', () => {
 					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
 
 					await waitForPushToTl();
@@ -3116,10 +3118,7 @@ describe('Timelines', () => {
 
 						const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 						await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-						const file = await uploadUrl(
-							bob,
-							'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png',
-						);
+						const file = await uploadTimelineFile(bob);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
 
@@ -3144,7 +3143,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [alice.id] });
 
 					await waitForPushToTl();
@@ -3164,7 +3163,7 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/push', { listId: list.id, userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [carol.id] });
 
 					await waitForPushToTl();
@@ -3567,7 +3566,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
 
 					await waitForPushToTl();
@@ -3683,10 +3682,7 @@ describe('Timelines', () => {
 					async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 
-						const file = await uploadUrl(
-							bob,
-							'https://raw.githubusercontent.com/misskey-dev/assets/main/public/icon.png',
-						);
+						const file = await uploadTimelineFile(bob);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
 
@@ -3758,7 +3754,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
 
@@ -3776,7 +3772,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol, dave] = await Promise.all([signup(), signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', renoteId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
@@ -3796,7 +3792,7 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', replyId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
@@ -3815,7 +3811,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('mute/create', { userId: bob.id }, alice);
-					await setTimeout(250);
+					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: bobNote1.id });
 					const bobNote3 = await post(bob, { text: 'hi', renoteId: bobNote1.id });

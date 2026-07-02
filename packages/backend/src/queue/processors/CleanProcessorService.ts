@@ -4,12 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In, LessThan } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository, RoleAssignmentsRepository, UserIpsRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import type { Config } from '@/config.js';
+import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/AntennaStore.js';
+import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
+import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/RoleAssignmentStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 
@@ -21,14 +23,8 @@ export class CleanProcessorService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.userIpsRepository)
-		private userIpsRepository: UserIpsRepository,
-
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
-
-		@Inject(DI.roleAssignmentsRepository)
-		private roleAssignmentsRepository: RoleAssignmentsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private queueLoggerService: QueueLoggerService,
 	) {
@@ -39,29 +35,14 @@ export class CleanProcessorService {
 	public async process(): Promise<void> {
 		this.logger.info('Cleaning...');
 
-		this.userIpsRepository.delete({
-			createdAt: LessThan(new Date(Date.now() - (1000 * 60 * 60 * 24 * 90))),
-		});
+		await deleteUserIpsOlderThanFromDatabase(this.drizzle, new Date(Date.now() - (1000 * 60 * 60 * 24 * 90)));
 
 		// 使われてないアンテナを停止
 		if (this.config.deactivateAntennaThreshold > 0) {
-			this.antennasRepository.update({
-				lastUsedAt: LessThan(new Date(Date.now() - this.config.deactivateAntennaThreshold)),
-			}, {
-				isActive: false,
-			});
+			deactivateAntennasNotUsedSinceFromDatabase(this.drizzle, new Date(Date.now() - this.config.deactivateAntennaThreshold));
 		}
 
-		const expiredRoleAssignments = await this.roleAssignmentsRepository.createQueryBuilder('assign')
-			.where('assign.expiresAt IS NOT NULL')
-			.andWhere('assign.expiresAt < :now', { now: new Date() })
-			.getMany();
-
-		if (expiredRoleAssignments.length > 0) {
-			await this.roleAssignmentsRepository.delete({
-				id: In(expiredRoleAssignments.map(x => x.id)),
-			});
-		}
+		await deleteExpiredRoleAssignmentsFromDatabase(this.drizzle, new Date());
 
 		this.logger.succ('Cleaned.');
 	}

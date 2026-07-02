@@ -5,11 +5,13 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { PollVotesRepository, NotesRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { CacheService } from '@/core/CacheService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { bindThis } from '@/decorators.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/PollVoteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 import type { EndedPollNotificationJobData } from '../types.js';
@@ -19,11 +21,8 @@ export class EndedPollNotificationProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 		private notificationService: NotificationService,
@@ -34,19 +33,13 @@ export class EndedPollNotificationProcessorService {
 
 	@bindThis
 	public async process(job: Bull.Job<EndedPollNotificationJobData>): Promise<void> {
-		const note = await this.notesRepository.findOneBy({ id: job.data.noteId });
+		const note = await fetchNoteByIdFromDatabase(this.db, job.data.noteId);
 		if (note == null || !note.hasPoll) {
 			return;
 		}
 
-		const votes = await this.pollVotesRepository.createQueryBuilder('vote')
-			.select('vote.userId')
-			.where('vote.noteId = :noteId', { noteId: note.id })
-			.innerJoinAndSelect('vote.user', 'user')
-			.andWhere('user.host IS NULL')
-			.getMany();
-
-		const userIds = [...new Set([note.userId, ...votes.map(v => v.userId)])];
+		const voterIds = await listLocalPollVoterIdsByNoteIdFromDatabase(this.db, note.id);
+		const userIds = [...new Set([note.userId, ...voterIds])];
 
 		for (const userId of userIds) {
 			const profile = await this.cacheService.userProfileCache.fetch(userId);

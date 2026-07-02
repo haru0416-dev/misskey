@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { FollowRequestsRepository, NotesRepository, MiUser, UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiGroupedNotification, MiNotification } from '@/models/Notification.js';
 import type { MiNote } from '@/models/Note.js';
@@ -15,9 +14,12 @@ import type { Packed } from '@/misc/json-schema.js';
 import { bindThis } from '@/decorators.js';
 import { FilterUnionByProperty, groupedNotificationTypes } from '@/types.js';
 import { CacheService } from '@/core/CacheService.js';
-import { RoleEntityService } from './RoleEntityService.js';
-import { ChatEntityService } from './ChatEntityService.js';
-import type { OnModuleInit } from '@nestjs/common';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/FollowRequestStore.js';
+import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import type { RoleEntityService } from './RoleEntityService.js';
+import type { ChatEntityService } from './ChatEntityService.js';
 import type { UserEntityService } from './UserEntityService.js';
 import type { NoteEntityService } from './NoteEntityService.js';
 
@@ -44,14 +46,8 @@ export class NotificationEntityService implements OnModuleInit {
 	constructor(
 		private moduleRef: ModuleRef,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 	) {
@@ -208,18 +204,7 @@ export class NotificationEntityService implements OnModuleInit {
 		validNotifications = await this.#filterValidNotifier(validNotifications, meId);
 
 		const noteIds = validNotifications.map(x => 'noteId' in x ? x.noteId : null).filter(x => x != null);
-		const notes = noteIds.length > 0 ? await this.notesRepository.find({
-			where: { id: In(noteIds) },
-			relations: {
-				user: true,
-				reply: {
-					user: true,
-				},
-				renote: {
-					user: true,
-				},
-			},
-		}) : [];
+		const notes = noteIds.length > 0 ? await listNotesByIdsFromDatabase(this.db, noteIds) : [];
 		const packedNotesArray = await this.noteEntityService.packMany(notes, { id: meId }, {
 			detail: true,
 		});
@@ -233,18 +218,14 @@ export class NotificationEntityService implements OnModuleInit {
 			if (notification.type === 'reaction:grouped') userIds.push(...notification.reactions.map(x => x.userId));
 			if (notification.type === 'renote:grouped') userIds.push(...notification.userIds);
 		}
-		const users = userIds.length > 0 ? await this.usersRepository.find({
-			where: { id: In(userIds) },
-		}) : [];
+		const users = userIds.length > 0 ? await listUsersByIdsFromDatabase(this.db, userIds, { includeSuspended: true }) : [];
 		const packedUsersArray = await this.userEntityService.packMany(users, { id: meId });
 		const packedUsers = new Map(packedUsersArray.map(p => [p.id, p]));
 
 		// 既に解決されたフォローリクエストの通知を除外
 		const followRequestNotifications = validNotifications.filter((x): x is FilterUnionByProperty<T, 'type', 'receiveFollowRequest'> => x.type === 'receiveFollowRequest');
 		if (followRequestNotifications.length > 0) {
-			const reqs = await this.followRequestsRepository.find({
-				where: { followerId: In(followRequestNotifications.map(x => x.notifierId)) },
-			});
+			const reqs = await listFollowRequestsByFollowerIdsFromDatabase(this.db, followRequestNotifications.map(x => x.notifierId));
 			validNotifications = validNotifications.filter(x => (x.type !== 'receiveFollowRequest') || reqs.some(r => r.followerId === x.notifierId));
 		}
 
@@ -340,9 +321,7 @@ export class NotificationEntityService implements OnModuleInit {
 		]);
 
 		const notifierIds = notifications.map(notification => 'notifierId' in notification ? notification.notifierId : null).filter(x => x != null);
-		const notifiers = notifierIds.length > 0 ? await this.usersRepository.find({
-			where: { id: In(notifierIds) },
-		}) : [];
+		const notifiers = notifierIds.length > 0 ? await listUsersByIdsFromDatabase(this.db, notifierIds, { includeSuspended: true }) : [];
 
 		const filteredNotifications = ((await Promise.all(notifications.map(async (notification) => {
 			const isValid = this.#validateNotifier(notification, userIdsWhoMeMuting, userMutedInstances, notifiers);

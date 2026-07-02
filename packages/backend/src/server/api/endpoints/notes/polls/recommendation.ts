@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets, In } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, MutingsRepository, PollsRepository, PollVotesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -40,75 +41,23 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
-
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteEntityService: NoteEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.pollsRepository.createQueryBuilder('poll')
-				.where('poll.userHost IS NULL')
-				.andWhere('poll.userId != :meId', { meId: me.id })
-				.andWhere('poll.noteVisibility = \'public\'')
-				.andWhere(new Brackets(qb => {
-					qb
-						.where('poll.expiresAt IS NULL')
-						.orWhere('poll.expiresAt > :now', { now: new Date() });
-				}));
-
-			//#region exclude arleady voted polls
-			const votedQuery = this.pollVotesRepository.createQueryBuilder('vote')
-				.select('vote.noteId')
-				.where('vote.userId = :meId', { meId: me.id });
-
-			query
-				.andWhere(`poll.noteId NOT IN (${ votedQuery.getQuery() })`);
-
-			query.setParameters(votedQuery.getParameters());
-			//#endregion
-
-			//#region mute
-			const mutingQuery = this.mutingsRepository.createQueryBuilder('muting')
-				.select('muting.muteeId')
-				.where('muting.muterId = :muterId', { muterId: me.id });
-
-			query
-				.andWhere(`poll.userId NOT IN (${ mutingQuery.getQuery() })`);
-
-			query.setParameters(mutingQuery.getParameters());
-			//#endregion
-
-			//#region exclude channels
-			if (ps.excludeChannels) {
-				query.andWhere('poll.channelId IS NULL');
-			}
-			//#endregion
-
-			const polls = await query
-				.orderBy('poll.noteId', 'DESC')
-				.limit(ps.limit)
-				.offset(ps.offset)
-				.getMany();
-
-			if (polls.length === 0) return [];
-
-			const notes = await this.notesRepository.find({
-				where: {
-					id: In(polls.map(poll => poll.noteId)),
-				},
-				order: {
-					id: 'DESC',
-				},
+			const noteIds = await listUnvotedPublicPollNoteIdsFromDatabase(this.db, {
+				meId: me.id,
+				excludeChannels: ps.excludeChannels,
+				limit: ps.limit,
+				offset: ps.offset,
 			});
+
+			if (noteIds.length === 0) return [];
+
+			const notes = await listNotesByIdsFromDatabase(this.db, noteIds);
+			notes.sort((a, b) => b.id.localeCompare(a.id));
 
 			return await this.noteEntityService.packMany(notes, me, {
 				detail: true,

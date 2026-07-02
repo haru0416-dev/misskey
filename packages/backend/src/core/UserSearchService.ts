@@ -4,14 +4,17 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets, SelectQueryBuilder } from 'typeorm';
+import { sql, type SQL } from 'drizzle-orm';
 import { DI } from '@/di-symbols.js';
-import { type FollowingsRepository, MiUser, type MutingsRepository, type UserProfilesRepository, type UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import { bindThis } from '@/decorators.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { Config } from '@/config.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { Packed } from '@/misc/json-schema.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { deserializeUser } from '@/core/UserStore.js';
+import type { UserRow } from '@/db/schema/user.js';
 
 function defaultActiveThreshold() {
 	return new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
@@ -23,17 +26,8 @@ export class UserSearchService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 	) {
@@ -83,13 +77,8 @@ export class UserSearchService {
 
 		let resultSet = new Set<MiUser['id']>();
 		const limit = opts?.limit ?? 10;
-		for (const query of queries) {
-			const ids = await query
-				.select('user.id')
-				.limit(limit - resultSet.size)
-				.orderBy('user.usernameLower', 'ASC')
-				.getRawMany<{ user_id: MiUser['id'] }>()
-				.then(res => res.map(x => x.user_id));
+		for (const conditions of queries) {
+			const ids = await this.selectSearchUserIds(conditions, limit - resultSet.size);
 
 			resultSet = new Set([...resultSet, ...ids]);
 			if (resultSet.size >= limit) {
@@ -118,40 +107,34 @@ export class UserSearchService {
 			host?: string | null,
 			activeThreshold?: Date,
 		},
-	) {
+	): SQL[][] {
 		// デフォルト30日以内に更新されたユーザーをアクティブユーザーとする
 		const activeThreshold = params.activeThreshold ?? defaultActiveThreshold();
+		const followingUserQuery = sql`SELECT "followeeId" FROM "following" WHERE "followerId" = ${me.id}`;
+		const baseConditions = this.buildBaseUserSearchConditions(params);
 
-		const followingUserQuery = this.followingsRepository.createQueryBuilder('following')
-			.select('following.followeeId')
-			.where('following.followerId = :followerId', { followerId: me.id });
-
-		const activeFollowingUsersQuery = this.generateUserQueryBuilder(params)
-			.andWhere(`user.id IN (${followingUserQuery.getQuery()})`)
-			.andWhere('user.updatedAt > :activeThreshold', { activeThreshold });
-		activeFollowingUsersQuery.setParameters(followingUserQuery.getParameters());
-
-		const inactiveFollowingUsersQuery = this.generateUserQueryBuilder(params)
-			.andWhere(`user.id IN (${followingUserQuery.getQuery()})`)
-			.andWhere(new Brackets(qb => {
-				qb
-					.where('user.updatedAt IS NULL')
-					.orWhere('user.updatedAt <= :activeThreshold', { activeThreshold });
-			}));
-		inactiveFollowingUsersQuery.setParameters(followingUserQuery.getParameters());
-
-		// 自分自身がヒットするとしたらここ
-		const activeUserQuery = this.generateUserQueryBuilder(params)
-			.andWhere(`user.id NOT IN (${followingUserQuery.getQuery()})`)
-			.andWhere('user.updatedAt > :activeThreshold', { activeThreshold });
-		activeUserQuery.setParameters(followingUserQuery.getParameters());
-
-		const inactiveUserQuery = this.generateUserQueryBuilder(params)
-			.andWhere(`user.id NOT IN (${followingUserQuery.getQuery()})`)
-			.andWhere('user.updatedAt <= :activeThreshold', { activeThreshold });
-		inactiveUserQuery.setParameters(followingUserQuery.getParameters());
-
-		return [activeFollowingUsersQuery, inactiveFollowingUsersQuery, activeUserQuery, inactiveUserQuery];
+		return [
+			[
+				...baseConditions,
+				sql`"user"."id" IN (${followingUserQuery})`,
+				sql`"user"."updatedAt" > ${activeThreshold}`,
+			],
+			[
+				...baseConditions,
+				sql`"user"."id" IN (${followingUserQuery})`,
+				sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" <= ${activeThreshold})`,
+			],
+			[
+				...baseConditions,
+				sql`"user"."id" NOT IN (${followingUserQuery})`,
+				sql`"user"."updatedAt" > ${activeThreshold}`,
+			],
+			[
+				...baseConditions,
+				sql`"user"."id" NOT IN (${followingUserQuery})`,
+				sql`"user"."updatedAt" <= ${activeThreshold}`,
+			],
+		];
 	}
 
 	/**
@@ -164,21 +147,21 @@ export class UserSearchService {
 		username?: string | null,
 		host?: string | null,
 		activeThreshold?: Date,
-	}) {
+	}): SQL[][] {
 		// デフォルト30日以内に更新されたユーザーをアクティブユーザーとする
 		const activeThreshold = params.activeThreshold ?? defaultActiveThreshold();
+		const baseConditions = this.buildBaseUserSearchConditions(params);
 
-		const activeUserQuery = this.generateUserQueryBuilder(params)
-			.andWhere(new Brackets(qb => {
-				qb
-					.where('user.updatedAt IS NULL')
-					.orWhere('user.updatedAt > :activeThreshold', { activeThreshold });
-			}));
-
-		const inactiveUserQuery = this.generateUserQueryBuilder(params)
-			.andWhere('user.updatedAt <= :activeThreshold', { activeThreshold });
-
-		return [activeUserQuery, inactiveUserQuery];
+		return [
+			[
+				...baseConditions,
+				sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`,
+			],
+			[
+				...baseConditions,
+				sql`"user"."updatedAt" <= ${activeThreshold}`,
+			],
+		];
 	}
 
 	/**
@@ -187,29 +170,50 @@ export class UserSearchService {
 	 * @private
 	 */
 	@bindThis
-	private generateUserQueryBuilder(params: {
+	private buildBaseUserSearchConditions(params: {
 		username?: string | null,
 		host?: string | null,
-	}): SelectQueryBuilder<MiUser> {
-		const userQuery = this.usersRepository.createQueryBuilder('user');
+	}): SQL[] {
+		const conditions: SQL[] = [];
 
 		if (params.username) {
-			userQuery.andWhere('user.usernameLower LIKE :username', { username: sqlLikeEscape(params.username.toLowerCase()) + '%' });
+			conditions.push(sql`"user"."usernameLower" LIKE ${sqlLikeEscape(params.username.toLowerCase()) + '%'}`);
 		}
 
 		if (params.host) {
 			if (params.host === this.config.hostname || params.host === '.') {
-				userQuery.andWhere('user.host IS NULL');
+				conditions.push(sql`"user"."host" IS NULL`);
 			} else {
-				userQuery.andWhere('user.host LIKE :host', {
-					host: sqlLikeEscape(params.host.toLowerCase()) + '%',
-				});
+				conditions.push(sql`"user"."host" LIKE ${sqlLikeEscape(params.host.toLowerCase()) + '%'}`);
 			}
 		}
 
-		userQuery.andWhere('user.isSuspended = FALSE');
+		conditions.push(sql`"user"."isSuspended" = FALSE`);
 
-		return userQuery;
+		return conditions;
+	}
+
+	@bindThis
+	private async selectSearchUserIds(conditions: SQL[], limit: number): Promise<MiUser['id'][]> {
+		if (limit <= 0) return [];
+
+		const result = await this.db.execute<{ id: MiUser['id'] }>(sql`
+			SELECT "user"."id" AS "id"
+			FROM "user"
+			WHERE ${sql.join(conditions, sql` AND `)}
+			ORDER BY "user"."usernameLower" ASC
+			LIMIT ${limit}
+		`);
+
+		return result.rows.map(row => row.id);
+	}
+
+	@bindThis
+	private limitOffsetSql(options: Partial<{ limit: number; offset: number }>): SQL {
+		return sql.join([
+			options.limit == null ? sql`` : sql`LIMIT ${options.limit}`,
+			options.offset == null ? sql`` : sql`OFFSET ${options.offset}`,
+		], sql` `);
 	}
 
 	@bindThis
@@ -222,78 +226,69 @@ export class UserSearchService {
 
 		const isUsername = query.startsWith('@') && !query.includes(' ') && query.indexOf('@', 1) === -1;
 
-		let users: MiUser[] = [];
+		const nameConditions: SQL[] = [
+			sql`("user"."name" ILIKE ${'%' + sqlLikeEscape(query) + '%'} ${
+				isUsername
+					? sql`OR "user"."usernameLower" LIKE ${sqlLikeEscape(query.replace('@', '').toLowerCase()) + '%'}`
+					: this.userEntityService.validateLocalUsername(query)
+						? sql`OR "user"."usernameLower" LIKE ${'%' + sqlLikeEscape(query.toLowerCase()) + '%'}`
+						: sql``
+			})`,
+			sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`,
+			sql`"user"."isSuspended" = FALSE`,
+		];
 
-		const mutingQuery = meId == null ? null : this.mutingsRepository.createQueryBuilder('muting')
-			.select('muting.muteeId')
-			.where('muting.muterId = :muterId', { muterId: meId });
-
-		const nameQuery = this.usersRepository.createQueryBuilder('user')
-			.where(new Brackets(qb => {
-				qb.where('user.name ILIKE :query', { query: '%' + sqlLikeEscape(query) + '%' });
-
-				if (isUsername) {
-					qb.orWhere('user.usernameLower LIKE :username', { username: sqlLikeEscape(query.replace('@', '').toLowerCase()) + '%' });
-				} else if (this.userEntityService.validateLocalUsername(query)) { // Also search username if it qualifies as username
-					qb.orWhere('user.usernameLower LIKE :username', { username: '%' + sqlLikeEscape(query.toLowerCase()) + '%' });
-				}
-			}))
-			.andWhere(new Brackets(qb => {
-				qb
-					.where('user.updatedAt IS NULL')
-					.orWhere('user.updatedAt > :activeThreshold', { activeThreshold: activeThreshold });
-			}))
-			.andWhere('user.isSuspended = FALSE');
-
-		if (mutingQuery) {
-			nameQuery.andWhere(`user.id NOT IN (${mutingQuery.getQuery()})`);
-			nameQuery.setParameters(mutingQuery.getParameters());
+		if (meId != null) {
+			nameConditions.push(sql`"user"."id" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
 		}
 
 		if (options.origin === 'local') {
-			nameQuery.andWhere('user.host IS NULL');
+			nameConditions.push(sql`"user"."host" IS NULL`);
 		} else if (options.origin === 'remote') {
-			nameQuery.andWhere('user.host IS NOT NULL');
+			nameConditions.push(sql`"user"."host" IS NOT NULL`);
 		}
 
-		users = await nameQuery
-			.orderBy('user.updatedAt', 'DESC', 'NULLS LAST')
-			.limit(options.limit)
-			.offset(options.offset)
-			.getMany();
+		const nameResult = await this.db.execute<UserRow>(sql`
+			SELECT "user".*
+			FROM "user"
+			WHERE ${sql.join(nameConditions, sql` AND `)}
+			ORDER BY "user"."updatedAt" DESC NULLS LAST
+			${this.limitOffsetSql(options)}
+		`);
+		let users = nameResult.rows.map(row => deserializeUser(row));
 
 		if (users.length < (options.limit ?? 30)) {
-			const profQuery = this.userProfilesRepository.createQueryBuilder('prof')
-				.select('prof.userId')
-				.where('prof.description ILIKE :query', { query: '%' + sqlLikeEscape(query) + '%' });
+			const profileConditions: SQL[] = [
+				sql`"prof"."description" ILIKE ${'%' + sqlLikeEscape(query) + '%'}`,
+			];
 
-			if (mutingQuery) {
-				profQuery.andWhere(`prof.userId NOT IN (${mutingQuery.getQuery()})`);
-				profQuery.setParameters(mutingQuery.getParameters());
+			if (meId != null) {
+				profileConditions.push(sql`"prof"."userId" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
 			}
 
 			if (options.origin === 'local') {
-				profQuery.andWhere('prof.userHost IS NULL');
+				profileConditions.push(sql`"prof"."userHost" IS NULL`);
 			} else if (options.origin === 'remote') {
-				profQuery.andWhere('prof.userHost IS NOT NULL');
+				profileConditions.push(sql`"prof"."userHost" IS NOT NULL`);
 			}
 
-			const userQuery = this.usersRepository.createQueryBuilder('user')
-				.where(`user.id IN (${ profQuery.getQuery() })`)
-				.andWhere(new Brackets(qb => {
-					qb
-						.where('user.updatedAt IS NULL')
-						.orWhere('user.updatedAt > :activeThreshold', { activeThreshold: activeThreshold });
-				}))
-				.andWhere('user.isSuspended = FALSE')
-				.setParameters(profQuery.getParameters());
+			const profileUserQuery = sql`
+				SELECT "prof"."userId"
+				FROM "user_profile" AS "prof"
+				WHERE ${sql.join(profileConditions, sql` AND `)}
+			`;
 
-			users = users.concat(await userQuery
-				.orderBy('user.updatedAt', 'DESC', 'NULLS LAST')
-				.limit(options.limit)
-				.offset(options.offset)
-				.getMany(),
-			);
+			const profileResult = await this.db.execute<UserRow>(sql`
+				SELECT "user".*
+				FROM "user"
+				WHERE "user"."id" IN (${profileUserQuery})
+					AND ("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})
+					AND "user"."isSuspended" = FALSE
+				ORDER BY "user"."updatedAt" DESC NULLS LAST
+				${this.limitOffsetSql(options)}
+			`);
+
+			users = users.concat(profileResult.rows.map(row => deserializeUser(row)));
 		}
 
 		return users;

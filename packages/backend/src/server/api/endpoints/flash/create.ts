@@ -5,11 +5,12 @@
 
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { FlashsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
+import { createFlashInDatabase } from '@/core/FlashStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['flash'],
@@ -52,14 +53,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.flashsRepository)
-		private flashsRepository: FlashsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private flashEntityService: FlashEntityService,
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const flash = await this.flashsRepository.insertOne({
+			const flash = await createFlashInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: me.id,
 				updatedAt: new Date(),

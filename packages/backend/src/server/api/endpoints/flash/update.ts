@@ -5,9 +5,10 @@
 
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { FlashsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { fetchFlashByIdFromDatabase, updateFlashInDatabase } from '@/core/FlashStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -57,11 +58,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.flashsRepository)
-		private flashsRepository: FlashsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const flash = await this.flashsRepository.findOneBy({ id: ps.flashId });
+			const flash = await fetchFlashByIdFromDatabase(this.drizzle, ps.flashId);
 			if (flash == null) {
 				throw new ApiError(meta.errors.noSuchFlash);
 			}
@@ -69,7 +70,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.accessDenied);
 			}
 
-			await this.flashsRepository.update(flash.id, {
+			await updateFlashInDatabase(this.drizzle, flash.id, {
 				updatedAt: new Date(),
 				...Object.fromEntries(
 					Object.entries(ps).filter(

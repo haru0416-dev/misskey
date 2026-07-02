@@ -4,20 +4,20 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull } from 'typeorm';
 import vary from 'vary';
 import fastifyAccepts from '@fastify/accepts';
 import { DI } from '@/di-symbols.js';
-import type { MiMeta, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { escapeAttribute, escapeValue } from '@/misc/prelude/xml.js';
 import type { MiUser } from '@/models/User.js';
 import * as Acct from '@/misc/acct.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
 import { bindThis } from '@/decorators.js';
 import { NodeinfoServerService } from './NodeinfoServerService.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
-import type { FindOptionsWhere } from 'typeorm';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 
 @Injectable()
@@ -29,8 +29,8 @@ export class WellKnownServerService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private nodeinfoServerService: NodeinfoServerService,
 		private userEntityService: UserEntityService,
@@ -122,13 +122,21 @@ fastify.get('/.well-known/change-password', async (request, reply) => {
 				return;
 			}
 
-			const fromId = (id: MiUser['id']): FindOptionsWhere<MiUser> => ({
-				id,
-				host: IsNull(),
-				isSuspended: false,
-			});
+			const fromId = async (id: MiUser['id']): Promise<MiUser | null> => {
+				const user = await fetchUserByIdFromDatabase(this.db, id);
+				if (user == null || user.host !== null || user.isSuspended) return null;
+				return user;
+			};
 
-			const generateQuery = (resource: string): FindOptionsWhere<MiUser> | number =>
+			const fromAcct = async (acct: Acct.Acct): Promise<MiUser | null | number> => {
+				if (acct.host && acct.host !== this.config.host.toLowerCase()) return 422;
+
+				const user = await fetchUserByUsernameAndHostFromDatabase(this.db, acct.username, null);
+				if (user == null || user.isSuspended) return null;
+				return user;
+			};
+
+			const resolveUser = (resource: string): Promise<MiUser | null | number> =>
 				resource.startsWith(`${this.config.url.toLowerCase()}/users/`) ?
 					fromId(resource.split('/').pop()!) :
 					fromAcct(Acct.parse(
@@ -136,26 +144,17 @@ fastify.get('/.well-known/change-password', async (request, reply) => {
 						resource.startsWith('acct:') ? resource.slice('acct:'.length) :
 						resource));
 
-			const fromAcct = (acct: Acct.Acct): FindOptionsWhere<MiUser> | number =>
-				!acct.host || acct.host === this.config.host.toLowerCase() ? {
-					usernameLower: acct.username.toLowerCase(),
-					host: IsNull(),
-					isSuspended: false,
-				} : 422;
-
 			if (typeof request.query.resource !== 'string') {
 				reply.code(400);
 				return;
 			}
 
-			const query = generateQuery(request.query.resource.toLowerCase());
+			const user = await resolveUser(request.query.resource.toLowerCase());
 
-			if (typeof query === 'number') {
-				reply.code(query);
+			if (typeof user === 'number') {
+				reply.code(user);
 				return;
 			}
-
-			const user = await this.usersRepository.findOneBy(query);
 
 			if (user == null) {
 				reply.code(404);

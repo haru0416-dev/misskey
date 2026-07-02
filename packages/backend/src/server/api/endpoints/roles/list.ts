@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { RolesRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { RoleEntityService } from '@/core/entities/RoleEntityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
 
 export const meta = {
 	tags: ['role'],
@@ -37,16 +38,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.rolesRepository)
-		private rolesRepository: RolesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private roleEntityService: RoleEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const roles = await this.rolesRepository.findBy({
-				isPublic: true,
-				isExplorable: true,
-			});
+			const roles = await listPublicExplorableRolesFromDatabase(this.db);
 			return await this.roleEntityService.packMany(roles, me);
 		});
 	}

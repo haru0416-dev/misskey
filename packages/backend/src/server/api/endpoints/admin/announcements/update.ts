@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AnnouncementsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
+import { fetchAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -46,13 +47,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private announcementService: AnnouncementService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const announcement = await this.announcementsRepository.findOneBy({ id: ps.id });
+			const announcement = await fetchAnnouncementByIdFromDatabase(this.db, ps.id);
 
 			if (announcement == null) throw new ApiError(meta.errors.noSuchAnnouncement);
 

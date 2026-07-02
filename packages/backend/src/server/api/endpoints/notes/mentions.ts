@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, FollowingsRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listMentionNotesFromDatabase } from '@/core/NoteStore.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -45,48 +46,33 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const followingQuery = this.followingsRepository.createQueryBuilder('following')
-				.select('following.followeeId')
-				.where('following.followerId = :followerId', { followerId: me.id });
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere(new Brackets(qb => {
-					qb // このmeIdAsListパラメータはqueryServiceのgenerateVisibilityQueryでセットされる
-						.where(':meIdAsList <@ note.mentions')
-						.orWhere(':meIdAsList <@ note.visibleUserIds');
-				}))
-				// Avoid scanning primary key index
-				.orderBy('CONCAT(note.id)', (ps.sinceDate || ps.sinceId) ? 'ASC' : 'DESC')
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser');
-
-			this.queryService.generateVisibilityQuery(query, me);
-			this.queryService.generateBaseNoteFilteringQuery(query, me);
-			this.queryService.generateMutedNoteThreadQuery(query, me);
-
-			if (ps.visibility) {
-				query.andWhere('note.visibility = :visibility', { visibility: ps.visibility });
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
 			}
 
-			if (ps.following) {
-				query.andWhere(`((note.userId IN (${ followingQuery.getQuery() })) OR (note.userId = :meId))`, { meId: me.id });
-				query.setParameters(followingQuery.getParameters());
-			}
-
-			const mentions = await query.limit(ps.limit).getMany();
+			const mentions = await listMentionNotesFromDatabase(this.db, {
+				me,
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				visibility: ps.visibility,
+				following: ps.following,
+				blockedHosts: this.instanceMeta.blockedHosts,
+			});
 
 			return await this.noteEntityService.packMany(mentions, me);
 		});

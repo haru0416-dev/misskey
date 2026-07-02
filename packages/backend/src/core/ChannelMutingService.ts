@@ -5,13 +5,27 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
-import { Brackets, In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { ChannelMutingRepository, ChannelsRepository, MiChannel, MiChannelMuting, MiUser } from '@/models/_.js';
+import type { MiChannel, MiUser } from '@/models/_.js';
+import type { MiChannelMuting } from '@/models/ChannelMuting.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEvents, GlobalEventService } from '@/core/GlobalEventService.js';
 import { bindThis } from '@/decorators.js';
 import { RedisKVCache } from '@/misc/cache.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import {
+	createChannelMutingInDatabase,
+	deleteChannelMutingFromDatabase,
+	deleteChannelMutingsByIdsFromDatabase,
+	fetchActiveMutedChannelIdsFromDatabase,
+	fetchExpiredChannelMutingsFromDatabase,
+	fetchMutedChannelIdsFromDatabase,
+	updateChannelMutingExpirationInDatabase,
+} from '@/core/ChannelMutingStore.js';
 
 @Injectable()
 export class ChannelMutingService {
@@ -22,20 +36,16 @@ export class ChannelMutingService {
 		private redisClient: Redis.Redis,
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-		@Inject(DI.channelMutingRepository)
-		private channelMutingRepository: ChannelMutingRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
 	) {
 		this.mutingChannelsCache = new RedisKVCache<Set<string>>(this.redisClient, 'channelMutingChannels', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (userId) => this.channelMutingRepository.find({
-				where: { userId: userId },
-				select: { channelId: true },
-			}).then(xs => new Set(xs.map(x => x.channelId))),
+			fetcher: (userId) => fetchMutedChannelIdsFromDatabase(this.drizzle, userId)
+				.then(channelIds => new Set(channelIds)),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value)),
 			fromRedisConverter: (value) => new Set(JSON.parse(value)),
 		});
@@ -62,37 +72,39 @@ export class ChannelMutingService {
 			joinBannerFile?: boolean;
 		},
 	): Promise<MiChannel[]> {
+		const channelIds = await fetchActiveMutedChannelIdsFromDatabase(this.drizzle, params.requestUserId, new Date());
+
 		if (opts?.idOnly) {
-			const q = this.channelMutingRepository.createQueryBuilder('channel_muting')
-				.select('channel_muting.channelId')
-				.where('channel_muting.userId = :userId', { userId: params.requestUserId })
-				.andWhere(new Brackets(qb => {
-					qb.where('channel_muting.expiresAt IS NULL')
-						.orWhere('channel_muting.expiresAt > :now', { now: new Date() });
-				}));
-
-			return q
-				.getRawMany<{ channel_muting_channelId: string }>()
-				.then(xs => xs.map(x => ({ id: x.channel_muting_channelId } as MiChannel)));
-		} else {
-			const q = this.channelsRepository.createQueryBuilder('channel')
-				.innerJoin('channel_muting', 'channel_muting', 'channel_muting.channelId = channel.id')
-				.where('channel_muting.userId = :userId', { userId: params.requestUserId })
-				.andWhere(new Brackets(qb => {
-					qb.where('channel_muting.expiresAt IS NULL')
-						.orWhere('channel_muting.expiresAt > :now', { now: new Date() });
-				}));
-
-			if (opts?.joinUser) {
-				q.innerJoinAndSelect('channel.user', 'user');
-			}
-
-			if (opts?.joinBannerFile) {
-				q.leftJoinAndSelect('channel.banner', 'drive_file');
-			}
-
-			return q.getMany();
+			return channelIds.map(id => ({ id } as MiChannel));
 		}
+
+		if (channelIds.length === 0) {
+			return [];
+		}
+
+		const channels = await listChannelsByIdsFromDatabase(this.drizzle, channelIds);
+
+		if (opts?.joinUser) {
+			const users = await listUsersByIdsFromDatabase(this.drizzle, channels.map(channel => channel.userId).filter(userId => userId != null), { includeSuspended: true });
+			const userById = new Map(users.map(user => [user.id, user]));
+			for (const channel of channels) {
+				channel.user = channel.userId == null ? null : userById.get(channel.userId) ?? null;
+			}
+		}
+
+		if (opts?.joinBannerFile) {
+			const files = await listDriveFilesByIdsFromDatabase(this.drizzle, channels.map(channel => channel.bannerId).filter(bannerId => bannerId != null));
+			const fileById = new Map(files.map(file => [file.id, file]));
+			for (const channel of channels) {
+				channel.banner = channel.bannerId == null ? null : fileById.get(channel.bannerId) ?? null;
+			}
+		}
+
+		const channelById = new Map(channels.map(channel => [channel.id, channel]));
+
+		return channelIds
+			.map(id => channelById.get(id))
+			.filter(channel => channel != null);
 	}
 
 	/**
@@ -106,19 +118,34 @@ export class ChannelMutingService {
 		joinUser?: boolean;
 		joinChannel?: boolean;
 	}): Promise<MiChannelMuting[]> {
-		const now = new Date();
-		const q = this.channelMutingRepository.createQueryBuilder('channel_muting')
-			.where('channel_muting.expiresAt < :now', { now });
+		const rows = await fetchExpiredChannelMutingsFromDatabase(this.drizzle, new Date());
+		const mutings: MiChannelMuting[] = rows.map(row => ({
+			...row,
+			user: null,
+			channel: null,
+		}));
+
+		if (mutings.length === 0) {
+			return mutings;
+		}
 
 		if (opts?.joinUser) {
-			q.innerJoinAndSelect('channel_muting.user', 'user');
+			const users = await listUsersByIdsFromDatabase(this.drizzle, mutings.map(muting => muting.userId), { includeSuspended: true });
+			const userById = new Map(users.map(user => [user.id, user]));
+			for (const muting of mutings) {
+				muting.user = userById.get(muting.userId) ?? null;
+			}
 		}
 
 		if (opts?.joinChannel) {
-			q.leftJoinAndSelect('channel_muting.channel', 'channel');
+			const channels = await listChannelsByIdsFromDatabase(this.drizzle, mutings.map(muting => muting.channelId));
+			const channelById = new Map(channels.map(channel => [channel.id, channel]));
+			for (const muting of mutings) {
+				muting.channel = channelById.get(muting.channelId) ?? null;
+			}
 		}
 
-		return q.getMany();
+		return mutings;
 	}
 
 	/**
@@ -146,12 +173,18 @@ export class ChannelMutingService {
 		targetChannelId: MiChannel['id'],
 		expiresAt?: Date | null,
 	}): Promise<void> {
-		await this.channelMutingRepository.insert({
-			id: this.idService.gen(),
-			userId: params.requestUserId,
-			channelId: params.targetChannelId,
-			expiresAt: params.expiresAt,
-		});
+		try {
+			await createChannelMutingInDatabase(this.drizzle, {
+				id: this.idService.gen(),
+				userId: params.requestUserId,
+				channelId: params.targetChannelId,
+				expiresAt: params.expiresAt,
+			});
+		} catch (e) {
+			if (!isDuplicateKeyValueDatabaseError(e)) throw e;
+
+			await updateChannelMutingExpirationInDatabase(this.drizzle, params.requestUserId, params.targetChannelId, params.expiresAt ?? null);
+		}
 
 		this.globalEventService.publishInternalEvent('muteChannel', {
 			userId: params.requestUserId,
@@ -168,10 +201,7 @@ export class ChannelMutingService {
 		requestUserId: MiUser['id'],
 		targetChannelId: MiChannel['id'],
 	}): Promise<void> {
-		await this.channelMutingRepository.delete({
-			userId: params.requestUserId,
-			channelId: params.targetChannelId,
-		});
+		await deleteChannelMutingFromDatabase(this.drizzle, params.requestUserId, params.targetChannelId);
 
 		this.globalEventService.publishInternalEvent('unmuteChannel', {
 			userId: params.requestUserId,
@@ -185,7 +215,7 @@ export class ChannelMutingService {
 	@bindThis
 	public async eraseExpiredMutings(): Promise<void> {
 		const expiredMutings = await this.findExpiredMutings();
-		await this.channelMutingRepository.delete({ id: In(expiredMutings.map(x => x.id)) });
+		await deleteChannelMutingsByIdsFromDatabase(this.drizzle, expiredMutings.map(x => x.id));
 
 		const userIds = [...new Set(expiredMutings.map(x => x.userId))];
 		for (const userId of userIds) {

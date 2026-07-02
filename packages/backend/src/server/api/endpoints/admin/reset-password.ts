@@ -7,10 +7,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { ApiError } from '@/server/api/error.js';
-import type { UsersRepository, UserProfilesRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -60,16 +63,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private moderationLogService: ModerationLogService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const user = await this.usersRepository.findOneBy({ id: ps.userId });
+			const user = await fetchUserByIdFromDatabase(this.db, ps.userId);
 
 			if (user == null) {
 				throw new ApiError(meta.errors.noSuchUser);
@@ -84,9 +84,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Generate hash of password
 			const hash = bcrypt.hashSync(passwd);
 
-			await this.userProfilesRepository.update({
-				userId: user.id,
-			}, {
+			await updateUserProfileInDatabase(this.db, user.id, {
 				password: hash,
 			});
 

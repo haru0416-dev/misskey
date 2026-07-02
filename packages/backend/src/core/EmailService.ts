@@ -12,10 +12,12 @@ import { UtilityService } from '@/core/UtilityService.js';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
-import type { MiMeta, UserProfilesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { bindThis } from '@/decorators.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class EmailService {
@@ -28,8 +30,8 @@ export class EmailService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private loggerService: LoggerService,
 		private utilityService: UtilityService,
@@ -174,10 +176,7 @@ export class EmailService {
 			};
 		}
 
-		const exist = await this.userProfilesRepository.countBy({
-			emailVerified: true,
-			email: emailAddress,
-		});
+		const exist = await countVerifiedUserProfilesByEmailFromDatabase(this.drizzle, emailAddress);
 
 		if (exist !== 0) {
 			return {

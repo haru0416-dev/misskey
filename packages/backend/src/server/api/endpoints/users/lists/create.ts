@@ -4,14 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserListsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
-import type { MiUserList } from '@/models/UserList.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserListEntityService } from '@/core/entities/UserListEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { RoleService } from '@/core/RoleService.js';
+import { countUserListsByUserIdFromDatabase, createUserListInDatabase } from '@/core/UserListStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['lists'],
@@ -50,26 +50,24 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userListEntityService: UserListEntityService,
 		private idService: IdService,
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const currentCount = await this.userListsRepository.countBy({
-				userId: me.id,
-			});
+			const currentCount = await countUserListsByUserIdFromDatabase(this.db, me.id);
 			if (currentCount >= (await this.roleService.getUserPolicies(me.id)).userListLimit) {
 				throw new ApiError(meta.errors.tooManyUserLists);
 			}
 
-			const userList = await this.userListsRepository.insertOne({
+			const userList = await createUserListInDatabase(this.db, {
 				id: this.idService.gen(),
 				userId: me.id,
 				name: ps.name,
-			} as MiUserList);
+			});
 
 			return await this.userListEntityService.pack(userList);
 		});

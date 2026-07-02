@@ -5,17 +5,24 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { GalleryLikesRepository } from '@/models/_.js';
 import type { } from '@/models/Blocking.js';
-import type { MiGalleryLike } from '@/models/GalleryLike.js';
+import type { MiGalleryPost } from '@/models/GalleryPost.js';
+import type { MiUser } from '@/models/User.js';
+import { fetchGalleryLikeByIdOrFailFromDatabase } from '@/core/GalleryLikeStore.js';
+import type { GalleryLikeRow } from '@/db/schema/gallery-like.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { GalleryPostEntityService } from './GalleryPostEntityService.js';
+
+export type GalleryLikePackable = GalleryLikeRow & {
+	post?: MiGalleryPost | null;
+};
 
 @Injectable()
 export class GalleryLikeEntityService {
 	constructor(
-		@Inject(DI.galleryLikesRepository)
-		private galleryLikesRepository: GalleryLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private galleryPostEntityService: GalleryPostEntityService,
 	) {
@@ -23,23 +30,23 @@ export class GalleryLikeEntityService {
 
 	@bindThis
 	public async pack(
-		src: MiGalleryLike['id'] | MiGalleryLike,
-		me?: any,
+		src: GalleryLikeRow['id'] | GalleryLikePackable,
+		me?: { id: MiUser['id'] } | null | undefined,
 	) {
-		const like = typeof src === 'object' ? src : await this.galleryLikesRepository.findOneByOrFail({ id: src });
+		const like = typeof src === 'object' ? src : await fetchGalleryLikeByIdOrFailFromDatabase(this.drizzle, src);
+		const post = typeof src === 'object' ? (src.post ?? src.postId) : like.postId;
 
 		return {
 			id: like.id,
-			post: await this.galleryPostEntityService.pack(like.post ?? like.postId, me),
+			post: await this.galleryPostEntityService.pack(post, me),
 		};
 	}
 
 	@bindThis
 	public packMany(
-		likes: any[],
-		me: any,
+		likes: GalleryLikePackable[],
+		me: { id: MiUser['id'] },
 	) {
 		return Promise.all(likes.map(x => this.pack(x, me)));
 	}
 }
-

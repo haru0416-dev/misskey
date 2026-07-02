@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AbuseUserReportsRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
 import { AbuseUserReportEntityService } from '@/core/entities/AbuseUserReportEntityService.js';
+import { IdService } from '@/core/IdService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listAbuseUserReportsFromDatabase, resolveAbuseUserReportPagination } from '@/core/AbuseUserReportStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -110,31 +111,20 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.abuseUserReportsRepository)
-		private abuseUserReportsRepository: AbuseUserReportsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private abuseUserReportEntityService: AbuseUserReportEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.abuseUserReportsRepository.createQueryBuilder('report'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
-
-			switch (ps.state) {
-				case 'resolved': query.andWhere('report.resolved = TRUE'); break;
-				case 'unresolved': query.andWhere('report.resolved = FALSE'); break;
-			}
-
-			switch (ps.reporterOrigin) {
-				case 'local': query.andWhere('report.reporterHost IS NULL'); break;
-				case 'remote': query.andWhere('report.reporterHost IS NOT NULL'); break;
-			}
-
-			switch (ps.targetUserOrigin) {
-				case 'local': query.andWhere('report.targetUserHost IS NULL'); break;
-				case 'remote': query.andWhere('report.targetUserHost IS NOT NULL'); break;
-			}
-
-			const reports = await query.limit(ps.limit).getMany();
+			const reports = await listAbuseUserReportsFromDatabase(this.db, {
+				limit: ps.limit,
+				...resolveAbuseUserReportPagination(this.idService, ps),
+				state: ps.state,
+				reporterOrigin: ps.reporterOrigin,
+				targetUserOrigin: ps.targetUserOrigin,
+			});
 
 			return await this.abuseUserReportEntityService.packMany(reports);
 		});

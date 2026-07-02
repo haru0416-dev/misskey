@@ -5,9 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AppsRepository, AccessTokensRepository, AuthSessionsRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { deleteAuthSessionByIdFromDatabase, fetchAuthSessionByTokenAndAppIdFromDatabase } from '@/core/AuthSessionStore.js';
+import { fetchAppBySecretFromDatabase } from '@/core/AppStore.js';
+import { fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase } from '@/core/AccessTokenStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -65,32 +68,21 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.appsRepository)
-		private appsRepository: AppsRepository,
-
-		@Inject(DI.authSessionsRepository)
-		private authSessionsRepository: AuthSessionsRepository,
-
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Lookup app
-			const app = await this.appsRepository.findOneBy({
-				secret: ps.appSecret,
-			});
+			const app = await fetchAppBySecretFromDatabase(this.drizzle, ps.appSecret);
 
 			if (app == null) {
 				throw new ApiError(meta.errors.noSuchApp);
 			}
 
 			// Fetch token
-			const session = await this.authSessionsRepository.findOneBy({
-				token: ps.token,
-				appId: app.id,
-			});
+			const session = await fetchAuthSessionByTokenAndAppIdFromDatabase(this.drizzle, ps.token, app.id);
 
 			if (session == null) {
 				throw new ApiError(meta.errors.noSuchSession);
@@ -101,13 +93,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// Lookup access token
-			const accessToken = await this.accessTokensRepository.findOneByOrFail({
-				appId: app.id,
-				userId: session.userId,
-			});
+			const accessToken = await fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase(this.drizzle, app.id, session.userId);
 
 			// Delete session
-			this.authSessionsRepository.delete(session.id);
+			await deleteAuthSessionByIdFromDatabase(this.drizzle, session.id);
 
 			return {
 				accessToken: accessToken.token,

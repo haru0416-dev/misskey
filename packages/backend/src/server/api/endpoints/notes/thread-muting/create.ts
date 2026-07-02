@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import type { NotesRepository, NoteThreadMutingsRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
+import { createNoteThreadMutingInDatabase } from '@/core/NoteThreadMutingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -44,11 +45,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.noteThreadMutingsRepository)
-		private noteThreadMutingsRepository: NoteThreadMutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 		private idService: IdService,
@@ -59,15 +57,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 
-			const _mutedNotes = await this.notesRepository.find({
-				where: [{
-					id: note.threadId ?? note.id,
-				}, {
-					threadId: note.threadId ?? note.id,
-				}],
-			});
-
-			await this.noteThreadMutingsRepository.insert({
+			await createNoteThreadMutingInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				threadId: note.threadId ?? note.id,
 				userId: me.id,

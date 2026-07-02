@@ -4,7 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository, PollsRepository, PollVotesRepository } from '@/models/_.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
@@ -15,6 +14,10 @@ import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
+import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -79,14 +82,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
-
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private getterService: GetterService,
@@ -117,7 +114,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			const poll = await this.pollsRepository.findOneByOrFail({ noteId: note.id });
+			const poll = await fetchPollByNoteIdOrFailFromDatabase(this.db, note.id);
 
 			if (poll.expiresAt && poll.expiresAt < createdAt) {
 				throw new ApiError(meta.errors.alreadyExpired);
@@ -128,10 +125,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// if already voted
-			const exist = await this.pollVotesRepository.findBy({
-				noteId: note.id,
-				userId: me.id,
-			});
+			const exist = await listPollVotesByNoteAndUserFromDatabase(this.db, note.id, me.id);
 
 			if (exist.length) {
 				if (poll.multiple) {
@@ -144,7 +138,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// Create vote
-			const vote = await this.pollVotesRepository.insertOne({
+			const vote = await createPollVoteInDatabase(this.db, {
 				id: this.idService.gen(createdAt.getTime()),
 				noteId: note.id,
 				userId: me.id,
@@ -152,8 +146,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// Increment votes count
-			const index = ps.choice + 1; // In SQL, array index is 1 based
-			await this.pollsRepository.query(`UPDATE poll SET votes[${index}] = votes[${index}] + 1 WHERE "noteId" = '${poll.noteId}'`);
+			await incrementPollVoteInDatabase(this.db, poll.noteId, ps.choice);
 
 			this.globalEventService.publishNoteStream(note, 'pollVoted', {
 				choice: ps.choice,
@@ -162,7 +155,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// リモート投票の場合リプライ送信
 			if (note.userHost != null) {
-				const pollOwner = await this.usersRepository.findOneByOrFail({ id: note.userId }) as MiRemoteUser;
+				const pollOwner = await fetchUserByIdOrFailFromDatabase(this.db, note.userId) as MiRemoteUser;
 
 				this.queueService.deliver(me, this.apRendererService.addContext(await this.apRendererService.renderVote(me, vote, note, poll, pollOwner)), pollOwner.inbox, false);
 			}

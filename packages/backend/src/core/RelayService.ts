@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import type { MiUser } from '@/models/User.js';
-import type { RelaysRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import type { MiRelay } from '@/models/Relay.js';
@@ -15,14 +14,23 @@ import { DI } from '@/di-symbols.js';
 import { deepClone } from '@/misc/clone.js';
 import { bindThis } from '@/decorators.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
+import {
+	createRelayInDatabase,
+	deleteRelayFromDatabase,
+	fetchRelayByInboxFromDatabase,
+	listRelaysByStatusFromDatabase,
+	listRelaysFromDatabase,
+	updateRelayStatusInDatabase,
+} from '@/core/RelayStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class RelayService {
 	private relaysCache: MemorySingleCache<MiRelay[]>;
 
 	constructor(
-		@Inject(DI.relaysRepository)
-		private relaysRepository: RelaysRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private queueService: QueueService,
@@ -34,7 +42,7 @@ export class RelayService {
 
 	@bindThis
 	public async addRelay(inbox: string): Promise<MiRelay> {
-		const relay = await this.relaysRepository.insertOne({
+		const relay = await createRelayInDatabase(this.drizzle, {
 			id: this.idService.gen(),
 			inbox,
 			status: 'requesting',
@@ -50,9 +58,7 @@ export class RelayService {
 
 	@bindThis
 	public async removeRelay(inbox: string): Promise<void> {
-		const relay = await this.relaysRepository.findOneBy({
-			inbox,
-		});
+		const relay = await fetchRelayByInboxFromDatabase(this.drizzle, inbox);
 
 		if (relay == null) {
 			throw new Error('relay not found');
@@ -64,38 +70,32 @@ export class RelayService {
 		const activity = this.apRendererService.addContext(undo);
 		this.queueService.deliver(relayActor, activity, relay.inbox, false);
 
-		await this.relaysRepository.delete(relay.id);
+		await deleteRelayFromDatabase(this.drizzle, relay.id);
 	}
 
 	@bindThis
 	public async listRelay(): Promise<MiRelay[]> {
-		const relays = await this.relaysRepository.find();
+		const relays = await listRelaysFromDatabase(this.drizzle);
 		return relays;
 	}
 
 	@bindThis
 	public async relayAccepted(id: string): Promise<string> {
-		const result = await this.relaysRepository.update(id, {
-			status: 'accepted',
-		});
+		const result = await updateRelayStatusInDatabase(this.drizzle, id, 'accepted');
 
 		return JSON.stringify(result);
 	}
 
 	@bindThis
 	public async relayRejected(id: string): Promise<string> {
-		const result = await this.relaysRepository.update(id, {
-			status: 'rejected',
-		});
+		const result = await updateRelayStatusInDatabase(this.drizzle, id, 'rejected');
 
 		return JSON.stringify(result);
 	}
 
 	@bindThis
 	private getAcceptedRelays(): Promise<MiRelay[]> {
-		return this.relaysCache.fetch(() => this.relaysRepository.findBy({
-			status: 'accepted',
-		}));
+		return this.relaysCache.fetch(() => listRelaysByStatusFromDatabase(this.drizzle, 'accepted'));
 	}
 
 	@bindThis

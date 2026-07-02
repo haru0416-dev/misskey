@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MiMeta, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { SignupService } from '@/core/SignupService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { localUsernameSchema, passwordSchema } from '@/models/User.js';
@@ -13,6 +13,8 @@ import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { ApiError } from '@/server/api/error.js';
 import { Packed } from '@/misc/json-schema.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -72,14 +74,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private signupService: SignupService,
 	) {
 		super(meta, paramDef, async (ps, _me, token) => {
-			const me = _me ? await this.usersRepository.findOneByOrFail({ id: _me.id }) : null;
+			const me = _me ? await fetchUserByIdOrFailFromDatabase(this.db, _me.id) : null;
 
 			if (this.serverSettings.rootUserId == null && me == null && token == null) {
 				// 初回セットアップの場合

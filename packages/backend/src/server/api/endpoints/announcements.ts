@@ -4,12 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Brackets } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import { DI } from '@/di-symbols.js';
-import type { AnnouncementsRepository } from '@/models/_.js';
+import { IdService } from '@/core/IdService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listAnnouncementsForUserFromDatabase, resolveAnnouncementPagination } from '@/core/AnnouncementStore.js';
 
 export const meta = {
 	tags: ['meta'],
@@ -43,21 +43,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
-		private queryService: QueryService,
+		private idService: IdService,
 		private announcementEntityService: AnnouncementEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.announcementsRepository.createQueryBuilder('announcement'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('announcement.isActive = :isActive', { isActive: ps.isActive })
-				.andWhere(new Brackets(qb => {
-					if (me) qb.orWhere('announcement.userId = :meId', { meId: me.id });
-					qb.orWhere('announcement.userId IS NULL');
-				}));
-
-			const announcements = await query.limit(ps.limit).getMany();
+			const announcements = await listAnnouncementsForUserFromDatabase(this.db, {
+				limit: ps.limit,
+				...resolveAnnouncementPagination(this.idService, ps),
+				isActive: ps.isActive,
+				requestUserId: me?.id,
+			});
 
 			return this.announcementEntityService.packMany(announcements, me);
 		});

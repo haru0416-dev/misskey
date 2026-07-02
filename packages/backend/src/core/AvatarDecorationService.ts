@@ -5,7 +5,7 @@
 
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import type { AvatarDecorationsRepository, MiAvatarDecoration, MiUser } from '@/models/_.js';
+import type { MiAvatarDecoration, MiUser } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
@@ -13,6 +13,14 @@ import { bindThis } from '@/decorators.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import {
+	createAvatarDecorationInDatabase,
+	deleteAvatarDecorationFromDatabase,
+	fetchAvatarDecorationFromDatabase,
+	listAvatarDecorationsFromDatabase,
+	updateAvatarDecorationInDatabase,
+} from '@/core/AvatarDecorationStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class AvatarDecorationService implements OnApplicationShutdown {
@@ -22,8 +30,8 @@ export class AvatarDecorationService implements OnApplicationShutdown {
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
 
-		@Inject(DI.avatarDecorationsRepository)
-		private avatarDecorationsRepository: AvatarDecorationsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private moderationLogService: ModerationLogService,
@@ -55,9 +63,12 @@ export class AvatarDecorationService implements OnApplicationShutdown {
 
 	@bindThis
 	public async create(options: Partial<MiAvatarDecoration>, moderator?: MiUser): Promise<MiAvatarDecoration> {
-		const created = await this.avatarDecorationsRepository.insertOne({
+		const created = await createAvatarDecorationInDatabase(this.drizzle, {
 			id: this.idService.gen(),
 			...options,
+			name: options.name!,
+			description: options.description!,
+			url: options.url!,
 		});
 
 		this.globalEventService.publishInternalEvent('avatarDecorationCreated', created);
@@ -74,15 +85,20 @@ export class AvatarDecorationService implements OnApplicationShutdown {
 
 	@bindThis
 	public async update(id: MiAvatarDecoration['id'], params: Partial<MiAvatarDecoration>, moderator?: MiUser): Promise<void> {
-		const avatarDecoration = await this.avatarDecorationsRepository.findOneByOrFail({ id });
+		const avatarDecoration = await fetchAvatarDecorationFromDatabase(this.drizzle, id);
+		if (!avatarDecoration) {
+			throw new Error('Avatar decoration was not found');
+		}
 
 		const date = new Date();
-		await this.avatarDecorationsRepository.update(avatarDecoration.id, {
+		const updated = await updateAvatarDecorationInDatabase(this.drizzle, avatarDecoration.id, {
 			updatedAt: date,
 			...params,
 		});
+		if (!updated) {
+			throw new Error('Avatar decoration was not found after update');
+		}
 
-		const updated = await this.avatarDecorationsRepository.findOneByOrFail({ id: avatarDecoration.id });
 		this.globalEventService.publishInternalEvent('avatarDecorationUpdated', updated);
 
 		if (moderator) {
@@ -96,9 +112,12 @@ export class AvatarDecorationService implements OnApplicationShutdown {
 
 	@bindThis
 	public async delete(id: MiAvatarDecoration['id'], moderator?: MiUser): Promise<void> {
-		const avatarDecoration = await this.avatarDecorationsRepository.findOneByOrFail({ id });
+		const avatarDecoration = await fetchAvatarDecorationFromDatabase(this.drizzle, id);
+		if (!avatarDecoration) {
+			throw new Error('Avatar decoration was not found');
+		}
 
-		await this.avatarDecorationsRepository.delete({ id: avatarDecoration.id });
+		await deleteAvatarDecorationFromDatabase(this.drizzle, avatarDecoration.id);
 		this.globalEventService.publishInternalEvent('avatarDecorationDeleted', avatarDecoration);
 
 		if (moderator) {
@@ -114,7 +133,7 @@ export class AvatarDecorationService implements OnApplicationShutdown {
 		if (noCache) {
 			this.cache.delete();
 		}
-		return this.cache.fetch(() => this.avatarDecorationsRepository.find());
+		return this.cache.fetch(() => listAvatarDecorationsFromDatabase(this.drizzle));
 	}
 
 	@bindThis

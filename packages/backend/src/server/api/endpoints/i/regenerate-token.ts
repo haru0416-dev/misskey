@@ -6,10 +6,12 @@
 import bcrypt from 'bcryptjs';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UsersRepository, UserProfilesRepository } from '@/models/_.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	requireCredential: true,
@@ -28,19 +30,16 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const freshUser = await this.usersRepository.findOneByOrFail({ id: me.id });
+			const freshUser = await fetchUserByIdOrFailFromDatabase(this.drizzle, me.id);
 			const oldToken = freshUser.token!;
 
-			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: me.id });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, me.id);
 
 			// Compare password
 			const same = await bcrypt.compare(ps.password, profile.password!);
@@ -51,7 +50,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const newToken = generateNativeUserToken();
 
-			await this.usersRepository.update(me.id, {
+			await updateUserInDatabase(this.drizzle, me.id, {
 				token: newToken,
 			});
 

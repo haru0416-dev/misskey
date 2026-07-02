@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { GalleryPostsRepository } from '@/models/_.js';
 import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { FeaturedService } from '@/core/FeaturedService.js';
+import { listGalleryPostsByIdsFromDatabase } from '@/core/GalleryPostStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['gallery'],
@@ -41,8 +42,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	private galleryPostsRankingCacheLastFetchedAt = 0;
 
 	constructor(
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private galleryPostEntityService: GalleryPostEntityService,
 		private featuredService: FeaturedService,
@@ -67,10 +68,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				return [];
 			}
 
-			const query = this.galleryPostsRepository.createQueryBuilder('post')
-				.where('post.id IN (:...postIds)', { postIds: postIds });
-
-			const posts = await query.getMany();
+			const posts = await listGalleryPostsByIdsFromDatabase(this.drizzle, postIds);
 
 			return await this.galleryPostEntityService.packMany(posts, me);
 		});

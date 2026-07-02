@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AppsRepository } from '@/models/_.js';
 import { AppEntityService } from '@/core/entities/AppEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { listAppsByUserIdFromDatabase } from '@/core/AppStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['account', 'app'],
@@ -38,20 +39,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.appsRepository)
-		private appsRepository: AppsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private appEntityService: AppEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = {
-				userId: me.id,
-			};
-
-			const apps = await this.appsRepository.find({
-				where: query,
-				take: ps.limit,
-				skip: ps.offset,
+			const apps = await listAppsByUserIdFromDatabase(this.db, me.id, {
+				limit: ps.limit,
+				offset: ps.offset,
 			});
 
 			return await Promise.all(apps.map(app => this.appEntityService.pack(app, me, {

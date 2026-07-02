@@ -6,12 +6,14 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { OnApplicationShutdown } from '@nestjs/common';
-import { DataSource, IsNull } from 'typeorm';
 import * as Redis from 'ioredis';
 import bcrypt from 'bcryptjs';
-import { MiLocalUser, MiUser } from '@/models/User.js';
-import { MiSystemAccount, MiUsedUsername, MiUserKeypair, MiUserProfile, type UsersRepository, type SystemAccountsRepository } from '@/models/_.js';
-import type { MiMeta, UserProfilesRepository } from '@/models/_.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { MiUserProfile } from '@/models/UserProfile.js';
+import { createOrFetchSystemAccountInDatabase, fetchSystemAccountUserFromDatabase, listSystemAccountsFromDatabase, updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiSystemAccount } from '@/models/SystemAccount.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { DI } from '@/di-symbols.js';
@@ -30,20 +32,11 @@ export class SystemAccountService implements OnApplicationShutdown {
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
 
-		@Inject(DI.db)
-		private db: DataSource,
-
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.systemAccountsRepository)
-		private systemAccountsRepository: SystemAccountsRepository,
-
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -81,7 +74,7 @@ export class SystemAccountService implements OnApplicationShutdown {
 
 	@bindThis
 	public async list(): Promise<MiSystemAccount[]> {
-		const accounts = await this.systemAccountsRepository.findBy({});
+		const accounts = await listSystemAccountsFromDatabase(this.drizzle);
 
 		return accounts;
 	}
@@ -91,14 +84,11 @@ export class SystemAccountService implements OnApplicationShutdown {
 		const cached = this.cache.get(type);
 		if (cached) return cached;
 
-		const systemAccount = await this.systemAccountsRepository.findOne({
-			where: { type: type },
-			relations: { user: true },
-		});
+		const systemAccount = await fetchSystemAccountUserFromDatabase(this.drizzle, type);
 
 		if (systemAccount) {
-			this.cache.set(type, systemAccount.user as MiLocalUser);
-			return systemAccount.user as MiLocalUser;
+			this.cache.set(type, systemAccount);
+			return systemAccount;
 		} else {
 			const created = await this.createCorrespondingUser(type, {
 				username: `system.${type}`, // NOTE: (できれば避けたいが) . が含まれるかどうかでシステムアカウントかどうかを判定している処理もあるので変えないように
@@ -125,68 +115,19 @@ export class SystemAccountService implements OnApplicationShutdown {
 
 		const keyPair = await genRsaKeyPair();
 
-		let account!: MiUser;
-
-		// Start transaction
-		await this.db.transaction(async transactionalEntityManager => {
-			await transactionalEntityManager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`system-account:${type}`]);
-
-			const systemAccount = await transactionalEntityManager.findOne(MiSystemAccount, {
-				where: { type },
-				relations: { user: true },
-			});
-
-			if (systemAccount?.user) {
-				account = systemAccount.user;
-				return;
-			}
-
-			const exist = await transactionalEntityManager.findOneBy(MiUser, {
-				usernameLower: extra.username.toLowerCase(),
-				host: IsNull(),
-			});
-
-			if (exist) {
-				account = exist;
-			} else {
-				account = await transactionalEntityManager.insert(MiUser, {
-					id: this.idService.gen(),
-					username: extra.username,
-					usernameLower: extra.username.toLowerCase(),
-					host: null,
-					token: secret,
-					isLocked: true,
-					isExplorable: false,
-					isBot: true,
-					name: extra.name,
-				}).then(x => transactionalEntityManager.findOneByOrFail(MiUser, x.identifiers[0]));
-
-				await transactionalEntityManager.insert(MiUserKeypair, {
-					publicKey: keyPair.publicKey,
-					privateKey: keyPair.privateKey,
-					userId: account.id,
-				});
-
-				await transactionalEntityManager.insert(MiUserProfile, {
-					userId: account.id,
-					autoAcceptFollowed: false,
-					password: hash,
-				});
-
-				await transactionalEntityManager.upsert(MiUsedUsername, {
-					createdAt: new Date(),
-					username: extra.username.toLowerCase(),
-				}, ['username']);
-			}
-
-			await transactionalEntityManager.upsert(MiSystemAccount, {
-				id: account.id,
-				userId: account.id,
-				type: type,
-			}, ['type']);
+		const account = await createOrFetchSystemAccountInDatabase(this.drizzle, {
+			id: this.idService.gen(),
+			type,
+			username: extra.username,
+			usernameLower: extra.username.toLowerCase(),
+			name: extra.name ?? null,
+			token: secret,
+			passwordHash: hash,
+			publicKey: keyPair.publicKey,
+			privateKey: keyPair.privateKey,
 		});
 
-		return account as MiLocalUser;
+		return account;
 	}
 
 	@bindThis
@@ -196,21 +137,11 @@ export class SystemAccountService implements OnApplicationShutdown {
 	}): Promise<MiLocalUser> {
 		const user = await this.fetch(type);
 
-		const updates = {} as Partial<MiUser>;
-		if (extra.name !== undefined) updates.name = extra.name;
-
-		if (Object.keys(updates).length > 0) {
-			await this.usersRepository.update(user.id, updates);
-		}
-
-		const profileUpdates = {} as Partial<MiUserProfile>;
-		if (extra.description !== undefined) profileUpdates.description = extra.description;
-
-		if (Object.keys(profileUpdates).length > 0) {
-			await this.userProfilesRepository.update(user.id, profileUpdates);
-		}
-
-		const updated = await this.usersRepository.findOneByOrFail({ id: user.id }) as MiLocalUser;
+		const updated = await updateSystemAccountUserInDatabase(this.drizzle, {
+			userId: user.id,
+			name: extra.name,
+			description: extra.description,
+		});
 		this.cache.set(type, updated);
 
 		return updated;

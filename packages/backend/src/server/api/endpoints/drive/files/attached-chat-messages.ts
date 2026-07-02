@@ -5,12 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFilesRepository, ChatMessagesRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
+import { IdService } from '@/core/IdService.js';
 import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ChatService } from '@/core/ChatService.js';
+import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/ChatMessageStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -55,16 +57,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.chatMessagesRepository)
-		private chatMessagesRepository: ChatMessagesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private chatService: ChatService,
 		private chatEntityService: ChatEntityService,
-		private queryService: QueryService,
 		private roleService: RoleService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const isModerator = await this.roleService.isModerator(me);
@@ -73,19 +72,16 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				await this.chatService.checkChatAvailability(me.id, 'read');
 			}
 
-			const file = await this.driveFilesRepository.findOneBy({
-				id: ps.fileId,
-				userId: isModerator ? undefined : me.id,
-			});
+			const file = await fetchDriveFileByIdFromDatabase(this.db, ps.fileId);
 
-			if (file == null) {
+			if (file == null || (!isModerator && file.userId !== me.id)) {
 				throw new ApiError(meta.errors.noSuchFile);
 			}
 
-			const query = this.queryService.makePaginationQuery(this.chatMessagesRepository.createQueryBuilder('message'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
-			query.andWhere('message.fileId = :fileId', { fileId: file.id });
-
-			const messages = await query.limit(ps.limit).getMany();
+			const messages = await listChatMessagesByFileIdFromDatabase(this.db, file.id, {
+				limit: ps.limit,
+				...resolveChatMessagePagination(this.idService, ps),
+			});
 
 			return await this.chatEntityService.packMessagesDetailed(messages, me);
 		});

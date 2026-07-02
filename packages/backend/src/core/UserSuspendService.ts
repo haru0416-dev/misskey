@@ -4,8 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { Not, IsNull } from 'typeorm';
-import type { FollowingsRepository, FollowRequestsRepository, UsersRepository } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import { QueueService } from '@/core/QueueService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -15,18 +13,16 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
 import { RelationshipJobData } from '@/queue/types.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { deleteFollowRequestsByFolloweeIdFromDatabase, deleteFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
+import { listFollowingsForUnfollowByFollowerIdFromDatabase, listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
+import { updateUserSuspendedStateInDatabase } from '@/core/UserStore.js';
 
 @Injectable()
 export class UserSuspendService {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private queueService: QueueService,
@@ -38,9 +34,7 @@ export class UserSuspendService {
 
 	@bindThis
 	public async suspend(user: MiUser, moderator: MiUser): Promise<void> {
-		await this.usersRepository.update(user.id, {
-			isSuspended: true,
-		});
+		await updateUserSuspendedStateInDatabase(this.db, user.id, true);
 
 		this.moderationLogService.log(moderator, 'suspend', {
 			userId: user.id,
@@ -56,9 +50,7 @@ export class UserSuspendService {
 
 	@bindThis
 	public async unsuspend(user: MiUser, moderator: MiUser): Promise<void> {
-		await this.usersRepository.update(user.id, {
-			isSuspended: false,
-		});
+		await updateUserSuspendedStateInDatabase(this.db, user.id, false);
 
 		this.moderationLogService.log(moderator, 'unsuspend', {
 			userId: user.id,
@@ -75,35 +67,14 @@ export class UserSuspendService {
 	private async postSuspend(user: { id: MiUser['id']; host: MiUser['host'] }): Promise<void> {
 		this.globalEventService.publishInternalEvent('userChangeSuspendedState', { id: user.id, isSuspended: true });
 
-		this.followRequestsRepository.delete({
-			followeeId: user.id,
-		});
-		this.followRequestsRepository.delete({
-			followerId: user.id,
-		});
+		deleteFollowRequestsByFolloweeIdFromDatabase(this.db, user.id);
+		deleteFollowRequestsByFollowerIdFromDatabase(this.db, user.id);
 
 		if (this.userEntityService.isLocalUser(user)) {
 			// 知り得る全SharedInboxにDelete配信
 			const content = this.apRendererService.addContext(this.apRendererService.renderDelete(this.userEntityService.genLocalUserUri(user.id), user));
 
-			const queue: string[] = [];
-
-			const followings = await this.followingsRepository.find({
-				where: [
-					{ followerSharedInbox: Not(IsNull()) },
-					{ followeeSharedInbox: Not(IsNull()) },
-				],
-				select: {
-					followerSharedInbox: true,
-					followeeSharedInbox: true,
-				},
-			});
-
-			const inboxes = followings.map(x => x.followerSharedInbox ?? x.followeeSharedInbox);
-
-			for (const inbox of inboxes) {
-				if (inbox != null && !queue.includes(inbox)) queue.push(inbox);
-			}
+			const queue = await listSharedInboxesFromFollowingsInDatabase(this.db);
 
 			for (const inbox of queue) {
 				this.queueService.deliver(user, content, inbox, true);
@@ -119,24 +90,7 @@ export class UserSuspendService {
 			// 知り得る全SharedInboxにUndo Delete配信
 			const content = this.apRendererService.addContext(this.apRendererService.renderUndo(this.apRendererService.renderDelete(this.userEntityService.genLocalUserUri(user.id), user), user));
 
-			const queue: string[] = [];
-
-			const followings = await this.followingsRepository.find({
-				where: [
-					{ followerSharedInbox: Not(IsNull()) },
-					{ followeeSharedInbox: Not(IsNull()) },
-				],
-				select: {
-					followerSharedInbox: true,
-					followeeSharedInbox: true,
-				},
-			});
-
-			const inboxes = followings.map(x => x.followerSharedInbox ?? x.followeeSharedInbox);
-
-			for (const inbox of inboxes) {
-				if (inbox != null && !queue.includes(inbox)) queue.push(inbox);
-			}
+			const queue = await listSharedInboxesFromFollowingsInDatabase(this.db);
 
 			for (const inbox of queue) {
 				this.queueService.deliver(user as any, content, inbox, true);
@@ -146,22 +100,15 @@ export class UserSuspendService {
 
 	@bindThis
 	private async unFollowAll(follower: MiUser) {
-		const followings = await this.followingsRepository.find({
-			where: {
-				followerId: follower.id,
-				followeeId: Not(IsNull()),
-			},
-		});
+		const followings = await listFollowingsForUnfollowByFollowerIdFromDatabase(this.db, follower.id);
 
 		const jobs: RelationshipJobData[] = [];
 		for (const following of followings) {
-			if (following.followeeId && following.followerId) {
-				jobs.push({
-					from: { id: following.followerId },
-					to: { id: following.followeeId },
-					silent: true,
-				});
-			}
+			jobs.push({
+				from: { id: following.followerId },
+				to: { id: following.followeeId },
+				silent: true,
+			});
 		}
 		this.queueService.createUnfollowJob(jobs);
 	}

@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { RegistrationTicketsRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listRegistrationTicketsCreatedByFromDatabase, resolveRegistrationTicketPagination } from '@/core/RegistrationTicketStore.js';
 import { InviteCodeEntityService } from '@/core/entities/InviteCodeEntityService.js';
-import { QueryService } from '@/core/QueryService.js';
+import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
 
 export const meta = {
@@ -43,21 +44,22 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.registrationTicketsRepository)
-		private registrationTicketsRepository: RegistrationTicketsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private inviteCodeEntityService: InviteCodeEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.registrationTicketsRepository.createQueryBuilder('ticket'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('ticket.createdById = :meId', { meId: me.id })
-				.leftJoinAndSelect('ticket.createdBy', 'createdBy')
-				.leftJoinAndSelect('ticket.usedBy', 'usedBy');
+			const { sinceId, untilId, order } = resolveRegistrationTicketPagination(this.idService, ps);
 
-			const tickets = await query
-				.limit(ps.limit)
-				.getMany();
+			const tickets = await listRegistrationTicketsCreatedByFromDatabase(this.db, {
+				createdById: me.id,
+				limit: ps.limit,
+				order,
+				sinceId,
+				untilId,
+			});
 
 			return await this.inviteCodeEntityService.packMany(tickets, me);
 		});

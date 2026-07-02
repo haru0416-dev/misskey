@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UsersRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listUsersByHostWithPaginationFromDatabase } from '@/core/UserStore.js';
 
 export const meta = {
 	tags: ['federation'],
@@ -42,19 +43,27 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.usersRepository.createQueryBuilder('user'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('user.host = :host', { host: ps.host });
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			const users = await query
-				.limit(ps.limit)
-				.getMany();
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
+			}
+
+			const users = await listUsersByHostWithPaginationFromDatabase(this.db, {
+				host: ps.host,
+				limit: ps.limit,
+				sinceId,
+				untilId,
+			});
 
 			return await this.userEntityService.packMany(users, me, { schema: 'UserDetailedNotMe' });
 		});

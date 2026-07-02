@@ -5,11 +5,15 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { NoteDraftsRepository } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { bindThis } from '@/decorators.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
+import {
+	deleteNoteDraftByIdFromDatabase,
+	fetchNoteDraftWithUserByIdFromDatabase,
+} from '@/core/NoteDraftStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 import type * as Bull from 'bullmq';
 import type { PostScheduledNoteJobData } from '../types.js';
@@ -19,8 +23,8 @@ export class PostScheduledNoteProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.noteDraftsRepository)
-		private noteDraftsRepository: NoteDraftsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteCreateService: NoteCreateService,
 		private notificationService: NotificationService,
@@ -31,10 +35,7 @@ export class PostScheduledNoteProcessorService {
 
 	@bindThis
 	public async process(job: Bull.Job<PostScheduledNoteJobData>): Promise<void> {
-		const draft = await this.noteDraftsRepository.findOne({
-			where: { id: job.data.noteDraftId },
-			relations: { user: true },
-		});
+		const draft = await fetchNoteDraftWithUserByIdFromDatabase(this.db, job.data.noteDraftId);
 		if (draft == null || draft.user == null || draft.scheduledAt == null || !draft.isActuallyScheduled) {
 			return;
 		}
@@ -60,7 +61,7 @@ export class PostScheduledNoteProcessorService {
 			});
 
 			// await不要
-			this.noteDraftsRepository.remove(draft);
+			void deleteNoteDraftByIdFromDatabase(this.db, draft.id);
 
 			// await不要
 			this.notificationService.createNotification(draft.userId, 'scheduledNotePosted', {

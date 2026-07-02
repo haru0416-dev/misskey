@@ -5,8 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AccessTokensRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import {
+	deleteAccessTokenByIdAndUserIdFromDatabase,
+	deleteAccessTokenByTokenAndUserIdFromDatabase,
+	existsAccessTokenByIdFromDatabase,
+	existsAccessTokenByTokenFromDatabase,
+} from '@/core/AccessTokenStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	requireCredential: true,
@@ -36,27 +42,21 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			if ('tokenId' in ps) {
-				const tokenExist = await this.accessTokensRepository.exists({ where: { id: ps.tokenId } });
+				const tokenExist = await existsAccessTokenByIdFromDatabase(this.db, ps.tokenId);
 
 				if (tokenExist) {
-					await this.accessTokensRepository.delete({
-						id: ps.tokenId,
-						userId: me.id,
-					});
+					await deleteAccessTokenByIdAndUserIdFromDatabase(this.db, ps.tokenId, me.id);
 				}
 			} else if (ps.token) {
-				const tokenExist = await this.accessTokensRepository.exists({ where: { token: ps.token } });
+				const tokenExist = await existsAccessTokenByTokenFromDatabase(this.db, ps.token);
 
 				if (tokenExist) {
-					await this.accessTokensRepository.delete({
-						token: ps.token,
-						userId: me.id,
-					});
+					await deleteAccessTokenByTokenAndUserIdFromDatabase(this.db, ps.token, me.id);
 				}
 			}
 		});

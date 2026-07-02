@@ -4,8 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
@@ -13,6 +11,9 @@ import type { MiUser } from '@/models/User.js';
 import type { MiFollowing } from '@/models/Following.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchFollowingByIdOrFailFromDatabase } from '@/core/FollowingStore.js';
 import { UserEntityService } from './UserEntityService.js';
 
 type LocalFollowerFollowing = MiFollowing & {
@@ -42,8 +43,8 @@ type RemoteFolloweeFollowing = MiFollowing & {
 @Injectable()
 export class FollowingEntityService {
 	constructor(
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -83,7 +84,7 @@ export class FollowingEntityService {
 			packedFollower?: Packed<'UserDetailedNotMe'>,
 		},
 	): Promise<Packed<'Following'>> {
-		const following = typeof src === 'object' ? src : await this.followingsRepository.findOneByOrFail({ id: src });
+		const following = typeof src === 'object' ? src : await fetchFollowingByIdOrFailFromDatabase(this.db, src);
 
 		if (opts == null) opts = {};
 
@@ -123,4 +124,3 @@ export class FollowingEntityService {
 		);
 	}
 }
-

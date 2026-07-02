@@ -4,10 +4,9 @@
  */
 
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import * as Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
-import type { PollsRepository, EmojisRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
@@ -24,6 +23,9 @@ import { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
 import { checkHttps } from '@/misc/check-https.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { insertEmojiInDatabase, listEmojisByHostAndNamesFromDatabase, updateEmojiByHostAndNameInDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { getOneApId, getApId, getOneApHrefNullable, validPost, isEmoji, getApType } from '../type.js';
 import { ApLoggerService } from '../ApLoggerService.js';
 import { ApMfmService } from '../ApMfmService.js';
@@ -52,11 +54,8 @@ export class ApNoteService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
-
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private apMfmService: ApMfmService,
@@ -285,7 +284,7 @@ export class ApNoteService {
 
 		// vote
 		if (reply && reply.hasPoll) {
-			const poll = await this.pollsRepository.findOneByOrFail({ noteId: reply.id });
+			const poll = await fetchPollByNoteIdOrFailFromDatabase(this.db, reply.id);
 
 			const tryCreateVote = async (name: string, index: number): Promise<null> => {
 				if (poll.expiresAt && Date.now() > new Date(poll.expiresAt).getTime()) {
@@ -388,10 +387,7 @@ export class ApNoteService {
 
 		const eomjiTags = toArray(tags).filter(isEmoji);
 
-		const existingEmojis = await this.emojisRepository.findBy({
-			host,
-			name: In(eomjiTags.map(tag => tag.name.replaceAll(':', ''))),
-		});
+		const existingEmojis = await listEmojisByHostAndNamesFromDatabase(this.db, host, eomjiTags.map(tag => tag.name.replaceAll(':', '')));
 
 		return await Promise.all(eomjiTags.map(async tag => {
 			const name = tag.name.replaceAll(':', '');
@@ -405,10 +401,7 @@ export class ApNoteService {
 					|| (new Date(tag.updated) > exists.updatedAt)
 					|| (tag.icon.url !== exists.originalUrl)
 				) {
-					await this.emojisRepository.update({
-						host,
-						name,
-					}, {
+					const emoji = await updateEmojiByHostAndNameInDatabase(this.db, host, name, {
 						uri: tag.id,
 						originalUrl: tag.icon.url,
 						publicUrl: tag.icon.url,
@@ -417,7 +410,6 @@ export class ApNoteService {
 						license: (tag._misskey_license?.freeText ?? null)
 					});
 
-					const emoji = await this.emojisRepository.findOneBy({ host, name });
 					if (emoji == null) throw new Error('emoji update failed');
 					return emoji;
 				}
@@ -427,7 +419,7 @@ export class ApNoteService {
 
 			this.logger.info(`register emoji host=${host}, name=${name}`);
 
-			return await this.emojisRepository.insertOne({
+			return await insertEmojiInDatabase(this.db, {
 				id: this.idService.gen(),
 				host,
 				name,

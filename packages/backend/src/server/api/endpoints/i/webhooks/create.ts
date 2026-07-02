@@ -6,12 +6,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { IdService } from '@/core/IdService.js';
-import type { WebhooksRepository } from '@/models/_.js';
 import { webhookEventTypes } from '@/models/Webhook.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
 import { ApiError } from '@/server/api/error.js';
+import { countWebhooksByUserIdFromDatabase, createWebhookInDatabase } from '@/core/WebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 // TODO: UserWebhook schemaの適用
 export const meta = {
@@ -75,22 +76,20 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.webhooksRepository)
-		private webhooksRepository: WebhooksRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
 		private roleService: RoleService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const currentWebhooksCount = await this.webhooksRepository.countBy({
-				userId: me.id,
-			});
+			const currentWebhooksCount = await countWebhooksByUserIdFromDatabase(this.db, me.id);
 			if (currentWebhooksCount >= (await this.roleService.getUserPolicies(me.id)).webhookLimit) {
 				throw new ApiError(meta.errors.tooManyWebhooks);
 			}
 
-			const webhook = await this.webhooksRepository.insertOne({
+			const webhook = await createWebhookInDatabase(this.db, {
 				id: this.idService.gen(),
 				userId: me.id,
 				name: ps.name,

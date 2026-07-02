@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { In, IsNull } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { MiMeta, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -13,9 +12,10 @@ import { RemoteUserResolveService } from '@/core/RemoteUserResolveService.js';
 import { DI } from '@/di-symbols.js';
 import PerUserPvChart from '@/core/chart/charts/per-user-pv.js';
 import { RoleService } from '@/core/RoleService.js';
+import { fetchLocalUserByUsernameFromDatabase, fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 import { ApiLoggerService } from '../../ApiLoggerService.js';
-import type { FindOptionsWhere } from 'typeorm';
 
 export const meta = {
 	tags: ['users'],
@@ -106,8 +106,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private remoteUserResolveService: RemoteUserResolveService,
@@ -133,11 +133,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					return [];
 				}
 
-				const users = await this.usersRepository.findBy(isModerator ? {
-					id: In(ps.userIds),
-				} : {
-					id: In(ps.userIds),
-					isSuspended: false,
+				const users = await listUsersByIdsFromDatabase(this.drizzle, ps.userIds, {
+					includeSuspended: isModerator,
 				});
 
 				// リクエストされた通りに並べ替え
@@ -163,11 +160,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 						throw new ApiError(meta.errors.failedToResolveRemoteUser);
 					});
 				} else {
-					const q: FindOptionsWhere<MiUser> = 'userId' in ps
-						? { id: ps.userId }
-						: { usernameLower: ps.username!.toLowerCase(), host: IsNull() };
-
-					user = await this.usersRepository.findOneBy(q);
+					user = 'userId' in ps
+						? await fetchUserByIdFromDatabase(this.drizzle, ps.userId)
+						: await fetchLocalUserByUsernameFromDatabase(this.drizzle, ps.username!);
 				}
 
 				if (user == null || (!isModerator && user.isSuspended)) {

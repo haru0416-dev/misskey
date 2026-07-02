@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFoldersRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
+import { listDriveFoldersByUserIdFromDatabase, resolveDriveFolderPagination } from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['drive'],
@@ -44,23 +45,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFoldersRepository)
-		private driveFoldersRepository: DriveFoldersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFolderEntityService: DriveFolderEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.driveFoldersRepository.createQueryBuilder('folder'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('folder.userId = :userId', { userId: me.id });
-
-			if (ps.folderId) {
-				query.andWhere('folder.parentId = :parentId', { parentId: ps.folderId });
-			} else {
-				query.andWhere('folder.parentId IS NULL');
-			}
-
-			const folders = await query.limit(ps.limit).getMany();
+			const pagination = resolveDriveFolderPagination(this.idService, ps);
+			const folders = await listDriveFoldersByUserIdFromDatabase(this.db, me.id, {
+				limit: ps.limit,
+				parentId: ps.folderId ?? null,
+				...pagination,
+			});
 
 			return await Promise.all(folders.map(folder => this.driveFolderEntityService.pack(folder)));
 		});

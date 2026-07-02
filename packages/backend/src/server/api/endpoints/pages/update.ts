@@ -5,13 +5,15 @@
 
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { DriveFilesRepository, MiDriveFile } from '@/models/_.js';
+import type { MiDriveFile } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '../../error.js';
 import { pageNameSchema } from '@/models/Page.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { PageService } from '@/core/PageService.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['pages'],
@@ -76,8 +78,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private pageService: PageService,
 	) {
@@ -85,10 +87,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			try {
 				let eyeCatchingImage: MiDriveFile | null | undefined | string = ps.eyeCatchingImageId;
 				if (eyeCatchingImage != null) {
-					eyeCatchingImage = await this.driveFilesRepository.findOneBy({
-						id: eyeCatchingImage,
-						userId: me.id,
-					});
+					eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, eyeCatchingImage, me.id);
 
 					if (eyeCatchingImage == null) {
 						throw new ApiError(meta.errors.noSuchFile);

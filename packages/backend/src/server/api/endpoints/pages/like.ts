@@ -4,10 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { PagesRepository, PageLikesRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import { createPageLikeInDatabase, pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
+import { fetchPageByIdFromDatabase, incrementPageLikedCountInDatabase } from '@/core/PageStore.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -51,16 +54,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
-
-		@Inject(DI.pageLikesRepository)
-		private pageLikesRepository: PageLikesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const page = await this.pagesRepository.findOneBy({ id: ps.pageId });
+			const page = await fetchPageByIdFromDatabase(this.drizzle, ps.pageId);
 			if (page == null) {
 				throw new ApiError(meta.errors.noSuchPage);
 			}
@@ -70,25 +70,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			// if already liked
-			const exist = await this.pageLikesRepository.exists({
-				where: {
-					pageId: page.id,
-					userId: me.id,
-				},
-			});
+			const exist = await pageLikeExistsInDatabase(this.drizzle, me.id, page.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyLiked);
 			}
 
 			// Create like
-			await this.pageLikesRepository.insert({
-				id: this.idService.gen(),
-				pageId: page.id,
-				userId: me.id,
-			});
+			try {
+				await createPageLikeInDatabase(this.drizzle, {
+					id: this.idService.gen(),
+					pageId: page.id,
+					userId: me.id,
+				});
+			} catch (error) {
+				if (isDuplicateKeyValueDatabaseError(error)) {
+					throw new ApiError(meta.errors.alreadyLiked);
+				}
+				throw error;
+			}
 
-			this.pagesRepository.increment({ id: page.id }, 'likedCount', 1);
+			incrementPageLikedCountInDatabase(this.drizzle, page.id);
 		});
 	}
 }

@@ -4,11 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DriveFoldersRepository } from '@/models/_.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { listDriveFoldersByNameFromDatabase } from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['drive'],
@@ -40,16 +40,16 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFoldersRepository)
-		private driveFoldersRepository: DriveFoldersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFolderEntityService: DriveFolderEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const folders = await this.driveFoldersRepository.findBy({
+			const folders = await listDriveFoldersByNameFromDatabase(this.db, {
 				name: ps.name,
 				userId: me.id,
-				parentId: ps.parentId ?? IsNull(),
+				parentId: ps.parentId ?? null,
 			});
 
 			return await Promise.all(folders.map(folder => this.driveFolderEntityService.pack(folder)));

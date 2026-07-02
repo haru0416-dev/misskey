@@ -9,7 +9,6 @@ import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { describe, expect, test, beforeAll, afterAll, afterEach } from 'vitest';
 import sharp from 'sharp';
-import { DataSource, type Repository } from 'typeorm';
 import { initTestDb, randomString } from '../../utils.js';
 import type { AiService } from '@/core/AiService.js';
 import { DownloadService } from '@/core/DownloadService.js';
@@ -21,8 +20,11 @@ import { IdService } from '@/core/IdService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { loadConfig, type Config } from '@/config.js';
-import { MiDriveFile } from '@/models/DriveFile.js';
 import { FileServerService } from '@/server/FileServerService.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { driveFile, type DriveFileInsert } from '@/db/schema/drive-file.js';
+import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 
 const dummyPath = path.resolve('test/resources/dummy-for-file-server-service.png');
 const dummySize = fs.statSync(dummyPath).size;
@@ -72,10 +74,10 @@ async function createRemoteFileServer() {
 }
 
 describe('FileServerService', () => {
-	let db: DataSource;
+	let drizzlePool: MiDrizzlePool;
+	let drizzle: MiDrizzleDatabase;
 	let fastify: FastifyInstance;
 	let externalFastify: FastifyInstance;
-	let driveFilesRepository: Repository<MiDriveFile>;
 	let internalStorageService: InternalStorageService;
 	let idService: IdService;
 	let config: Config;
@@ -110,7 +112,7 @@ describe('FileServerService', () => {
 	}) {
 		const accessKey = params.accessKey;
 		const url = params.uri ?? `${config.url}/files/${accessKey}`;
-		await driveFilesRepository.insert({
+		await createDriveFileInDatabase(drizzle, {
 			id: idService.gen(),
 			userId: null,
 			userHost: null,
@@ -138,13 +140,14 @@ describe('FileServerService', () => {
 			isLink: params.isLink,
 			requestHeaders: {},
 			requestIp: null,
-		});
+		} satisfies DriveFileInsert);
 	}
 
 	beforeAll(async () => {
 		config = loadConfig();
-		db = await initTestDb(false);
-		driveFilesRepository = db.getRepository(MiDriveFile);
+		await initTestDb(false);
+		drizzlePool = createDrizzlePool(config);
+		drizzle = createDrizzleDatabase(drizzlePool, config);
 
 		const loggerService = new LoggerService();
 		const aiService = {
@@ -160,7 +163,7 @@ describe('FileServerService', () => {
 		idService = new IdService(config);
 		fileServerService = new FileServerService(
 			config,
-			driveFilesRepository as any,
+			drizzle,
 			fileInfoService,
 			downloadService,
 			imageProcessingService,
@@ -184,7 +187,7 @@ describe('FileServerService', () => {
 		} as Config;
 		externalFileServerService = new FileServerService(
 			externalConfig,
-			driveFilesRepository as any,
+			drizzle,
 			fileInfoService,
 			downloadService,
 			imageProcessingService,
@@ -216,7 +219,7 @@ describe('FileServerService', () => {
 	});
 
 	afterEach(async () => {
-		await driveFilesRepository.createQueryBuilder().delete().execute();
+		await drizzle.delete(driveFile);
 		for (const filePath of storedPaths) {
 			try {
 				fs.unlinkSync(filePath);
@@ -231,7 +234,7 @@ describe('FileServerService', () => {
 		await fastify.close();
 		await externalFastify.close();
 		await remoteServer.close();
-		await db.destroy();
+		await drizzlePool.end();
 		if (createdFallbackAssets) {
 			fs.rmSync(fallbackAssetsDir, { recursive: true, force: true });
 		}

@@ -11,17 +11,11 @@ import type { IObject } from '@/core/activitypub/type.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { LoggerService } from '@/core/LoggerService.js';
 import type { UtilityService } from '@/core/UtilityService.js';
-import type {
-	FollowRequestsRepository,
-	MiMeta,
-	NoteReactionsRepository,
-	NotesRepository,
-	PollsRepository,
-	UsersRepository,
-} from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { bindThis } from '@/decorators.js';
 import { Resolver } from '@/core/activitypub/ApResolverService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 type MockResponse = {
 	type: string;
@@ -36,11 +30,7 @@ export class MockResolver extends Resolver {
 		super(
 			{} as Config,
 			{} as MiMeta,
-			{} as UsersRepository,
-			{} as NotesRepository,
-			{} as PollsRepository,
-			{} as NoteReactionsRepository,
-			{} as FollowRequestsRepository,
+			{} as MiDrizzleDatabase,
 			{} as UtilityService,
 			{} as SystemAccountService,
 			{} as ApRequestService,

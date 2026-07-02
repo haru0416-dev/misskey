@@ -61,8 +61,6 @@ export class NodeinfoServerService {
 			] = await Promise.all([
 				this.metaService.fetch(true),
 				// 重い
-				//this.usersRepository.count({ where: { host: IsNull(), lastActiveDate: MoreThan(new Date(now - 15552000000)) } }),
-				//this.usersRepository.count({ where: { host: IsNull(), lastActiveDate: MoreThan(new Date(now - 2592000000)) } }),
 			]);
 
 			const activeHalfyear = null;

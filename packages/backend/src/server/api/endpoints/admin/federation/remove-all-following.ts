@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { FollowingsRepository, UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { QueueService } from '@/core/QueueService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listFollowingsByFollowerHostFromDatabase } from '@/core/FollowingStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -28,25 +29,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private queueService: QueueService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const followings = await this.followingsRepository.findBy({
-				followerHost: ps.host,
-			});
+			const followings = await listFollowingsByFollowerHostFromDatabase(this.db, ps.host);
 
-			const pairs = await Promise.all(followings.map(f => Promise.all([
-				this.usersRepository.findOneByOrFail({ id: f.followerId }),
-				this.usersRepository.findOneByOrFail({ id: f.followeeId }),
-			]).then(([from, to]) => [{ id: from.id }, { id: to.id }])));
-
-			this.queueService.createUnfollowJob(pairs.map(p => ({ from: p[0], to: p[1], silent: true })));
+			this.queueService.createUnfollowJob(followings.map(following => ({
+				from: { id: following.followerId },
+				to: { id: following.followeeId },
+				silent: true,
+			})));
 		});
 	}
 }

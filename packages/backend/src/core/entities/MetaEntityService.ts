@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
 import JSON5 from 'json5';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/Meta.js';
-import type { AdsRepository } from '@/models/_.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { bindThis } from '@/decorators.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { listActiveAdsFromDatabase } from '@/core/AdStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class MetaEntityService {
@@ -25,8 +25,8 @@ export class MetaEntityService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.adsRepository)
-		private adsRepository: AdsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private systemAccountService: SystemAccountService,
 	) { }
@@ -39,15 +39,7 @@ export class MetaEntityService {
 			instance = this.meta;
 		}
 
-		const ads = await this.adsRepository.createQueryBuilder('ads')
-			.where('ads.expiresAt > :now', { now: new Date() })
-			.andWhere('ads.startsAt <= :now', { now: new Date() })
-			.andWhere(new Brackets(qb => {
-				// 曜日のビットフラグを確認する
-				qb.where('ads.dayOfWeek & :dayOfWeek > 0', { dayOfWeek: 1 << new Date().getDay() })
-					.orWhere('ads.dayOfWeek = 0');
-			}))
-			.getMany();
+		const ads = await listActiveAdsFromDatabase(this.drizzle);
 
 		// クライアントの手間を減らすためあらかじめJSONに変換しておく
 		let defaultLightTheme = null;
@@ -175,4 +167,3 @@ export class MetaEntityService {
 		return packDetailed;
 	}
 }
-

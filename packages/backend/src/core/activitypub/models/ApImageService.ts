@@ -5,12 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import { truncate } from '@/misc/truncate.js';
 import { DB_MAX_IMAGE_COMMENT_LENGTH } from '@/const.js';
 import { DriveService } from '@/core/DriveService.js';
+import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import { checkHttps } from '@/misc/check-https.js';
@@ -26,8 +28,8 @@ export class ApImageService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private apResolverService: ApResolverService,
 		private driveService: DriveService,
@@ -80,8 +82,8 @@ export class ApImageService {
 		if (!file.isLink || file.url === image.url) return file;
 
 		// URLが異なっている場合、同じ画像が以前に異なるURLで登録されていたということなので、URLを更新する
-		await this.driveFilesRepository.update({ id: file.id }, { url: image.url, uri: image.url });
-		return await this.driveFilesRepository.findOneByOrFail({ id: file.id });
+		await updateDriveFileInDatabase(this.drizzle, file.id, { url: image.url, uri: image.url });
+		return await fetchDriveFileByIdOrFailFromDatabase(this.drizzle, file.id);
 	}
 
 	/**

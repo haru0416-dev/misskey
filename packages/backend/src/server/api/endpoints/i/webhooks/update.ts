@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { WebhooksRepository } from '@/models/_.js';
 import { webhookEventTypes } from '@/models/Webhook.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchWebhookByIdAndUserIdFromDatabase, updateWebhookInDatabase } from '@/core/WebhookStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -48,22 +49,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.webhooksRepository)
-		private webhooksRepository: WebhooksRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const webhook = await this.webhooksRepository.findOneBy({
-				id: ps.webhookId,
-				userId: me.id,
-			});
+			const webhook = await fetchWebhookByIdAndUserIdFromDatabase(this.db, ps.webhookId, me.id);
 
 			if (webhook == null) {
 				throw new ApiError(meta.errors.noSuchWebhook);
 			}
 
-			await this.webhooksRepository.update(webhook.id, {
+			const updated = await updateWebhookInDatabase(this.db, webhook.id, {
 				name: ps.name,
 				url: ps.url,
 				secret: ps.secret === null ? '' : ps.secret,
@@ -71,9 +69,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				active: ps.active,
 			});
 
-			const updated = await this.webhooksRepository.findOneByOrFail({
-				id: ps.webhookId,
-			});
+			if (updated == null) {
+				throw new Error(`Webhook ${webhook.id} not found`);
+			}
 
 			this.globalEventService.publishInternalEvent('webhookUpdated', updated);
 		});

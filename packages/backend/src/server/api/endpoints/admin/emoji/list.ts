@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { EmojisRepository } from '@/models/_.js';
+import { listLocalEmojisPageFromDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiEmoji } from '@/models/Emoji.js';
-import { QueryService } from '@/core/QueryService.js';
+import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
 import { EmojiEntityService } from '@/core/entities/EmojiEntityService.js';
 //import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
@@ -45,15 +46,34 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private emojiEntityService: EmojiEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const q = this.queryService.makePaginationQuery(this.emojisRepository.createQueryBuilder('emoji'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('emoji.host IS NULL');
+			let sinceId: string | null = null;
+			let untilId: string | null = null;
+			let order: 'asc' | 'desc' = 'desc';
+
+			if (ps.sinceId && ps.untilId) {
+				sinceId = ps.sinceId;
+				untilId = ps.untilId;
+			} else if (ps.sinceId) {
+				sinceId = ps.sinceId;
+				order = 'asc';
+			} else if (ps.untilId) {
+				untilId = ps.untilId;
+			} else if (ps.sinceDate && ps.untilDate) {
+				sinceId = this.idService.gen(ps.sinceDate);
+				untilId = this.idService.gen(ps.untilDate);
+			} else if (ps.sinceDate) {
+				sinceId = this.idService.gen(ps.sinceDate);
+				order = 'asc';
+			} else if (ps.untilDate) {
+				untilId = this.idService.gen(ps.untilDate);
+			}
 
 			let emojis: MiEmoji[];
 
@@ -61,7 +81,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				//q.andWhere('emoji.name ILIKE :q', { q: `%${ sqlLikeEscape(ps.query) }%` });
 				//const emojis = await q.limit(ps.limit).getMany();
 
-				emojis = await q.getMany();
+				emojis = await listLocalEmojisPageFromDatabase(this.db, { order, sinceId, untilId });
 				const queryarry = ps.query.match(/\:([a-z0-9_]*)\:/g);
 
 				if (queryarry) {
@@ -76,7 +96,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 				emojis.splice(ps.limit + 1);
 			} else {
-				emojis = await q.limit(ps.limit).getMany();
+				emojis = await listLocalEmojisPageFromDatabase(this.db, { order, sinceId, untilId, limit: ps.limit });
 			}
 
 			return this.emojiEntityService.packDetailedMany(emojis);

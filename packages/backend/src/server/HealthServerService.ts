@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { DataSource } from 'typeorm';
+import { sql } from 'drizzle-orm';
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
 import { readyRef } from '@/boot/ready.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import type { Meilisearch } from 'meilisearch';
 
@@ -30,8 +31,8 @@ export class HealthServerService {
 		@Inject(DI.redisForReactions)
 		private redisForReactions: Redis.Redis,
 
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.meilisearch)
 		private meilisearch: Meilisearch | null,
@@ -47,7 +48,7 @@ export class HealthServerService {
 				this.redisForSub.ping(),
 				this.redisForTimelines.ping(),
 				this.redisForReactions.ping(),
-				this.db.query('SELECT 1'),
+				this.db.execute(sql`SELECT 1`),
 				...(this.meilisearch ? [this.meilisearch.health()] : []),
 			]).then(() => 200, () => 503));
 			reply.header('Cache-Control', 'no-store');

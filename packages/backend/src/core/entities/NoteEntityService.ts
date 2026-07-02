@@ -4,20 +4,28 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { EntityNotFoundError, In } from 'typeorm';
 import { ModuleRef } from '@nestjs/core';
 import { DI } from '@/di-symbols.js';
+import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
-import type { UsersRepository, NotesRepository, FollowingsRepository, PollsRepository, PollVotesRepository, NoteReactionsRepository, ChannelsRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { DebounceLoader } from '@/misc/loader.js';
 import { IdService } from '@/core/IdService.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import { CacheService } from '@/core/CacheService.js';
+import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { fetchNoteReactionByUserAndNoteFromDatabase, listNoteReactionsByUserIdAndNoteIdsFromDatabase } from '@/core/NoteReactionStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import { followingExistsInDatabase } from '@/core/FollowingStore.js';
+import { fetchNoteByIdOrFailFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnModuleInit } from '@nestjs/common';
 import type { CustomEmojiService } from '../CustomEmojiService.js';
 import type { ReactionService } from '../ReactionService.js';
@@ -52,7 +60,7 @@ async function nullIfEntityNotFound<T>(promise: Promise<T>): Promise<T | null> {
 	try {
 		return await promise;
 	} catch (err) {
-		if (err instanceof EntityNotFoundError) {
+		if (isEntityNotFoundError(err)) {
 			return null;
 		}
 		throw err;
@@ -76,26 +84,8 @@ export class NoteEntityService implements OnModuleInit {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.pollsRepository)
-		private pollsRepository: PollsRepository,
-
-		@Inject(DI.pollVotesRepository)
-		private pollVotesRepository: PollVotesRepository,
-
-		@Inject(DI.noteReactionsRepository)
-		private noteReactionsRepository: NoteReactionsRepository,
-
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		//private userEntityService: UserEntityService,
 		//private driveFileEntityService: DriveFileEntityService,
@@ -192,7 +182,7 @@ export class NoteEntityService implements OnModuleInit {
 
 	@bindThis
 	private async populatePoll(note: MiNote, meId: MiUser['id'] | null) {
-		const poll = await this.pollsRepository.findOneByOrFail({ noteId: note.id });
+		const poll = await fetchPollByNoteIdOrFailFromDatabase(this.db, note.id);
 		const choices = poll.choices.map(c => ({
 			text: c,
 			votes: poll.votes[poll.choices.indexOf(c)],
@@ -201,20 +191,14 @@ export class NoteEntityService implements OnModuleInit {
 
 		if (meId) {
 			if (poll.multiple) {
-				const votes = await this.pollVotesRepository.findBy({
-					userId: meId,
-					noteId: note.id,
-				});
+				const votes = await listPollVotesByNoteAndUserFromDatabase(this.db, note.id, meId);
 
 				const myChoices = votes.map(v => v.choice);
 				for (const myChoice of myChoices) {
 					choices[myChoice].isVoted = true;
 				}
 			} else {
-				const vote = await this.pollVotesRepository.findOneBy({
-					userId: meId,
-					noteId: note.id,
-				});
+				const vote = await fetchPollVoteByNoteAndUserFromDatabase(this.db, note.id, meId);
 
 				if (vote) {
 					choices[vote.choice].isVoted = true;
@@ -258,10 +242,7 @@ export class NoteEntityService implements OnModuleInit {
 			return undefined;
 		}
 
-		const reaction = await this.noteReactionsRepository.findOneBy({
-			userId: meId,
-			noteId: note.id,
-		});
+		const reaction = await fetchNoteReactionByUserAndNoteFromDatabase(this.db, meId, note.id);
 
 		if (reaction) {
 			return this.reactionService.convertLegacyReaction(reaction.reaction);
@@ -272,7 +253,7 @@ export class NoteEntityService implements OnModuleInit {
 
 	@bindThis
 	public async isVisibleForMe(note: MiNote, meId: MiUser['id'] | null): Promise<boolean> {
-		// This code must always be synchronized with the checks in QueryService.generateVisibilityQuery.
+		// This code must always be synchronized with the visibility checks in NoteStore.
 		// visibility が specified かつ自分が指定されていなかったら非表示
 		if (note.visibility === 'specified') {
 			if (meId == null) {
@@ -299,15 +280,9 @@ export class NoteEntityService implements OnModuleInit {
 				return true;
 			} else {
 				// フォロワーかどうか
-				const [following, user] = await Promise.all([
-					this.followingsRepository.count({
-						where: {
-							followeeId: note.userId,
-							followerId: meId,
-						},
-						take: 1,
-					}),
-					this.usersRepository.findOneByOrFail({ id: meId }),
+				const [isFollowing, user] = await Promise.all([
+					followingExistsInDatabase(this.db, meId, note.userId),
+					fetchUserByIdOrFailFromDatabase(this.db, meId),
 				]);
 
 				/* If we know the following, everyhting is fine.
@@ -317,7 +292,7 @@ export class NoteEntityService implements OnModuleInit {
 				in which case we can never know the following. Instead we have
 				to assume that the users are following each other.
 				*/
-				return following > 0 || (note.userHost != null && user.host != null);
+				return isFollowing || (note.userHost != null && user.host != null);
 			}
 		}
 
@@ -383,7 +358,7 @@ export class NoteEntityService implements OnModuleInit {
 		const channel = note.channelId
 			? note.channel
 				? note.channel
-				: await this.channelsRepository.findOneBy({ id: note.channelId })
+				: await fetchChannelByIdFromDatabase(this.db, note.channelId)
 			: null;
 
 		const reactionEmojiNames = Object.keys(reactions)
@@ -528,10 +503,9 @@ export class NoteEntityService implements OnModuleInit {
 				}
 			}
 
-			const myReactions = idsNeedFetchMyReaction.size > 0 ? await this.noteReactionsRepository.findBy({
-				userId: meId,
-				noteId: In(Array.from(idsNeedFetchMyReaction)),
-			}) : [];
+			const myReactions = idsNeedFetchMyReaction.size > 0
+				? await listNoteReactionsByUserIdAndNoteIdsFromDatabase(this.db, meId, Array.from(idsNeedFetchMyReaction))
+				: [];
 
 			for (const id of idsNeedFetchMyReaction) {
 				myReactionsMap.set(id, myReactions.find(reaction => reaction.noteId === id)?.reaction ?? null);
@@ -587,31 +561,14 @@ export class NoteEntityService implements OnModuleInit {
 
 	@bindThis
 	private findNoteOrFail(id: string): Promise<MiNote> {
-		return this.notesRepository.findOneOrFail({
-			where: { id },
-			relations: {
-				user: true,
-				renote: true,
-				reply: true,
-			},
-		});
+		return fetchNoteByIdOrFailFromDatabase(this.db, id);
 	}
 
 	@bindThis
 	public async fetchDiffs(noteIds: MiNote['id'][]) {
 		if (noteIds.length === 0) return [];
 
-		const notes = await this.notesRepository.find({
-			where: {
-				id: In(noteIds),
-			},
-			select: {
-				id: true,
-				userHost: true,
-				reactions: true,
-				reactionAndUserPairCache: true,
-			},
-		});
+		const notes = await listNotesByIdsFromDatabase(this.db, noteIds);
 
 		const bufferedReactionsMap = this.meta.enableReactionsBuffering ? await this.reactionsBufferingService.getMany(noteIds) : null;
 

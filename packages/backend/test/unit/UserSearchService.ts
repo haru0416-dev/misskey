@@ -5,22 +5,26 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, beforeAll, afterEach, afterAll, vi, test, expect } from 'vitest';
-import { In } from 'typeorm';
 import { UserSearchService } from '@/core/UserSearchService.js';
-import { FollowingsRepository, MiUser, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import { following } from '@/db/schema/following.js';
+import { createUserInDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { createFollowingInDatabase } from '@/core/FollowingStore.js';
 
 describe('UserSearchService', () => {
 	let app: TestingModule;
 	let service: UserSearchService;
 
-	let usersRepository: UsersRepository;
-	let followingsRepository: FollowingsRepository;
+	let db: MiDrizzleDatabase;
 	let idService: IdService;
-	let userProfilesRepository: UserProfilesRepository;
 
 	let root: MiUser;
 	let alice: MiUser;
@@ -34,15 +38,13 @@ describe('UserSearchService', () => {
 	let bobbie: MiUser;
 	let bobby: MiUser;
 
-	async function createUser(data: Partial<MiUser> = {}) {
-		const user = await usersRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	async function createUser(data: Partial<UserInsert> & Pick<UserInsert, 'username' | 'usernameLower'>) {
+		const user = await createUserInDatabase(db, {
+			id: idService.gen(),
+			...data,
+		});
 
-		await userProfilesRepository.insert({
+		await createUserProfileInDatabase(db, {
 			userId: user.id,
 		});
 
@@ -51,7 +53,7 @@ describe('UserSearchService', () => {
 
 	async function createFollowings(follower: MiUser, followees: MiUser[]) {
 		for (const followee of followees) {
-			await followingsRepository.insert({
+			await createFollowingInDatabase(db, {
 				id: idService.gen(),
 				followerId: follower.id,
 				followeeId: followee.id,
@@ -61,7 +63,7 @@ describe('UserSearchService', () => {
 
 	async function setActive(users: MiUser[]) {
 		for (const user of users) {
-			await usersRepository.update(user.id, {
+			await updateUserInDatabase(db, user.id, {
 				updatedAt: new Date(),
 			});
 		}
@@ -69,7 +71,7 @@ describe('UserSearchService', () => {
 
 	async function setInactive(users: MiUser[]) {
 		for (const user of users) {
-			await usersRepository.update(user.id, {
+			await updateUserInDatabase(db, user.id, {
 				updatedAt: new Date(0),
 			});
 		}
@@ -77,7 +79,7 @@ describe('UserSearchService', () => {
 
 	async function setSuspended(users: MiUser[]) {
 		for (const user of users) {
-			await usersRepository.update(user.id, {
+			await updateUserInDatabase(db, user.id, {
 				isSuspended: true,
 			});
 		}
@@ -104,9 +106,7 @@ describe('UserSearchService', () => {
 
 		await app.init();
 
-		usersRepository = app.get(DI.usersRepository);
-		userProfilesRepository = app.get(DI.userProfilesRepository);
-		followingsRepository = app.get(DI.followingsRepository);
+		db = app.get(DI.drizzle);
 
 		service = app.get(UserSearchService);
 		idService = app.get(IdService);
@@ -127,7 +127,9 @@ describe('UserSearchService', () => {
 	});
 
 	afterEach(async () => {
-		await usersRepository.createQueryBuilder().delete().execute();
+		await db.delete(following);
+		await db.delete(userProfile);
+		await db.delete(user);
 	});
 
 	afterAll(async () => {
@@ -200,10 +202,6 @@ describe('UserSearchService', () => {
 				{ limit: 100 },
 				root,
 			);
-
-			// 見る用
-			// const users = await usersRepository.findBy({ id: In(result) }).then(it => new Map(it.map(x => [x.id, x])));
-			// console.log(result.map(x => users.get(x as any)).map(it => it?.username));
 
 			// フォローしててアクティブなので先頭: alyssa, bob, bobbi
 			// フォローしてて非アクティブなので次: alyson, bobbie

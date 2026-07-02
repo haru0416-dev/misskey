@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { MiMeta, NotesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import ActiveUsersChart from '@/core/chart/charts/active-users.js';
 import { DI } from '@/di-symbols.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
-import { QueryService } from '@/core/QueryService.js';
-import { MiLocalUser } from '@/models/User.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listLocalTimelineNotesFromDatabase } from '@/core/NoteStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -68,15 +68,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteEntityService: NoteEntityService,
 		private roleService: RoleService,
 		private activeUsersChart: ActiveUsersChart,
 		private idService: IdService,
 		private fanoutTimelineEndpointService: FanoutTimelineEndpointService,
-		private queryService: QueryService,
 		private channelMutingService: ChannelMutingService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -148,47 +147,22 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		withFiles: boolean,
 		withReplies: boolean,
 	}, me: MiLocalUser | null) {
-		const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'),
-			ps.sinceId, ps.untilId)
-			.andWhere('(note.visibility = \'public\') AND (note.userHost IS NULL) AND (note.channelId IS NULL)')
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser');
-
-		this.queryService.generateVisibilityQuery(query, me);
-		this.queryService.generateBaseNoteFilteringQuery(query, me);
+		let mutedChannelIds: string[] = [];
 		if (me) {
-			this.queryService.generateMutedUserRenotesQueryForNotes(query, me);
-
-			const mutedChannelIds = await this.channelMutingService
+			mutedChannelIds = await this.channelMutingService
 				.list({ requestUserId: me.id }, { idOnly: true })
 				.then(x => x.map(x => x.id));
-			if (mutedChannelIds.length > 0) {
-				query.andWhere(new Brackets(qb => {
-					qb.orWhere('note.renoteChannelId IS NULL')
-						.orWhere('note.renoteChannelId NOT IN (:...mutedChannelIds)', { mutedChannelIds });
-				}));
-			}
 		}
 
-		if (ps.withFiles) {
-			query.andWhere('note.fileIds != \'{}\'');
-		}
-
-		if (!ps.withReplies) {
-			query.andWhere(new Brackets(qb => {
-				qb
-					.where('note.replyId IS NULL') // 返信ではない
-					.orWhere(new Brackets(qb => {
-						qb // 返信だけど投稿者自身への返信
-							.where('note.replyId IS NOT NULL')
-							.andWhere('note.replyUserId = note.userId');
-					}));
-			}));
-		}
-
-		return await query.limit(ps.limit).getMany();
+		return await listLocalTimelineNotesFromDatabase(this.db, {
+			limit: ps.limit,
+			sinceId: ps.sinceId,
+			untilId: ps.untilId,
+			withFiles: ps.withFiles,
+			withReplies: ps.withReplies,
+			me,
+			blockedHosts: this.serverSettings.blockedHosts,
+			mutedChannelIds,
+		});
 	}
 }

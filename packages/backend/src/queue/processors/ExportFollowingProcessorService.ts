@@ -5,10 +5,12 @@
 
 import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
-import { In, MoreThan, Not } from 'typeorm';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, FollowingsRepository, MutingsRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -25,14 +27,8 @@ export class ExportFollowingProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private driveService: DriveService,
@@ -46,7 +42,7 @@ export class ExportFollowingProcessorService {
 	public async process(job: Bull.Job<DbExportFollowingData>): Promise<void> {
 		this.logger.info(`Exporting following of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -61,22 +57,14 @@ export class ExportFollowingProcessorService {
 
 			let cursor: MiFollowing['id'] | null = null;
 
-			const mutings = job.data.excludeMuting ? await this.mutingsRepository.findBy({
-				muterId: user.id,
-			}) : [];
+			const mutingUserIds = job.data.excludeMuting ? await listMuteeIdsByMuterIdFromDatabase(this.db, user.id) : [];
 
 			while (true) {
-				const followings = await this.followingsRepository.find({
-					where: {
-						followerId: user.id,
-						...(mutings.length > 0 ? { followeeId: Not(In(mutings.map(x => x.muteeId))) } : {}),
-						...(cursor ? { id: MoreThan(cursor) } : {}),
-					},
-					take: 100,
-					order: {
-						id: 1,
-					},
-				}) as MiFollowing[];
+				const followings = await listFollowingsByFollowerIdFromDatabase(this.db, user.id, {
+					limit: 100,
+					sinceId: cursor,
+					excludeFolloweeIds: mutingUserIds,
+				});
 
 				if (followings.length === 0) {
 					break;
@@ -85,7 +73,7 @@ export class ExportFollowingProcessorService {
 				cursor = followings.at(-1)?.id ?? null;
 
 				for (const following of followings) {
-					const u = await this.usersRepository.findOneBy({ id: following.followeeId });
+					const u = await fetchUserByIdFromDatabase(this.db, following.followeeId);
 					if (u == null) {
 						continue;
 					}

@@ -10,8 +10,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { HttpHeader } from 'fastify/types/utils.js';
-import { MiUser } from '@/models/User.js';
-import { MiUserProfile, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { DI } from '@/di-symbols.js';
@@ -21,6 +20,11 @@ import { RateLimiterService } from '@/server/api/RateLimiterService.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
 import { SigninService } from '@/server/api/SigninService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { UserInsert } from '@/db/schema/user.js';
+import type { UserProfileInsert } from '@/db/schema/user-profile.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 class FakeLimiter {
 	public async limit() {
@@ -62,25 +66,17 @@ type ApiFastifyRequestType = FastifyRequest<{
 describe('SigninWithPasskeyApiService', () => {
 	let app: TestingModule;
 	let passkeyApiService: SigninWithPasskeyApiService;
-	let usersRepository: UsersRepository;
-	let userProfilesRepository: UserProfilesRepository;
+	let db: MiDrizzleDatabase;
 	let webAuthnService: WebAuthnService;
 	let idService: IdService;
 	let FakeWebauthnVerify: ()=>Promise<string>;
 
-	async function createUser(data: Partial<MiUser> = {}) {
-		const user = await usersRepository
-			.save({
-				...data,
-			});
-		return user;
+	async function createUser(data: UserInsert): Promise<MiUser> {
+		return await createUserInDatabase(db, data);
 	}
 
-	async function createUserProfile(data: Partial<MiUserProfile> = {}) {
-		const userProfile = await userProfilesRepository
-			.save({ ...data },
-			);
-		return userProfile;
+	async function createUserProfile(data: UserProfileInsert) {
+		return await createUserProfileInDatabase(db, data);
 	}
 
 	beforeAll(async () => {
@@ -97,8 +93,7 @@ describe('SigninWithPasskeyApiService', () => {
 			}
 		}).compile();
 		passkeyApiService = app.get<SigninWithPasskeyApiService>(SigninWithPasskeyApiService);
-		usersRepository = app.get<UsersRepository>(DI.usersRepository);
-		userProfilesRepository = app.get<UserProfilesRepository>(DI.userProfilesRepository);
+		db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		webAuthnService = app.get<WebAuthnService>(WebAuthnService);
 		idService = app.get<IdService>(IdService);
 	});
@@ -169,7 +164,7 @@ describe('SigninWithPasskeyApiService', () => {
 			const res = new DummyFastifyReply() as FastifyReply;
 			const userId = await FakeWebauthnVerify();
 			const data = { userId: userId, usePasswordLessLogin: false };
-			await userProfilesRepository.update({ userId: userId }, data);
+			await updateUserProfileInDatabase(db, userId, data);
 			const res_body = await passkeyApiService.signin(req, res);
 			expect(res.statusCode).toBe(403);
 			expect((res_body as any).error?.id).toStrictEqual('2d84773e-f7b7-4d0b-8f72-bb69b584c912');

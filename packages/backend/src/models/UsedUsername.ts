@@ -3,16 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { PrimaryColumn, Entity, Column } from 'typeorm';
 
-@Entity('used_username')
 export class MiUsedUsername {
-	@PrimaryColumn('varchar', {
-		length: 128,
-	})
 	public username: string;
 
-	@Column('timestamp with time zone')
 	public createdAt: Date;
 
 	constructor(data: Partial<MiUsedUsername>) {

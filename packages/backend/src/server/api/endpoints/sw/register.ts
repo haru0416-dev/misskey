@@ -5,10 +5,18 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { IdService } from '@/core/IdService.js';
-import type { MiMeta, SwSubscriptionsRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
+import {
+	createSwSubscriptionInDatabase,
+	fetchSwSubscriptionFromDatabase,
+	isDuplicateKeyValueDatabaseError,
+	updateSwSubscriptionByUserAndEndpointInDatabase,
+	updateSwSubscriptionInDatabase,
+} from '@/core/SwSubscriptionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['account'],
@@ -64,39 +72,57 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		@Inject(DI.swSubscriptionsRepository)
-		private swSubscriptionsRepository: SwSubscriptionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private pushNotificationService: PushNotificationService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// if already subscribed
-			const exist = await this.swSubscriptionsRepository.findOneBy({
-				userId: me.id,
-				endpoint: ps.endpoint,
-				auth: ps.auth,
-				publickey: ps.publickey,
-			});
+			const exist = await fetchSwSubscriptionFromDatabase(this.drizzle, me.id, ps.endpoint);
 
 			if (exist != null) {
+				const isSameSubscription = exist.auth === ps.auth
+					&& exist.publickey === ps.publickey
+					&& exist.sendReadMessage === ps.sendReadMessage;
+
+				if (!isSameSubscription) {
+					await updateSwSubscriptionInDatabase(this.drizzle, exist.id, {
+						auth: ps.auth,
+						publickey: ps.publickey,
+						sendReadMessage: ps.sendReadMessage,
+					});
+					this.pushNotificationService.refreshCache(me.id);
+				}
+
 				return {
-					state: 'already-subscribed' as const,
+					state: isSameSubscription ? 'already-subscribed' as const : 'subscribed' as const,
 					key: this.serverSettings.swPublicKey,
 					userId: me.id,
-					endpoint: exist.endpoint,
-					sendReadMessage: exist.sendReadMessage,
+					endpoint: ps.endpoint,
+					sendReadMessage: ps.sendReadMessage,
 				};
 			}
 
-			await this.swSubscriptionsRepository.insert({
-				id: this.idService.gen(),
-				userId: me.id,
-				endpoint: ps.endpoint,
-				auth: ps.auth,
-				publickey: ps.publickey,
-				sendReadMessage: ps.sendReadMessage,
-			});
+			try {
+				await createSwSubscriptionInDatabase(this.drizzle, {
+					id: this.idService.gen(),
+					userId: me.id,
+					endpoint: ps.endpoint,
+					auth: ps.auth,
+					publickey: ps.publickey,
+					sendReadMessage: ps.sendReadMessage,
+				});
+			} catch (e) {
+				if (!isDuplicateKeyValueDatabaseError(e)) throw e;
+
+				await updateSwSubscriptionByUserAndEndpointInDatabase(this.drizzle, me.id, ps.endpoint, {
+					auth: ps.auth,
+					publickey: ps.publickey,
+					sendReadMessage: ps.sendReadMessage,
+				});
+			}
 
 			this.pushNotificationService.refreshCache(me.id);
 

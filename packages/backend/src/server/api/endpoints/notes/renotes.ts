@@ -4,13 +4,15 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { ApiError } from '../../error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listRenoteNotesFromDatabase } from '@/core/NoteStore.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -52,12 +54,15 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private noteEntityService: NoteEntityService,
-		private queryService: QueryService,
 		private getterService: GetterService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const note = await this.getterService.getNote(ps.noteId).catch(err => {
@@ -65,18 +70,22 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 
-			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('note.renoteId = :renoteId', { renoteId: note.id })
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('renote.user', 'renoteUser');
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			this.queryService.generateVisibilityQuery(query, me);
-			this.queryService.generateBaseNoteFilteringQuery(query, me);
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
+			}
 
-			const renotes = await query.limit(ps.limit).getMany();
+			const renotes = await listRenoteNotesFromDatabase(this.db, {
+				renoteId: note.id,
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				me,
+				blockedHosts: this.instanceMeta.blockedHosts,
+			});
 
 			return await this.noteEntityService.packMany(renotes, me);
 		});

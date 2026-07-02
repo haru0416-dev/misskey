@@ -4,10 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -29,24 +31,21 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private moderationLogService: ModerationLogService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const user = await this.usersRepository.findOneBy({ id: ps.userId });
+			const user = await fetchUserByIdFromDatabase(this.db, ps.userId);
 
 			if (user == null) {
 				throw new Error('user not found');
 			}
 
-			const currentProfile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+			const currentProfile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, user.id);
 
-			await this.userProfilesRepository.update({ userId: user.id }, {
+			await updateUserProfileInDatabase(this.db, user.id, {
 				moderationNote: ps.text,
 			});
 

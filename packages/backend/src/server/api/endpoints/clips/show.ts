@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ClipsRepository } from '@/models/_.js';
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -43,16 +44,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private clipEntityService: ClipEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Fetch the clip
-			const clip = await this.clipsRepository.findOneBy({
-				id: ps.clipId,
-			});
+			const clip = await fetchClipByIdFromDatabase(this.db, ps.clipId);
 
 			if (clip == null) {
 				throw new ApiError(meta.errors.noSuchClip);

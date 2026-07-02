@@ -6,9 +6,10 @@
 import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
 import { ZipReader } from 'slacc';
-import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { EmojisRepository, DriveFilesRepository } from '@/models/_.js';
+import { deleteEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { createTempDir } from '@/misc/create-temp.js';
@@ -25,11 +26,8 @@ export class ImportCustomEmojisProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private customEmojiService: CustomEmojiService,
 		private driveService: DriveService,
@@ -43,9 +41,7 @@ export class ImportCustomEmojisProcessorService {
 	public async process(job: Bull.Job<DbUserImportJobData>): Promise<void> {
 		this.logger.info('Importing custom emojis ...');
 
-		const file = await this.driveFilesRepository.findOneBy({
-			id: job.data.fileId,
-		});
+		const file = await fetchDriveFileByIdFromDatabase(this.db, job.data.fileId);
 		if (file == null) {
 			return;
 		}
@@ -85,10 +81,7 @@ export class ImportCustomEmojisProcessorService {
 					continue;
 				}
 				const emojiPath = outputPath + '/' + record.fileName;
-				await this.emojisRepository.delete({
-					name: emojiInfo.name,
-					host: IsNull(),
-				});
+				await deleteEmojiByNameAndHostFromDatabase(this.db, emojiInfo.name, null);
 
 				try {
 					const driveFile = await this.driveService.addFile({

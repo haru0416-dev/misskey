@@ -5,12 +5,17 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import type { NoteFavoritesRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { AchievementService } from '@/core/AchievementService.js';
+import {
+	createNoteFavoriteInDatabase,
+	noteFavoriteExistsInDatabase,
+} from '@/core/NoteFavoriteStore.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -52,8 +57,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.noteFavoritesRepository)
-		private noteFavoritesRepository: NoteFavoritesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private getterService: GetterService,
@@ -67,23 +72,26 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// if already favorited
-			const exist = await this.noteFavoritesRepository.exists({
-				where: {
-					noteId: note.id,
-					userId: me.id,
-				},
-			});
+			const exist = await noteFavoriteExistsInDatabase(this.db, me.id, note.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyFavorited);
 			}
 
 			// Create favorite
-			await this.noteFavoritesRepository.insert({
-				id: this.idService.gen(),
-				noteId: note.id,
-				userId: me.id,
-			});
+			try {
+				await createNoteFavoriteInDatabase(this.db, {
+					id: this.idService.gen(),
+					noteId: note.id,
+					userId: me.id,
+				});
+			} catch (error) {
+				if (isDuplicateKeyValueDatabaseError(error)) {
+					throw new ApiError(meta.errors.alreadyFavorited);
+				}
+
+				throw error;
+			}
 
 			if (note.userHost == null && note.userId !== me.id) {
 				this.achievementService.create(note.userId, 'myNoteFavorited1');

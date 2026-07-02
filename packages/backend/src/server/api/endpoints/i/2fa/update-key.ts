@@ -6,11 +6,15 @@
 import bcrypt from 'bcryptjs';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UserSecurityKeysRepository } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '../../../error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	fetchUserSecurityKeyByIdFromDatabase,
+	updateUserSecurityKeyNameByIdInDatabase,
+} from '@/core/UserSecurityKeyStore.js';
 
 export const meta = {
 	requireCredential: true,
@@ -44,16 +48,14 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const key = await this.userSecurityKeysRepository.findOneBy({
-				id: ps.credentialId,
-			});
+			const key = await fetchUserSecurityKeyByIdFromDatabase(this.db, ps.credentialId);
 
 			if (key == null) {
 				throw new ApiError(meta.errors.noSuchKey);
@@ -63,9 +65,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.accessDenied);
 			}
 
-			await this.userSecurityKeysRepository.update(key.id, {
-				name: ps.name,
-			});
+			await updateUserSecurityKeyNameByIdInDatabase(this.db, key.id, ps.name);
 
 			// Publish meUpdated event
 			this.globalEventService.publishMainStream(me.id, 'meUpdated', await this.userEntityService.pack(me.id, me, {

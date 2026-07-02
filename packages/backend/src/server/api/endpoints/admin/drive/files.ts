@@ -4,11 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { DriveFilesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { IdService } from '@/core/IdService.js';
+import { listDriveFilesForAdminFromDatabase } from '@/core/DriveFileStore.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -52,38 +53,30 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private driveFileEntityService: DriveFileEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.driveFilesRepository.createQueryBuilder('file'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
+			let sinceId = ps.sinceId ?? null;
+			let untilId = ps.untilId ?? null;
 
-			if (ps.userId) {
-				query.andWhere('file.userId = :userId', { userId: ps.userId });
-			} else {
-				if (ps.origin === 'local') {
-					query.andWhere('file.userHost IS NULL');
-				} else if (ps.origin === 'remote') {
-					query.andWhere('file.userHost IS NOT NULL');
-				}
-
-				if (ps.hostname) {
-					query.andWhere('file.userHost = :hostname', { hostname: ps.hostname });
-				}
+			if (sinceId == null && untilId == null) {
+				if (ps.sinceDate) sinceId = this.idService.gen(ps.sinceDate);
+				if (ps.untilDate) untilId = this.idService.gen(ps.untilDate);
 			}
 
-			if (ps.type) {
-				if (ps.type.endsWith('/*')) {
-					query.andWhere('file.type like :type', { type: ps.type.replace('/*', '/') + '%' });
-				} else {
-					query.andWhere('file.type = :type', { type: ps.type });
-				}
-			}
-
-			const files = await query.limit(ps.limit).getMany();
+			const files = await listDriveFilesForAdminFromDatabase(this.db, {
+				limit: ps.limit,
+				sinceId,
+				untilId,
+				userId: ps.userId,
+				type: ps.type,
+				origin: ps.origin,
+				hostname: ps.hostname,
+			});
 
 			return await this.driveFileEntityService.packMany(files, { detail: true, withUser: true, self: true });
 		});

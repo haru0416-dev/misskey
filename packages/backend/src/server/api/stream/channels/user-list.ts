@@ -4,16 +4,24 @@
  */
 
 import { Inject, Injectable, Scope } from '@nestjs/common';
-import type { MiUserListMembership, UserListMembershipsRepository, UserListsRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { NoteStreamingHidingService } from '../NoteStreamingHidingService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import { userListExistsByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { bindThis } from '@/decorators.js';
 import { isRenotePacked, isQuotePacked } from '@/misc/is-renote.js';
 import type { JsonObject } from '@/misc/json-value.js';
 import Channel, { type ChannelRequest } from '../channel.js';
 import { REQUEST } from '@nestjs/core';
+
+type MembershipCacheEntry = {
+	// NOTE: 既存実装は withReplies を取得していなかったため、値は常に undefined
+	// になっていた(既存挙動を保持するため踏襲)。
+	withReplies: boolean | undefined;
+};
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class UserListChannel extends Channel {
@@ -21,17 +29,14 @@ export class UserListChannel extends Channel {
 	public static shouldShare = false;
 	public static requireCredential = false as const;
 	private listId: string;
-	private membershipsMap: Record<string, Pick<MiUserListMembership, 'withReplies'> | undefined> = {};
+	private membershipsMap: Record<string, MembershipCacheEntry | undefined> = {};
 	private listUsersClock: NodeJS.Timeout;
 	private withFiles: boolean;
 	private withRenotes: boolean;
 
 	constructor(
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(REQUEST)
 		request: ChannelRequest,
@@ -52,12 +57,7 @@ export class UserListChannel extends Channel {
 		this.withRenotes = !!(params.withRenotes ?? true);
 
 		// Check existence and owner
-		const listExist = await this.userListsRepository.exists({
-			where: {
-				id: this.listId,
-				userId: this.user!.id,
-			},
-		});
+		const listExist = await userListExistsByIdAndUserIdFromDatabase(this.db, this.listId, this.user!.id);
 		if (!listExist) return false;
 
 		// Subscribe stream
@@ -73,17 +73,12 @@ export class UserListChannel extends Channel {
 
 	@bindThis
 	private async updateListUsers() {
-		const memberships = await this.userListMembershipsRepository.find({
-			where: {
-				userListId: this.listId,
-			},
-			select: { userId: true },
-		});
+		const memberIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(this.db, this.listId);
 
-		const membershipsMap: Record<string, Pick<MiUserListMembership, 'withReplies'> | undefined> = {};
-		for (const membership of memberships) {
-			membershipsMap[membership.userId] = {
-				withReplies: membership.withReplies,
+		const membershipsMap: Record<string, MembershipCacheEntry | undefined> = {};
+		for (const userId of memberIds) {
+			membershipsMap[userId] = {
+				withReplies: undefined,
 			};
 		}
 		this.membershipsMap = membershipsMap;

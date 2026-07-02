@@ -5,10 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
-import type { FollowRequestsRepository } from '@/models/_.js';
 import { FollowRequestEntityService } from '@/core/entities/FollowRequestEntityService.js';
 import { DI } from '@/di-symbols.js';
+import {
+	listFollowRequestsByFollowerIdFromDatabase,
+	resolveFollowRequestPagination,
+} from '@/core/FollowRequestStore.js';
+import { IdService } from '@/core/IdService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['following', 'account'],
@@ -59,19 +63,18 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private followRequestEntityService: FollowRequestEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.followRequestsRepository.createQueryBuilder('request'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('request.followerId = :meId', { meId: me.id });
-
-			const requests = await query
-				.limit(ps.limit)
-				.getMany();
+			const pagination = resolveFollowRequestPagination(this.idService, ps);
+			const requests = await listFollowRequestsByFollowerIdFromDatabase(this.db, me.id, {
+				limit: ps.limit,
+				...pagination,
+			});
 
 			return await this.followRequestEntityService.packMany(requests, me);
 		});

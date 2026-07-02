@@ -4,16 +4,17 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import { MetaService } from '@/core/MetaService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { EmailService } from '@/core/EmailService.js';
-import { MiUser, type UserProfilesRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
 
 // モデレーターが不在と判断する日付の閾値
@@ -100,8 +101,9 @@ export class CheckModeratorsActivityProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
 		private metaService: MetaService,
 		private roleService: RoleService,
 		private emailService: EmailService,
@@ -217,9 +219,8 @@ export class CheckModeratorsActivityProcessorService {
 		// -- モデレータへのメール送信
 
 		const moderators = await this.fetchModerators();
-		const moderatorProfiles = await this.userProfilesRepository
-			.findBy({ userId: In(moderators.map(it => it.id)) })
-			.then(it => new Map(it.map(it => [it.userId, it])));
+		const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(this.db, moderators.map(it => it.id))
+			.then(profiles => new Map(profiles.map(profile => [profile.userId, profile])));
 
 		const mail = generateModeratorInactivityMail(remainingTime);
 		for (const moderator of moderators) {
@@ -242,9 +243,8 @@ export class CheckModeratorsActivityProcessorService {
 		// -- モデレータへのメールとお知らせ（個人向け）送信
 
 		const moderators = await this.fetchModerators();
-		const moderatorProfiles = await this.userProfilesRepository
-			.findBy({ userId: In(moderators.map(it => it.id)) })
-			.then(it => new Map(it.map(it => [it.userId, it])));
+		const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(this.db, moderators.map(it => it.id))
+			.then(profiles => new Map(profiles.map(profile => [profile.userId, profile])));
 
 		const mail = generateInvitationOnlyChangedMail();
 		for (const moderator of moderators) {

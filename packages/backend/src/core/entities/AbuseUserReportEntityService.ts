@@ -5,19 +5,20 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { AbuseUserReportsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import type { Packed } from '@/misc/json-schema.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
 import { UserEntityService } from './UserEntityService.js';
 
 @Injectable()
 export class AbuseUserReportEntityService {
 	constructor(
-		@Inject(DI.abuseUserReportsRepository)
-		private abuseUserReportsRepository: AbuseUserReportsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -33,7 +34,7 @@ export class AbuseUserReportEntityService {
 			packedAssignee?: Packed<'UserDetailedNotMe'>,
 		},
 	) {
-		const report = typeof src === 'object' ? src : await this.abuseUserReportsRepository.findOneByOrFail({ id: src });
+		const report = typeof src === 'object' ? src : await fetchAbuseUserReportByIdOrFailFromDatabase(this.db, src);
 
 		return await awaitAll({
 			id: report.id,

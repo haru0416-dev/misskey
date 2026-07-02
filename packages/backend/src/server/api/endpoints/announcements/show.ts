@@ -4,9 +4,9 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { EntityNotFoundError } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
+import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -46,7 +46,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			try {
 				return await this.announcementService.getAnnouncement(ps.announcementId, me);
 			} catch (err) {
-				if (err instanceof EntityNotFoundError) throw new ApiError(meta.errors.noSuchAnnouncement);
+				if (isEntityNotFoundError(err)) throw new ApiError(meta.errors.noSuchAnnouncement);
 				throw err;
 			}
 		});

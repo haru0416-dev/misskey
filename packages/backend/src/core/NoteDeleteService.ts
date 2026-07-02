@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets, In, IsNull, Not } from 'typeorm';
 import { Injectable, Inject } from '@nestjs/common';
 import type { MiUser, MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import type { MiNote, IMentionedRemoteUsers } from '@/models/Note.js';
-import type { InstancesRepository, MiMeta, NotesRepository, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { RelayService } from '@/core/RelayService.js';
 import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { adjustInstanceNotesCountFromDatabase } from '@/core/InstanceStore.js';
 import type { Config } from '@/config.js';
 import NotesChart from '@/core/chart/charts/notes.js';
 import PerUserNotesChart from '@/core/chart/charts/per-user-notes.js';
@@ -23,6 +24,13 @@ import { bindThis } from '@/decorators.js';
 import { SearchService } from '@/core/SearchService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
+import {
+	decrementNoteRepliesCountInDatabase,
+	deleteNoteByIdAndUserIdFromDatabase,
+	fetchNoteByIdFromDatabase,
+	listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase,
+} from '@/core/NoteStore.js';
+import { fetchUserByIdOrFailFromDatabase, listUsersByUrisOrIdsFromDatabase } from '@/core/UserStore.js';
 
 @Injectable()
 export class NoteDeleteService {
@@ -33,14 +41,8 @@ export class NoteDeleteService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private globalEventService: GlobalEventService,
@@ -64,7 +66,7 @@ export class NoteDeleteService {
 		const deletedAt = new Date();
 
 		if (note.replyId) {
-			await this.notesRepository.decrement({ id: note.replyId }, 'repliesCount', 1);
+			await decrementNoteRepliesCountInDatabase(this.db, note.replyId, 1);
 		}
 
 		if (!quiet) {
@@ -78,9 +80,7 @@ export class NoteDeleteService {
 
 				// if deleted note is renote
 				if (isRenote(note) && !isQuote(note)) {
-					renote = await this.notesRepository.findOneBy({
-						id: note.renoteId,
-					});
+					renote = await fetchNoteByIdFromDatabase(this.db, note.renoteId);
 				}
 
 				const content = this.apRendererService.addContext(renote
@@ -99,7 +99,7 @@ export class NoteDeleteService {
 			if (this.meta.enableStatsForFederatedInstances) {
 				if (this.userEntityService.isRemoteUser(user)) {
 					this.federatedInstanceService.fetchOrRegister(user.host).then(async i => {
-						this.instancesRepository.decrement({ id: i.id }, 'notesCount', 1);
+						await adjustInstanceNotesCountFromDatabase(this.db, i.id, -1);
 						if (this.meta.enableChartsForFederatedInstances) {
 							this.instanceChart.updateNote(i.host, note, false);
 						}
@@ -110,13 +110,10 @@ export class NoteDeleteService {
 
 		this.searchService.unindexNote(note);
 
-		await this.notesRepository.delete({
-			id: note.id,
-			userId: user.id,
-		});
+		await deleteNoteByIdAndUserIdFromDatabase(this.db, note.id, user.id);
 
 		if (deleter && (note.userId !== deleter.id)) {
-			const user = await this.usersRepository.findOneByOrFail({ id: note.userId });
+			const user = await fetchUserByIdOrFailFromDatabase(this.db, note.userId);
 			this.moderationLogService.log(deleter, 'deleteNote', {
 				noteId: note.id,
 				noteUserId: note.userId,
@@ -129,42 +126,19 @@ export class NoteDeleteService {
 
 	@bindThis
 	private async getMentionedRemoteUsers(note: MiNote) {
-		const where = [] as any[];
-
 		// mention / reply / dm
 		const uris = (JSON.parse(note.mentionedRemoteUsers) as IMentionedRemoteUsers).map(x => x.uri);
-		if (uris.length > 0) {
-			where.push(
-				{ uri: In(uris) },
-			);
-		}
 
 		// renote / quote
-		if (note.renoteUserId) {
-			where.push({
-				id: note.renoteUserId,
-			});
-		}
-
-		if (where.length === 0) return [];
-
-		return await this.usersRepository.find({
-			where,
+		return await listUsersByUrisOrIdsFromDatabase(this.db, {
+			uris,
+			ids: note.renoteUserId ? [note.renoteUserId] : [],
 		}) as MiRemoteUser[];
 	}
 
 	@bindThis
 	private async getRenotedOrRepliedRemoteUsers(note: MiNote) {
-		const query = this.notesRepository.createQueryBuilder('note')
-			.leftJoinAndSelect('note.user', 'user')
-			.where(new Brackets(qb => {
-				qb.orWhere('note.renoteId = :renoteId', { renoteId: note.id });
-				qb.orWhere('note.replyId = :replyId', { replyId: note.id });
-			}))
-			.andWhere({ userHost: Not(IsNull()) });
-		const notes = await query.getMany() as (MiNote & { user: MiRemoteUser })[];
-		const remoteUsers = notes.map(({ user }) => user);
-		return remoteUsers;
+		return await listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(this.db, note.id);
 	}
 
 	@bindThis

@@ -4,9 +4,15 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { FollowingsRepository, UsersRepository } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { updateFollowerHibernatedStateByFollowerIdInDatabase } from '@/core/FollowingStore.js';
+import {
+	updateUserHibernatedStateInDatabase,
+	updateUserLastActiveDateInDatabase,
+	updateUserLastActiveDateReturningWasHibernatedInDatabase,
+} from '@/core/UserStore.js';
 import { bindThis } from '@/decorators.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -14,10 +20,9 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 @Injectable()
 export class UserService {
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
 		private systemWebhookService: SystemWebhookService,
 		private userEntityService: UserEntityService,
 	) {
@@ -26,31 +31,13 @@ export class UserService {
 	@bindThis
 	public async updateLastActiveDate(user: MiUser): Promise<void> {
 		if (user.isHibernated) {
-			const result = await this.usersRepository.createQueryBuilder().update()
-				.set({
-					lastActiveDate: new Date(),
-				})
-				.where('id = :id', { id: user.id })
-				.returning('*')
-				.execute()
-				.then((response) => {
-					return response.raw[0];
-				});
-			const wokeUp = result.isHibernated;
+			const wokeUp = await updateUserLastActiveDateReturningWasHibernatedInDatabase(this.db, user.id, new Date());
 			if (wokeUp) {
-				this.usersRepository.update(user.id, {
-					isHibernated: false,
-				});
-				this.followingsRepository.update({
-					followerId: user.id,
-				}, {
-					isFollowerHibernated: false,
-				});
+				updateUserHibernatedStateInDatabase(this.db, user.id, false);
+				updateFollowerHibernatedStateByFollowerIdInDatabase(this.db, user.id, false);
 			}
 		} else {
-			this.usersRepository.update(user.id, {
-				lastActiveDate: new Date(),
-			});
+			updateUserLastActiveDateInDatabase(this.db, user.id, new Date());
 		}
 	}
 

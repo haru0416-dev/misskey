@@ -5,8 +5,21 @@
 
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { In, IsNull } from 'typeorm';
 import { EmojiEntityService } from '@/core/entities/EmojiEntityService.js';
+import {
+	deleteEmojiByIdFromDatabase,
+	emojiExistsWithLocalNameInDatabase,
+	fetchEmojiByIdFromDatabase,
+	fetchEmojiByIdOrFailFromDatabase,
+	fetchEmojiByNameAndHostFromDatabase,
+	fetchEmojisFromDatabase,
+	insertEmojiInDatabase,
+	listEmojisByIdsFromDatabase,
+	listEmojiThumbnailsByNamesAndHostsFromDatabase,
+	listLocalEmojisFromDatabase,
+	updateEmojiInDatabase,
+	updateEmojisByIdsInDatabase,
+} from '@/core/EmojiStore.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { IdService } from '@/core/IdService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
@@ -14,9 +27,9 @@ import { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
 import { MemoryKVCache, RedisSingleCache } from '@/misc/cache.js';
-import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
-import type { EmojisRepository, MiRole, MiUser } from '@/models/_.js';
+import type { MiRole, MiUser } from '@/models/_.js';
 import type { MiEmoji } from '@/models/Emoji.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Serialized } from '@/types.js';
 
 const parseEmojiStrRegexp = /^([-\w]+)(?:@([\w.-]+))?$/;
@@ -65,8 +78,8 @@ export class CustomEmojiService implements OnApplicationShutdown {
 	constructor(
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 		private utilityService: UtilityService,
 		private idService: IdService,
 		private emojiEntityService: EmojiEntityService,
@@ -78,7 +91,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 		this.localEmojisCache = new RedisSingleCache<Map<string, MiEmoji>>(this.redisClient, 'localEmojis', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60 * 3, // 3m
-			fetcher: () => this.emojisRepository.find({ where: { host: IsNull() } }).then(emojis => new Map(emojis.map(emoji => [emoji.name, emoji]))),
+			fetcher: () => listLocalEmojisFromDatabase(this.db).then(emojis => new Map(emojis.map(emoji => [emoji.name, emoji]))),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value.values())),
 			fromRedisConverter: (value) => {
 				return new Map(JSON.parse(value).map((x: Serialized<MiEmoji>) => [x.name, {
@@ -103,7 +116,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 		localOnly: boolean;
 		roleIdsThatCanBeUsedThisEmojiAsReaction: MiRole['id'][];
 	}, moderator?: MiUser): Promise<MiEmoji> {
-		const emoji = await this.emojisRepository.insertOne({
+		const emoji = await insertEmojiInDatabase(this.db, {
 			id: this.idService.gen(),
 			updatedAt: new Date(),
 			name: data.name,
@@ -168,7 +181,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 			if (isDuplicate) return 'SAME_NAME_EMOJI_EXISTS';
 		}
 
-		await this.emojisRepository.update(emoji.id, {
+		await updateEmojiInDatabase(this.db, emoji.id, {
 			updatedAt: new Date(),
 			name: data.name,
 			category: data.category,
@@ -201,7 +214,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 		}
 
 		if (moderator) {
-			const updated = await this.emojisRepository.findOneByOrFail({ id: id });
+			const updated = await fetchEmojiByIdOrFailFromDatabase(this.db, id);
 			this.moderationLogService.log(moderator, 'updateCustomEmoji', {
 				emojiId: emoji.id,
 				before: emoji,
@@ -213,12 +226,10 @@ export class CustomEmojiService implements OnApplicationShutdown {
 
 	@bindThis
 	public async addAliasesBulk(ids: MiEmoji['id'][], aliases: string[]) {
-		const emojis = await this.emojisRepository.findBy({
-			id: In(ids),
-		});
+		const emojis = await listEmojisByIdsFromDatabase(this.db, ids);
 
 		for (const emoji of emojis) {
-			await this.emojisRepository.update(emoji.id, {
+			await updateEmojiInDatabase(this.db, emoji.id, {
 				updatedAt: new Date(),
 				aliases: [...new Set(emoji.aliases.concat(aliases))],
 			});
@@ -233,9 +244,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 
 	@bindThis
 	public async setAliasesBulk(ids: MiEmoji['id'][], aliases: string[]) {
-		await this.emojisRepository.update({
-			id: In(ids),
-		}, {
+		await updateEmojisByIdsInDatabase(this.db, ids, {
 			updatedAt: new Date(),
 			aliases: aliases,
 		});
@@ -249,12 +258,10 @@ export class CustomEmojiService implements OnApplicationShutdown {
 
 	@bindThis
 	public async removeAliasesBulk(ids: MiEmoji['id'][], aliases: string[]) {
-		const emojis = await this.emojisRepository.findBy({
-			id: In(ids),
-		});
+		const emojis = await listEmojisByIdsFromDatabase(this.db, ids);
 
 		for (const emoji of emojis) {
-			await this.emojisRepository.update(emoji.id, {
+			await updateEmojiInDatabase(this.db, emoji.id, {
 				updatedAt: new Date(),
 				aliases: emoji.aliases.filter(x => !aliases.includes(x)),
 			});
@@ -269,9 +276,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 
 	@bindThis
 	public async setCategoryBulk(ids: MiEmoji['id'][], category: string | null) {
-		await this.emojisRepository.update({
-			id: In(ids),
-		}, {
+		await updateEmojisByIdsInDatabase(this.db, ids, {
 			updatedAt: new Date(),
 			category: category,
 		});
@@ -285,9 +290,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 
 	@bindThis
 	public async setLicenseBulk(ids: MiEmoji['id'][], license: string | null) {
-		await this.emojisRepository.update({
-			id: In(ids),
-		}, {
+		await updateEmojisByIdsInDatabase(this.db, ids, {
 			updatedAt: new Date(),
 			license: license,
 		});
@@ -301,9 +304,9 @@ export class CustomEmojiService implements OnApplicationShutdown {
 
 	@bindThis
 	public async delete(id: MiEmoji['id'], moderator?: MiUser) {
-		const emoji = await this.emojisRepository.findOneByOrFail({ id: id });
+		const emoji = await fetchEmojiByIdOrFailFromDatabase(this.db, id);
 
-		await this.emojisRepository.delete(emoji.id);
+		await deleteEmojiByIdFromDatabase(this.db, emoji.id);
 
 		this.localEmojisCache.refresh();
 
@@ -321,12 +324,10 @@ export class CustomEmojiService implements OnApplicationShutdown {
 
 	@bindThis
 	public async deleteBulk(ids: MiEmoji['id'][], moderator?: MiUser) {
-		const emojis = await this.emojisRepository.findBy({
-			id: In(ids),
-		});
+		const emojis = await listEmojisByIdsFromDatabase(this.db, ids);
 
 		for (const emoji of emojis) {
-			await this.emojisRepository.delete(emoji.id);
+			await deleteEmojiByIdFromDatabase(this.db, emoji.id);
 
 			if (moderator) {
 				this.moderationLogService.log(moderator, 'deleteCustomEmoji', {
@@ -381,10 +382,7 @@ export class CustomEmojiService implements OnApplicationShutdown {
 		if (name == null) return null;
 		if (host == null) return null;
 
-		const queryOrNull = async () => (await this.emojisRepository.findOneBy({
-			name,
-			host,
-		})) ?? null;
+		const queryOrNull = () => fetchEmojiByNameAndHostFromDatabase(this.db, name, host);
 
 		const emoji = await this.emojisCache.fetch(`${name} ${host}`, queryOrNull);
 
@@ -414,26 +412,20 @@ export class CustomEmojiService implements OnApplicationShutdown {
 	@bindThis
 	public async prefetchEmojis(emojis: { name: string; host: string | null; }[]): Promise<void> {
 		const notCachedEmojis = emojis.filter(emoji => this.emojisCache.get(`${emoji.name} ${emoji.host}`) == null);
-		const emojisQuery: any[] = [];
+		const emojisQuery: { names: string[]; host: string }[] = [];
 		const hosts = new Set(notCachedEmojis.map(e => e.host));
 		for (const host of hosts) {
 			if (host == null) continue;
 			emojisQuery.push({
-				name: In(notCachedEmojis.filter(e => e.host === host).map(e => e.name)),
+				names: notCachedEmojis.filter(e => e.host === host).map(e => e.name),
 				host: host,
 			});
 		}
-		const _emojis = emojisQuery.length > 0 ? await this.emojisRepository.find({
-			where: emojisQuery,
-			select: {
-				name: true,
-				host: true,
-				originalUrl: true,
-				publicUrl: true,
-			},
-		}) : [];
+		const _emojis = await listEmojiThumbnailsByNamesAndHostsFromDatabase(this.db, emojisQuery);
 		for (const emoji of _emojis) {
-			this.emojisCache.set(`${emoji.name} ${emoji.host}`, emoji);
+			// name, host, originalUrl, publicUrlのみ取得しているが、
+			// このキャッシュを読むpopulateEmoji()はこれらのフィールドしか使わないため許容する
+			this.emojisCache.set(`${emoji.name} ${emoji.host}`, emoji as MiEmoji);
 		}
 	}
 
@@ -443,17 +435,17 @@ export class CustomEmojiService implements OnApplicationShutdown {
 	 */
 	@bindThis
 	public checkDuplicate(name: string): Promise<boolean> {
-		return this.emojisRepository.exists({ where: { name, host: IsNull() } });
+		return emojiExistsWithLocalNameInDatabase(this.db, name);
 	}
 
 	@bindThis
 	public getEmojiById(id: string): Promise<MiEmoji | null> {
-		return this.emojisRepository.findOneBy({ id });
+		return fetchEmojiByIdFromDatabase(this.db, id);
 	}
 
 	@bindThis
 	public getEmojiByName(name: string): Promise<MiEmoji | null> {
-		return this.emojisRepository.findOneBy({ name, host: IsNull() });
+		return fetchEmojiByNameAndHostFromDatabase(this.db, name, null);
 	}
 
 	@bindThis
@@ -484,120 +476,15 @@ export class CustomEmojiService implements OnApplicationShutdown {
 			sortKeys?: FetchEmojisSortKeys[]
 		},
 	) {
-		function multipleWordsToQuery(words: string) {
-			return words.split(/\s/).filter(x => x.length > 0).map(x => `%${sqlLikeEscape(x)}%`);
-		}
-
-		const builder = this.emojisRepository.createQueryBuilder('emoji');
-		if (params?.query) {
-			const q = params.query;
-			if (q.updatedAtFrom) {
-				// noIndexScan
-				builder.andWhere('CAST(emoji.updatedAt AS DATE) >= :updateAtFrom', { updateAtFrom: q.updatedAtFrom });
-			}
-			if (q.updatedAtTo) {
-				// noIndexScan
-				builder.andWhere('CAST(emoji.updatedAt AS DATE) <= :updateAtTo', { updateAtTo: q.updatedAtTo });
-			}
-			if (q.name) {
-				builder.andWhere('emoji.name ~~ ANY(ARRAY[:...name])', { name: multipleWordsToQuery(q.name) });
-			}
-
-			switch (true) {
-				case q.hostType === 'local': {
-					builder.andWhere('emoji.host IS NULL');
-					break;
-				}
-				case q.hostType === 'remote': {
-					if (q.host) {
-						// noIndexScan
-						builder.andWhere('emoji.host ~~ ANY(ARRAY[:...host])', { host: multipleWordsToQuery(q.host) });
-					} else {
-						builder.andWhere('emoji.host IS NOT NULL');
-					}
-					break;
-				}
-			}
-
-			if (q.uri) {
-				// noIndexScan
-				builder.andWhere('emoji.uri ~~ ANY(ARRAY[:...uri])', { uri: multipleWordsToQuery(q.uri) });
-			}
-			if (q.publicUrl) {
-				// noIndexScan
-				builder.andWhere('emoji.publicUrl ~~ ANY(ARRAY[:...publicUrl])', { publicUrl: multipleWordsToQuery(q.publicUrl) });
-			}
-			if (q.type) {
-				// noIndexScan
-				builder.andWhere('emoji.type ~~ ANY(ARRAY[:...type])', { type: multipleWordsToQuery(q.type) });
-			}
-			if (q.aliases) {
-				// noIndexScan
-				const subQueryBuilder = builder.subQuery()
-					.select('COUNT(0)', 'count')
-					.from(
-						sq2 => sq2
-							.select('unnest(subEmoji.aliases)', 'alias')
-							.addSelect('subEmoji.id', 'id')
-							.from('emoji', 'subEmoji'),
-						'aliasTable',
-					)
-					.where('"emoji"."id" = "aliasTable"."id"')
-					.andWhere('"aliasTable"."alias" ~~ ANY(ARRAY[:...aliases])', { aliases: multipleWordsToQuery(q.aliases) });
-
-				builder.andWhere(`(${subQueryBuilder.getQuery()}) > 0`);
-			}
-			if (q.category) {
-				builder.andWhere('emoji.category ~~ ANY(ARRAY[:...category])', { category: multipleWordsToQuery(q.category) });
-			}
-			if (q.license) {
-				// noIndexScan
-				builder.andWhere('emoji.license ~~ ANY(ARRAY[:...license])', { license: multipleWordsToQuery(q.license) });
-			}
-			if (q.isSensitive != null) {
-				// noIndexScan
-				builder.andWhere('emoji.isSensitive = :isSensitive', { isSensitive: q.isSensitive });
-			}
-			if (q.localOnly != null) {
-				// noIndexScan
-				builder.andWhere('emoji.localOnly = :localOnly', { localOnly: q.localOnly });
-			}
-			if (q.roleIds && q.roleIds.length > 0) {
-				builder.andWhere('emoji.roleIdsThatCanBeUsedThisEmojiAsReaction && ARRAY[:...roleIds]::VARCHAR[]', { roleIds: q.roleIds });
-			}
-		}
-
-		if (params?.sinceId) {
-			builder.andWhere('emoji.id > :sinceId', { sinceId: params.sinceId });
-		}
-		if (params?.untilId) {
-			builder.andWhere('emoji.id < :untilId', { untilId: params.untilId });
-		}
-
-		if (opts?.sortKeys && opts.sortKeys.length > 0) {
-			for (const sortKey of opts.sortKeys) {
-				const direction = sortKey.startsWith('-') ? 'DESC' : 'ASC';
-				const key = sortKey.replace(/^[+-]/, '');
-				builder.addOrderBy(`emoji.${key}`, direction);
-			}
-		} else {
-			builder.addOrderBy('emoji.id', 'DESC');
-		}
-
 		const limit = opts?.limit ?? 10;
-		if (opts?.page) {
-			builder.skip((opts.page - 1) * limit);
-		}
 
-		builder.take(limit);
-
-		const [emojis, count] = await builder.getManyAndCount();
+		const { emojis, allCount } = await fetchEmojisFromDatabase(this.db, params, opts);
 
 		return {
 			emojis,
-			count: (count > limit ? emojis.length : count),
-			allCount: count,
-			allPages: Math.ceil(count / limit),
+			count: (allCount > limit ? emojis.length : allCount),
+			allCount,
+			allPages: Math.ceil(allCount / limit),
 		};
 	}
 

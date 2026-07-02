@@ -5,12 +5,14 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
+import { countAntennasByUserIdFromDatabase, createAntennaInDatabase } from '@/core/AntennaStore.js';
 import { IdService } from '@/core/IdService.js';
-import type { UserListsRepository, AntennasRepository } from '@/models/_.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { AntennaEntityService } from '@/core/entities/AntennaEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { RoleService } from '@/core/RoleService.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -81,11 +83,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
-
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private antennaEntityService: AntennaEntityService,
 		private roleService: RoleService,
@@ -97,9 +96,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.emptyKeyword);
 			}
 
-			const currentAntennasCount = await this.antennasRepository.countBy({
-				userId: me.id,
-			});
+			const currentAntennasCount = await countAntennasByUserIdFromDatabase(this.db, me.id);
 			if (currentAntennasCount >= (await this.roleService.getUserPolicies(me.id)).antennaLimit) {
 				throw new ApiError(meta.errors.tooManyAntennas);
 			}
@@ -107,10 +104,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			let userList;
 
 			if (ps.src === 'list' && ps.userListId) {
-				userList = await this.userListsRepository.findOneBy({
-					id: ps.userListId,
-					userId: me.id,
-				});
+				userList = await fetchUserListByIdAndUserIdFromDatabase(this.db, ps.userListId, me.id);
 
 				if (userList == null) {
 					throw new ApiError(meta.errors.noSuchUserList);
@@ -119,7 +113,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const now = new Date();
 
-			const antenna = await this.antennasRepository.insertOne({
+			const antenna = await createAntennaInDatabase(this.db, {
 				id: this.idService.gen(now.getTime()),
 				lastUsedAt: now,
 				userId: me.id,

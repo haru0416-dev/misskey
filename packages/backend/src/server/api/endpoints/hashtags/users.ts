@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { UsersRepository } from '@/models/_.js';
 import { safeForSql } from "@/misc/safe-for-sql.js";
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listUsersByTagFromDatabase } from '@/core/UserStore.js';
 
 export const meta = {
 	requireCredential: false,
@@ -43,42 +44,23 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			if (!safeForSql(normalizeForSearch(ps.tag))) throw new Error('Injection');
-			const query = this.usersRepository.createQueryBuilder('user')
-				.where(':tag <@ user.tags', { tag: [normalizeForSearch(ps.tag)] })
-				.andWhere('user.isSuspended = FALSE');
+			const tag = normalizeForSearch(ps.tag);
+			if (!safeForSql(tag)) throw new Error('Injection');
 
-			const recent = new Date(Date.now() - (1000 * 60 * 60 * 24 * 5));
-
-			if (ps.state === 'alive') {
-				query.andWhere('user.updatedAt > :date', { date: recent });
-			}
-
-			if (ps.origin === 'local') {
-				query.andWhere('user.host IS NULL');
-			} else if (ps.origin === 'remote') {
-				query.andWhere('user.host IS NOT NULL');
-			}
-
-			switch (ps.sort) {
-				case '+follower': query.orderBy('user.followersCount', 'DESC'); break;
-				case '-follower': query.orderBy('user.followersCount', 'ASC'); break;
-				case '+createdAt': query.orderBy('user.id', 'DESC'); break;
-				case '-createdAt': query.orderBy('user.id', 'ASC'); break;
-				case '+updatedAt': query.orderBy('user.updatedAt', 'DESC'); break;
-				case '-updatedAt': query.orderBy('user.updatedAt', 'ASC'); break;
-			}
-
-			const users = await query
-				.limit(ps.limit)
-				.offset(ps.offset)
-				.getMany();
+			const users = await listUsersByTagFromDatabase(this.db, {
+				tag,
+				limit: ps.limit,
+				offset: ps.offset,
+				sort: ps.sort,
+				state: ps.state,
+				origin: ps.origin,
+			});
 
 			return await this.userEntityService.packMany(users, me, { schema: 'UserDetailed' });
 		});

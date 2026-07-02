@@ -5,25 +5,31 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { DriveFilesRepository, DriveFoldersRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
-import type { MiDriveFolder } from '@/models/DriveFolder.js';
+import type { DriveFolderRow } from '@/db/schema/drive-folder.js';
+import {
+	countDriveFilesByFolderIdFromDatabase,
+	countDriveFilesGroupedByFolderIdsFromDatabase,
+} from '@/core/DriveFileStore.js';
+import {
+	countChildDriveFoldersGroupedByParentIdsFromDatabase,
+	countDriveFoldersByParentIdFromDatabase,
+	fetchDriveFolderByIdOrFailFromDatabase,
+	listDriveFoldersByIdsFromDatabase,
+} from '@/core/DriveFolderStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
-import { In } from 'typeorm';
 import { uniqueByKey } from '@/misc/unique-by-key.js';
 import { splitIdAndObjects } from '@/misc/split-id-and-objects.js';
 
 @Injectable()
 export class DriveFolderEntityService {
 	constructor(
-		@Inject(DI.driveFoldersRepository)
-		private driveFoldersRepository: DriveFoldersRepository,
-
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -31,12 +37,12 @@ export class DriveFolderEntityService {
 
 	@bindThis
 	public async pack(
-		src: MiDriveFolder['id'] | MiDriveFolder,
+		src: DriveFolderRow['id'] | DriveFolderRow,
 		options?: {
 			detail: boolean
 		},
 		hint?: {
-			folderMap?: Map<string, MiDriveFolder>;
+			folderMap?: Map<string, DriveFolderRow>;
 			foldersCountMap?: Map<string, number> | null;
 			filesCountMap?: Map<string, number> | null;
 			parentPacker?: (id: string) => Promise<Packed<'DriveFolder'>>;
@@ -48,7 +54,7 @@ export class DriveFolderEntityService {
 
 		const folder = typeof src === 'object'
 			? src
-			: hint?.folderMap?.get(src) ?? await this.driveFoldersRepository.findOneByOrFail({ id: src });
+			: hint?.folderMap?.get(src) ?? await fetchDriveFolderByIdOrFailFromDatabase(this.db, src);
 
 		return await awaitAll({
 			id: folder.id,
@@ -58,13 +64,9 @@ export class DriveFolderEntityService {
 
 			...(opts.detail ? {
 				foldersCount: hint?.foldersCountMap?.get(folder.id)
-					?? this.driveFoldersRepository.countBy({
-						parentId: folder.id,
-					}),
+					?? countDriveFoldersByParentIdFromDatabase(this.db, folder.id),
 				filesCount: hint?.filesCountMap?.get(folder.id)
-					?? this.driveFilesRepository.countBy({
-						folderId: folder.id,
-					}),
+					?? countDriveFilesByFolderIdFromDatabase(this.db, folder.id),
 
 				...(folder.parentId ? {
 					parent: hint?.parentPacker
@@ -76,7 +78,7 @@ export class DriveFolderEntityService {
 	}
 
 	public async packMany(
-		src: Array<MiDriveFolder['id'] | MiDriveFolder>,
+		src: Array<DriveFolderRow['id'] | DriveFolderRow>,
 		options?: {
 			detail: boolean
 		},
@@ -84,22 +86,18 @@ export class DriveFolderEntityService {
 		/**
 		 * 重複を除去しつつ、必要なDriveFolderオブジェクトをすべて取得する
 		 */
-		const collectUniqueObjects = async (src: Array<MiDriveFolder['id'] | MiDriveFolder>) => {
+		const collectUniqueObjects = async (src: Array<DriveFolderRow['id'] | DriveFolderRow>) => {
 			const uniqueSrc = uniqueByKey(
 				src,
 				(s) => typeof s === 'string' ? s : s.id,
 			);
 			const { ids, objects } = splitIdAndObjects(uniqueSrc);
 
-			const uniqueObjects = new Map<string, MiDriveFolder>(objects.map(s => [s.id, s]));
+			const uniqueObjects = new Map<string, DriveFolderRow>(objects.map(s => [s.id, s]));
 			const needsFetchIds = ids.filter(id => !uniqueObjects.has(id));
 
 			if (needsFetchIds.length > 0) {
-				const fetchedObjects = await this.driveFoldersRepository.find({
-					where: {
-						id: In(needsFetchIds),
-					},
-				});
+				const fetchedObjects = await listDriveFoldersByIdsFromDatabase(this.db, needsFetchIds);
 				for (const obj of fetchedObjects) {
 					uniqueObjects.set(obj.id, obj);
 				}
@@ -111,7 +109,7 @@ export class DriveFolderEntityService {
 		/**
 		 * 親フォルダーを再帰的に収集する
 		 */
-		const collectAncestors = async (folderMap: Map<string, MiDriveFolder>) => {
+		const collectAncestors = async (folderMap: Map<string, DriveFolderRow>) => {
 			for (;;) {
 				const parentIds = new Set<string>();
 				for (const folder of folderMap.values()) {
@@ -122,11 +120,7 @@ export class DriveFolderEntityService {
 
 				if (parentIds.size === 0) break;
 
-				const fetchedParents = await this.driveFoldersRepository.find({
-					where: {
-						id: In([...parentIds]),
-					},
-				});
+				const fetchedParents = await listDriveFoldersByIdsFromDatabase(this.db, [...parentIds]);
 
 				if (fetchedParents.length === 0) break;
 
@@ -149,22 +143,12 @@ export class DriveFolderEntityService {
 
 			const ids = [...folderMap.keys()];
 			if (ids.length > 0) {
-				const folderCounts = await this.driveFoldersRepository.createQueryBuilder('folder')
-					.select('folder.parentId', 'parentId')
-					.addSelect('COUNT(*)', 'count')
-					.where('folder.parentId IN (:...ids)', { ids })
-					.groupBy('folder.parentId')
-					.getRawMany<{ parentId: string; count: string }>();
+				const folderCounts = await countChildDriveFoldersGroupedByParentIdsFromDatabase(this.db, ids);
 
-				const fileCounts = await this.driveFilesRepository.createQueryBuilder('file')
-					.select('file.folderId', 'folderId')
-					.addSelect('COUNT(*)', 'count')
-					.where('file.folderId IN (:...ids)', { ids })
-					.groupBy('file.folderId')
-					.getRawMany<{ folderId: string; count: string }>();
+				const fileCounts = await countDriveFilesGroupedByFolderIdsFromDatabase(this.db, ids);
 
-				foldersCountMap = new Map(folderCounts.map(row => [row.parentId, Number(row.count)]));
-				filesCountMap = new Map(fileCounts.map(row => [row.folderId, Number(row.count)]));
+				foldersCountMap = new Map(folderCounts.map(row => [row.parentId, row.count]));
+				filesCountMap = new Map(fileCounts.map(row => [row.folderId, row.count]));
 			} else {
 				foldersCountMap = new Map();
 				filesCountMap = new Map();

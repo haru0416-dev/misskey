@@ -5,20 +5,21 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { ModerationLogsRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { } from '@/models/Blocking.js';
 import { MiModerationLog } from '@/models/ModerationLog.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import { fetchModerationLogByIdOrFailFromDatabase } from '@/core/ModerationLogStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { UserEntityService } from './UserEntityService.js';
 
 @Injectable()
 export class ModerationLogEntityService {
 	constructor(
-		@Inject(DI.moderationLogsRepository)
-		private moderationLogsRepository: ModerationLogsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private idService: IdService,
@@ -32,7 +33,7 @@ export class ModerationLogEntityService {
 			packedUser?: Packed<'UserDetailedNotMe'>,
 		},
 	) {
-		const log = typeof src === 'object' ? src : await this.moderationLogsRepository.findOneByOrFail({ id: src });
+		const log = typeof src === 'object' ? src : await fetchModerationLogByIdOrFailFromDatabase(this.drizzle, src);
 
 		return await awaitAll({
 			id: log.id,
@@ -56,4 +57,3 @@ export class ModerationLogEntityService {
 		return Promise.all(reports.map(report => this.pack(report, { packedUser: _userMap.get(report.userId) })));
 	}
 }
-

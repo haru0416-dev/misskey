@@ -5,7 +5,6 @@
 
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { Brackets, IsNull } from 'typeorm';
 import type { MiLocalUser, MiPartialLocalUser, MiPartialRemoteUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { QueueService } from '@/core/QueueService.js';
@@ -18,7 +17,7 @@ import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { UserWebhookService } from '@/core/UserWebhookService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, FollowRequestsRepository, InstancesRepository, MiMeta, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { bindThis } from '@/decorators.js';
@@ -28,6 +27,28 @@ import type { Config } from '@/config.js';
 import { AccountMoveService } from '@/core/AccountMoveService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import type { ThinUser } from '@/queue/types.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
+import {
+	countMutualFollowingsBetweenUsersFromDatabase,
+	countNonMovedFolloweesByFollowerIdFromDatabase,
+	countNonMovedFollowersByFolloweeIdFromDatabase,
+	createFollowingInDatabase,
+	deleteFollowingByIdInDatabase,
+	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
+	followingExistsInDatabase,
+	listAllFollowingsByFollowerIdFromDatabase,
+} from '@/core/FollowingStore.js';
+import {
+	createFollowRequestInDatabase,
+	deleteFollowRequestByIdFromDatabase,
+	deleteFollowRequestFromDatabase,
+	fetchFollowRequestFromDatabase,
+	followRequestExistsInDatabase,
+	listAllFollowRequestsByFolloweeIdFromDatabase,
+} from '@/core/FollowRequestStore.js';
+import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import Logger from '../logger.js';
 
 const logger = new Logger('following/create');
@@ -58,20 +79,8 @@ export class UserFollowingService implements OnModuleInit {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
-
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 		private utilityService: UtilityService,
@@ -113,8 +122,8 @@ export class UserFollowingService implements OnModuleInit {
 		 * 必ず最新のユーザー情報を取得する
 		 */
 		const [follower, followee] = await Promise.all([
-			this.usersRepository.findOneByOrFail({ id: _follower.id }),
-			this.usersRepository.findOneByOrFail({ id: _followee.id }),
+			fetchUserByIdOrFailFromDatabase(this.db, _follower.id),
+			fetchUserByIdOrFailFromDatabase(this.db, _followee.id),
 		]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 
 		if (this.userEntityService.isRemoteUser(follower) && this.userEntityService.isRemoteUser(followee)) {
@@ -142,12 +151,7 @@ export class UserFollowingService implements OnModuleInit {
 			if (blocked) throw new IdentifiableError('3338392a-f764-498d-8855-db939dcf8c48', 'blocked');
 		}
 
-		if (await this.followingsRepository.exists({
-			where: {
-				followerId: follower.id,
-				followeeId: followee.id,
-			},
-		})) {
+		if (await followingExistsInDatabase(this.db, follower.id, followee.id)) {
 			// すでにフォロー関係が存在している場合
 			if (this.userEntityService.isRemoteUser(follower) && this.userEntityService.isLocalUser(followee)) {
 				// リモート → ローカル: acceptを送り返しておしまい
@@ -160,7 +164,7 @@ export class UserFollowingService implements OnModuleInit {
 			}
 		}
 
-		const followeeProfile = await this.userProfilesRepository.findOneByOrFail({ userId: followee.id });
+		const followeeProfile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, followee.id);
 		// フォロー対象が鍵アカウントである or
 		// フォロワーがBotであり、フォロー対象がBotからのフォローに慎重である or
 		// フォロワーがローカルユーザーであり、フォロー対象がリモートユーザーである or
@@ -175,24 +179,14 @@ export class UserFollowingService implements OnModuleInit {
 			let autoAccept = false;
 
 			// 鍵アカウントであっても、既にフォローされていた場合はスルー
-			const isFollowing = await this.followingsRepository.exists({
-				where: {
-					followerId: follower.id,
-					followeeId: followee.id,
-				},
-			});
+			const isFollowing = await followingExistsInDatabase(this.db, follower.id, followee.id);
 			if (isFollowing) {
 				autoAccept = true;
 			}
 
 			// フォローしているユーザーは自動承認オプション
 			if (!autoAccept && (this.userEntityService.isLocalUser(followee) && followeeProfile.autoAcceptFollowed)) {
-				const isFollowed = await this.followingsRepository.exists({
-					where: {
-						followerId: followee.id,
-						followeeId: follower.id,
-					},
-				});
+				const isFollowed = await followingExistsInDatabase(this.db, followee.id, follower.id);
 
 				if (isFollowed) autoAccept = true;
 			}
@@ -201,12 +195,7 @@ export class UserFollowingService implements OnModuleInit {
 			if (followee.isLocked && !autoAccept) {
 				autoAccept = !!(await this.accountMoveService.validateAlsoKnownAs(
 					follower,
-					(oldSrc, newSrc) => this.followingsRepository.exists({
-						where: {
-							followeeId: followee.id,
-							followerId: newSrc.id,
-						},
-					}),
+					(oldSrc, newSrc) => followingExistsInDatabase(this.db, newSrc.id, followee.id),
 					true,
 				));
 			}
@@ -239,7 +228,7 @@ export class UserFollowingService implements OnModuleInit {
 
 		let alreadyFollowed = false as boolean;
 
-		await this.followingsRepository.insert({
+		await createFollowingInDatabase(this.db, {
 			id: this.idService.gen(),
 			followerId: follower.id,
 			followeeId: followee.id,
@@ -263,18 +252,10 @@ export class UserFollowingService implements OnModuleInit {
 
 		this.cacheService.userFollowingsCache.refresh(follower.id);
 
-		const requestExist = await this.followRequestsRepository.exists({
-			where: {
-				followeeId: followee.id,
-				followerId: follower.id,
-			},
-		});
+		const requestExist = await followRequestExistsInDatabase(this.db, follower.id, followee.id);
 
 		if (requestExist) {
-			await this.followRequestsRepository.delete({
-				followeeId: followee.id,
-				followerId: follower.id,
-			});
+			await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 		}
 
 		if (alreadyFollowed) return;
@@ -291,16 +272,16 @@ export class UserFollowingService implements OnModuleInit {
 		this.globalEventService.publishInternalEvent('follow', { followerId: follower.id, followeeId: followee.id });
 
 		const [followeeUser, followerUser] = await Promise.all([
-			this.usersRepository.findOneByOrFail({ id: followee.id }),
-			this.usersRepository.findOneByOrFail({ id: follower.id }),
+			fetchUserByIdOrFailFromDatabase(this.db, followee.id),
+			fetchUserByIdOrFailFromDatabase(this.db, follower.id),
 		]);
 
 		// Neither followee nor follower has moved.
 		if (!followeeUser.movedToUri && !followerUser.movedToUri) {
 			//#region Increment counts
 			await Promise.all([
-				this.usersRepository.increment({ id: follower.id }, 'followingCount', 1),
-				this.usersRepository.increment({ id: followee.id }, 'followersCount', 1),
+				adjustUserFollowingCountInDatabase(this.db, follower.id, 1),
+				adjustUserFollowersCountInDatabase(this.db, followee.id, 1),
 			]);
 			//#endregion
 
@@ -308,14 +289,14 @@ export class UserFollowingService implements OnModuleInit {
 			if (this.meta.enableStatsForFederatedInstances) {
 				if (this.userEntityService.isRemoteUser(follower) && this.userEntityService.isLocalUser(followee)) {
 					this.federatedInstanceService.fetchOrRegister(follower.host).then(async i => {
-						this.instancesRepository.increment({ id: i.id }, 'followingCount', 1);
+						await adjustInstanceFollowingCountFromDatabase(this.db, i.id, 1);
 						if (this.meta.enableChartsForFederatedInstances) {
 							this.instanceChart.updateFollowing(i.host, true);
 						}
 					});
 				} else if (this.userEntityService.isLocalUser(follower) && this.userEntityService.isRemoteUser(followee)) {
 					this.federatedInstanceService.fetchOrRegister(followee.host).then(async i => {
-						this.instancesRepository.increment({ id: i.id }, 'followersCount', 1);
+						await adjustInstanceFollowersCountFromDatabase(this.db, i.id, 1);
 						if (this.meta.enableChartsForFederatedInstances) {
 							this.instanceChart.updateFollowers(i.host, true);
 						}
@@ -360,27 +341,27 @@ export class UserFollowingService implements OnModuleInit {
 		},
 		silent = false,
 	): Promise<void> {
-		const following = await this.followingsRepository.findOne({
-			relations: {
-				follower: true,
-				followee: true,
-			},
-			where: {
-				followerId: follower.id,
-				followeeId: followee.id,
-			},
-		});
-
-		if (following === null || !following.follower || !following.followee) {
+		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(this.db, follower.id, followee.id);
+		if (following === null) {
 			logger.warn('フォロー解除がリクエストされましたがフォローしていませんでした');
 			return;
 		}
 
-		await this.followingsRepository.delete(following.id);
+		const [followingFollower, followingFollowee] = await Promise.all([
+			fetchUserByIdFromDatabase(this.db, following.followerId),
+			fetchUserByIdFromDatabase(this.db, following.followeeId),
+		]);
+
+		if (!followingFollower || !followingFollowee) {
+			logger.warn('フォロー解除がリクエストされましたがフォロー関係のユーザーが見つかりませんでした');
+			return;
+		}
+
+		await deleteFollowingByIdInDatabase(this.db, following.id);
 
 		this.cacheService.userFollowingsCache.refresh(follower.id);
 
-		this.decrementFollowing(following.follower, following.followee);
+		await this.decrementFollowing(followingFollower, followingFollowee);
 
 		if (!silent && this.userEntityService.isLocalUser(follower)) {
 			// Publish unfollow event
@@ -415,8 +396,8 @@ export class UserFollowingService implements OnModuleInit {
 		if (!follower.movedToUri && !followee.movedToUri) {
 			//#region Decrement following / followers counts
 			await Promise.all([
-				this.usersRepository.decrement({ id: follower.id }, 'followingCount', 1),
-				this.usersRepository.decrement({ id: followee.id }, 'followersCount', 1),
+				adjustUserFollowingCountInDatabase(this.db, follower.id, -1),
+				adjustUserFollowersCountInDatabase(this.db, followee.id, -1),
 			]);
 			//#endregion
 
@@ -424,14 +405,14 @@ export class UserFollowingService implements OnModuleInit {
 			if (this.meta.enableStatsForFederatedInstances) {
 				if (this.userEntityService.isRemoteUser(follower) && this.userEntityService.isLocalUser(followee)) {
 					this.federatedInstanceService.fetchOrRegister(follower.host).then(async i => {
-						this.instancesRepository.decrement({ id: i.id }, 'followingCount', 1);
+						await adjustInstanceFollowingCountFromDatabase(this.db, i.id, -1);
 						if (this.meta.enableChartsForFederatedInstances) {
 							this.instanceChart.updateFollowing(i.host, false);
 						}
 					});
 				} else if (this.userEntityService.isLocalUser(follower) && this.userEntityService.isRemoteUser(followee)) {
 					this.federatedInstanceService.fetchOrRegister(followee.host).then(async i => {
-						this.instancesRepository.decrement({ id: i.id }, 'followersCount', 1);
+						await adjustInstanceFollowersCountFromDatabase(this.db, i.id, -1);
 						if (this.meta.enableChartsForFederatedInstances) {
 							this.instanceChart.updateFollowers(i.host, false);
 						}
@@ -446,32 +427,14 @@ export class UserFollowingService implements OnModuleInit {
 			for (const user of [follower, followee]) {
 				if (user.movedToUri) continue; // No need to update if the user has already moved.
 
-				const nonMovedFollowees = await this.followingsRepository.count({
-					relations: {
-						followee: true,
-					},
-					where: {
-						followerId: user.id,
-						followee: {
-							movedToUri: IsNull(),
-						},
-					},
+				const [nonMovedFollowees, nonMovedFollowers] = await Promise.all([
+					countNonMovedFolloweesByFollowerIdFromDatabase(this.db, user.id),
+					countNonMovedFollowersByFolloweeIdFromDatabase(this.db, user.id),
+				]);
+				await updateUserInDatabase(this.db, user.id, {
+					followingCount: nonMovedFollowees,
+					followersCount: nonMovedFollowers,
 				});
-				const nonMovedFollowers = await this.followingsRepository.count({
-					relations: {
-						follower: true,
-					},
-					where: {
-						followeeId: user.id,
-						follower: {
-							movedToUri: IsNull(),
-						},
-					},
-				});
-				await this.usersRepository.update(
-					{ id: user.id },
-					{ followingCount: nonMovedFollowees, followersCount: nonMovedFollowers },
-				);
 			}
 
 			// TODO: adjust charts
@@ -501,12 +464,9 @@ export class UserFollowingService implements OnModuleInit {
 		if (blocked) throw new Error('blocked');
 
 		// Remove old follow requests before creating a new one.
-		await this.followRequestsRepository.delete({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
-		const followRequest = await this.followRequestsRepository.insertOne({
+		const followRequest = await createFollowRequestInDatabase(this.db, {
 			id: this.idService.gen(),
 			followerId: follower.id,
 			followeeId: followee.id,
@@ -558,21 +518,13 @@ export class UserFollowingService implements OnModuleInit {
 			}
 		}
 
-		const requestExist = await this.followRequestsRepository.exists({
-			where: {
-				followeeId: followee.id,
-				followerId: follower.id,
-			},
-		});
+		const requestExist = await followRequestExistsInDatabase(this.db, follower.id, followee.id);
 
 		if (!requestExist) {
 			throw new IdentifiableError('17447091-ce07-46dd-b331-c1fd4f15b1e7', 'request not found');
 		}
 
-		await this.followRequestsRepository.delete({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		this.userEntityService.pack(followee.id, followee, {
 			schema: 'MeDetailed',
@@ -586,10 +538,7 @@ export class UserFollowingService implements OnModuleInit {
 		},
 		follower: MiUser,
 	): Promise<void> {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (request == null) {
 			throw new IdentifiableError('8884c2dd-5795-4ac9-b27e-6a01d38190f9', 'No follow request.');
@@ -612,12 +561,10 @@ export class UserFollowingService implements OnModuleInit {
 			id: MiUser['id']; host: MiUser['host']; uri: MiUser['host']; inbox: MiUser['inbox']; sharedInbox: MiUser['sharedInbox'];
 		},
 	): Promise<void> {
-		const requests = await this.followRequestsRepository.findBy({
-			followeeId: user.id,
-		});
+		const requests = await listAllFollowRequestsByFolloweeIdFromDatabase(this.db, user.id);
 
 		for (const request of requests) {
-			const follower = await this.usersRepository.findOneByOrFail({ id: request.followerId });
+			const follower = await fetchUserByIdOrFailFromDatabase(this.db, request.followerId);
 			this.acceptFollowRequest(user, follower);
 		}
 	}
@@ -669,14 +616,11 @@ export class UserFollowingService implements OnModuleInit {
 	 */
 	@bindThis
 	private async removeFollowRequest(followee: Both, follower: Both): Promise<void> {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (!request) return;
 
-		await this.followRequestsRepository.delete(request.id);
+		await deleteFollowRequestByIdFromDatabase(this.db, request.id);
 	}
 
 	/**
@@ -684,22 +628,20 @@ export class UserFollowingService implements OnModuleInit {
 	 */
 	@bindThis
 	private async removeFollow(followee: Both, follower: Both): Promise<void> {
-		const following = await this.followingsRepository.findOne({
-			relations: {
-				followee: true,
-				follower: true,
-			},
-			where: {
-				followeeId: followee.id,
-				followerId: follower.id,
-			},
-		});
+		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(this.db, follower.id, followee.id);
 
-		if (!following || !following.followee || !following.follower) return;
+		if (!following) return;
 
-		await this.followingsRepository.delete(following.id);
+		const [followingFollower, followingFollowee] = await Promise.all([
+			fetchUserByIdFromDatabase(this.db, following.followerId),
+			fetchUserByIdFromDatabase(this.db, following.followeeId),
+		]);
 
-		this.decrementFollowing(following.follower, following.followee);
+		if (!followingFollower || !followingFollowee) return;
+
+		await deleteFollowingByIdInDatabase(this.db, following.id);
+
+		this.decrementFollowing(followingFollower, followingFollowee);
 	}
 
 	/**
@@ -707,10 +649,7 @@ export class UserFollowingService implements OnModuleInit {
 	 */
 	@bindThis
 	private async deliverReject(followee: Local, follower: Remote): Promise<void> {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		const content = this.apRendererService.addContext(this.apRendererService.renderReject(this.apRendererService.renderFollow(follower, followee, request?.requestId ?? undefined), followee));
 		this.queueService.deliver(followee, content, follower.inbox, false);
@@ -731,34 +670,17 @@ export class UserFollowingService implements OnModuleInit {
 
 	@bindThis
 	public getFollowees(userId: MiUser['id']) {
-		return this.followingsRepository.createQueryBuilder('following')
-			.select('following.followeeId')
-			.where('following.followerId = :followerId', { followerId: userId })
-			.getMany();
+		return listAllFollowingsByFollowerIdFromDatabase(this.db, userId);
 	}
 
 	@bindThis
 	public isFollowing(followerId: MiUser['id'], followeeId: MiUser['id']) {
-		return this.followingsRepository.exists({
-			where: {
-				followerId,
-				followeeId,
-			},
-		});
+		return followingExistsInDatabase(this.db, followerId, followeeId);
 	}
 
 	@bindThis
 	public async isMutual(aUserId: MiUser['id'], bUserId: MiUser['id']) {
-		const count = await this.followingsRepository.createQueryBuilder('following')
-			.where(new Brackets(qb => {
-				qb.where('following.followerId = :aUserId', { aUserId })
-					.andWhere('following.followeeId = :bUserId', { bUserId });
-			}))
-			.orWhere(new Brackets(qb => {
-				qb.where('following.followerId = :bUserId', { bUserId })
-					.andWhere('following.followeeId = :aUserId', { aUserId });
-			}))
-			.getCount();
+		const count = await countMutualFollowingsBetweenUsersFromDatabase(this.db, aUserId, bUserId);
 
 		return count === 2;
 	}

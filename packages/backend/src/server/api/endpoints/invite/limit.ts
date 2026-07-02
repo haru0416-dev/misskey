@@ -4,9 +4,9 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { MoreThan } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { RegistrationTicketsRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countRegistrationTicketsCreatedSinceFromDatabase } from '@/core/RegistrationTicketStore.js';
 import { RoleService } from '@/core/RoleService.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
@@ -39,8 +39,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.registrationTicketsRepository)
-		private registrationTicketsRepository: RegistrationTicketsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private roleService: RoleService,
 		private idService: IdService,
@@ -48,9 +48,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			const policies = await this.roleService.getUserPolicies(me.id);
 
-			const count = policies.inviteLimit ? await this.registrationTicketsRepository.countBy({
-				id: MoreThan(this.idService.gen(Date.now() - (policies.inviteLimitCycle * 60 * 1000))),
+			const count = policies.inviteLimit ? await countRegistrationTicketsCreatedSinceFromDatabase(this.db, {
 				createdById: me.id,
+				sinceId: this.idService.gen(Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
 			}) : null;
 
 			return {

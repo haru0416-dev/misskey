@@ -12,11 +12,20 @@ import {
 } from '@simplewebauthn/server';
 import { AttestationFormat, isoCBOR, isoUint8Array } from '@simplewebauthn/server/helpers';
 import { DI } from '@/di-symbols.js';
-import type { MiMeta, UserSecurityKeysRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { bindThis } from '@/decorators.js';
 import { MiUser } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	fetchUserSecurityKeyByIdAndUserIdFromDatabase,
+	fetchUserSecurityKeyByIdFromDatabase,
+	listUserSecurityKeysByUserIdFromDatabase,
+	recordUserSecurityKeyUsageByIdAndUserIdInDatabase,
+	recordUserSecurityKeyUsageByIdInDatabase,
+	updateUserSecurityKeyPublicKeyByIdAndUserIdInDatabase,
+} from '@/core/UserSecurityKeyStore.js';
 import type {
 	AuthenticationResponseJSON,
 	AuthenticatorTransportFuture,
@@ -38,8 +47,8 @@ export class WebAuthnService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 	}
 
@@ -56,9 +65,7 @@ export class WebAuthnService {
 	@bindThis
 	public async initiateRegistration(userId: MiUser['id'], userName: string, userDisplayName?: string): Promise<PublicKeyCredentialCreationOptionsJSON> {
 		const relyingParty = this.getRelyingParty();
-		const keys = await this.userSecurityKeysRepository.findBy({
-			userId: userId,
-		});
+		const keys = await listUserSecurityKeysByUserIdFromDatabase(this.db, userId);
 
 		const registrationOptions = await generateRegistrationOptions({
 			rpName: relyingParty.rpName,
@@ -141,9 +148,7 @@ export class WebAuthnService {
 	@bindThis
 	public async initiateAuthentication(userId: MiUser['id']): Promise<PublicKeyCredentialRequestOptionsJSON> {
 		const relyingParty = this.getRelyingParty();
-		const keys = await this.userSecurityKeysRepository.findBy({
-			userId: userId,
-		});
+		const keys = await listUserSecurityKeysByUserIdFromDatabase(this.db, userId);
 
 		if (keys.length === 0) {
 			throw new IdentifiableError('f27fd449-9af4-4841-9249-1f989b9fa4a4', 'no keys found');
@@ -194,9 +199,7 @@ export class WebAuthnService {
 			throw new IdentifiableError('2d16e51c-007b-4edd-afd2-f7dd02c947f6', `challenge '${context}' not found`);
 		}
 
-		const key = await this.userSecurityKeysRepository.findOneBy({
-			id: response.id,
-		});
+		const key = await fetchUserSecurityKeyByIdFromDatabase(this.db, response.id);
 
 		if (!key) {
 			throw new IdentifiableError('36b96a7d-b547-412d-aeed-2d611cdc8cdc', 'Unknown Webauthn key');
@@ -229,9 +232,7 @@ export class WebAuthnService {
 			return null;
 		}
 
-		await this.userSecurityKeysRepository.update({
-			id: response.id,
-		}, {
+		await recordUserSecurityKeyUsageByIdInDatabase(this.db, response.id, {
 			lastUsed: new Date(),
 			counter: authenticationInfo.newCounter,
 			credentialDeviceType: authenticationInfo.credentialDeviceType,
@@ -249,10 +250,7 @@ export class WebAuthnService {
 			throw new IdentifiableError('2d16e51c-007b-4edd-afd2-f7dd02c947f6', 'challenge not found');
 		}
 
-		const key = await this.userSecurityKeysRepository.findOneBy({
-			id: response.id,
-			userId: userId,
-		});
+		const key = await fetchUserSecurityKeyByIdAndUserIdFromDatabase(this.db, response.id, userId);
 
 		if (!key) {
 			throw new IdentifiableError('36b96a7d-b547-412d-aeed-2d611cdc8cdc', 'unknown key');
@@ -272,12 +270,7 @@ export class WebAuthnService {
 				cborMap.set(-3, cert.slice(halfLength + 1)); // y
 
 				const cborPubKey = Buffer.from(isoCBOR.encode(cborMap)).toString('base64url');
-				await this.userSecurityKeysRepository.update({
-					id: response.id,
-					userId: userId,
-				}, {
-					publicKey: cborPubKey,
-				});
+				await updateUserSecurityKeyPublicKeyByIdAndUserIdInDatabase(this.db, response.id, userId, cborPubKey);
 				key.publicKey = cborPubKey;
 			}
 		}
@@ -310,10 +303,7 @@ export class WebAuthnService {
 			return false;
 		}
 
-		await this.userSecurityKeysRepository.update({
-			id: response.id,
-			userId: userId,
-		}, {
+		await recordUserSecurityKeyUsageByIdAndUserIdInDatabase(this.db, response.id, userId, {
 			lastUsed: new Date(),
 			counter: authenticationInfo.newCounter,
 			credentialDeviceType: authenticationInfo.credentialDeviceType,

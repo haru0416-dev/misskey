@@ -5,8 +5,9 @@
 
 process.env.NODE_ENV = 'test';
 
-import { afterAll, beforeAll, beforeEach, describe, test, expect } from 'vitest';
-import { Test } from '@nestjs/testing';
+import * as http from 'node:http';
+import * as https from 'node:https';
+import { beforeAll, beforeEach, describe, test, expect } from 'vitest';
 import {
 	DeleteObjectCommand,
 	DeleteObjectCommandOutput,
@@ -15,31 +16,57 @@ import {
 	S3Client,
 } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
-import { GlobalModule } from '@/GlobalModule.js';
 import { DriveService } from '@/core/DriveService.js';
-import { CoreModule } from '@/core/CoreModule.js';
-import type { TestingModule } from '@nestjs/testing';
+import { S3Service } from '@/core/S3Service.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { MiMeta } from '@/models/Meta.js';
 
 describe('DriveService', () => {
-	let app: TestingModule;
 	let driveService: DriveService;
 	const s3Mock = mockClient(S3Client);
+	const meta = {
+		objectStorageBucket: 'fake',
+		objectStorageEndpoint: null,
+		objectStorageUseSSL: true,
+		objectStorageUseProxy: true,
+		objectStorageAccessKey: null,
+		objectStorageSecretKey: null,
+		objectStorageRegion: 'us-east-1',
+		objectStorageS3ForcePathStyle: false,
+	} as MiMeta;
 
-	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [GlobalModule, CoreModule],
-			providers: [DriveService],
-		}).compile();
-		app.enableShutdownHooks();
-		driveService = app.get<DriveService>(DriveService);
+	beforeAll(() => {
+		const httpRequestService = {
+			getAgentByUrl: (url: URL) => url.protocol === 'https:' ? new https.Agent() : new http.Agent(),
+		} as HttpRequestService;
+		const s3Service = new S3Service(httpRequestService);
+		const unused = undefined as never;
+		driveService = new DriveService(
+			unused,
+			meta,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			s3Service,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+		);
 	});
 
 	beforeEach(async () => {
 		s3Mock.reset();
-	});
-
-	afterAll(async () => {
-		await app.close();
 	});
 
 	describe('Object storage', () => {

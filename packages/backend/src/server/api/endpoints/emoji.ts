@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { IsNull } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { EmojisRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
+import { fetchEmojiByNameAndHostOrFailFromDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EmojiEntityService } from '@/core/entities/EmojiEntityService.js';
 import { DI } from '@/di-symbols.js';
 
@@ -37,18 +37,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private emojiEntityService: EmojiEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const emoji = await this.emojisRepository.findOneOrFail({
-				where: {
-					name: ps.name,
-					host: IsNull(),
-				},
-			});
+			const emoji = await fetchEmojiByNameAndHostOrFailFromDatabase(this.db, ps.name, null);
 
 			return this.emojiEntityService.packDetailed(emoji);
 		});

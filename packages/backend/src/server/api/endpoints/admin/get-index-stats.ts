@@ -4,9 +4,10 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { sql } from 'drizzle-orm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	requireCredential: true,
@@ -35,13 +36,16 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async () => {
-			const stats = await this.db.query('SELECT * FROM pg_indexes;').then(recs => {
+			const stats = await this.db.execute<{
+				tablename: string;
+				indexname: string;
+			}>(sql`SELECT * FROM pg_indexes;`).then(result => {
 				const res = [] as { tablename: string; indexname: string; }[];
-				for (const rec of recs) {
+				for (const rec of result.rows) {
 					res.push(rec);
 				}
 				return res;

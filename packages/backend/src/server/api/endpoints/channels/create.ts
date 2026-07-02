@@ -6,11 +6,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ChannelsRepository, DriveFilesRepository } from '@/models/_.js';
-import type { MiChannel } from '@/models/Channel.js';
 import { IdService } from '@/core/IdService.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { createChannelInDatabase } from '@/core/ChannelStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -60,11 +61,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
-
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private idService: IdService,
 		private channelEntityService: ChannelEntityService,
@@ -72,17 +70,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			let banner = null;
 			if (ps.bannerId != null) {
-				banner = await this.driveFilesRepository.findOneBy({
-					id: ps.bannerId,
-					userId: me.id,
-				});
+				banner = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.bannerId, me.id);
 
 				if (banner == null) {
 					throw new ApiError(meta.errors.noSuchFile);
 				}
 			}
 
-			const channel = await this.channelsRepository.insertOne({
+			const channel = await createChannelInDatabase(this.drizzle, {
 				id: this.idService.gen(),
 				userId: me.id,
 				name: ps.name,
@@ -91,7 +86,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				isSensitive: ps.isSensitive ?? false,
 				...(ps.color !== undefined ? { color: ps.color } : {}),
 				allowRenoteToExternal: ps.allowRenoteToExternal ?? true,
-			} as MiChannel);
+			});
 
 			return await this.channelEntityService.pack(channel, me);
 		});
