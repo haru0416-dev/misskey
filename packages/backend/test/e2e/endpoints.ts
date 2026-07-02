@@ -2436,6 +2436,30 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin database stats', () => {
+		test('admin/get-index-stats と admin/get-table-stats はDB統計を返し、scopeを維持する', async () => {
+			const indexes = await api('admin/get-index-stats', {}, alice);
+			assert.strictEqual(indexes.status, 200);
+			assert.ok(Array.isArray(indexes.body));
+			assert.ok(indexes.body.some(row => typeof row.tablename === 'string' && typeof row.indexname === 'string'));
+
+			const tables = await api('admin/get-table-stats', {}, alice);
+			assert.strictEqual(tables.status, 200);
+			assert.ok(Object.keys(tables.body).length > 0);
+			assert.ok(Object.values(tables.body).some(row => typeof row.count === 'number' && typeof row.size === 'number'));
+
+			const indexToken = await createAppToken(alice, ['read:admin:index-stats']);
+			const tableScopeDenied = await api('admin/get-table-stats', {}, { token: indexToken });
+			assert.strictEqual(tableScopeDenied.status, 403);
+			assert.strictEqual(castAsError(tableScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honostats${Date.now().toString(36)}` });
+			const roleDenied = await api('admin/get-table-stats', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
 	describe('i/update', () => {
 		test('アカウント設定を更新できる', async () => {
 			const myName = '大室櫻子';

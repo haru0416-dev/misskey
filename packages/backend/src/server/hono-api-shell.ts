@@ -15,6 +15,7 @@ import type { EmailService } from '@/core/EmailService.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
+import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from './hono-api-admin-stats.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
@@ -361,6 +362,34 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiAdmin(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminShowModerationLogs(deps, body));
+		});
+	});
+
+	app.post('/admin/get-index-stats', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			if (!await isHonoApiAdministrator(deps, auth.user)) {
+				throw rolePermissionDeniedError();
+			}
+			assertTokenPermission(auth, 'read:admin:index-stats');
+
+			return jsonResponse(c, await handleHonoApiAdminGetIndexStats(deps, body));
+		});
+	});
+
+	app.post('/admin/get-table-stats', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			if (!await isHonoApiAdministrator(deps, auth.user)) {
+				throw rolePermissionDeniedError();
+			}
+			assertTokenPermission(auth, 'read:admin:table-stats');
+
+			return jsonResponse(c, await handleHonoApiAdminGetTableStats(deps, body));
 		});
 	});
 
