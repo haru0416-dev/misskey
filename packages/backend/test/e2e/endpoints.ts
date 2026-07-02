@@ -45,7 +45,7 @@ import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.j
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
-import { createWebhookInDatabase } from '@/core/WebhookStore.js';
+import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
@@ -1492,7 +1492,7 @@ describe('Endpoints', () => {
 			assert.deepStrictEqual(res.body, achievements);
 		});
 
-		test('i/webhooks list and show return only the caller webhooks', async () => {
+		test('i/webhooks list, show, update, and delete are scoped to the caller', async () => {
 			const config = loadConfig();
 			const latestSentAt = new Date('2024-01-02T03:04:05.000Z');
 			const webhook = await createWebhookInDatabase(db, {
@@ -1540,6 +1540,35 @@ describe('Endpoints', () => {
 			const noSuch = await api('i/webhooks/show', { webhookId: otherWebhook.id }, alice);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, '50f614d9-3047-4f7e-90d8-ad6b2d5fb098');
+
+			const updateOther = await api('i/webhooks/update', { webhookId: otherWebhook.id, name: 'bad update' }, alice);
+			assert.strictEqual(updateOther.status, 400);
+			assert.strictEqual(castAsError(updateOther.body as any).error.id, 'fb0fea69-da18-45b1-828d-bd4fd1612518');
+
+			const update = await api('i/webhooks/update', {
+				webhookId: webhook.id,
+				name: 'hono webhook updated',
+				on: ['followed'],
+				url: 'https://example.com/hono-webhook-updated',
+				secret: null,
+				active: false,
+			}, alice);
+			assert.strictEqual(update.status, 204);
+
+			const updated = await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id);
+			assert.strictEqual(updated?.name, 'hono webhook updated');
+			assert.deepStrictEqual(updated?.on, ['followed']);
+			assert.strictEqual(updated?.url, 'https://example.com/hono-webhook-updated');
+			assert.strictEqual(updated?.secret, '');
+			assert.strictEqual(updated?.active, false);
+
+			const deleteOther = await api('i/webhooks/delete', { webhookId: otherWebhook.id }, alice);
+			assert.strictEqual(deleteOther.status, 400);
+			assert.strictEqual(castAsError(deleteOther.body as any).error.id, 'bae73e5a-5522-4965-ae19-3a8688e71d82');
+
+			const deleted = await api('i/webhooks/delete', { webhookId: webhook.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id), null);
 		});
 
 		test('users/lists/delete removes only the caller list and preserves error id', async () => {
@@ -1645,6 +1674,8 @@ describe('Endpoints', () => {
 				['notes/drafts/count', {}, readDriveToken],
 				['i/webhooks/list', {}, readDriveToken],
 				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
+				['i/webhooks/delete', { webhookId: genId(config) }, readAccountToken],
+				['i/webhooks/update', { webhookId: genId(config) }, readAccountToken],
 				['users/lists/list', {}, readDriveToken],
 				['users/lists/show', { listId: genId(config) }, readDriveToken],
 				['users/lists/delete', { listId: genId(config) }, readAccountToken],
