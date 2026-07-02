@@ -10,6 +10,8 @@ import type { Config } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createMisskeyHonoApp } from '@/server/hono-app.js';
 import { createHonoNodeServer } from '@/server/hono-node-server.js';
+import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
+import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
 
 export type HonoServerRuntime = {
 	server: Server;
@@ -55,6 +57,17 @@ async function closeServer(server: Server): Promise<void> {
 
 export async function launchHonoServer(config: Config, logger = new Logger('hono', 'cyan')): Promise<HonoServerRuntime> {
 	const deps = await createRuntimeDependencies(config);
+	const oauthRuntime = createOAuthProviderRuntime({
+		config,
+		db: deps.db,
+		httpRequestService: deps.httpRequestService,
+		getCommonData: createClientCommonDataLoader({
+			config,
+			db: deps.db,
+			meta: deps.meta,
+		}),
+		logger: deps.loggerService.getLogger('oauth'),
+	});
 	const app = createMisskeyHonoApp({
 		http: {
 			config,
@@ -78,6 +91,11 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			internalStorageService: deps.internalStorageService,
 			logger: deps.loggerService.getLogger('server', 'gray'),
 		},
+		feed: {
+			config,
+			db: deps.db,
+			meta: deps.meta,
+		},
 		health: {
 			redis: deps.redis,
 			redisForPub: deps.redisForPub,
@@ -91,6 +109,9 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			config,
 			db: deps.db,
 			meta: deps.meta,
+		},
+		oauth: {
+			runtime: oauthRuntime,
 		},
 		openApi: {
 			config,
@@ -131,6 +152,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		dispose: async () => {
 			if (disposed) return;
 			disposed = true;
+			oauthRuntime.dispose();
 			await closeServer(server);
 			await deps.dispose();
 		},

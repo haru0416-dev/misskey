@@ -15,6 +15,7 @@ import { appendQuery, query } from '@/misc/prelude/url.js';
 import { deepClone } from '@/misc/clone.js';
 import { bindThis } from '@/decorators.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
+import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { IdService } from '@/core/IdService.js';
 import { uniqueByKey } from '@/misc/unique-by-key.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -115,28 +116,11 @@ export class DriveFileEntityService {
 
 	@bindThis
 	public getPublicUrl(file: MiDriveFile, mode?: 'avatar'): string { // static = thumbnail
-		// リモートかつメディアプロキシ
-		if (file.uri != null && file.userHost != null && this.config.externalMediaProxyEnabled) {
-			return this.getProxiedUrl(file.uri, mode);
-		}
-
-		// リモートかつ期限切れはローカルプロキシを試みる
-		if (file.uri != null && file.isLink && this.meta.proxyRemoteFiles) {
-			const key = file.webpublicAccessKey;
-
-			if (key && !key.match('/')) {	// 古いものはここにオブジェクトストレージキーが入ってるので除外
-				const url = `${this.config.url}/files/${key}`;
-				if (mode === 'avatar') return this.getProxiedUrl(file.uri, 'avatar');
-				return url;
-			}
-		}
-
-		const url = file.webpublicUrl ?? file.url;
-
-		if (mode === 'avatar') {
-			return this.getProxiedUrl(url, 'avatar');
-		}
-		return url;
+		return getDriveFilePublicUrl(file, {
+			config: this.config,
+			meta: this.meta,
+			mode,
+		});
 	}
 
 	@bindThis

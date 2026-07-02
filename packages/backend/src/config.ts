@@ -6,7 +6,6 @@
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { type FastifyServerOptions } from 'fastify';
 import type * as Sentry from '@sentry/node';
 import type * as SentryVue from '@sentry/vue';
 import type { RedisOptions } from 'ioredis';
@@ -20,6 +19,8 @@ type RedisOptionsSource = Partial<RedisOptions> & {
 	prefix?: string;
 };
 
+type TrustProxyConfig = boolean | string | string[] | number | ((address: string, hop: number) => boolean);
+
 /**
  * 設定ファイルの型
  */
@@ -27,7 +28,7 @@ type Source = {
 	url?: string;
 	port?: number;
 	socket?: string;
-	trustProxy?: FastifyServerOptions['trustProxy'];
+	trustProxy?: TrustProxyConfig;
 	chmodSocket?: string;
 	enableIpRateLimit?: boolean;
 	disableHsts?: boolean;
@@ -121,7 +122,7 @@ export type Config = {
 	url: string;
 	port: number;
 	socket: string | undefined;
-	trustProxy: NonNullable<FastifyServerOptions['trustProxy']>;
+	trustProxy: TrustProxyConfig;
 	chmodSocket: string | undefined;
 	enableIpRateLimit: boolean;
 	disableHsts: boolean | undefined;
