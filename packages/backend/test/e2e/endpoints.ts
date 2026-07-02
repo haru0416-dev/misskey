@@ -24,6 +24,7 @@ import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregatio
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
@@ -1022,6 +1023,37 @@ describe('Endpoints', () => {
 			}, alice);
 			assert.strictEqual(invalid.status, 400);
 			assert.strictEqual(castAsError(invalid.body as any).error.code, 'EXT_RESOURCE_RETURNED_INVALID_SCHEMA');
+		});
+	});
+
+	describe('sw endpoints', () => {
+		test('sw/show-registration returns own subscription or null', async () => {
+			const endpoint = `https://push.example.test/${genId(loadConfig())}`;
+			await createSwSubscriptionInDatabase(db, {
+				id: genId(loadConfig()),
+				userId: alice.id,
+				endpoint,
+				auth: 'auth-secret',
+				publickey: 'public-key',
+				sendReadMessage: true,
+			});
+
+			const shown = await api('sw/show-registration', { endpoint }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.deepStrictEqual(shown.body, {
+				userId: alice.id,
+				endpoint,
+				sendReadMessage: true,
+			});
+
+			const missing = await api('sw/show-registration', { endpoint }, bob);
+			assert.strictEqual(missing.status, 200);
+			assert.strictEqual(missing.body, null);
+
+			const appToken = await createAppToken(alice, ['read:account']);
+			const appDenied = await api('sw/show-registration', { endpoint }, { token: appToken });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
 		});
 	});
 

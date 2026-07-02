@@ -46,6 +46,7 @@ import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
+import { handleHonoApiSwShowRegistration } from './hono-api-sw.js';
 
 export type ApiShellDependencies = {
 	config: Config;
@@ -563,6 +564,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
 				'Cache-Control': 'public, max-age=60',
 			});
+		});
+	});
+
+	app.post('/sw/show-registration', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiSwShowRegistration(deps, auth.user, body));
 		});
 	});
 
