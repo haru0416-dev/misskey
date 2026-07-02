@@ -16,13 +16,13 @@ import { bindThis } from '@/decorators.js';
 import type { Antenna } from '@/server/api/endpoints/i/import-antennas.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
 import { type SystemWebhookPayload } from '@/core/SystemWebhookService.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { type UserWebhookPayload } from './UserWebhookService.js';
 import type {
 	DbJobData,
 	DeliverJobData,
 	RelationshipJobData,
-	SystemWebhookDeliverJobData,
 	ThinUser,
 	UserWebhookDeliverJobData,
 } from '../queue/types.js';
@@ -703,30 +703,7 @@ export class QueueService implements OnModuleInit {
 		content: SystemWebhookPayload<T>,
 		opts?: { attempts?: number },
 	) {
-		const data: SystemWebhookDeliverJobData = {
-			type,
-			content,
-			webhookId: webhook.id,
-			to: webhook.url,
-			secret: webhook.secret,
-			createdAt: Date.now(),
-			eventId: randomUUID(),
-		};
-
-		return this.systemWebhookDeliverQueue.add(webhook.id, data, {
-			attempts: opts?.attempts ?? 4,
-			backoff: {
-				type: 'custom',
-			},
-			removeOnComplete: {
-				age: 3600 * 24 * 7, // keep up to 7 days
-				count: 30,
-			},
-			removeOnFail: {
-				age: 3600 * 24 * 7, // keep up to 7 days
-				count: 100,
-			},
-		});
+		return enqueueSystemWebhookDeliverJob(this.systemWebhookDeliverQueue, webhook, type, content, opts);
 	}
 
 	@bindThis

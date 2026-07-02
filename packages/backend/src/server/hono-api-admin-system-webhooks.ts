@@ -4,9 +4,12 @@
  */
 
 import { createSystemWebhookWithSideEffects, deleteSystemWebhookWithSideEffects, updateSystemWebhookWithSideEffects } from '@/core/SystemWebhookLogic.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { fetchSystemWebhookByIdFromDatabase, listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
+import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/SystemWebhookTestLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
+import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
@@ -20,6 +23,7 @@ import { parseHonoApiParams } from './hono-api-validation.js';
 export type HonoApiAdminSystemWebhookDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
+	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
@@ -66,6 +70,25 @@ const adminSystemWebhookShowParamDef = {
 	required: ['id'],
 } as const;
 
+const adminSystemWebhookTestParamDef = {
+	type: 'object',
+	properties: {
+		webhookId: { type: 'string', format: 'misskey:id' },
+		type: {
+			type: 'string',
+			enum: systemWebhookEventTypes,
+		},
+		override: {
+			type: 'object',
+			properties: {
+				url: { type: 'string', nullable: false },
+				secret: { type: 'string', nullable: false },
+			},
+		},
+	},
+	required: ['webhookId', 'type'],
+} as const;
+
 const adminSystemWebhookUpdateParamDef = {
 	type: 'object',
 	properties: {
@@ -90,6 +113,9 @@ type AdminSystemWebhookListParams = Omit<SchemaType<typeof adminSystemWebhookLis
 	on?: SystemWebhookEventType[];
 };
 type AdminSystemWebhookShowParams = SchemaType<typeof adminSystemWebhookShowParamDef>;
+type AdminSystemWebhookTestParams = Omit<SchemaType<typeof adminSystemWebhookTestParamDef>, 'type'> & {
+	type: SystemWebhookEventType;
+};
 type AdminSystemWebhookUpdateParams = Omit<SchemaType<typeof adminSystemWebhookUpdateParamDef>, 'on'> & {
 	on: SystemWebhookEventType[];
 };
@@ -121,6 +147,15 @@ function noSuchSystemWebhookError(): HonoApiError {
 		code: 'NO_SUCH_SYSTEM_WEBHOOK',
 		id: '38dd1ffe-04b4-6ff5-d8ba-4e6a6ae22c9d',
 		kind: 'server',
+	});
+}
+
+function noSuchWebhookError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such webhook.',
+		code: 'NO_SUCH_WEBHOOK',
+		id: '0c52149c-e913-18f8-5dc7-74870bfe0cf9',
 	});
 }
 
@@ -175,6 +210,25 @@ export async function handleHonoApiAdminSystemWebhookShow(
 	if (webhook == null) throw noSuchSystemWebhookError();
 
 	return packHonoApiSystemWebhook(webhook);
+}
+
+export async function handleHonoApiAdminSystemWebhookTest(
+	deps: HonoApiAdminSystemWebhookDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminSystemWebhookTestParamDef, body) as AdminSystemWebhookTestParams;
+	try {
+		await testSystemWebhookWithQueue({
+			fetchSystemWebhooksByIds: ids => listSystemWebhooksFromDatabase(deps.db, { ids }),
+			enqueueSystemWebhookDeliver: (webhook, type, content, opts) => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, type, content, opts),
+			populateEmojis: async () => ({}),
+		}, params);
+	} catch (e) {
+		if (e instanceof NoSuchSystemWebhookForTestError) {
+			throw noSuchWebhookError();
+		}
+		throw e;
+	}
 }
 
 export async function handleHonoApiAdminSystemWebhookUpdate(

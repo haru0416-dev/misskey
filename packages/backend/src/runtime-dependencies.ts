@@ -23,6 +23,7 @@ import { EmailService } from '@/core/EmailService.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { WebAuthnService } from '@/core/WebAuthnService.js';
+import { createSystemWebhookDeliverQueue, type SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 
@@ -45,6 +46,7 @@ export type RuntimeDependencies = {
 	urlPreviewService: UrlPreviewService;
 	videoProcessingService: VideoProcessingService;
 	webAuthnService: WebAuthnService;
+	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
 	redis: Redis.Redis;
 	redisForPub: Redis.Redis;
 	redisForSub: Redis.Redis;
@@ -60,6 +62,7 @@ export type RuntimeResources = {
 	redisForSub: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
+	systemWebhookDeliverQueue?: SystemWebhookDeliverQueue;
 };
 
 export function createMeilisearchClient(config: Config): Meilisearch | null {
@@ -137,6 +140,7 @@ export async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
 export async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
 	await allSettled();
 	await Promise.all([
+		resources.systemWebhookDeliverQueue?.close(),
 		resources.drizzlePool.end(),
 		closeRedisConnection(resources.redis),
 		closeRedisConnection(resources.redisForPub),
@@ -154,6 +158,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const redisForSub = await createRedisForSub(config);
 	const redisForTimelines = createRedisForTimelines(config);
 	const redisForReactions = createRedisForReactions(config);
+	const systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config);
 	const meilisearch = createMeilisearchClient(config);
 	const meta = await fetchReactiveMeta(db, redisForSub);
 	const loggerService = new LoggerService();
@@ -189,13 +194,14 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		urlPreviewService,
 		videoProcessingService,
 		webAuthnService,
+		systemWebhookDeliverQueue,
 		redis,
 		redisForPub,
 		redisForSub,
 		redisForTimelines,
 		redisForReactions,
 		dispose: async () => {
-			await disposeRuntimeResources({ drizzlePool, redis, redisForPub, redisForSub, redisForTimelines, redisForReactions });
+			await disposeRuntimeResources({ drizzlePool, redis, redisForPub, redisForSub, redisForTimelines, redisForReactions, systemWebhookDeliverQueue });
 		},
 	};
 }

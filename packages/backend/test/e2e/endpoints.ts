@@ -10,6 +10,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import bcrypt from 'bcryptjs';
+import * as Bull from 'bullmq';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // node-fetch only supports it's own Blob yet
 // https://github.com/node-fetch/node-fetch/pull/1664
@@ -55,6 +56,8 @@ import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { baseQueueOptions, QUEUE } from '@/queue/const.js';
+import type { SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -66,11 +69,13 @@ describe('Endpoints', () => {
 	let dave: misskey.entities.SignupResponse;
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
+	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 
 	beforeAll(async () => {
 		const config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
+		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		carol = await signup({ username: 'carol' });
@@ -79,6 +84,7 @@ describe('Endpoints', () => {
 	}, 1000 * 60 * 2);
 
 	afterAll(async () => {
+		await systemWebhookDeliverQueue?.close();
 		await pool?.end();
 	});
 
@@ -2522,6 +2528,21 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/system-webhook', () => {
+		async function findSystemWebhookDeliverJob(
+			webhookId: string,
+			type: SystemWebhookDeliverJobData['type'],
+			url: string,
+		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const job = jobs.find(job => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type && job.data.to === url);
+				if (job != null) return job;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
+		}
+
 		test('admin/system-webhook は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
 			const now = Date.now();
 			const name = `Hono system webhook ${now}`;
@@ -2579,6 +2600,29 @@ describe('Endpoints', () => {
 			assert.strictEqual(updated.body.name, `${name} updated`);
 			assert.deepStrictEqual(updated.body.on, ['userCreated']);
 			assert.strictEqual(updated.body.secret, 'updated-secret');
+
+			const overrideUrl = 'https://example.test/system-webhook-test';
+			const tested = await api('admin/system-webhook/test', {
+				webhookId: created.body.id,
+				type: 'userCreated',
+				override: {
+					url: overrideUrl,
+					secret: 'override-secret',
+				},
+			}, alice);
+			assert.strictEqual(tested.status, 204);
+			const testJob = await findSystemWebhookDeliverJob(created.body.id, 'userCreated', overrideUrl);
+			assert.strictEqual(testJob.opts.attempts, 1);
+			assert.strictEqual(testJob.data.secret, 'override-secret');
+			assert.strictEqual((testJob.data.content as any).id, 'dummy-user-1');
+			await testJob.remove();
+
+			const missingTest = await api('admin/system-webhook/test', {
+				webhookId: '000000000000000000000000',
+				type: 'userCreated',
+			}, alice);
+			assert.strictEqual(missingTest.status, 400);
+			assert.strictEqual(castAsError(missingTest.body as any).error.code, 'NO_SUCH_WEBHOOK');
 
 			const appToken = await createAppToken(alice, ['write:admin:roles']);
 			const secureDenied = await api('admin/system-webhook/list', {}, { token: appToken });
