@@ -19,6 +19,7 @@ import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
+import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
@@ -2909,6 +2910,117 @@ describe('Endpoints', () => {
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/resolve-abuse-user-report', () => {
+		async function createReport(suffix: string) {
+			const config = loadConfig();
+			return await createAbuseUserReportInDatabase(db, {
+				id: genId(config),
+				targetUserId: bob.id,
+				reporterId: carol.id,
+				comment: `Hono abuse report ${suffix}`,
+				targetUserHost: null,
+				reporterHost: null,
+			});
+		}
+
+		async function findSystemWebhookDeliverJob(
+			webhookId: string,
+			type: SystemWebhookDeliverJobData['type'],
+		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const job = jobs.find(job => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type);
+				if (job != null) return job;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
+		}
+
+		test('admin/resolve-abuse-user-report は解決状態、token scope、role、ログ、404を維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const report = await createReport(suffix);
+			const webhook = await api('admin/system-webhook/create', {
+				isActive: true,
+				name: `Hono resolve abuse report webhook ${suffix}`,
+				on: ['abuseReportResolved'],
+				url: `https://example.test/resolve-abuse-report/${suffix}`,
+			}, alice);
+			assert.strictEqual(webhook.status, 200);
+
+			const resolved = await api('admin/resolve-abuse-user-report', {
+				reportId: report.id,
+				resolvedAs: 'accept',
+			}, alice);
+			assert.strictEqual(resolved.status, 204);
+
+			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.resolved, true);
+			assert.strictEqual(after.assigneeId, alice.id);
+			assert.strictEqual(after.resolvedAs, 'accept');
+
+			const webhookJob = await findSystemWebhookDeliverJob(webhook.body.id, 'abuseReportResolved');
+			assert.strictEqual((webhookJob.data.content as any).id, report.id);
+			assert.strictEqual((webhookJob.data.content as any).targetUserId, bob.id);
+			assert.strictEqual((webhookJob.data.content as any).reporterId, carol.id);
+			assert.strictEqual((webhookJob.data.content as any).assigneeId, alice.id);
+			assert.strictEqual((webhookJob.data.content as any).resolved, true);
+			assert.strictEqual((webhookJob.data.content as any).resolvedAs, 'accept');
+			await webhookJob.remove();
+			const deletedWebhook = await api('admin/system-webhook/delete', { id: webhook.body.id }, alice);
+			assert.strictEqual(deletedWebhook.status, 204);
+
+			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
+			const tokenReport = await createReport(`${suffix}token`);
+			const resolvedByToken = await api('admin/resolve-abuse-user-report', {
+				reportId: tokenReport.id,
+			}, { token });
+			assert.strictEqual(resolvedByToken.status, 204);
+
+			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
+			assert.strictEqual(after.resolved, true);
+			assert.strictEqual(after.assigneeId, alice.id);
+			assert.strictEqual(after.resolvedAs, null);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/resolve-abuse-user-report', {
+				reportId: report.id,
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `har${suffix}` });
+			const roleDenied = await api('admin/resolve-abuse-user-report', {
+				reportId: report.id,
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/resolve-abuse-user-report', {
+				reportId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'ac3794dd-2ce4-d878-e546-73c60c06b398');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'resolveAbuseReport',
+					search: report.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('resolveAbuseReport moderation log was not found');
+			}
 		});
 	});
 
