@@ -18,6 +18,7 @@ import { assertCredential, assertOptionalCredential, assertSecureCredential, ass
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
+import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import { handleHonoApiI } from './hono-api-i.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
@@ -297,6 +298,19 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiAuthAccept(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/endpoints', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiEndpoints());
+		});
+	});
+
+	app.post('/endpoint', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEndpoint(body));
 		});
 	});
 

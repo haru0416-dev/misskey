@@ -111,6 +111,36 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('api metadata', () => {
+		test('endpoints returns known endpoint names', async () => {
+			const res = await api('endpoints', {});
+
+			assert.strictEqual(res.status, 200);
+			assert.ok(Array.isArray(res.body));
+			assert.ok(res.body.includes('endpoint'));
+			assert.ok(res.body.includes('endpoints'));
+			assert.ok(res.body.includes('i'));
+		});
+
+		test('endpoint returns parameter metadata and null for missing endpoint', async () => {
+			const res = await api('endpoint', {
+				endpoint: 'i/update',
+			});
+
+			assert.strictEqual(res.status, 200);
+			if (res.body == null) assert.fail('endpoint metadata is missing');
+			assert.ok(Array.isArray(res.body.params));
+			assert.ok(res.body.params.some(param => param.name === 'name' && param.type === 'String'));
+
+			const missing = await api('endpoint', {
+				endpoint: 'missing/endpoint',
+			});
+
+			assert.strictEqual(missing.status, 200);
+			assert.strictEqual(missing.body, null);
+		});
+	});
+
 	describe('signin-flow', () => {
 		test('間違ったパスワードでサインインできない', async () => {
 			const res = await api('signin-flow', {
