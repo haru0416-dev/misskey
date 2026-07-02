@@ -28,7 +28,7 @@ import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -1173,6 +1173,29 @@ describe('Endpoints', () => {
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
 			assert.strictEqual(await bcrypt.compare('new-reset-password', profile.password!), true);
+		});
+	});
+
+	describe('verify-email endpoint', () => {
+		test('verify-email verifies matching code and rejects missing code', async () => {
+			const code = `verify-${genId(loadConfig())}`;
+			await updateUserProfileInDatabase(db, dave.id, {
+				email: 'verify-email@example.test',
+				emailVerified: false,
+				emailVerifyCode: code,
+			});
+
+			const verified = await api('verify-email', { code });
+			assert.strictEqual(verified.status, 204);
+			assert.strictEqual(verified.body, null);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, dave.id);
+			assert.strictEqual(profile.emailVerified, true);
+			assert.strictEqual(profile.emailVerifyCode, null);
+
+			const missing = await api('verify-email', { code: 'missing-code' });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_CODE');
 		});
 	});
 

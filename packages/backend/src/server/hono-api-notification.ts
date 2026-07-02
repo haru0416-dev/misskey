@@ -20,7 +20,7 @@ import type { MiUser } from '@/models/User.js';
 
 export type HonoApiMainStreamPublisher = (
 	userId: MiUser['id'],
-	type: 'notification' | 'unreadNotification' | 'signin' | 'registryUpdated',
+	type: 'notification' | 'unreadNotification' | 'signin' | 'registryUpdated' | 'meUpdated',
 	value: unknown,
 ) => void;
 

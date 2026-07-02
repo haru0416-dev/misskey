@@ -48,6 +48,7 @@ import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-ap
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
+import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
 
 export type ApiShellDependencies = {
 	config: Config;
@@ -836,6 +837,16 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiUsernameAvailable(deps, body));
+		});
+	});
+
+	app.post('/verify-email', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await authenticateOptionalRequest(deps, c, body);
+
+			await handleHonoApiVerifyEmail(deps, body);
+			return emptyResponse(c);
 		});
 	});
 
