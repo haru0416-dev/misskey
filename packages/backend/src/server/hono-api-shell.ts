@@ -19,6 +19,7 @@ import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, h
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
+import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import { handleHonoApiI } from './hono-api-i.js';
 import { handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
@@ -269,6 +270,40 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body));
+		});
+	});
+
+	app.get('/emoji', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiEmoji(deps, c.req.query()), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.post('/emoji', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEmoji(deps, body), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.get('/emojis', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.post('/emojis', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
 		});
 	});
 

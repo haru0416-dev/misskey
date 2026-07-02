@@ -12,6 +12,7 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
+import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
@@ -238,6 +239,63 @@ describe('Endpoints', () => {
 
 			const body = await res.json() as { count?: unknown };
 			assert.strictEqual(typeof body.count, 'number');
+		});
+	});
+
+	describe('emoji endpoints', () => {
+		test('emojis and emoji return packed local emoji data', async () => {
+			const config = loadConfig();
+			const emoji = await insertEmojiInDatabase(db, {
+				id: genId(config),
+				name: 'hono_emoji',
+				host: null,
+				category: 'frameworks',
+				originalUrl: 'https://example.com/original.png',
+				publicUrl: 'https://example.com/public.png',
+				aliases: ['hono'],
+				license: 'example license',
+				localOnly: true,
+				isSensitive: true,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			const list = await relativeFetch('api/emojis');
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.headers.get('cache-control'), 'public, max-age=3600');
+
+			const listBody = await list.json() as {
+				emojis?: {
+					name?: unknown;
+					url?: unknown;
+					category?: unknown;
+					aliases?: unknown;
+					localOnly?: unknown;
+					isSensitive?: unknown;
+				}[];
+			};
+			const listedEmoji = listBody.emojis?.find(item => item.name === emoji.name);
+			assert.ok(listedEmoji);
+			assert.strictEqual(listedEmoji.url, emoji.publicUrl);
+			assert.strictEqual(listedEmoji.category, emoji.category);
+			assert.deepStrictEqual(listedEmoji.aliases, emoji.aliases);
+			assert.strictEqual(listedEmoji.localOnly, true);
+			assert.strictEqual(listedEmoji.isSensitive, true);
+
+			const detail = await api('emoji', {
+				name: emoji.name,
+			});
+			assert.strictEqual(detail.status, 200);
+			assert.strictEqual(detail.body.id, emoji.id);
+			assert.strictEqual(detail.body.name, emoji.name);
+			assert.strictEqual(detail.body.host, null);
+			assert.strictEqual(detail.body.url, emoji.publicUrl);
+			assert.strictEqual(detail.body.license, emoji.license);
+			assert.strictEqual(detail.body.localOnly, true);
+			assert.strictEqual(detail.body.isSensitive, true);
+
+			const detailByGet = await relativeFetch(`api/emoji?name=${emoji.name}`);
+			assert.strictEqual(detailByGet.status, 200);
+			assert.strictEqual(detailByGet.headers.get('cache-control'), 'public, max-age=3600');
 		});
 	});
 
