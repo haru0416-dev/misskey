@@ -23,7 +23,7 @@ import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
-import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
+import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
@@ -1760,8 +1760,11 @@ describe('Endpoints', () => {
 			for (const [endpoint, params, token] of [
 				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
 				['drive/folders', {}, readAccountToken],
+				['drive/folders/create', { name: 'hono-denied-folder' }, readDriveToken],
+				['drive/folders/delete', { folderId: genId(config) }, readDriveToken],
 				['drive/folders/find', { name: 'hono-denied-folder' }, readAccountToken],
 				['drive/folders/show', { folderId: genId(config) }, readAccountToken],
+				['drive/folders/update', { folderId: genId(config), name: 'hono-denied-folder' }, readDriveToken],
 				['notes/drafts/count', {}, readDriveToken],
 				['i/webhooks/list', {}, readDriveToken],
 				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
@@ -3050,6 +3053,97 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
 			assert.strictEqual(res.body.name, 'test');
+		});
+	});
+
+	describe('drive/folders/delete', () => {
+		test('空フォルダを削除できる', async () => {
+			const config = loadConfig();
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-folder-${Date.now()}`,
+				parentId: null,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: folder.id,
+			}, alice);
+
+			assert.strictEqual(res.status, 204);
+			assert.strictEqual(await fetchDriveFolderByIdFromDatabase(db, folder.id), null);
+		});
+
+		test('他人のフォルダを削除できない', async () => {
+			const config = loadConfig();
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-other-user-folder-${Date.now()}`,
+				parentId: null,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: folder.id,
+			}, bob);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '1069098f-c281-440f-b085-f9932edbe091');
+			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, folder.id), null);
+		});
+
+		test('子フォルダがあるフォルダを削除できない', async () => {
+			const config = loadConfig();
+			const parent = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-parent-folder-${Date.now()}`,
+				parentId: null,
+			});
+			await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-child-folder-${Date.now()}`,
+				parentId: parent.id,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: parent.id,
+			}, alice);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
+			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, parent.id), null);
+		});
+
+		test('子ファイルがあるフォルダを削除できない', async () => {
+			const config = loadConfig();
+			const parent = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-file-parent-folder-${Date.now()}`,
+				parentId: null,
+			});
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: createHash('md5').update(`delete-folder-file-${Date.now()}`).digest('hex'),
+				name: 'delete-folder-file.txt',
+				type: 'text/plain',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/delete-folder-file-${parent.id}`,
+				folderId: parent.id,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: parent.id,
+			}, alice);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
+			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, parent.id), null);
 		});
 	});
 

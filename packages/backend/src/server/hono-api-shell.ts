@@ -25,8 +25,11 @@ import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoi
 import {
 	handleHonoApiDriveFilesCheckExistence,
 	handleHonoApiDriveFolders,
+	handleHonoApiDriveFoldersCreate,
+	handleHonoApiDriveFoldersDelete,
 	handleHonoApiDriveFoldersFind,
 	handleHonoApiDriveFoldersShow,
+	handleHonoApiDriveFoldersUpdate,
 } from './hono-api-drive.js';
 import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
@@ -59,7 +62,7 @@ import { handleHonoApiRetention } from './hono-api-retention.js';
 import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
-import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
+import type { HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { signupPendingWithHonoApi, signupWithHonoApi } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
@@ -79,6 +82,7 @@ export type ApiShellDependencies = {
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
+	publishDriveStream?: HonoApiDriveStreamPublisher;
 };
 
 const unknownApiEndpoint = {
@@ -355,6 +359,33 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/drive/folders/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:drive');
+			await assertHonoApiRateLimit(deps, 'drive/folders/create', {
+				duration: 60 * 60 * 1000,
+				max: 10,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiDriveFoldersCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/folders/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:drive');
+
+			await handleHonoApiDriveFoldersDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
 	app.post('/drive/folders/find', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -374,6 +405,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:drive');
 
 			return jsonResponse(c, await handleHonoApiDriveFoldersShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/folders/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFoldersUpdate(deps, auth.user, body));
 		});
 	});
 
