@@ -6,14 +6,18 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
+import bcrypt from 'bcryptjs';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // node-fetch only supports it's own Blob yet
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { api, castAsError, post, role, signup, simpleGet, uploadFile } from '../utils.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { api, castAsError, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Endpoints', () => {
@@ -79,6 +83,34 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('signup-pending', () => {
+		test('pending user can complete signup and sign in', async () => {
+			const config = loadConfig();
+			const password = 'pending-password';
+			const salt = await bcrypt.genSalt(8);
+			const pending = await createUserPendingInDatabase(db, {
+				id: genId(config),
+				code: 'pending-signup-test',
+				username: 'pendinguser',
+				email: 'pending@example.test',
+				password: await bcrypt.hash(password, salt),
+			});
+
+			const res = await api('signup-pending', {
+				code: pending.code,
+			});
+
+			assert.strictEqual(res.status, 200);
+			const body = res.body as misskey.entities.SigninFlowResponse & { finished: true };
+			assert.strictEqual(body.finished, true);
+			assert.strictEqual(typeof body.i, 'string');
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, body.id);
+			assert.strictEqual(profile.email, pending.email);
+			assert.strictEqual(profile.emailVerified, true);
+		});
+	});
+
 	describe('signin-flow', () => {
 		test('間違ったパスワードでサインインできない', async () => {
 			const res = await api('signin-flow', {
@@ -108,6 +140,16 @@ describe('Endpoints', () => {
 			});
 
 			assert.strictEqual(res.status, 200);
+		});
+	});
+
+	describe('signin-with-passkey', () => {
+		test('パスキーサインインの challenge を開始できる', async () => {
+			const res = await api('signin-with-passkey', {});
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(typeof res.body.context, 'string');
+			assert.strictEqual(typeof res.body.option.challenge, 'string');
 		});
 	});
 
@@ -174,6 +216,33 @@ describe('Endpoints', () => {
 			});
 			assert.strictEqual(deleted.status, 400);
 			assert.strictEqual(castAsError(deleted.body as any).error.code, 'NO_SUCH_SESSION');
+		});
+	});
+
+	describe('miauth', () => {
+		test('session check returns issued token once', async () => {
+			const session = 'miauth-session-test';
+			const issued = await api('miauth/gen-token', {
+				session,
+				permission: ['read:account'],
+			}, alice);
+			assert.strictEqual(issued.status, 200);
+			assert.strictEqual(typeof issued.body.token, 'string');
+
+			const checked = await relativeFetch(`api/miauth/${session}/check`, {
+				method: 'POST',
+			});
+			assert.strictEqual(checked.status, 200);
+			const checkedBody = await checked.json() as { ok: boolean; token?: string; user?: { id?: string } };
+			assert.strictEqual(checkedBody.ok, true);
+			assert.strictEqual(checkedBody.token, issued.body.token);
+			assert.strictEqual(checkedBody.user?.id, alice.id);
+
+			const checkedAgain = await relativeFetch(`api/miauth/${session}/check`, {
+				method: 'POST',
+			});
+			assert.strictEqual(checkedAgain.status, 200);
+			assert.deepStrictEqual(await checkedAgain.json(), { ok: false });
 		});
 	});
 

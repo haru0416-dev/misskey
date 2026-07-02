@@ -4,6 +4,7 @@
  */
 
 import * as assert from 'node:assert';
+import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { basename, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -12,7 +13,6 @@ import WebSocket, { ClientOptions } from 'ws';
 import fetch, { Blob, FormData } from 'node-fetch';
 import type { RequestInit, Headers, Response } from 'node-fetch';
 import * as htmlParser from 'node-html-parser';
-import Fastify from 'fastify';
 import { loadConfig } from '@/config.js';
 import { createDrizzlePool } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
@@ -653,37 +653,68 @@ export function castAsError(obj: Record<string, unknown>): { error: ApiError } {
 }
 
 export async function captureWebhook<T = SystemWebhookPayload>(postAction: () => Promise<void>, port = WEBHOOK_PORT): Promise<T> {
-	const fastify = Fastify();
+	const server = createServer((req, res) => {
+		if (req.url !== '/') {
+			res.statusCode = 404;
+			res.end();
+			return;
+		}
 
-	let timeoutHandle: NodeJS.Timeout | null = null;
-	const result = await new Promise<string>(async (resolve, reject) => {
-		fastify.all('/', async (req, res) => {
+		const chunks: Buffer[] = [];
+		req.on('data', chunk => {
+			chunks.push(Buffer.from(chunk));
+		});
+		req.on('end', () => {
 			if (timeoutHandle) {
 				clearTimeout(timeoutHandle);
 			}
 
-			const body = JSON.stringify(req.body);
-			res.status(200).send('ok');
-			await fastify.close();
-			resolve(body);
+			res.statusCode = 200;
+			res.end('ok');
+			void close().then(() => {
+				resolveResult(Buffer.concat(chunks).toString('utf8'));
+			});
+		});
+	});
+
+	let timeoutHandle: NodeJS.Timeout | null = null;
+	let listening = false;
+	let resolveResult: (value: string) => void = () => {};
+
+	const close = async () => {
+		if (!listening) return;
+		listening = false;
+		await new Promise<void>((resolve, reject) => {
+			server.close(err => err ? reject(err) : resolve());
+		});
+	};
+
+	const result = await new Promise<string>(async (resolve, reject) => {
+		resolveResult = resolve;
+
+		await new Promise<void>((resolveListen, rejectListen) => {
+			server.once('error', rejectListen);
+			server.listen(port, () => {
+				server.off('error', rejectListen);
+				listening = true;
+				resolveListen();
+			});
 		});
 
-		await fastify.listen({ port });
-
 		timeoutHandle = setTimeout(async () => {
-			await fastify.close();
+			await close();
 			reject(new Error('timeout'));
 		}, 3000);
 
 		try {
 			await postAction();
 		} catch (e) {
-			await fastify.close();
+			await close();
 			reject(e);
 		}
 	});
 
-	await fastify.close();
+	await close();
 
 	return JSON.parse(result) as T;
 }
