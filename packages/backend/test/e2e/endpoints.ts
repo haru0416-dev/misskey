@@ -1565,6 +1565,76 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(missing.body as any).error.id, '78436795-db79-42f5-b1e2-55ea2cf19166');
 		});
 
+		test('users/lists list, show, and update preserve visibility and ownership semantics', async () => {
+			const config = loadConfig();
+			const privateList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-private-list-${Date.now()}`,
+				isPublic: false,
+			});
+			const publicList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-public-list-${Date.now()}`,
+				isPublic: true,
+			});
+			await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-bob-list-${Date.now()}`,
+				isPublic: true,
+			});
+
+			const ownList = await api('users/lists/list', {}, alice);
+			assert.strictEqual(ownList.status, 200);
+			assert.strictEqual((ownList.body as any[]).some(item => item.id === privateList.id), true);
+			assert.strictEqual((ownList.body as any[]).some(item => item.id === publicList.id), true);
+
+			const publicOnly = await api('users/lists/list', { userId: alice.id });
+			assert.strictEqual(publicOnly.status, 200);
+			assert.strictEqual((publicOnly.body as any[]).some(item => item.id === publicList.id), true);
+			assert.strictEqual((publicOnly.body as any[]).some(item => item.id === privateList.id), false);
+
+			const invalidAnonymousList = await api('users/lists/list', {});
+			assert.strictEqual(invalidAnonymousList.status, 400);
+			assert.strictEqual(castAsError(invalidAnonymousList.body as any).error.id, 'ab36de0e-29e9-48cb-9732-d82f1281620d');
+
+			const privateShowByOwner = await api('users/lists/show', { listId: privateList.id }, alice);
+			assert.strictEqual(privateShowByOwner.status, 200);
+			assert.strictEqual(privateShowByOwner.body.id, privateList.id);
+
+			const privateShowAnonymous = await api('users/lists/show', { listId: privateList.id });
+			assert.strictEqual(privateShowAnonymous.status, 400);
+			assert.strictEqual(castAsError(privateShowAnonymous.body as any).error.id, '7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+
+			const favorite = await api('users/lists/favorite', { listId: publicList.id }, bob);
+			assert.strictEqual(favorite.status, 204);
+			const publicShow = await api('users/lists/show', { listId: publicList.id, forPublic: true }, bob);
+			assert.strictEqual(publicShow.status, 200);
+			assert.strictEqual(publicShow.body.id, publicList.id);
+			assert.strictEqual(publicShow.body.likedCount, 1);
+			assert.strictEqual(publicShow.body.isLiked, true);
+
+			const otherUserUpdate = await api('users/lists/update', { listId: privateList.id, name: 'bad update' }, bob);
+			assert.strictEqual(otherUserUpdate.status, 400);
+			assert.strictEqual(castAsError(otherUserUpdate.body as any).error.id, '796666fe-3dff-4d39-becb-8a5932c1d5b7');
+
+			const update = await api('users/lists/update', {
+				listId: privateList.id,
+				name: 'hono updated list',
+				isPublic: true,
+			}, alice);
+			assert.strictEqual(update.status, 200);
+			assert.strictEqual(update.body.id, privateList.id);
+			assert.strictEqual(update.body.name, 'hono updated list');
+			assert.strictEqual(update.body.isPublic, true);
+
+			const fetched = await fetchUserListByIdAndUserIdFromDatabase(db, privateList.id, alice.id);
+			assert.strictEqual(fetched?.name, 'hono updated list');
+			assert.strictEqual(fetched?.isPublic, true);
+		});
+
 		test('Hono account data endpoints require matching app token permissions', async () => {
 			const readAccountToken = await createAppToken(alice, ['read:account']);
 			const readDriveToken = await createAppToken(alice, ['read:drive']);
@@ -1575,7 +1645,10 @@ describe('Endpoints', () => {
 				['notes/drafts/count', {}, readDriveToken],
 				['i/webhooks/list', {}, readDriveToken],
 				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
+				['users/lists/list', {}, readDriveToken],
+				['users/lists/show', { listId: genId(config) }, readDriveToken],
 				['users/lists/delete', { listId: genId(config) }, readAccountToken],
+				['users/lists/update', { listId: genId(config) }, readAccountToken],
 			] as const) {
 				const denied = await api(endpoint, params as any, { token });
 				assert.strictEqual(denied.status, 403, endpoint);

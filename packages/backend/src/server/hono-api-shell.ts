@@ -56,7 +56,7 @@ import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-ap
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
-import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete } from './hono-api-users.js';
+import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
 import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
 import { handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow } from './hono-api-webhooks.js';
 
@@ -1053,6 +1053,26 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/users/lists/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiUsersListsList(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/lists/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiUsersListsShow(deps, auth.user, body));
+		});
+	});
+
 	app.post('/users/lists/delete', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -1062,6 +1082,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiUsersListsDelete(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/users/lists/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			return jsonResponse(c, await handleHonoApiUsersListsUpdate(deps, auth.user, body));
 		});
 	});
 
