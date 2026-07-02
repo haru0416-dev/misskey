@@ -15,12 +15,33 @@ import type { EmailService } from '@/core/EmailService.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
-import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } from './hono-api-app.js';
+import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
+import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
+import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
-import { handleHonoApiI } from './hono-api-i.js';
+import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
+import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
+import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
+import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
+import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
+import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
+import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
+import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
+import {
+	handleHonoApiRegistryGet,
+	handleHonoApiRegistryGetAll,
+	handleHonoApiRegistryGetDetail,
+	handleHonoApiRegistryKeys,
+	handleHonoApiRegistryKeysWithType,
+	handleHonoApiRegistryRemove,
+	handleHonoApiRegistryScopesWithDomain,
+	handleHonoApiRegistrySet,
+} from './hono-api-registry.js';
+import { handleHonoApiRetention } from './hono-api-retention.js';
+import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
@@ -33,7 +54,7 @@ export type ApiShellDependencies = {
 	httpRequestService: HttpRequestService;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
-	emailService: Pick<EmailService, 'sendEmail'>;
+	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: SignupInternalEventPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
@@ -53,7 +74,7 @@ function setApiHeaders(c: Context): void {
 	c.header('Cache-Control', 'private, max-age=0, must-revalidate');
 }
 
-function jsonResponse(c: Context, body: unknown, status = 200): Response {
+function jsonResponse(c: Context, body: unknown, status = 200, headers: Record<string, string> = {}): Response {
 	setApiHeaders(c);
 	return new Response(JSON.stringify(body), {
 		status,
@@ -61,6 +82,7 @@ function jsonResponse(c: Context, body: unknown, status = 200): Response {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
+			...headers,
 		},
 	});
 }
@@ -111,6 +133,10 @@ function signinWithPasskeyResponse(c: Context, deps: ApiShellDependencies, resul
 			'Content-Type': 'application/json; charset=utf-8',
 		},
 	});
+}
+
+function publicCacheHeadersWhenAnonymous(auth: HonoApiAuthenticated, seconds: number): Record<string, string> {
+	return auth.user == null ? { 'Cache-Control': `public, max-age=${seconds}` } : {};
 }
 
 function apiErrorResponse(c: Context, err: HonoApiError): Response {
@@ -261,6 +287,65 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/announcements', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiAnnouncements(deps, auth.user, body));
+		});
+	});
+
+	app.post('/announcements/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiAnnouncementShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/email-address/available', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body));
+		});
+	});
+
+	app.get('/emoji', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiEmoji(deps, c.req.query()), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.post('/emoji', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEmoji(deps, body), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.get('/emojis', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.post('/emojis', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
 	app.post('/auth/session/generate', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -300,6 +385,206 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/endpoints', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiEndpoints());
+		});
+	});
+
+	app.post('/endpoint', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiEndpoint(body));
+		});
+	});
+
+	app.get('/federation/instances', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = normalizeHonoApiFederationQuery(c.req.query());
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFederationInstances(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+		});
+	});
+
+	app.post('/federation/instances', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFederationInstances(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+		});
+	});
+
+	app.post('/federation/show-instance', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFederationShowInstance(deps, auth.user, body));
+		});
+	});
+
+	app.get('/federation/stats', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = normalizeHonoApiFederationQuery(c.req.query());
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFederationStats(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+		});
+	});
+
+	app.post('/federation/stats', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFederationStats(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+		});
+	});
+
+	app.get('/fetch-rss', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiFetchRss(deps, c.req.query()), 200, {
+				'Cache-Control': 'public, max-age=180',
+			});
+		});
+	});
+
+	app.post('/fetch-rss', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiFetchRss(deps, body), 200, {
+				'Cache-Control': 'public, max-age=180',
+			});
+		});
+	});
+
+	app.post('/hashtags/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsList(deps, body));
+		});
+	});
+
+	app.post('/hashtags/search', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body));
+		});
+	});
+
+	app.post('/hashtags/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsShow(deps, body));
+		});
+	});
+
+	app.post('/hashtags/trend', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body));
+		});
+	});
+
+	app.post('/meta', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiMeta(deps, body));
+		});
+	});
+
+	app.post('/ping', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, handleHonoApiPing());
+		});
+	});
+
+	app.get('/retention', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiRetention(deps, {}), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.post('/retention', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiRetention(deps, body), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.post('/roles/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiRolesList(deps, body));
+		});
+	});
+
+	app.post('/roles/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiRolesShow(deps, body));
+		});
+	});
+
+	app.get('/server-info', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
+	app.post('/server-info', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
+	app.post('/test', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, handleHonoApiTest(body));
+		});
+	});
+
+	app.get('/get-online-users-count', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
+	app.post('/get-online-users-count', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
+	app.post('/get-avatar-decorations', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiGetAvatarDecorations(deps, body));
+		});
+	});
+
 	app.post('/i', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -308,6 +593,141 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:account');
 
 			return jsonResponse(c, await handleHonoApiI(deps, auth.user, auth.token));
+		});
+	});
+
+	app.post('/i/apps', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiIApps(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/authorized-apps', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiIAuthorizedApps(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/revoke-token', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			await handleHonoApiIRevokeToken(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/registry/get', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiRegistryGet(deps, auth.user, auth.token, body));
+		});
+	});
+
+	app.post('/i/registry/get-all', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiRegistryGetAll(deps, auth.user, auth.token, body));
+		});
+	});
+
+	app.post('/i/registry/get-detail', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiRegistryGetDetail(deps, auth.user, auth.token, body));
+		});
+	});
+
+	app.post('/i/registry/keys', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiRegistryKeys(deps, auth.user, auth.token, body));
+		});
+	});
+
+	app.post('/i/registry/keys-with-type', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiRegistryKeysWithType(deps, auth.user, auth.token, body));
+		});
+	});
+
+	app.post('/i/registry/remove', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiRegistryRemove(deps, auth.user, auth.token, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/registry/scopes-with-domain', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiRegistryScopesWithDomain(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/registry/set', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiRegistrySet(deps, auth.user, auth.token, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/signin-history', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiISigninHistory(deps, auth.user, body));
 		});
 	});
 
@@ -336,6 +756,13 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:account');
 
 			return jsonResponse(c, await handleHonoApiMyApps(deps, auth.user, body));
+		});
+	});
+
+	app.post('/username/available', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiUsernameAvailable(deps, body));
 		});
 	});
 
