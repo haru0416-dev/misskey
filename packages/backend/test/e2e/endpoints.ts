@@ -59,7 +59,7 @@ import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DeliverJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData, InboxJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -72,6 +72,7 @@ describe('Endpoints', () => {
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
 	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
+	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 
 	beforeAll(async () => {
@@ -79,6 +80,7 @@ describe('Endpoints', () => {
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
 		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
+		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
 		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -89,6 +91,7 @@ describe('Endpoints', () => {
 
 	afterAll(async () => {
 		await deliverQueue?.close();
+		await inboxQueue?.close();
 		await systemWebhookDeliverQueue?.close();
 		await pool?.end();
 	});
@@ -2876,6 +2879,112 @@ describe('Endpoints', () => {
 			assert.strictEqual(typeof undo.published, 'string');
 			assert.ok(undo['@context']);
 			await undoJob.remove();
+		});
+	});
+
+	describe('admin/queue read endpoints', () => {
+		test('admin/queue のread endpointはqueue状態、job、権限を維持する', async () => {
+			const now = Date.now();
+			const delayedDeliverHost = `queue-deliver-${now}.example`;
+			const delayedInboxHost = `queue-inbox-${now}.example`;
+			const waitingInbox = `https://queue-waiting-${now}.example/inbox`;
+			const waitingName = `hono-queue-waiting-${now}`;
+			const waitingContent = JSON.stringify({ type: 'QueueTest', id: now });
+			const waitingJob = await deliverQueue!.add(waitingName, {
+				user: { id: alice.id },
+				content: waitingContent,
+				digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
+				to: waitingInbox,
+				isSharedInbox: false,
+			}, { removeOnComplete: true, removeOnFail: true });
+			const delayedDeliverJob = await deliverQueue!.add(`hono-queue-delayed-${now}`, {
+				user: { id: alice.id },
+				content: waitingContent,
+				digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
+				to: `https://${delayedDeliverHost}/inbox`,
+				isSharedInbox: false,
+			}, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+			const delayedInboxJob = await inboxQueue!.add(`hono-inbox-delayed-${now}`, {
+				activity: {
+					type: 'Create',
+					actor: `https://${delayedInboxHost}/actor`,
+					object: `https://${delayedInboxHost}/notes/${now}`,
+				},
+				signature: {
+					keyId: `https://${delayedInboxHost}/actor#main-key`,
+				},
+			} as InboxJobData, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+
+			try {
+				await waitingJob.log(`hono queue log ${now}`);
+				assert.ok(waitingJob.id);
+
+				const queues = await api('admin/queue/queues', {}, alice);
+				assert.strictEqual(queues.status, 200);
+				const deliverQueueInfo = queues.body.find(queue => queue.name === 'deliver');
+				assert.ok(deliverQueueInfo);
+				assert.strictEqual(typeof deliverQueueInfo.isPaused, 'boolean');
+				assert.strictEqual(typeof deliverQueueInfo.counts, 'object');
+				assert.strictEqual(typeof deliverQueueInfo.metrics.completed.count, 'number');
+
+				const queueStats = await api('admin/queue/queue-stats', { queue: 'deliver' }, alice);
+				assert.strictEqual(queueStats.status, 200);
+				assert.strictEqual(queueStats.body.name, 'deliver');
+				assert.strictEqual(typeof queueStats.body.qualifiedName, 'string');
+				assert.strictEqual(typeof queueStats.body.db.version, 'string');
+
+				const emojiScopeToken = await createAppToken(alice, ['read:admin:emoji']);
+				const legacyStats = await api('admin/queue/stats', {}, { token: emojiScopeToken });
+				assert.strictEqual(legacyStats.status, 200);
+				assert.strictEqual(typeof legacyStats.body.deliver, 'object');
+				assert.strictEqual(typeof legacyStats.body.inbox, 'object');
+				assert.strictEqual(typeof legacyStats.body.db, 'object');
+				assert.strictEqual(typeof legacyStats.body.objectStorage, 'object');
+
+				const deliverDelayed = await api('admin/queue/deliver-delayed', {}, alice);
+				assert.strictEqual(deliverDelayed.status, 200);
+				assert.ok(deliverDelayed.body.some(([host, count]) => host === delayedDeliverHost && count >= 1));
+
+				const inboxDelayed = await api('admin/queue/inbox-delayed', {}, alice);
+				assert.strictEqual(inboxDelayed.status, 200);
+				assert.ok(inboxDelayed.body.some(([host, count]) => host === delayedInboxHost && count >= 1));
+
+				const jobs = await api('admin/queue/jobs', { queue: 'deliver', state: ['wait'], search: waitingName }, alice);
+				assert.strictEqual(jobs.status, 200);
+				assert.ok(jobs.body.some(job => job.id === waitingJob.id && job.name === waitingName));
+
+				const shown = await api('admin/queue/show-job', { queue: 'deliver', jobId: waitingJob.id }, alice);
+				assert.strictEqual(shown.status, 200);
+				assert.strictEqual(shown.body.id, waitingJob.id);
+				assert.strictEqual(shown.body.name, waitingName);
+				assert.strictEqual(shown.body.data.to, waitingInbox);
+
+				const logs = await api('admin/queue/show-job-logs', { queue: 'deliver', jobId: waitingJob.id }, alice);
+				assert.strictEqual(logs.status, 200);
+				assert.ok(logs.body.includes(`hono queue log ${now}`));
+
+				const readQueueToken = await createAppToken(alice, ['read:admin:queue']);
+				const queuesWithToken = await api('admin/queue/queues', {}, { token: readQueueToken });
+				assert.strictEqual(queuesWithToken.status, 200);
+
+				const legacyStatsScopeDenied = await api('admin/queue/stats', {}, { token: readQueueToken });
+				assert.strictEqual(legacyStatsScopeDenied.status, 403);
+				assert.strictEqual(castAsError(legacyStatsScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const deniedToken = await createAppToken(alice, ['read:admin:relays']);
+				const scopeDenied = await api('admin/queue/queues', {}, { token: deniedToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const normalUser = await signup({ username: `honoqueue${now.toString(36)}` });
+				const roleDenied = await api('admin/queue/queues', {}, normalUser);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await waitingJob.remove().catch(() => undefined);
+				await delayedDeliverJob.remove().catch(() => undefined);
+				await delayedInboxJob.remove().catch(() => undefined);
+			}
 		});
 	});
 

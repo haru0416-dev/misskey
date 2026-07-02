@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { MetricsTime, type JobType } from 'bullmq';
+import type { JobType } from 'bullmq';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
@@ -18,7 +18,7 @@ import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { type SystemWebhookPayload } from '@/core/SystemWebhookService.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
-import type { Packed } from '@/misc/json-schema.js';
+import { clearQueue, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, pauseQueue, promoteQueueJobs, removeQueueJob, resumeQueue, retryQueueJob, type QueueClearState, type QueueType } from '@/core/QueueAdminLogic.js';
 import { type UserWebhookPayload } from './UserWebhookService.js';
 import type {
 	DbJobData,
@@ -42,18 +42,7 @@ import type {
 import type httpSignature from '@peertube/http-signature';
 import type * as Bull from 'bullmq';
 
-export const QUEUE_TYPES = [
-	'system',
-	'endedPollNotification',
-	'postScheduledNote',
-	'deliver',
-	'inbox',
-	'db',
-	'relationship',
-	'objectStorage',
-	'userWebhookDeliver',
-	'systemWebhookDeliver',
-] as const;
+export { QUEUE_TYPES } from '@/core/QueueAdminLogic.js';
 
 const REPEATABLE_SYSTEM_JOB_DEF = [{
 	name: 'tickCharts',
@@ -85,19 +74,6 @@ const REPEATABLE_SYSTEM_JOB_DEF = [{
 	// 毎日午前4時に起動(最も人の少ない時間帯)
 	pattern: '0 4 * * *',
 }];
-
-function parseRedisInfo(infoText: string): Record<string, string> {
-	const fields = infoText
-		.split('\n')
-		.filter(line => line.length > 0 && !line.startsWith('#'))
-		.map(line => line.trim().split(':'));
-
-	const result: Record<string, string> = {};
-	for (const [key, value] of fields) {
-		result[key] = value;
-	}
-	return result;
-}
 
 @Injectable()
 export class QueueService implements OnModuleInit {
@@ -677,209 +653,57 @@ export class QueueService implements OnModuleInit {
 	}
 
 	@bindThis
-	private getQueue(type: typeof QUEUE_TYPES[number]): Bull.Queue {
-		switch (type) {
-			case 'system': return this.systemQueue;
-			case 'endedPollNotification': return this.endedPollNotificationQueue;
-			case 'postScheduledNote': return this.postScheduledNoteQueue;
-			case 'deliver': return this.deliverQueue;
-			case 'inbox': return this.inboxQueue;
-			case 'db': return this.dbQueue;
-			case 'relationship': return this.relationshipQueue;
-			case 'objectStorage': return this.objectStorageQueue;
-			case 'userWebhookDeliver': return this.userWebhookDeliverQueue;
-			case 'systemWebhookDeliver': return this.systemWebhookDeliverQueue;
-			default: throw new Error(`Unrecognized queue type: ${type}`);
-		}
+	public async queueClear(queueType: QueueType, state: QueueClearState) {
+		await clearQueue(this, queueType, state);
 	}
 
 	@bindThis
-	public async queueClear(queueType: typeof QUEUE_TYPES[number], state: '*' | 'completed' | 'wait' | 'active' | 'paused' | 'prioritized' | 'delayed' | 'failed') {
-		const queue = this.getQueue(queueType);
-
-		if (state === '*') {
-			await Promise.all([
-				queue.clean(0, 0, 'completed'),
-				queue.clean(0, 0, 'wait'),
-				queue.clean(0, 0, 'active'),
-				queue.clean(0, 0, 'paused'),
-				queue.clean(0, 0, 'prioritized'),
-				queue.clean(0, 0, 'delayed'),
-				queue.clean(0, 0, 'failed'),
-			]);
-		} else {
-			await queue.clean(0, 0, state);
-		}
+	public async queuePromoteJobs(queueType: QueueType) {
+		await promoteQueueJobs(this, queueType);
 	}
 
 	@bindThis
-	public async queuePromoteJobs(queueType: typeof QUEUE_TYPES[number]) {
-		const queue = this.getQueue(queueType);
-		await queue.promoteJobs();
+	public async queuePause(queueType: QueueType) {
+		await pauseQueue(this, queueType);
 	}
 
 	@bindThis
-	public async queuePause(queueType: typeof QUEUE_TYPES[number]) {
-		const queue = this.getQueue(queueType);
-		await queue.pause();
+	public async queueResume(queueType: QueueType) {
+		await resumeQueue(this, queueType);
 	}
 
 	@bindThis
-	public async queueResume(queueType: typeof QUEUE_TYPES[number]) {
-		const queue = this.getQueue(queueType);
-		await queue.resume();
+	public async queueRetryJob(queueType: QueueType, jobId: string) {
+		await retryQueueJob(this, queueType, jobId);
 	}
 
 	@bindThis
-	public async queueRetryJob(queueType: typeof QUEUE_TYPES[number], jobId: string) {
-		const queue = this.getQueue(queueType);
-		const job = await queue.getJob(jobId);
-		if (job != null) {
-			if (job.finishedOn != null) {
-				await job.retry();
-			} else {
-				await job.promote();
-			}
-		}
+	public async queueRemoveJob(queueType: QueueType, jobId: string) {
+		await removeQueueJob(this, queueType, jobId);
 	}
 
 	@bindThis
-	public async queueRemoveJob(queueType: typeof QUEUE_TYPES[number], jobId: string) {
-		const queue = this.getQueue(queueType);
-		const job = await queue.getJob(jobId);
-		if (job != null) {
-			await job.remove();
-		}
+	public async queueGetJob(queueType: QueueType, jobId: string) {
+		return await getQueueJob(this, queueType, jobId);
 	}
 
 	@bindThis
-	private packJobData(job: Bull.Job): Packed<'QueueJob'> {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		const stacktrace = job.stacktrace ? job.stacktrace.filter(Boolean) : [];
-		stacktrace.reverse();
-
-		return {
-			id: job.id!,
-			name: job.name,
-			data: job.data,
-			opts: job.opts,
-			timestamp: job.timestamp,
-			processedOn: job.processedOn,
-			processedBy: job.processedBy,
-			finishedOn: job.finishedOn,
-			progress: job.progress,
-			attempts: job.attemptsMade,
-			delay: job.delay,
-			failedReason: job.failedReason,
-			stacktrace: stacktrace,
-			returnValue: job.returnvalue,
-			isFailed: !!job.failedReason || (Array.isArray(stacktrace) && stacktrace.length > 0),
-		};
+	public async queueGetJobLogs(queueType: QueueType, jobId: string) {
+		return await getQueueJobLogs(this, queueType, jobId);
 	}
 
 	@bindThis
-	public async queueGetJob(queueType: typeof QUEUE_TYPES[number], jobId: string) {
-		const queue = this.getQueue(queueType);
-		const job = await queue.getJob(jobId);
-		if (job != null) {
-			return this.packJobData(job);
-		} else {
-			throw new Error(`Job not found: ${jobId}`);
-		}
-	}
-
-	@bindThis
-	public async queueGetJobLogs(queueType: typeof QUEUE_TYPES[number], jobId: string) {
-		const queue = this.getQueue(queueType);
-		const result = await queue.getJobLogs(jobId);
-		return result.logs;
-	}
-
-	@bindThis
-	public async queueGetJobs(queueType: typeof QUEUE_TYPES[number], jobTypes: JobType[], search?: string) {
-		const RETURN_LIMIT = 100;
-		const queue = this.getQueue(queueType);
-		let jobs: Bull.Job[];
-
-		if (search) {
-			jobs = await queue.getJobs(jobTypes, 0, 1000);
-
-			jobs = jobs.filter(job => {
-				const jobString = JSON.stringify(job).toLowerCase();
-				return search.toLowerCase().split(' ').every(term => {
-					return jobString.includes(term);
-				});
-			});
-
-			jobs = jobs.slice(0, RETURN_LIMIT);
-		} else {
-			jobs = await queue.getJobs(jobTypes, 0, RETURN_LIMIT);
-		}
-
-		return jobs.map(job => this.packJobData(job));
+	public async queueGetJobs(queueType: QueueType, jobTypes: JobType[], search?: string) {
+		return await getQueueJobs(this, queueType, jobTypes, search);
 	}
 
 	@bindThis
 	public async queueGetQueues() {
-		const fetchings = QUEUE_TYPES.map(async type => {
-			const queue = this.getQueue(type);
-
-			const counts = await queue.getJobCounts();
-			const isPaused = await queue.isPaused();
-			const metrics_completed = await queue.getMetrics('completed', 0, MetricsTime.ONE_WEEK);
-			const metrics_failed = await queue.getMetrics('failed', 0, MetricsTime.ONE_WEEK);
-
-			return {
-				name: type,
-				counts: counts,
-				isPaused,
-				metrics: {
-					completed: metrics_completed,
-					failed: metrics_failed,
-				},
-			};
-		});
-
-		return await Promise.all(fetchings);
+		return await getQueues(this);
 	}
 
 	@bindThis
-	public async queueGetQueue(queueType: typeof QUEUE_TYPES[number]) {
-		const queue = this.getQueue(queueType);
-		const counts = await queue.getJobCounts();
-		const isPaused = await queue.isPaused();
-		const metrics_completed = await queue.getMetrics('completed', 0, MetricsTime.ONE_WEEK);
-		const metrics_failed = await queue.getMetrics('failed', 0, MetricsTime.ONE_WEEK);
-		const db = parseRedisInfo(await (await queue.client).info());
-
-		return {
-			name: queueType,
-			qualifiedName: queue.qualifiedName,
-			counts: counts,
-			isPaused,
-			metrics: {
-				completed: metrics_completed,
-				failed: metrics_failed,
-			},
-			db: {
-				version: db.redis_version,
-				mode: db.redis_mode as 'cluster' | 'standalone' | 'sentinel',
-				runId: db.run_id,
-				processId: db.process_id,
-				port: parseInt(db.tcp_port),
-				os: db.os,
-				uptime: parseInt(db.uptime_in_seconds),
-				memory: {
-					total: parseInt(db.total_system_memory) || parseInt(db.maxmemory),
-					used: parseInt(db.used_memory),
-					fragmentationRatio: parseInt(db.mem_fragmentation_ratio),
-					peak: parseInt(db.used_memory_peak),
-				},
-				clients: {
-					connected: parseInt(db.connected_clients),
-					blocked: parseInt(db.blocked_clients),
-				},
-			},
-		};
+	public async queueGetQueue(queueType: QueueType) {
+		return await getQueueStats(this, queueType);
 	}
 }
