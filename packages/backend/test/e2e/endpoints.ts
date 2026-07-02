@@ -1057,6 +1057,23 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('request-reset-password endpoint', () => {
+		test('request-reset-password silently accepts unknown users and validates params', async () => {
+			const accepted = await api('request-reset-password', {
+				username: 'missing_reset_user',
+				email: 'missing-reset-user@example.test',
+			});
+			assert.strictEqual(accepted.status, 204);
+			assert.strictEqual(accepted.body, null);
+
+			const invalid = await api('request-reset-password', {
+				username: 'missing_reset_user',
+			} as any);
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+		});
+	});
+
 	describe('auth/session', () => {
 		test('legacy auth session flow', async () => {
 			const app = await api('app/create', {
