@@ -53,6 +53,7 @@ import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleH
 import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
 import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from './hono-api-captcha.js';
 import { handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats, type HonoApiAdminQueueDependencies } from './hono-api-admin-queue.js';
+import { handleHonoApiAdminDriveCleanRemoteFiles, handleHonoApiAdminDriveShowFile } from './hono-api-admin-drive.js';
 import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
@@ -920,6 +921,31 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiAdminFederationRemoveAllFollowing(deps, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/drive/clean-remote-files', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:drive');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminDriveCleanRemoteFiles(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/drive/show-file', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:drive');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminDriveShowFile(deps, auth.user, body));
 		});
 	});
 

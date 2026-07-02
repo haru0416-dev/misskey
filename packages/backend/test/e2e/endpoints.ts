@@ -61,7 +61,7 @@ import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DeliverJobData, InboxJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData, InboxJobData, ObjectStorageJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -76,6 +76,7 @@ describe('Endpoints', () => {
 	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
 	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
 	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
+	let objectStorageQueue: Bull.Queue<ObjectStorageJobData> | undefined;
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 
 	beforeAll(async () => {
@@ -85,6 +86,7 @@ describe('Endpoints', () => {
 		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
 		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
 		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
+		objectStorageQueue = new Bull.Queue<ObjectStorageJobData>(QUEUE.OBJECT_STORAGE, baseQueueOptions(config, QUEUE.OBJECT_STORAGE));
 		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -97,6 +99,7 @@ describe('Endpoints', () => {
 		await deliverQueue?.close();
 		await inboxQueue?.close();
 		await relationshipQueue?.close();
+		await objectStorageQueue?.close();
 		await systemWebhookDeliverQueue?.close();
 		await pool?.end();
 	});
@@ -820,6 +823,140 @@ describe('Endpoints', () => {
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api('admin/federation/remove-all-following', { host }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/drive', () => {
+		test('admin/drive/show-file は fileId/url、秘匿 header、token scope、role、404を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const bobMd5 = createHash('md5').update(`hono-admin-drive-bob-${suffix}`).digest('hex');
+			const bobFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userHost: null,
+				md5: bobMd5,
+				name: `hono-admin-drive-bob-${suffix}.png`,
+				type: 'image/png',
+				size: 123,
+				comment: `admin drive show ${suffix}`,
+				blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+				properties: { width: 10, height: 20 },
+				storedInternal: true,
+				url: `${origin}/files/${bobMd5}`,
+				thumbnailUrl: `${origin}/files/${bobMd5}.thumbnail`,
+				webpublicUrl: `${origin}/files/${bobMd5}.webpublic`,
+				accessKey: `access-${suffix}`,
+				thumbnailAccessKey: `thumbnail-${suffix}`,
+				webpublicAccessKey: `webpublic-${suffix}`,
+				webpublicType: 'image/webp',
+				uri: `https://remote.example/files/${bobMd5}`,
+				src: `https://source.example/files/${bobMd5}`,
+				isSensitive: true,
+				maybeSensitive: true,
+				maybePorn: false,
+				isLink: true,
+				requestIp: '192.0.2.10',
+				requestHeaders: { authorization: 'secret', 'user-agent': 'test-agent' },
+			});
+			const aliceMd5 = createHash('md5').update(`hono-admin-drive-alice-${suffix}`).digest('hex');
+			const aliceFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: aliceMd5,
+				name: `hono-admin-drive-alice-${suffix}.png`,
+				type: 'image/png',
+				size: 456,
+				storedInternal: true,
+				url: `${origin}/files/${aliceMd5}`,
+				requestIp: '192.0.2.11',
+				requestHeaders: { authorization: 'root-secret' },
+			});
+
+			const shown = await api('admin/drive/show-file', { fileId: bobFile.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, bobFile.id);
+			assert.strictEqual(typeof shown.body.createdAt, 'string');
+			assert.strictEqual(shown.body.userId, bob.id);
+			assert.strictEqual(shown.body.md5, bobMd5);
+			assert.strictEqual(shown.body.name, bobFile.name);
+			assert.strictEqual(shown.body.type, bobFile.type);
+			assert.strictEqual(shown.body.size, bobFile.size);
+			assert.strictEqual(shown.body.comment, bobFile.comment);
+			assert.strictEqual(shown.body.blurhash, bobFile.blurhash);
+			assert.deepStrictEqual(shown.body.properties, { width: 10, height: 20 });
+			assert.strictEqual(shown.body.storedInternal, true);
+			assert.strictEqual(shown.body.url, bobFile.url);
+			assert.strictEqual(shown.body.thumbnailUrl, bobFile.thumbnailUrl);
+			assert.strictEqual(shown.body.webpublicUrl, bobFile.webpublicUrl);
+			assert.strictEqual(shown.body.accessKey, bobFile.accessKey);
+			assert.strictEqual(shown.body.thumbnailAccessKey, bobFile.thumbnailAccessKey);
+			assert.strictEqual(shown.body.webpublicAccessKey, bobFile.webpublicAccessKey);
+			assert.strictEqual((shown.body as any).webpublicType, bobFile.webpublicType);
+			assert.strictEqual(shown.body.uri, bobFile.uri);
+			assert.strictEqual(shown.body.src, bobFile.src);
+			assert.strictEqual(shown.body.isSensitive, true);
+			assert.strictEqual(shown.body.maybeSensitive, true);
+			assert.strictEqual(shown.body.maybePorn, false);
+			assert.strictEqual(shown.body.isLink, true);
+			assert.strictEqual(shown.body.requestIp, '192.0.2.10');
+			assert.deepStrictEqual(shown.body.requestHeaders, { authorization: 'secret', 'user-agent': 'test-agent' });
+
+			const shownByUrl = await api('admin/drive/show-file', { url: bobFile.url }, alice);
+			assert.strictEqual(shownByUrl.status, 200);
+			assert.strictEqual(shownByUrl.body.id, bobFile.id);
+
+			const ownedByModerator = await api('admin/drive/show-file', { fileId: aliceFile.id }, alice);
+			assert.strictEqual(ownedByModerator.status, 200);
+			assert.strictEqual(ownedByModerator.body.requestIp, '192.0.2.11');
+			assert.strictEqual(ownedByModerator.body.requestHeaders, null);
+
+			const token = await createAppToken(alice, ['read:admin:drive']);
+			const shownByToken = await api('admin/drive/show-file', { fileId: bobFile.id }, { token });
+			assert.strictEqual(shownByToken.status, 200);
+			assert.strictEqual(shownByToken.body.id, bobFile.id);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:drive']);
+			const scopeDenied = await api('admin/drive/show-file', { fileId: bobFile.id }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hads${suffix}` });
+			const roleDenied = await api('admin/drive/show-file', { fileId: bobFile.id }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/drive/show-file', { fileId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_FILE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'caf3ca38-c6e5-472e-a30c-b05377dcc240');
+		});
+
+		test('admin/drive/clean-remote-files は objectStorage queue job と権限を維持する', async () => {
+			const cleaned = await api('admin/drive/clean-remote-files', {}, alice);
+			assert.strictEqual(cleaned.status, 204);
+
+			let job: Bull.Job<ObjectStorageJobData> | undefined;
+			for (let i = 0; i < 10; i++) {
+				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				job = jobs.find(job => job.name === 'cleanRemoteFiles');
+				if (job != null) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.ok(job);
+			await job.remove();
+
+			const token = await createAppToken(alice, ['write:admin:drive']);
+			const cleanedByToken = await api('admin/drive/clean-remote-files', {}, { token });
+			assert.strictEqual(cleanedByToken.status, 204);
+			const tokenJobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			await Promise.all(tokenJobs.filter(job => job.name === 'cleanRemoteFiles').map(job => job.remove()));
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
+			const scopeDenied = await api('admin/drive/clean-remote-files', {}, { token: wrongScopeToken });
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 		});
