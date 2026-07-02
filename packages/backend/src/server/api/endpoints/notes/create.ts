@@ -4,7 +4,6 @@
  */
 
 import ms from 'ms';
-import { In } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';

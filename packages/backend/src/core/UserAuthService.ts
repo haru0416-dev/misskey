@@ -8,7 +8,9 @@ import * as Redis from 'ioredis';
 import * as OTPAuth from 'otpauth';
 import { createHash } from 'node:crypto';
 import { DI } from '@/di-symbols.js';
-import type { MiUserProfile, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiUserProfile } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { bindThis } from '@/decorators.js';
 
 @Injectable()
@@ -17,18 +19,15 @@ export class UserAuthService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 	}
 
 	@bindThis
 	public async twoFactorAuthenticate(profile: MiUserProfile, token: string): Promise<void> {
 		if (profile.twoFactorBackupSecret?.includes(token)) {
-			await this.userProfilesRepository.update({ userId: profile.userId }, {
+			await updateUserProfileInDatabase(this.db, profile.userId, {
 				twoFactorBackupSecret: profile.twoFactorBackupSecret.filter((secret) => secret !== token),
 			});
 		} else {

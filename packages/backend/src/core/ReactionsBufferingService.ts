@@ -8,11 +8,13 @@ import * as Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
 import type { MiNote } from '@/models/Note.js';
 import { bindThis } from '@/decorators.js';
-import type { MiUser, NotesRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import type { OnApplicationShutdown } from '@nestjs/common';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { applyBufferedNoteReactionsInDatabase } from '@/core/NoteStore.js';
 
 const REDIS_DELTA_PREFIX = 'reactionsBufferDeltas';
 const REDIS_PAIR_PREFIX = 'reactionsBufferPairs';
@@ -29,8 +31,8 @@ export class ReactionsBufferingService implements OnApplicationShutdown {
 		@Inject(DI.redisForReactions)
 		private redisForReactions: Redis.Redis, // TODO: 専用のRedisインスタンスにする
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 		this.redisForSub.on('message', this.onMessage);
 	}
@@ -171,18 +173,12 @@ export class ReactionsBufferingService implements OnApplicationShutdown {
 
 		// TODO: SQL一個にまとめたい
 		for (const [noteId, buffered] of bufferedMap) {
-			const sql = Object.entries(buffered.deltas)
-				.map(([reaction, count]) =>
-					`jsonb_set("reactions", '{${reaction}}', (COALESCE("reactions"->>'${reaction}', '0')::int + ${count})::text::jsonb)`)
-				.join(' || ');
-
-			this.notesRepository.createQueryBuilder().update()
-				.set({
-					reactions: () => sql,
-					reactionAndUserPairCache: buffered.pairs.map(x => x.join('/')),
-				})
-				.where('id = :id', { id: noteId })
-				.execute();
+			void applyBufferedNoteReactionsInDatabase(
+				this.db,
+				noteId,
+				buffered.deltas,
+				buffered.pairs.map(x => x.join('/')),
+			);
 		}
 	}
 

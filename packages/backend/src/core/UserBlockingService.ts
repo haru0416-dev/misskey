@@ -7,11 +7,9 @@ import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { IdService } from '@/core/IdService.js';
 import type { MiUser } from '@/models/User.js';
-import type { MiBlocking } from '@/models/Blocking.js';
 import { QueueService } from '@/core/QueueService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
-import type { FollowRequestsRepository, BlockingsRepository, UserListsRepository, UserListMembershipsRepository } from '@/models/_.js';
 import Logger from '@/logger.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -20,6 +18,11 @@ import { UserWebhookService } from '@/core/UserWebhookService.js';
 import { bindThis } from '@/decorators.js';
 import { CacheService } from '@/core/CacheService.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
+import { deleteUserListMembershipInDatabase } from '@/core/UserListMembershipStore.js';
+import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
 
 @Injectable()
 export class UserBlockingService implements OnModuleInit {
@@ -29,17 +32,8 @@ export class UserBlockingService implements OnModuleInit {
 	constructor(
 		private moduleRef: ModuleRef,
 
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 		private userEntityService: UserEntityService,
@@ -67,15 +61,13 @@ export class UserBlockingService implements OnModuleInit {
 			this.removeFromList(blockee, blocker),
 		]);
 
-		const blocking = {
+		const blocking = await createBlockingInDatabase(this.db, {
 			id: this.idService.gen(),
-			blocker,
 			blockerId: blocker.id,
-			blockee,
 			blockeeId: blockee.id,
-		} as MiBlocking;
-
-		await this.blockingsRepository.insert(blocking);
+		});
+		blocking.blocker = blocker;
+		blocking.blockee = blockee;
 
 		this.cacheService.userBlockingCache.refresh(blocker.id);
 		this.cacheService.userBlockedCache.refresh(blockee.id);
@@ -93,19 +85,13 @@ export class UserBlockingService implements OnModuleInit {
 
 	@bindThis
 	private async cancelRequest(follower: MiUser, followee: MiUser, silent = false) {
-		const request = await this.followRequestsRepository.findOneBy({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		const request = await fetchFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (request == null) {
 			return;
 		}
 
-		await this.followRequestsRepository.delete({
-			followeeId: followee.id,
-			followerId: follower.id,
-		});
+		await deleteFollowRequestFromDatabase(this.db, follower.id, followee.id);
 
 		if (this.userEntityService.isLocalUser(followee)) {
 			this.userEntityService.pack(followee, followee, {
@@ -137,24 +123,16 @@ export class UserBlockingService implements OnModuleInit {
 
 	@bindThis
 	private async removeFromList(listOwner: MiUser, user: MiUser) {
-		const userLists = await this.userListsRepository.findBy({
-			userId: listOwner.id,
-		});
+		const userLists = await listUserListsByUserIdFromDatabase(this.db, listOwner.id);
 
 		for (const userList of userLists) {
-			await this.userListMembershipsRepository.delete({
-				userListId: userList.id,
-				userId: user.id,
-			});
+			await deleteUserListMembershipInDatabase(this.db, user.id, userList.id);
 		}
 	}
 
 	@bindThis
 	public async unblock(blocker: MiUser, blockee: MiUser) {
-		const blocking = await this.blockingsRepository.findOneBy({
-			blockerId: blocker.id,
-			blockeeId: blockee.id,
-		});
+		const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(this.db, blocker.id, blockee.id);
 
 		if (blocking == null) {
 			this.logger.warn('ブロック解除がリクエストされましたがブロックしていませんでした');
@@ -166,7 +144,7 @@ export class UserBlockingService implements OnModuleInit {
 		blocking.blocker = blocker;
 		blocking.blockee = blockee;
 
-		await this.blockingsRepository.delete(blocking.id);
+		await deleteBlockingByIdFromDatabase(this.db, blocking.id);
 
 		this.cacheService.userBlockingCache.refresh(blocker.id);
 		this.cacheService.userBlockedCache.refresh(blockee.id);

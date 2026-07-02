@@ -5,12 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { EmojisRepository } from '@/models/_.js';
-import { QueryService } from '@/core/QueryService.js';
+import { listRemoteEmojisPageFromDatabase } from '@/core/EmojiStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { EmojiEntityService } from '@/core/entities/EmojiEntityService.js';
+import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
-import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -51,30 +51,40 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
-		private queryService: QueryService,
 		private emojiEntityService: EmojiEntityService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const q = this.queryService.makePaginationQuery(this.emojisRepository.createQueryBuilder('emoji'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
+			let sinceId: string | null = null;
+			let untilId: string | null = null;
 
-			if (ps.host == null) {
-				q.andWhere('emoji.host IS NOT NULL');
-			} else {
-				q.andWhere('emoji.host = :host', { host: this.utilityService.toPuny(ps.host) });
+			if (ps.sinceId && ps.untilId) {
+				sinceId = ps.sinceId;
+				untilId = ps.untilId;
+			} else if (ps.sinceId) {
+				sinceId = ps.sinceId;
+			} else if (ps.untilId) {
+				untilId = ps.untilId;
+			} else if (ps.sinceDate && ps.untilDate) {
+				sinceId = this.idService.gen(ps.sinceDate);
+				untilId = this.idService.gen(ps.untilDate);
+			} else if (ps.sinceDate) {
+				sinceId = this.idService.gen(ps.sinceDate);
+			} else if (ps.untilDate) {
+				untilId = this.idService.gen(ps.untilDate);
 			}
 
-			if (ps.query) {
-				q.andWhere('emoji.name like :query', { query: '%' + sqlLikeEscape(ps.query) + '%' });
-			}
-
-			const emojis = await q
-				.orderBy('emoji.id', 'DESC')
-				.limit(ps.limit)
-				.getMany();
+			const emojis = await listRemoteEmojisPageFromDatabase(this.db, {
+				host: ps.host == null ? null : this.utilityService.toPuny(ps.host),
+				query: ps.query,
+				sinceId,
+				untilId,
+				limit: ps.limit,
+			});
 
 			return this.emojiEntityService.packDetailedMany(emojis);
 		});

@@ -4,8 +4,9 @@
  */
 
 import { Inject, Injectable, Scope } from '@nestjs/common';
+import { antennaExistsForUserFromDatabase } from '@/core/AntennaStore.js';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { NoteStreamingHidingService } from '../NoteStreamingHidingService.js';
 import { bindThis } from '@/decorators.js';
@@ -27,8 +28,8 @@ export class AntennaChannel extends Channel {
 		@Inject(REQUEST)
 		request: ChannelRequest,
 
-		@Inject(DI.antennasRepository)
-		private antennasReposiotry: AntennasRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private noteEntityService: NoteEntityService,
 		private noteStreamingHidingService: NoteStreamingHidingService,
@@ -44,12 +45,7 @@ export class AntennaChannel extends Channel {
 
 		this.antennaId = params.antennaId;
 
-		const antennaExists = await this.antennasReposiotry.exists({
-			where: {
-				id: this.antennaId,
-				userId: this.user.id,
-			},
-		});
+		const antennaExists = await antennaExistsForUserFromDatabase(this.db, this.antennaId, this.user.id);
 
 		if (!antennaExists) return false;
 

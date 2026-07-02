@@ -10,8 +10,9 @@ import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { bindThis } from '@/decorators.js';
 import type Logger from '@/logger.js';
 
-import type { UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import { RelationshipJobData } from '../types.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
@@ -22,8 +23,8 @@ export class RelationshipProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private queueLoggerService: QueueLoggerService,
 		private userFollowingService: UserFollowingService,
@@ -47,8 +48,8 @@ export class RelationshipProcessorService {
 	public async processUnfollow(job: Bull.Job<RelationshipJobData>): Promise<string> {
 		this.logger.info(`${job.data.from.id} is trying to unfollow ${job.data.to.id}`);
 		const [follower, followee] = await Promise.all([
-			this.usersRepository.findOneByOrFail({ id: job.data.from.id }),
-			this.usersRepository.findOneByOrFail({ id: job.data.to.id }),
+			fetchUserByIdOrFailFromDatabase(this.db, job.data.from.id),
+			fetchUserByIdOrFailFromDatabase(this.db, job.data.to.id),
 		]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 		await this.userFollowingService.unfollow(follower, followee, job.data.silent);
 		return 'ok';
@@ -58,8 +59,8 @@ export class RelationshipProcessorService {
 	public async processBlock(job: Bull.Job<RelationshipJobData>): Promise<string> {
 		this.logger.info(`${job.data.from.id} is trying to block ${job.data.to.id}`);
 		const [blockee, blocker] = await Promise.all([
-			this.usersRepository.findOneByOrFail({ id: job.data.from.id }),
-			this.usersRepository.findOneByOrFail({ id: job.data.to.id }),
+			fetchUserByIdOrFailFromDatabase(this.db, job.data.from.id),
+			fetchUserByIdOrFailFromDatabase(this.db, job.data.to.id),
 		]);
 		await this.userBlockingService.block(blockee, blocker, job.data.silent);
 		return 'ok';
@@ -69,8 +70,8 @@ export class RelationshipProcessorService {
 	public async processUnblock(job: Bull.Job<RelationshipJobData>): Promise<string> {
 		this.logger.info(`${job.data.from.id} is trying to unblock ${job.data.to.id}`);
 		const [blockee, blocker] = await Promise.all([
-			this.usersRepository.findOneByOrFail({ id: job.data.from.id }),
-			this.usersRepository.findOneByOrFail({ id: job.data.to.id }),
+			fetchUserByIdOrFailFromDatabase(this.db, job.data.from.id),
+			fetchUserByIdOrFailFromDatabase(this.db, job.data.to.id),
 		]);
 		await this.userBlockingService.unblock(blockee, blocker);
 		return 'ok';

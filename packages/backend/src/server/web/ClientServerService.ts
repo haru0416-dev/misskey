@@ -8,7 +8,6 @@ import { resolve } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
 import sharp from 'sharp';
-import { In, IsNull } from 'typeorm';
 import fastifyStatic from '@fastify/static';
 import fastifyProxy from '@fastify/http-proxy';
 import vary from 'vary';
@@ -22,16 +21,7 @@ import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityServi
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import type {
-	AnnouncementsRepository,
-	ChannelsRepository,
-	ClipsRepository,
-	FlashsRepository,
-	GalleryPostsRepository,
 	MiMeta,
-	NotesRepository,
-	PagesRepository,
-	UserProfilesRepository,
-	UsersRepository,
 } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { handleRequestRedirectToOmitSearch } from '@/misc/fastify-hook-handlers.js';
@@ -39,6 +29,16 @@ import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import { bindThis } from '@/decorators.js';
 import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
+import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
+import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
+import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
 import { UrlPreviewService } from './UrlPreviewService.js';
 import { ClientLoggerService } from './ClientLoggerService.js';
@@ -81,32 +81,8 @@ export class ClientServerService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
-		@Inject(DI.galleryPostsRepository)
-		private galleryPostsRepository: GalleryPostsRepository,
-
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
-
-		@Inject(DI.pagesRepository)
-		private pagesRepository: PagesRepository,
-
-		@Inject(DI.flashsRepository)
-		private flashsRepository: FlashsRepository,
-
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private flashEntityService: FlashEntityService,
 		private userEntityService: UserEntityService,
@@ -444,14 +420,9 @@ export class ClientServerService {
 
 		const getFeed = async (acct: string) => {
 			const { username, host } = Acct.parse(acct);
-			const user = await this.usersRepository.findOneBy({
-				usernameLower: username.toLowerCase(),
-				host: host ?? IsNull(),
-				isSuspended: false,
-				requireSigninToViewContents: false,
-			});
+			const user = await fetchUserByUsernameAndHostFromDatabase(this.drizzle, username, host ?? null);
 
-			return user && (await this.feedService.packFeed(user));
+			return user && !user.isSuspended && !user.requireSigninToViewContents && (await this.feedService.packFeed(user));
 		};
 
 		// Atom
@@ -503,21 +474,17 @@ export class ClientServerService {
 		// User
 		fastify.get<{ Params: { user: string; sub?: string; } }>('/@:user/:sub?', async (request, reply) => {
 			const { username, host } = Acct.parse(request.params.user);
-			const user = await this.usersRepository.findOneBy({
-				usernameLower: username.toLowerCase(),
-				host: host ?? IsNull(),
-				isSuspended: false,
-			});
+			const user = await fetchUserByUsernameAndHostFromDatabase(this.drizzle, username, host ?? null);
 
 			vary(reply.raw, 'Accept');
 
 			if (
-				user != null && (
+				user != null && !user.isSuspended && (
 					this.meta.ugcVisibilityForVisitor === 'all' ||
 						(this.meta.ugcVisibilityForVisitor === 'local' && user.host == null)
 				)
 			) {
-				const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id);
 
 				reply.header('Cache-Control', 'public, max-age=15');
 				if (profile.preventAiLearning) {
@@ -547,13 +514,9 @@ export class ClientServerService {
 		});
 
 		fastify.get<{ Params: { user: string; } }>('/users/:user', async (request, reply) => {
-			const user = await this.usersRepository.findOneBy({
-				id: request.params.user,
-				host: IsNull(),
-				isSuspended: false,
-			});
+			const user = await fetchLocalUserByIdFromDatabase(this.drizzle, request.params.user);
 
-			if (user == null) {
+			if (user == null || user.isSuspended) {
 				reply.code(404);
 				return;
 			}
@@ -567,27 +530,22 @@ export class ClientServerService {
 		fastify.get<{ Params: { note: string; } }>('/notes/:note', async (request, reply) => {
 			vary(reply.raw, 'Accept');
 
-			const note = await this.notesRepository.findOne({
-				where: {
-					id: request.params.note,
-					visibility: In(['public', 'home']),
-				},
-				relations: {
-					user: true,
-					reply: true,
-					renote: true,
-				},
-			});
+			const note = await fetchNoteByIdFromDatabase(this.drizzle, request.params.note);
+			const noteUser = note != null && ['public', 'home'].includes(note.visibility)
+				? await fetchUserByIdFromDatabase(this.drizzle, note.userId)
+				: null;
 
 			if (
 				note &&
-				!note.user!.requireSigninToViewContents &&
+				noteUser != null &&
+				!noteUser.requireSigninToViewContents &&
+				['public', 'home'].includes(note.visibility) &&
 				(this.meta.ugcVisibilityForVisitor === 'all' ||
 					(this.meta.ugcVisibilityForVisitor === 'local' && note.userHost == null)
 				)
 			) {
 				const _note = await this.noteEntityService.pack(note);
-				const profile = await this.userProfilesRepository.findOneByOrFail({ userId: note.userId });
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, note.userId);
 				reply.header('Cache-Control', 'public, max-age=15');
 				if (profile.preventAiLearning) {
 					reply.header('X-Robots-Tag', 'noimageai');
@@ -609,21 +567,15 @@ export class ClientServerService {
 		// Page
 		fastify.get<{ Params: { user: string; page: string; } }>('/@:user/pages/:page', async (request, reply) => {
 			const { username, host } = Acct.parse(request.params.user);
-			const user = await this.usersRepository.findOneBy({
-				usernameLower: username.toLowerCase(),
-				host: host ?? IsNull(),
-			});
+			const user = await fetchUserByUsernameAndHostFromDatabase(this.drizzle, username, host ?? null);
 
 			if (user == null) return;
 
-			const page = await this.pagesRepository.findOneBy({
-				name: request.params.page,
-				userId: user.id,
-			});
+			const page = await fetchPageByNameAndUserIdFromDatabase(this.drizzle, request.params.page, user.id);
 
 			if (page) {
 				const _page = await this.pageEntityService.pack(page);
-				const profile = await this.userProfilesRepository.findOneByOrFail({ userId: page.userId });
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, page.userId);
 				if (['public'].includes(page.visibility)) {
 					reply.header('Cache-Control', 'public, max-age=15');
 				} else {
@@ -645,13 +597,11 @@ export class ClientServerService {
 
 		// Flash
 		fastify.get<{ Params: { id: string; } }>('/play/:id', async (request, reply) => {
-			const flash = await this.flashsRepository.findOneBy({
-				id: request.params.id,
-			});
+			const flash = await fetchFlashByIdFromDatabase(this.drizzle, request.params.id);
 
 			if (flash) {
 				const _flash = await this.flashEntityService.pack(flash);
-				const profile = await this.userProfilesRepository.findOneByOrFail({ userId: flash.userId });
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, flash.userId);
 				reply.header('Cache-Control', 'public, max-age=15');
 				if (profile.preventAiLearning) {
 					reply.header('X-Robots-Tag', 'noimageai');
@@ -669,13 +619,11 @@ export class ClientServerService {
 
 		// Clip
 		fastify.get<{ Params: { clip: string; } }>('/clips/:clip', async (request, reply) => {
-			const clip = await this.clipsRepository.findOneBy({
-				id: request.params.clip,
-			});
+			const clip = await fetchClipByIdFromDatabase(this.drizzle, request.params.clip);
 
 			if (clip && clip.isPublic) {
 				const _clip = await this.clipEntityService.pack(clip);
-				const profile = await this.userProfilesRepository.findOneByOrFail({ userId: clip.userId });
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, clip.userId);
 				reply.header('Cache-Control', 'public, max-age=15');
 				if (profile.preventAiLearning) {
 					reply.header('X-Robots-Tag', 'noimageai');
@@ -696,11 +644,11 @@ export class ClientServerService {
 
 		// Gallery post
 		fastify.get<{ Params: { post: string; } }>('/gallery/:post', async (request, reply) => {
-			const post = await this.galleryPostsRepository.findOneBy({ id: request.params.post });
+			const post = await fetchGalleryPostByIdFromDatabase(this.drizzle, request.params.post);
 
 			if (post) {
 				const _post = await this.galleryPostEntityService.pack(post);
-				const profile = await this.userProfilesRepository.findOneByOrFail({ userId: post.userId });
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, post.userId);
 				reply.header('Cache-Control', 'public, max-age=15');
 				if (profile.preventAiLearning) {
 					reply.header('X-Robots-Tag', 'noimageai');
@@ -718,9 +666,7 @@ export class ClientServerService {
 
 		// Channel
 		fastify.get<{ Params: { channel: string; } }>('/channels/:channel', async (request, reply) => {
-			const channel = await this.channelsRepository.findOneBy({
-				id: request.params.channel,
-			});
+			const channel = await fetchChannelByIdFromDatabase(this.drizzle, request.params.channel);
 
 			if (channel) {
 				const _channel = await this.channelEntityService.pack(channel);
@@ -736,10 +682,7 @@ export class ClientServerService {
 
 		// 個別お知らせページ
 		fastify.get<{ Params: { announcementId: string; } }>('/announcements/:announcementId', async (request, reply) => {
-			const announcement = await this.announcementsRepository.findOneBy({
-				id: request.params.announcementId,
-				userId: IsNull(),
-			});
+			const announcement = await fetchGlobalAnnouncementByIdFromDatabase(this.drizzle, request.params.announcementId);
 
 			if (announcement) {
 				const _announcement = await this.announcementEntityService.pack(announcement);
@@ -770,9 +713,7 @@ export class ClientServerService {
 		fastify.get<{ Params: { user: string; } }>('/embed/user-timeline/:user', async (request, reply) => {
 			reply.removeHeader('X-Frame-Options');
 
-			const user = await this.usersRepository.findOneBy({
-				id: request.params.user,
-			});
+			const user = await fetchUserByIdFromDatabase(this.drizzle, request.params.user);
 
 			if (user == null) return;
 			if (user.host != null) return;
@@ -792,16 +733,7 @@ export class ClientServerService {
 		fastify.get<{ Params: { note: string; } }>('/embed/notes/:note', async (request, reply) => {
 			reply.removeHeader('X-Frame-Options');
 
-			const note = await this.notesRepository.findOne({
-				where: {
-					id: request.params.note,
-				},
-				relations: {
-					user: true,
-					reply: true,
-					renote: true,
-				},
-			});
+			const note = await fetchNoteByIdFromDatabase(this.drizzle, request.params.note);
 
 			if (note == null) return;
 			if (['specified', 'followers'].includes(note.visibility)) return;
@@ -822,9 +754,7 @@ export class ClientServerService {
 		fastify.get<{ Params: { clip: string; } }>('/embed/clips/:clip', async (request, reply) => {
 			reply.removeHeader('X-Frame-Options');
 
-			const clip = await this.clipsRepository.findOneBy({
-				id: request.params.clip,
-			});
+			const clip = await fetchClipByIdFromDatabase(this.drizzle, request.params.clip);
 
 			if (clip == null) return;
 

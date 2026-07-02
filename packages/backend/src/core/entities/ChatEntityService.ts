@@ -5,30 +5,47 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { MiUser, ChatMessagesRepository, MiChatMessage, ChatRoomsRepository, MiChatRoom, MiChatRoomInvitation, ChatRoomInvitationsRepository, MiChatRoomMembership, ChatRoomMembershipsRepository } from '@/models/_.js';
+import type { MiUser, MiChatMessage } from '@/models/_.js';
+import type { MiChatRoom } from '@/models/ChatRoom.js';
+import type { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
+import type { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
+import {
+	fetchChatRoomByIdOrFailFromDatabase,
+	fetchChatRoomInvitationByIdOrFailFromDatabase,
+	fetchChatRoomInvitationFromDatabase,
+	fetchChatRoomMembershipByIdOrFailFromDatabase,
+	fetchChatRoomMembershipFromDatabase,
+	listChatRoomsByIdsFromDatabase,
+	listChatRoomInvitationsByRoomIdsAndUserIdFromDatabase,
+	listChatRoomMembershipsByRoomIdsAndUserIdFromDatabase,
+} from '@/core/ChatRoomStore.js';
+import { fetchChatMessageByIdOrFailFromDatabase } from '@/core/ChatMessageStore.js';
+import type { ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
+import type { ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UserEntityService } from './UserEntityService.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
-import { In } from 'typeorm';
+
+type ChatRoomInvitationPackable = ChatRoomInvitationRow & {
+	user?: MiUser | null;
+	room?: MiChatRoom | null;
+};
+
+type ChatRoomMembershipPackable = ChatRoomMembershipRow & {
+	user?: MiUser | null;
+	room?: MiChatRoom | null;
+};
 
 @Injectable()
 export class ChatEntityService {
 	constructor(
-		@Inject(DI.chatMessagesRepository)
-		private chatMessagesRepository: ChatMessagesRepository,
-
-		@Inject(DI.chatRoomsRepository)
-		private chatRoomsRepository: ChatRoomsRepository,
-
-		@Inject(DI.chatRoomInvitationsRepository)
-		private chatRoomInvitationsRepository: ChatRoomInvitationsRepository,
-
-		@Inject(DI.chatRoomMembershipsRepository)
-		private chatRoomMembershipsRepository: ChatRoomMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
@@ -52,7 +69,7 @@ export class ChatEntityService {
 		const packedFiles = options?._hint_?.packedFiles;
 		const packedRooms = options?._hint_?.packedRooms;
 
-		const message = typeof src === 'object' ? src : await this.chatMessagesRepository.findOneByOrFail({ id: src });
+		const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(this.db, src);
 
 		// userは削除されている可能性があるのでnull許容
 		const reactions: { user: Packed<'UserLite'> | null; reaction: string; }[] = [];
@@ -113,8 +130,7 @@ export class ChatEntityService {
 		const [packedUsers, packedFiles, packedRooms] = await Promise.all([
 			this.userEntityService.packMany(users, me)
 				.then(users => new Map(users.map(u => [u.id, u]))),
-			this.driveFileEntityService.packMany(messages.map(m => m.file).filter(x => x != null))
-				.then(files => new Map(files.map(f => [f.id, f]))),
+			this.driveFileEntityService.packManyByIdsMap(messages.map(m => m.fileId).filter(x => x != null)),
 			this.packRooms(messages.map(m => m.toRoom ?? m.toRoomId).filter(x => x != null), me)
 				.then(rooms => new Map(rooms.map(r => [r.id, r]))),
 		]);
@@ -133,7 +149,7 @@ export class ChatEntityService {
 	): Promise<Packed<'ChatMessageLiteFor1on1'>> {
 		const packedFiles = options?._hint_?.packedFiles;
 
-		const message = typeof src === 'object' ? src : await this.chatMessagesRepository.findOneByOrFail({ id: src });
+		const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(this.db, src);
 
 		const reactions: { reaction: string; }[] = [];
 
@@ -163,8 +179,7 @@ export class ChatEntityService {
 		if (messages.length === 0) return [];
 
 		const [packedFiles] = await Promise.all([
-			this.driveFileEntityService.packMany(messages.map(m => m.file).filter(x => x != null))
-				.then(files => new Map(files.map(f => [f.id, f]))),
+			this.driveFileEntityService.packManyByIdsMap(messages.map(m => m.fileId).filter(x => x != null)),
 		]);
 
 		return Promise.all(messages.map(message => this.packMessageLiteFor1on1(message, { _hint_: { packedFiles } })));
@@ -183,7 +198,7 @@ export class ChatEntityService {
 		const packedFiles = options?._hint_?.packedFiles;
 		const packedUsers = options?._hint_?.packedUsers;
 
-		const message = typeof src === 'object' ? src : await this.chatMessagesRepository.findOneByOrFail({ id: src });
+		const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(this.db, src);
 
 		// userは削除されている可能性があるのでnull許容
 		const reactions: { user: Packed<'UserLite'> | null; reaction: string; }[] = [];
@@ -227,8 +242,7 @@ export class ChatEntityService {
 		const [packedUsers, packedFiles] = await Promise.all([
 			this.userEntityService.packMany(users)
 				.then(users => new Map(users.map(u => [u.id, u]))),
-			this.driveFileEntityService.packMany(messages.map(m => m.file).filter(x => x != null))
-				.then(files => new Map(files.map(f => [f.id, f]))),
+			this.driveFileEntityService.packManyByIdsMap(messages.map(m => m.fileId).filter(x => x != null)),
 		]);
 
 		return Promise.all(messages.map(message => this.packMessageLiteForRoom(message, { _hint_: { packedFiles, packedUsers } })));
@@ -241,15 +255,15 @@ export class ChatEntityService {
 		options?: {
 			_hint_?: {
 				packedOwners: Map<MiChatRoom['id'], Packed<'UserLite'>>;
-				myMemberships?: Map<MiChatRoom['id'], MiChatRoomMembership | null | undefined>;
-				myInvitations?: Map<MiChatRoom['id'], MiChatRoomInvitation | null | undefined>;
+				myMemberships?: Map<MiChatRoom['id'], ChatRoomMembershipPackable | null | undefined>;
+				myInvitations?: Map<MiChatRoom['id'], ChatRoomInvitationPackable | null | undefined>;
 			};
 		},
 	): Promise<Packed<'ChatRoom'>> {
-		const room = typeof src === 'object' ? src : await this.chatRoomsRepository.findOneByOrFail({ id: src });
+		const room = typeof src === 'object' ? src : await fetchChatRoomByIdOrFailFromDatabase(this.db, src);
 
-		const membership = me && me.id !== room.ownerId ? (options?._hint_?.myMemberships?.get(room.id) ?? (await this.chatRoomMembershipsRepository.findOneBy({ roomId: room.id, userId: me.id }))) : null;
-		const invitation = me && me.id !== room.ownerId ? (options?._hint_?.myInvitations?.get(room.id) ?? (await this.chatRoomInvitationsRepository.findOneBy({ roomId: room.id, userId: me.id }))) : null;
+		const membership = me && me.id !== room.ownerId ? (options?._hint_?.myMemberships?.get(room.id) ?? (await fetchChatRoomMembershipFromDatabase(this.db, room.id, me.id))) : null;
+		const invitation = me && me.id !== room.ownerId ? (options?._hint_?.myInvitations?.get(room.id) ?? (await fetchChatRoomInvitationFromDatabase(this.db, room.id, me.id))) : null;
 
 		return {
 			id: room.id,
@@ -273,12 +287,7 @@ export class ChatEntityService {
 		const _rooms = rooms.filter((room): room is MiChatRoom => typeof room !== 'string');
 		if (_rooms.length !== rooms.length) {
 			_rooms.push(
-				...(await this.chatRoomsRepository.find({
-					where: {
-						id: In(rooms.filter((room): room is string => typeof room === 'string')),
-					},
-					relations: { owner: true },
-				})),
+				...(await listChatRoomsByIdsFromDatabase(this.db, rooms.filter((room): room is string => typeof room === 'string'))),
 			);
 		}
 
@@ -287,18 +296,10 @@ export class ChatEntityService {
 		const [packedOwners, myMemberships, myInvitations] = await Promise.all([
 			this.userEntityService.packMany(owners, me)
 				.then(users => new Map(users.map(u => [u.id, u]))),
-			this.chatRoomMembershipsRepository.find({
-				where: {
-					roomId: In(_rooms.map(x => x.id)),
-					userId: me.id,
-				},
-			}).then(memberships => new Map(_rooms.map(r => [r.id, memberships.find(m => m.roomId === r.id)]))),
-			this.chatRoomInvitationsRepository.find({
-				where: {
-					roomId: In(_rooms.map(x => x.id)),
-					userId: me.id,
-				},
-			}).then(invitations => new Map(_rooms.map(r => [r.id, invitations.find(i => i.roomId === r.id)]))),
+			listChatRoomMembershipsByRoomIdsAndUserIdFromDatabase(this.db, _rooms.map(x => x.id), me.id)
+				.then(memberships => new Map(_rooms.map(r => [r.id, memberships.find(m => m.roomId === r.id)]))),
+			listChatRoomInvitationsByRoomIdsAndUserIdFromDatabase(this.db, _rooms.map(x => x.id), me.id)
+				.then(invitations => new Map(_rooms.map(r => [r.id, invitations.find(i => i.roomId === r.id)]))),
 		]);
 
 		return Promise.all(_rooms.map(room => this.packRoom(room, me, { _hint_: { packedOwners, myMemberships, myInvitations } })));
@@ -306,16 +307,16 @@ export class ChatEntityService {
 
 	@bindThis
 	public async packRoomInvitation(
-		src: MiChatRoomInvitation['id'] | MiChatRoomInvitation,
+		src: MiChatRoomInvitation['id'] | ChatRoomInvitationPackable,
 		me: { id: MiUser['id'] },
 		options?: {
 			_hint_?: {
 				packedRooms: Map<MiChatRoomInvitation['roomId'], Packed<'ChatRoom'>>;
-				packedUsers: Map<MiChatRoomInvitation['id'], Packed<'UserLite'>>;
+				packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
 			};
 		},
 	): Promise<Packed<'ChatRoomInvitation'>> {
-		const invitation = typeof src === 'object' ? src : await this.chatRoomInvitationsRepository.findOneByOrFail({ id: src });
+		const invitation: ChatRoomInvitationPackable = typeof src === 'object' ? src : await fetchChatRoomInvitationByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: invitation.id,
@@ -329,7 +330,7 @@ export class ChatEntityService {
 
 	@bindThis
 	public async packRoomInvitations(
-		invitations: MiChatRoomInvitation[],
+		invitations: ChatRoomInvitationPackable[],
 		me: { id: MiUser['id'] },
 	) {
 		if (invitations.length === 0) return [];
@@ -339,18 +340,18 @@ export class ChatEntityService {
 
 	@bindThis
 	public async packRoomMembership(
-		src: MiChatRoomMembership['id'] | MiChatRoomMembership,
+		src: MiChatRoomMembership['id'] | ChatRoomMembershipPackable,
 		me: { id: MiUser['id'] },
 		options?: {
 			populateUser?: boolean;
 			populateRoom?: boolean;
 			_hint_?: {
 				packedRooms: Map<MiChatRoomMembership['roomId'], Packed<'ChatRoom'>>;
-				packedUsers: Map<MiChatRoomMembership['id'], Packed<'UserLite'>>;
+				packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
 			};
 		},
 	): Promise<Packed<'ChatRoomMembership'>> {
-		const membership = typeof src === 'object' ? src : await this.chatRoomMembershipsRepository.findOneByOrFail({ id: src });
+		const membership: ChatRoomMembershipPackable = typeof src === 'object' ? src : await fetchChatRoomMembershipByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: membership.id,
@@ -364,7 +365,7 @@ export class ChatEntityService {
 
 	@bindThis
 	public async packRoomMemberships(
-		memberships: MiChatRoomMembership[],
+		memberships: ChatRoomMembershipPackable[],
 		me: { id: MiUser['id'] },
 		options: {
 			populateUser?: boolean;

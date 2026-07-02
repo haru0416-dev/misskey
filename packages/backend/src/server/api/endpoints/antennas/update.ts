@@ -5,10 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { AntennasRepository, UserListsRepository } from '@/models/_.js';
+import { fetchAntennaByIdAndUserIdFromDatabase, fetchAntennaByIdOrFailFromDatabase, updateAntennaInDatabase } from '@/core/AntennaStore.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { AntennaEntityService } from '@/core/entities/AntennaEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -80,11 +82,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
-
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private antennaEntityService: AntennaEntityService,
 		private globalEventService: GlobalEventService,
@@ -96,10 +95,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 			// Fetch the antenna
-			const antenna = await this.antennasRepository.findOneBy({
-				id: ps.antennaId,
-				userId: me.id,
-			});
+			const antenna = await fetchAntennaByIdAndUserIdFromDatabase(this.db, ps.antennaId, me.id);
 
 			if (antenna == null) {
 				throw new ApiError(meta.errors.noSuchAntenna);
@@ -108,17 +104,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			let userList;
 
 			if ((ps.src === 'list' || antenna.src === 'list') && ps.userListId) {
-				userList = await this.userListsRepository.findOneBy({
-					id: ps.userListId,
-					userId: me.id,
-				});
+				userList = await fetchUserListByIdAndUserIdFromDatabase(this.db, ps.userListId, me.id);
 
 				if (userList == null) {
 					throw new ApiError(meta.errors.noSuchUserList);
 				}
 			}
 
-			await this.antennasRepository.update(antenna.id, {
+			await updateAntennaInDatabase(this.db, antenna.id, {
 				name: ps.name,
 				src: ps.src,
 				userListId: ps.userListId !== undefined ? userList ? userList.id : null : undefined,
@@ -135,7 +128,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				lastUsedAt: new Date(),
 			});
 
-			this.globalEventService.publishInternalEvent('antennaUpdated', await this.antennasRepository.findOneByOrFail({ id: antenna.id }));
+			this.globalEventService.publishInternalEvent('antennaUpdated', await fetchAntennaByIdOrFailFromDatabase(this.db, antenna.id));
 
 			return await this.antennaEntityService.pack(antenna.id);
 		});

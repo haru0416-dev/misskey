@@ -7,7 +7,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
-import type { NoteFavoritesRepository } from '@/models/_.js';
+import {
+	deleteNoteFavoriteByIdFromDatabase,
+	fetchNoteFavoriteFromDatabase,
+} from '@/core/NoteFavoriteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -43,8 +47,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.noteFavoritesRepository)
-		private noteFavoritesRepository: NoteFavoritesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 	) {
@@ -56,17 +60,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// if already favorited
-			const exist = await this.noteFavoritesRepository.findOneBy({
-				noteId: note.id,
-				userId: me.id,
-			});
+			const exist = await fetchNoteFavoriteFromDatabase(this.db, me.id, note.id);
 
 			if (exist == null) {
 				throw new ApiError(meta.errors.notFavorited);
 			}
 
 			// Delete favorite
-			await this.noteFavoritesRepository.delete(exist.id);
+			await deleteNoteFavoriteByIdFromDatabase(this.db, exist.id);
 		});
 	}
 }

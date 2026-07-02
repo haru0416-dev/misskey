@@ -5,8 +5,9 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { NoteDraftsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
+import { countNoteDraftsByUserIdFromDatabase } from '@/core/NoteDraftStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['notes', 'drafts'],
@@ -37,15 +38,11 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.noteDraftsRepository)
-		private noteDraftsRepository: NoteDraftsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const count = await this.noteDraftsRepository.createQueryBuilder('drafts')
-				.where('drafts.userId = :meId', { meId: me.id })
-				.getCount();
-
-			return count;
+			return countNoteDraftsByUserIdFromDatabase(this.db, me.id);
 		});
 	}
 }

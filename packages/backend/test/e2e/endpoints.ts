@@ -6,27 +6,38 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeAll, test, expect } from 'vitest';
+import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // node-fetch only supports it's own Blob yet
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
-import { api, castAsError, initTestDb, post, role, signup, simpleGet, uploadFile } from '../utils.js';
+import { loadConfig } from '@/config.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { api, castAsError, post, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { MiUser } from '@/models/_.js';
 
 describe('Endpoints', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
 	let dave: misskey.entities.SignupResponse;
+	let db: MiDrizzleDatabase;
+	let pool: MiDrizzlePool | undefined;
 
 	beforeAll(async () => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		carol = await signup({ username: 'carol' });
 		dave = await signup({ username: 'dave' });
 		await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
 	}, 1000 * 60 * 2);
+
+	afterAll(async () => {
+		await pool?.end();
+	});
 
 	describe('signup', () => {
 		test('不正なユーザー名でアカウントが作成できない', async () => {
@@ -97,6 +108,145 @@ describe('Endpoints', () => {
 			});
 
 			assert.strictEqual(res.status, 200);
+		});
+	});
+
+	describe('auth/session', () => {
+		test('legacy auth session flow', async () => {
+			const app = await api('app/create', {
+				name: 'legacy auth test',
+				description: 'legacy auth test',
+				permission: ['read:account'],
+				callbackUrl: null,
+			});
+			assert.strictEqual(app.status, 200);
+			const appSecret = app.body.secret;
+			if (typeof appSecret !== 'string') {
+				assert.fail('app secret is missing');
+			}
+
+			const generated = await api('auth/session/generate', {
+				appSecret,
+			});
+			assert.strictEqual(generated.status, 200);
+			const sessionToken = generated.body.token;
+			assert.strictEqual(typeof sessionToken, 'string');
+			assert.ok(generated.body.url.endsWith(`/auth/${sessionToken}`));
+
+			const shown = await api('auth/session/show', {
+				token: sessionToken,
+			});
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.token, sessionToken);
+			assert.strictEqual(shown.body.app.id, app.body.id);
+
+			const pending = await api('auth/session/userkey', {
+				appSecret,
+				token: sessionToken,
+			});
+			assert.strictEqual(pending.status, 400);
+			assert.strictEqual(castAsError(pending.body as any).error.code, 'PENDING_SESSION');
+
+			const accepted = await api('auth/accept', {
+				token: sessionToken,
+			}, alice);
+			assert.strictEqual(accepted.status, 204);
+
+			const userkey = await api('auth/session/userkey', {
+				appSecret,
+				token: sessionToken,
+			});
+			assert.strictEqual(userkey.status, 200);
+			const accessToken = userkey.body.accessToken;
+			if (typeof accessToken !== 'string') {
+				assert.fail('access token is missing');
+			}
+			assert.strictEqual(userkey.body.user.id, alice.id);
+
+			const credential = await api('i', {}, {
+				token: accessToken,
+			});
+			assert.strictEqual(credential.status, 200);
+			assert.strictEqual(credential.body.id, alice.id);
+
+			const deleted = await api('auth/session/show', {
+				token: sessionToken,
+			});
+			assert.strictEqual(deleted.status, 400);
+			assert.strictEqual(castAsError(deleted.body as any).error.code, 'NO_SUCH_SESSION');
+		});
+	});
+
+	describe('app', () => {
+		test('app/create したアプリを app/show と my/apps で取得できる', async () => {
+			const created = await api('app/create', {
+				name: 'test app',
+				description: 'test app description',
+				permission: ['read:account'],
+				callbackUrl: null,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, 'test app');
+
+			const shown = await api('app/show', { appId: created.body.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.name, 'test app');
+			assert.strictEqual(shown.body.callbackUrl, null);
+			assert.strictEqual(shown.body.secret, undefined);
+
+			const notFound = await api('app/show', { appId: '0000000000000000' });
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.code, 'NO_SUCH_APP');
+
+			const mine = await api('my/apps', { limit: 100 }, alice);
+			assert.strictEqual(mine.status, 200);
+			assert.ok(mine.body.some(app => app.id === created.body.id));
+		});
+	});
+
+	describe('invite', () => {
+		test('invite/create したコードを invite/list で取得でき、invite/delete で削除できる', async () => {
+			const inviterRole = await role(alice, {}, { canInvite: { priority: 0, useDefault: false, value: true } });
+			await api('admin/roles/assign', { userId: bob.id, roleId: inviterRole.id }, alice);
+			await api('admin/roles/assign', { userId: carol.id, roleId: inviterRole.id }, alice);
+
+			const created = await api('invite/create', {}, bob);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.used, false);
+			assert.strictEqual(created.body.usedAt, null);
+			assert.strictEqual(created.body.createdBy?.id, bob.id);
+
+			const limit = await api('invite/limit', {}, bob);
+			assert.strictEqual(limit.status, 200);
+			assert.strictEqual(limit.body.remaining, null);
+
+			const list = await api('invite/list', {}, bob);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some(ticket => ticket.id === created.body.id));
+
+			const deletedByStranger = await api('invite/delete', { inviteId: created.body.id }, carol);
+			assert.strictEqual(deletedByStranger.status, 400);
+			assert.strictEqual(castAsError(deletedByStranger.body as any).error.code, 'ACCESS_DENIED');
+
+			const deleted = await api('invite/delete', { inviteId: created.body.id }, bob);
+			assert.strictEqual(deleted.status, 204);
+
+			const listAfterDelete = await api('invite/list', {}, bob);
+			assert.strictEqual(listAfterDelete.status, 200);
+			assert.ok(!listAfterDelete.body.some(ticket => ticket.id === created.body.id));
+		});
+
+		test('admin/invite/create したコードを admin/invite/list で取得できる', async () => {
+			const created = await api('admin/invite/create', { count: 2 }, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.length, 2);
+
+			const list = await api('admin/invite/list', { type: 'unused' }, alice);
+			assert.strictEqual(list.status, 200);
+			for (const ticket of created.body) {
+				assert.ok(list.body.some(x => x.id === ticket.id));
+			}
 		});
 	});
 
@@ -364,15 +514,12 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 
-			const connection = await initTestDb(true);
-			const Users = connection.getRepository(MiUser);
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.followersCount, 0);
 			assert.strictEqual(newBob.followingCount, 1);
-			const newAlice = await Users.findOneByOrFail({ id: alice.id });
+			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
 			assert.strictEqual(newAlice.followersCount, 1);
 			assert.strictEqual(newAlice.followingCount, 0);
-			connection.destroy();
 		});
 
 		test('既にフォローしている場合は怒る', async () => {
@@ -427,15 +574,12 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 
-			const connection = await initTestDb(true);
-			const Users = connection.getRepository(MiUser);
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.followersCount, 0);
 			assert.strictEqual(newBob.followingCount, 0);
-			const newAlice = await Users.findOneByOrFail({ id: alice.id });
+			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
 			assert.strictEqual(newAlice.followersCount, 0);
 			assert.strictEqual(newAlice.followingCount, 0);
-			connection.destroy();
 		});
 
 		test('フォローしていない場合は怒る', async () => {

@@ -5,16 +5,17 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { In } from 'typeorm';
+import { appendUserToAntennasInDatabase, listActiveAntennasFromDatabase, listAntennasByIdsFromDatabase } from '@/core/AntennaStore.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Acct from '@/misc/acct.js';
 import type { Packed } from '@/misc/json-schema.js';
-import type { AntennasRepository, UserListMembershipsRepository } from '@/models/_.js';
+import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -33,11 +34,8 @@ export class AntennaService implements OnApplicationShutdown {
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
 
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 		private utilityService: UtilityService,
@@ -138,12 +136,7 @@ export class AntennaService implements OnApplicationShutdown {
 			// TODO
 		} else if (antenna.src === 'list') {
 			if (antenna.userListId == null) return false;
-			const exists = await this.userListMembershipsRepository.exists({
-				where: {
-					userListId: antenna.userListId,
-					userId: note.userId,
-				},
-			});
+			const exists = await userListMembershipExistsInDatabase(this.db, note.userId, antenna.userListId);
 			if (!exists) return false;
 		} else if (antenna.src === 'users') {
 			const accts = antenna.users.map(x => {
@@ -211,9 +204,7 @@ export class AntennaService implements OnApplicationShutdown {
 	@bindThis
 	public async getAntennas() {
 		if (!this.antennasFetched) {
-			this.antennas = await this.antennasRepository.findBy({
-				isActive: true,
-			});
+			this.antennas = await listActiveAntennasFromDatabase(this.db);
 			this.antennasFetched = true;
 		}
 
@@ -240,17 +231,10 @@ export class AntennaService implements OnApplicationShutdown {
 		// Update the antennas by appending dst users acct to the users list
 		const dstUserAcct = '@' + Acct.toString({ username: dst.username, host: dst.host });
 
-		await this.antennasRepository.createQueryBuilder('antenna')
-			.update()
-			.set({
-				users: () => 'array_append(antenna.users, :dstUserAcct)',
-			})
-			.where('antenna.id IN (:...antennaIds)', { antennaIds })
-			.setParameters({ dstUserAcct })
-			.execute();
+		await appendUserToAntennasInDatabase(this.db, antennaIds, dstUserAcct);
 
 		// announce update to event
-		for (const newAntenna of await this.antennasRepository.findBy({ id: In(antennaIds) })) {
+		for (const newAntenna of await listAntennasByIdsFromDatabase(this.db, antennaIds)) {
 			this.globalEventService.publishInternalEvent('antennaUpdated', newAntenna);
 		}
 	}

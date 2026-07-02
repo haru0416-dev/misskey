@@ -11,7 +11,8 @@ import { setTimeout } from 'node:timers/promises';
 import * as assert from 'assert';
 import { afterAll, beforeAll, afterEach, describe, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { MiRepository, MiUser, UsersRepository, miRepository } from '@/models/_.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { jobQueue } from '@/boot/common.js';
 import { api, castAsError, initTestDb, signup, successfulApiCall, uploadFile } from '../utils.js';
@@ -29,14 +30,17 @@ describe('Account Move', () => {
 	let eve: misskey.entities.SignupResponse;
 	let frank: misskey.entities.SignupResponse;
 
-	let Users: UsersRepository;
+	let db: MiDrizzleDatabase;
+	let pool: MiDrizzlePool | undefined;
 
 	beforeAll(async () => {
 		jq = await jobQueue();
 
 		const config = loadConfig();
 		url = new URL(config.url);
-		const connection = await initTestDb(false);
+		await initTestDb(false);
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		root = await signup({ username: 'root' });
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -44,16 +48,16 @@ describe('Account Move', () => {
 		dave = await signup({ username: 'dave' });
 		eve = await signup({ username: 'eve' });
 		frank = await signup({ username: 'frank' });
-		Users = connection.getRepository(MiUser).extend(miRepository as MiRepository<MiUser>);
 	}, 1000 * 60 * 2);
 
 	afterAll(async () => {
+		await pool?.end();
 		await jq.close();
 	});
 
 	describe('Create Alias', () => {
 		afterEach(async () => {
-			await Users.update(bob.id, { alsoKnownAs: null });
+			await updateUserInDatabase(db, bob.id, { alsoKnownAs: null });
 		}, 1000 * 10);
 
 		test('Able to create an alias', async () => {
@@ -61,7 +65,7 @@ describe('Account Move', () => {
 				alsoKnownAs: [`@alice@${url.hostname}`],
 			}, bob);
 
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 1);
 			assert.strictEqual(newBob.alsoKnownAs[0], `${url.origin}/users/${alice.id}`);
 			assert.strictEqual(res.body.alsoKnownAs?.length, 1);
@@ -73,7 +77,7 @@ describe('Account Move', () => {
 				alsoKnownAs: ['@alice'],
 			}, bob);
 
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 1);
 			assert.strictEqual(newBob.alsoKnownAs[0], `${url.origin}/users/${alice.id}`);
 		});
@@ -83,7 +87,7 @@ describe('Account Move', () => {
 				alsoKnownAs: ['alice'],
 			}, bob);
 
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 1);
 			assert.strictEqual(newBob.alsoKnownAs[0], `${url.origin}/users/${alice.id}`);
 		});
@@ -141,7 +145,7 @@ describe('Account Move', () => {
 				alsoKnownAs: [`@alice@${url.hostname}`, `@carol@${url.hostname}`],
 			}, bob);
 
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 2);
 			assert.strictEqual(newBob.alsoKnownAs[0], `${url.origin}/users/${alice.id}`);
 			assert.strictEqual(newBob.alsoKnownAs[1], `${url.origin}/users/${carol.id}`);
@@ -155,7 +159,7 @@ describe('Account Move', () => {
 				alsoKnownAs: [`@carol@${url.hostname}`, `@dave@${url.hostname}`],
 			}, bob);
 
-			const newBob = await Users.findOneByOrFail({ id: bob.id });
+			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 2);
 			assert.strictEqual(newBob.alsoKnownAs[0], `${url.origin}/users/${carol.id}`);
 			assert.strictEqual(newBob.alsoKnownAs[1], `${url.origin}/users/${dave.id}`);
@@ -364,9 +368,9 @@ describe('Account Move', () => {
 			await api('following/create', {
 				userId: alice.id,
 			}, eve);
-			const newAlice = await Users.findOneByOrFail({ id: alice.id });
-			const newCarol = await Users.findOneByOrFail({ id: carol.id });
-			let newEve = await Users.findOneByOrFail({ id: eve.id });
+			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
+			const newCarol = await fetchUserByIdOrFailFromDatabase(db, carol.id);
+			let newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
 			assert.strictEqual(newAlice.movedToUri, `${url.origin}/users/${bob.id}`);
 			assert.strictEqual(newAlice.followingCount, 0);
 			assert.strictEqual(newAlice.followersCount, 0);
@@ -377,7 +381,7 @@ describe('Account Move', () => {
 			await api('following/delete', {
 				userId: alice.id,
 			}, eve);
-			newEve = await Users.findOneByOrFail({ id: eve.id });
+			newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
 			assert.strictEqual(newEve.followingCount, 1);
 			assert.strictEqual(newEve.followersCount, 1);
 		});

@@ -5,10 +5,12 @@
 
 import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
-import { MoreThan } from 'typeorm';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository, BlockingsRepository, MiBlocking } from '@/models/_.js';
+import type { MiBlocking } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/BlockingStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -24,11 +26,8 @@ export class ExportBlockingProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private notificationService: NotificationService,
@@ -42,7 +41,7 @@ export class ExportBlockingProcessorService {
 	public async process(job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 		this.logger.info(`Exporting blocking of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
@@ -58,20 +57,12 @@ export class ExportBlockingProcessorService {
 			let exportedCount = 0;
 			let cursor: MiBlocking['id'] | null = null;
 
-			const total = await this.blockingsRepository.countBy({
-				blockerId: user.id,
-			});
+			const total = await countBlockingsByBlockerIdFromDatabase(this.db, user.id);
 
 			while (true) {
-				const blockings = await this.blockingsRepository.find({
-					where: {
-						blockerId: user.id,
-						...(cursor ? { id: MoreThan(cursor) } : {}),
-					},
-					take: 100,
-					order: {
-						id: 1,
-					},
+				const blockings = await listBlockingsByBlockerIdFromDatabase(this.db, user.id, {
+					limit: 100,
+					sinceId: cursor,
 				});
 
 				if (blockings.length === 0) {
@@ -82,7 +73,7 @@ export class ExportBlockingProcessorService {
 				cursor = blockings.at(-1)?.id ?? null;
 
 				for (const block of blockings) {
-					const u = await this.usersRepository.findOneBy({ id: block.blockeeId });
+					const u = await fetchUserByIdFromDatabase(this.db, block.blockeeId);
 					if (u == null) {
 						exportedCount++; continue;
 					}

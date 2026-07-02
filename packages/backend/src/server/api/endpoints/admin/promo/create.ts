@@ -5,8 +5,9 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { PromoNotesRepository } from '@/models/_.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { createPromoNoteInDatabase, isPromoNoteExists } from '@/core/PromoNoteStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '../../../error.js';
 
@@ -44,8 +45,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.promoNotesRepository)
-		private promoNotesRepository: PromoNotesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 	) {
@@ -55,13 +56,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw e;
 			});
 
-			const exist = await this.promoNotesRepository.exists({ where: { noteId: note.id } });
+			const exist = await isPromoNoteExists(this.drizzle, note.id);
 
 			if (exist) {
 				throw new ApiError(meta.errors.alreadyPromoted);
 			}
 
-			await this.promoNotesRepository.insert({
+			await createPromoNoteInDatabase(this.drizzle, {
 				noteId: note.id,
 				expiresAt: new Date(ps.expiresAt),
 				userId: note.userId,

@@ -5,15 +5,16 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Bull from 'bullmq';
-import { Not } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { InstancesRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import type Logger from '@/logger.js';
 import { ApRequestService } from '@/core/activitypub/ApRequestService.js';
 import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
 import { FetchInstanceMetadataService } from '@/core/FetchInstanceMetadataService.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import type { MiInstance } from '@/models/Instance.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listSuspendedInstancesFromDatabase } from '@/core/InstanceStore.js';
 import InstanceChart from '@/core/chart/charts/instance.js';
 import ApRequestChart from '@/core/chart/charts/ap-request.js';
 import FederationChart from '@/core/chart/charts/federation.js';
@@ -33,8 +34,8 @@ export class DeliverProcessorService {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private federatedInstanceService: FederatedInstanceService,
@@ -60,11 +61,7 @@ export class DeliverProcessorService {
 		// isSuspendedなら中断
 		let suspendedHosts = this.suspendedHostsCache.get();
 		if (suspendedHosts == null) {
-			suspendedHosts = await this.instancesRepository.find({
-				where: {
-					suspensionState: Not('none'),
-				},
-			});
+			suspendedHosts = await listSuspendedInstancesFromDatabase(this.db);
 			this.suspendedHostsCache.set(suspendedHosts);
 		}
 		if (suspendedHosts.map(x => x.host).includes(this.utilityService.toPuny(host))) {

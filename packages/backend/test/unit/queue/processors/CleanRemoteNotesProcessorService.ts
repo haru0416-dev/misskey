@@ -6,34 +6,34 @@
 import { describe, expect, test, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import ms from 'ms';
-import {
-	type MiNote,
-	type MiUser,
-	type NotesRepository,
-	type NoteFavoritesRepository,
-	type NoteReactionsRepository,
-	type UserNotePiningsRepository,
-	type UsersRepository,
-	type UserProfilesRepository,
-	MiMeta,
-} from '@/models/_.js';
+import { MiMeta } from '@/models/Meta.js';
+import type { MiNote } from '@/models/Note.js';
+import type { MiUser } from '@/models/User.js';
 import { CleanRemoteNotesProcessorService } from '@/queue/processors/CleanRemoteNotesProcessorService.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { QueueLoggerService } from '@/queue/QueueLoggerService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { noteFavorite } from '@/db/schema/note-favorite.js';
+import { noteReaction } from '@/db/schema/note-reaction.js';
+import { note, type NoteInsert } from '@/db/schema/note.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import { userNotePining } from '@/db/schema/user-note-pining.js';
+import { createNoteFavoriteInDatabase } from '@/core/NoteFavoriteStore.js';
+import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
+import { createNoteInDatabase, fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { createUserNotePiningInDatabase } from '@/core/UserNotePiningStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 describe('CleanRemoteNotesProcessorService', () => {
 	let app: TestingModule;
 	let service: CleanRemoteNotesProcessorService;
 	let idService: IdService;
-	let notesRepository: NotesRepository;
-	let noteFavoritesRepository: NoteFavoritesRepository;
-	let noteReactionsRepository: NoteReactionsRepository;
-	let userNotePiningsRepository: UserNotePiningsRepository;
-	let usersRepository: UsersRepository;
-	let userProfilesRepository: UserProfilesRepository;
+	let db: MiDrizzleDatabase;
 
 	// Local user
 	let alice: MiUser;
@@ -50,38 +50,34 @@ describe('CleanRemoteNotesProcessorService', () => {
 		updateProgress: vi.fn(),
 	});
 
-	async function createUser(data: Partial<MiUser> = {}) {
+	async function createUser(data: Partial<UserInsert> = {}) {
 		const id = idService.gen();
 		const un = data.username || secureRndstr(16);
-		const user = await usersRepository
-			.insert({
-				id,
-				username: un,
-				usernameLower: un.toLowerCase(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+		const user = await createUserInDatabase(db, {
+			id,
+			username: un,
+			usernameLower: un.toLowerCase(),
+			...data,
+		});
 
-		await userProfilesRepository.save({
+		await createUserProfileInDatabase(db, {
 			userId: id,
 		});
 
 		return user;
 	}
 
-	async function createNote(data: Partial<MiNote>, user: MiUser, time?: number): Promise<MiNote> {
+	async function createNote(data: Partial<NoteInsert>, user: MiUser, time?: number): Promise<MiNote> {
 		const id = idService.gen(time);
-		const note = await notesRepository
-			.insert({
-				id: id,
-				text: `note_${id}`,
-				userId: user.id,
-				userHost: user.host,
-				visibility: 'public',
-				...data,
-			})
-			.then(x => notesRepository.findOneByOrFail(x.identifiers[0]));
-		return note;
+		await createNoteInDatabase(db, {
+			id: id,
+			text: `note_${id}`,
+			userId: user.id,
+			userHost: user.host,
+			visibility: 'public',
+			...data,
+		});
+		return await fetchNoteByIdOrFailFromDatabase(db, id);
 	}
 
 	beforeAll(async () => {
@@ -112,12 +108,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 		service = app.get(CleanRemoteNotesProcessorService);
 		idService = app.get(IdService);
-		notesRepository = app.get(DI.notesRepository);
-		noteFavoritesRepository = app.get(DI.noteFavoritesRepository);
-		noteReactionsRepository = app.get(DI.noteReactionsRepository);
-		userNotePiningsRepository = app.get(DI.userNotePiningsRepository);
-		usersRepository = app.get(DI.usersRepository);
-		userProfilesRepository = app.get(DI.userProfilesRepository);
+		db = app.get(DI.drizzle);
 
 		alice = await createUser({ username: 'alice', host: null });
 		bob = await createUser({ username: 'bob', host: 'remote1.example.com' });
@@ -138,12 +129,10 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 	afterEach(async () => {
 		// Clean up test data
-		await Promise.all([
-			notesRepository.createQueryBuilder().delete().execute(),
-			userNotePiningsRepository.createQueryBuilder().delete().execute(),
-			noteFavoritesRepository.createQueryBuilder().delete().execute(),
-			noteReactionsRepository.createQueryBuilder().delete().execute(),
-		]);
+		await db.delete(noteFavorite);
+		await db.delete(userNotePining);
+		await db.delete(noteReaction);
+		await db.delete(note);
 	}, 60 * 1000);
 
 	afterAll(async () => {
@@ -211,7 +200,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			});
 
 			// Check side-by-side from all notes
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(4);
 			expect(remainingNotes.some(n => n.id === remoteNotes[0].id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === remoteNotes[1].id)).toBe(true);
@@ -231,7 +220,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// Favorite the note
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: olderRemoteNote.id,
@@ -242,7 +231,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNote = await notesRepository.findOneBy({ id: olderRemoteNote.id });
+			const remainingNote = await fetchNoteByIdFromDatabase(db, olderRemoteNote.id);
 			expect(remainingNote).not.toBeNull();
 		});
 
@@ -254,7 +243,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// Pin the note by the user who created it
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: bob.id, // Same user as the note creator
 				noteId: olderRemoteNote.id,
@@ -265,7 +254,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNote = await notesRepository.findOneBy({ id: olderRemoteNote.id });
+			const remainingNote = await fetchNoteByIdFromDatabase(db, olderRemoteNote.id);
 			expect(remainingNote).not.toBeNull();
 		});
 
@@ -283,7 +272,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNote = await notesRepository.findOneBy({ id: clippedNote.id });
+			const remainingNote = await fetchNoteByIdFromDatabase(db, clippedNote.id);
 			expect(remainingNote).not.toBeNull();
 		});
 
@@ -301,7 +290,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNote = await notesRepository.findOneBy({ id: clippedNote.id });
+			const remainingNote = await fetchNoteByIdFromDatabase(db, clippedNote.id);
 			expect(remainingNote).not.toBeNull();
 		});
 
@@ -324,7 +313,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(3);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === originalNote.id)).toBe(false);
 			expect(remainingNotes.some(n => n.id === replyNote.id)).toBe(false);
 			expect(remainingNotes.some(n => n.id === renoteNote.id)).toBe(false);
@@ -347,7 +336,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0); // Only the old note should be deleted
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === oldNote.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === recentReplyNote.id)).toBe(true); // Recent reply note should remain
 		});
@@ -374,7 +363,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === oldNote.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === recentReplyNote.id)).toBe(true); // Recent reply note should remain
 			expect(remainingNotes.some(n => n.id === oldReplyNote.id)).toBe(true); // Old reply note should be deleted
@@ -393,7 +382,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			}, carol, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 2000);
 
 			// Favorite the reply note
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: replyNote.id,
@@ -404,7 +393,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0); // Only the old note should be deleted
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === olderRemoteNote.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === replyNote.id)).toBe(true); // Recent reply note should remain
 		});
@@ -422,7 +411,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			}, carol, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 2000);
 
 			// Pin the reply note
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: carol.id,
 				noteId: replyNote.id,
@@ -433,7 +422,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0); // Only the old note should be deleted
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === olderRemoteNote.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === replyNote.id)).toBe(true); // Reply note should remain
 		});
@@ -456,7 +445,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0); // Both notes should be kept because reply is clipped
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === olderRemoteNote.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === replyNote.id)).toBe(true);
 		});
@@ -472,7 +461,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// Should NOT be deleted: old remote note but favorited
 			const favoritedNote = await createNote({}, carol, oldTime);
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: favoritedNote.id,
@@ -480,7 +469,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// Should NOT be deleted: old remote note but pinned
 			const pinnedNote = await createNote({}, bob, oldTime);
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: bob.id,
 				noteId: pinnedNote.id,
@@ -502,7 +491,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(1); // Only deletableNote should be deleted
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(5);
 			expect(remainingNotes.some(n => n.id === deletableNote.id)).toBe(false); // Deleted
 			expect(remainingNotes.some(n => n.id === favoritedNote.id)).toBe(true); // Kept
@@ -530,7 +519,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(AMOUNT);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(0);
 		});
 
@@ -630,7 +619,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(AMOUNT_BASE); // Assuming all replies are deletable
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(AMOUNT_BASE * 2); // Only replies should remain
 			noteIdsExpectedToBeDeleted.forEach(id => {
 				expect(remainingNotes.some(n => n.id === id)).toBe(false); // All original notes should be deleted
@@ -655,7 +644,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.skipped).toBe(false);
 
 			// All three notes must be physically removed from the database
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === note1.id)).toBe(false);
 			expect(remainingNotes.some(n => n.id === note2.id)).toBe(false);
 			expect(remainingNotes.some(n => n.id === note3.id)).toBe(false);
@@ -694,7 +683,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			// バッチログが少なくとも 2 回（最低 currentLimit * 2 = 200 < 350 なので2回以上）
 			expect(countBatchLogs(job)).toBeGreaterThanOrEqual(2);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(0);
 		}, 30 * 1000);
 
@@ -734,7 +723,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(100);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			blockA.forEach(n => {
 				expect(remainingNotes.some(r => r.id === n.id)).toBe(false);
 			});
@@ -785,7 +774,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.oldest).toBe(idService.parse(target.id).date.getTime());
 			expect(result.newest).toBe(idService.parse(target.id).date.getTime());
 
-			const remainingTarget = await notesRepository.findOneBy({ id: target.id });
+			const remainingTarget = await fetchNoteByIdFromDatabase(db, target.id);
 			expect(remainingTarget).toBeNull();
 		}, 30 * 1000);
 
@@ -811,7 +800,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(deletables.length);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(protectedNotes.length);
 			deletables.forEach(n => {
 				expect(remainingNotes.some(r => r.id === n.id)).toBe(false);
@@ -864,7 +853,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// alice (local) がリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: olderRemoteNote.id,
@@ -876,7 +865,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNote = await notesRepository.findOneBy({ id: olderRemoteNote.id });
+			const remainingNote = await fetchNoteByIdFromDatabase(db, olderRemoteNote.id);
 			expect(remainingNote).not.toBeNull();
 		});
 
@@ -887,7 +876,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
 			// carol (remote) がリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: carol.id,
 				noteId: olderRemoteNote.id,
@@ -899,7 +888,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(1);
 			expect(result.skipped).toBe(false);
 
-			const remainingNote = await notesRepository.findOneBy({ id: olderRemoteNote.id });
+			const remainingNote = await fetchNoteByIdFromDatabase(db, olderRemoteNote.id);
 			expect(remainingNote).toBeNull();
 		});
 
@@ -909,19 +898,19 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			const olderRemoteNote = await createNote({}, bob, Date.now() - ms(`${meta.remoteNotesCleaningExpiryDaysForEachNotes} days`) - 1000);
 
-			await noteReactionsRepository.save([
-				{
+			await Promise.all([
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: alice.id, // local
 					noteId: olderRemoteNote.id,
 					reaction: '👍',
-				},
-				{
+				}),
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: carol.id, // remote
 					noteId: olderRemoteNote.id,
 					reaction: '❤️',
-				},
+				}),
 			]);
 
 			const result = await service.process(job as any);
@@ -929,7 +918,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNote = await notesRepository.findOneBy({ id: olderRemoteNote.id });
+			const remainingNote = await fetchNoteByIdFromDatabase(db, olderRemoteNote.id);
 			expect(remainingNote).not.toBeNull();
 		});
 
@@ -942,7 +931,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const reply = await createNote({ replyId: root.id }, carol, oldTime - 1000);
 
 			// root にローカルユーザーがリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: root.id,
@@ -954,7 +943,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === root.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === reply.id)).toBe(true);
 		});
@@ -968,7 +957,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const reply = await createNote({ replyId: root.id }, carol, oldTime - 1000);
 
 			// reply にローカルユーザーがリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: reply.id,
@@ -980,7 +969,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === root.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === reply.id)).toBe(true);
 		});
@@ -994,19 +983,19 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const reply = await createNote({ replyId: root.id }, carol, oldTime - 1000);
 
 			// root と reply それぞれに リモートユーザーがリアクション
-			await noteReactionsRepository.save([
-				{
+			await Promise.all([
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: carol.id, // remote
 					noteId: root.id,
 					reaction: '👍',
-				},
-				{
+				}),
+				createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: bob.id, // remote
 					noteId: reply.id,
 					reaction: '❤️',
-				},
+				}),
 			]);
 
 			const result = await service.process(job as any);
@@ -1014,7 +1003,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(2);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === root.id)).toBe(false);
 			expect(remainingNotes.some(n => n.id === reply.id)).toBe(false);
 		});
@@ -1030,7 +1019,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			const r3 = await createNote({ replyId: r2.id }, carol, oldTime - 3000);
 
 			// 末端 r3 にローカルリアクション
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: r3.id,
@@ -1042,7 +1031,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(4);
 		});
 
@@ -1058,7 +1047,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			}
 			for (let i = 0; i < 5; i++) {
 				const n = await createNote({}, carol, oldTime - 100 - i);
-				await noteReactionsRepository.save({
+				await createNoteReactionInDatabase(db, {
 					id: idService.gen(),
 					userId: alice.id, // local
 					noteId: n.id,
@@ -1072,7 +1061,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(5);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			deletables.forEach(n => {
 				expect(remainingNotes.some(r => r.id === n.id)).toBe(false);
 			});
@@ -1105,7 +1094,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(job.updateProgress).toHaveBeenCalledWith(100);
 
 			// 削除件数と残件数の総和が AMOUNT と一致
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length + result.deletedCount).toBe(AMOUNT);
 		}, 30 * 1000);
 	});
@@ -1133,7 +1122,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 				transientErrors: 0,
 			});
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.some(n => n.id === newRoot.id)).toBe(true);
 			expect(remainingNotes.some(n => n.id === oldReply.id)).toBe(true);
 		});
@@ -1153,7 +1142,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(0);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 			expect(remainingNotes.length).toBe(5);
 		});
 
@@ -1194,7 +1183,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 2) お気に入り保護
 			const favorited = await createNote({}, bob, oldTime - 1);
-			await noteFavoritesRepository.save({
+			await createNoteFavoriteInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: favorited.id,
@@ -1202,7 +1191,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 3) ピン留め保護
 			const pinned = await createNote({}, bob, oldTime - 2);
-			await userNotePiningsRepository.save({
+			await createUserNotePiningInDatabase(db, {
 				id: idService.gen(),
 				userId: bob.id,
 				noteId: pinned.id,
@@ -1216,7 +1205,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 6) ローカルリアクション保護
 			const reactedByLocal = await createNote({}, bob, oldTime - 5);
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: reactedByLocal.id,
@@ -1225,7 +1214,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 
 			// 7) リモートのみリアクション → 保護されない（削除される）
 			const reactedByRemote = await createNote({}, bob, oldTime - 6);
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: carol.id, // remote
 				noteId: reactedByRemote.id,
@@ -1249,7 +1238,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			// 12) 古い root + 古い reply, reply にローカルリアクション → ツリー保護
 			const protectedTreeRoot = await createNote({}, bob, oldTime - 11);
 			const protectedTreeReply = await createNote({ replyId: protectedTreeRoot.id }, carol, oldTime - 12);
-			await noteReactionsRepository.save({
+			await createNoteReactionInDatabase(db, {
 				id: idService.gen(),
 				userId: alice.id,
 				noteId: protectedTreeReply.id,
@@ -1262,7 +1251,7 @@ describe('CleanRemoteNotesProcessorService', () => {
 			expect(result.deletedCount).toBe(4);
 			expect(result.skipped).toBe(false);
 
-			const remainingNotes = await notesRepository.find();
+			const remainingNotes = await db.select().from(note);
 
 			const expectDeleted = [plainDeletable, reactedByRemote, oldTreeRoot, oldTreeReply];
 			const expectKept = [

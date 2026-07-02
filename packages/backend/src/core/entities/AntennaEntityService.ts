@@ -4,8 +4,9 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
+import { fetchAntennaByIdOrFailFromDatabase } from '@/core/AntennaStore.js';
 import { DI } from '@/di-symbols.js';
-import type { AntennasRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import { bindThis } from '@/decorators.js';
@@ -14,8 +15,8 @@ import { IdService } from '@/core/IdService.js';
 @Injectable()
 export class AntennaEntityService {
 	constructor(
-		@Inject(DI.antennasRepository)
-		private antennasRepository: AntennasRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private idService: IdService,
 	) {
@@ -25,7 +26,7 @@ export class AntennaEntityService {
 	public async pack(
 		src: MiAntenna['id'] | MiAntenna,
 	): Promise<Packed<'Antenna'>> {
-		const antenna = typeof src === 'object' ? src : await this.antennasRepository.findOneByOrFail({ id: src });
+		const antenna = typeof src === 'object' ? src : await fetchAntennaByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: antenna.id,

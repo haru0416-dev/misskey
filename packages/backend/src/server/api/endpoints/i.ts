@@ -4,10 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserProfilesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../error.js';
 
 export const meta = {
@@ -41,8 +43,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 	) {
@@ -53,25 +55,23 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const today = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
 
 			// 渡ってきている user はキャッシュされていて古い可能性があるので改めて取得
-			const userProfile = await this.userProfilesRepository.findOne({
-				where: {
-					userId: user.id,
-				},
-				relations: { user: true },
-			});
+			const [userProfile, freshUser] = await Promise.all([
+				fetchUserProfileByUserIdFromDatabase(this.drizzle, user.id),
+				fetchUserByIdOrFailFromDatabase(this.drizzle, user.id),
+			]);
 
 			if (userProfile == null) {
 				throw new ApiError(meta.errors.userIsDeleted);
 			}
 
 			if (!userProfile.loggedInDates.includes(today)) {
-				this.userProfilesRepository.update({ userId: user.id }, {
+				updateUserProfileInDatabase(this.drizzle, user.id, {
 					loggedInDates: [...userProfile.loggedInDates, today],
 				});
 				userProfile.loggedInDates = [...userProfile.loggedInDates, today];
 			}
 
-			return await this.userEntityService.pack(userProfile.user!, userProfile.user!, {
+			return await this.userEntityService.pack(freshUser, freshUser, {
 				schema: 'MeDetailed',
 				includeSecrets: isSecure,
 				userProfile,

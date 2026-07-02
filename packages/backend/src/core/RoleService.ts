@@ -5,19 +5,16 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { In } from 'typeorm';
 import { ModuleRef } from '@nestjs/core';
 import type {
 	MiMeta,
 	MiRole,
-	MiRoleAssignment,
-	RoleAssignmentsRepository,
-	RolesRepository,
-	UsersRepository,
 } from '@/models/_.js';
 import { MemoryKVCache, MemorySingleCache } from '@/misc/cache.js';
 import type { MiUser } from '@/models/User.js';
+import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { Config } from '@/config.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { CacheService } from '@/core/CacheService.js';
@@ -30,6 +27,23 @@ import { ModerationLogService } from '@/core/ModerationLogService.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import { NotificationService } from '@/core/NotificationService.js';
+import {
+	createRoleAssignmentInDatabase,
+	deleteRoleAssignmentByIdFromDatabase,
+	deleteRoleAssignmentByUserIdAndRoleIdFromDatabase,
+	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
+	listRoleAssignmentsByRoleIdsFromDatabase,
+	listRoleAssignmentsByUserIdFromDatabase,
+} from '@/core/RoleAssignmentStore.js';
+import {
+	createRoleInDatabase,
+	deleteRoleInDatabase,
+	fetchRoleByIdFromDatabase,
+	fetchRoleByIdOrFailFromDatabase,
+	listRolesFromDatabase,
+	updateRoleInDatabase,
+} from '@/core/RoleStore.js';
+import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 
 // misskey-js の rolePolicies と同期すべし
@@ -147,14 +161,8 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.rolesRepository)
-		private rolesRepository: RolesRepository,
-
-		@Inject(DI.roleAssignmentsRepository)
-		private roleAssignmentsRepository: RoleAssignmentsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private cacheService: CacheService,
 		private userEntityService: UserEntityService,
@@ -328,14 +336,14 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async getRoles() {
-		const roles = await this.rolesCache.fetch(() => this.rolesRepository.findBy({}));
+		const roles = await this.rolesCache.fetch(() => listRolesFromDatabase(this.db));
 		return roles;
 	}
 
 	@bindThis
 	public async getUserAssigns(userId: MiUser['id']) {
 		const now = Date.now();
-		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => this.roleAssignmentsRepository.findBy({ userId }));
+		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => listRoleAssignmentsByUserIdFromDatabase(this.db, userId));
 		// 期限切れのロールを除外
 		assigns = assigns.filter(a => a.expiresAt == null || (a.expiresAt.getTime() > now));
 		return assigns;
@@ -343,7 +351,7 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async getUserRoles(userId: MiUser['id']) {
-		const roles = await this.rolesCache.fetch(() => this.rolesRepository.findBy({}));
+		const roles = await this.rolesCache.fetch(() => listRolesFromDatabase(this.db));
 		const assigns = await this.getUserAssigns(userId);
 		const assignedRoles = roles.filter(r => assigns.map(x => x.roleId).includes(r.id));
 		const user = roles.some(r => r.target === 'conditional') ? await this.cacheService.findUserById(userId) : null;
@@ -357,10 +365,10 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	@bindThis
 	public async getUserBadgeRoles(userId: MiUser['id']) {
 		const now = Date.now();
-		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => this.roleAssignmentsRepository.findBy({ userId }));
+		let assigns = await this.roleAssignmentByUserIdCache.fetch(userId, () => listRoleAssignmentsByUserIdFromDatabase(this.db, userId));
 		// 期限切れのロールを除外
 		assigns = assigns.filter(a => a.expiresAt == null || (a.expiresAt.getTime() > now));
-		const roles = await this.rolesCache.fetch(() => this.rolesRepository.findBy({}));
+		const roles = await this.rolesCache.fetch(() => listRolesFromDatabase(this.db));
 		const assignedRoles = roles.filter(r => assigns.map(x => x.roleId).includes(r.id));
 		const assignedBadgeRoles = assignedRoles.filter(r => r.asBadge);
 		const badgeCondRoles = roles.filter(r => r.asBadge && (r.target === 'conditional'));
@@ -470,7 +478,7 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	@bindThis
 	public async isExplorable(role: { id: MiRole['id'] } | null): Promise<boolean> {
 		if (role == null) return false;
-		const check = await this.rolesRepository.findOneBy({ id: role.id });
+		const check = await fetchRoleByIdFromDatabase(this.db, role.id);
 		if (check == null) return false;
 		return check.isExplorable;
 	}
@@ -492,13 +500,13 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 		const includeRoot = opts?.includeRoot ?? false;
 		const excludeExpire = opts?.excludeExpire ?? false;
 
-		const roles = await this.rolesCache.fetch(() => this.rolesRepository.findBy({}));
+		const roles = await this.rolesCache.fetch(() => listRolesFromDatabase(this.db));
 		const moderatorRoles = includeAdmins
 			? roles.filter(r => r.isModerator || r.isAdministrator)
 			: roles.filter(r => r.isModerator);
 
 		const assigns = moderatorRoles.length > 0
-			? await this.roleAssignmentsRepository.findBy({ roleId: In(moderatorRoles.map(r => r.id)) })
+			? await listRoleAssignmentsByRoleIdsFromDatabase(this.db, moderatorRoles.map(r => r.id))
 			: [];
 
 		// Setを経由して重複を除去（ユーザIDは重複する可能性があるので）
@@ -528,19 +536,17 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	}): Promise<MiUser[]> {
 		const ids = await this.getModeratorIds(opts);
 		return ids.length > 0
-			? await this.usersRepository.findBy({
-				id: In(ids),
-			})
+			? await listUsersByIdsFromDatabase(this.db, ids, { includeSuspended: true })
 			: [];
 	}
 
 	@bindThis
 	public async getAdministratorIds(): Promise<MiUser['id'][]> {
-		const roles = await this.rolesCache.fetch(() => this.rolesRepository.findBy({}));
+		const roles = await this.rolesCache.fetch(() => listRolesFromDatabase(this.db));
 		const administratorRoles = roles.filter(r => r.isAdministrator);
-		const assigns = administratorRoles.length > 0 ? await this.roleAssignmentsRepository.findBy({
-			roleId: In(administratorRoles.map(r => r.id)),
-		}) : [];
+		const assigns = administratorRoles.length > 0
+			? await listRoleAssignmentsByRoleIdsFromDatabase(this.db, administratorRoles.map(r => r.id))
+			: [];
 		// TODO: isRootなアカウントも含める
 		// Setを経由して重複を除去（ユーザIDは重複する可能性があるので）
 		return [...new Set(assigns.map(a => a.userId))].sort((x, y) => x.localeCompare(y));
@@ -549,9 +555,7 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	@bindThis
 	public async getAdministrators(): Promise<MiUser[]> {
 		const ids = await this.getAdministratorIds();
-		const users = ids.length > 0 ? await this.usersRepository.findBy({
-			id: In(ids),
-		}) : [];
+		const users = ids.length > 0 ? await listUsersByIdsFromDatabase(this.db, ids, { includeSuspended: true }) : [];
 		return users;
 	}
 
@@ -559,38 +563,32 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	public async assign(userId: MiUser['id'], roleId: MiRole['id'], expiresAt: Date | null = null, moderator?: MiUser): Promise<void> {
 		const now = Date.now();
 
-		const role = await this.rolesRepository.findOneByOrFail({ id: roleId });
+		const role = await fetchRoleByIdOrFailFromDatabase(this.db, roleId);
 
-		const existing = await this.roleAssignmentsRepository.findOneBy({
-			roleId: roleId,
-			userId: userId,
-		});
+		const existing = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 
 		if (existing) {
 			if (existing.expiresAt && (existing.expiresAt.getTime() < now)) {
-				await this.roleAssignmentsRepository.delete({
-					roleId: roleId,
-					userId: userId,
-				});
+				await deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 			} else {
 				throw new RoleService.AlreadyAssignedError();
 			}
 		}
 
-		const created = await this.roleAssignmentsRepository.insertOne({
+		const created = await createRoleAssignmentInDatabase(this.db, {
 			id: this.idService.gen(now),
 			expiresAt: expiresAt,
 			roleId: roleId,
 			userId: userId,
 		});
 
-		this.rolesRepository.update(roleId, {
+		await updateRoleInDatabase(this.db, roleId, {
 			lastUsedAt: new Date(),
 		});
 
 		this.globalEventService.publishInternalEvent('userRoleAssigned', created);
 
-		const user = await this.usersRepository.findOneByOrFail({ id: userId });
+		const user = await fetchUserByIdOrFailFromDatabase(this.db, userId);
 
 		if (role.isPublic && user.host === null) {
 			this.notificationService.createNotification(userId, 'roleAssigned', {
@@ -614,20 +612,17 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	public async unassign(userId: MiUser['id'], roleId: MiRole['id'], moderator?: MiUser): Promise<void> {
 		const now = new Date();
 
-		const existing = await this.roleAssignmentsRepository.findOneBy({ roleId, userId });
+		const existing = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 		if (existing == null) {
 			throw new RoleService.NotAssignedError();
 		} else if (existing.expiresAt && (existing.expiresAt.getTime() < now.getTime())) {
-			await this.roleAssignmentsRepository.delete({
-				roleId: roleId,
-				userId: userId,
-			});
+			await deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
 			throw new RoleService.NotAssignedError();
 		}
 
-		await this.roleAssignmentsRepository.delete(existing.id);
+		await deleteRoleAssignmentByIdFromDatabase(this.db, existing.id);
 
-		this.rolesRepository.update(roleId, {
+		await updateRoleInDatabase(this.db, roleId, {
 			lastUsedAt: now,
 		});
 
@@ -635,8 +630,8 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 		if (moderator) {
 			const [user, role] = await Promise.all([
-				this.usersRepository.findOneByOrFail({ id: userId }),
-				this.rolesRepository.findOneByOrFail({ id: roleId }),
+				fetchUserByIdOrFailFromDatabase(this.db, userId),
+				fetchRoleByIdOrFailFromDatabase(this.db, roleId),
 			]);
 			this.moderationLogService.log(moderator, 'unassignRole', {
 				roleId: roleId,
@@ -665,25 +660,25 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	@bindThis
 	public async create(values: Partial<MiRole>, moderator?: MiUser): Promise<MiRole> {
 		const date = new Date();
-		const created = await this.rolesRepository.insertOne({
+		const created = await createRoleInDatabase(this.db, {
 			id: this.idService.gen(date.getTime()),
 			updatedAt: date,
 			lastUsedAt: date,
-			name: values.name,
-			description: values.description,
+			name: values.name!,
+			description: values.description!,
 			color: values.color,
 			iconUrl: values.iconUrl,
-			target: values.target,
-			condFormula: values.condFormula,
-			isPublic: values.isPublic,
-			isAdministrator: values.isAdministrator,
-			isModerator: values.isModerator,
-			isExplorable: values.isExplorable,
-			asBadge: values.asBadge,
-			preserveAssignmentOnMoveAccount: values.preserveAssignmentOnMoveAccount,
-			canEditMembersByModerator: values.canEditMembersByModerator,
-			displayOrder: values.displayOrder,
-			policies: values.policies,
+			target: values.target!,
+			condFormula: values.condFormula!,
+			isPublic: values.isPublic!,
+			isAdministrator: values.isAdministrator!,
+			isModerator: values.isModerator!,
+			isExplorable: values.isExplorable!,
+			asBadge: values.asBadge!,
+			preserveAssignmentOnMoveAccount: values.preserveAssignmentOnMoveAccount!,
+			canEditMembersByModerator: values.canEditMembersByModerator!,
+			displayOrder: values.displayOrder!,
+			policies: values.policies!,
 		});
 
 		this.globalEventService.publishInternalEvent('roleCreated', created);
@@ -701,12 +696,12 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	@bindThis
 	public async update(role: MiRole, params: Partial<MiRole>, moderator?: MiUser): Promise<void> {
 		const date = new Date();
-		await this.rolesRepository.update(role.id, {
+		await updateRoleInDatabase(this.db, role.id, {
 			updatedAt: date,
 			...params,
 		});
 
-		const updated = await this.rolesRepository.findOneByOrFail({ id: role.id });
+		const updated = await fetchRoleByIdOrFailFromDatabase(this.db, role.id);
 		this.globalEventService.publishInternalEvent('roleUpdated', updated);
 
 		if (moderator) {
@@ -720,7 +715,7 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async delete(role: MiRole, moderator?: MiUser): Promise<void> {
-		await this.rolesRepository.delete({ id: role.id });
+		await deleteRoleInDatabase(this.db, role.id);
 		this.globalEventService.publishInternalEvent('roleDeleted', role);
 
 		if (moderator) {

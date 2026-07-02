@@ -8,7 +8,7 @@ import type { Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomString } from '../utils.js';
 import { MiUser } from '@/models/User.js';
-import { MiWebhook, UsersRepository, WebhooksRepository } from '@/models/_.js';
+import type { MiWebhook } from '@/models/Webhook.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -16,6 +16,11 @@ import { DI } from '@/di-symbols.js';
 import { QueueService } from '@/core/QueueService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { UserWebhookService } from '@/core/UserWebhookService.js';
+import { webhook } from '@/db/schema/webhook.js';
+import { user, type UserInsert } from '@/db/schema/user.js';
+import { createWebhookInDatabase } from '@/core/WebhookStore.js';
+import { createUserInDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 describe('UserWebhookService', () => {
 	let app: TestingModule;
@@ -23,8 +28,7 @@ describe('UserWebhookService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	let usersRepository: UsersRepository;
-	let userWebhooksRepository: WebhooksRepository;
+	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let queueService: Mocked<QueueService>;
 
@@ -34,27 +38,23 @@ describe('UserWebhookService', () => {
 
 	// --------------------------------------------------------------------------------------
 
-	async function createUser(data: Partial<MiUser> = {}) {
-		return await usersRepository
-			.insert({
-				id: idService.gen(),
-				...data,
-			})
-			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	async function createUser(data: Partial<UserInsert> & Pick<UserInsert, 'username' | 'usernameLower'>) {
+		return await createUserInDatabase(db, {
+			id: idService.gen(),
+			...data,
+		});
 	}
 
 	async function createWebhook(data: Partial<MiWebhook> = {}) {
-		return userWebhooksRepository
-			.insert({
-				id: idService.gen(),
-				name: randomString(),
-				on: ['mention'],
-				url: 'https://example.com',
-				secret: randomString(),
-				userId: root.id,
-				...data,
-			})
-			.then(x => userWebhooksRepository.findOneByOrFail(x.identifiers[0]));
+		return createWebhookInDatabase(db, {
+			id: idService.gen(),
+			name: randomString(),
+			on: ['mention'],
+			url: 'https://example.com',
+			secret: randomString(),
+			userId: root.id,
+			...data,
+		});
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -77,8 +77,7 @@ describe('UserWebhookService', () => {
 			})
 			.compile();
 
-		usersRepository = app.get(DI.usersRepository);
-		userWebhooksRepository = app.get(DI.webhooksRepository);
+		db = app.get(DI.drizzle);
 
 		service = app.get(UserWebhookService);
 		idService = app.get(IdService);
@@ -96,8 +95,8 @@ describe('UserWebhookService', () => {
 	}
 
 	async function afterEachImpl() {
-		await usersRepository.createQueryBuilder().delete().execute();
-		await userWebhooksRepository.createQueryBuilder().delete().execute();
+		await db.delete(webhook);
+		await db.delete(user);
 	}
 
 	// --------------------------------------------------------------------------------------

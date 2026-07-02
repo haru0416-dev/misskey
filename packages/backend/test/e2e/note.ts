@@ -3,19 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Repository } from "typeorm";
-
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import { describe, beforeAll, afterAll, test } from 'vitest';
-import { MiNote } from '@/models/Note.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
+import { loadConfig } from '@/config.js';
+import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { api, castAsError, initTestDb, post, role, signup, uploadFile, uploadUrl } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Note', () => {
-	let Notes: Repository<MiNote>;
+	let db: MiDrizzleDatabase;
+	let pool: MiDrizzlePool | undefined;
 
 	let root: misskey.entities.SignupResponse;
 	let alice: misskey.entities.SignupResponse;
@@ -23,13 +24,19 @@ describe('Note', () => {
 	let tom: misskey.entities.SignupResponse;
 
 	beforeAll(async () => {
-		const connection = await initTestDb(true);
-		Notes = connection.getRepository(MiNote);
+		const config = loadConfig();
+		await initTestDb(true);
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		root = await signup({ username: 'root' });
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		tom = await signup({ username: 'tom', host: 'example.com' });
 	}, 1000 * 60 * 2);
+
+	afterAll(async () => {
+		await pool?.end();
+	});
 
 	test('投稿できる', async () => {
 		const post = {
@@ -41,6 +48,46 @@ describe('Note', () => {
 		assert.strictEqual(res.status, 200);
 		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
 		assert.strictEqual(res.body.createdNote.text, post.text);
+	});
+
+	test('お気に入りを作成・取得・削除できる', async () => {
+		const note = await post(bob, {
+			text: 'favorite target',
+		});
+
+		const initialState = await api('notes/state', { noteId: note.id }, alice);
+		assert.strictEqual(initialState.status, 200);
+		assert.strictEqual(initialState.body.isFavorited, false);
+
+		const create = await api('notes/favorites/create', { noteId: note.id }, alice);
+		assert.strictEqual(create.status, 204);
+
+		const favoritedState = await api('notes/state', { noteId: note.id }, alice);
+		assert.strictEqual(favoritedState.status, 200);
+		assert.strictEqual(favoritedState.body.isFavorited, true);
+
+		const duplicate = await api('notes/favorites/create', { noteId: note.id }, alice);
+		assert.strictEqual(duplicate.status, 400);
+		assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FAVORITED');
+
+		const favorites = await api('i/favorites', { limit: 10 }, alice);
+		assert.strictEqual(favorites.status, 200);
+		assert.ok(favorites.body.some(favorite => favorite.noteId === note.id && favorite.note.text === 'favorite target'));
+
+		const remove = await api('notes/favorites/delete', { noteId: note.id }, alice);
+		assert.strictEqual(remove.status, 204);
+
+		const removedState = await api('notes/state', { noteId: note.id }, alice);
+		assert.strictEqual(removedState.status, 200);
+		assert.strictEqual(removedState.body.isFavorited, false);
+
+		const removedFavorites = await api('i/favorites', { limit: 10 }, alice);
+		assert.strictEqual(removedFavorites.status, 200);
+		assert.strictEqual(removedFavorites.body.some(favorite => favorite.noteId === note.id), false);
+
+		const duplicateRemove = await api('notes/favorites/delete', { noteId: note.id }, alice);
+		assert.strictEqual(duplicateRemove.status, 400);
+		assert.strictEqual(castAsError(duplicateRemove.body as any).error.code, 'NOT_FAVORITED');
 	});
 
 	test('ファイルを添付できる', async () => {
@@ -338,7 +385,7 @@ describe('Note', () => {
 		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
 		assert.strictEqual(res.body.createdNote.text, post.text);
 
-		const noteDoc = await Notes.findOneBy({ id: res.body.createdNote.id });
+		const noteDoc = await fetchNoteByIdFromDatabase(db, res.body.createdNote.id);
 		assert.ok(noteDoc);
 		assert.deepStrictEqual(noteDoc.mentions, [bob.id]);
 	});
@@ -966,7 +1013,7 @@ describe('Note', () => {
 			}, alice);
 
 			assert.strictEqual(deleteOneRes.status, 204);
-			let mainNote = await Notes.findOneBy({ id: mainNoteRes.body.createdNote.id });
+			let mainNote = await fetchNoteByIdFromDatabase(db, mainNoteRes.body.createdNote.id);
 			assert.ok(mainNote);
 			assert.strictEqual(mainNote.repliesCount, 1);
 
@@ -975,7 +1022,7 @@ describe('Note', () => {
 			}, alice);
 
 			assert.strictEqual(deleteTwoRes.status, 204);
-			mainNote = await Notes.findOneBy({ id: mainNoteRes.body.createdNote.id });
+			mainNote = await fetchNoteByIdFromDatabase(db, mainNoteRes.body.createdNote.id);
 			assert.ok(mainNote);
 			assert.strictEqual(mainNote.repliesCount, 0);
 		});
@@ -1035,6 +1082,49 @@ describe('Note', () => {
 			// NOTE: デフォルトでは登録されていないので落ちる
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'UNAVAILABLE');
+		});
+	});
+
+	describe('notes/drafts', () => {
+		test('下書きの作成、更新、一覧、件数、削除ができる', async () => {
+			const beforeCount = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(beforeCount.status, 200);
+
+			const createRes = await api('notes/drafts/create', {
+				text: 'draft body',
+			}, alice);
+			assert.strictEqual(createRes.status, 200);
+			assert.strictEqual(createRes.body.createdDraft.text, 'draft body');
+
+			const draftId = createRes.body.createdDraft.id;
+
+			const countAfterCreate = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(countAfterCreate.status, 200);
+			assert.strictEqual(countAfterCreate.body, beforeCount.body + 1);
+
+			const listRes = await api('notes/drafts/list', {
+				limit: 10,
+				scheduled: false,
+			}, alice);
+			assert.strictEqual(listRes.status, 200);
+			assert.ok(listRes.body.some(draft => draft.id === draftId && draft.text === 'draft body'));
+
+			const updateRes = await api('notes/drafts/update', {
+				draftId,
+				text: 'updated draft body',
+			}, alice);
+			assert.strictEqual(updateRes.status, 200);
+			assert.strictEqual(updateRes.body.updatedDraft.id, draftId);
+			assert.strictEqual(updateRes.body.updatedDraft.text, 'updated draft body');
+
+			const deleteRes = await api('notes/drafts/delete', {
+				draftId,
+			}, alice);
+			assert.strictEqual(deleteRes.status, 204);
+
+			const countAfterDelete = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(countAfterDelete.status, 200);
+			assert.strictEqual(countAfterDelete.body, beforeCount.body);
 		});
 	});
 });

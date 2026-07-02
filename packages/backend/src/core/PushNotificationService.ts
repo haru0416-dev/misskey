@@ -10,9 +10,15 @@ import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { getNoteSummary } from '@/misc/get-note-summary.js';
-import type { MiMeta, MiSwSubscription, SwSubscriptionsRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiSwSubscription } from '@/models/SwSubscription.js';
 import { bindThis } from '@/decorators.js';
 import { RedisKVCache } from '@/misc/cache.js';
+import {
+	deleteSwSubscriptionForPushEndpointFromDatabase,
+	listSwSubscriptionsByUserIdFromDatabase,
+} from '@/core/SwSubscriptionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 // Defined also packages/sw/types.ts#L13
 type PushNotificationsTypes = {
@@ -60,13 +66,13 @@ export class PushNotificationService implements OnApplicationShutdown {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.swSubscriptionsRepository)
-		private swSubscriptionsRepository: SwSubscriptionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 	) {
 		this.subscriptionsCache = new RedisKVCache<MiSwSubscription[]>(this.redisClient, 'userSwSubscriptions', {
 			lifetime: 1000 * 60 * 60 * 1, // 1h
 			memoryCacheLifetime: 1000 * 60 * 3, // 3m
-			fetcher: (key) => this.swSubscriptionsRepository.findBy({ userId: key }),
+			fetcher: (key) => listSwSubscriptionsByUserIdFromDatabase(this.drizzle, key),
 			toRedisConverter: (value) => JSON.stringify(value),
 			fromRedisConverter: (value) => JSON.parse(value),
 		});
@@ -109,8 +115,8 @@ export class PushNotificationService implements OnApplicationShutdown {
 				//swLogger.info(err.body);
 
 				if (err.statusCode === 410) {
-					this.swSubscriptionsRepository.delete({
-						userId: userId,
+					deleteSwSubscriptionForPushEndpointFromDatabase(this.drizzle, {
+						userId,
 						endpoint: subscription.endpoint,
 						auth: subscription.auth,
 						publickey: subscription.publickey,

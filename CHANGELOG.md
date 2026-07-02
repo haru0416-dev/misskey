@@ -3,6 +3,10 @@
 ### General
 - Enhance: ゲーム機能を削除
 
+### Server
+- Enhance: データベースインデックスを追加し、一部のサーバー処理のパフォーマンスと重複登録耐性を改善
+- Enhance: バックエンドのデータベースアクセスを TypeORM から Drizzle に移行
+
 ## 2026.6.1
 
 ### Note

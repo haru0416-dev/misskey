@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { NoteThreadMutingsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
+import { deleteNoteThreadMutingFromDatabase } from '@/core/NoteThreadMutingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -37,8 +38,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.noteThreadMutingsRepository)
-		private noteThreadMutingsRepository: NoteThreadMutingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 	) {
@@ -48,10 +49,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 
-			await this.noteThreadMutingsRepository.delete({
-				threadId: note.threadId ?? note.id,
-				userId: me.id,
-			});
+			await deleteNoteThreadMutingFromDatabase(this.drizzle, me.id, note.threadId ?? note.id);
 		});
 	}
 }

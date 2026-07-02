@@ -6,13 +6,17 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
-import type { ChannelFollowingsRepository, ChannelsRepository, MiUser } from '@/models/_.js';
-import { MiChannel } from '@/models/_.js';
+import type { MiChannel, MiUser } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEvents, GlobalEventService } from '@/core/GlobalEventService.js';
 import { bindThis } from '@/decorators.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { RedisKVCache } from '@/misc/cache.js';
+import { createChannelFollowingInDatabase, deleteChannelFollowingFromDatabase, listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 
 @Injectable()
 export class ChannelFollowingService implements OnModuleInit {
@@ -23,20 +27,15 @@ export class ChannelFollowingService implements OnModuleInit {
 		private redisClient: Redis.Redis,
 		@Inject(DI.redisForSub)
 		private redisForSub: Redis.Redis,
-		@Inject(DI.channelsRepository)
-		private channelsRepository: ChannelsRepository,
-		@Inject(DI.channelFollowingsRepository)
-		private channelFollowingsRepository: ChannelFollowingsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
 	) {
 		this.userFollowingChannelsCache = new RedisKVCache<Set<string>>(this.redisClient, 'userFollowingChannels', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60, // 1m
-			fetcher: (key) => this.channelFollowingsRepository.find({
-				where: { followerId: key },
-				select: { followeeId: true },
-			}).then(xs => new Set(xs.map(x => x.followeeId))),
+			fetcher: (key) => listFollowedChannelIdsByUserIdFromDatabase(this.drizzle, key).then(xs => new Set(xs)),
 			toRedisConverter: (value) => JSON.stringify(Array.from(value)),
 			fromRedisConverter: (value) => new Set(JSON.parse(value)),
 		});
@@ -67,27 +66,33 @@ export class ChannelFollowingService implements OnModuleInit {
 		},
 	): Promise<MiChannel[]> {
 		if (opts?.idOnly) {
-			const q = this.channelFollowingsRepository.createQueryBuilder('channel_following')
-				.select('channel_following.followeeId')
-				.where('channel_following.followerId = :userId', { userId: params.requestUserId });
-
-			return q
-				.getRawMany<{ channel_following_followeeId: string }>()
-				.then(xs => xs.map(x => ({ id: x.channel_following_followeeId } as MiChannel)));
+			return await listFollowedChannelIdsByUserIdFromDatabase(this.drizzle, params.requestUserId)
+				.then(xs => xs.map(id => ({ id } as MiChannel)));
 		} else {
-			const q = this.channelsRepository.createQueryBuilder('channel')
-				.innerJoin('channel_following', 'channel_following', 'channel_following.followeeId = channel.id')
-				.where('channel_following.followerId = :userId', { userId: params.requestUserId });
+			const channelIds = await listFollowedChannelIdsByUserIdFromDatabase(this.drizzle, params.requestUserId);
+			const channelById = await listChannelsByIdsFromDatabase(this.drizzle, channelIds)
+				.then(channels => new Map(channels.map(channel => [channel.id, channel])));
+			const channels = channelIds
+				.map(id => channelById.get(id))
+				.filter(channel => channel != null);
 
-			if (opts?.joinUser) {
-				q.innerJoinAndSelect('channel.user', 'user');
+			if (opts?.joinUser && channels.length > 0) {
+				const userById = await listUsersByIdsFromDatabase(this.drizzle, channels.map(channel => channel.userId).filter(id => id != null), { includeSuspended: true })
+					.then(users => new Map(users.map(user => [user.id, user])));
+				for (const channel of channels) {
+					channel.user = channel.userId ? userById.get(channel.userId) ?? null : null;
+				}
 			}
 
-			if (opts?.joinBannerFile) {
-				q.leftJoinAndSelect('channel.banner', 'drive_file');
+			if (opts?.joinBannerFile && channels.length > 0) {
+				const fileById = await listDriveFilesByIdsFromDatabase(this.drizzle, channels.map(channel => channel.bannerId).filter(id => id != null))
+					.then(files => new Map(files.map(file => [file.id, file])));
+				for (const channel of channels) {
+					channel.banner = channel.bannerId ? fileById.get(channel.bannerId) ?? null : null;
+				}
 			}
 
-			return q.getMany();
+			return channels;
 		}
 	}
 
@@ -96,7 +101,7 @@ export class ChannelFollowingService implements OnModuleInit {
 		requestUser: MiLocalUser,
 		targetChannel: MiChannel,
 	): Promise<void> {
-		await this.channelFollowingsRepository.insert({
+		await createChannelFollowingInDatabase(this.drizzle, {
 			id: this.idService.gen(),
 			followerId: requestUser.id,
 			followeeId: targetChannel.id,
@@ -113,10 +118,7 @@ export class ChannelFollowingService implements OnModuleInit {
 		requestUser: MiLocalUser,
 		targetChannel: MiChannel,
 	): Promise<void> {
-		await this.channelFollowingsRepository.delete({
-			followerId: requestUser.id,
-			followeeId: targetChannel.id,
-		});
+		await deleteChannelFollowingFromDatabase(this.drizzle, requestUser.id, targetChannel.id);
 
 		this.globalEventService.publishInternalEvent('unfollowChannel', {
 			userId: requestUser.id,

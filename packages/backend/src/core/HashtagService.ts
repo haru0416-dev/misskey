@@ -9,12 +9,13 @@ import { DI } from '@/di-symbols.js';
 import type { MiUser } from '@/models/User.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { IdService } from '@/core/IdService.js';
-import type { MiHashtag } from '@/models/Hashtag.js';
-import type { HashtagsRepository, MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
 import { FeaturedService } from '@/core/FeaturedService.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import { recordHashtagUsageInDatabase } from '@/core/HashtagStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 @Injectable()
 export class HashtagService {
@@ -25,8 +26,8 @@ export class HashtagService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis, // TODO: 専用のRedisサーバーを設定できるようにする
 
-		@Inject(DI.hashtagsRepository)
-		private hashtagsRepository: HashtagsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private featuredService: FeaturedService,
@@ -60,103 +61,15 @@ export class HashtagService {
 		// TODO: サンプリング
 		this.updateHashtagsRanking(tag, user.id);
 
-		const index = await this.hashtagsRepository.findOneBy({ name: tag });
-
-		if (index == null && !inc) return;
-
-		if (index != null) {
-			const q = this.hashtagsRepository.createQueryBuilder('tag').update()
-				.where('name = :name', { name: tag });
-
-			const set = {} as any;
-
-			if (isUserAttached) {
-				if (inc) {
-				// 自分が初めてこのタグを使ったなら
-					if (!index.attachedUserIds.some(id => id === user.id)) {
-						set.attachedUserIds = () => `array_append("attachedUserIds", '${user.id}')`;
-						set.attachedUsersCount = () => '"attachedUsersCount" + 1';
-					}
-					// 自分が(ローカル内で)初めてこのタグを使ったなら
-					if (this.userEntityService.isLocalUser(user) && !index.attachedLocalUserIds.some(id => id === user.id)) {
-						set.attachedLocalUserIds = () => `array_append("attachedLocalUserIds", '${user.id}')`;
-						set.attachedLocalUsersCount = () => '"attachedLocalUsersCount" + 1';
-					}
-					// 自分が(リモートで)初めてこのタグを使ったなら
-					if (this.userEntityService.isRemoteUser(user) && !index.attachedRemoteUserIds.some(id => id === user.id)) {
-						set.attachedRemoteUserIds = () => `array_append("attachedRemoteUserIds", '${user.id}')`;
-						set.attachedRemoteUsersCount = () => '"attachedRemoteUsersCount" + 1';
-					}
-				} else {
-					set.attachedUserIds = () => `array_remove("attachedUserIds", '${user.id}')`;
-					set.attachedUsersCount = () => '"attachedUsersCount" - 1';
-					if (this.userEntityService.isLocalUser(user)) {
-						set.attachedLocalUserIds = () => `array_remove("attachedLocalUserIds", '${user.id}')`;
-						set.attachedLocalUsersCount = () => '"attachedLocalUsersCount" - 1';
-					} else {
-						set.attachedRemoteUserIds = () => `array_remove("attachedRemoteUserIds", '${user.id}')`;
-						set.attachedRemoteUsersCount = () => '"attachedRemoteUsersCount" - 1';
-					}
-				}
-			} else {
-				// 自分が初めてこのタグを使ったなら
-				if (!index.mentionedUserIds.some(id => id === user.id)) {
-					set.mentionedUserIds = () => `array_append("mentionedUserIds", '${user.id}')`;
-					set.mentionedUsersCount = () => '"mentionedUsersCount" + 1';
-				}
-				// 自分が(ローカル内で)初めてこのタグを使ったなら
-				if (this.userEntityService.isLocalUser(user) && !index.mentionedLocalUserIds.some(id => id === user.id)) {
-					set.mentionedLocalUserIds = () => `array_append("mentionedLocalUserIds", '${user.id}')`;
-					set.mentionedLocalUsersCount = () => '"mentionedLocalUsersCount" + 1';
-				}
-				// 自分が(リモートで)初めてこのタグを使ったなら
-				if (this.userEntityService.isRemoteUser(user) && !index.mentionedRemoteUserIds.some(id => id === user.id)) {
-					set.mentionedRemoteUserIds = () => `array_append("mentionedRemoteUserIds", '${user.id}')`;
-					set.mentionedRemoteUsersCount = () => '"mentionedRemoteUsersCount" + 1';
-				}
-			}
-
-			if (Object.keys(set).length > 0) {
-				q.set(set);
-				q.execute();
-			}
-		} else {
-			if (isUserAttached) {
-				this.hashtagsRepository.insert({
-					id: this.idService.gen(),
-					name: tag,
-					mentionedUserIds: [],
-					mentionedUsersCount: 0,
-					mentionedLocalUserIds: [],
-					mentionedLocalUsersCount: 0,
-					mentionedRemoteUserIds: [],
-					mentionedRemoteUsersCount: 0,
-					attachedUserIds: [user.id],
-					attachedUsersCount: 1,
-					attachedLocalUserIds: this.userEntityService.isLocalUser(user) ? [user.id] : [],
-					attachedLocalUsersCount: this.userEntityService.isLocalUser(user) ? 1 : 0,
-					attachedRemoteUserIds: this.userEntityService.isRemoteUser(user) ? [user.id] : [],
-					attachedRemoteUsersCount: this.userEntityService.isRemoteUser(user) ? 1 : 0,
-				} as MiHashtag);
-			} else {
-				this.hashtagsRepository.insert({
-					id: this.idService.gen(),
-					name: tag,
-					mentionedUserIds: [user.id],
-					mentionedUsersCount: 1,
-					mentionedLocalUserIds: this.userEntityService.isLocalUser(user) ? [user.id] : [],
-					mentionedLocalUsersCount: this.userEntityService.isLocalUser(user) ? 1 : 0,
-					mentionedRemoteUserIds: this.userEntityService.isRemoteUser(user) ? [user.id] : [],
-					mentionedRemoteUsersCount: this.userEntityService.isRemoteUser(user) ? 1 : 0,
-					attachedUserIds: [],
-					attachedUsersCount: 0,
-					attachedLocalUserIds: [],
-					attachedLocalUsersCount: 0,
-					attachedRemoteUserIds: [],
-					attachedRemoteUsersCount: 0,
-				} as MiHashtag);
-			}
-		}
+		await recordHashtagUsageInDatabase(this.drizzle, {
+			id: this.idService.gen(),
+			name: tag,
+			userId: user.id,
+			isLocalUser: this.userEntityService.isLocalUser(user),
+			isRemoteUser: this.userEntityService.isRemoteUser(user),
+			isUserAttached,
+			increment: inc,
+		});
 	}
 
 	@bindThis

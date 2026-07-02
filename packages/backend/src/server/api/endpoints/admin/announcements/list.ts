@@ -4,12 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { AnnouncementsRepository, AnnouncementReadsRepository } from '@/models/_.js';
-import type { MiAnnouncement } from '@/models/Announcement.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
+import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/AnnouncementReadStore.js';
+import { listAnnouncementsForAdminFromDatabase, resolveAnnouncementPagination } from '@/core/AnnouncementStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -109,39 +109,19 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.announcementsRepository)
-		private announcementsRepository: AnnouncementsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.announcementReadsRepository)
-		private announcementReadsRepository: AnnouncementReadsRepository,
-
-		private queryService: QueryService,
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.announcementsRepository.createQueryBuilder('announcement'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate);
-
-			if (ps.status === 'archived') {
-				query.andWhere('announcement.isActive = false');
-			} else if (ps.status === 'active') {
-				query.andWhere('announcement.isActive = true');
-			}
-
-			if (ps.userId) {
-				query.andWhere('announcement.userId = :userId', { userId: ps.userId });
-			} else {
-				query.andWhere('announcement.userId IS NULL');
-			}
-
-			const announcements = await query.limit(ps.limit).getMany();
-
-			const reads = new Map<MiAnnouncement, number>();
-
-			for (const announcement of announcements) {
-				reads.set(announcement, await this.announcementReadsRepository.countBy({
-					announcementId: announcement.id,
-				}));
-			}
+			const announcements = await listAnnouncementsForAdminFromDatabase(this.drizzle, {
+				limit: ps.limit,
+				...resolveAnnouncementPagination(this.idService, ps),
+				status: ps.status,
+				userId: ps.userId,
+			});
+			const reads = await countAnnouncementReadsByAnnouncementIdsFromDatabase(this.drizzle, announcements.map(announcement => announcement.id));
 
 			return announcements.map(announcement => ({
 				id: announcement.id,
@@ -157,7 +137,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				silence: announcement.silence,
 				needConfirmationToRead: announcement.needConfirmationToRead,
 				userId: announcement.userId,
-				reads: reads.get(announcement)!,
+				reads: reads.get(announcement.id) ?? 0,
 			}));
 		});
 	}

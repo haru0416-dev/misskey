@@ -6,18 +6,23 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeAll, test } from 'vitest';
+import { describe, beforeAll, afterAll, test } from 'vitest';
 import { WebSocket } from 'ws';
-import { MiFollowing } from '@/models/Following.js';
-import { api, createAppToken, initTestDb, port, post, signup, waitFire } from '../utils.js';
+import { loadConfig } from '@/config.js';
+import { createFollowingInDatabase } from '@/core/FollowingStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { genAidx } from '@/misc/id/aidx.js';
+import { api, createAppToken, initTestDb, port, post, signup, waitFire, type UserToken } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Streaming', () => {
-	let Followings: any;
+	let db: MiDrizzleDatabase;
+	let pool: MiDrizzlePool | undefined;
+	const STREAMING_NEGATIVE_TIMEOUT_MS = 500;
 
 	const follow = async (follower: any, followee: any) => {
-		await Followings.save({
-			id: 'a',
+		await createFollowingInDatabase(db, {
+			id: genAidx(Date.now()),
 			followerId: follower.id,
 			followeeId: followee.id,
 			followerHost: follower.host,
@@ -28,6 +33,18 @@ describe('Streaming', () => {
 			followeeSharedInbox: null,
 		});
 	};
+
+	afterAll(async () => {
+		await pool?.end();
+	});
+
+	const waitFireWithoutEvent = <C extends keyof misskey.Channels>(
+		user: UserToken,
+		channel: C,
+		trgr: () => any,
+		cond: (msg: Record<string, any>) => boolean,
+		params?: misskey.Channels[C]['params'],
+	) => waitFire(user, channel, trgr, cond, params, STREAMING_NEGATIVE_TIMEOUT_MS);
 
 	describe('Streaming', () => {
 		// Local users
@@ -48,8 +65,10 @@ describe('Streaming', () => {
 		let list: any;
 
 		beforeAll(async () => {
-			const connection = await initTestDb(true);
-			Followings = connection.getRepository(MiFollowing);
+			const config = loadConfig();
+			await initTestDb(true);
+			pool = createDrizzlePool(config);
+			db = createDrizzleDatabase(pool, config);
 
 			ayano = await signup({ username: 'ayano' });
 			kyoko = await signup({ username: 'kyoko' });
@@ -182,7 +201,7 @@ describe('Streaming', () => {
 			test('フォローしているユーザーのフォローしていないユーザーの visibility: followers な投稿への返信が流れない', async () => {
 				const chitoseNote = await post(chitose, { text: 'followers-only post', visibility: 'followers' });
 
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'homeTimeline',	// ayano:home
 					() => api('notes/create', { text: 'reply to chitose\'s followers-only post', replyId: chitoseNote.id }, kyoko),	// kyoko's reply to chitose's followers-only post
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,	// wait kyoko
@@ -195,7 +214,7 @@ describe('Streaming', () => {
 				const chitoseNote = await post(chitose, { text: 'followers-only post', visibility: 'followers' });
 				const kyokoReply = await post(kyoko, { text: 'reply to followers-only post', replyId: chitoseNote.id });
 
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'homeTimeline',	// ayano:home
 					() => api('notes/create', { renoteId: kyokoReply.id }, kyoko),	// kyoko's renote of kyoko's reply to chitose's followers-only post
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,	// wait kyoko
@@ -205,7 +224,7 @@ describe('Streaming', () => {
 			});
 
 			test('フォローしていないユーザーの投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					kyoko, 'homeTimeline',	// kyoko:home
 					() => api('notes/create', { text: 'foo' }, ayano),	// ayano posts
 					msg => msg.type === 'note' && msg.body.userId === ayano.id,	// wait ayano
@@ -225,7 +244,7 @@ describe('Streaming', () => {
 			});
 
 			test('フォローしているユーザーでも自分が指定されていないダイレクト投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'homeTimeline',	// ayano:home
 					() => api('notes/create', { text: 'foo', visibility: 'specified', visibleUserIds: [chitose.id] }, kyoko),	// kyoko dm => chitose
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,	// wait kyoko
@@ -253,7 +272,7 @@ describe('Streaming', () => {
 			test('visibility: specified な投稿に対するリプライで visibleUserIds が拡張されたとき、その拡張されたユーザーの HTL にはそのリプライが流れない', async () => {
 				const chitoseToKyoko = await post(chitose, { text: 'direct note from chitose to kyoko', visibility: 'specified', visibleUserIds: [kyoko.id] });
 
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'homeTimeline',	// ayano:home
 					() => api('notes/create', { text: 'direct reply from kyoko to chitose and ayano', replyId: chitoseToKyoko.id, visibility: 'specified', visibleUserIds: [chitose.id, ayano.id] }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -265,7 +284,7 @@ describe('Streaming', () => {
 			test('visibility: specified な投稿に対するリプライで visibleUserIds が収縮されたとき、その収縮されたユーザーの HTL にはそのリプライが流れない', async () => {
 				const chitoseToKyokoAndAyano = await post(chitose, { text: 'direct note from chitose to kyoko and ayano', visibility: 'specified', visibleUserIds: [kyoko.id, ayano.id] });
 
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'homeTimeline',	// ayano:home
 					() => api('notes/create', { text: 'direct reply from kyoko to chitose', replyId: chitoseToKyokoAndAyano.id, visibility: 'specified', visibleUserIds: [chitose.id] }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -275,7 +294,7 @@ describe('Streaming', () => {
 			});
 
 			test('withRenotes: false のときリノートが流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'homeTimeline',	// ayano:home
 					() => api('notes/create', { renoteId: kyokoNote.id }, kyoko),	// kyoko renote
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,	// wait kyoko
@@ -374,7 +393,7 @@ describe('Streaming', () => {
 			*/
 
 			test('ホーム指定の投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'localTimeline',	// ayano:Local
 					() => api('notes/create', { text: 'foo', visibility: 'home' }, kyoko),	// kyoko home posts
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,	// wait kyoko
@@ -384,7 +403,7 @@ describe('Streaming', () => {
 			});
 
 			test('フォローしているローカルユーザーのダイレクト投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'localTimeline',	// ayano:Local
 					() => api('notes/create', { text: 'foo', visibility: 'specified', visibleUserIds: [ayano.id] }, kyoko),	// kyoko DM => ayano
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,	// wait kyoko
@@ -394,7 +413,7 @@ describe('Streaming', () => {
 			});
 
 			test('フォローしていないローカルユーザーのフォロワー宛て投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'localTimeline',	// ayano:Local
 					() => api('notes/create', { text: 'foo', visibility: 'followers' }, chitose),
 					msg => msg.type === 'note' && msg.body.userId === chitose.id,	// wait chitose
@@ -488,7 +507,7 @@ describe('Streaming', () => {
 			});
 
 			test('フォローしていないローカルユーザーのホーム投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'hybridTimeline',	// ayano:Hybrid
 					() => api('notes/create', { text: 'foo', visibility: 'home' }, chitose),
 					msg => msg.type === 'note' && msg.body.userId === chitose.id,
@@ -498,7 +517,7 @@ describe('Streaming', () => {
 			});
 
 			test('フォローしていないローカルユーザーのフォロワー宛て投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'hybridTimeline',	// ayano:Hybrid
 					() => api('notes/create', { text: 'foo', visibility: 'followers' }, chitose),
 					msg => msg.type === 'note' && msg.body.userId === chitose.id,
@@ -530,7 +549,7 @@ describe('Streaming', () => {
 			});
 
 			test('withReplies: true のフォローしていない人のfollowersノートに対するリプライが流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					erin, 'homeTimeline',	// erin:home
 					() => api('notes/create', { text: 'hello', replyId: chitose.id }, ayano),	// ayano reply to chitose's post
 					msg => msg.type === 'note' && msg.body.userId === ayano.id,	// wait ayano
@@ -564,7 +583,7 @@ describe('Streaming', () => {
 			*/
 
 			test('ホーム投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					ayano, 'globalTimeline',	// ayano:Global
 					() => api('notes/create', { text: 'foo', visibility: 'home' }, kyoko),	// kyoko posts
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,	// wait kyoko
@@ -597,7 +616,7 @@ describe('Streaming', () => {
 			});
 
 			test('リストに入れていないユーザーの投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { text: 'foo' }, chinatsu),
 					msg => msg.type === 'note' && msg.body.userId === chinatsu.id,
@@ -621,7 +640,7 @@ describe('Streaming', () => {
 
 			// #4335
 			test('リストに入れているがフォローはしてないユーザーのフォロワー宛て投稿は流れない', async () => {
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { text: 'foo', visibility: 'followers' }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -634,7 +653,7 @@ describe('Streaming', () => {
 			// #10443
 			test('チャンネル投稿は流れない', async () => {
 				// リスインしている kyoko が 任意のチャンネルに投降した時の動きを見たい
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { text: 'foo', channelId: 'dummy' }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -647,7 +666,7 @@ describe('Streaming', () => {
 			// #10443
 			test('ミュートしているユーザへのリプライがリストTLに流れない', async () => {
 				// chitose が kanako をミュートしている状態で、リスインしている kyoko が kanako にリプライした時の動きを見たい
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { text: 'foo', replyId: kanakoNote.id }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -660,7 +679,7 @@ describe('Streaming', () => {
 			// #10443
 			test('ミュートしているユーザの投稿をリノートしたときリストTLに流れない', async () => {
 				// chitose が kanako をミュートしている状態で、リスインしている kyoko が kanako のノートをリノートした時の動きを見たい
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { renoteId: kanakoNote.id }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -677,7 +696,7 @@ describe('Streaming', () => {
 				}, chitose);
 
 				// chitose が example.com をミュートしている状態で、リスインしている takumi が ノートした時の動きを見たい
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { text: 'foo' }, takumi),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -694,7 +713,7 @@ describe('Streaming', () => {
 				}, chitose);
 
 				// chitose が example.com をミュートしている状態で、リスインしている kyoko が takumi のノートにリプライした時の動きを見たい
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { text: 'foo', replyId: takumiNote.id }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,
@@ -711,7 +730,7 @@ describe('Streaming', () => {
 				}, chitose);
 
 				// chitose が example.com をミュートしている状態で、リスインしている kyoko が takumi のノートをリノートした時の動きを見たい
-				const fired = await waitFire(
+				const fired = await waitFireWithoutEvent(
 					chitose, 'userList',
 					() => api('notes/create', { renoteId: takumiNote.id }, kyoko),
 					msg => msg.type === 'note' && msg.body.userId === kyoko.id,

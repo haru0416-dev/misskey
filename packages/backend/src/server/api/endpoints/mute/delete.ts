@@ -5,10 +5,11 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MutingsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { UserMutingService } from '@/core/UserMutingService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -50,8 +51,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userMutingService: UserMutingService,
 		private getterService: GetterService,
@@ -71,10 +72,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			// Check not muting
-			const exist = await this.mutingsRepository.findOneBy({
-				muterId: muter.id,
-				muteeId: mutee.id,
-			});
+			const exist = await fetchMutingByMuterIdAndMuteeIdFromDatabase(this.db, muter.id, mutee.id);
 
 			if (exist == null) {
 				throw new ApiError(meta.errors.notMuting);

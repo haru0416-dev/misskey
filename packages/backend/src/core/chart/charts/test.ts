@@ -4,7 +4,7 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
 import Logger from '@/logger.js';
@@ -22,8 +22,8 @@ export default class TestChart extends Chart<typeof schema> { // eslint-disable-
 	public total = 0; // publicにするのはテストのため
 
 	constructor(
-		@Inject(DI.db)
-		private db: DataSource,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,

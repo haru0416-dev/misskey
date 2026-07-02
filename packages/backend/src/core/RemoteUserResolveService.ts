@@ -6,13 +6,19 @@
 import { URL } from 'node:url';
 import { Inject, Injectable } from '@nestjs/common';
 import chalk from 'chalk';
-import { IsNull } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { UsersRepository } from '@/models/_.js';
 import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import type { Config } from '@/config.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import {
+	fetchLocalUserByUsernameFromDatabase,
+	fetchUserByUriFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+	updateUserLastFetchedAtInDatabase,
+	updateUserUriByUsernameAndHostInDatabase,
+} from '@/core/UserStore.js';
 import { ILink, WebfingerService } from '@/core/WebfingerService.js';
 import { RemoteLoggerService } from '@/core/RemoteLoggerService.js';
 import { ApDbResolverService } from '@/core/activitypub/ApDbResolverService.js';
@@ -27,8 +33,8 @@ export class RemoteUserResolveService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private webfingerService: WebfingerService,
@@ -45,29 +51,25 @@ export class RemoteUserResolveService {
 
 		if (host == null) {
 			this.logger.info(`return local user: ${usernameLower}`);
-			return await this.usersRepository.findOneBy({ usernameLower, host: IsNull() }).then(u => {
-				if (u == null) {
-					throw new Error('user not found');
-				} else {
-					return u;
-				}
-			}) as MiLocalUser;
+			const localUser = await fetchLocalUserByUsernameFromDatabase(this.drizzle, usernameLower);
+			if (localUser == null) {
+				throw new Error('user not found');
+			}
+			return localUser;
 		}
 
 		host = this.utilityService.toPuny(host);
 
 		if (host === this.utilityService.toPuny(this.config.host)) {
 			this.logger.info(`return local user: ${usernameLower}`);
-			return await this.usersRepository.findOneBy({ usernameLower, host: IsNull() }).then(u => {
-				if (u == null) {
-					throw new Error('user not found');
-				} else {
-					return u;
-				}
-			}) as MiLocalUser;
+			const localUser = await fetchLocalUserByUsernameFromDatabase(this.drizzle, usernameLower);
+			if (localUser == null) {
+				throw new Error('user not found');
+			}
+			return localUser;
 		}
 
-		const user = await this.usersRepository.findOneBy({ usernameLower, host }) as MiRemoteUser | null;
+		const user = await fetchUserByUsernameAndHostFromDatabase(this.drizzle, usernameLower, host) as MiRemoteUser | null;
 
 		const acctLower = `${usernameLower}@${host}`;
 
@@ -97,9 +99,7 @@ export class RemoteUserResolveService {
 		// ユーザー情報が古い場合は、WebFingerからやりなおして返す
 		if (user.lastFetchedAt == null || Date.now() - user.lastFetchedAt.getTime() > 1000 * 60 * 60 * 24) {
 			// 繋がらないインスタンスに何回も試行するのを防ぐ, 後続の同様処理の連続試行を防ぐ ため 試行前にも更新する
-			await this.usersRepository.update(user.id, {
-				lastFetchedAt: new Date(),
-			});
+			await updateUserLastFetchedAtInDatabase(this.drizzle, user.id, new Date());
 
 			this.logger.info(`try resync: ${acctLower}`);
 			const self = await this.resolveSelf(acctLower);
@@ -115,12 +115,7 @@ export class RemoteUserResolveService {
 					throw new Error('Invalid uri');
 				}
 
-				await this.usersRepository.update({
-					usernameLower,
-					host: host,
-				}, {
-					uri: self.href,
-				});
+				await updateUserUriByUsernameAndHostInDatabase(this.drizzle, usernameLower, host, self.href);
 			} else {
 				this.logger.info(`uri is fine: ${acctLower}`);
 			}
@@ -128,13 +123,11 @@ export class RemoteUserResolveService {
 			await this.apPersonService.updatePerson(self.href);
 
 			this.logger.info(`return resynced remote user: ${acctLower}`);
-			return await this.usersRepository.findOneBy({ uri: self.href }).then(u => {
-				if (u == null) {
-					throw new Error('user not found');
-				} else {
-					return u as MiLocalUser | MiRemoteUser;
-				}
-			});
+			const resynced = await fetchUserByUriFromDatabase(this.drizzle, self.href);
+			if (resynced == null) {
+				throw new Error('user not found');
+			}
+			return resynced as MiLocalUser | MiRemoteUser;
 		}
 
 		this.logger.info(`return existing remote user: ${acctLower}`);

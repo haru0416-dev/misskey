@@ -3,13 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { IsNull, MoreThan, Not } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { FollowingsRepository, InstancesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { InstanceEntityService } from '@/core/entities/InstanceEntityService.js';
 import { DI } from '@/di-symbols.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import {
+	countFollowingsWithRemoteFolloweeHostFromDatabase,
+	countFollowingsWithRemoteFollowerHostFromDatabase,
+} from '@/core/FollowingStore.js';
+import {
+	listInstancesOrderByFollowersCountDescFromDatabase,
+	listInstancesOrderByFollowingCountDescFromDatabase,
+} from '@/core/InstanceStore.js';
 
 export const meta = {
 	tags: ['federation'],
@@ -63,44 +70,17 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private instanceEntityService: InstanceEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const [topSubInstances, topPubInstances, allSubCount, allPubCount] = await Promise.all([
-				this.instancesRepository.find({
-					where: {
-						followersCount: MoreThan(0),
-					},
-					order: {
-						followersCount: 'DESC',
-					},
-					take: ps.limit,
-				}),
-				this.instancesRepository.find({
-					where: {
-						followingCount: MoreThan(0),
-					},
-					order: {
-						followingCount: 'DESC',
-					},
-					take: ps.limit,
-				}),
-				this.followingsRepository.count({
-					where: {
-						followeeHost: Not(IsNull()),
-					},
-				}),
-				this.followingsRepository.count({
-					where: {
-						followerHost: Not(IsNull()),
-					},
-				}),
+				listInstancesOrderByFollowersCountDescFromDatabase(this.db, ps.limit),
+				listInstancesOrderByFollowingCountDescFromDatabase(this.db, ps.limit),
+				countFollowingsWithRemoteFolloweeHostFromDatabase(this.db),
+				countFollowingsWithRemoteFollowerHostFromDatabase(this.db),
 			]);
 
 			const gotSubCount = topSubInstances.map(x => x.followersCount).reduce((a, b) => a + b, 0);

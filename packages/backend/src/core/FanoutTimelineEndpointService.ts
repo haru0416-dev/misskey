@@ -10,7 +10,6 @@ import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiMeta } from '@/models/Meta.js';
 import { Packed } from '@/misc/json-schema.js';
-import type { NotesRepository } from '@/models/_.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { FanoutTimelineName, FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import { UtilityService } from '@/core/UtilityService.js';
@@ -21,6 +20,8 @@ import { isReply } from '@/misc/is-reply.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 
 type NoteFilter = (note: MiNote) => boolean;
 
@@ -48,8 +49,8 @@ type TimelineOptions = {
 @Injectable()
 export class FanoutTimelineEndpointService {
 	constructor(
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		@Inject(DI.meta)
 		private meta: MiMeta,
@@ -206,16 +207,7 @@ export class FanoutTimelineEndpointService {
 	}
 
 	private async getAndFilterFromDb(noteIds: string[], noteFilter: NoteFilter, idCompare: (a: string, b: string) => number): Promise<MiNote[]> {
-		const query = this.notesRepository.createQueryBuilder('note')
-			.where('note.id IN (:...noteIds)', { noteIds: noteIds })
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser')
-			.leftJoinAndSelect('note.channel', 'channel');
-
-		const notes = (await query.getMany()).filter(noteFilter);
+		const notes = (await listHydratedNotesByIdsFromDatabase(this.db, noteIds)).filter(noteFilter);
 
 		notes.sort((a, b) => idCompare(a.id, b.id));
 

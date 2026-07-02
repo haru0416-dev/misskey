@@ -10,10 +10,12 @@ import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyRawBody from 'fastify-raw-body';
-import { IsNull } from 'typeorm';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import { fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
-import type { EmojisRepository, MiMeta, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import type Logger from '@/logger.js';
 import * as Acct from '@/misc/acct.js';
@@ -46,14 +48,8 @@ export class ServerService implements OnApplicationShutdown {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.emojisRepository)
-		private emojisRepository: EmojisRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private userEntityService: UserEntityService,
 		private apiServerService: ApiServerService,
@@ -171,11 +167,12 @@ export class ServerService implements OnApplicationShutdown {
 			const name = pathChunks.shift();
 			const host = pathChunks.pop();
 
-			const emoji = await this.emojisRepository.findOneBy({
+			const emoji = await fetchEmojiByNameAndHostFromDatabase(
+				this.db,
+				name!,
 				// `@.` is the spec of ReactionService.decodeReaction
-				host: (host === undefined || host === '.') ? IsNull() : host,
-				name: name,
-			});
+				(host === undefined || host === '.') ? null : host,
+			);
 
 			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
 
@@ -210,17 +207,15 @@ export class ServerService implements OnApplicationShutdown {
 
 		fastify.get<{ Params: { acct: string } }>('/avatar/@:acct', async (request, reply) => {
 			const { username, host } = Acct.parse(request.params.acct);
-			const user = await this.usersRepository.findOne({
-				where: {
-					usernameLower: username.toLowerCase(),
-					host: (host == null) || (host === this.config.host) ? IsNull() : host,
-					isSuspended: false,
-				},
-			});
+			const user = await fetchUserByUsernameAndHostFromDatabase(
+				this.db,
+				username,
+				(host == null) || (host === this.config.host) ? null : host,
+			);
 
 			reply.header('Cache-Control', 'public, max-age=86400');
 
-			if (user) {
+			if (user && !user.isSuspended) {
 				reply.redirect((user.avatarId == null ? null : user.avatarUrl) ?? this.userEntityService.getIdenticonUrl(user));
 			} else {
 				reply.redirect('/static-assets/user-unknown.png');

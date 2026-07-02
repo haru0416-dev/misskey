@@ -4,10 +4,11 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { SwSubscriptionsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
+import { deleteSwSubscriptionByEndpointFromDatabase } from '@/core/SwSubscriptionStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['account'],
@@ -28,16 +29,13 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.swSubscriptionsRepository)
-		private swSubscriptionsRepository: SwSubscriptionsRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private pushNotificationService: PushNotificationService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			await this.swSubscriptionsRepository.delete({
-				...(me ? { userId: me.id } : {}),
-				endpoint: ps.endpoint,
-			});
+			await deleteSwSubscriptionByEndpointFromDatabase(this.drizzle, me?.id ?? null, ps.endpoint);
 
 			if (me) {
 				this.pushNotificationService.refreshCache(me.id);

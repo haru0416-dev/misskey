@@ -4,10 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserListsRepository, UserListFavoritesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserListEntityService } from '@/core/entities/UserListEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import { fetchPublicUserListByIdFromDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -65,40 +67,26 @@ export const paramDef = {
 @Injectable() // eslint-disable-next-line import/no-default-export
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
-		@Inject(DI.userListFavoritesRepository)
-		private userListFavoritesRepository: UserListFavoritesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private userListEntityService: UserListEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const additionalProperties: Partial<{ likedCount: number, isLiked: boolean }> = {};
 			// Fetch the list
-			const userList = await this.userListsRepository.findOneBy(!ps.forPublic && me !== null ? {
-				id: ps.listId,
-				userId: me.id,
-			} : {
-				id: ps.listId,
-				isPublic: true,
-			});
+			const userList = !ps.forPublic && me !== null
+				? await fetchUserListByIdAndUserIdFromDatabase(this.drizzle, ps.listId, me.id)
+				: await fetchPublicUserListByIdFromDatabase(this.drizzle, ps.listId);
 
 			if (userList == null) {
 				throw new ApiError(meta.errors.noSuchList);
 			}
 
 			if (ps.forPublic && userList.isPublic) {
-				additionalProperties.likedCount = await this.userListFavoritesRepository.countBy({
-					userListId: ps.listId,
-				});
+				additionalProperties.likedCount = await countUserListFavoritesFromDatabase(this.drizzle, ps.listId);
 				if (me !== null) {
-					additionalProperties.isLiked = await this.userListFavoritesRepository.exists({
-						where: {
-							userId: me.id,
-							userListId: ps.listId,
-						},
-					});
+					additionalProperties.isLiked = await userListFavoriteExistsInDatabase(this.drizzle, me.id, ps.listId);
 				} else {
 					additionalProperties.isLiked = false;
 				}

@@ -5,12 +5,13 @@
 
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import type { InstancesRepository } from '@/models/_.js';
 import type { MiInstance } from '@/models/Instance.js';
 import { MemoryKVCache, RedisKVCache } from '@/misc/cache.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { createInstanceInDatabase, fetchInstanceByHostFromDatabase, updateInstanceInDatabase } from '@/core/InstanceStore.js';
 import { bindThis } from '@/decorators.js';
 
 @Injectable()
@@ -21,8 +22,8 @@ export class FederatedInstanceService implements OnApplicationShutdown {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.instancesRepository)
-		private instancesRepository: InstancesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private idService: IdService,
@@ -30,7 +31,7 @@ export class FederatedInstanceService implements OnApplicationShutdown {
 		this.federatedInstanceCache = new RedisKVCache<MiInstance | null>(this.redisClient, 'federatedInstance', {
 			lifetime: 1000 * 60 * 30, // 30m
 			memoryCacheLifetime: 1000 * 60 * 3, // 3m
-			fetcher: (key) => this.instancesRepository.findOneBy({ host: key }),
+			fetcher: (key) => fetchInstanceByHostFromDatabase(this.db, key),
 			toRedisConverter: (value) => JSON.stringify(value),
 			fromRedisConverter: (value) => {
 				const parsed = JSON.parse(value);
@@ -53,10 +54,10 @@ export class FederatedInstanceService implements OnApplicationShutdown {
 		const cached = await this.federatedInstanceCache.get(host);
 		if (cached) return cached;
 
-		const index = await this.instancesRepository.findOneBy({ host });
+		const index = await fetchInstanceByHostFromDatabase(this.db, host);
 
 		if (index == null) {
-			const i = await this.instancesRepository.insertOne({
+			const i = await createInstanceInDatabase(this.db, {
 				id: this.idService.gen(),
 				host,
 				firstRetrievedAt: new Date(),
@@ -77,7 +78,7 @@ export class FederatedInstanceService implements OnApplicationShutdown {
 		const cached = await this.federatedInstanceCache.get(host);
 		if (cached !== undefined) return cached;
 
-		const index = await this.instancesRepository.findOneBy({ host });
+		const index = await fetchInstanceByHostFromDatabase(this.db, host);
 
 		if (index == null) {
 			this.federatedInstanceCache.set(host, null);
@@ -90,14 +91,7 @@ export class FederatedInstanceService implements OnApplicationShutdown {
 
 	@bindThis
 	public async update(id: MiInstance['id'], data: Partial<MiInstance>): Promise<void> {
-		const result = await this.instancesRepository.createQueryBuilder().update()
-			.set(data)
-			.where('id = :id', { id })
-			.returning('*')
-			.execute()
-			.then((response) => {
-				return response.raw[0];
-			});
+		const result = await updateInstanceInDatabase(this.db, id, data);
 
 		this.federatedInstanceCache.set(result.host, result);
 	}

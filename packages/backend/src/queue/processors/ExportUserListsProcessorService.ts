@@ -5,12 +5,14 @@
 
 import * as fs from 'node:fs';
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { format as dateFormat } from 'date-fns';
 import { DI } from '@/di-symbols.js';
-import type { UserListMembershipsRepository, UserListsRepository, UsersRepository } from '@/models/_.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { DriveService } from '@/core/DriveService.js';
+import { listUserListMembershipsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { NotificationService } from '@/core/NotificationService.js';
@@ -24,14 +26,8 @@ export class ExportUserListsProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.userListsRepository)
-		private userListsRepository: UserListsRepository,
-
-		@Inject(DI.userListMembershipsRepository)
-		private userListMembershipsRepository: UserListMembershipsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private utilityService: UtilityService,
 		private driveService: DriveService,
@@ -45,14 +41,12 @@ export class ExportUserListsProcessorService {
 	public async process(job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 		this.logger.info(`Exporting user lists of ${job.data.user.id} ...`);
 
-		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		const user = await fetchUserByIdFromDatabase(this.db, job.data.user.id);
 		if (user == null) {
 			return;
 		}
 
-		const lists = await this.userListsRepository.findBy({
-			userId: user.id,
-		});
+		const lists = await listUserListsByUserIdFromDatabase(this.db, user.id);
 
 		// Create temp file
 		const [path, cleanup] = await createTemp();
@@ -63,10 +57,8 @@ export class ExportUserListsProcessorService {
 			const stream = fs.createWriteStream(path, { flags: 'a' });
 
 			for (const list of lists) {
-				const memberships = await this.userListMembershipsRepository.findBy({ userListId: list.id });
-				const users = await this.usersRepository.findBy({
-					id: In(memberships.map(j => j.userId)),
-				});
+				const memberships = await listUserListMembershipsByUserListIdFromDatabase(this.db, list.id);
+				const users = await listUsersByIdsFromDatabase(this.db, memberships.map(j => j.userId), { includeSuspended: true });
 				const usersWithReplies = new Set(memberships.filter(m => m.withReplies).map(m => m.userId));
 
 				for (const u of users) {

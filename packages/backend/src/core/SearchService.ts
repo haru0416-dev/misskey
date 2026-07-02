@@ -4,19 +4,17 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { type Config, FulltextSearchProvider } from '@/config.js';
 import { bindThis } from '@/decorators.js';
 import { MiNote } from '@/models/Note.js';
-import type { NotesRepository } from '@/models/_.js';
-import { MiUser } from '@/models/_.js';
-import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { MiMeta, MiUser } from '@/models/_.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { CacheService } from '@/core/CacheService.js';
-import { QueryService } from '@/core/QueryService.js';
 import { IdService } from '@/core/IdService.js';
 import { LoggerService } from '@/core/LoggerService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listFeaturedNotesByIdsFromDatabase, searchNotesByTextFromDatabase } from '@/core/NoteStore.js';
 import type { Index, Meilisearch } from 'meilisearch';
 
 type K = string;
@@ -89,11 +87,13 @@ export class SearchService {
 		@Inject(DI.meilisearch)
 		private meilisearch: Meilisearch | null,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
+
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
 
 		private cacheService: CacheService,
-		private queryService: QueryService,
 		private idService: IdService,
 		private loggerService: LoggerService,
 	) {
@@ -205,49 +205,20 @@ export class SearchService {
 		opts: SearchOpts,
 		pagination: SearchPagination,
 	): Promise<MiNote[]> {
-		const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), pagination.sinceId, pagination.untilId);
-
-		if (opts.userId) {
-			query.andWhere('note.userId = :userId', { userId: opts.userId });
-		} else if (opts.channelId) {
-			query.andWhere('note.channelId = :channelId', { channelId: opts.channelId });
-		}
-
-		query
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser');
-
-		if (this.config.fulltextSearch?.provider === 'sqlPgroonga') {
-			query.andWhere('note.text &@~ :q', { q });
-		} else {
-			query.andWhere('LOWER(note.text) LIKE :q', { q: `%${ sqlLikeEscape(q.toLowerCase()) }%` });
-		}
-
-		if (opts.host) {
-			if (opts.host === '.') {
-				query.andWhere('note.userHost IS NULL');
-			} else {
-				query.andWhere('note.userHost = :host', { host: opts.host });
-			}
-		}
-
-		if (opts.rangeStartAt != null) {
-			const date = this.idService.gen(opts.rangeStartAt - 1);
-			query.andWhere('note.id > :rangeStartAt', { rangeStartAt: date });
-		}
-
-		if (opts.rangeEndAt != null) {
-			const date = this.idService.gen(opts.rangeEndAt + 1);
-			query.andWhere('note.id < :rangeEndAt', { rangeEndAt: date });
-		}
-
-		this.queryService.generateVisibilityQuery(query, me);
-		this.queryService.generateBaseNoteFilteringQuery(query, me);
-
-		return query.limit(pagination.limit).getMany();
+		return await searchNotesByTextFromDatabase(this.db, {
+			query: q,
+			usePgroonga: this.config.fulltextSearch?.provider === 'sqlPgroonga',
+			me,
+			blockedHosts: this.instanceMeta.blockedHosts,
+			limit: pagination.limit,
+			sinceId: pagination.sinceId,
+			untilId: pagination.untilId,
+			userId: opts.userId,
+			channelId: opts.channelId,
+			host: opts.host,
+			rangeStartId: opts.rangeStartAt != null ? this.idService.gen(opts.rangeStartAt - 1) : null,
+			rangeEndId: opts.rangeEndAt != null ? this.idService.gen(opts.rangeEndAt + 1) : null,
+		});
 	}
 
 	@bindThis
@@ -316,19 +287,7 @@ export class SearchService {
 			])
 			: [new Set<string>(), new Set<string>()];
 
-		const query = this.notesRepository.createQueryBuilder('note')
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser');
-
-		query.where('note.id IN (:...noteIds)', { noteIds: res.hits.map(x => x.id) });
-
-		this.queryService.generateBlockedHostQueryForNote(query);
-		this.queryService.generateSuspendedUserQueryForNote(query);
-
-		const notes = (await query.getMany()).filter(note => {
+		const notes = (await listFeaturedNotesByIdsFromDatabase(this.db, res.hits.map(x => x.id), this.instanceMeta.blockedHosts)).filter(note => {
 			if (me && isUserRelated(note, userIdsWhoBlockingMe)) return false;
 			if (me && isUserRelated(note, userIdsWhoMeMuting)) return false;
 			return true;

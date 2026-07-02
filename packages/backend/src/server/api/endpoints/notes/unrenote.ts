@@ -5,11 +5,13 @@
 
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository, NotesRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteDeleteService } from '@/core/NoteDeleteService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listNotesByUserIdAndRenoteIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -45,11 +47,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 		private noteDeleteService: NoteDeleteService,
@@ -60,13 +59,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 
-			const renotes = await this.notesRepository.findBy({
-				userId: me.id,
-				renoteId: note.id,
-			});
+			const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(this.db, me.id, note.id);
+			const user = await fetchUserByIdOrFailFromDatabase(this.db, me.id);
 
 			for (const note of renotes) {
-				this.noteDeleteService.delete(await this.usersRepository.findOneByOrFail({ id: me.id }), note);
+				this.noteDeleteService.delete(user, note);
 			}
 		});
 	}

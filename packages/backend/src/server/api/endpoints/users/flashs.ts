@@ -5,9 +5,10 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueryService } from '@/core/QueryService.js';
+import { IdService } from '@/core/IdService.js';
 import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
-import type { FlashsRepository } from '@/models/_.js';
+import { listFlashsWithPaginationFromDatabase, resolveFlashPagination } from '@/core/FlashStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { DI } from '@/di-symbols.js';
 
 export const meta = {
@@ -42,20 +43,20 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
-		@Inject(DI.flashsRepository)
-		private flashsRepository: FlashsRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 
 		private flashEntityService: FlashEntityService,
-		private queryService: QueryService,
+		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.flashsRepository.createQueryBuilder('flash'), ps.sinceId, ps.untilId, ps.sinceDate, ps.untilDate)
-				.andWhere('flash.userId = :userId', { userId: ps.userId })
-				.andWhere('flash.visibility = \'public\'');
-
-			const flashs = await query
-				.limit(ps.limit)
-				.getMany();
+			const pagination = resolveFlashPagination(this.idService, ps);
+			const flashs = await listFlashsWithPaginationFromDatabase(this.db, {
+				userId: ps.userId,
+				visibility: 'public',
+				limit: ps.limit,
+				...pagination,
+			});
 
 			return await this.flashEntityService.packMany(flashs);
 		});

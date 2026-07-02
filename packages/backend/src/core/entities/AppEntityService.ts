@@ -5,26 +5,25 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
-import type { AccessTokensRepository, AppsRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
-import type { MiApp } from '@/models/App.js';
+import type { AppRow } from '@/db/schema/app.js';
 import type { MiUser } from '@/models/User.js';
+import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
+import { existsAccessTokenByAppIdAndUserIdFromDatabase } from '@/core/AccessTokenStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 
 @Injectable()
 export class AppEntityService {
 	constructor(
-		@Inject(DI.appsRepository)
-		private appsRepository: AppsRepository,
-
-		@Inject(DI.accessTokensRepository)
-		private accessTokensRepository: AccessTokensRepository,
+		@Inject(DI.drizzle)
+		private db: MiDrizzleDatabase,
 	) {
 	}
 
 	@bindThis
 	public async pack(
-		src: MiApp['id'] | MiApp,
+		src: AppRow['id'] | AppRow,
 		me?: { id: MiUser['id'] } | null | undefined,
 		options?: {
 			detail?: boolean,
@@ -38,7 +37,7 @@ export class AppEntityService {
 			includeProfileImageIds: false,
 		}, options);
 
-		const app = typeof src === 'object' ? src : await this.appsRepository.findOneByOrFail({ id: src });
+		const app = typeof src === 'object' ? src : await fetchAppByIdOrFailFromDatabase(this.db, src);
 
 		return {
 			id: app.id,
@@ -47,10 +46,7 @@ export class AppEntityService {
 			permission: app.permission,
 			...(opts.includeSecret ? { secret: app.secret } : {}),
 			...(me ? {
-				isAuthorized: await this.accessTokensRepository.countBy({
-					appId: app.id,
-					userId: me.id,
-				}).then(count => count > 0),
+				isAuthorized: await existsAccessTokenByAppIdAndUserIdFromDatabase(this.db, app.id, me.id),
 			} : {}),
 		};
 	}

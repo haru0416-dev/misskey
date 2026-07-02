@@ -7,7 +7,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
 import _Ajv from 'ajv';
 import { ModuleRef } from '@nestjs/core';
-import { In } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -23,22 +22,36 @@ import {
 	nameSchema,
 	passwordSchema,
 } from '@/models/User.js';
-import type {
-	BlockingsRepository,
-	FollowingsRepository,
-	FollowRequestsRepository,
-	MiFollowing,
-	MiMeta,
-	MiUserNotePining,
-	MiUserProfile,
-	MutingsRepository,
-	RenoteMutingsRepository,
-	UserMemoRepository,
-	UserNotePiningsRepository,
-	UserProfilesRepository,
-	UserSecurityKeysRepository,
-	UsersRepository,
-} from '@/models/_.js';
+import type { MiMeta } from '@/models/_.js';
+import type { MiFollowing } from '@/models/Following.js';
+import type { MiUserProfile } from '@/models/UserProfile.js';
+import type { MiUserNotePining } from '@/models/UserNotePining.js';
+import {
+	fetchUserMemoTextFromDatabase,
+	listUserMemoTextsByUserIdFromDatabase,
+} from '@/core/UserMemoStore.js';
+import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import {
+	followRequestExistsByFolloweeIdInDatabase,
+	followRequestExistsInDatabase,
+	listFollowRequestFolloweeIdsByFollowerIdFromDatabase,
+	listFollowRequestFollowerIdsByFolloweeIdFromDatabase,
+} from '@/core/FollowRequestStore.js';
+import {
+	listUserNotePiningsByUserIdFromDatabase,
+	listUserNotePiningsByUserIdsFromDatabase,
+} from '@/core/UserNotePiningStore.js';
+import {
+	countUserSecurityKeysByUserIdFromDatabase,
+	listUserSecurityKeySummariesByUserIdFromDatabase,
+} from '@/core/UserSecurityKeyStore.js';
+import { blockingExistsInDatabase, listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listAllFollowingsByFollowerIdFromDatabase, listFollowerIdsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
+import { mutingExistsInDatabase, listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
 import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
@@ -108,35 +121,9 @@ export class UserEntityService implements OnModuleInit {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
-		@Inject(DI.userSecurityKeysRepository)
-		private userSecurityKeysRepository: UserSecurityKeysRepository,
-
-		@Inject(DI.followingsRepository)
-		private followingsRepository: FollowingsRepository,
-
-		@Inject(DI.followRequestsRepository)
-		private followRequestsRepository: FollowRequestsRepository,
-
-		@Inject(DI.blockingsRepository)
-		private blockingsRepository: BlockingsRepository,
-
-		@Inject(DI.mutingsRepository)
-		private mutingsRepository: MutingsRepository,
-
-		@Inject(DI.renoteMutingsRepository)
-		private renoteMutingsRepository: RenoteMutingsRepository,
-
-		@Inject(DI.userNotePiningsRepository)
-		private userNotePiningsRepository: UserNotePiningsRepository,
-
-		@Inject(DI.userProfilesRepository)
-		private userProfilesRepository: UserProfilesRepository,
-
-		@Inject(DI.userMemosRepository)
-		private userMemosRepository: UserMemoRepository,
 	) {
 	}
 
@@ -177,52 +164,14 @@ export class UserEntityService implements OnModuleInit {
 			isMuted,
 			isRenoteMuted,
 		] = await Promise.all([
-			this.followingsRepository.findOneBy({
-				followerId: me,
-				followeeId: target,
-			}),
-			this.followingsRepository.exists({
-				where: {
-					followerId: target,
-					followeeId: me,
-				},
-			}),
-			this.followRequestsRepository.exists({
-				where: {
-					followerId: me,
-					followeeId: target,
-				},
-			}),
-			this.followRequestsRepository.exists({
-				where: {
-					followerId: target,
-					followeeId: me,
-				},
-			}),
-			this.blockingsRepository.exists({
-				where: {
-					blockerId: me,
-					blockeeId: target,
-				},
-			}),
-			this.blockingsRepository.exists({
-				where: {
-					blockerId: target,
-					blockeeId: me,
-				},
-			}),
-			this.mutingsRepository.exists({
-				where: {
-					muterId: me,
-					muteeId: target,
-				},
-			}),
-			this.renoteMutingsRepository.exists({
-				where: {
-					muterId: me,
-					muteeId: target,
-				},
-			}),
+			fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(this.drizzle, me, target),
+			followingExistsInDatabase(this.drizzle, target, me),
+			followRequestExistsInDatabase(this.drizzle, me, target),
+			followRequestExistsInDatabase(this.drizzle, target, me),
+			blockingExistsInDatabase(this.drizzle, me, target),
+			blockingExistsInDatabase(this.drizzle, target, me),
+			mutingExistsInDatabase(this.drizzle, me, target),
+			renoteMutingExistsInDatabase(this.drizzle, me, target),
 		]);
 
 		return {
@@ -251,43 +200,15 @@ export class UserEntityService implements OnModuleInit {
 			muters,
 			renoteMuters,
 		] = await Promise.all([
-			this.followingsRepository.findBy({ followerId: me })
+			listAllFollowingsByFollowerIdFromDatabase(this.drizzle, me)
 				.then(f => new Map(f.map(it => [it.followeeId, it]))),
-			this.followingsRepository.createQueryBuilder('f')
-				.select('f.followerId')
-				.where('f.followeeId = :me', { me })
-				.getRawMany<{ f_followerId: string }>()
-				.then(it => it.map(it => it.f_followerId)),
-			this.followRequestsRepository.createQueryBuilder('f')
-				.select('f.followeeId')
-				.where('f.followerId = :me', { me })
-				.getRawMany<{ f_followeeId: string }>()
-				.then(it => it.map(it => it.f_followeeId)),
-			this.followRequestsRepository.createQueryBuilder('f')
-				.select('f.followerId')
-				.where('f.followeeId = :me', { me })
-				.getRawMany<{ f_followerId: string }>()
-				.then(it => it.map(it => it.f_followerId)),
-			this.blockingsRepository.createQueryBuilder('b')
-				.select('b.blockeeId')
-				.where('b.blockerId = :me', { me })
-				.getRawMany<{ b_blockeeId: string }>()
-				.then(it => it.map(it => it.b_blockeeId)),
-			this.blockingsRepository.createQueryBuilder('b')
-				.select('b.blockerId')
-				.where('b.blockeeId = :me', { me })
-				.getRawMany<{ b_blockerId: string }>()
-				.then(it => it.map(it => it.b_blockerId)),
-			this.mutingsRepository.createQueryBuilder('m')
-				.select('m.muteeId')
-				.where('m.muterId = :me', { me })
-				.getRawMany<{ m_muteeId: string }>()
-				.then(it => it.map(it => it.m_muteeId)),
-			this.renoteMutingsRepository.createQueryBuilder('m')
-				.select('m.muteeId')
-				.where('m.muterId = :me', { me })
-				.getRawMany<{ m_muteeId: string }>()
-				.then(it => it.map(it => it.m_muteeId)),
+			listFollowerIdsByFolloweeIdFromDatabase(this.drizzle, me),
+			listFollowRequestFolloweeIdsByFollowerIdFromDatabase(this.drizzle, me),
+			listFollowRequestFollowerIdsByFolloweeIdFromDatabase(this.drizzle, me),
+			listBlockeeIdsByBlockerIdFromDatabase(this.drizzle, me),
+			listBlockerIdsByBlockeeIdFromDatabase(this.drizzle, me),
+			listMuteeIdsByMuterIdFromDatabase(this.drizzle, me),
+			listRenoteMuteeIdsByMuterIdFromDatabase(this.drizzle, me),
 		]);
 
 		return new Map(
@@ -363,11 +284,7 @@ export class UserEntityService implements OnModuleInit {
 
 	@bindThis
 	public async getHasPendingReceivedFollowRequest(userId: MiUser['id']): Promise<boolean> {
-		const count = await this.followRequestsRepository.countBy({
-			followeeId: userId,
-		});
-
-		return count > 0;
+		return await followRequestExistsByFolloweeIdInDatabase(this.drizzle, userId);
 	}
 
 	@bindThis
@@ -402,6 +319,24 @@ export class UserEntityService implements OnModuleInit {
 		return `${this.config.url}/users/${userId}`;
 	}
 
+	@bindThis
+	private async attachNotesToPinings(pinings: MiUserNotePining[]): Promise<MiUserNotePining[]> {
+		if (pinings.length === 0) {
+			return [];
+		}
+
+		const notes = await listNotesByIdsFromDatabase(this.drizzle, [...new Set(pinings.map(pin => pin.noteId))]);
+		const noteMap = new Map(notes.map(note => [note.id, note]));
+
+		return pinings.flatMap(pin => {
+			const note = noteMap.get(pin.noteId);
+			return note == null ? [] : [{
+				...pin,
+				note,
+			}];
+		});
+	}
+
 	public async pack<S extends 'MeDetailed' | 'UserDetailedNotMe' | 'UserDetailed' | 'UserLite' = 'UserLite'>(
 		src: MiUser['id'] | MiUser,
 		me?: { id: MiUser['id']; } | null | undefined,
@@ -419,7 +354,7 @@ export class UserEntityService implements OnModuleInit {
 			includeSecrets: false,
 		}, options);
 
-		const user = typeof src === 'object' ? src : await this.usersRepository.findOneByOrFail({ id: src });
+		const user = typeof src === 'object' ? src : await fetchUserByIdOrFailFromDatabase(this.drizzle, src);
 
 		const isDetailed = opts.schema !== 'UserLite';
 		const meId = me ? me.id : null;
@@ -427,7 +362,7 @@ export class UserEntityService implements OnModuleInit {
 		const iAmModerator = me ? await this.roleService.isModerator(me as MiUser) : false;
 
 		const profile = isDetailed
-			? (opts.userProfile ?? await this.userProfilesRepository.findOneByOrFail({ userId: user.id }))
+			? (opts.userProfile ?? await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, user.id))
 			: null;
 
 		let relation: UserRelation | null = null;
@@ -444,8 +379,7 @@ export class UserEntityService implements OnModuleInit {
 			if (opts.userMemos) {
 				memo = opts.userMemos.get(user.id) ?? null;
 			} else {
-				memo = await this.userMemosRepository.findOneBy({ userId: meId, targetUserId: user.id })
-					.then(row => row?.memo ?? null);
+				memo = await fetchUserMemoTextFromDatabase(this.drizzle, meId, user.id);
 			}
 		}
 
@@ -454,11 +388,9 @@ export class UserEntityService implements OnModuleInit {
 			if (opts.pinNotes) {
 				pins = opts.pinNotes.get(user.id) ?? [];
 			} else {
-				pins = await this.userNotePiningsRepository.createQueryBuilder('pin')
-					.where('pin.userId = :userId', { userId: user.id })
-					.innerJoinAndSelect('pin.note', 'note')
-					.orderBy('pin.id', 'DESC')
-					.getMany();
+				pins = await this.attachNotesToPinings(
+					await listUserNotePiningsByUserIdFromDatabase(this.drizzle, user.id, { order: 'desc' }),
+				);
 			}
 		}
 
@@ -578,7 +510,7 @@ export class UserEntityService implements OnModuleInit {
 				twoFactorEnabled: profile!.twoFactorEnabled,
 				usePasswordLessLogin: profile!.usePasswordLessLogin,
 				securityKeys: profile!.twoFactorEnabled
-					? this.userSecurityKeysRepository.countBy({ userId: user.id }).then(result => result >= 1)
+					? countUserSecurityKeysByUserIdFromDatabase(this.drizzle, user.id).then(result => result >= 1)
 					: false,
 			} : {}),
 
@@ -625,16 +557,7 @@ export class UserEntityService implements OnModuleInit {
 				email: profile!.email,
 				emailVerified: profile!.emailVerified,
 				securityKeysList: profile!.twoFactorEnabled
-					? this.userSecurityKeysRepository.find({
-						where: {
-							userId: user.id,
-						},
-						select: {
-							id: true,
-							name: true,
-							lastUsed: true,
-						},
-					})
+					? listUserSecurityKeySummariesByUserIdFromDatabase(this.drizzle, user.id)
 					: [],
 			} : {}),
 
@@ -669,9 +592,7 @@ export class UserEntityService implements OnModuleInit {
 		const _users = users.filter((user): user is MiUser => typeof user !== 'string');
 		if (_users.length !== users.length) {
 			_users.push(
-				...await this.usersRepository.findBy({
-					id: In(users.filter((user): user is string => typeof user === 'string')),
-				}),
+				...await listUsersByIdsFromDatabase(this.drizzle, users.filter((user): user is string => typeof user === 'string'), { includeSuspended: true }),
 			);
 		}
 		const _userIds = _users.map(u => u.id);
@@ -684,20 +605,18 @@ export class UserEntityService implements OnModuleInit {
 		let pinNotes: Map<MiUser['id'], MiUserNotePining[]> = new Map();
 
 		if (options?.schema !== 'UserLite') {
-			profilesMap = await this.userProfilesRepository.findBy({ userId: In(_userIds) })
+			profilesMap = await listUserProfilesByUserIdsFromDatabase(this.drizzle, _userIds)
 				.then(profiles => new Map(profiles.map(p => [p.userId, p])));
 
 			const meId = me ? me.id : null;
 			if (meId) {
-				userMemos = await this.userMemosRepository.findBy({ userId: meId })
-					.then(memos => new Map(memos.map(memo => [memo.targetUserId, memo.memo])));
+				userMemos = await listUserMemoTextsByUserIdFromDatabase(this.drizzle, meId);
 
 				if (_userIds.length > 0) {
 					userRelations = await this.getRelations(meId, _userIds);
-					pinNotes = await this.userNotePiningsRepository.createQueryBuilder('pin')
-						.where('pin.userId IN (:...userIds)', { userIds: _userIds })
-						.innerJoinAndSelect('pin.note', 'note')
-						.getMany()
+					pinNotes = await this.attachNotesToPinings(
+						await listUserNotePiningsByUserIdsFromDatabase(this.drizzle, _userIds, { order: 'desc' }),
+					)
 						.then(pinsNotes => {
 							const map = new Map<MiUser['id'], MiUserNotePining[]>();
 							for (const note of pinsNotes) {

@@ -10,7 +10,9 @@ import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChatService } from '@/core/ChatService.js';
-import type { DriveFilesRepository, MiUser } from '@/models/_.js';
+import type { MiUser } from '@/models/_.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['chat'],
@@ -78,8 +80,8 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.driveFilesRepository)
-		private driveFilesRepository: DriveFilesRepository,
+		@Inject(DI.drizzle)
+		private drizzle: MiDrizzleDatabase,
 
 		private getterService: GetterService,
 		private chatService: ChatService,
@@ -89,10 +91,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			let file = null;
 			if (ps.fileId != null) {
-				file = await this.driveFilesRepository.findOneBy({
-					id: ps.fileId,
-					userId: me.id,
-				});
+				file = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.fileId, me.id);
 
 				if (file == null) {
 					throw new ApiError(meta.errors.noSuchFile);
