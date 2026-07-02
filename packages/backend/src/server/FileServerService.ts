@@ -19,6 +19,7 @@ import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { bindThis } from '@/decorators.js';
 import { handleRequestRedirectToOmitSearch } from '@/misc/fastify-hook-handlers.js';
+import type { FileServerReply, FileServerRequest } from '@/server/file/FileServerTypes.js';
 import { FileServerDriveHandler } from './file/FileServerDriveHandler.js';
 import { FileServerFileResolver } from './file/FileServerFileResolver.js';
 import { FileServerProxyHandler } from './file/FileServerProxyHandler.js';
@@ -48,7 +49,7 @@ export class FileServerService {
 		private loggerService: LoggerService,
 	) {
 		this.logger = this.loggerService.getLogger('server', 'gray');
-		this.assets = resolve(this.config.rootDir, 'packages/backend/src/server/file/assets');
+		this.assets = resolve(this.config.rootDir, 'packages/backend/src/server/assets');
 		this.fileResolver = new FileServerFileResolver(
 			this.db,
 			this.fileInfoService,
@@ -91,7 +92,7 @@ export class FileServerService {
 			});
 
 			fastify.get<{ Params: { key: string; } }>('/files/:key', async (request, reply) => {
-				return await this.driveHandler.handle(request, reply)
+				return await this.driveHandler.handle(request as unknown as FileServerRequest<{ key: string }>, reply as unknown as FileServerReply)
 					.catch(err => this.errorHandler(request, reply, err));
 			});
 			fastify.get<{ Params: { key: string; } }>('/files/:key/*', async (request, reply) => {
@@ -104,7 +105,7 @@ export class FileServerService {
 			Params: { url: string; };
 			Querystring: { url?: string; };
 		}>('/proxy/:url*', async (request, reply) => {
-			return await this.proxyHandler.handle(request, reply)
+			return await this.proxyHandler.handle(request as unknown as FileServerRequest<{ url: string }, { url?: string }>, reply as unknown as FileServerReply)
 				.catch(err => this.errorHandler(request, reply, err));
 		});
 

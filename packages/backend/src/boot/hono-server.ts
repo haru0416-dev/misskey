@@ -60,6 +60,16 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			config,
 			meta: deps.meta,
 		},
+		file: {
+			config,
+			db: deps.db,
+			fileInfoService: deps.fileInfoService,
+			downloadService: deps.downloadService,
+			imageProcessingService: deps.imageProcessingService,
+			videoProcessingService: deps.videoProcessingService,
+			internalStorageService: deps.internalStorageService,
+			logger: deps.loggerService.getLogger('server', 'gray'),
+		},
 		health: {
 			redis: deps.redis,
 			redisForPub: deps.redisForPub,

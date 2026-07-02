@@ -12,6 +12,14 @@ import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
+import { AiService } from '@/core/AiService.js';
+import { DownloadService } from '@/core/DownloadService.js';
+import { FileInfoService } from '@/core/FileInfoService.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { ImageProcessingService } from '@/core/ImageProcessingService.js';
+import { InternalStorageService } from '@/core/InternalStorageService.js';
+import { LoggerService } from '@/core/LoggerService.js';
+import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 
 export type RuntimeDependencies = {
 	config: Config;
@@ -19,6 +27,14 @@ export type RuntimeDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	meilisearch: Meilisearch | null;
+	aiService: AiService;
+	downloadService: DownloadService;
+	fileInfoService: FileInfoService;
+	httpRequestService: HttpRequestService;
+	imageProcessingService: ImageProcessingService;
+	internalStorageService: InternalStorageService;
+	loggerService: LoggerService;
+	videoProcessingService: VideoProcessingService;
 	redis: Redis.Redis;
 	redisForPub: Redis.Redis;
 	redisForSub: Redis.Redis;
@@ -130,6 +146,14 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const redisForReactions = createRedisForReactions(config);
 	const meilisearch = createMeilisearchClient(config);
 	const meta = await fetchReactiveMeta(db, redisForSub);
+	const loggerService = new LoggerService();
+	const httpRequestService = new HttpRequestService(config);
+	const aiService = new AiService(meta, httpRequestService, loggerService);
+	const fileInfoService = new FileInfoService(aiService, loggerService);
+	const downloadService = new DownloadService(config, httpRequestService, loggerService);
+	const imageProcessingService = new ImageProcessingService();
+	const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
+	const internalStorageService = new InternalStorageService(config);
 
 	return {
 		config,
@@ -137,6 +161,14 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		db,
 		meta,
 		meilisearch,
+		aiService,
+		downloadService,
+		fileInfoService,
+		httpRequestService,
+		imageProcessingService,
+		internalStorageService,
+		loggerService,
+		videoProcessingService,
 		redis,
 		redisForPub,
 		redisForSub,
