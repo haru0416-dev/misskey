@@ -19,7 +19,7 @@ import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.j
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
-import { createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
+import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
@@ -2694,6 +2694,75 @@ describe('Endpoints', () => {
 				assert.strictEqual(denied.status, 403, endpoint);
 				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
 			}
+		});
+	});
+
+	describe('Hono channel follow endpoints', () => {
+		test('follow and unfollow update the channel following row', async () => {
+			const config = loadConfig();
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-follow-${Date.now().toString(36)}`,
+				description: 'hono follow target',
+			});
+
+			const followed = await api('channels/follow', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(followed.status, 204);
+			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), true);
+
+			const unfollowed = await api('channels/unfollow', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(unfollowed.status, 204);
+			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), false);
+
+			const unfollowedAgain = await api('channels/unfollow', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(unfollowedAgain.status, 204);
+		});
+
+		test('keeps legacy validation, permission, and moved-account errors', async () => {
+			const config = loadConfig();
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-follow-validation-${Date.now().toString(36)}`,
+				description: 'hono follow validation target',
+			});
+
+			const missingFollow = await api('channels/follow', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingFollow.status, 400);
+			assert.strictEqual(castAsError(missingFollow.body as any).error.id, 'c0031718-d573-4e85-928e-10039f1fbb68');
+
+			const missingUnfollow = await api('channels/unfollow', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingUnfollow.status, 400);
+			assert.strictEqual(castAsError(missingUnfollow.body as any).error.id, '19959ee9-0153-4c51-bbd9-a98c49dc59d6');
+
+			const readToken = await createAppToken(alice, ['read:channels']);
+			for (const endpoint of ['channels/follow', 'channels/unfollow'] as const) {
+				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+
+			const movedUser = await signup({ username: `honofollow${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+			const movedDenied = await api('channels/follow', {
+				channelId: target.id,
+			}, movedUser);
+			assert.strictEqual(movedDenied.status, 403);
+			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(await channelFollowingExistsInDatabase(db, movedUser.id, target.id), false);
 		});
 	});
 

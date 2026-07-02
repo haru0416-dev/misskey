@@ -5,7 +5,12 @@
 
 import type { Config } from '@/config.js';
 import { fetchFavoriteChannelIdsFromDatabase, fetchFavoritedChannelIdsInDatabase } from '@/core/ChannelFavoriteStore.js';
-import { fetchFollowingChannelIdsInDatabase, listChannelFollowingsByFollowerIdFromDatabase } from '@/core/ChannelFollowingStore.js';
+import {
+	createChannelFollowingInDatabase,
+	deleteChannelFollowingFromDatabase,
+	fetchFollowingChannelIdsInDatabase,
+	listChannelFollowingsByFollowerIdFromDatabase,
+} from '@/core/ChannelFollowingStore.js';
 import {
 	channelMutingExistsInDatabase,
 	createChannelMutingInDatabase,
@@ -92,6 +97,18 @@ const emptyParamDef = {
 	required: [],
 } as const;
 
+const channelFollowParamDef = {
+	type: 'object',
+	properties: {
+		channelId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['channelId'],
+} as const;
+
+type ChannelFollowParams = {
+	channelId: string;
+};
+
 const channelMuteCreateParamDef = {
 	type: 'object',
 	properties: {
@@ -121,6 +138,24 @@ const channelMuteDeleteParamDef = {
 type ChannelMuteDeleteParams = {
 	channelId: string;
 };
+
+function channelFollowNoSuchChannelError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such channel.',
+		code: 'NO_SUCH_CHANNEL',
+		id: 'c0031718-d573-4e85-928e-10039f1fbb68',
+	});
+}
+
+function channelUnfollowNoSuchChannelError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such channel.',
+		code: 'NO_SUCH_CHANNEL',
+		id: '19959ee9-0153-4c51-bbd9-a98c49dc59d6',
+	});
+}
 
 function channelMuteCreateNoSuchChannelError(): HonoApiError {
 	return new HonoApiError({
@@ -322,6 +357,46 @@ export async function handleHonoApiChannelsMyFavorites(
 		.filter((channel): channel is MiChannel => channel != null);
 
 	return await packChannelsForHonoApi(deps, channels, me);
+}
+
+export async function handleHonoApiChannelsFollow(
+	deps: HonoApiChannelsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(channelFollowParamDef, body) as ChannelFollowParams;
+	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
+	if (targetChannel == null) {
+		throw channelFollowNoSuchChannelError();
+	}
+
+	await createChannelFollowingInDatabase(deps.db, {
+		id: genId(deps.config),
+		followerId: me.id,
+		followeeId: targetChannel.id,
+	});
+	deps.publishInternalEvent?.('followChannel', {
+		userId: me.id,
+		channelId: targetChannel.id,
+	});
+}
+
+export async function handleHonoApiChannelsUnfollow(
+	deps: HonoApiChannelsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(channelFollowParamDef, body) as ChannelFollowParams;
+	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
+	if (targetChannel == null) {
+		throw channelUnfollowNoSuchChannelError();
+	}
+
+	await deleteChannelFollowingFromDatabase(deps.db, me.id, targetChannel.id);
+	deps.publishInternalEvent?.('unfollowChannel', {
+		userId: me.id,
+		channelId: targetChannel.id,
+	});
 }
 
 export async function handleHonoApiChannelsMuteCreate(
