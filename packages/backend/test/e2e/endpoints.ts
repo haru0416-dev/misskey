@@ -32,6 +32,7 @@ import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashS
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
+import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
@@ -2289,6 +2290,45 @@ describe('Endpoints', () => {
 			const roleDenied = await api('admin/roles/list', {}, normalUser);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const defaultPolicyUser = await signup({ username: `honorolepol${now.toString(36)}` });
+			const beforeMeta = await fetchMetaFromDatabase(db);
+			try {
+				const updatedDefaultPolicies = await api('admin/roles/update-default-policies', {
+					policies: {
+						...beforeMeta.policies,
+						canInvite: true,
+						inviteLimit: 2,
+						inviteLimitCycle: 60,
+						inviteExpirationTime: 0,
+					} as any,
+				}, alice);
+				assert.strictEqual(updatedDefaultPolicies.status, 204);
+
+				const afterMeta = await fetchMetaFromDatabase(db);
+				assert.strictEqual(afterMeta.policies.canInvite, true);
+				assert.strictEqual(afterMeta.policies.inviteLimit, 2);
+
+				const inviteLimit = await api('invite/limit', {}, defaultPolicyUser);
+				assert.strictEqual(inviteLimit.status, 200);
+				assert.strictEqual(inviteLimit.body.remaining, 2);
+
+				const updateDefaultScopeDenied = await api('admin/roles/update-default-policies', {
+					policies: afterMeta.policies as any,
+				}, { token: readToken });
+				assert.strictEqual(updateDefaultScopeDenied.status, 403);
+				assert.strictEqual(castAsError(updateDefaultScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateServerSettings',
+					search: 'canInvite',
+				});
+				assert.ok(logs.length > 0);
+			} finally {
+				await api('admin/roles/update-default-policies', { policies: beforeMeta.policies as any }, alice);
+			}
 
 			const deleted = await api('admin/roles/delete', { roleId: created.body.id }, alice);
 			assert.strictEqual(deleted.status, 204);

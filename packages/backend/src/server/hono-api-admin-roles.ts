@@ -15,10 +15,12 @@ import {
 	listRolesOrderByLastUsedAtDescFromDatabase,
 } from '@/core/RoleStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
@@ -28,6 +30,7 @@ import { packHonoApiRole } from './hono-api-roles.js';
 export type HonoApiAdminRoleDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
+	meta: MiMeta;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
@@ -116,10 +119,21 @@ const adminRolesUpdateParamDef = {
 	required: ['roleId'],
 } as const;
 
+const adminRolesUpdateDefaultPoliciesParamDef = {
+	type: 'object',
+	properties: {
+		policies: {
+			type: 'object',
+		},
+	},
+	required: ['policies'],
+} as const;
+
 type AdminRolesCreateParams = SchemaType<typeof adminRolesCreateParamDef>;
 type AdminRolesDeleteParams = SchemaType<typeof adminRolesDeleteParamDef>;
 type AdminRolesShowParams = SchemaType<typeof adminRolesShowParamDef>;
 type AdminRolesUpdateParams = SchemaType<typeof adminRolesUpdateParamDef>;
+type AdminRolesUpdateDefaultPoliciesParams = SchemaType<typeof adminRolesUpdateDefaultPoliciesParamDef>;
 
 function noSuchRoleError(id: string): HonoApiError {
 	return new HonoApiError({
@@ -228,4 +242,25 @@ export async function handleHonoApiAdminRolesUpdate(
 		displayOrder: params.displayOrder,
 		policies: params.policies,
 	} as RoleUpdateOptions, me);
+}
+
+export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
+	deps: HonoApiAdminRoleDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminRolesUpdateDefaultPoliciesParamDef, body) as AdminRolesUpdateDefaultPoliciesParams;
+	const before = await fetchMetaFromDatabase(deps.db);
+	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, {
+		policies: params.policies as MiMeta['policies'],
+	});
+
+	Object.assign(deps.meta, after);
+	deps.meta.rootUser = null;
+	deps.publishInternalEvent?.('metaUpdated', { before: updateBefore, after });
+	deps.publishInternalEvent?.('policiesUpdated', after.policies);
+	await logModerationEventInDatabase(deps, me, 'updateServerSettings', {
+		before: before.policies,
+		after: after.policies,
+	});
 }
