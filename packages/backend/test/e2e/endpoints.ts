@@ -2194,6 +2194,90 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/roles', () => {
+		test('admin/roles は作成、一覧、表示、scope、権限、ログを維持する', async () => {
+			const now = Date.now();
+			const createPayload = {
+				name: `Hono admin role ${now}`,
+				description: 'Hono admin role endpoint test',
+				color: '#3366cc',
+				iconUrl: null,
+				target: 'manual' as const,
+				condFormula: {
+					id: '018d87a0-7f78-48b4-9ee8-1e22e6f73089',
+					type: 'isRemote',
+				} as any,
+				isPublic: true,
+				isModerator: false,
+				isAdministrator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: true,
+				canEditMembersByModerator: false,
+				displayOrder: 313,
+				policies: {
+					canInvite: { useDefault: false, priority: 0, value: true },
+				},
+			};
+
+			const created = await api('admin/roles/create', createPayload, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, createPayload.name);
+			assert.strictEqual(created.body.description, createPayload.description);
+			assert.strictEqual(created.body.color, createPayload.color);
+			assert.strictEqual(created.body.isPublic, true);
+			assert.strictEqual(created.body.isExplorable, true);
+			assert.strictEqual(created.body.preserveAssignmentOnMoveAccount, true);
+			assert.strictEqual(created.body.displayOrder, createPayload.displayOrder);
+			assert.strictEqual(created.body.usersCount, 0);
+			assert.strictEqual(created.body.policies.canInvite.useDefault, false);
+			assert.strictEqual(created.body.policies.canInvite.value, true);
+
+			const list = await api('admin/roles/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const listedRole = list.body.find(item => item.id === created.body.id);
+			assert.ok(listedRole);
+			assert.strictEqual(listedRole.name, createPayload.name);
+			assert.strictEqual(listedRole.usersCount, 0);
+
+			const shown = await api('admin/roles/show', { roleId: created.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.name, createPayload.name);
+			assert.strictEqual(shown.body.policies.canInvite.value, true);
+
+			const missing = await api('admin/roles/show', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const readToken = await createAppToken(alice, ['read:admin:roles']);
+			const scopeDenied = await api('admin/roles/create', {
+				...createPayload,
+				name: `Hono admin role denied ${now}`,
+			}, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honorole${now.toString(36)}` });
+			const roleDenied = await api('admin/roles/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'createRole',
+					search: created.body.id,
+				});
+				if (logs.length > 0) return;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail('createRole moderation log was not recorded');
+		});
+	});
+
 	describe('invite', () => {
 		test('invite/limit keeps role policy, token scope, and remaining count semantics', async () => {
 			const config = loadConfig();

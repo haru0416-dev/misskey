@@ -44,7 +44,7 @@ function noSuchRoleError(): HonoApiError {
 	});
 }
 
-async function packHonoApiRole(
+export async function packHonoApiRole(
 	deps: HonoApiRoleDependencies,
 	role: MiRole,
 ): Promise<Packed<'Role'>> {

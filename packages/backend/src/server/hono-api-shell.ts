@@ -18,6 +18,7 @@ import { assertCredential, assertOptionalCredential, assertProhibitMoved, assert
 import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
 import { handleHonoApiAdminAnnouncementsCreate, handleHonoApiAdminAnnouncementsDelete, handleHonoApiAdminAnnouncementsList, handleHonoApiAdminAnnouncementsUpdate } from './hono-api-admin-announcements.js';
 import { handleHonoApiAdminAvatarDecorationsCreate, handleHonoApiAdminAvatarDecorationsDelete, handleHonoApiAdminAvatarDecorationsList, handleHonoApiAdminAvatarDecorationsUpdate } from './hono-api-admin-avatar-decorations.js';
+import { handleHonoApiAdminRolesCreate, handleHonoApiAdminRolesList, handleHonoApiAdminRolesShow } from './hono-api-admin-roles.js';
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from './hono-api-admin-stats.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
@@ -511,6 +512,42 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminInviteList(deps, body));
+		});
+	});
+
+	app.post('/admin/roles/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:roles');
+			await assertHonoApiAdmin(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminRolesCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/roles/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:roles');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminRolesList(deps, body));
+		});
+	});
+
+	app.post('/admin/roles/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:roles');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminRolesShow(deps, body));
 		});
 	});
 

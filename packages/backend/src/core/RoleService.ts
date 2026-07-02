@@ -36,13 +36,13 @@ import {
 	listRoleAssignmentsByUserIdFromDatabase,
 } from '@/core/RoleAssignmentStore.js';
 import {
-	createRoleInDatabase,
 	deleteRoleInDatabase,
 	fetchRoleByIdFromDatabase,
 	fetchRoleByIdOrFailFromDatabase,
 	listRolesFromDatabase,
 	updateRoleInDatabase,
 } from '@/core/RoleStore.js';
+import { createRoleWithSideEffects, type RoleCreateOptions } from '@/core/RoleLogic.js';
 import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { DEFAULT_POLICIES, type RolePolicies } from './role-policies.js';
@@ -571,38 +571,12 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async create(values: Partial<MiRole>, moderator?: MiUser): Promise<MiRole> {
-		const date = new Date();
-		const created = await createRoleInDatabase(this.db, {
-			id: this.idService.gen(date.getTime()),
-			updatedAt: date,
-			lastUsedAt: date,
-			name: values.name!,
-			description: values.description!,
-			color: values.color,
-			iconUrl: values.iconUrl,
-			target: values.target!,
-			condFormula: values.condFormula!,
-			isPublic: values.isPublic!,
-			isAdministrator: values.isAdministrator!,
-			isModerator: values.isModerator!,
-			isExplorable: values.isExplorable!,
-			asBadge: values.asBadge!,
-			preserveAssignmentOnMoveAccount: values.preserveAssignmentOnMoveAccount!,
-			canEditMembersByModerator: values.canEditMembersByModerator!,
-			displayOrder: values.displayOrder!,
-			policies: values.policies!,
-		});
-
-		this.globalEventService.publishInternalEvent('roleCreated', created);
-
-		if (moderator) {
-			this.moderationLogService.log(moderator, 'createRole', {
-				roleId: created.id,
-				role: created,
-			});
-		}
-
-		return created;
+		return await createRoleWithSideEffects({
+			db: this.db,
+			genId: time => this.idService.gen(time),
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, values as RoleCreateOptions, moderator);
 	}
 
 	@bindThis
