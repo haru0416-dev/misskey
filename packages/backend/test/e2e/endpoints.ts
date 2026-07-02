@@ -2246,6 +2246,33 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.body.name, createPayload.name);
 			assert.strictEqual(shown.body.policies.canInvite.value, true);
 
+			const updated = await api('admin/roles/update', {
+				roleId: created.body.id,
+				name: `Hono admin role updated ${now}`,
+				description: 'updated role description',
+				color: null,
+				isPublic: false,
+				preserveAssignmentOnMoveAccount: false,
+				displayOrder: 314,
+				policies: {
+					canInvite: { useDefault: false, priority: 0, value: false },
+				} as any,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const afterUpdate = await api('admin/roles/show', { roleId: created.body.id }, alice);
+			assert.strictEqual(afterUpdate.status, 200);
+			assert.strictEqual(afterUpdate.body.name, `Hono admin role updated ${now}`);
+			assert.strictEqual(afterUpdate.body.description, 'updated role description');
+			assert.strictEqual(afterUpdate.body.color, null);
+			assert.strictEqual(afterUpdate.body.isPublic, false);
+			assert.strictEqual(afterUpdate.body.displayOrder, 314);
+			assert.strictEqual(afterUpdate.body.policies.canInvite.value, false);
+
+			const missingUpdate = await api('admin/roles/update', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.code, 'NO_SUCH_ROLE');
+
 			const missing = await api('admin/roles/show', { roleId: '000000000000000000000000' }, alice);
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
@@ -2263,18 +2290,34 @@ describe('Endpoints', () => {
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
+			const deleted = await api('admin/roles/delete', { roleId: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/roles/show', { roleId: created.body.id }, alice);
+			assert.strictEqual(afterDelete.status, 400);
+			assert.strictEqual(castAsError(afterDelete.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const missingDelete = await api('admin/roles/delete', { roleId: '000000000000000000000000' }, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.code, 'NO_SUCH_ROLE');
+
+			const logTypes = ['createRole', 'updateRole', 'deleteRole'] as const;
+			const logged = new Set<string>();
 			for (let i = 0; i < 10; i++) {
-				const logs = await listModerationLogsFromDatabase(db, {
-					limit: 10,
-					order: 'desc',
-					type: 'createRole',
-					search: created.body.id,
-				});
-				if (logs.length > 0) return;
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
 				await new Promise(resolve => setTimeout(resolve, 100));
 			}
 
-			assert.fail('createRole moderation log was not recorded');
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
 		});
 	});
 

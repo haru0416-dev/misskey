@@ -36,13 +36,18 @@ import {
 	listRoleAssignmentsByUserIdFromDatabase,
 } from '@/core/RoleAssignmentStore.js';
 import {
-	deleteRoleInDatabase,
 	fetchRoleByIdFromDatabase,
 	fetchRoleByIdOrFailFromDatabase,
 	listRolesFromDatabase,
 	updateRoleInDatabase,
 } from '@/core/RoleStore.js';
-import { createRoleWithSideEffects, type RoleCreateOptions } from '@/core/RoleLogic.js';
+import {
+	createRoleWithSideEffects,
+	deleteRoleWithSideEffects,
+	updateRoleWithSideEffects,
+	type RoleCreateOptions,
+	type RoleUpdateOptions,
+} from '@/core/RoleLogic.js';
 import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { DEFAULT_POLICIES, type RolePolicies } from './role-policies.js';
@@ -581,35 +586,20 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async update(role: MiRole, params: Partial<MiRole>, moderator?: MiUser): Promise<void> {
-		const date = new Date();
-		await updateRoleInDatabase(this.db, role.id, {
-			updatedAt: date,
-			...params,
-		});
-
-		const updated = await fetchRoleByIdOrFailFromDatabase(this.db, role.id);
-		this.globalEventService.publishInternalEvent('roleUpdated', updated);
-
-		if (moderator) {
-			this.moderationLogService.log(moderator, 'updateRole', {
-				roleId: role.id,
-				before: role,
-				after: updated,
-			});
-		}
+		await updateRoleWithSideEffects({
+			db: this.db,
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, role, params as RoleUpdateOptions, moderator);
 	}
 
 	@bindThis
 	public async delete(role: MiRole, moderator?: MiUser): Promise<void> {
-		await deleteRoleInDatabase(this.db, role.id);
-		this.globalEventService.publishInternalEvent('roleDeleted', role);
-
-		if (moderator) {
-			this.moderationLogService.log(moderator, 'deleteRole', {
-				roleId: role.id,
-				role: role,
-			});
-		}
+		await deleteRoleWithSideEffects({
+			db: this.db,
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, role, moderator);
 	}
 
 	@bindThis

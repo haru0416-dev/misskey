@@ -4,7 +4,12 @@
  */
 
 import type { InternalEventTypes } from '@/core/GlobalEventService.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
+import {
+	createRoleInDatabase,
+	deleteRoleInDatabase,
+	fetchRoleByIdOrFailFromDatabase,
+	updateRoleInDatabase,
+} from '@/core/RoleStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
@@ -14,6 +19,11 @@ export type RoleCreateOptions = Pick<
 	MiRole,
 	'name' | 'description' | 'color' | 'iconUrl' | 'target' | 'condFormula' | 'isPublic' | 'isAdministrator' | 'isModerator' | 'asBadge' | 'canEditMembersByModerator' | 'displayOrder' | 'policies'
 > & Partial<Pick<MiRole, 'isExplorable' | 'preserveAssignmentOnMoveAccount'>>;
+
+export type RoleUpdateOptions = Partial<Pick<
+	MiRole,
+	'name' | 'description' | 'color' | 'iconUrl' | 'target' | 'condFormula' | 'isPublic' | 'isAdministrator' | 'isModerator' | 'isExplorable' | 'asBadge' | 'preserveAssignmentOnMoveAccount' | 'canEditMembersByModerator' | 'displayOrder' | 'policies'
+>>;
 
 export type RoleLogicDependencies = {
 	db: MiDrizzleDatabase;
@@ -59,4 +69,43 @@ export async function createRoleWithSideEffects(
 	}
 
 	return created;
+}
+
+export async function updateRoleWithSideEffects(
+	deps: Pick<RoleLogicDependencies, 'db' | 'publishInternalEvent' | 'logModeration'>,
+	role: MiRole,
+	params: RoleUpdateOptions,
+	moderator?: MiUser,
+): Promise<void> {
+	await updateRoleInDatabase(deps.db, role.id, {
+		updatedAt: new Date(),
+		...params,
+	});
+
+	const updated = await fetchRoleByIdOrFailFromDatabase(deps.db, role.id);
+	deps.publishInternalEvent?.('roleUpdated', updated);
+
+	if (moderator) {
+		void deps.logModeration?.(moderator, 'updateRole', {
+			roleId: role.id,
+			before: role,
+			after: updated,
+		});
+	}
+}
+
+export async function deleteRoleWithSideEffects(
+	deps: Pick<RoleLogicDependencies, 'db' | 'publishInternalEvent' | 'logModeration'>,
+	role: MiRole,
+	moderator?: MiUser,
+): Promise<void> {
+	await deleteRoleInDatabase(deps.db, role.id);
+	deps.publishInternalEvent?.('roleDeleted', role);
+
+	if (moderator) {
+		void deps.logModeration?.(moderator, 'deleteRole', {
+			roleId: role.id,
+			role,
+		});
+	}
 }
