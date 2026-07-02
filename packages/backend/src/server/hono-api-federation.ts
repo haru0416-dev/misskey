@@ -6,16 +6,19 @@
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import semver from 'semver';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { RelationshipQueue } from '@/core/QueueModule.js';
 import {
+	createInstanceInDatabase,
 	fetchInstanceByHostFromDatabase,
 	listFederationInstancesFromDatabase,
 	listInstancesOrderByFollowersCountDescFromDatabase,
 	listInstancesOrderByFollowingCountDescFromDatabase,
 	updateInstanceInDatabase,
 } from '@/core/InstanceStore.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import {
 	countFollowingsWithRemoteFolloweeHostFromDatabase,
 	countFollowingsWithRemoteFollowerHostFromDatabase,
@@ -23,10 +26,12 @@ import {
 } from '@/core/FollowingStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { genId } from '@/misc/id/gen-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiInstance, MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
+import type Logger from '@/logger.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -38,6 +43,8 @@ export type HonoApiFederationDependencies = {
 
 export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies & {
 	redis: Redis.Redis;
+	httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
+	logger: Pick<Logger, 'error' | 'info'>;
 	relationshipQueue: RelationshipQueue;
 };
 
@@ -190,6 +197,43 @@ async function updateFederatedInstanceCache(
 		'EX',
 		60 * 30,
 	);
+}
+
+async function fetchOrRegisterFederatedInstance(
+	deps: HonoApiAdminFederationDependencies,
+	host: string,
+): Promise<MiInstance> {
+	host = toPuny(host);
+
+	const index = await fetchInstanceByHostFromDatabase(deps.db, host);
+	if (index != null) {
+		await updateFederatedInstanceCache(deps, index);
+		return index;
+	}
+
+	const created = await createInstanceInDatabase(deps.db, {
+		id: genId(deps.config),
+		host,
+		firstRetrievedAt: new Date(),
+	});
+
+	await updateFederatedInstanceCache(deps, created);
+	return created;
+}
+
+async function tryLockFetchInstanceMetadata(deps: HonoApiAdminFederationDependencies, host: string): Promise<string | null> {
+	// TODO: マイグレーションなのであとで消す (2024.3.1)
+	await deps.redis.del(`fetchInstanceMetadata:mutex:${host}`);
+
+	return await deps.redis.set(
+		`fetchInstanceMetadata:mutex:v2:${host}`, '1',
+		'EX', 30,
+		'GET',
+	);
+}
+
+async function unlockFetchInstanceMetadata(deps: HonoApiAdminFederationDependencies, host: string): Promise<number> {
+	return await deps.redis.del(`fetchInstanceMetadata:mutex:v2:${host}`);
 }
 
 function toRelationshipJob(name: 'unfollow', data: RelationshipJobData) {
@@ -381,6 +425,30 @@ export async function handleHonoApiAdminFederationUpdateInstance(
 			after: params.moderationNote,
 		});
 	}
+}
+
+export async function handleHonoApiAdminFederationRefreshRemoteInstanceMetadata(
+	deps: HonoApiAdminFederationDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminFederationHostParamDef, body) as AdminFederationHostParams;
+	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
+
+	if (instance == null) {
+		throw new Error('instance not found');
+	}
+
+	void fetchInstanceMetadataWithSideEffects({
+		httpRequestService: deps.httpRequestService,
+		logger: deps.logger,
+		tryLock: host => tryLockFetchInstanceMetadata(deps, host),
+		unlock: host => unlockFetchInstanceMetadata(deps, host),
+		fetchOrRegisterInstance: host => fetchOrRegisterFederatedInstance(deps, host),
+		updateInstance: async (id, updates) => {
+			const updated = await updateInstanceInDatabase(deps.db, id, updates);
+			await updateFederatedInstanceCache(deps, updated);
+		},
+	}, instance, true);
 }
 
 export async function handleHonoApiAdminFederationRemoveAllFollowing(

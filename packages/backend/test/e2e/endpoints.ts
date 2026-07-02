@@ -951,6 +951,39 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 
+		test('admin/federation/refresh-remote-instance-metadata は即時応答、token scope、roleを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const host = `hono-refresh-fed-${suffix}.invalid`;
+			await createInstanceInDatabase(db, {
+				id: genId(config, now),
+				host,
+				firstRetrievedAt: new Date(now),
+			});
+
+			const refreshed = await api('admin/federation/refresh-remote-instance-metadata', {
+				host: host.toUpperCase(),
+			}, alice);
+			assert.strictEqual(refreshed.status, 204);
+
+			const token = await createAppToken(alice, ['write:admin:federation']);
+			const refreshedByToken = await api('admin/federation/refresh-remote-instance-metadata', {
+				host,
+			}, { token });
+			assert.strictEqual(refreshedByToken.status, 204);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/federation/refresh-remote-instance-metadata', { host }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `harf${suffix}` });
+			const roleDenied = await api('admin/federation/refresh-remote-instance-metadata', { host }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
 		test('admin/federation/remove-all-following は remote follower の unfollow job を作る', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
