@@ -4,16 +4,16 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { MiAbuseUserReport, MiNote, MiUser } from '@/models/_.js';
+import { MiNote, MiUser } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { MiSystemWebhook, type SystemWebhookEventType } from '@/models/SystemWebhook.js';
-import { type AbuseReportPayload, SystemWebhookPayload, SystemWebhookService } from '@/core/SystemWebhookService.js';
+import { SystemWebhookService } from '@/core/SystemWebhookService.js';
+import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/SystemWebhookTestLogic.js';
 import { type Packed } from '@/misc/json-schema.js';
 import { MiWebhook, type WebhookEventTypes } from '@/models/Webhook.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { type UserWebhookPayload, UserWebhookService } from '@/core/UserWebhookService.js';
 import { QueueService } from '@/core/QueueService.js';
-import { ModeratorInactivityRemainingTime } from '@/queue/processors/CheckModeratorsActivityProcessorService.js';
 
 const oneDayMillis = 24 * 60 * 60 * 1000;
 
@@ -267,98 +267,18 @@ export class WebhookTestService {
 			override?: Partial<Omit<MiSystemWebhook, 'id'>>,
 		},
 	) {
-		const webhooks = await this.systemWebhookService.fetchSystemWebhooks({ ids: [params.webhookId] });
-		if (webhooks.length === 0) {
-			throw new WebhookTestService.NoSuchWebhookError();
+		try {
+			await testSystemWebhookWithQueue({
+				fetchSystemWebhooksByIds: ids => this.systemWebhookService.fetchSystemWebhooks({ ids }),
+				enqueueSystemWebhookDeliver: (webhook, type, content, opts) => this.queueService.systemWebhookDeliver(webhook, type, content, opts),
+				populateEmojis: (emojiNames, host) => this.customEmojiService.populateEmojis(emojiNames, host),
+			}, params);
+		} catch (e) {
+			if (e instanceof NoSuchSystemWebhookForTestError) {
+				throw new WebhookTestService.NoSuchWebhookError();
+			}
+			throw e;
 		}
-
-		const webhook = webhooks[0];
-		const send = <U extends SystemWebhookEventType>(type: U, contents: SystemWebhookPayload<U>) => {
-			const merged = {
-				...webhook,
-				...params.override,
-			};
-
-			// テスト目的なのでSystemWebhookServiceの機能を経由せず直接キューに追加する（チェック処理などをスキップする意図）.
-			// また、Jobの試行回数も1回だけ.
-			this.queueService.systemWebhookDeliver(merged, type, contents, { attempts: 1 });
-		};
-
-		switch (params.type) {
-			case 'abuseReport': {
-				send('abuseReport', await this.generateAbuseReport({
-					targetUserId: dummyUser1.id,
-					targetUser: dummyUser1,
-					reporterId: dummyUser2.id,
-					reporter: dummyUser2,
-				}));
-				break;
-			}
-			case 'abuseReportResolved': {
-				send('abuseReportResolved', await this.generateAbuseReport({
-					targetUserId: dummyUser1.id,
-					targetUser: dummyUser1,
-					reporterId: dummyUser2.id,
-					reporter: dummyUser2,
-					assigneeId: dummyUser3.id,
-					assignee: dummyUser3,
-					resolved: true,
-				}));
-				break;
-			}
-			case 'userCreated': {
-				send('userCreated', await this.toPackedUserLite(dummyUser1));
-				break;
-			}
-			case 'inactiveModeratorsWarning': {
-				const dummyTime: ModeratorInactivityRemainingTime = {
-					time: 100000,
-					asDays: 1,
-					asHours: 24,
-				};
-
-				send('inactiveModeratorsWarning', {
-					remainingTime: dummyTime,
-				});
-				break;
-			}
-			case 'inactiveModeratorsInvitationOnlyChanged': {
-				send('inactiveModeratorsInvitationOnlyChanged', {});
-				break;
-			}
-			default: {
-				const _exhaustiveAssertion: never = params.type;
-				return;
-			}
-		}
-	}
-
-	@bindThis
-	private async generateAbuseReport(override?: Partial<MiAbuseUserReport>): Promise<AbuseReportPayload> {
-		const result: MiAbuseUserReport = {
-			id: 'dummy-abuse-report1',
-			targetUserId: 'dummy-target-user',
-			targetUser: null,
-			reporterId: 'dummy-reporter-user',
-			reporter: null,
-			assigneeId: null,
-			assignee: null,
-			resolved: false,
-			forwarded: false,
-			comment: 'This is a dummy report for testing purposes.',
-			targetUserHost: null,
-			reporterHost: null,
-			resolvedAs: null,
-			moderationNote: 'foo',
-			...override,
-		};
-
-		return {
-			...result,
-			targetUser: result.targetUser ? await this.toPackedUserLite(result.targetUser) : null,
-			reporter: result.reporter ? await this.toPackedUserLite(result.reporter) : null,
-			assignee: result.assignee ? await this.toPackedUserLite(result.assignee) : null,
-		};
 	}
 
 	@bindThis

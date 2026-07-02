@@ -10,14 +10,13 @@ import { MemorySingleCache } from '@/misc/cache.js';
 import type { MiRelay } from '@/models/Relay.js';
 import { QueueService } from '@/core/QueueService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
+import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { deepClone } from '@/misc/clone.js';
 import { bindThis } from '@/decorators.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
+import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/RelayLogic.js';
 import {
-	createRelayInDatabase,
-	deleteRelayFromDatabase,
-	fetchRelayByInboxFromDatabase,
 	listRelaysByStatusFromDatabase,
 	listRelaysFromDatabase,
 	updateRelayStatusInDatabase,
@@ -29,6 +28,9 @@ export class RelayService {
 	private relaysCache: MemorySingleCache<MiRelay[]>;
 
 	constructor(
+		@Inject(DI.config)
+		private config: Config,
+
 		@Inject(DI.drizzle)
 		private drizzle: MiDrizzleDatabase,
 
@@ -42,35 +44,24 @@ export class RelayService {
 
 	@bindThis
 	public async addRelay(inbox: string): Promise<MiRelay> {
-		const relay = await createRelayInDatabase(this.drizzle, {
-			id: this.idService.gen(),
-			inbox,
-			status: 'requesting',
-		});
-
-		const relayActor = await this.systemAccountService.fetch('relay');
-		const follow = this.apRendererService.renderFollowRelay(relay, relayActor);
-		const activity = this.apRendererService.addContext(follow);
-		this.queueService.deliver(relayActor, activity, relay.inbox, false);
-
-		return relay;
+		return await addRelayWithSideEffects({
+			config: this.config,
+			db: this.drizzle,
+			genId: () => this.idService.gen(),
+			fetchRelayActor: () => this.systemAccountService.fetch('relay'),
+			enqueueDeliver: (user, content, to, isSharedInbox) => this.queueService.deliver(user, content, to, isSharedInbox),
+		}, inbox);
 	}
 
 	@bindThis
 	public async removeRelay(inbox: string): Promise<void> {
-		const relay = await fetchRelayByInboxFromDatabase(this.drizzle, inbox);
-
-		if (relay == null) {
-			throw new Error('relay not found');
-		}
-
-		const relayActor = await this.systemAccountService.fetch('relay');
-		const follow = this.apRendererService.renderFollowRelay(relay, relayActor);
-		const undo = this.apRendererService.renderUndo(follow, relayActor);
-		const activity = this.apRendererService.addContext(undo);
-		this.queueService.deliver(relayActor, activity, relay.inbox, false);
-
-		await deleteRelayFromDatabase(this.drizzle, relay.id);
+		await removeRelayWithSideEffects({
+			config: this.config,
+			db: this.drizzle,
+			genId: () => this.idService.gen(),
+			fetchRelayActor: () => this.systemAccountService.fetch('relay'),
+			enqueueDeliver: (user, content, to, isSharedInbox) => this.queueService.deliver(user, content, to, isSharedInbox),
+		}, inbox);
 	}
 
 	@bindThis
