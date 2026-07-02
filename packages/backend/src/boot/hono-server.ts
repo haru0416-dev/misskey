@@ -83,6 +83,16 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			userAuthService: deps.userAuthService,
 			webAuthnService: deps.webAuthnService,
 			emailService: deps.emailService,
+			systemQueue: deps.systemQueue,
+			endedPollNotificationQueue: deps.endedPollNotificationQueue,
+			postScheduledNoteQueue: deps.postScheduledNoteQueue,
+			deliverQueue: deps.deliverQueue,
+			inboxQueue: deps.inboxQueue,
+			dbQueue: deps.dbQueue,
+			relationshipQueue: deps.relationshipQueue,
+			objectStorageQueue: deps.objectStorageQueue,
+			userWebhookDeliverQueue: deps.userWebhookDeliverQueue,
+			systemWebhookDeliverQueue: deps.systemWebhookDeliverQueue,
 			logger: deps.loggerService.getLogger('Signin'),
 			publishInternalEvent: (type, value) => {
 				deps.redisForPub.publish(config.host, JSON.stringify({

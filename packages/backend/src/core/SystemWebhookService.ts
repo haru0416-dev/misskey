@@ -19,12 +19,9 @@ import { Packed } from '@/misc/json-schema.js';
 import { AbuseReportResolveType } from '@/models/AbuseUserReport.js';
 import { ModeratorInactivityRemainingTime } from '@/queue/processors/CheckModeratorsActivityProcessorService.js';
 import {
-	createSystemWebhookInDatabase,
-	deleteSystemWebhookFromDatabase,
-	fetchSystemWebhookByIdOrFailFromDatabase,
 	listSystemWebhooksFromDatabase,
-	updateSystemWebhookInDatabase,
 } from '@/core/SystemWebhookStore.js';
+import { createSystemWebhookWithSideEffects, deleteSystemWebhookWithSideEffects, updateSystemWebhookWithSideEffects } from '@/core/SystemWebhookLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { OnApplicationShutdown } from '@nestjs/common';
 
@@ -112,19 +109,12 @@ export class SystemWebhookService implements OnApplicationShutdown {
 		},
 		updater: MiUser,
 	): Promise<MiSystemWebhook> {
-		const id = this.idService.gen();
-		const webhook = await createSystemWebhookInDatabase(this.db, {
-			...params,
-			id,
-		});
-		this.globalEventService.publishInternalEvent('systemWebhookCreated', webhook);
-		this.moderationLogService
-			.log(updater, 'createSystemWebhook', {
-				systemWebhookId: webhook.id,
-				webhook: webhook,
-			});
-
-		return webhook;
+		return await createSystemWebhookWithSideEffects({
+			db: this.db,
+			genId: () => this.idService.gen(),
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (moderator, type, info) => this.moderationLogService.log(moderator, type, info),
+		}, params, updater);
 	}
 
 	/**
@@ -142,28 +132,11 @@ export class SystemWebhookService implements OnApplicationShutdown {
 		},
 		updater: MiUser,
 	): Promise<MiSystemWebhook> {
-		const beforeEntity = await fetchSystemWebhookByIdOrFailFromDatabase(this.db, params.id);
-		const afterEntity = await updateSystemWebhookInDatabase(this.db, beforeEntity.id, {
-			updatedAt: new Date(),
-			isActive: params.isActive,
-			name: params.name,
-			on: params.on,
-			url: params.url,
-			secret: params.secret,
-		});
-		if (afterEntity == null) {
-			throw new Error(`System webhook ${beforeEntity.id} not found`);
-		}
-
-		this.globalEventService.publishInternalEvent('systemWebhookUpdated', afterEntity);
-		this.moderationLogService
-			.log(updater, 'updateSystemWebhook', {
-				systemWebhookId: beforeEntity.id,
-				before: beforeEntity,
-				after: afterEntity,
-			});
-
-		return afterEntity;
+		return await updateSystemWebhookWithSideEffects({
+			db: this.db,
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (moderator, type, info) => this.moderationLogService.log(moderator, type, info),
+		}, params, updater);
 	}
 
 	/**
@@ -171,15 +144,11 @@ export class SystemWebhookService implements OnApplicationShutdown {
 	 */
 	@bindThis
 	public async deleteSystemWebhook(id: MiSystemWebhook['id'], updater: MiUser) {
-		const webhook = await fetchSystemWebhookByIdOrFailFromDatabase(this.db, id);
-		await deleteSystemWebhookFromDatabase(this.db, id);
-
-		this.globalEventService.publishInternalEvent('systemWebhookDeleted', webhook);
-		this.moderationLogService
-			.log(updater, 'deleteSystemWebhook', {
-				systemWebhookId: webhook.id,
-				webhook,
-			});
+		await deleteSystemWebhookWithSideEffects({
+			db: this.db,
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (moderator, type, info) => this.moderationLogService.log(moderator, type, info),
+		}, id, updater);
 	}
 
 	/**

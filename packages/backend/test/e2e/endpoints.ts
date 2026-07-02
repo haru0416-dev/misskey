@@ -10,6 +10,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import bcrypt from 'bcryptjs';
+import * as Bull from 'bullmq';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // node-fetch only supports it's own Blob yet
 // https://github.com/node-fetch/node-fetch/pull/1664
@@ -18,6 +19,7 @@ import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
+import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
@@ -37,15 +39,19 @@ import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
+import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
+import { isPromoNoteExists } from '@/core/PromoNoteStore.js';
 import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
+import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
+import { userIp } from '@/db/schema/user-ip.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
@@ -54,6 +60,8 @@ import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { baseQueueOptions, QUEUE } from '@/queue/const.js';
+import type { DeliverJobData, InboxJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -65,11 +73,19 @@ describe('Endpoints', () => {
 	let dave: misskey.entities.SignupResponse;
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
+	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
+	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
+	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
+	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 
 	beforeAll(async () => {
 		const config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
+		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
+		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
+		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
+		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		carol = await signup({ username: 'carol' });
@@ -78,6 +94,10 @@ describe('Endpoints', () => {
 	}, 1000 * 60 * 2);
 
 	afterAll(async () => {
+		await deliverQueue?.close();
+		await inboxQueue?.close();
+		await relationshipQueue?.close();
+		await systemWebhookDeliverQueue?.close();
 		await pool?.end();
 	});
 
@@ -300,6 +320,43 @@ describe('Endpoints', () => {
 
 			const body = await res.json() as { count?: unknown };
 			assert.strictEqual(typeof body.count, 'number');
+		});
+	});
+
+	describe('admin/accounts/find-by-email', () => {
+		test('admin/accounts/find-by-email はemail検索、admin権限、token scopeを維持する', async () => {
+			const now = Date.now();
+			const target = await signup({ username: `honoemail${now.toString(36)}` });
+			const email = `honoemail-${now}@example.test`;
+			await updateUserProfileInDatabase(db, target.id, {
+				email,
+				emailVerified: true,
+			});
+
+			const found = await api('admin/accounts/find-by-email', { email }, alice);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual(found.body.id, target.id);
+			assert.strictEqual(found.body.username, target.username);
+
+			const missing = await api('admin/accounts/find-by-email', { email: `missing-${now}@example.test` }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'USER_NOT_FOUND');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'cb865949-8af5-4062-a88c-ef55e8786d1d');
+
+			const readToken = await createAppToken(alice, ['read:admin:account']);
+			const foundWithToken = await api('admin/accounts/find-by-email', { email }, { token: readToken });
+			assert.strictEqual(foundWithToken.status, 200);
+			assert.strictEqual(foundWithToken.body.id, target.id);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
+			const scopeDenied = await api('admin/accounts/find-by-email', { email }, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hoem${now.toString(36)}` });
+			const roleDenied = await api('admin/accounts/find-by-email', { email }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 	});
 
@@ -1222,6 +1279,55 @@ describe('Endpoints', () => {
 	});
 
 	describe('promo/read endpoint', () => {
+		test('admin/promo/create はpromo note作成、重複、権限を維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'admin promo create target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const created = await api('admin/promo/create', { noteId, expiresAt: now + 60_000 }, alice);
+			assert.strictEqual(created.status, 204);
+			assert.strictEqual(await isPromoNoteExists(db, noteId), true);
+
+			const duplicate = await api('admin/promo/create', { noteId, expiresAt: now + 120_000 }, alice);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_PROMOTED');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, 'ae427aa2-7a41-484f-a18c-2c1104051604');
+
+			const missing = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'ee449fbe-af2a-453b-9cae-cf2fe7c895fc');
+
+			const writeToken = await createAppToken(alice, ['write:admin:promo']);
+			const tokenNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: tokenNoteId,
+				text: 'admin promo create token target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const createdWithToken = await api('admin/promo/create', { noteId: tokenNoteId, expiresAt: now + 60_000 }, { token: writeToken });
+			assert.strictEqual(createdWithToken.status, 204);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
+			const scopeDenied = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honopromo${now.toString(36)}` });
+			const roleDenied = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
 		test('promo/read records a promoted note as read idempotently', async () => {
 			const config = loadConfig();
 			const noteId = genId(config);
@@ -2517,6 +2623,1287 @@ describe('Endpoints', () => {
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/system-webhook', () => {
+		async function findSystemWebhookDeliverJob(
+			webhookId: string,
+			type: SystemWebhookDeliverJobData['type'],
+			url: string,
+		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const job = jobs.find(job => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type && job.data.to === url);
+				if (job != null) return job;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
+		}
+
+		test('admin/system-webhook は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
+			const now = Date.now();
+			const name = `Hono system webhook ${now}`;
+			const created = await api('admin/system-webhook/create', {
+				isActive: true,
+				name,
+				on: ['abuseReport'],
+				url: 'https://example.test/system-webhook',
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.isActive, true);
+			assert.strictEqual(created.body.name, name);
+			assert.deepStrictEqual(created.body.on, ['abuseReport']);
+			assert.strictEqual(created.body.url, 'https://example.test/system-webhook');
+			assert.strictEqual(created.body.secret, '');
+
+			const createdInactive = await api('admin/system-webhook/create', {
+				isActive: false,
+				name: `${name} inactive`,
+				on: ['userCreated'],
+				url: 'https://example.test/system-webhook-inactive',
+				secret: 'secret',
+			}, alice);
+			assert.strictEqual(createdInactive.status, 200);
+
+			const listed = await api('admin/system-webhook/list', { on: ['abuseReport'] }, alice);
+			assert.strictEqual(listed.status, 200);
+			assert.strictEqual(listed.body.some(webhook => webhook.id === created.body.id), true);
+			assert.strictEqual(listed.body.some(webhook => webhook.id === createdInactive.body.id), false);
+
+			const listedInactive = await api('admin/system-webhook/list', { isActive: false }, alice);
+			assert.strictEqual(listedInactive.status, 200);
+			assert.strictEqual(listedInactive.body.some(webhook => webhook.id === createdInactive.body.id), true);
+
+			const shown = await api('admin/system-webhook/show', { id: created.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.name, name);
+
+			const missing = await api('admin/system-webhook/show', { id: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_SYSTEM_WEBHOOK');
+
+			const updated = await api('admin/system-webhook/update', {
+				id: created.body.id,
+				isActive: false,
+				name: `${name} updated`,
+				on: ['userCreated'],
+				url: 'https://example.test/system-webhook-updated',
+				secret: 'updated-secret',
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.id, created.body.id);
+			assert.strictEqual(updated.body.isActive, false);
+			assert.strictEqual(updated.body.name, `${name} updated`);
+			assert.deepStrictEqual(updated.body.on, ['userCreated']);
+			assert.strictEqual(updated.body.secret, 'updated-secret');
+
+			const overrideUrl = 'https://example.test/system-webhook-test';
+			const tested = await api('admin/system-webhook/test', {
+				webhookId: created.body.id,
+				type: 'userCreated',
+				override: {
+					url: overrideUrl,
+					secret: 'override-secret',
+				},
+			}, alice);
+			assert.strictEqual(tested.status, 204);
+			const testJob = await findSystemWebhookDeliverJob(created.body.id, 'userCreated', overrideUrl);
+			assert.strictEqual(testJob.opts.attempts, 1);
+			assert.strictEqual(testJob.data.secret, 'override-secret');
+			assert.strictEqual((testJob.data.content as any).id, 'dummy-user-1');
+			await testJob.remove();
+
+			const missingTest = await api('admin/system-webhook/test', {
+				webhookId: '000000000000000000000000',
+				type: 'userCreated',
+			}, alice);
+			assert.strictEqual(missingTest.status, 400);
+			assert.strictEqual(castAsError(missingTest.body as any).error.code, 'NO_SUCH_WEBHOOK');
+
+			const appToken = await createAppToken(alice, ['write:admin:roles']);
+			const secureDenied = await api('admin/system-webhook/list', {}, { token: appToken });
+			assert.strictEqual(secureDenied.status, 400);
+			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const normalUser = await signup({ username: `hswh${now.toString(36)}` });
+			const roleDenied = await api('admin/system-webhook/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/system-webhook/delete', { id: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchSystemWebhookByIdFromDatabase(db, created.body.id), null);
+
+			const deletedInactive = await api('admin/system-webhook/delete', { id: createdInactive.body.id }, alice);
+			assert.strictEqual(deletedInactive.status, 204);
+
+			const logTypes = ['createSystemWebhook', 'updateSystemWebhook', 'deleteSystemWebhook'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/abuse-report/notification-recipient', () => {
+		test('admin/abuse-report/notification-recipient は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const name = `Hono abuse recipient ${suffix}`;
+			const emailUser = await signup({ username: `harn${suffix}` });
+			await updateUserProfileInDatabase(db, emailUser.id, {
+				email: `hono-recipient-${suffix}@example.test`,
+				emailVerified: true,
+			});
+			const moderatorRole = await role(alice, {
+				name: `Hono abuse recipient moderator ${suffix}`,
+				isModerator: true,
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: moderatorRole.id,
+				userId: emailUser.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const webhook = await api('admin/system-webhook/create', {
+				isActive: true,
+				name: `${name} webhook`,
+				on: ['abuseReport'],
+				url: 'https://example.test/abuse-recipient-webhook',
+			}, alice);
+			assert.strictEqual(webhook.status, 200);
+
+			const createdWebhookRecipient = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name,
+				method: 'webhook',
+				systemWebhookId: webhook.body.id,
+			}, alice);
+			assert.strictEqual(createdWebhookRecipient.status, 200);
+			assert.strictEqual(createdWebhookRecipient.body.isActive, true);
+			assert.strictEqual(createdWebhookRecipient.body.name, name);
+			assert.strictEqual(createdWebhookRecipient.body.method, 'webhook');
+			assert.strictEqual(createdWebhookRecipient.body.systemWebhookId, webhook.body.id);
+			assert.ok(createdWebhookRecipient.body.systemWebhook);
+			assert.strictEqual(createdWebhookRecipient.body.systemWebhook.id, webhook.body.id);
+
+			const createdEmailRecipient = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} email`,
+				method: 'email',
+				userId: emailUser.id,
+			}, alice);
+			assert.strictEqual(createdEmailRecipient.status, 200);
+			assert.strictEqual(createdEmailRecipient.body.method, 'email');
+			assert.strictEqual(createdEmailRecipient.body.userId, emailUser.id);
+			assert.ok(createdEmailRecipient.body.user);
+			assert.strictEqual(createdEmailRecipient.body.user.id, emailUser.id);
+
+			const listedWebhook = await api('admin/abuse-report/notification-recipient/list', { method: ['webhook'] }, alice);
+			assert.strictEqual(listedWebhook.status, 200);
+			assert.strictEqual(listedWebhook.body.some(recipient => recipient.id === createdWebhookRecipient.body.id), true);
+			assert.strictEqual(listedWebhook.body.some(recipient => recipient.id === createdEmailRecipient.body.id), false);
+
+			const listedEmail = await api('admin/abuse-report/notification-recipient/list', { method: ['email'] }, alice);
+			assert.strictEqual(listedEmail.status, 200);
+			assert.strictEqual(listedEmail.body.some(recipient => recipient.id === createdEmailRecipient.body.id), true);
+
+			const shown = await api('admin/abuse-report/notification-recipient/show', { id: createdWebhookRecipient.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, createdWebhookRecipient.body.id);
+			assert.ok(shown.body.systemWebhook);
+			assert.strictEqual(shown.body.systemWebhook.id, webhook.body.id);
+
+			const missing = await api('admin/abuse-report/notification-recipient/show', { id: '000000000000000000000000' }, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_RECIPIENT');
+
+			const updated = await api('admin/abuse-report/notification-recipient/update', {
+				id: createdWebhookRecipient.body.id,
+				isActive: false,
+				name: `${name} updated`,
+				method: 'email',
+				userId: emailUser.id,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.id, createdWebhookRecipient.body.id);
+			assert.strictEqual(updated.body.isActive, false);
+			assert.strictEqual(updated.body.name, `${name} updated`);
+			assert.strictEqual(updated.body.method, 'email');
+			assert.strictEqual(updated.body.userId, emailUser.id);
+			assert.strictEqual(updated.body.systemWebhookId, undefined);
+
+			const missingEmailUser = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} missing email user`,
+				method: 'email',
+			}, alice);
+			assert.strictEqual(missingEmailUser.status, 400);
+			assert.strictEqual(castAsError(missingEmailUser.body as any).error.code, 'CORRELATION_CHECK_EMAIL');
+
+			const unverifiedUser = await signup({ username: `hanu${suffix}` });
+			const unverifiedEmailUser = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} unverified email`,
+				method: 'email',
+				userId: unverifiedUser.id,
+			}, alice);
+			assert.strictEqual(unverifiedEmailUser.status, 400);
+			assert.strictEqual(castAsError(unverifiedEmailUser.body as any).error.code, 'EMAIL_ADDRESS_NOT_SET');
+
+			const missingWebhook = await api('admin/abuse-report/notification-recipient/create', {
+				isActive: true,
+				name: `${name} missing webhook`,
+				method: 'webhook',
+			}, alice);
+			assert.strictEqual(missingWebhook.status, 400);
+			assert.strictEqual(castAsError(missingWebhook.body as any).error.code, 'CORRELATION_CHECK_WEBHOOK');
+
+			const appToken = await createAppToken(alice, ['write:admin:roles']);
+			const secureDenied = await api('admin/abuse-report/notification-recipient/list', {}, { token: appToken });
+			assert.strictEqual(secureDenied.status, 400);
+			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const normalUser = await signup({ username: `hanr${suffix}` });
+			const roleDenied = await api('admin/abuse-report/notification-recipient/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deletedUpdated = await api('admin/abuse-report/notification-recipient/delete', { id: createdWebhookRecipient.body.id }, alice);
+			assert.strictEqual(deletedUpdated.status, 204);
+			const deletedEmail = await api('admin/abuse-report/notification-recipient/delete', { id: createdEmailRecipient.body.id }, alice);
+			assert.strictEqual(deletedEmail.status, 204);
+
+			const shownDeleted = await api('admin/abuse-report/notification-recipient/show', { id: createdWebhookRecipient.body.id }, alice);
+			assert.strictEqual(shownDeleted.status, 404);
+			assert.strictEqual(castAsError(shownDeleted.body as any).error.code, 'NO_SUCH_RECIPIENT');
+
+			const deletedWebhook = await api('admin/system-webhook/delete', { id: webhook.body.id }, alice);
+			assert.strictEqual(deletedWebhook.status, 204);
+
+			const logTypes = ['createAbuseReportNotificationRecipient', 'updateAbuseReportNotificationRecipient', 'deleteAbuseReportNotificationRecipient'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: createdWebhookRecipient.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/abuse-user-reports', () => {
+		async function createReport(suffix: string, values: Partial<Parameters<typeof createAbuseUserReportInDatabase>[1]> = {}) {
+			const config = loadConfig();
+			return await createAbuseUserReportInDatabase(db, {
+				id: genId(config),
+				targetUserId: bob.id,
+				reporterId: carol.id,
+				comment: `Hono abuse report ${suffix}`,
+				targetUserHost: null,
+				reporterHost: null,
+				...values,
+			});
+		}
+
+		async function findSystemWebhookDeliverJob(
+			webhookId: string,
+			type: SystemWebhookDeliverJobData['type'],
+		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const job = jobs.find(job => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type);
+				if (job != null) return job;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
+		}
+
+		test('admin/abuse-user-reports は一覧、filter、token scope、roleを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const config = loadConfig();
+			const unresolved = await createReport(`${suffix}unresolved`, {
+				id: genId(config, now - 2000),
+				comment: `Hono abuse report list unresolved ${suffix}`,
+			});
+			const resolved = await createReport(`${suffix}resolved`, {
+				id: genId(config, now - 1000),
+				assigneeId: alice.id,
+				resolved: true,
+				resolvedAs: 'reject',
+				moderationNote: `resolved note ${suffix}`,
+				comment: `Hono abuse report list resolved ${suffix}`,
+			});
+			const remoteReporter = await createReport(`${suffix}remote`, {
+				id: genId(config, now),
+				reporterHost: 'remote.example',
+				comment: `Hono abuse report list remote ${suffix}`,
+			});
+
+			const listed = await api('admin/abuse-user-reports', {
+				limit: 10,
+				sinceDate: now - 3000,
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			const listedReports = listed.body as any[];
+			assert.deepStrictEqual(listedReports.slice(0, 3).map(report => report.id), [
+				unresolved.id,
+				resolved.id,
+				remoteReporter.id,
+			]);
+			const packedResolved = listedReports.find(report => report.id === resolved.id);
+			assert.strictEqual(packedResolved.comment, `Hono abuse report list resolved ${suffix}`);
+			assert.strictEqual(packedResolved.resolved, true);
+			assert.strictEqual(packedResolved.resolvedAs, 'reject');
+			assert.strictEqual(packedResolved.moderationNote, `resolved note ${suffix}`);
+			assert.strictEqual(packedResolved.reporterId, carol.id);
+			assert.strictEqual(packedResolved.targetUserId, bob.id);
+			assert.strictEqual(packedResolved.assigneeId, alice.id);
+			assert.strictEqual(packedResolved.reporter.id, carol.id);
+			assert.strictEqual(packedResolved.targetUser.id, bob.id);
+			assert.strictEqual(packedResolved.assignee.id, alice.id);
+			assert.strictEqual(typeof packedResolved.createdAt, 'string');
+
+			const unresolvedOnly = await api('admin/abuse-user-reports', {
+				state: 'unresolved',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, alice);
+			assert.strictEqual(unresolvedOnly.status, 200);
+			assert.strictEqual((unresolvedOnly.body as any[]).some(report => report.id === unresolved.id), true);
+			assert.strictEqual((unresolvedOnly.body as any[]).some(report => report.id === resolved.id), false);
+
+			const resolvedOnly = await api('admin/abuse-user-reports', {
+				state: 'resolved',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, alice);
+			assert.strictEqual(resolvedOnly.status, 200);
+			assert.strictEqual((resolvedOnly.body as any[]).some(report => report.id === resolved.id), true);
+			assert.strictEqual((resolvedOnly.body as any[]).some(report => report.id === unresolved.id), false);
+
+			const remoteReporters = await api('admin/abuse-user-reports', {
+				reporterOrigin: 'remote',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, alice);
+			assert.strictEqual(remoteReporters.status, 200);
+			assert.deepStrictEqual((remoteReporters.body as any[]).map(report => report.id), [remoteReporter.id]);
+
+			const token = await createAppToken(alice, ['read:admin:abuse-user-reports']);
+			const listedByToken = await api('admin/abuse-user-reports', {
+				state: 'resolved',
+				sinceDate: now - 3000,
+				limit: 10,
+			}, { token });
+			assert.strictEqual(listedByToken.status, 200);
+			assert.strictEqual((listedByToken.body as any[]).some(report => report.id === resolved.id), true);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/abuse-user-reports', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hal${suffix}` });
+			const roleDenied = await api('admin/abuse-user-reports', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('admin/resolve-abuse-user-report は解決状態、token scope、role、ログ、404を維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const report = await createReport(suffix);
+			const webhook = await api('admin/system-webhook/create', {
+				isActive: true,
+				name: `Hono resolve abuse report webhook ${suffix}`,
+				on: ['abuseReportResolved'],
+				url: `https://example.test/resolve-abuse-report/${suffix}`,
+			}, alice);
+			assert.strictEqual(webhook.status, 200);
+
+			const resolved = await api('admin/resolve-abuse-user-report', {
+				reportId: report.id,
+				resolvedAs: 'accept',
+			}, alice);
+			assert.strictEqual(resolved.status, 204);
+
+			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.resolved, true);
+			assert.strictEqual(after.assigneeId, alice.id);
+			assert.strictEqual(after.resolvedAs, 'accept');
+
+			const webhookJob = await findSystemWebhookDeliverJob(webhook.body.id, 'abuseReportResolved');
+			assert.strictEqual((webhookJob.data.content as any).id, report.id);
+			assert.strictEqual((webhookJob.data.content as any).targetUserId, bob.id);
+			assert.strictEqual((webhookJob.data.content as any).reporterId, carol.id);
+			assert.strictEqual((webhookJob.data.content as any).assigneeId, alice.id);
+			assert.strictEqual((webhookJob.data.content as any).resolved, true);
+			assert.strictEqual((webhookJob.data.content as any).resolvedAs, 'accept');
+			await webhookJob.remove();
+			const deletedWebhook = await api('admin/system-webhook/delete', { id: webhook.body.id }, alice);
+			assert.strictEqual(deletedWebhook.status, 204);
+
+			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
+			const tokenReport = await createReport(`${suffix}token`);
+			const resolvedByToken = await api('admin/resolve-abuse-user-report', {
+				reportId: tokenReport.id,
+			}, { token });
+			assert.strictEqual(resolvedByToken.status, 204);
+
+			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
+			assert.strictEqual(after.resolved, true);
+			assert.strictEqual(after.assigneeId, alice.id);
+			assert.strictEqual(after.resolvedAs, null);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/resolve-abuse-user-report', {
+				reportId: report.id,
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `har${suffix}` });
+			const roleDenied = await api('admin/resolve-abuse-user-report', {
+				reportId: report.id,
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/resolve-abuse-user-report', {
+				reportId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'ac3794dd-2ce4-d878-e546-73c60c06b398');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'resolveAbuseReport',
+					search: report.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('resolveAbuseReport moderation log was not found');
+			}
+		});
+
+		test('admin/update-abuse-user-report は moderationNote 更新、token scope、role、ログ、404を維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const report = await createReport(`${suffix}note`);
+			const moderationNote = `updated moderation note ${suffix}`;
+
+			const updated = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.moderationNote, moderationNote);
+
+			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
+			const updatedByToken = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote: `${moderationNote} by token`,
+			}, { token });
+			assert.strictEqual(updatedByToken.status, 204);
+
+			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.moderationNote, `${moderationNote} by token`);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote: 'denied',
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `haur${suffix}` });
+			const roleDenied = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote: 'denied',
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/update-abuse-user-report', {
+				reportId: '000000000000000000000000',
+				moderationNote: 'missing',
+			}, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '15f51cf5-46d1-4b1d-a618-b35bcbed0662');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateAbuseReportNote',
+					search: report.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id && (log.info as any).before === report.moderationNote && (log.info as any).after === moderationNote), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('updateAbuseReportNote moderation log was not found');
+			}
+		});
+	});
+
+	describe('admin/user-maintenance', () => {
+		test('admin/reset-password と unset 系 endpoint は DB 更新、token scope、role、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const target = await signup({ username: `haum${suffix}` });
+			const config = loadConfig();
+			const avatarMd5 = createHash('md5').update(`hono-admin-avatar-${suffix}`).digest('hex');
+			const bannerMd5 = createHash('md5').update(`hono-admin-banner-${suffix}`).digest('hex');
+			const avatarFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: target.id,
+				userHost: null,
+				md5: avatarMd5,
+				name: `avatar-${suffix}.png`,
+				type: 'image/png',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${avatarMd5}`,
+			});
+			const bannerFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: target.id,
+				userHost: null,
+				md5: bannerMd5,
+				name: `banner-${suffix}.png`,
+				type: 'image/png',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${bannerMd5}`,
+			});
+
+			await updateUserProfileInDatabase(db, target.id, {
+				password: await bcrypt.hash('old-password', 8),
+				twoFactorSecret: 'two-factor-secret',
+				twoFactorBackupSecret: ['backup-code'],
+				twoFactorEnabled: true,
+				usePasswordLessLogin: true,
+			});
+			await updateUserInDatabase(db, target.id, {
+				avatarId: avatarFile.id,
+				avatarUrl: 'https://example.test/avatar.png',
+				avatarBlurhash: 'avatar-blurhash',
+				bannerId: bannerFile.id,
+				bannerUrl: 'https://example.test/banner.png',
+				bannerBlurhash: 'banner-blurhash',
+			});
+
+			const reset = await api('admin/reset-password', { userId: target.id }, alice);
+			assert.strictEqual(reset.status, 200);
+			assert.strictEqual(reset.body.password.length, 8);
+			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(await bcrypt.compare(reset.body.password, profile.password!), true);
+
+			const resetToken = await createAppToken(alice, ['write:admin:reset-password']);
+			const resetByToken = await api('admin/reset-password', { userId: target.id }, { token: resetToken });
+			assert.strictEqual(resetByToken.status, 200);
+			assert.strictEqual(resetByToken.body.password.length, 8);
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(await bcrypt.compare(resetByToken.body.password, profile.password!), true);
+
+			const noSuchReset = await api('admin/reset-password', { userId: '000000000000000000000000' }, alice);
+			assert.strictEqual(noSuchReset.status, 400);
+			assert.strictEqual(castAsError(noSuchReset.body as any).error.code, 'NO_SUCH_USER');
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:unset-mfa']);
+			const scopeDenied = await api('admin/reset-password', { userId: target.id }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hanm${suffix}` });
+			const roleDenied = await api('admin/reset-password', { userId: target.id }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const unsetMfa = await api('admin/unset-mfa', { userId: target.id }, alice);
+			assert.strictEqual(unsetMfa.status, 204);
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(profile.twoFactorSecret, null);
+			assert.strictEqual(profile.twoFactorBackupSecret, null);
+			assert.strictEqual(profile.twoFactorEnabled, false);
+			assert.strictEqual(profile.usePasswordLessLogin, false);
+
+			const noSuchUnsetMfa = await api('admin/unset-mfa', { userId: '000000000000000000000000' }, alice);
+			assert.strictEqual(noSuchUnsetMfa.status, 400);
+			assert.strictEqual(castAsError(noSuchUnsetMfa.body as any).error.code, 'NO_SUCH_USER');
+
+			const unsetAvatar = await api('admin/unset-user-avatar', { userId: target.id }, alice);
+			assert.strictEqual(unsetAvatar.status, 204);
+			let user = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(user.avatarId, null);
+			assert.strictEqual(user.avatarUrl, null);
+			assert.strictEqual(user.avatarBlurhash, null);
+
+			const unsetAvatarAgain = await api('admin/unset-user-avatar', { userId: target.id }, alice);
+			assert.strictEqual(unsetAvatarAgain.status, 204);
+
+			const unsetBanner = await api('admin/unset-user-banner', { userId: target.id }, alice);
+			assert.strictEqual(unsetBanner.status, 204);
+			user = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(user.bannerId, null);
+			assert.strictEqual(user.bannerUrl, null);
+			assert.strictEqual(user.bannerBlurhash, null);
+
+			const unsetBannerAgain = await api('admin/unset-user-banner', { userId: target.id }, alice);
+			assert.strictEqual(unsetBannerAgain.status, 204);
+
+			const logTypes = ['resetPassword', 'unsetMfa', 'unsetUserAvatar', 'unsetUserBanner'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: target.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+
+		test('admin/update-user-note は moderationNote 更新、token scope、role、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const target = await signup({ username: `haun${suffix}` });
+			await updateUserProfileInDatabase(db, target.id, {
+				moderationNote: 'before note',
+			});
+
+			const text = `after note ${suffix}`;
+			const updated = await api('admin/update-user-note', {
+				userId: target.id,
+				text,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(profile.moderationNote, text);
+
+			const token = await createAppToken(alice, ['write:admin:user-note']);
+			const updatedByToken = await api('admin/update-user-note', {
+				userId: target.id,
+				text: `${text} by token`,
+			}, { token });
+			assert.strictEqual(updatedByToken.status, 204);
+
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(profile.moderationNote, `${text} by token`);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:reset-password']);
+			const scopeDenied = await api('admin/update-user-note', {
+				userId: target.id,
+				text: 'denied',
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hunn${suffix}` });
+			const roleDenied = await api('admin/update-user-note', {
+				userId: target.id,
+				text: 'denied',
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateUserNote',
+					search: target.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).before === 'before note' && (log.info as any).after === text), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('updateUserNote moderation log was not found');
+			}
+		});
+
+		test('admin/send-email は送信要求、token scope、role、validationを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const payload = {
+				to: `hono-send-email-${suffix}@example.test`,
+				subject: `Hono send email ${suffix}`,
+				text: `Hello ${suffix}`,
+			};
+
+			const sent = await api('admin/send-email', payload, alice);
+			assert.strictEqual(sent.status, 204);
+
+			const token = await createAppToken(alice, ['write:admin:send-email']);
+			const sentByToken = await api('admin/send-email', payload, { token });
+			assert.strictEqual(sentByToken.status, 204);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/send-email', payload, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hse${suffix}` });
+			const roleDenied = await api('admin/send-email', payload, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const invalidPayload: Record<string, unknown> = {
+				to: payload.to,
+				subject: payload.subject,
+			};
+			const invalid = await api('admin/send-email', invalidPayload as misskey.Endpoints['admin/send-email']['req'], alice);
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+		});
+
+		test('admin/suspend-user と admin/unsuspend-user は状態更新、queue、token scope、role、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const target = await signup({ username: `hsus${suffix}` });
+			const config = loadConfig();
+			const following = await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: target.id,
+				followeeId: bob.id,
+			});
+
+			const suspended = await api('admin/suspend-user', { userId: target.id }, alice);
+			assert.strictEqual(suspended.status, 204);
+
+			let targetUser = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(targetUser.isSuspended, true);
+
+			for (let i = 0; i < 10; i++) {
+				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const job = jobs.find(job =>
+					job.name === 'unfollow' &&
+					job.data.from.id === following.followerId &&
+					job.data.to.id === following.followeeId &&
+					job.data.silent === true);
+				if (job != null) {
+					await job.remove();
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('suspend-user unfollow job was not created');
+			}
+
+			const suspendTokenTarget = await signup({ username: `hstt${suffix}` });
+			const suspendToken = await createAppToken(alice, ['write:admin:suspend-user']);
+			const suspendedByToken = await api('admin/suspend-user', { userId: suspendTokenTarget.id }, { token: suspendToken });
+			assert.strictEqual(suspendedByToken.status, 204);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const suspendScopeDenied = await api('admin/suspend-user', { userId: target.id }, { token: wrongScopeToken });
+			assert.strictEqual(suspendScopeDenied.status, 403);
+			assert.strictEqual(castAsError(suspendScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hsnr${suffix}` });
+			const suspendRoleDenied = await api('admin/suspend-user', { userId: target.id }, normalUser);
+			assert.strictEqual(suspendRoleDenied.status, 403);
+			assert.strictEqual(castAsError(suspendRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const unsuspended = await api('admin/unsuspend-user', { userId: target.id }, alice);
+			assert.strictEqual(unsuspended.status, 204);
+
+			targetUser = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(targetUser.isSuspended, false);
+
+			const unsuspendToken = await createAppToken(alice, ['write:admin:unsuspend-user']);
+			const unsuspendedByToken = await api('admin/unsuspend-user', { userId: target.id }, { token: unsuspendToken });
+			assert.strictEqual(unsuspendedByToken.status, 204);
+
+			const unsuspendScopeDenied = await api('admin/unsuspend-user', { userId: target.id }, { token: wrongScopeToken });
+			assert.strictEqual(unsuspendScopeDenied.status, 403);
+			assert.strictEqual(castAsError(unsuspendScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const unsuspendRoleDenied = await api('admin/unsuspend-user', { userId: target.id }, normalUser);
+			assert.strictEqual(unsuspendRoleDenied.status, 403);
+			assert.strictEqual(castAsError(unsuspendRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of ['suspend', 'unsuspend'] as const) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: target.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === 2) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), ['suspend', 'unsuspend']);
+		});
+	});
+
+	describe('admin/get-user-ips', () => {
+		test('admin/get-user-ips は最新30件、admin権限、token scopeを維持する', async () => {
+			const now = Date.now();
+			const createdAtBase = new Date(now - 1000 * 60);
+			const rows = await db
+				.insert(userIp)
+				.values(Array.from({ length: 32 }, (_, i) => ({
+					userId: bob.id,
+					ip: `hono-ip-${now}-${i}`,
+					createdAt: new Date(createdAtBase.getTime() + i * 1000),
+				})))
+				.returning({
+					id: userIp.id,
+					ip: userIp.ip,
+					createdAt: userIp.createdAt,
+				});
+			const expected = rows
+				.sort((a, b) => b.id - a.id)
+				.slice(0, 30)
+				.map(row => ({
+					ip: row.ip,
+					createdAt: row.createdAt.toISOString(),
+				}));
+
+			const listed = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			assert.deepStrictEqual(listed.body, expected);
+
+			const readToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const listedWithApp = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, { token: readToken });
+			assert.strictEqual(listedWithApp.status, 200);
+			assert.deepStrictEqual(listedWithApp.body, expected);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:roles']);
+			const scopeDenied = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoips${now.toString(36)}` });
+			const roleDenied = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/server-info', () => {
+		function assertAdminServerInfoBody(body: any): void {
+			assert.strictEqual(typeof body.machine, 'string');
+			assert.strictEqual(typeof body.os, 'string');
+			assert.strictEqual(typeof body.node, 'string');
+			assert.strictEqual(typeof body.psql, 'string');
+			assert.strictEqual(typeof body.redis, 'string');
+			assert.strictEqual(typeof body.cpu.model, 'string');
+			assert.strictEqual(typeof body.cpu.cores, 'number');
+			assert.strictEqual(typeof body.mem.total, 'number');
+			assert.strictEqual(typeof body.fs.total, 'number');
+			assert.strictEqual(typeof body.fs.used, 'number');
+			assert.strictEqual(typeof body.net.interface, 'string');
+		}
+
+		test('admin/server-info はサーバ情報、moderator権限、token scopeを維持する', async () => {
+			const listed = await api('admin/server-info', {}, alice);
+			assert.strictEqual(listed.status, 200);
+			assertAdminServerInfoBody(listed.body);
+
+			const readToken = await createAppToken(alice, ['read:admin:server-info']);
+			const listedWithApp = await api('admin/server-info', {}, { token: readToken });
+			assert.strictEqual(listedWithApp.status, 200);
+			assertAdminServerInfoBody(listedWithApp.body);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const scopeDenied = await api('admin/server-info', {}, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honosi${Date.now().toString(36)}` });
+			const roleDenied = await api('admin/server-info', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/relays', () => {
+		async function findDeliverJob(inbox: string, type: 'Follow' | 'Undo'): Promise<Bull.Job<DeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				for (const job of jobs) {
+					if (job.data.to !== inbox) continue;
+
+					const content = JSON.parse(job.data.content) as { type?: unknown };
+					if (content.type === type) return job;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`deliver job was not found: ${inbox} ${type}`);
+		}
+
+		test('admin/relays/list はrelay一覧、moderator権限、token scopeを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const relays = await Promise.all(([
+				['requesting', 'requesting'],
+				['accepted', 'accepted'],
+				['rejected', 'rejected'],
+			] as const).map(([label, status], i) => createRelayInDatabase(db, {
+				id: genId(config, now + i),
+				inbox: `https://relay-${label}-${now}.example/inbox`,
+				status,
+			})));
+			const expected = relays
+				.map(relay => ({
+					id: relay.id,
+					inbox: relay.inbox,
+					status: relay.status,
+				}))
+				.sort((a, b) => a.id.localeCompare(b.id));
+
+			const listed = await api('admin/relays/list', {}, alice);
+			assert.strictEqual(listed.status, 200);
+			assert.deepStrictEqual(listed.body
+				.filter(relay => expected.some(expectedRelay => expectedRelay.id === relay.id))
+				.sort((a, b) => a.id.localeCompare(b.id)), expected);
+
+			const readToken = await createAppToken(alice, ['read:admin:relays']);
+			const listedWithApp = await api('admin/relays/list', {}, { token: readToken });
+			assert.strictEqual(listedWithApp.status, 200);
+			assert.deepStrictEqual(listedWithApp.body
+				.filter(relay => expected.some(expectedRelay => expectedRelay.id === relay.id))
+				.sort((a, b) => a.id.localeCompare(b.id)), expected);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const scopeDenied = await api('admin/relays/list', {}, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honorelay${now.toString(36)}` });
+			const roleDenied = await api('admin/relays/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('admin/relays/add と admin/relays/remove はDB、deliver queue、権限を維持する', async () => {
+			const now = Date.now();
+			const inbox = `https://relay-write-${now}.example/inbox`;
+
+			const added = await api('admin/relays/add', { inbox }, alice);
+			assert.strictEqual(added.status, 200);
+			assert.strictEqual(added.body.inbox, inbox);
+			assert.strictEqual(added.body.status, 'requesting');
+			assert.strictEqual(typeof added.body.id, 'string');
+
+			const row = await fetchRelayByInboxFromDatabase(db, inbox);
+			assert.ok(row);
+			assert.strictEqual(row.id, added.body.id);
+
+			const followJob = await findDeliverJob(inbox, 'Follow');
+			assert.strictEqual(followJob.data.to, inbox);
+			assert.strictEqual(followJob.data.isSharedInbox, false);
+			assert.strictEqual(followJob.data.digest, `SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`);
+
+			const follow = JSON.parse(followJob.data.content) as any;
+			assert.strictEqual(follow.type, 'Follow');
+			assert.strictEqual(follow.id, `${origin}/activities/follow-relay/${added.body.id}`);
+			assert.strictEqual(follow.actor.startsWith(`${origin}/users/`), true);
+			assert.strictEqual(follow.object, 'https://www.w3.org/ns/activitystreams#Public');
+			assert.ok(follow['@context']);
+			await followJob.remove();
+
+			const invalidUrl = await api('admin/relays/add', { inbox: 'http://relay-invalid.example/inbox' }, alice);
+			assert.strictEqual(invalidUrl.status, 400);
+			assert.strictEqual(castAsError(invalidUrl.body as any).error.code, 'INVALID_URL');
+			assert.strictEqual(castAsError(invalidUrl.body as any).error.id, 'fb8c92d3-d4e5-44e7-b3d4-800d5cef8b2c');
+
+			const readToken = await createAppToken(alice, ['read:admin:relays']);
+			const scopeDenied = await api('admin/relays/add', { inbox: `https://relay-denied-${now}.example/inbox` }, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honorelayw${now.toString(36)}` });
+			const roleDenied = await api('admin/relays/add', { inbox: `https://relay-role-denied-${now}.example/inbox` }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const removed = await api('admin/relays/remove', { inbox }, alice);
+			assert.strictEqual(removed.status, 204);
+			assert.strictEqual(await fetchRelayByInboxFromDatabase(db, inbox), null);
+
+			const undoJob = await findDeliverJob(inbox, 'Undo');
+			assert.strictEqual(undoJob.data.to, inbox);
+			assert.strictEqual(undoJob.data.isSharedInbox, false);
+			assert.strictEqual(undoJob.data.digest, `SHA-256=${createHash('sha256').update(undoJob.data.content).digest('base64')}`);
+
+			const undo = JSON.parse(undoJob.data.content) as any;
+			assert.strictEqual(undo.type, 'Undo');
+			assert.strictEqual(undo.id, `${origin}/activities/follow-relay/${added.body.id}/undo`);
+			assert.strictEqual(undo.actor.startsWith(`${origin}/users/`), true);
+			assert.strictEqual(undo.object.type, 'Follow');
+			assert.strictEqual(undo.object.id, `${origin}/activities/follow-relay/${added.body.id}`);
+			assert.strictEqual(typeof undo.published, 'string');
+			assert.ok(undo['@context']);
+			await undoJob.remove();
+		});
+	});
+
+	describe('admin/queue read endpoints', () => {
+		test('admin/queue のread endpointはqueue状態、job、権限を維持する', async () => {
+			const now = Date.now();
+			const delayedDeliverHost = `queue-deliver-${now}.example`;
+			const delayedInboxHost = `queue-inbox-${now}.example`;
+			const waitingInbox = `https://queue-waiting-${now}.example/inbox`;
+			const waitingName = `hono-queue-waiting-${now}`;
+			const waitingContent = JSON.stringify({ type: 'QueueTest', id: now });
+			const waitingJob = await deliverQueue!.add(waitingName, {
+				user: { id: alice.id },
+				content: waitingContent,
+				digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
+				to: waitingInbox,
+				isSharedInbox: false,
+			}, { removeOnComplete: true, removeOnFail: true });
+			const delayedDeliverJob = await deliverQueue!.add(`hono-queue-delayed-${now}`, {
+				user: { id: alice.id },
+				content: waitingContent,
+				digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
+				to: `https://${delayedDeliverHost}/inbox`,
+				isSharedInbox: false,
+			}, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+			const delayedInboxJob = await inboxQueue!.add(`hono-inbox-delayed-${now}`, {
+				activity: {
+					type: 'Create',
+					actor: `https://${delayedInboxHost}/actor`,
+					object: `https://${delayedInboxHost}/notes/${now}`,
+				},
+				signature: {
+					keyId: `https://${delayedInboxHost}/actor#main-key`,
+				},
+			} as InboxJobData, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+
+			try {
+				await waitingJob.log(`hono queue log ${now}`);
+				assert.ok(waitingJob.id);
+
+				const queues = await api('admin/queue/queues', {}, alice);
+				assert.strictEqual(queues.status, 200);
+				const deliverQueueInfo = queues.body.find(queue => queue.name === 'deliver');
+				assert.ok(deliverQueueInfo);
+				assert.strictEqual(typeof deliverQueueInfo.isPaused, 'boolean');
+				assert.strictEqual(typeof deliverQueueInfo.counts, 'object');
+				assert.strictEqual(typeof deliverQueueInfo.metrics.completed.count, 'number');
+
+				const queueStats = await api('admin/queue/queue-stats', { queue: 'deliver' }, alice);
+				assert.strictEqual(queueStats.status, 200);
+				assert.strictEqual(queueStats.body.name, 'deliver');
+				assert.strictEqual(typeof queueStats.body.qualifiedName, 'string');
+				assert.strictEqual(typeof queueStats.body.db.version, 'string');
+
+				const emojiScopeToken = await createAppToken(alice, ['read:admin:emoji']);
+				const legacyStats = await api('admin/queue/stats', {}, { token: emojiScopeToken });
+				assert.strictEqual(legacyStats.status, 200);
+				assert.strictEqual(typeof legacyStats.body.deliver, 'object');
+				assert.strictEqual(typeof legacyStats.body.inbox, 'object');
+				assert.strictEqual(typeof legacyStats.body.db, 'object');
+				assert.strictEqual(typeof legacyStats.body.objectStorage, 'object');
+
+				const deliverDelayed = await api('admin/queue/deliver-delayed', {}, alice);
+				assert.strictEqual(deliverDelayed.status, 200);
+				assert.ok(deliverDelayed.body.some(([host, count]) => host === delayedDeliverHost && count >= 1));
+
+				const inboxDelayed = await api('admin/queue/inbox-delayed', {}, alice);
+				assert.strictEqual(inboxDelayed.status, 200);
+				assert.ok(inboxDelayed.body.some(([host, count]) => host === delayedInboxHost && count >= 1));
+
+				const jobs = await api('admin/queue/jobs', { queue: 'deliver', state: ['wait'], search: waitingName }, alice);
+				assert.strictEqual(jobs.status, 200);
+				assert.ok(jobs.body.some(job => job.id === waitingJob.id && job.name === waitingName));
+
+				const shown = await api('admin/queue/show-job', { queue: 'deliver', jobId: waitingJob.id }, alice);
+				assert.strictEqual(shown.status, 200);
+				assert.strictEqual(shown.body.id, waitingJob.id);
+				assert.strictEqual(shown.body.name, waitingName);
+				assert.strictEqual(shown.body.data.to, waitingInbox);
+
+				const logs = await api('admin/queue/show-job-logs', { queue: 'deliver', jobId: waitingJob.id }, alice);
+				assert.strictEqual(logs.status, 200);
+				assert.ok(logs.body.includes(`hono queue log ${now}`));
+
+				const readQueueToken = await createAppToken(alice, ['read:admin:queue']);
+				const queuesWithToken = await api('admin/queue/queues', {}, { token: readQueueToken });
+				assert.strictEqual(queuesWithToken.status, 200);
+
+				const legacyStatsScopeDenied = await api('admin/queue/stats', {}, { token: readQueueToken });
+				assert.strictEqual(legacyStatsScopeDenied.status, 403);
+				assert.strictEqual(castAsError(legacyStatsScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const deniedToken = await createAppToken(alice, ['read:admin:relays']);
+				const scopeDenied = await api('admin/queue/queues', {}, { token: deniedToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const normalUser = await signup({ username: `honoqueue${now.toString(36)}` });
+				const roleDenied = await api('admin/queue/queues', {}, normalUser);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await waitingJob.remove().catch(() => undefined);
+				await delayedDeliverJob.remove().catch(() => undefined);
+				await delayedInboxJob.remove().catch(() => undefined);
+			}
+		});
+	});
+
+	describe('admin/queue write endpoints', () => {
+		async function expectModerationLog(type: 'clearQueue' | 'promoteQueue' | 'pauseQueue' | 'resumeQueue'): Promise<void> {
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 20,
+					order: 'desc',
+					type,
+					userId: alice.id,
+				});
+				if (logs.length > 0) return;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`moderation log was not found: ${type}`);
+		}
+
+		test('admin/queue のwrite endpointはqueue操作、moderation log、権限を維持する', async () => {
+			const now = Date.now();
+			const content = JSON.stringify({ type: 'QueueWriteTest', id: now });
+			const baseJobData = {
+				user: { id: alice.id },
+				content,
+				digest: `SHA-256=${createHash('sha256').update(content).digest('base64')}`,
+				to: `https://queue-write-${now}.example/inbox`,
+				isSharedInbox: false,
+			};
+			let retryJob: Bull.Job<DeliverJobData> | undefined;
+			const promoteJob = await deliverQueue!.add(`hono-queue-promote-${now}`, baseJobData, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+			const removeJob = await deliverQueue!.add(`hono-queue-remove-${now}`, {
+				...baseJobData,
+				to: `https://queue-remove-${now}.example/inbox`,
+			}, { removeOnComplete: true, removeOnFail: true });
+			const clearJob = await deliverQueue!.add(`hono-queue-clear-${now}`, {
+				...baseJobData,
+				to: `https://queue-clear-${now}.example/inbox`,
+			}, { removeOnComplete: true, removeOnFail: true });
+
+			try {
+				assert.ok(promoteJob.id);
+				assert.ok(removeJob.id);
+				assert.ok(clearJob.id);
+
+				const paused = await api('admin/queue/pause', { queue: 'deliver' }, alice);
+				assert.strictEqual(paused.status, 204);
+				assert.strictEqual(await deliverQueue!.isPaused(), true);
+				await expectModerationLog('pauseQueue');
+
+				const resumed = await api('admin/queue/resume', { queue: 'deliver' }, alice);
+				assert.strictEqual(resumed.status, 204);
+				assert.strictEqual(await deliverQueue!.isPaused(), false);
+				await expectModerationLog('resumeQueue');
+
+				const promoted = await api('admin/queue/promote-jobs', { queue: 'deliver' }, alice);
+				assert.strictEqual(promoted.status, 204);
+				assert.notStrictEqual(await promoteJob.getState(), 'delayed');
+				await expectModerationLog('promoteQueue');
+
+				retryJob = await deliverQueue!.add(`hono-queue-retry-${now}`, {
+					...baseJobData,
+					to: `https://queue-retry-${now}.example/inbox`,
+				}, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+				assert.ok(retryJob.id);
+				const retried = await api('admin/queue/retry-job', { queue: 'deliver', jobId: retryJob.id }, alice);
+				assert.strictEqual(retried.status, 204);
+				assert.notStrictEqual(await retryJob.getState(), 'delayed');
+
+				const removed = await api('admin/queue/remove-job', { queue: 'deliver', jobId: removeJob.id }, alice);
+				assert.strictEqual(removed.status, 204);
+				assert.strictEqual(await deliverQueue!.getJob(removeJob.id), undefined);
+
+				const cleared = await api('admin/queue/clear', { queue: 'deliver', state: 'wait' }, alice);
+				assert.strictEqual(cleared.status, 204);
+				assert.strictEqual(await deliverQueue!.getJob(clearJob.id), undefined);
+				await expectModerationLog('clearQueue');
+
+				const writeToken = await createAppToken(alice, ['write:admin:queue']);
+				const pausedWithToken = await api('admin/queue/pause', { queue: 'deliver' }, { token: writeToken });
+				assert.strictEqual(pausedWithToken.status, 204);
+				await api('admin/queue/resume', { queue: 'deliver' }, alice);
+
+				const deniedToken = await createAppToken(alice, ['read:admin:queue']);
+				const scopeDenied = await api('admin/queue/pause', { queue: 'deliver' }, { token: deniedToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const normalUser = await signup({ username: `honoqueuew${now.toString(36)}` });
+				const roleDenied = await api('admin/queue/pause', { queue: 'deliver' }, normalUser);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await deliverQueue!.resume().catch(() => undefined);
+				await promoteJob.remove().catch(() => undefined);
+				await retryJob?.remove().catch(() => undefined);
+				await removeJob.remove().catch(() => undefined);
+				await clearJob.remove().catch(() => undefined);
+			}
 		});
 	});
 
