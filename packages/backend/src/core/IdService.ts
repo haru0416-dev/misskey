@@ -4,16 +4,16 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { ulid } from 'ulid';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
-import { genAid, isSafeAidT, parseAid, parseAidFull } from '@/misc/id/aid.js';
-import { genAidx, isSafeAidxT, parseAidx, parseAidxFull } from '@/misc/id/aidx.js';
-import { genMeid, isSafeMeidT, parseMeid, parseMeidFull } from '@/misc/id/meid.js';
-import { genMeidg, isSafeMeidgT, parseMeidg, parseMeidgFull } from '@/misc/id/meidg.js';
-import { genObjectId, isSafeObjectIdT, parseObjectId, parseObjectIdFull } from '@/misc/id/object-id.js';
+import { isSafeAidT, parseAid, parseAidFull } from '@/misc/id/aid.js';
+import { isSafeAidxT, parseAidx, parseAidxFull } from '@/misc/id/aidx.js';
+import { isSafeMeidT, parseMeid, parseMeidFull } from '@/misc/id/meid.js';
+import { isSafeMeidgT, parseMeidg, parseMeidgFull } from '@/misc/id/meidg.js';
+import { isSafeObjectIdT, parseObjectId, parseObjectIdFull } from '@/misc/id/object-id.js';
 import { bindThis } from '@/decorators.js';
 import { parseUlid, parseUlidFull } from '@/misc/id/ulid.js';
+import { genId } from '@/misc/id/gen-id.js';
 
 @Injectable()
 export class IdService {
@@ -45,17 +45,7 @@ export class IdService {
 	 */
 	@bindThis
 	public gen(time?: number): string {
-		const t = (!time || (time > Date.now())) ? Date.now() : time;
-
-		switch (this.method) {
-			case 'aid': return genAid(t);
-			case 'aidx': return genAidx(t);
-			case 'meid': return genMeid(t);
-			case 'meidg': return genMeidg(t);
-			case 'ulid': return ulid(t);
-			case 'objectid': return genObjectId(t);
-			default: throw new Error('unrecognized id generation method');
-		}
+		return genId(this.config, time);
 	}
 
 	@bindThis

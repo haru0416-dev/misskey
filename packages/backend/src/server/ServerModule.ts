@@ -7,11 +7,7 @@ import { Module } from '@nestjs/common';
 import { EndpointsModule } from '@/server/api/EndpointsModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { ApiCallService } from './api/ApiCallService.js';
-import { FileServerService } from './FileServerService.js';
-import { HealthServerService } from './HealthServerService.js';
-import { NodeinfoServerService } from './NodeinfoServerService.js';
 import { ServerService } from './ServerService.js';
-import { WellKnownServerService } from './WellKnownServerService.js';
 import { GetterService } from './api/GetterService.js';
 import { ActivityPubServerService } from './ActivityPubServerService.js';
 import { ApiLoggerService } from './api/ApiLoggerService.js';
@@ -22,11 +18,9 @@ import { SigninApiService } from './api/SigninApiService.js';
 import { SigninService } from './api/SigninService.js';
 import { SignupApiService } from './api/SignupApiService.js';
 import { StreamingApiServerService } from './api/StreamingApiServerService.js';
-import { OpenApiServerService } from './api/openapi/OpenApiServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
 import { HtmlTemplateService } from './web/HtmlTemplateService.js';
 import { FeedService } from './web/FeedService.js';
-import { UrlPreviewService } from './web/UrlPreviewService.js';
 import { ClientLoggerService } from './web/ClientLoggerService.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
 
@@ -60,13 +54,8 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		ClientLoggerService,
 		HtmlTemplateService,
 		FeedService,
-		HealthServerService,
-		UrlPreviewService,
 		ActivityPubServerService,
-		FileServerService,
-		NodeinfoServerService,
 		ServerService,
-		WellKnownServerService,
 		GetterService,
 		MainStreamConnection,
 		ApiCallService,
@@ -96,7 +85,6 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		ServerStatsChannel,
 		UserListChannel,
 		NoteStreamingHidingService,
-		OpenApiServerService,
 		OAuth2ProviderService,
 	],
 	exports: [

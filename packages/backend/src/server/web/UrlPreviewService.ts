@@ -14,7 +14,18 @@ import { LoggerService } from '@/core/LoggerService.js';
 import { bindThis } from '@/decorators.js';
 import { ApiError } from '@/server/api/error.js';
 import { MiMeta } from '@/models/Meta.js';
-import type { FastifyRequest, FastifyReply } from 'fastify';
+
+export type UrlPreviewRequest = {
+	query: {
+		url?: unknown;
+		lang?: unknown;
+	};
+};
+
+export type UrlPreviewReply = {
+	code: (statusCode: number) => unknown;
+	header: (name: string, value: string | number | undefined) => unknown;
+};
 
 @Injectable()
 export class UrlPreviewService {
@@ -47,8 +58,8 @@ export class UrlPreviewService {
 
 	@bindThis
 	public async handle(
-		request: FastifyRequest<{ Querystring: { url: string; lang?: string; } }>,
-		reply: FastifyReply,
+		request: UrlPreviewRequest,
+		reply: UrlPreviewReply,
 	): Promise<object | undefined> {
 		const url = request.query.url;
 		if (typeof url !== 'string') {
@@ -61,6 +72,11 @@ export class UrlPreviewService {
 			reply.code(400);
 			return;
 		}
+		if (lang != null && typeof lang !== 'string') {
+			reply.code(400);
+			return;
+		}
+		const normalizedLang = lang ?? undefined;
 
 		if (!this.meta.urlPreviewEnabled) {
 			reply.code(403);
@@ -74,13 +90,13 @@ export class UrlPreviewService {
 		}
 
 		this.logger.info(this.meta.urlPreviewSummaryProxyUrl
-			? `(Proxy) Getting preview of ${url}@${lang} ...`
-			: `Getting preview of ${url}@${lang} ...`);
+			? `(Proxy) Getting preview of ${url}@${normalizedLang} ...`
+			: `Getting preview of ${url}@${normalizedLang} ...`);
 
 		try {
 			const summary = this.meta.urlPreviewSummaryProxyUrl
-				? await this.fetchSummaryFromProxy(url, this.meta, lang)
-				: await this.fetchSummary(url, this.meta, lang);
+				? await this.fetchSummaryFromProxy(url, this.meta, normalizedLang)
+				: await this.fetchSummary(url, this.meta, normalizedLang);
 
 			this.logger.succ(`Got preview of ${url}: ${summary.title}`);
 

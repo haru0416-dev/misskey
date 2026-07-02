@@ -12,7 +12,6 @@ import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { fetchAccessTokenBySessionFromDatabase, markAccessTokenFetchedInDatabase } from '@/core/AccessTokenStore.js';
-import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { bindThis } from '@/decorators.js';
 import endpoints from './endpoints.js';
@@ -142,10 +141,6 @@ export class ApiServerService {
 
 		fastify.post<{ Body: { code: string; } }>('/signup-pending', (request, reply) => this.signupApiService.signupPending(request, reply));
 
-		fastify.get('/v1/instance/peers', async (request, reply) => {
-			return listActiveInstanceHostsFromDatabase(this.db);
-		});
-
 		fastify.post<{ Params: { session: string; } }>('/miauth/:session/check', async (request, reply) => {
 			const token = await fetchAccessTokenBySessionFromDatabase(this.db, request.params.session);
 
@@ -162,33 +157,6 @@ export class ApiServerService {
 					ok: false,
 				};
 			}
-		});
-
-		fastify.all('/clear-browser-cache', (request, reply) => {
-			if (['GET', 'POST'].includes(request.method)) {
-				reply.header('Clear-Site-Data', '"cache", "prefetchCache", "prerenderCache", "executionContexts"');
-				reply.code(204);
-				reply.send();
-			} else {
-				reply.code(405);
-				reply.send();
-			}
-		});
-
-		// Make sure any unknown path under /api returns HTTP 404 Not Found,
-		// because otherwise ClientServerService will return the base client HTML
-		// page with HTTP 200.
-		fastify.get('/*', (request, reply) => {
-			reply.code(404);
-			// Mock ApiCallService.send's error handling
-			reply.send({
-				error: {
-					message: 'Unknown API endpoint.',
-					code: 'UNKNOWN_API_ENDPOINT',
-					id: '2ca3b769-540a-4f08-9dd5-b5a825b6d0f1',
-					kind: 'client',
-				},
-			});
 		});
 
 		done();
