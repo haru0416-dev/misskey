@@ -36,7 +36,7 @@ import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, h
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono-api-error.js';
-import { handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
+import { handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import {
 	handleHonoApiDriveFilesCheckExistence,
@@ -1598,6 +1598,32 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiCanManageCustomEmojis(deps, auth);
 
 			await handleHonoApiAdminEmojiSetLicenseBulk(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/emoji/delete-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			await handleHonoApiAdminEmojiDeleteBulk(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});

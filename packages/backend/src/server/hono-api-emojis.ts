@@ -5,12 +5,14 @@
 
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
-import { fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
+import { deleteEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
+import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiEmoji } from '@/models/Emoji.js';
+import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiBroadcastStreamPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
@@ -75,6 +77,24 @@ const adminEmojiAliasesBulkParamDef = {
 	required: ['ids', 'aliases'],
 } as const;
 
+const adminEmojiDeleteParamDef = {
+	type: 'object',
+	properties: {
+		id: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['id'],
+} as const;
+
+const adminEmojiDeleteBulkParamDef = {
+	type: 'object',
+	properties: {
+		ids: { type: 'array', items: {
+			type: 'string', format: 'misskey:id',
+		} },
+	},
+	required: ['ids'],
+} as const;
+
 const adminEmojiSetCategoryBulkParamDef = {
 	type: 'object',
 	properties: {
@@ -111,6 +131,8 @@ type EmojiParams = {
 type AdminEmojiListParams = SchemaType<typeof adminEmojiListParamDef>;
 type AdminEmojiListRemoteParams = SchemaType<typeof adminEmojiListRemoteParamDef>;
 type AdminEmojiAliasesBulkParams = SchemaType<typeof adminEmojiAliasesBulkParamDef>;
+type AdminEmojiDeleteParams = SchemaType<typeof adminEmojiDeleteParamDef>;
+type AdminEmojiDeleteBulkParams = SchemaType<typeof adminEmojiDeleteBulkParamDef>;
 type AdminEmojiSetCategoryBulkParams = SchemaType<typeof adminEmojiSetCategoryBulkParamDef>;
 type AdminEmojiSetLicenseBulkParams = SchemaType<typeof adminEmojiSetLicenseBulkParamDef>;
 
@@ -246,6 +268,17 @@ async function finishHonoApiEmojiBulkUpdate(
 	await publishHonoApiEmojiUpdated(deps, ids);
 }
 
+async function publishHonoApiEmojiDeleted(
+	deps: HonoApiEmojiDependencies,
+	emojis: MiEmoji[],
+): Promise<void> {
+	if (deps.publishBroadcastStream == null) return;
+
+	deps.publishBroadcastStream('emojiDeleted', {
+		emojis: emojis.map(packHonoEmojiDetailed),
+	});
+}
+
 export async function handleHonoApiEmojis(deps: HonoApiEmojiDependencies): Promise<{
 	emojis: Packed<'EmojiSimple'>[];
 }> {
@@ -309,6 +342,42 @@ export async function handleHonoApiAdminEmojiAddAliasesBulk(
 	}
 
 	await finishHonoApiEmojiBulkUpdate(deps, params.ids);
+}
+
+export async function handleHonoApiAdminEmojiDelete(
+	deps: HonoApiEmojiDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminEmojiDeleteParamDef, body) as AdminEmojiDeleteParams;
+	const emoji = await fetchEmojiByIdOrFailFromDatabase(deps.db, params.id);
+	await deleteEmojiByIdFromDatabase(deps.db, emoji.id);
+	await refreshHonoApiLocalEmojisCache(deps);
+	await publishHonoApiEmojiDeleted(deps, [emoji]);
+	await logModerationEventInDatabase(deps, me, 'deleteCustomEmoji', {
+		emojiId: emoji.id,
+		emoji,
+	});
+}
+
+export async function handleHonoApiAdminEmojiDeleteBulk(
+	deps: HonoApiEmojiDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminEmojiDeleteBulkParamDef, body) as AdminEmojiDeleteBulkParams;
+	const emojis = await listEmojisByIdsFromDatabase(deps.db, params.ids);
+
+	for (const emoji of emojis) {
+		await deleteEmojiByIdFromDatabase(deps.db, emoji.id);
+		await logModerationEventInDatabase(deps, me, 'deleteCustomEmoji', {
+			emojiId: emoji.id,
+			emoji,
+		});
+	}
+
+	await refreshHonoApiLocalEmojisCache(deps);
+	await publishHonoApiEmojiDeleted(deps, emojis);
 }
 
 export async function handleHonoApiAdminEmojiSetAliasesBulk(

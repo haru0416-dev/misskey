@@ -28,7 +28,7 @@ import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
-import { fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
@@ -1421,6 +1421,142 @@ describe('Endpoints', () => {
 					ids: [first.id],
 					category: `denied_${suffix}`,
 				}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji/delete と delete-bulk はDB削除、cache、moderation log、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemd${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji delete manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const single = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 2000),
+				name: `honoemoji_delete_single_${suffix}`,
+				host: null,
+				aliases: [],
+				category: `delete_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/delete-single.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const bulkFirst = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `honoemoji_delete_bulk_first_${suffix}`,
+				host: null,
+				aliases: [],
+				category: `delete_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/delete-bulk-first.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const bulkSecond = await insertEmojiInDatabase(db, {
+				id: genId(config, now),
+				name: `honoemoji_delete_bulk_second_${suffix}`,
+				host: null,
+				aliases: [],
+				category: `delete_${suffix}`,
+				originalUrl: `${origin}/emoji/${suffix}/delete-bulk-second.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const deleted = await api('admin/emoji/delete', { id: single.id }, manager);
+				assert.strictEqual(deleted.status, 204);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, single.id), null);
+
+				const deletedBulk = await api('admin/emoji/delete-bulk', {
+					ids: [bulkFirst.id, bulkSecond.id],
+				}, manager);
+				assert.strictEqual(deletedBulk.status, 204);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkFirst.id), null);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkSecond.id), null);
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === single.id), false);
+					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === bulkFirst.id), false);
+					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === bulkSecond.id), false);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				for (let i = 0; i < 10; i++) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type: 'deleteCustomEmoji',
+						search: suffix,
+					});
+					if (logs.length >= 3) {
+						assert.strictEqual(logs.some(log => (log.info as any).emojiId === single.id), true);
+						assert.strictEqual(logs.some(log => (log.info as any).emojiId === bulkFirst.id), true);
+						assert.strictEqual(logs.some(log => (log.info as any).emojiId === bulkSecond.id), true);
+						break;
+					}
+					await new Promise(resolve => setTimeout(resolve, 100));
+					if (i === 9) assert.fail('deleteCustomEmoji moderation logs were not found');
+				}
+
+				const tokenTarget = await insertEmojiInDatabase(db, {
+					id: genId(config, now + 1000),
+					name: `honoemoji_delete_token_${suffix}`,
+					host: null,
+					aliases: [],
+					category: null,
+					originalUrl: `${origin}/emoji/${suffix}/delete-token.webp`,
+					publicUrl: '',
+					license: null,
+					isSensitive: false,
+					localOnly: false,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+				});
+				const token = await createAppToken(manager, ['write:admin:emoji']);
+				const deletedByToken = await api('admin/emoji/delete', { id: tokenTarget.id }, { token });
+				assert.strictEqual(deletedByToken.status, 204);
+				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, tokenTarget.id), null);
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/delete-bulk', {
+					ids: [tokenTarget.id],
+				}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/delete', { id: tokenTarget.id }, bob);
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
