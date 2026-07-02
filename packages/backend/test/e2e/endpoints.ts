@@ -5,6 +5,7 @@
 
 process.env.NODE_ENV = 'test';
 
+import { createHash } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
@@ -19,13 +20,17 @@ import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.j
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
+import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
+import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -943,6 +948,299 @@ describe('Endpoints', () => {
 			const getBody = await get.json() as { title?: string; items?: { title?: string }[] };
 			assert.strictEqual(getBody.title, 'Hono RSS Feed');
 			assert.strictEqual(getBody.items?.[0].title, 'First entry');
+		});
+	});
+
+	describe('fetch-external-resources endpoint', () => {
+		let resourceServer: Server | undefined;
+		let resourceUrl: string;
+		const data = 'line 1\r\nline 2';
+
+		beforeAll(async () => {
+			resourceServer = createServer((req, res) => {
+				const responseBody = req.url === '/invalid'
+					? JSON.stringify({ type: 'text/plain' })
+					: JSON.stringify({ type: 'text/plain', data });
+
+				res.writeHead(200, {
+					'Content-Type': 'application/json; charset=utf-8',
+				});
+				res.end(responseBody);
+			});
+			await new Promise<void>((resolve, reject) => {
+				resourceServer!.once('error', reject);
+				resourceServer!.listen(0, '127.0.0.1', () => {
+					resourceServer!.off('error', reject);
+					resolve();
+				});
+			});
+			const address = resourceServer.address() as AddressInfo;
+			resourceUrl = `http://127.0.0.1:${address.port}`;
+		});
+
+		afterAll(async () => {
+			await new Promise<void>((resolve, reject) => {
+				if (resourceServer == null || !resourceServer.listening) {
+					resolve();
+					return;
+				}
+
+				resourceServer.close(error => error ? reject(error) : resolve());
+			});
+		});
+
+		test('fetches, validates, and returns hashed external resources', async () => {
+			const hash = createHash('sha512').update(data.replace(/\r\n/g, '\n')).digest('hex');
+
+			const res = await api('fetch-external-resources', {
+				url: `${resourceUrl}/valid`,
+				hash,
+			}, alice);
+
+			assert.strictEqual(res.status, 200);
+			assert.deepStrictEqual(res.body, {
+				type: 'text/plain',
+				data,
+			});
+		});
+
+		test('rejects third-party app tokens and mismatched resources', async () => {
+			const appToken = await createAppToken(alice, ['read:account']);
+			const appDenied = await api('fetch-external-resources', {
+				url: `${resourceUrl}/valid`,
+				hash: 'bad',
+			}, { token: appToken });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const mismatched = await api('fetch-external-resources', {
+				url: `${resourceUrl}/valid`,
+				hash: 'bad',
+			}, alice);
+			assert.strictEqual(mismatched.status, 400);
+			assert.strictEqual(castAsError(mismatched.body as any).error.code, 'EXT_RESOURCE_HASH_DIDNT_MATCH');
+
+			const invalid = await api('fetch-external-resources', {
+				url: `${resourceUrl}/invalid`,
+				hash: 'bad',
+			}, alice);
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(invalid.body as any).error.code, 'EXT_RESOURCE_RETURNED_INVALID_SCHEMA');
+		});
+	});
+
+	describe('sw endpoints', () => {
+		test('sw/show-registration returns own subscription or null', async () => {
+			const endpoint = `https://push.example.test/${genId(loadConfig())}`;
+			await createSwSubscriptionInDatabase(db, {
+				id: genId(loadConfig()),
+				userId: alice.id,
+				endpoint,
+				auth: 'auth-secret',
+				publickey: 'public-key',
+				sendReadMessage: true,
+			});
+
+			const shown = await api('sw/show-registration', { endpoint }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.deepStrictEqual(shown.body, {
+				userId: alice.id,
+				endpoint,
+				sendReadMessage: true,
+			});
+
+			const missing = await api('sw/show-registration', { endpoint }, bob);
+			assert.strictEqual(missing.status, 200);
+			assert.strictEqual(missing.body, null);
+
+			const appToken = await createAppToken(alice, ['read:account']);
+			const appDenied = await api('sw/show-registration', { endpoint }, { token: appToken });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+		});
+
+		test('sw registration lifecycle creates, updates, and unregisters subscriptions', async () => {
+			const endpoint = `https://push.example.test/lifecycle-${genId(loadConfig())}`;
+
+			const registered = await api('sw/register', {
+				endpoint,
+				auth: 'auth-1',
+				publickey: 'public-key-1',
+				sendReadMessage: true,
+			}, alice);
+			assert.strictEqual(registered.status, 200);
+			assert.strictEqual(registered.body.state, 'subscribed');
+			assert.strictEqual(registered.body.userId, alice.id);
+			assert.strictEqual(registered.body.endpoint, endpoint);
+			assert.strictEqual(registered.body.sendReadMessage, true);
+
+			const same = await api('sw/register', {
+				endpoint,
+				auth: 'auth-1',
+				publickey: 'public-key-1',
+				sendReadMessage: true,
+			}, alice);
+			assert.strictEqual(same.status, 200);
+			assert.strictEqual(same.body.state, 'already-subscribed');
+
+			const updated = await api('sw/update-registration', {
+				endpoint,
+				sendReadMessage: false,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.deepStrictEqual(updated.body, {
+				userId: alice.id,
+				endpoint,
+				sendReadMessage: false,
+			});
+
+			const missingUpdate = await api('sw/update-registration', {
+				endpoint,
+			}, bob);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.code, 'NO_SUCH_REGISTRATION');
+
+			const unregistered = await api('sw/unregister', { endpoint }, alice);
+			assert.strictEqual(unregistered.status, 204);
+			assert.strictEqual(unregistered.body, null);
+
+			const afterUnregister = await api('sw/show-registration', { endpoint }, alice);
+			assert.strictEqual(afterUnregister.status, 200);
+			assert.strictEqual(afterUnregister.body, null);
+		});
+
+		test('sw secure endpoints reject app tokens and unregister accepts anonymous requests', async () => {
+			const endpoint = `https://push.example.test/anonymous-${genId(loadConfig())}`;
+			await api('sw/register', {
+				endpoint,
+				auth: 'auth',
+				publickey: 'public-key',
+			}, alice);
+
+			const appToken = await createAppToken(alice, ['read:account']);
+			const appRegisterDenied = await api('sw/register', {
+				endpoint: `${endpoint}-app`,
+				auth: 'auth',
+				publickey: 'public-key',
+			}, { token: appToken });
+			assert.strictEqual(appRegisterDenied.status, 400);
+			assert.strictEqual(castAsError(appRegisterDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const appUpdateDenied = await api('sw/update-registration', { endpoint }, { token: appToken });
+			assert.strictEqual(appUpdateDenied.status, 400);
+			assert.strictEqual(castAsError(appUpdateDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const anonymousUnregister = await api('sw/unregister', { endpoint });
+			assert.strictEqual(anonymousUnregister.status, 204);
+
+			const afterAnonymousUnregister = await api('sw/show-registration', { endpoint }, alice);
+			assert.strictEqual(afterAnonymousUnregister.status, 200);
+			assert.strictEqual(afterAnonymousUnregister.body, null);
+		});
+	});
+
+	describe('request-reset-password endpoint', () => {
+		test('request-reset-password silently accepts unknown users and validates params', async () => {
+			const accepted = await api('request-reset-password', {
+				username: 'missing_reset_user',
+				email: 'missing-reset-user@example.test',
+			});
+			assert.strictEqual(accepted.status, 204);
+			assert.strictEqual(accepted.body, null);
+
+			const invalid = await api('request-reset-password', {
+				username: 'missing_reset_user',
+			} as any);
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+		});
+	});
+
+	describe('reset-password endpoint', () => {
+		test('reset-password updates password and consumes reset token', async () => {
+			const config = loadConfig();
+			const token = `reset-token-${genId(config)}`;
+			await createPasswordResetRequestInDatabase(db, {
+				id: genId(config),
+				userId: carol.id,
+				token,
+			});
+
+			const reset = await api('reset-password', {
+				token,
+				password: 'new-reset-password',
+			});
+			assert.strictEqual(reset.status, 204);
+			assert.strictEqual(reset.body, null);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
+			assert.strictEqual(await bcrypt.compare('new-reset-password', profile.password!), true);
+		});
+	});
+
+	describe('verify-email endpoint', () => {
+		test('verify-email verifies matching code and rejects missing code', async () => {
+			const code = `verify-${genId(loadConfig())}`;
+			await updateUserProfileInDatabase(db, dave.id, {
+				email: 'verify-email@example.test',
+				emailVerified: false,
+				emailVerifyCode: code,
+			});
+
+			const verified = await api('verify-email', { code });
+			assert.strictEqual(verified.status, 204);
+			assert.strictEqual(verified.body, null);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, dave.id);
+			assert.strictEqual(profile.emailVerified, true);
+			assert.strictEqual(profile.emailVerifyCode, null);
+
+			const missing = await api('verify-email', { code: 'missing-code' });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_CODE');
+		});
+	});
+
+	describe('promo/read endpoint', () => {
+		test('promo/read records a promoted note as read idempotently', async () => {
+			const config = loadConfig();
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'promo read target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const read = await api('promo/read', { noteId }, bob);
+			assert.strictEqual(read.status, 204);
+			assert.strictEqual(read.body, null);
+			assert.strictEqual(await isPromoReadExists(db, bob.id, noteId), true);
+
+			const duplicate = await api('promo/read', { noteId }, bob);
+			assert.strictEqual(duplicate.status, 204);
+
+			const missing = await api('promo/read', { noteId: genId(config) }, bob);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+		});
+
+		test('promo/read requires write account permission for app tokens', async () => {
+			const config = loadConfig();
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'promo read app token target',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const appToken = await createAppToken(bob, ['read:account']);
+
+			const denied = await api('promo/read', { noteId }, { token: appToken });
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED');
 		});
 	});
 
