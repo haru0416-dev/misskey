@@ -23,7 +23,7 @@ import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-ap
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
-import { signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
+import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 
 export type ApiShellDependencies = {
 	config: Config;
@@ -207,6 +207,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await signupWithHonoApi(deps, body ?? {}));
+		});
+	});
+
+	app.post('/signup-pending', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return signinFlowResponse(c, deps, await signupPendingWithHonoApi(deps, {
+				body,
+				headers: c.req.raw.headers,
+				ip: getRequestIp(c, deps.config),
+			}));
 		});
 	});
 

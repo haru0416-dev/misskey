@@ -9,15 +9,20 @@ import RE2 from 're2';
 import type { Config } from '@/config.js';
 import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
 import { updateMetaInDatabase } from '@/core/MetaStore.js';
+import { fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
+import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
 import { isLocalUsernameTaken } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import type { MiMeta } from '@/models/_.js';
-import type { MiUser } from '@/models/User.js';
-import { signupValidationError } from './hono-api-error.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
+import { HonoApiError, signupValidationError } from './hono-api-error.js';
+import { completeHonoApiSignin, type HonoApiSigninDependencies, type HonoApiSigninFlowResult, type HonoApiSigninRequest } from './hono-api-signin.js';
 import { packMeDetailedForHonoApi } from './hono-api-user.js';
 
 type SignupBody = {
@@ -115,24 +120,28 @@ async function packSignupUser(deps: SignupDependencies, user: MiUser, token: str
 	};
 }
 
-export async function signupWithHonoApi(deps: SignupDependencies, body: SignupBody): Promise<SignupResponse> {
-	assertSignupGateOpen(deps.meta);
-	validateUsername(body.username);
-	validatePassword(body.password);
+async function createLocalSignupAccount(
+	deps: SignupDependencies,
+	params: {
+		username: string;
+		passwordHash: string | null;
+		host: string | null;
+	},
+): Promise<{
+	account: MiUser;
+	token: string;
+}> {
+	const usernameLower = params.username.toLowerCase();
 
-	const username = body.username;
-	const normalizedHost = process.env.NODE_ENV === 'test' ? normalizeHost(body.host) : null;
-
-	if (await isLocalUsernameTaken(deps.db, username)) {
+	if (await isLocalUsernameTaken(deps.db, params.username)) {
 		throw signupValidationError('DUPLICATED_USERNAME');
 	}
 
-	if (await isUsedUsername(deps.db, username)) {
+	if (await isUsedUsername(deps.db, params.username)) {
 		throw signupValidationError('USED_USERNAME');
 	}
 
 	if (deps.meta.rootUserId != null) {
-		const usernameLower = username.toLowerCase();
 		if (deps.meta.preservedUsernames.map(x => x.toLowerCase()).includes(usernameLower)) {
 			throw signupValidationError('USED_USERNAME');
 		}
@@ -142,27 +151,95 @@ export async function signupWithHonoApi(deps: SignupDependencies, body: SignupBo
 		}
 	}
 
-	const salt = await bcrypt.genSalt(8);
-	const hash = await bcrypt.hash(body.password, salt);
 	const token = generateNativeUserToken();
 	const keyPair = await genRsaKeyPair();
-	const remoteUri = normalizedHost == null ? null : `https://${normalizedHost}/users/${username}`;
+	const remoteUri = params.host == null ? null : `https://${params.host}/users/${params.username}`;
 	const account = await createSignupAccountInDatabase(deps.db, {
 		id: genId(deps.config),
-		username,
-		usernameLower: username.toLowerCase(),
-		host: normalizedHost,
+		username: params.username,
+		usernameLower,
+		host: params.host,
 		uri: remoteUri,
 		inbox: remoteUri == null ? null : `${remoteUri}/inbox`,
-		sharedInbox: normalizedHost == null ? null : `https://${normalizedHost}/inbox`,
+		sharedInbox: params.host == null ? null : `https://${params.host}/inbox`,
 		followersUri: remoteUri == null ? null : `${remoteUri}/followers`,
 		token,
-		passwordHash: hash,
+		passwordHash: params.passwordHash,
 		publicKey: keyPair.publicKey,
 		privateKey: keyPair.privateKey,
 	});
 
 	await assignRootUserIfMissing(deps, account.id);
 
+	return { account, token };
+}
+
+export async function signupWithHonoApi(deps: SignupDependencies, body: SignupBody): Promise<SignupResponse> {
+	assertSignupGateOpen(deps.meta);
+	validateUsername(body.username);
+	validatePassword(body.password);
+
+	const username = body.username;
+	const normalizedHost = process.env.NODE_ENV === 'test' ? normalizeHost(body.host) : null;
+
+	const salt = await bcrypt.genSalt(8);
+	const hash = await bcrypt.hash(body.password, salt);
+	const { account, token } = await createLocalSignupAccount(deps, {
+		username,
+		host: normalizedHost,
+		passwordHash: hash,
+	});
+
 	return await packSignupUser(deps, account, token);
+}
+
+export async function signupPendingWithHonoApi(
+	deps: SignupDependencies & HonoApiSigninDependencies,
+	request: HonoApiSigninRequest,
+): Promise<HonoApiSigninFlowResult> {
+	const code = request.body.code;
+	if (typeof code !== 'string') {
+		throw signupValidationError('INVALID_PARAM');
+	}
+
+	try {
+		const pendingUser = await fetchUserPendingByCodeFromDatabase(deps.db, code);
+
+		if (parseId(deps.config, pendingUser.id).date.getTime() + (1000 * 60 * 30) < Date.now()) {
+			throw signupValidationError('EXPIRED');
+		}
+
+		validateUsername(pendingUser.username);
+		const { account } = await createLocalSignupAccount(deps, {
+			username: pendingUser.username,
+			passwordHash: pendingUser.password,
+			host: null,
+		});
+
+		await deleteUserPendingFromDatabase(deps.db, pendingUser.id);
+
+		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, account.id);
+
+		await updateUserProfileInDatabase(deps.db, profile.userId, {
+			email: pendingUser.email,
+			emailVerified: true,
+			emailVerifyCode: null,
+		});
+
+		const ticket = await fetchRegistrationTicketByPendingUserIdFromDatabase(deps.db, pendingUser.id);
+		if (ticket) {
+			await updateRegistrationTicketInDatabase(deps.db, ticket.id, {
+				usedById: account.id,
+				pendingUserId: null,
+			});
+		}
+
+		return completeHonoApiSignin(deps, request, account as MiLocalUser);
+	} catch (err) {
+		if (err instanceof HonoApiError) {
+			throw err;
+		}
+
+		throw signupValidationError(typeof err === 'string' ? err : (err as Error).message);
+	}
 }
