@@ -28,7 +28,7 @@ import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
-import { api, castAsError, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
+import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Endpoints', () => {
@@ -779,6 +779,105 @@ describe('Endpoints', () => {
 			assert.strictEqual(afterOlder.status, 200);
 			assert.strictEqual(afterOlder.body.some(item => item.id === newer.id), true);
 			assert.strictEqual(afterOlder.body.some(item => item.id === older.id), false);
+		});
+	});
+
+	describe('registry endpoints', () => {
+		test('i/registry endpoints store native and app-token scoped values', async () => {
+			const now = Date.now();
+			const nativeScope = ['hono', 'registry'];
+			const nativeKey = `native_${now}`;
+			const nativeValue = {
+				enabled: true,
+				count: 2,
+				items: ['alpha', 'beta'],
+			};
+
+			const setNative = await api('i/registry/set', {
+				scope: nativeScope,
+				key: nativeKey,
+				value: nativeValue,
+			}, alice);
+			assert.strictEqual(setNative.status, 204);
+
+			const gotNative = await api('i/registry/get', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(gotNative.status, 200);
+			assert.deepStrictEqual(gotNative.body, nativeValue);
+
+			const detail = await api('i/registry/get-detail', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(detail.status, 200);
+			assert.strictEqual(typeof detail.body.updatedAt, 'string');
+			assert.deepStrictEqual(detail.body.value, nativeValue);
+
+			const all = await api('i/registry/get-all', {
+				scope: nativeScope,
+			}, alice);
+			assert.strictEqual(all.status, 200);
+			assert.deepStrictEqual(all.body[nativeKey], nativeValue);
+
+			const keys = await api('i/registry/keys', {
+				scope: nativeScope,
+			}, alice);
+			assert.strictEqual(keys.status, 200);
+			assert.ok(keys.body.includes(nativeKey));
+
+			const keysWithType = await api('i/registry/keys-with-type', {
+				scope: nativeScope,
+			}, alice);
+			assert.strictEqual(keysWithType.status, 200);
+			assert.strictEqual(keysWithType.body[nativeKey], 'object');
+
+			const appToken = await createAppToken(alice, ['read:account', 'write:account']);
+			const appScope = ['hono', 'registry_app'];
+			const appKey = `app_${now}`;
+			const appValue = ['from', 'app'];
+			const setApp = await api('i/registry/set', {
+				scope: appScope,
+				key: appKey,
+				value: appValue,
+			}, { token: appToken });
+			assert.strictEqual(setApp.status, 204);
+
+			const gotApp = await api('i/registry/get', {
+				scope: appScope,
+				key: appKey,
+			}, { token: appToken });
+			assert.strictEqual(gotApp.status, 200);
+			assert.deepStrictEqual(gotApp.body, appValue);
+
+			const nativeCannotReadAppDomain = await api('i/registry/get', {
+				scope: appScope,
+				key: appKey,
+			}, alice);
+			assert.strictEqual(nativeCannotReadAppDomain.status, 400);
+			assert.strictEqual(castAsError(nativeCannotReadAppDomain.body as any).error.code, 'NO_SUCH_KEY');
+
+			const scopesWithDomain = await api('i/registry/scopes-with-domain', {}, alice);
+			assert.strictEqual(scopesWithDomain.status, 200);
+			assert.ok(scopesWithDomain.body.some(item => item.domain === null && item.scopes.some(scope => scope.join('.') === nativeScope.join('.'))));
+			assert.ok(scopesWithDomain.body.some(item => item.domain != null && item.scopes.some(scope => scope.join('.') === appScope.join('.'))));
+
+			const appDenied = await api('i/registry/scopes-with-domain', {}, { token: appToken });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const removed = await api('i/registry/remove', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(removed.status, 204);
+			const afterRemove = await api('i/registry/get', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(afterRemove.status, 400);
+			assert.strictEqual(castAsError(afterRemove.body as any).error.code, 'NO_SUCH_KEY');
 		});
 	});
 
