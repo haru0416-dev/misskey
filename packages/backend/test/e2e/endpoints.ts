@@ -28,7 +28,7 @@ import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
-import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import { fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
@@ -1272,6 +1272,155 @@ describe('Endpoints', () => {
 				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 				const roleDenied = await api('admin/emoji/list', {}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji bulk metadata 更新は aliases、category、license、cache、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemb${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji bulk manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const first = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `honoemoji_bulk_first_${suffix}`,
+				host: null,
+				aliases: [`base_${suffix}`],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/bulk-first.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const second = await insertEmojiInDatabase(db, {
+				id: genId(config, now),
+				name: `honoemoji_bulk_second_${suffix}`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/bulk-second.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const addAliases = await api('admin/emoji/add-aliases-bulk', {
+					ids: [first.id, second.id],
+					aliases: [`added_${suffix}`, `base_${suffix}`],
+				}, manager);
+				assert.strictEqual(addAliases.status, 204);
+
+				let afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				let afterSecond = await fetchEmojiByIdOrFailFromDatabase(db, second.id);
+				assert.deepStrictEqual(afterFirst.aliases, [`base_${suffix}`, `added_${suffix}`]);
+				assert.deepStrictEqual(afterSecond.aliases, [`added_${suffix}`, `base_${suffix}`]);
+
+				const removeAliases = await api('admin/emoji/remove-aliases-bulk', {
+					ids: [first.id],
+					aliases: [`base_${suffix}`],
+				}, manager);
+				assert.strictEqual(removeAliases.status, 204);
+				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				assert.deepStrictEqual(afterFirst.aliases, [`added_${suffix}`]);
+
+				const setAliases = await api('admin/emoji/set-aliases-bulk', {
+					ids: [second.id],
+					aliases: [`final_${suffix}`],
+				}, manager);
+				assert.strictEqual(setAliases.status, 204);
+
+				const setCategory = await api('admin/emoji/set-category-bulk', {
+					ids: [first.id, second.id],
+					category: `bulk_category_${suffix}`,
+				}, manager);
+				assert.strictEqual(setCategory.status, 204);
+
+				const setLicense = await api('admin/emoji/set-license-bulk', {
+					ids: [first.id, second.id],
+					license: `bulk license ${suffix}`,
+				}, manager);
+				assert.strictEqual(setLicense.status, 204);
+
+				const resetLicense = await api('admin/emoji/set-license-bulk', {
+					ids: [second.id],
+					license: null,
+				}, manager);
+				assert.strictEqual(resetLicense.status, 204);
+
+				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				afterSecond = await fetchEmojiByIdOrFailFromDatabase(db, second.id);
+				assert.deepStrictEqual(afterFirst.aliases, [`added_${suffix}`]);
+				assert.deepStrictEqual(afterSecond.aliases, [`final_${suffix}`]);
+				assert.strictEqual(afterFirst.category, `bulk_category_${suffix}`);
+				assert.strictEqual(afterSecond.category, `bulk_category_${suffix}`);
+				assert.strictEqual(afterFirst.license, `bulk license ${suffix}`);
+				assert.strictEqual(afterSecond.license, null);
+				assert.ok(afterFirst.updatedAt);
+				assert.ok(afterSecond.updatedAt);
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					const cachedFirst = cachedEmojis.find(emoji => emoji.id === first.id);
+					const cachedSecond = cachedEmojis.find(emoji => emoji.id === second.id);
+					assert.ok(cachedFirst);
+					assert.ok(cachedSecond);
+					assert.deepStrictEqual(cachedFirst.aliases, [`added_${suffix}`]);
+					assert.deepStrictEqual(cachedSecond.aliases, [`final_${suffix}`]);
+					assert.strictEqual(cachedFirst.category, `bulk_category_${suffix}`);
+					assert.strictEqual(cachedSecond.license, null);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				const token = await createAppToken(manager, ['write:admin:emoji']);
+				const tokenUpdated = await api('admin/emoji/set-category-bulk', {
+					ids: [first.id],
+					category: null,
+				}, { token });
+				assert.strictEqual(tokenUpdated.status, 204);
+				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
+				assert.strictEqual(afterFirst.category, null);
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/set-aliases-bulk', {
+					ids: [first.id],
+					aliases: [],
+				}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/set-category-bulk', {
+					ids: [first.id],
+					category: `denied_${suffix}`,
+				}, bob);
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
