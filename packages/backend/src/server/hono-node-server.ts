@@ -31,6 +31,10 @@ function requestHeaders(req: IncomingMessage): Headers {
 		}
 	}
 
+	if (req.socket.remoteAddress != null && !headers.has('x-misskey-remote-address')) {
+		headers.set('x-misskey-remote-address', req.socket.remoteAddress);
+	}
+
 	return headers;
 }
 
