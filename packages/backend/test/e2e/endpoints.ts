@@ -16,6 +16,8 @@ import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.j
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
+import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
@@ -323,6 +325,112 @@ describe('Endpoints', () => {
 			const detailByGet = await relativeFetch(`api/emoji?name=${emoji.name}`);
 			assert.strictEqual(detailByGet.status, 200);
 			assert.strictEqual(detailByGet.headers.get('cache-control'), 'public, max-age=3600');
+		});
+	});
+
+	describe('retention endpoint', () => {
+		test('retention supports GET and returns latest aggregation data', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			await createRetentionAggregationInDatabase(db, {
+				id: genId(config, now),
+				createdAt: new Date(now),
+				updatedAt: new Date(now),
+				dateKey: `hono-retention-${now}`,
+				userIds: [alice.id],
+				usersCount: 1,
+				data: { '1': 1 },
+			});
+			const latest = {
+				id: genId(config, now + 1),
+				createdAt: new Date(now + 1),
+				updatedAt: new Date(now + 1),
+				dateKey: `hono-retention-${now + 1}`,
+				userIds: [alice.id, bob.id],
+				usersCount: 2,
+				data: { '1': 2, '2': 1 },
+			};
+			await createRetentionAggregationInDatabase(db, latest);
+
+			const res = await relativeFetch('api/retention');
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
+
+			const body = await res.json() as { createdAt?: unknown; users?: unknown; data?: Record<string, unknown> }[];
+			const record = body.find(item => item.createdAt === latest.createdAt.toISOString());
+			assert.ok(record);
+			assert.strictEqual(record.users, latest.usersCount);
+			assert.deepStrictEqual(record.data, latest.data);
+		});
+	});
+
+	describe('hashtag endpoints', () => {
+		test('list, search, and show return packed hashtag data', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const primary = `hono_hashtag_primary_${now}`;
+			const secondary = `hono_hashtag_secondary_${now}`;
+			await db.insert(hashtagTable).values([{
+				id: genId(config, now),
+				name: primary,
+				mentionedUserIds: [alice.id, bob.id],
+				mentionedUsersCount: 1000002,
+				mentionedLocalUserIds: [alice.id, bob.id],
+				mentionedLocalUsersCount: 1000002,
+				mentionedRemoteUserIds: [],
+				mentionedRemoteUsersCount: 0,
+				attachedUserIds: [alice.id],
+				attachedUsersCount: 1000001,
+				attachedLocalUserIds: [alice.id],
+				attachedLocalUsersCount: 1000001,
+				attachedRemoteUserIds: [],
+				attachedRemoteUsersCount: 0,
+			}, {
+				id: genId(config, now + 1),
+				name: secondary,
+				mentionedUserIds: [alice.id],
+				mentionedUsersCount: 1000001,
+				mentionedLocalUserIds: [alice.id],
+				mentionedLocalUsersCount: 1000001,
+				mentionedRemoteUserIds: [],
+				mentionedRemoteUsersCount: 0,
+				attachedUserIds: [],
+				attachedUsersCount: 0,
+				attachedLocalUserIds: [],
+				attachedLocalUsersCount: 0,
+				attachedRemoteUserIds: [],
+				attachedRemoteUsersCount: 0,
+			}]);
+
+			const list = await api('hashtags/list', {
+				limit: 5,
+				sort: '+mentionedUsers',
+			});
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body[0].tag, primary);
+			assert.strictEqual(list.body[0].mentionedUsersCount, 1000002);
+			assert.strictEqual(list.body[0].attachedLocalUsersCount, 1000001);
+
+			const search = await api('hashtags/search', {
+				query: `hono_hashtag_`,
+				limit: 10,
+			});
+			assert.strictEqual(search.status, 200);
+			assert.ok(search.body.includes(primary));
+			assert.ok(search.body.includes(secondary));
+
+			const shown = await api('hashtags/show', {
+				tag: primary.toUpperCase(),
+			});
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.tag, primary);
+			assert.strictEqual(shown.body.mentionedLocalUsersCount, 1000002);
+
+			const missing = await api('hashtags/show', {
+				tag: `missing_${primary}`,
+			});
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
 		});
 	});
 

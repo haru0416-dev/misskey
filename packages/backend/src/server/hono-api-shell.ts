@@ -22,11 +22,13 @@ import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
+import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow } from './hono-api-hashtags.js';
 import { handleHonoApiI } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
+import { handleHonoApiRetention } from './hono-api-retention.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
@@ -428,6 +430,27 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/hashtags/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsList(deps, body));
+		});
+	});
+
+	app.post('/hashtags/search', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body));
+		});
+	});
+
+	app.post('/hashtags/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsShow(deps, body));
+		});
+	});
+
 	app.post('/meta', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -439,6 +462,23 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			await jsonBody(c);
 			return jsonResponse(c, handleHonoApiPing());
+		});
+	});
+
+	app.get('/retention', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiRetention(deps, {}), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
+		});
+	});
+
+	app.post('/retention', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiRetention(deps, body), 200, {
+				'Cache-Control': 'public, max-age=3600',
+			});
 		});
 	});
 
