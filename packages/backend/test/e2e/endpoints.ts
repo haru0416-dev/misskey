@@ -38,6 +38,7 @@ import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
+import { createRelayInDatabase } from '@/core/RelayStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
@@ -2747,6 +2748,52 @@ describe('Endpoints', () => {
 
 			const normalUser = await signup({ username: `honosi${Date.now().toString(36)}` });
 			const roleDenied = await api('admin/server-info', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/relays/list', () => {
+		test('admin/relays/list はrelay一覧、moderator権限、token scopeを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const relays = await Promise.all(([
+				['requesting', 'requesting'],
+				['accepted', 'accepted'],
+				['rejected', 'rejected'],
+			] as const).map(([label, status], i) => createRelayInDatabase(db, {
+				id: genId(config, now + i),
+				inbox: `https://relay-${label}-${now}.example/inbox`,
+				status,
+			})));
+			const expected = relays
+				.map(relay => ({
+					id: relay.id,
+					inbox: relay.inbox,
+					status: relay.status,
+				}))
+				.sort((a, b) => a.id.localeCompare(b.id));
+
+			const listed = await api('admin/relays/list', {}, alice);
+			assert.strictEqual(listed.status, 200);
+			assert.deepStrictEqual(listed.body
+				.filter(relay => expected.some(expectedRelay => expectedRelay.id === relay.id))
+				.sort((a, b) => a.id.localeCompare(b.id)), expected);
+
+			const readToken = await createAppToken(alice, ['read:admin:relays']);
+			const listedWithApp = await api('admin/relays/list', {}, { token: readToken });
+			assert.strictEqual(listedWithApp.status, 200);
+			assert.deepStrictEqual(listedWithApp.body
+				.filter(relay => expected.some(expectedRelay => expectedRelay.id === relay.id))
+				.sort((a, b) => a.id.localeCompare(b.id)), expected);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const scopeDenied = await api('admin/relays/list', {}, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honorelay${now.toString(36)}` });
+			const roleDenied = await api('admin/relays/list', {}, normalUser);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
