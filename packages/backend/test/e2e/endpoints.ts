@@ -3096,6 +3096,41 @@ describe('Endpoints', () => {
 				if (i === 9) assert.fail('updateUserNote moderation log was not found');
 			}
 		});
+
+		test('admin/send-email は送信要求、token scope、role、validationを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const payload = {
+				to: `hono-send-email-${suffix}@example.test`,
+				subject: `Hono send email ${suffix}`,
+				text: `Hello ${suffix}`,
+			};
+
+			const sent = await api('admin/send-email', payload, alice);
+			assert.strictEqual(sent.status, 204);
+
+			const token = await createAppToken(alice, ['write:admin:send-email']);
+			const sentByToken = await api('admin/send-email', payload, { token });
+			assert.strictEqual(sentByToken.status, 204);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/send-email', payload, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hse${suffix}` });
+			const roleDenied = await api('admin/send-email', payload, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const invalidPayload: Record<string, unknown> = {
+				to: payload.to,
+				subject: payload.subject,
+			};
+			const invalid = await api('admin/send-email', invalidPayload as misskey.Endpoints['admin/send-email']['req'], alice);
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+		});
 	});
 
 	describe('admin/get-user-ips', () => {
