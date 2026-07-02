@@ -52,7 +52,7 @@ import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { userIp } from '@/db/schema/user-ip.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
@@ -3523,6 +3523,24 @@ describe('Endpoints', () => {
 			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
 		}
 
+		async function findDeliverJob(
+			inbox: string,
+			type: 'Flag',
+		): Promise<Bull.Job<DeliverJobData>> {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				for (const job of jobs) {
+					if (job.data.to !== inbox) continue;
+
+					const content = JSON.parse(job.data.content) as { type?: unknown };
+					if (content.type === type) return job;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`deliver job was not found: ${inbox} ${type}`);
+		}
+
 		test('admin/abuse-user-reports は一覧、filter、token scope、roleを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
@@ -3695,6 +3713,110 @@ describe('Endpoints', () => {
 				}
 				await new Promise(resolve => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('resolveAbuseReport moderation log was not found');
+			}
+		});
+
+		test('admin/forward-abuse-user-report は配送、forwarded、token scope、role、ログ、404を維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const config = loadConfig();
+			const targetId = genId(config, now - 1000);
+			const targetHost = `hono-abuse-forward-${suffix}.example`;
+			const targetInbox = `https://${targetHost}/inbox`;
+			const targetUri = `https://${targetHost}/users/${targetId}`;
+			const target = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: targetId,
+					username: `haft${suffix}`,
+					usernameLower: `haft${suffix}`,
+					host: targetHost,
+					inbox: targetInbox,
+					uri: targetUri,
+				},
+				profile: {
+					userId: targetId,
+					userHost: targetHost,
+				},
+			});
+			const report = await createReport(`${suffix}forward`, {
+				id: genId(config, now),
+				targetUserId: target.id,
+				targetUserHost: targetHost,
+				comment: `Hono abuse report forward ${suffix}`,
+			});
+
+			const forwarded = await api('admin/forward-abuse-user-report', {
+				reportId: report.id,
+			}, alice);
+			assert.strictEqual(forwarded.status, 204);
+
+			const after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.forwarded, true);
+
+			const deliverJob = await findDeliverJob(targetInbox, 'Flag');
+			assert.strictEqual(deliverJob.data.to, targetInbox);
+			assert.strictEqual(deliverJob.data.isSharedInbox, false);
+			assert.strictEqual(deliverJob.data.digest, `SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`);
+			const flag = JSON.parse(deliverJob.data.content) as any;
+			assert.strictEqual(flag.type, 'Flag');
+			assert.strictEqual(flag.actor.startsWith(`${origin}/users/`), true);
+			assert.strictEqual(flag.object, targetUri);
+			assert.strictEqual(flag.content, `Hono abuse report forward ${suffix}`);
+			assert.ok(flag.id.startsWith(`${origin}/`));
+			assert.ok(flag['@context']);
+			await deliverJob.remove();
+
+			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
+			const tokenReport = await createReport(`${suffix}forwardtoken`, {
+				id: genId(config, now + 1000),
+				targetUserId: target.id,
+				targetUserHost: targetHost,
+				comment: `Hono abuse report forward token ${suffix}`,
+			});
+			const forwardedByToken = await api('admin/forward-abuse-user-report', {
+				reportId: tokenReport.id,
+			}, { token });
+			assert.strictEqual(forwardedByToken.status, 204);
+
+			const afterToken = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
+			assert.strictEqual(afterToken.forwarded, true);
+			const tokenDeliverJob = await findDeliverJob(targetInbox, 'Flag');
+			await tokenDeliverJob.remove();
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/forward-abuse-user-report', {
+				reportId: report.id,
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hafr${suffix}` });
+			const roleDenied = await api('admin/forward-abuse-user-report', {
+				reportId: report.id,
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/forward-abuse-user-report', {
+				reportId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '8763e21b-d9bc-40be-acf6-54c1a6986493');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'forwardAbuseReport',
+					search: report.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('forwardAbuseReport moderation log was not found');
 			}
 		});
 

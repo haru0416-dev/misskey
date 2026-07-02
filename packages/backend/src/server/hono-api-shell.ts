@@ -15,7 +15,7 @@ import type { EmailService } from '@/core/EmailService.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
-import { handleHonoApiAdminAbuseUserReports, handleHonoApiAdminResolveAbuseUserReport, handleHonoApiAdminUpdateAbuseUserReport } from './hono-api-admin-abuse-reports.js';
+import { handleHonoApiAdminAbuseUserReports, handleHonoApiAdminForwardAbuseUserReport, handleHonoApiAdminResolveAbuseUserReport, handleHonoApiAdminUpdateAbuseUserReport } from './hono-api-admin-abuse-reports.js';
 import { handleHonoApiAdminAbuseReportNotificationRecipientCreate, handleHonoApiAdminAbuseReportNotificationRecipientDelete, handleHonoApiAdminAbuseReportNotificationRecipientList, handleHonoApiAdminAbuseReportNotificationRecipientShow, handleHonoApiAdminAbuseReportNotificationRecipientUpdate } from './hono-api-admin-abuse-report-notification-recipient.js';
 import { handleHonoApiAdminAccountsFindByEmail, handleHonoApiAdminUpdateProxyAccount } from './hono-api-admin-accounts.js';
 import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
@@ -465,6 +465,19 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminResolveAbuseUserReport(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/forward-abuse-user-report', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:resolve-abuse-user-report');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminForwardAbuseUserReport(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});
