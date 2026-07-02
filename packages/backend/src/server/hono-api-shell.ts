@@ -41,6 +41,7 @@ import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
+import { handleHonoApiBlockingCreate, handleHonoApiBlockingDelete, handleHonoApiBlockingList } from './hono-api-account-blocking.js';
 import { handleHonoApiMuteCreate, handleHonoApiMuteDelete, handleHonoApiMuteList, handleHonoApiRenoteMuteCreate, handleHonoApiRenoteMuteDelete, handleHonoApiRenoteMuteList } from './hono-api-account-mutes.js';
 import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono-api-error.js';
 import { handleHonoApiAdminEmojiAdd, handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiCopy, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiImportZip, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiAdminEmojiUpdate, handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
@@ -1828,6 +1829,47 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiAuthAccept(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/blocking/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:blocks');
+			await assertHonoApiRateLimit(deps, 'blocking/create', {
+				duration: 60 * 60 * 1000,
+				max: 20,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiBlockingCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/blocking/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:blocks');
+			await assertHonoApiRateLimit(deps, 'blocking/delete', {
+				duration: 60 * 60 * 1000,
+				max: 100,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiBlockingDelete(deps, auth.user, body));
+		});
+	});
+
+	app.post('/blocking/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:blocks');
+
+			return jsonResponse(c, await handleHonoApiBlockingList(deps, auth.user, body));
 		});
 	});
 

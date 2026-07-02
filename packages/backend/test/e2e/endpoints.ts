@@ -20,6 +20,7 @@ import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.j
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
+import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
@@ -31,6 +32,7 @@ import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@
 import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
+import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
@@ -56,6 +58,7 @@ import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { userIp } from '@/db/schema/user-ip.js';
 import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
@@ -552,6 +555,140 @@ describe('Endpoints', () => {
 			}, bob);
 			assert.strictEqual(nonRootDenied.status, 400);
 			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
+		});
+	});
+
+	describe('account blocking endpoints', () => {
+		test('blocking はDB、cache、follow cleanup、list membership cleanup、list、delete、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const blocker = await signup({ username: `hblock${suffix}` });
+			const blockee = await signup({ username: `hblockee${suffix}` });
+
+			await createFollowingInDatabase(db, {
+				id: genId(config, now),
+				followerId: blocker.id,
+				followeeId: blockee.id,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config, now + 1),
+				followerId: blockee.id,
+				followeeId: blocker.id,
+			});
+			await updateUserInDatabase(db, blocker.id, {
+				followingCount: 1,
+				followersCount: 1,
+			});
+			await updateUserInDatabase(db, blockee.id, {
+				followingCount: 1,
+				followersCount: 1,
+			});
+
+			await createFollowRequestInDatabase(db, {
+				id: genId(config, now + 2),
+				followerId: blocker.id,
+				followeeId: blockee.id,
+			});
+			await createFollowRequestInDatabase(db, {
+				id: genId(config, now + 3),
+				followerId: blockee.id,
+				followeeId: blocker.id,
+			});
+
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config, now + 4),
+				userId: blockee.id,
+				name: `hblock-list-${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config, now + 5),
+				userId: blocker.id,
+				userListId: userList.id,
+				userListUserId: blockee.id,
+			});
+
+			const wrongWriteToken = await createAppToken(blocker, ['read:blocks']);
+			const createScopeDenied = await api('blocking/create', { userId: blockee.id }, { token: wrongWriteToken });
+			assert.strictEqual(createScopeDenied.status, 403);
+			assert.strictEqual(castAsError(createScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfBlock = await api('blocking/create', { userId: blocker.id }, blocker);
+			assert.strictEqual(selfBlock.status, 400);
+			assert.strictEqual(castAsError(selfBlock.body as any).error.code, 'BLOCKEE_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfBlock.body as any).error.id, '88b19138-f28d-42c0-8499-6a31bbd0fdc6');
+
+			const noSuch = await api('blocking/create', { userId: genId(config, now - 1000) }, blocker);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '7cc4f851-e2f1-4621-9633-ec9e1d00c01e');
+
+			const created = await api('blocking/create', { userId: blockee.id }, blocker);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.id, blockee.id);
+
+			const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id);
+			assert.ok(blocking);
+			assert.strictEqual(blocking.blockerId, blocker.id);
+			assert.strictEqual(blocking.blockeeId, blockee.id);
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blocker.id, blockee.id), null);
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blockee.id, blocker.id), null);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, blocker.id, blockee.id), null);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, blockee.id, blocker.id), null);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, blocker.id, userList.id), false);
+
+			const refreshedBlocker = await fetchUserByIdOrFailFromDatabase(db, blocker.id);
+			const refreshedBlockee = await fetchUserByIdOrFailFromDatabase(db, blockee.id);
+			assert.strictEqual(refreshedBlocker.followingCount, 0);
+			assert.strictEqual(refreshedBlocker.followersCount, 0);
+			assert.strictEqual(refreshedBlockee.followingCount, 0);
+			assert.strictEqual(refreshedBlockee.followersCount, 0);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userBlocking:${blocker.id}`) ?? '[]'), [blockee.id]);
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userBlocked:${blockee.id}`) ?? '[]'), [blocker.id]);
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${blocker.id}`) ?? '{}'), {});
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${blockee.id}`) ?? '{}'), {});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const duplicate = await api('blocking/create', { userId: blockee.id }, blocker);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_BLOCKING');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '787fed64-acb9-464a-82eb-afbd745b9614');
+
+			const readToken = await createAppToken(blocker, ['read:blocks']);
+			const list = await api('blocking/list', { limit: 10 }, { token: readToken });
+			assert.strictEqual(list.status, 200);
+			const listed = (list.body as any[]).find(item => item.blockeeId === blockee.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.id, blocking.id);
+			assert.strictEqual(listed.blockee.id, blockee.id);
+
+			const wrongReadToken = await createAppToken(blocker, ['write:blocks']);
+			const listScopeDenied = await api('blocking/list', {}, { token: wrongReadToken });
+			assert.strictEqual(listScopeDenied.status, 403);
+			assert.strictEqual(castAsError(listScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const deleted = await api('blocking/delete', { userId: blockee.id }, blocker);
+			assert.strictEqual(deleted.status, 200);
+			assert.strictEqual(deleted.body.id, blockee.id);
+			assert.strictEqual(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id), null);
+
+			const redisAfterDelete = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redisAfterDelete.get(`kvcache:userBlocking:${blocker.id}`) ?? '[]'), []);
+				assert.deepStrictEqual(JSON.parse(await redisAfterDelete.get(`kvcache:userBlocked:${blockee.id}`) ?? '[]'), []);
+			} finally {
+				await closeRedisConnection(redisAfterDelete);
+			}
+
+			const notBlocking = await api('blocking/delete', { userId: blockee.id }, blocker);
+			assert.strictEqual(notBlocking.status, 400);
+			assert.strictEqual(castAsError(notBlocking.body as any).error.code, 'NOT_BLOCKING');
+			assert.strictEqual(castAsError(notBlocking.body as any).error.id, '291b2efa-60c6-45c0-9f6a-045c8f9b02cd');
 		});
 	});
 
