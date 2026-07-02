@@ -20,7 +20,6 @@ import { ActivityPubServerService } from './ActivityPubServerService.js';
 import { ApiServerService } from './api/ApiServerService.js';
 import { StreamingApiServerService } from './api/StreamingApiServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
-import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
 
 const _dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -41,7 +40,6 @@ export class ServerService implements OnApplicationShutdown {
 		private activityPubServerService: ActivityPubServerService,
 		private clientServerService: ClientServerService,
 		private loggerService: LoggerService,
-		private oauth2ProviderService: OAuth2ProviderService,
 	) {
 		this.logger = this.loggerService.getLogger('server', 'gray');
 	}
@@ -116,8 +114,6 @@ export class ServerService implements OnApplicationShutdown {
 
 		fastify.register(this.apiServerService.createServer, { prefix: '/api' });
 		fastify.register(this.activityPubServerService.createServer);
-		fastify.register(this.oauth2ProviderService.createServer, { prefix: '/oauth' });
-		fastify.register(this.oauth2ProviderService.createTokenServer, { prefix: '/oauth/token' });
 
 		fastify.register(this.clientServerService.createServer);
 

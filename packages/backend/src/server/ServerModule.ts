@@ -21,7 +21,6 @@ import { StreamingApiServerService } from './api/StreamingApiServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
 import { HtmlTemplateService } from './web/HtmlTemplateService.js';
 import { ClientLoggerService } from './web/ClientLoggerService.js';
-import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
 
 import MainStreamConnection from '@/server/api/stream/Connection.js';
 import { MainChannel } from './api/stream/channels/main.js';
@@ -83,7 +82,6 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		ServerStatsChannel,
 		UserListChannel,
 		NoteStreamingHidingService,
-		OAuth2ProviderService,
 	],
 	exports: [
 		ServerService,
