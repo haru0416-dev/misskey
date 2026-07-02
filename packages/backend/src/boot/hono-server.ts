@@ -74,7 +74,18 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			meta: deps.meta,
 		},
 		apiShell: {
+			config,
 			db: deps.db,
+			meta: deps.meta,
+			publishInternalEvent: (type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: 'internal',
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
 		},
 		clientBase: {
 			config,

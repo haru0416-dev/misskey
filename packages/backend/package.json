@@ -174,7 +174,6 @@
 		"cross-env": "10.1.0",
 		"drizzle-kit": "0.31.10",
 		"execa": "9.6.1",
-		"fastify": "5.8.5",
 		"fkill": "10.0.3",
 		"js-yaml": "4.2.0",
 		"pid-port": "2.1.1",

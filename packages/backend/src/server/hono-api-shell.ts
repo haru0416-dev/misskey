@@ -4,11 +4,17 @@
  */
 
 import { Hono, type Context } from 'hono';
+import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiMeta } from '@/models/_.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
+import { SignupApiError, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 
 export type ApiShellDependencies = {
+	config: Config;
 	db: MiDrizzleDatabase;
+	meta: MiMeta;
+	publishInternalEvent?: SignupInternalEventPublisher;
 };
 
 const unknownApiEndpoint = {
@@ -19,6 +25,26 @@ const unknownApiEndpoint = {
 		kind: 'client',
 	},
 };
+
+const invalidJsonBody = {
+	error: {
+		message: 'Invalid JSON body.',
+		code: 'INVALID_PARAM',
+		id: '0b5f1631-7c1a-41a6-b399-cce335f34d85',
+		kind: 'client',
+	},
+};
+
+function apiErrorBody(err: SignupApiError): { error: { message: string; code: string; id: string; kind: 'client'; }; } {
+	return {
+		error: {
+			message: err.message,
+			code: err.code,
+			id: 'b973e8da-5e72-4efd-8de0-822ae5e4cfc7',
+			kind: 'client',
+		},
+	};
+}
 
 function setApiHeaders(c: Context): void {
 	c.header('Access-Control-Allow-Origin', '*');
@@ -58,6 +84,25 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return jsonResponse(c, await listActiveInstanceHostsFromDatabase(deps.db));
 	});
 
+	app.post('/signup', async (c) => {
+		let body: unknown;
+		try {
+			body = await c.req.json();
+		} catch {
+			return jsonResponse(c, invalidJsonBody, 400);
+		}
+
+		try {
+			return jsonResponse(c, await signupWithHonoApi(deps, body ?? {}));
+		} catch (err) {
+			if (err instanceof SignupApiError) {
+				return jsonResponse(c, apiErrorBody(err), err.status);
+			}
+
+			throw err;
+		}
+	});
+
 	app.all('/clear-browser-cache', (c) => {
 		if (c.req.method === 'GET' || c.req.method === 'POST') {
 			c.header('Clear-Site-Data', '"cache", "prefetchCache", "prerenderCache", "executionContexts"');
@@ -67,7 +112,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return c.body(null, 405);
 	});
 
-	app.get('/*', (c) => jsonResponse(c, unknownApiEndpoint, 404));
+	app.all('/*', (c) => jsonResponse(c, unknownApiEndpoint, 404));
 
 	app.notFound((c) => {
 		setApiHeaders(c);
