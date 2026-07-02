@@ -8,7 +8,10 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
-import { SignupApiError, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
+import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from './hono-api-auth.js';
+import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
+import { handleHonoApiI } from './hono-api-i.js';
+import { signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 
 export type ApiShellDependencies = {
 	config: Config;
@@ -26,26 +29,6 @@ const unknownApiEndpoint = {
 	},
 };
 
-const invalidJsonBody = {
-	error: {
-		message: 'Invalid JSON body.',
-		code: 'INVALID_PARAM',
-		id: '0b5f1631-7c1a-41a6-b399-cce335f34d85',
-		kind: 'client',
-	},
-};
-
-function apiErrorBody(err: SignupApiError): { error: { message: string; code: string; id: string; kind: 'client'; }; } {
-	return {
-		error: {
-			message: err.message,
-			code: err.code,
-			id: 'b973e8da-5e72-4efd-8de0-822ae5e4cfc7',
-			kind: 'client',
-		},
-	};
-}
-
 function setApiHeaders(c: Context): void {
 	c.header('Access-Control-Allow-Origin', '*');
 	c.header('Cache-Control', 'private, max-age=0, must-revalidate');
@@ -61,6 +44,50 @@ function jsonResponse(c: Context, body: unknown, status = 200): Response {
 			'Content-Type': 'application/json; charset=utf-8',
 		},
 	});
+}
+
+function apiErrorResponse(c: Context, err: HonoApiError): Response {
+	setApiHeaders(c);
+	return new Response(JSON.stringify(err.toBody()), {
+		status: err.status,
+		headers: {
+			'Access-Control-Allow-Origin': '*',
+			'Cache-Control': 'private, max-age=0, must-revalidate',
+			'Content-Type': 'application/json; charset=utf-8',
+			...err.headers,
+		},
+	});
+}
+
+async function jsonBody(c: Context): Promise<Record<string, unknown>> {
+	try {
+		const body = await c.req.json();
+		return body != null && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
+	} catch {
+		throw invalidJsonBody();
+	}
+}
+
+function tokenFromRequest(c: Context, body: Record<string, unknown>): string | null {
+	const authorization = c.req.header('authorization');
+	if (authorization != null) {
+		const match = authorization.match(/^Bearer\s+(.+)$/i);
+		if (match) return match[1];
+	}
+
+	return typeof body.i === 'string' ? body.i : null;
+}
+
+async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {
+	try {
+		return await handler();
+	} catch (err) {
+		if (err instanceof HonoApiError) {
+			return apiErrorResponse(c, err);
+		}
+
+		throw err;
+	}
 }
 
 export function createApiShellApp(deps: ApiShellDependencies): Hono {
@@ -85,22 +112,21 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 	});
 
 	app.post('/signup', async (c) => {
-		let body: unknown;
-		try {
-			body = await c.req.json();
-		} catch {
-			return jsonResponse(c, invalidJsonBody, 400);
-		}
-
-		try {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
 			return jsonResponse(c, await signupWithHonoApi(deps, body ?? {}));
-		} catch (err) {
-			if (err instanceof SignupApiError) {
-				return jsonResponse(c, apiErrorBody(err), err.status);
-			}
+		});
+	});
 
-			throw err;
-		}
+	app.post('/i', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiI(deps, auth.user, auth.token));
+		});
 	});
 
 	app.all('/clear-browser-cache', (c) => {
