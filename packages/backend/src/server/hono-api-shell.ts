@@ -16,6 +16,7 @@ import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
 import { handleHonoApiAdminAdCreate, handleHonoApiAdminAdDelete, handleHonoApiAdminAdList, handleHonoApiAdminAdUpdate } from './hono-api-admin-ad.js';
+import { handleHonoApiAdminAnnouncementsCreate, handleHonoApiAdminAnnouncementsDelete, handleHonoApiAdminAnnouncementsList, handleHonoApiAdminAnnouncementsUpdate } from './hono-api-admin-announcements.js';
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from './hono-api-admin-stats.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
@@ -69,7 +70,7 @@ import { handleHonoApiRetention } from './hono-api-retention.js';
 import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
-import type { HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher } from './hono-api-events.js';
+import type { HonoApiBroadcastStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { signupPendingWithHonoApi, signupWithHonoApi } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
@@ -88,6 +89,7 @@ export type ApiShellDependencies = {
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
 	publishDriveStream?: HonoApiDriveStreamPublisher;
 };
@@ -377,6 +379,56 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'write:admin:ad');
 
 			await handleHonoApiAdminAdUpdate(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/announcements/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'write:admin:announcements');
+
+			return jsonResponse(c, await handleHonoApiAdminAnnouncementsCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/admin/announcements/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'write:admin:announcements');
+
+			await handleHonoApiAdminAnnouncementsDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/announcements/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'read:admin:announcements');
+
+			return jsonResponse(c, await handleHonoApiAdminAnnouncementsList(deps, body));
+		});
+	});
+
+	app.post('/admin/announcements/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiModerator(deps, auth);
+			assertTokenPermission(auth, 'write:admin:announcements');
+
+			await handleHonoApiAdminAnnouncementsUpdate(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});

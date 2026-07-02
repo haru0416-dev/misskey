@@ -2478,6 +2478,99 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/announcements', () => {
+		test('admin/announcements は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
+			const now = Date.now();
+			const title = `hono-announcement-${now}`;
+			const created = await api('admin/announcements/create', {
+				title,
+				text: 'announcement body',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				forExistingUsers: false,
+				silence: false,
+				needConfirmationToRead: true,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.title, title);
+			assert.strictEqual(created.body.imageUrl, null);
+			assert.strictEqual((created.body as any).needConfirmationToRead, true);
+
+			const list = await api('admin/announcements/list', { limit: 20, status: 'active' }, alice);
+			assert.strictEqual(list.status, 200);
+			const listed = list.body.find(announcement => announcement.id === created.body.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.title, title);
+			assert.strictEqual(listed.reads, 0);
+			assert.strictEqual(listed.isActive, true);
+
+			const updated = await api('admin/announcements/update', {
+				id: created.body.id,
+				title: `${title}-updated`,
+				text: 'updated body',
+				imageUrl: '',
+				isActive: false,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const updatedList = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
+			assert.strictEqual(updatedList.status, 200);
+			const updatedAnnouncement = updatedList.body.find(announcement => announcement.id === created.body.id);
+			assert.ok(updatedAnnouncement);
+			assert.strictEqual(updatedAnnouncement.title, `${title}-updated`);
+			assert.strictEqual(updatedAnnouncement.text, 'updated body');
+			assert.strictEqual(updatedAnnouncement.imageUrl, null);
+			assert.strictEqual(updatedAnnouncement.isActive, false);
+
+			const noSuch = await api('admin/announcements/update', {
+				id: '0000000000000000',
+				title: 'missing',
+			}, alice);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
+
+			const readToken = await createAppToken(alice, ['read:admin:announcements']);
+			const scopeDenied = await api('admin/announcements/create', {
+				title,
+				text: 'announcement body',
+				imageUrl: null,
+			}, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoannounce${now.toString(36)}` });
+			const roleDenied = await api('admin/announcements/list', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const deleted = await api('admin/announcements/delete', { id: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
+			assert.strictEqual(afterDelete.status, 200);
+			assert.ok(!afterDelete.body.some(announcement => announcement.id === created.body.id));
+
+			const logTypes = ['createGlobalAnnouncement', 'updateGlobalAnnouncement', 'deleteGlobalAnnouncement'] as const;
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of logTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: created.body.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === logTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
 	describe('admin/ad', () => {
 		test('admin/ad は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
 			const now = Date.now();

@@ -17,12 +17,9 @@ import { parseObjectIdFull } from '@/misc/id/object-id.js';
 import { parseUlidFull } from '@/misc/id/ulid.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiUser } from '@/models/User.js';
+import type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 
-export type HonoApiMainStreamPublisher = (
-	userId: MiUser['id'],
-	type: 'notification' | 'unreadNotification' | 'signin' | 'registryUpdated' | 'meUpdated',
-	value: unknown,
-) => void;
+export type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 
 export type HonoApiNotificationDependencies = {
 	config: Config;
