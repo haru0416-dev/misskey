@@ -13,6 +13,7 @@ import { createNodeinfoApp, type NodeinfoDependencies } from './hono-nodeinfo.js
 import { createOpenApiApp, type OpenApiDependencies } from './hono-openapi.js';
 import { createRootRoutes, type RootRouteDependencies } from './hono-root-routes.js';
 import { createStaticAssetsApp, type StaticAssetsDependencies } from './hono-static-assets.js';
+import { createWebUtilityApp, type WebUtilityDependencies } from './hono-web-utility.js';
 import { createWebMetadataApp, type WebMetadataDependencies } from './hono-web-metadata.js';
 import { createWellKnownApp, type WellKnownDependencies } from './hono-well-known.js';
 
@@ -30,6 +31,7 @@ export type MisskeyHonoAppDependencies = {
 	openApi: OpenApiDependencies;
 	root: RootRouteDependencies;
 	staticAssets: StaticAssetsDependencies;
+	webUtility: WebUtilityDependencies;
 	webMetadata: WebMetadataDependencies;
 	wellKnown: WellKnownDependencies;
 };
@@ -92,6 +94,7 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	app.route('/', createFileServerApp(deps.file));
 	app.route('/', createStaticAssetsApp(deps.staticAssets));
 	app.route('/', createWebMetadataApp(deps.webMetadata));
+	app.route('/', createWebUtilityApp(deps.webUtility));
 	app.route('/', createRootRoutes(deps.root));
 
 	return app;

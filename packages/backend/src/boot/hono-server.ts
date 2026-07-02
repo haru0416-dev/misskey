@@ -102,6 +102,10 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			config,
 			meta: deps.meta,
 		},
+		webUtility: {
+			config,
+			meta: deps.meta,
+		},
 		wellKnown: {
 			config,
 			db: deps.db,
