@@ -9,6 +9,7 @@ import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import type { DbQueue } from '@/core/QueueModule.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -23,6 +24,7 @@ export type HonoApiEmojiDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
+	dbQueue: DbQueue;
 	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
 };
 
@@ -169,6 +171,14 @@ const adminEmojiDeleteBulkParamDef = {
 	required: ['ids'],
 } as const;
 
+const adminEmojiImportZipParamDef = {
+	type: 'object',
+	properties: {
+		fileId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['fileId'],
+} as const;
+
 const adminEmojiSetCategoryBulkParamDef = {
 	type: 'object',
 	properties: {
@@ -219,6 +229,7 @@ type AdminEmojiUpdateParams = {
 type AdminEmojiAliasesBulkParams = SchemaType<typeof adminEmojiAliasesBulkParamDef>;
 type AdminEmojiDeleteParams = SchemaType<typeof adminEmojiDeleteParamDef>;
 type AdminEmojiDeleteBulkParams = SchemaType<typeof adminEmojiDeleteBulkParamDef>;
+type AdminEmojiImportZipParams = SchemaType<typeof adminEmojiImportZipParamDef>;
 type AdminEmojiSetCategoryBulkParams = SchemaType<typeof adminEmojiSetCategoryBulkParamDef>;
 type AdminEmojiSetLicenseBulkParams = SchemaType<typeof adminEmojiSetLicenseBulkParamDef>;
 
@@ -545,6 +556,27 @@ export async function handleHonoApiAdminEmojiDeleteBulk(
 
 	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiDeleted(deps, emojis);
+}
+
+export async function handleHonoApiAdminEmojiImportZip(
+	deps: HonoApiEmojiDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminEmojiImportZipParamDef, body) as AdminEmojiImportZipParams;
+	await deps.dbQueue.add('importCustomEmojis', {
+		user: { id: me.id },
+		fileId: params.fileId,
+	}, {
+		removeOnComplete: {
+			age: 3600 * 24 * 7,
+			count: 30,
+		},
+		removeOnFail: {
+			age: 3600 * 24 * 7,
+			count: 100,
+		},
+	});
 }
 
 export async function handleHonoApiAdminEmojiUpdate(

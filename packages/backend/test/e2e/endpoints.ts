@@ -62,7 +62,7 @@ import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type 
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DeliverJobData, InboxJobData, ObjectStorageJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -74,6 +74,7 @@ describe('Endpoints', () => {
 	let dave: misskey.entities.SignupResponse;
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
+	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis'>> | undefined;
 	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
 	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
 	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
@@ -84,6 +85,7 @@ describe('Endpoints', () => {
 		const config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
+		dbQueue = new Bull.Queue<DbJobData<'importCustomEmojis'>>(QUEUE.DB, baseQueueOptions(config, QUEUE.DB));
 		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
 		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
 		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
@@ -97,6 +99,7 @@ describe('Endpoints', () => {
 	}, 1000 * 60 * 2);
 
 	afterAll(async () => {
+		await dbQueue?.close();
 		await deliverQueue?.close();
 		await inboxQueue?.close();
 		await relationshipQueue?.close();
@@ -1833,6 +1836,67 @@ describe('Endpoints', () => {
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji/import-zip は import job、secure credential、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemi${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji import manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const fileId = genId(config, now);
+			const removeImportJobs = async () => {
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				await Promise.all(jobs
+					.filter(job => job.name === 'importCustomEmojis' && job.data.fileId === fileId)
+					.map(job => job.remove()));
+			};
+
+			try {
+				const imported = await api('admin/emoji/import-zip', { fileId }, manager);
+				assert.strictEqual(imported.status, 204);
+
+				let job: Bull.Job<DbJobData<'importCustomEmojis'>> | undefined;
+				for (let i = 0; i < 10; i++) {
+					const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+					job = jobs.find(job => job.name === 'importCustomEmojis' && job.data.fileId === fileId && job.data.user.id === manager.id);
+					if (job != null) break;
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.ok(job);
+				assert.deepStrictEqual(job.data, {
+					user: { id: manager.id },
+					fileId,
+				});
+
+				const token = await createAppToken(manager, ['write:admin:emoji']);
+				const appDenied = await api('admin/emoji/import-zip', { fileId: genId(config, now + 1) }, { token });
+				assert.strictEqual(appDenied.status, 400);
+				assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+
+				const roleDenied = await api('admin/emoji/import-zip', { fileId: genId(config, now + 2) }, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await removeImportJobs();
 				await api('admin/roles/unassign', {
 					roleId: emojiRole.id,
 					userId: manager.id,
