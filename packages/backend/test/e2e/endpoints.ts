@@ -2988,6 +2988,105 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/queue write endpoints', () => {
+		async function expectModerationLog(type: 'clearQueue' | 'promoteQueue' | 'pauseQueue' | 'resumeQueue'): Promise<void> {
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 20,
+					order: 'desc',
+					type,
+					userId: alice.id,
+				});
+				if (logs.length > 0) return;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.fail(`moderation log was not found: ${type}`);
+		}
+
+		test('admin/queue のwrite endpointはqueue操作、moderation log、権限を維持する', async () => {
+			const now = Date.now();
+			const content = JSON.stringify({ type: 'QueueWriteTest', id: now });
+			const baseJobData = {
+				user: { id: alice.id },
+				content,
+				digest: `SHA-256=${createHash('sha256').update(content).digest('base64')}`,
+				to: `https://queue-write-${now}.example/inbox`,
+				isSharedInbox: false,
+			};
+			let retryJob: Bull.Job<DeliverJobData> | undefined;
+			const promoteJob = await deliverQueue!.add(`hono-queue-promote-${now}`, baseJobData, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+			const removeJob = await deliverQueue!.add(`hono-queue-remove-${now}`, {
+				...baseJobData,
+				to: `https://queue-remove-${now}.example/inbox`,
+			}, { removeOnComplete: true, removeOnFail: true });
+			const clearJob = await deliverQueue!.add(`hono-queue-clear-${now}`, {
+				...baseJobData,
+				to: `https://queue-clear-${now}.example/inbox`,
+			}, { removeOnComplete: true, removeOnFail: true });
+
+			try {
+				assert.ok(promoteJob.id);
+				assert.ok(removeJob.id);
+				assert.ok(clearJob.id);
+
+				const paused = await api('admin/queue/pause', { queue: 'deliver' }, alice);
+				assert.strictEqual(paused.status, 204);
+				assert.strictEqual(await deliverQueue!.isPaused(), true);
+				await expectModerationLog('pauseQueue');
+
+				const resumed = await api('admin/queue/resume', { queue: 'deliver' }, alice);
+				assert.strictEqual(resumed.status, 204);
+				assert.strictEqual(await deliverQueue!.isPaused(), false);
+				await expectModerationLog('resumeQueue');
+
+				const promoted = await api('admin/queue/promote-jobs', { queue: 'deliver' }, alice);
+				assert.strictEqual(promoted.status, 204);
+				assert.notStrictEqual(await promoteJob.getState(), 'delayed');
+				await expectModerationLog('promoteQueue');
+
+				retryJob = await deliverQueue!.add(`hono-queue-retry-${now}`, {
+					...baseJobData,
+					to: `https://queue-retry-${now}.example/inbox`,
+				}, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+				assert.ok(retryJob.id);
+				const retried = await api('admin/queue/retry-job', { queue: 'deliver', jobId: retryJob.id }, alice);
+				assert.strictEqual(retried.status, 204);
+				assert.notStrictEqual(await retryJob.getState(), 'delayed');
+
+				const removed = await api('admin/queue/remove-job', { queue: 'deliver', jobId: removeJob.id }, alice);
+				assert.strictEqual(removed.status, 204);
+				assert.strictEqual(await deliverQueue!.getJob(removeJob.id), undefined);
+
+				const cleared = await api('admin/queue/clear', { queue: 'deliver', state: 'wait' }, alice);
+				assert.strictEqual(cleared.status, 204);
+				assert.strictEqual(await deliverQueue!.getJob(clearJob.id), undefined);
+				await expectModerationLog('clearQueue');
+
+				const writeToken = await createAppToken(alice, ['write:admin:queue']);
+				const pausedWithToken = await api('admin/queue/pause', { queue: 'deliver' }, { token: writeToken });
+				assert.strictEqual(pausedWithToken.status, 204);
+				await api('admin/queue/resume', { queue: 'deliver' }, alice);
+
+				const deniedToken = await createAppToken(alice, ['read:admin:queue']);
+				const scopeDenied = await api('admin/queue/pause', { queue: 'deliver' }, { token: deniedToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const normalUser = await signup({ username: `honoqueuew${now.toString(36)}` });
+				const roleDenied = await api('admin/queue/pause', { queue: 'deliver' }, normalUser);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await deliverQueue!.resume().catch(() => undefined);
+				await promoteJob.remove().catch(() => undefined);
+				await retryJob?.remove().catch(() => undefined);
+				await removeJob.remove().catch(() => undefined);
+				await clearJob.remove().catch(() => undefined);
+			}
+		});
+	});
+
 	describe('invite', () => {
 		test('invite/limit keeps role policy, token scope, and remaining count semantics', async () => {
 			const config = loadConfig();

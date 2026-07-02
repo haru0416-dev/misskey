@@ -4,11 +4,18 @@
  */
 
 import type { JobType } from 'bullmq';
-import { getDelayedDeliverHosts, getDelayedInboxHosts, getLegacyQueueCounts, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, QUEUE_TYPES, type AdminQueueDependencies, type QueueType } from '@/core/QueueAdminLogic.js';
+import type { Config } from '@/config.js';
+import { clearQueue, getDelayedDeliverHosts, getDelayedInboxHosts, getLegacyQueueCounts, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, pauseQueue, promoteQueueJobs, QUEUE_TYPES, removeQueueJob, resumeQueue, retryQueueJob, type AdminQueueDependencies, type QueueClearState, type QueueType } from '@/core/QueueAdminLogic.js';
+import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import type { MiUser } from '@/models/User.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
-export type HonoApiAdminQueueDependencies = AdminQueueDependencies;
+export type HonoApiAdminQueueDependencies = AdminQueueDependencies & {
+	config: Pick<Config, 'id'>;
+	db: MiDrizzleDatabase;
+};
 
 const adminQueueNoParamsDef = {
 	type: 'object',
@@ -22,6 +29,15 @@ const adminQueueSelectParamDef = {
 		queue: { type: 'string', enum: QUEUE_TYPES },
 	},
 	required: ['queue'],
+} as const;
+
+const adminQueueClearParamDef = {
+	type: 'object',
+	properties: {
+		queue: { type: 'string', enum: QUEUE_TYPES },
+		state: { type: 'string', enum: ['*', 'completed', 'wait', 'active', 'paused', 'prioritized', 'delayed', 'failed'] },
+	},
+	required: ['queue', 'state'],
 } as const;
 
 const adminQueueJobsParamDef = {
@@ -45,6 +61,11 @@ const adminQueueJobParamDef = {
 
 type AdminQueueSelectParams = SchemaType<typeof adminQueueSelectParamDef> & {
 	queue: QueueType;
+};
+
+type AdminQueueClearParams = SchemaType<typeof adminQueueClearParamDef> & {
+	queue: QueueType;
+	state: QueueClearState;
 };
 
 type AdminQueueJobsParams = SchemaType<typeof adminQueueJobsParamDef> & {
@@ -126,4 +147,66 @@ export async function handleHonoApiAdminQueueShowJobLogs(
 	const ps = parseHonoApiParams(adminQueueJobParamDef, body) as AdminQueueJobParams;
 
 	return await getQueueJobLogs(deps, ps.queue, ps.jobId);
+}
+
+export async function handleHonoApiAdminQueueClear(
+	deps: HonoApiAdminQueueDependencies,
+	moderator: { id: MiUser['id'] },
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueClearParamDef, body) as AdminQueueClearParams;
+
+	await clearQueue(deps, ps.queue, ps.state);
+	await logModerationEventInDatabase(deps, moderator, 'clearQueue');
+}
+
+export async function handleHonoApiAdminQueuePause(
+	deps: HonoApiAdminQueueDependencies,
+	moderator: { id: MiUser['id'] },
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueSelectParamDef, body) as AdminQueueSelectParams;
+
+	await pauseQueue(deps, ps.queue);
+	await logModerationEventInDatabase(deps, moderator, 'pauseQueue');
+}
+
+export async function handleHonoApiAdminQueueResume(
+	deps: HonoApiAdminQueueDependencies,
+	moderator: { id: MiUser['id'] },
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueSelectParamDef, body) as AdminQueueSelectParams;
+
+	await resumeQueue(deps, ps.queue);
+	await logModerationEventInDatabase(deps, moderator, 'resumeQueue');
+}
+
+export async function handleHonoApiAdminQueuePromoteJobs(
+	deps: HonoApiAdminQueueDependencies,
+	moderator: { id: MiUser['id'] },
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueSelectParamDef, body) as AdminQueueSelectParams;
+
+	await promoteQueueJobs(deps, ps.queue);
+	await logModerationEventInDatabase(deps, moderator, 'promoteQueue');
+}
+
+export async function handleHonoApiAdminQueueRetryJob(
+	deps: HonoApiAdminQueueDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueJobParamDef, body) as AdminQueueJobParams;
+
+	await retryQueueJob(deps, ps.queue, ps.jobId);
+}
+
+export async function handleHonoApiAdminQueueRemoveJob(
+	deps: HonoApiAdminQueueDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueJobParamDef, body) as AdminQueueJobParams;
+
+	await removeQueueJob(deps, ps.queue, ps.jobId);
 }
