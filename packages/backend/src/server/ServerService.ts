@@ -10,17 +10,10 @@ import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyRawBody from 'fastify-raw-body';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
-import { fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import type Logger from '@/logger.js';
-import * as Acct from '@/misc/acct.js';
-import { genIdenticon } from '@/misc/gen-identicon.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { bindThis } from '@/decorators.js';
 import { ActivityPubServerService } from './ActivityPubServerService.js';
@@ -48,10 +41,6 @@ export class ServerService implements OnApplicationShutdown {
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private userEntityService: UserEntityService,
 		private apiServerService: ApiServerService,
 		private openApiServerService: OpenApiServerService,
 		private streamingApiServerService: StreamingApiServerService,
@@ -61,7 +50,6 @@ export class ServerService implements OnApplicationShutdown {
 		private fileServerService: FileServerService,
 		private healthServerService: HealthServerService,
 		private clientServerService: ClientServerService,
-		private globalEventService: GlobalEventService,
 		private loggerService: LoggerService,
 		private oauth2ProviderService: OAuth2ProviderService,
 	) {
@@ -145,93 +133,6 @@ export class ServerService implements OnApplicationShutdown {
 		fastify.register(this.oauth2ProviderService.createServer, { prefix: '/oauth' });
 		fastify.register(this.oauth2ProviderService.createTokenServer, { prefix: '/oauth/token' });
 		fastify.register(this.healthServerService.createServer, { prefix: '/healthz' });
-
-		fastify.get<{ Params: { path: string }; Querystring: { static?: any; badge?: any; }; }>('/emoji/:path(.*)', async (request, reply) => {
-			const path = request.params.path;
-
-			reply.header('Cache-Control', 'public, max-age=86400');
-
-			if (!path.match(/^[a-zA-Z0-9\-_@\.]+?\.webp$/)) {
-				reply.code(404);
-				return;
-			}
-
-			const emojiPath = path.replace(/\.webp$/i, '');
-			const pathChunks = emojiPath.split('@');
-
-			if (pathChunks.length > 2) {
-				reply.code(400);
-				return;
-			}
-
-			const name = pathChunks.shift();
-			const host = pathChunks.pop();
-
-			const emoji = await fetchEmojiByNameAndHostFromDatabase(
-				this.db,
-				name!,
-				// `@.` is the spec of ReactionService.decodeReaction
-				(host === undefined || host === '.') ? null : host,
-			);
-
-			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
-
-			if (emoji == null) {
-				if ('fallback' in request.query) {
-					return await reply.redirect('/static-assets/emoji-unknown.png');
-				} else {
-					reply.code(404);
-					return;
-				}
-			}
-
-			let url: URL;
-			if ('badge' in request.query) {
-				url = new URL(`${this.config.mediaProxy}/emoji.png`);
-				// || emoji.originalUrl してるのは後方互換性のため（publicUrlはstringなので??はだめ）
-				url.searchParams.set('url', emoji.publicUrl || emoji.originalUrl);
-				url.searchParams.set('badge', '1');
-			} else {
-				url = new URL(`${this.config.mediaProxy}/emoji.webp`);
-				// || emoji.originalUrl してるのは後方互換性のため（publicUrlはstringなので??はだめ）
-				url.searchParams.set('url', emoji.publicUrl || emoji.originalUrl);
-				url.searchParams.set('emoji', '1');
-				if ('static' in request.query) url.searchParams.set('static', '1');
-			}
-
-			return await reply.redirect(
-				url.toString(),
-				301,
-			);
-		});
-
-		fastify.get<{ Params: { acct: string } }>('/avatar/@:acct', async (request, reply) => {
-			const { username, host } = Acct.parse(request.params.acct);
-			const user = await fetchUserByUsernameAndHostFromDatabase(
-				this.db,
-				username,
-				(host == null) || (host === this.config.host) ? null : host,
-			);
-
-			reply.header('Cache-Control', 'public, max-age=86400');
-
-			if (user && !user.isSuspended) {
-				reply.redirect((user.avatarId == null ? null : user.avatarUrl) ?? this.userEntityService.getIdenticonUrl(user));
-			} else {
-				reply.redirect('/static-assets/user-unknown.png');
-			}
-		});
-
-		fastify.get<{ Params: { x: string } }>('/identicon/:x', async (request, reply) => {
-			reply.header('Content-Type', 'image/png');
-			reply.header('Cache-Control', 'public, max-age=86400');
-
-			if (this.meta.enableIdenticonGeneration) {
-				return await genIdenticon(request.params.x);
-			} else {
-				return reply.redirect('/static-assets/avatar.png');
-			}
-		});
 
 		fastify.register(this.clientServerService.createServer);
 
