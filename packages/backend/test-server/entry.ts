@@ -1,22 +1,17 @@
 import type { Server } from 'node:http';
 import { portToPid } from 'pid-port';
-import fkill from 'fkill';
 import { Hono } from 'hono';
-import { NestFactory } from '@nestjs/core';
-import { MainModule } from '@/MainModule.js';
-import { ServerService } from '@/server/ServerService.js';
 import { loadConfig } from '@/config.js';
-import { NestLogger } from '@/NestLogger.js';
 import { createHonoNodeServer } from '@/server/hono-node-server.js';
-import { INestApplicationContext } from '@nestjs/common';
+import { server as startServer } from '@/boot/common.js';
+import type { HonoServerRuntime } from '@/boot/hono-server.js';
 
 const config = loadConfig();
 const originEnv = JSON.stringify(process.env);
 
 process.env.NODE_ENV = 'test';
 
-let app: INestApplicationContext;
-let serverService: ServerService;
+let runtime: HonoServerRuntime | undefined;
 let controllerServer: Server | undefined;
 
 /**
@@ -26,28 +21,19 @@ export async function setup() {
 	await killTestServer();
 	await stopControllerEndpoints();
 
-	console.log('starting application...');
-
-	app = await NestFactory.createApplicationContext(MainModule, {
-		logger: new NestLogger(),
-	});
-	serverService = app.get(ServerService);
-	await serverService.launch();
-
 	await startControllerEndpoints();
 
 	// ジョブキューは必要な時にテストコード側で起動する
 	// ジョブキューが動くとテスト結果の確認に支障が出ることがあるので意図的に動かさないでいる
 
-	console.log('application initialized.');
+	console.log('controller initialized.');
 }
 
 /**
  * テスト用のサーバインスタンスを停止する
  */
 export async function teardown() {
-	await serverService.dispose();
-	await app.close();
+	await stopApplication();
 	await stopControllerEndpoints();
 	await killTestServer();
 }
@@ -56,15 +42,44 @@ export async function teardown() {
  * 既に重複したポートで待ち受けしているサーバがある場合はkillする
  */
 async function killTestServer() {
-	//
 	try {
 		const pid = await portToPid(config.port);
 		if (pid) {
-			await fkill(pid, { force: true });
+			process.kill(pid, 'SIGTERM');
+			if (!await waitForPortToClose(config.port, 5000)) {
+				process.kill(pid, 'SIGKILL');
+				await waitForPortToClose(config.port, 5000);
+			}
 		}
 	} catch {
 		// NOP;
 	}
+}
+
+async function waitForPortToClose(port: number, timeout: number): Promise<boolean> {
+	const deadline = Date.now() + timeout;
+	while (Date.now() < deadline) {
+		const pid = await portToPid(port).catch(() => undefined);
+		if (!pid) return true;
+		await new Promise(resolve => setTimeout(resolve, 100));
+	}
+
+	return false;
+}
+
+async function startApplication() {
+	console.log('starting application...');
+
+	runtime = await startServer();
+
+	console.log('application initialized.');
+}
+
+async function stopApplication() {
+	if (!runtime) return;
+
+	await runtime.dispose();
+	runtime = undefined;
 }
 
 /**
@@ -90,18 +105,9 @@ async function startControllerEndpoints(port = config.port + 1000) {
 	controller.post('/env-reset', async (c) => {
 		process.env = JSON.parse(originEnv);
 
-		await serverService.dispose();
-		await app.close();
-
+		await stopApplication();
 		await killTestServer();
-
-		console.log('starting application...');
-
-		app = await NestFactory.createApplicationContext(MainModule, {
-			logger: new NestLogger(),
-		});
-		serverService = app.get(ServerService);
-		await serverService.launch();
+		await startApplication();
 
 		return c.json({ success: true });
 	});

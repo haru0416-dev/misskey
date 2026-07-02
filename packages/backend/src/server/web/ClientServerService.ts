@@ -40,7 +40,6 @@ import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByU
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { FeedService } from './FeedService.js';
-import { UrlPreviewService } from './UrlPreviewService.js';
 import { ClientLoggerService } from './ClientLoggerService.js';
 import { HtmlTemplateService } from './HtmlTemplateService.js';
 
@@ -92,7 +91,6 @@ export class ClientServerService {
 		private clipEntityService: ClipEntityService,
 		private channelEntityService: ChannelEntityService,
 		private announcementEntityService: AnnouncementEntityService,
-		private urlPreviewService: UrlPreviewService,
 		private feedService: FeedService,
 		private htmlTemplateService: HtmlTemplateService,
 		private clientLoggerService: ClientLoggerService,
@@ -414,9 +412,6 @@ export class ClientServerService {
 				...data,
 			}));
 		};
-
-		// URL preview endpoint
-		fastify.get<{ Querystring: { url: string; lang: string; } }>('/url', (request, reply) => this.urlPreviewService.handle(request, reply));
 
 		const getFeed = async (acct: string) => {
 			const { username, host } = Acct.parse(acct);

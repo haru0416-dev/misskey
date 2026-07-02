@@ -98,6 +98,9 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		staticAssets: {
 			config,
 		},
+		urlPreview: {
+			urlPreviewService: deps.urlPreviewService,
+		},
 		webMetadata: {
 			config,
 			meta: deps.meta,

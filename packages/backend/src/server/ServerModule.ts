@@ -26,7 +26,6 @@ import { OpenApiServerService } from './api/openapi/OpenApiServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
 import { HtmlTemplateService } from './web/HtmlTemplateService.js';
 import { FeedService } from './web/FeedService.js';
-import { UrlPreviewService } from './web/UrlPreviewService.js';
 import { ClientLoggerService } from './web/ClientLoggerService.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
 
@@ -61,7 +60,6 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		HtmlTemplateService,
 		FeedService,
 		HealthServerService,
-		UrlPreviewService,
 		ActivityPubServerService,
 		FileServerService,
 		NodeinfoServerService,

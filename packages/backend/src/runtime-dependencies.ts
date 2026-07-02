@@ -20,6 +20,7 @@ import { ImageProcessingService } from '@/core/ImageProcessingService.js';
 import { InternalStorageService } from '@/core/InternalStorageService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
+import { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 
 export type RuntimeDependencies = {
 	config: Config;
@@ -34,6 +35,7 @@ export type RuntimeDependencies = {
 	imageProcessingService: ImageProcessingService;
 	internalStorageService: InternalStorageService;
 	loggerService: LoggerService;
+	urlPreviewService: UrlPreviewService;
 	videoProcessingService: VideoProcessingService;
 	redis: Redis.Redis;
 	redisForPub: Redis.Redis;
@@ -151,6 +153,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const aiService = new AiService(meta, httpRequestService, loggerService);
 	const fileInfoService = new FileInfoService(aiService, loggerService);
 	const downloadService = new DownloadService(config, httpRequestService, loggerService);
+	const urlPreviewService = new UrlPreviewService(config, meta, httpRequestService, loggerService);
 	const imageProcessingService = new ImageProcessingService();
 	const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
 	const internalStorageService = new InternalStorageService(config);
@@ -168,6 +171,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		imageProcessingService,
 		internalStorageService,
 		loggerService,
+		urlPreviewService,
 		videoProcessingService,
 		redis,
 		redisForPub,
