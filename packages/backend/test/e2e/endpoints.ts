@@ -18,11 +18,14 @@ import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
-import { channelFavoriteExistsInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
+import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
@@ -1438,6 +1441,93 @@ describe('Endpoints', () => {
 			assert.strictEqual(missing.body, false);
 		});
 
+		test('drive/folders list, find, and show preserve ownership and detail fields', async () => {
+			const config = loadConfig();
+			const stamp = Date.now().toString(36);
+			const parent = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-parent-${stamp}`,
+				parentId: null,
+			});
+			const child = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-child-${stamp}`,
+				parentId: parent.id,
+			});
+			const rootChildName = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-child-${stamp}`,
+				parentId: null,
+			});
+			const otherUserFolder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-child-${stamp}`,
+				parentId: null,
+			});
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: createHash('md5').update(`hono-drive-folder-${stamp}`).digest('hex'),
+				name: 'hono-drive-folder.txt',
+				type: 'text/plain',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/hono-drive-folder-${stamp}`,
+				folderId: parent.id,
+			});
+
+			const rootList = await api('drive/folders', { folderId: null }, alice);
+			assert.strictEqual(rootList.status, 200);
+			assert.strictEqual((rootList.body as any[]).some(item => item.id === parent.id), true);
+			assert.strictEqual((rootList.body as any[]).some(item => item.id === rootChildName.id), true);
+			assert.strictEqual((rootList.body as any[]).some(item => item.id === otherUserFolder.id), false);
+
+			const childList = await api('drive/folders', { folderId: parent.id }, alice);
+			assert.strictEqual(childList.status, 200);
+			assert.deepStrictEqual((childList.body as any[]).map(item => item.id), [child.id]);
+
+			const childFind = await api('drive/folders/find', {
+				name: child.name,
+				parentId: parent.id,
+			}, alice);
+			assert.strictEqual(childFind.status, 200);
+			assert.deepStrictEqual((childFind.body as any[]).map(item => item.id), [child.id]);
+
+			const rootFind = await api('drive/folders/find', {
+				name: child.name,
+				parentId: null,
+			}, alice);
+			assert.strictEqual(rootFind.status, 200);
+			assert.strictEqual((rootFind.body as any[]).some(item => item.id === rootChildName.id), true);
+			assert.strictEqual((rootFind.body as any[]).some(item => item.id === child.id), false);
+			assert.strictEqual((rootFind.body as any[]).some(item => item.id === otherUserFolder.id), false);
+
+			const showParent = await api('drive/folders/show', { folderId: parent.id }, alice);
+			assert.strictEqual(showParent.status, 200);
+			const shownParent = showParent.body as any;
+			assert.strictEqual(shownParent.id, parent.id);
+			assert.strictEqual(shownParent.parentId, null);
+			assert.strictEqual(shownParent.foldersCount, 1);
+			assert.strictEqual(shownParent.filesCount, 1);
+			assert.strictEqual(typeof shownParent.createdAt, 'string');
+
+			const showChild = await api('drive/folders/show', { folderId: child.id }, alice);
+			assert.strictEqual(showChild.status, 200);
+			const shownChild = showChild.body as any;
+			assert.strictEqual(shownChild.id, child.id);
+			assert.ok(shownChild.parent);
+			assert.strictEqual(shownChild.parent.id, parent.id);
+
+			const otherUserShow = await api('drive/folders/show', { folderId: parent.id }, bob);
+			assert.strictEqual(otherUserShow.status, 400);
+			assert.strictEqual(castAsError(otherUserShow.body as any).error.id, 'd74ab9eb-bb09-4bba-bf24-fb58f761e1e9');
+		});
+
 		test('notes/drafts/count returns the caller draft count and rejects moved users', async () => {
 			const config = loadConfig();
 			const before = await api('notes/drafts/count', {}, alice);
@@ -1671,6 +1761,12 @@ describe('Endpoints', () => {
 
 			for (const [endpoint, params, token] of [
 				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
+				['drive/folders', {}, readAccountToken],
+				['drive/folders/create', { name: 'hono-denied-folder' }, readDriveToken],
+				['drive/folders/delete', { folderId: genId(config) }, readDriveToken],
+				['drive/folders/find', { name: 'hono-denied-folder' }, readAccountToken],
+				['drive/folders/show', { folderId: genId(config) }, readAccountToken],
+				['drive/folders/update', { folderId: genId(config), name: 'hono-denied-folder' }, readDriveToken],
 				['notes/drafts/count', {}, readDriveToken],
 				['i/webhooks/list', {}, readDriveToken],
 				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
@@ -2513,20 +2609,547 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('Hono channel read endpoints', () => {
+		test('featured, owned, followed, and my-favorites preserve caller-scoped flags', async () => {
+			const config = loadConfig();
+			const stamp = Date.now().toString(36);
+			const owned = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-owned-${stamp}`,
+				description: 'hono owned channel',
+				lastNotedAt: new Date('2024-01-01T00:00:00.000Z'),
+			});
+			const followed = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-followed-${stamp}`,
+				description: 'hono followed channel',
+				lastNotedAt: new Date('2024-01-02T00:00:00.000Z'),
+			});
+			const archived = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-archived-${stamp}`,
+				description: 'hono archived channel',
+				lastNotedAt: new Date('2024-01-03T00:00:00.000Z'),
+				isArchived: true,
+			});
+			await createChannelFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: alice.id,
+				followeeId: followed.id,
+			});
+			await createChannelFavoriteInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				channelId: followed.id,
+			});
+			await createChannelMutingInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				channelId: followed.id,
+			});
+
+			const featuredAnonymous = await api('channels/featured', {});
+			assert.strictEqual(featuredAnonymous.status, 200);
+			const anonymousFeatured = (featuredAnonymous.body as any[]).find(channel => channel.id === followed.id);
+			assert.ok(anonymousFeatured);
+			assert.strictEqual(Object.hasOwn(anonymousFeatured, 'isFollowing'), false);
+			assert.strictEqual((featuredAnonymous.body as any[]).some(channel => channel.id === archived.id), false);
+
+			const featured = await api('channels/featured', {}, alice);
+			assert.strictEqual(featured.status, 200);
+			const featuredFollowed = (featured.body as any[]).find(channel => channel.id === followed.id);
+			assert.ok(featuredFollowed);
+			assert.strictEqual(featuredFollowed.isFollowing, true);
+			assert.strictEqual(featuredFollowed.isFavorited, true);
+			assert.strictEqual(featuredFollowed.isMuting, true);
+
+			const ownedList = await api('channels/owned', { limit: 20 }, alice);
+			assert.strictEqual(ownedList.status, 200);
+			assert.strictEqual((ownedList.body as any[]).some(channel => channel.id === owned.id), true);
+			assert.strictEqual((ownedList.body as any[]).some(channel => channel.id === archived.id), false);
+
+			const followedList = await api('channels/followed', { limit: 20 }, alice);
+			assert.strictEqual(followedList.status, 200);
+			assert.deepStrictEqual((followedList.body as any[]).filter(channel => channel.id === followed.id).map(channel => channel.isFollowing), [true]);
+
+			const favorites = await api('channels/my-favorites', {}, alice);
+			assert.strictEqual(favorites.status, 200);
+			const favorite = (favorites.body as any[]).find(channel => channel.id === followed.id);
+			assert.ok(favorite);
+			assert.strictEqual(favorite.isFavorited, true);
+		});
+
+		test('channel account read endpoints require read:channels app token permission', async () => {
+			const readAccountToken = await createAppToken(alice, ['read:account']);
+
+			for (const [endpoint, params] of [
+				['channels/owned', {}],
+				['channels/followed', {}],
+				['channels/my-favorites', {}],
+			] as const) {
+				const denied = await api(endpoint, params, { token: readAccountToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+		});
+	});
+
+	describe('Hono channel write endpoints', () => {
+		const createOwnedDriveFile = async (userId: string, seed: string) => {
+			const config = loadConfig();
+			const md5 = createHash('md5').update(seed).digest('hex');
+			return await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId,
+				userHost: null,
+				md5,
+				name: `${seed}.png`,
+				type: 'image/png',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+		};
+
+		test('create and update return packed channels with caller-scoped flags', async () => {
+			const owner = await signup({ username: `honochnowner${Date.now().toString(36)}` });
+			const createdBanner = await createOwnedDriveFile(owner.id, `hono-channel-create-${Date.now()}`);
+			const created = await api('channels/create', {
+				name: `hono-channel-create-${Date.now().toString(36)}`,
+				description: 'hono channel create target',
+				bannerId: createdBanner.id,
+				color: '#123456',
+				isSensitive: true,
+				allowRenoteToExternal: false,
+			}, owner);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.userId, owner.id);
+			assert.strictEqual(created.body.description, 'hono channel create target');
+			assert.strictEqual(created.body.bannerId, createdBanner.id);
+			assert.strictEqual(created.body.color, '#123456');
+			assert.strictEqual(created.body.isSensitive, true);
+			assert.strictEqual(created.body.allowRenoteToExternal, false);
+			assert.strictEqual(created.body.isFollowing, false);
+			assert.strictEqual(created.body.isFavorited, false);
+			assert.strictEqual(created.body.isMuting, false);
+
+			const updatedBanner = await createOwnedDriveFile(owner.id, `hono-channel-update-${Date.now()}`);
+			const pinnedNoteId = '000000000000000000000001';
+			const updated = await api('channels/update', {
+				channelId: created.body.id,
+				name: 'hono channel updated',
+				description: null,
+				bannerId: updatedBanner.id,
+				isArchived: true,
+				pinnedNoteIds: [pinnedNoteId],
+				color: '#654321',
+				isSensitive: false,
+				allowRenoteToExternal: true,
+			}, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.id, created.body.id);
+			assert.strictEqual(updated.body.name, 'hono channel updated');
+			assert.strictEqual(updated.body.description, null);
+			assert.strictEqual(updated.body.bannerId, updatedBanner.id);
+			assert.strictEqual(updated.body.isArchived, true);
+			assert.deepStrictEqual(updated.body.pinnedNoteIds, [pinnedNoteId]);
+			assert.strictEqual(updated.body.color, '#654321');
+			assert.strictEqual(updated.body.isSensitive, false);
+			assert.strictEqual(updated.body.allowRenoteToExternal, true);
+		});
+
+		test('keeps legacy channel create validation, policy, and moved-account errors', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const deniedUser = await signup({ username: `honochdeny${now.toString(36)}` });
+			const requester = await signup({ username: `honochreq${now.toString(36)}` });
+			const fileOwner = await signup({ username: `honochfile${now.toString(36)}` });
+			const denyRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono channel create deny role ${now}`,
+				description: 'Hono channel create deny role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {
+					canCreateChannel: {
+						useDefault: false,
+						priority: 2,
+						value: false,
+					},
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: deniedUser.id,
+				roleId: denyRole.id,
+				expiresAt: null,
+			});
+
+			const policyDenied = await api('channels/create', {
+				name: 'hono policy denied channel',
+			}, deniedUser);
+			assert.strictEqual(policyDenied.status, 403);
+			assert.strictEqual(castAsError(policyDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			assert.strictEqual(castAsError(policyDenied.body as any).error.id, 'c3d38592-54c0-429d-be96-5636b0431a61');
+
+			const otherFile = await createOwnedDriveFile(fileOwner.id, `hono-channel-other-file-${now}`);
+			const missingFile = await api('channels/create', {
+				name: 'hono channel missing file',
+				bannerId: otherFile.id,
+			}, requester);
+			assert.strictEqual(missingFile.status, 400);
+			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050');
+
+			const readToken = await createAppToken(requester, ['read:channels']);
+			const permissionDenied = await api('channels/create', {
+				name: 'hono channel app denied',
+			}, { token: readToken });
+			assert.strictEqual(permissionDenied.status, 403);
+			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const movedUser = await signup({ username: `honochmoved${now.toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+			const movedDenied = await api('channels/create', {
+				name: 'hono moved denied channel',
+			}, movedUser);
+			assert.strictEqual(movedDenied.status, 403);
+			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+		});
+
+		test('keeps legacy channel update authorization and file errors', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const owner = await signup({ username: `hcupown${now.toString(36)}` });
+			const intruder = await signup({ username: `honochupintr${now.toString(36)}` });
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				name: `hono-update-target-${now.toString(36)}`,
+				description: 'hono update target',
+			});
+
+			const missing = await api('channels/update', {
+				channelId: '000000000000000000000000',
+				name: 'missing',
+			}, intruder);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'f9c5467f-d492-4c3c-9a8d-a70dacc86512');
+
+			const denied = await api('channels/update', {
+				channelId: target.id,
+				name: 'denied',
+			}, intruder);
+			assert.strictEqual(denied.status, 400);
+			assert.strictEqual(castAsError(denied.body as any).error.id, '1fb7cb09-d46a-4fdf-b8df-057788cce513');
+
+			const intruderFile = await createOwnedDriveFile(intruder.id, `hono-channel-intruder-file-${now}`);
+			const missingFile = await api('channels/update', {
+				channelId: target.id,
+				bannerId: intruderFile.id,
+			}, owner);
+			assert.strictEqual(missingFile.status, 400);
+			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'e86c14a4-0da2-4032-8df3-e737a04c7f3b');
+
+			const readToken = await createAppToken(owner, ['read:channels']);
+			const permissionDenied = await api('channels/update', {
+				channelId: target.id,
+				name: 'denied by app scope',
+			}, { token: readToken });
+			assert.strictEqual(permissionDenied.status, 403);
+			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const moderator = await signup({ username: `honomod${now.toString(36)}` });
+			const moderatorRole = await createRoleInDatabase(db, {
+				id: genId(config, now + 2),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono channel moderator role ${now}`,
+				description: 'Hono channel moderator role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: true,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 3),
+				userId: moderator.id,
+				roleId: moderatorRole.id,
+				expiresAt: null,
+			});
+
+			const moderatorUpdate = await api('channels/update', {
+				channelId: target.id,
+				name: 'moderator updated channel',
+			}, moderator);
+			assert.strictEqual(moderatorUpdate.status, 200);
+			assert.strictEqual(moderatorUpdate.body.id, target.id);
+			assert.strictEqual(moderatorUpdate.body.name, 'moderator updated channel');
+		});
+	});
+
+	describe('Hono channel follow endpoints', () => {
+		test('follow and unfollow update the channel following row', async () => {
+			const config = loadConfig();
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-follow-${Date.now().toString(36)}`,
+				description: 'hono follow target',
+			});
+
+			const followed = await api('channels/follow', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(followed.status, 204);
+			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), true);
+
+			const unfollowed = await api('channels/unfollow', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(unfollowed.status, 204);
+			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), false);
+
+			const unfollowedAgain = await api('channels/unfollow', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(unfollowedAgain.status, 204);
+		});
+
+		test('keeps legacy validation, permission, and moved-account errors', async () => {
+			const config = loadConfig();
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-follow-validation-${Date.now().toString(36)}`,
+				description: 'hono follow validation target',
+			});
+
+			const missingFollow = await api('channels/follow', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingFollow.status, 400);
+			assert.strictEqual(castAsError(missingFollow.body as any).error.id, 'c0031718-d573-4e85-928e-10039f1fbb68');
+
+			const missingUnfollow = await api('channels/unfollow', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingUnfollow.status, 400);
+			assert.strictEqual(castAsError(missingUnfollow.body as any).error.id, '19959ee9-0153-4c51-bbd9-a98c49dc59d6');
+
+			const readToken = await createAppToken(alice, ['read:channels']);
+			for (const endpoint of ['channels/follow', 'channels/unfollow'] as const) {
+				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+
+			const movedUser = await signup({ username: `honofollow${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+			const movedDenied = await api('channels/follow', {
+				channelId: target.id,
+			}, movedUser);
+			assert.strictEqual(movedDenied.status, 403);
+			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(await channelFollowingExistsInDatabase(db, movedUser.id, target.id), false);
+		});
+	});
+
+	describe('Hono channel mute endpoints', () => {
+		test('create, list, and delete preserve channel mute behavior', async () => {
+			const config = loadConfig();
+			const stamp = Date.now().toString(36);
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-mute-${stamp}`,
+				description: 'hono mute target',
+				lastNotedAt: new Date('2024-01-04T00:00:00.000Z'),
+			});
+			const expiredTarget = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-expired-mute-${stamp}`,
+				description: 'hono expired mute target',
+				lastNotedAt: new Date('2024-01-05T00:00:00.000Z'),
+			});
+			await createChannelMutingInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				channelId: expiredTarget.id,
+				expiresAt: new Date(Date.now() - 60_000),
+			});
+
+			const created = await api('channels/mute/create', {
+				channelId: target.id,
+				expiresAt: Date.now() + 60_000,
+			}, alice);
+			assert.strictEqual(created.status, 204);
+			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), true);
+
+			const duplicate = await api('channels/mute/create', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
+
+			const expiredDuplicate = await api('channels/mute/create', {
+				channelId: expiredTarget.id,
+			}, alice);
+			assert.strictEqual(expiredDuplicate.status, 400);
+			assert.strictEqual(castAsError(expiredDuplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
+
+			const list = await api('channels/mute/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const mutedChannels = list.body as any[];
+			const muted = mutedChannels.find(channel => channel.id === target.id);
+			assert.ok(muted);
+			assert.strictEqual(muted.isMuting, true);
+			assert.strictEqual(mutedChannels.some(channel => channel.id === expiredTarget.id), false);
+
+			const deleted = await api('channels/mute/delete', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), false);
+
+			const missingDelete = await api('channels/mute/delete', {
+				channelId: target.id,
+			}, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, '14d55962-6ea8-d990-1333-d6bef78dc2ab');
+		});
+
+		test('keeps legacy validation, permission, and moved-account errors', async () => {
+			const config = loadConfig();
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-mute-validation-${Date.now().toString(36)}`,
+				description: 'hono mute validation target',
+			});
+
+			const missingCreate = await api('channels/mute/create', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingCreate.status, 400);
+			assert.strictEqual(castAsError(missingCreate.body as any).error.id, '7174361e-d58f-31d6-2e7c-6fb830786a3f');
+
+			const missingDelete = await api('channels/mute/delete', {
+				channelId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, 'e7998769-6e94-d9c2-6b8f-94a527314aba');
+
+			const pastExpiration = await api('channels/mute/create', {
+				channelId: target.id,
+				expiresAt: Date.now() - 60_000,
+			}, alice);
+			assert.strictEqual(pastExpiration.status, 400);
+			assert.strictEqual(castAsError(pastExpiration.body as any).error.id, '42b32236-df2c-a45f-fdbf-def67268f749');
+
+			const readToken = await createAppToken(alice, ['read:channels']);
+			const writeToken = await createAppToken(alice, ['write:channels']);
+			for (const endpoint of ['channels/mute/create', 'channels/mute/delete'] as const) {
+				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+
+			const listDenied = await api('channels/mute/list', {}, { token: writeToken });
+			assert.strictEqual(listDenied.status, 403);
+			assert.strictEqual(castAsError(listDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const movedUser = await signup({ username: `honomute${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+			const movedDenied = await api('channels/mute/create', {
+				channelId: target.id,
+			}, movedUser);
+			assert.strictEqual(movedDenied.status, 403);
+			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(await channelMutingExistsInDatabase(db, movedUser.id, target.id), false);
+		});
+	});
+
 	describe('channels/search', () => {
+		let channelSearchFixture: {
+			prefix: string;
+			aaa: { id: string; name: string; description: string };
+			ccc1: { id: string; name: string; description: string };
+			ccc2: { id: string; name: string; description: string };
+		} | null = null;
+
+		async function ensureChannelSearchFixture() {
+			if (channelSearchFixture != null) return channelSearchFixture;
+
+			const config = loadConfig();
+			const prefix = `hono-search-${Date.now().toString(36)}`;
+			const aaa = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `${prefix}-aaa`,
+				description: `${prefix}-bbb`,
+			});
+			const ccc1 = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `${prefix}-ccc1`,
+				description: `${prefix}-ddd1`,
+			});
+			const ccc2 = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `${prefix}-ccc2`,
+				description: `${prefix}-ddd2`,
+			});
+
+			const fixture = {
+				prefix,
+				aaa: { id: aaa.id, name: aaa.name, description: aaa.description! },
+				ccc1: { id: ccc1.id, name: ccc1.name, description: ccc1.description! },
+				ccc2: { id: ccc2.id, name: ccc2.name, description: ccc2.description! },
+			};
+			channelSearchFixture = fixture;
+			return fixture;
+		}
+
 		test('空白検索で一覧を取得できる', async () => {
-			await api('channels/create', {
-				name: 'aaa',
-				description: 'bbb',
-			}, bob);
-			await api('channels/create', {
-				name: 'ccc1',
-				description: 'ddd1',
-			}, bob);
-			await api('channels/create', {
-				name: 'ccc2',
-				description: 'ddd2',
-			}, bob);
+			const fixture = await ensureChannelSearchFixture();
 
 			const res = await api('channels/search', {
 				query: '',
@@ -2534,22 +3157,27 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 3);
+			const ids = (res.body as any[]).map(channel => channel.id);
+			assert.strictEqual(ids.includes(fixture.aaa.id), true);
+			assert.strictEqual(ids.includes(fixture.ccc1.id), true);
+			assert.strictEqual(ids.includes(fixture.ccc2.id), true);
 		});
 		test('名前のみの検索で名前を検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'aaa',
+				query: fixture.aaa.name,
 				type: 'nameOnly',
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].name, 'aaa');
+			assert.strictEqual(res.body[0].id, fixture.aaa.id);
 		});
 		test('名前のみの検索で名前を複数検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ccc',
+				query: `${fixture.prefix}-ccc`,
 				type: 'nameOnly',
 			}, bob);
 
@@ -2558,8 +3186,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.length, 2);
 		});
 		test('名前のみの検索で説明は検索できない', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'bbb',
+				query: fixture.aaa.description,
 				type: 'nameOnly',
 			}, bob);
 
@@ -2568,28 +3197,31 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.length, 0);
 		});
 		test('名前と説明の検索で名前を検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ccc1',
+				query: fixture.ccc1.name,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].name, 'ccc1');
+			assert.strictEqual(res.body[0].id, fixture.ccc1.id);
 		});
 		test('名前と説明での検索で説明を検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ddd1',
+				query: fixture.ccc1.description,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].name, 'ccc1');
+			assert.strictEqual(res.body[0].id, fixture.ccc1.id);
 		});
 		test('名前と説明の検索で名前を複数検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ccc',
+				query: `${fixture.prefix}-ccc`,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
@@ -2597,8 +3229,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.length, 2);
 		});
 		test('名前と説明での検索で説明を複数検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ddd',
+				query: `${fixture.prefix}-ddd`,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
@@ -2959,6 +3592,97 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
 			assert.strictEqual(res.body.name, 'test');
+		});
+	});
+
+	describe('drive/folders/delete', () => {
+		test('空フォルダを削除できる', async () => {
+			const config = loadConfig();
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-folder-${Date.now()}`,
+				parentId: null,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: folder.id,
+			}, alice);
+
+			assert.strictEqual(res.status, 204);
+			assert.strictEqual(await fetchDriveFolderByIdFromDatabase(db, folder.id), null);
+		});
+
+		test('他人のフォルダを削除できない', async () => {
+			const config = loadConfig();
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-other-user-folder-${Date.now()}`,
+				parentId: null,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: folder.id,
+			}, bob);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '1069098f-c281-440f-b085-f9932edbe091');
+			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, folder.id), null);
+		});
+
+		test('子フォルダがあるフォルダを削除できない', async () => {
+			const config = loadConfig();
+			const parent = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-parent-folder-${Date.now()}`,
+				parentId: null,
+			});
+			await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-child-folder-${Date.now()}`,
+				parentId: parent.id,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: parent.id,
+			}, alice);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
+			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, parent.id), null);
+		});
+
+		test('子ファイルがあるフォルダを削除できない', async () => {
+			const config = loadConfig();
+			const parent = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `delete-file-parent-folder-${Date.now()}`,
+				parentId: null,
+			});
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: createHash('md5').update(`delete-folder-file-${Date.now()}`).digest('hex'),
+				name: 'delete-folder-file.txt',
+				type: 'text/plain',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/delete-folder-file-${parent.id}`,
+				folderId: parent.id,
+			});
+
+			const res = await api('drive/folders/delete', {
+				folderId: parent.id,
+			}, alice);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
+			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, parent.id), null);
 		});
 	});
 
