@@ -31,7 +31,7 @@ import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
-import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
+import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
@@ -2389,6 +2389,50 @@ describe('Endpoints', () => {
 				await new Promise(resolve => setTimeout(resolve, 10));
 			}
 			assert.ok(logged);
+		});
+	});
+
+	describe('admin/show-moderation-logs', () => {
+		test('admin/show-moderation-logs は検索、ユーザー pack、権限を維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const marker = `hono moderation log ${now}`;
+			const id = genId(config, now);
+			await createModerationLogInDatabase(db, {
+				id,
+				userId: alice.id,
+				type: 'updateUserNote',
+				info: {
+					userId: bob.id,
+					before: '',
+					after: marker,
+				},
+			});
+
+			const list = await api('admin/show-moderation-logs', {
+				type: 'updateUserNote',
+				userId: alice.id,
+				search: marker,
+			}, alice);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body.length, 1);
+			assert.strictEqual(list.body[0].id, id);
+			assert.strictEqual(list.body[0].createdAt, new Date(now).toISOString());
+			assert.strictEqual(list.body[0].type, 'updateUserNote');
+			assert.strictEqual(list.body[0].info.after, marker);
+			assert.strictEqual(list.body[0].userId, alice.id);
+			assert.strictEqual(list.body[0].user.id, alice.id);
+			assert.strictEqual(list.body[0].user.username, alice.username);
+
+			const scopeDeniedToken = await createAppToken(alice, ['read:admin:server-info']);
+			const scopeDenied = await api('admin/show-moderation-logs', {}, { token: scopeDeniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honomodlog${now.toString(36)}` });
+			const adminDenied = await api('admin/show-moderation-logs', {}, normalUser);
+			assert.strictEqual(adminDenied.status, 400);
+			assert.strictEqual(castAsError(adminDenied.body as any).error.code, 'ACCESS_DENIED');
 		});
 	});
 

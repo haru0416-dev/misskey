@@ -5,7 +5,7 @@
 
 import type { Config } from '@/config.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
 import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -136,6 +136,39 @@ export async function packUserDetailedNotMeForHonoApi(
 	user: MiUser,
 ): Promise<UserDetailedNotMeHonoApiResponse> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+
+	return packUserDetailedNotMeCoreForHonoApi(deps, user, profile);
+}
+
+export async function packUserDetailedNotMeManyForHonoApi(
+	deps: UserPackingDependencies,
+	srcs: (MiUser['id'] | MiUser)[],
+): Promise<UserDetailedNotMeHonoApiResponse[]> {
+	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
+	const ids = srcs.filter((src): src is string => typeof src === 'string');
+	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
+	const userById = new Map([...explicitUsers, ...fetchedUsers].map(user => [user.id, user]));
+	for (const missingId of ids.filter(id => !userById.has(id))) {
+		const user = await fetchUserByIdOrFailFromDatabase(deps.db, missingId);
+		userById.set(user.id, user);
+	}
+
+	const users = srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
+	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, [...new Set(users.map(user => user.id))]);
+	const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
+
+	return await Promise.all(users.map(async user => packUserDetailedNotMeCoreForHonoApi(
+		deps,
+		user,
+		profileByUserId.get(user.id) ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id),
+	)));
+}
+
+function packUserDetailedNotMeCoreForHonoApi(
+	deps: UserPackingDependencies,
+	user: MiUser,
+	profile: MiUserProfile,
+): UserDetailedNotMeHonoApiResponse {
 	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
 
 	return {

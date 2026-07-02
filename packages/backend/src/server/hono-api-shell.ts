@@ -44,13 +44,14 @@ import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hon
 import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
+import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiPromoRead } from './hono-api-promo.js';
 import { assertHonoApiRateLimit } from './hono-api-rate-limit.js';
 import { handleHonoApiResetDb } from './hono-api-reset-db.js';
-import { getHonoApiRolePolicies, isHonoApiModerator } from './hono-api-role-policy.js';
+import { getHonoApiRolePolicies, isHonoApiAdministrator, isHonoApiModerator } from './hono-api-role-policy.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -242,6 +243,12 @@ async function assertHonoApiModerator(deps: ApiShellDependencies, auth: { user: 
 	}
 }
 
+async function assertHonoApiAdmin(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
+	if (!await isHonoApiAdministrator(deps, auth.user)) {
+		throw accessDeniedError();
+	}
+}
+
 export function createApiShellApp(deps: ApiShellDependencies): Hono {
 	const app = new Hono();
 
@@ -342,6 +349,18 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminInviteList(deps, body));
+		});
+	});
+
+	app.post('/admin/show-moderation-logs', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:show-moderation-log');
+			await assertHonoApiAdmin(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminShowModerationLogs(deps, body));
 		});
 	});
 
