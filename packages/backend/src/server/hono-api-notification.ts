@@ -19,8 +19,8 @@ import type { MiUser } from '@/models/User.js';
 
 export type HonoApiMainStreamPublisher = (
 	userId: MiUser['id'],
-	type: 'notification' | 'unreadNotification',
-	value: Record<string, unknown>,
+	type: 'notification' | 'unreadNotification' | 'signin',
+	value: unknown,
 ) => void;
 
 export type HonoApiNotificationDependencies = {
@@ -35,6 +35,14 @@ type CreateTokenNotification = {
 	createdAt: string;
 	type: 'createToken';
 };
+
+type LoginNotification = {
+	id: string;
+	createdAt: string;
+	type: 'login';
+};
+
+type HonoSimpleNotification = CreateTokenNotification | LoginNotification;
 
 function parseIdFull(config: Config, id: string): { date: number; additional: bigint } {
 	switch (config.id.toLowerCase()) {
@@ -56,7 +64,7 @@ function toXListId(config: Config, id: string): string {
 async function xaddNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
-	notification: CreateTokenNotification,
+	notification: HonoSimpleNotification,
 ): Promise<string> {
 	while (true) {
 		try {
@@ -73,16 +81,20 @@ async function xaddNotification(
 	}
 }
 
-export function createTokenNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+function createSimpleNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	type: HonoSimpleNotification['type'],
+): void {
 	trackPromise((async () => {
 		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.createToken?.type === 'never') return;
+		if (profile?.notificationRecieveConfig[type]?.type === 'never') return;
 
 		const notification = {
 			id: genId(deps.config),
 			createdAt: new Date().toISOString(),
-			type: 'createToken',
-		} satisfies CreateTokenNotification;
+			type,
+		} satisfies HonoSimpleNotification;
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
@@ -93,4 +105,12 @@ export function createTokenNotification(deps: HonoApiNotificationDependencies, u
 			deps.publishMainStream?.(userId, 'unreadNotification', notification);
 		}, 2000).unref();
 	})());
+}
+
+export function createTokenNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+	createSimpleNotification(deps, userId, 'createToken');
+}
+
+export function createLoginNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+	createSimpleNotification(deps, userId, 'login');
 }

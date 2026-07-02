@@ -8,6 +8,11 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { UserAuthService } from '@/core/UserAuthService.js';
+import type { WebAuthnService } from '@/core/WebAuthnService.js';
+import type { EmailService } from '@/core/EmailService.js';
+import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } from './hono-api-app.js';
@@ -16,6 +21,7 @@ import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiI } from './hono-api-i.js';
 import { handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
+import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 
 export type ApiShellDependencies = {
@@ -23,6 +29,11 @@ export type ApiShellDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis.Redis;
+	httpRequestService: HttpRequestService;
+	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
+	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication'>;
+	emailService: Pick<EmailService, 'sendEmail'>;
+	logger: Pick<Logger, 'error'>;
 	publishInternalEvent?: SignupInternalEventPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
@@ -64,6 +75,30 @@ function emptyResponse(c: Context): Response {
 	});
 }
 
+function signinFlowResponse(c: Context, deps: ApiShellDependencies, result: HonoApiSigninFlowResult): Response {
+	setApiHeaders(c);
+	const headers: Record<string, string> = {
+		'Access-Control-Allow-Origin': deps.config.url,
+		'Access-Control-Allow-Credentials': 'true',
+		'Cache-Control': 'private, max-age=0, must-revalidate',
+	};
+
+	if (result.body === undefined) {
+		return new Response(null, {
+			status: result.status,
+			headers,
+		});
+	}
+
+	return new Response(JSON.stringify(result.body), {
+		status: result.status,
+		headers: {
+			...headers,
+			'Content-Type': 'application/json; charset=utf-8',
+		},
+	});
+}
+
 function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	setApiHeaders(c);
 	return new Response(JSON.stringify(err.toBody()), {
@@ -94,6 +129,21 @@ function tokenFromRequest(c: Context, body: Record<string, unknown>): string | n
 	}
 
 	return typeof body.i === 'string' ? body.i : null;
+}
+
+function getRequestIp(c: Context, config: Config): string {
+	if (config.trustProxy !== false) {
+		const forwardedFor = c.req.header('x-forwarded-for')?.split(',')[0]?.trim();
+		if (forwardedFor) return forwardedFor;
+
+		const realIp = c.req.header('x-real-ip');
+		if (realIp) return realIp;
+
+		const cfConnectingIp = c.req.header('cf-connecting-ip');
+		if (cfConnectingIp) return cfConnectingIp;
+	}
+
+	return c.req.header('x-misskey-remote-address') ?? '0.0.0.0';
 }
 
 async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {
@@ -143,6 +193,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await signupWithHonoApi(deps, body ?? {}));
+		});
+	});
+
+	app.post('/signin-flow', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return signinFlowResponse(c, deps, await handleHonoApiSigninFlow(deps, {
+				body,
+				headers: c.req.raw.headers,
+				ip: getRequestIp(c, deps.config),
+			}));
 		});
 	});
 
