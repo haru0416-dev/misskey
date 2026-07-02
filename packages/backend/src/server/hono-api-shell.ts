@@ -16,7 +16,7 @@ import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
-import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiMyApps } from './hono-api-app.js';
+import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
@@ -550,6 +550,40 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:account');
 
 			return jsonResponse(c, await handleHonoApiI(deps, auth.user, auth.token));
+		});
+	});
+
+	app.post('/i/apps', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiIApps(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/authorized-apps', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiIAuthorizedApps(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/revoke-token', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			await handleHonoApiIRevokeToken(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 

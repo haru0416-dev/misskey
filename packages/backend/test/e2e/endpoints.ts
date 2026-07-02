@@ -752,6 +752,50 @@ describe('Endpoints', () => {
 	});
 
 	describe('app', () => {
+		async function createLegacyAppToken(name: string): Promise<{
+			app: { id: string; name: string; description?: string | null };
+			accessToken: string;
+		}> {
+			const created = await api('app/create', {
+				name,
+				description: `${name} description`,
+				permission: ['read:account'],
+				callbackUrl: null,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			const appSecret = created.body.secret;
+			if (typeof appSecret !== 'string') {
+				assert.fail('app secret is missing');
+			}
+
+			const generated = await api('auth/session/generate', {
+				appSecret,
+			});
+			assert.strictEqual(generated.status, 200);
+			const sessionToken = generated.body.token;
+			assert.strictEqual(typeof sessionToken, 'string');
+
+			const accepted = await api('auth/accept', {
+				token: sessionToken,
+			}, alice);
+			assert.strictEqual(accepted.status, 204);
+
+			const userkey = await api('auth/session/userkey', {
+				appSecret,
+				token: sessionToken,
+			});
+			assert.strictEqual(userkey.status, 200);
+			const accessToken = userkey.body.accessToken;
+			if (typeof accessToken !== 'string') {
+				assert.fail('access token is missing');
+			}
+
+			return {
+				app: created.body,
+				accessToken,
+			};
+		}
+
 		test('app/create したアプリを app/show と my/apps で取得できる', async () => {
 			const created = await api('app/create', {
 				name: 'test app',
@@ -776,6 +820,45 @@ describe('Endpoints', () => {
 			const mine = await api('my/apps', { limit: 100 }, alice);
 			assert.strictEqual(mine.status, 200);
 			assert.ok(mine.body.some(app => app.id === created.body.id));
+		});
+
+		test('i/apps と i/authorized-apps で連携アプリトークンを取得して revoke できる', async () => {
+			const byToken = await createLegacyAppToken(`i apps revoke by token ${Date.now()}`);
+			const byTokenId = await createLegacyAppToken(`i apps revoke by tokenId ${Date.now()}`);
+
+			const list = await api('i/apps', { sort: '-createdAt' }, alice);
+			assert.strictEqual(list.status, 200);
+			const tokenItem = list.body.find(item => item.name === byToken.app.name);
+			const tokenIdItem = list.body.find(item => item.name === byTokenId.app.name);
+			assert.ok(tokenItem);
+			assert.ok(tokenIdItem);
+			assert.strictEqual(tokenItem.permission.includes('read:account'), true);
+			assert.strictEqual(tokenItem.description, `${byToken.app.name} description`);
+			assert.strictEqual(typeof tokenItem.createdAt, 'string');
+
+			const authorized = await api('i/authorized-apps', { limit: 100, sort: 'desc' }, alice);
+			assert.strictEqual(authorized.status, 200);
+			const authorizedApp = authorized.body.find(app => app.id === byToken.app.id);
+			assert.ok(authorizedApp);
+			assert.strictEqual(authorizedApp.name, byToken.app.name);
+			assert.strictEqual(authorizedApp.isAuthorized, true);
+
+			const denied = await api('i/apps', {}, { token: byToken.accessToken });
+			assert.strictEqual(denied.status, 400);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'ACCESS_DENIED');
+
+			const revokedByToken = await api('i/revoke-token', { token: byToken.accessToken }, alice);
+			assert.strictEqual(revokedByToken.status, 204);
+			const revokedCredential = await api('i', {}, { token: byToken.accessToken });
+			assert.strictEqual(revokedCredential.status, 401);
+			assert.strictEqual(castAsError(revokedCredential.body as any).error.code, 'AUTHENTICATION_FAILED');
+
+			const revokedByTokenId = await api('i/revoke-token', { tokenId: tokenIdItem.id }, alice);
+			assert.strictEqual(revokedByTokenId.status, 204);
+			const afterRevoke = await api('i/authorized-apps', { limit: 100 }, alice);
+			assert.strictEqual(afterRevoke.status, 200);
+			assert.strictEqual(afterRevoke.body.some(app => app.id === byToken.app.id), false);
+			assert.strictEqual(afterRevoke.body.some(app => app.id === byTokenId.app.id), false);
 		});
 	});
 
