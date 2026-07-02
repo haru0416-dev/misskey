@@ -5,6 +5,8 @@
 
 process.env.NODE_ENV = 'test';
 
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import bcrypt from 'bcryptjs';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
@@ -12,12 +14,23 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
+import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
+import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
+import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
+import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
+import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
+import { createRoleInDatabase } from '@/core/RoleStore.js';
+import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { api, castAsError, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
+import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
+import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Endpoints', () => {
@@ -111,6 +124,578 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('api metadata', () => {
+		test('endpoints returns known endpoint names', async () => {
+			const res = await api('endpoints', {});
+
+			assert.strictEqual(res.status, 200);
+			assert.ok(Array.isArray(res.body));
+			assert.ok(res.body.includes('endpoint'));
+			assert.ok(res.body.includes('endpoints'));
+			assert.ok(res.body.includes('i'));
+		});
+
+		test('endpoint returns parameter metadata and null for missing endpoint', async () => {
+			const res = await api('endpoint', {
+				endpoint: 'i/update',
+			});
+
+			assert.strictEqual(res.status, 200);
+			if (res.body == null) assert.fail('endpoint metadata is missing');
+			assert.ok(Array.isArray(res.body.params));
+			assert.ok(res.body.params.some(param => param.name === 'name' && param.type === 'String'));
+
+			const missing = await api('endpoint', {
+				endpoint: 'missing/endpoint',
+			});
+
+			assert.strictEqual(missing.status, 200);
+			assert.strictEqual(missing.body, null);
+		});
+	});
+
+	describe('basic meta endpoints', () => {
+		test('meta returns lite and detailed metadata', async () => {
+			const lite = await api('meta', {
+				detail: false,
+			});
+
+			assert.strictEqual(lite.status, 200);
+			assert.strictEqual(lite.body.uri, origin);
+			assert.strictEqual(typeof lite.body.version, 'string');
+			assert.strictEqual((lite.body as Record<string, unknown>).features, undefined);
+
+			const detailed = await api('meta', {});
+			const detailedBody = detailed.body as {
+				uri: string;
+				features?: { miauth?: boolean };
+				proxyAccountName?: unknown;
+			};
+
+			assert.strictEqual(detailed.status, 200);
+			assert.strictEqual(detailedBody.uri, origin);
+			if (detailedBody.features == null) assert.fail('detailed meta features are missing');
+			assert.strictEqual(detailedBody.features.miauth, true);
+			assert.strictEqual(typeof detailedBody.proxyAccountName, 'string');
+		});
+
+		test('ping returns current timestamp', async () => {
+			const before = Date.now();
+			const res = await api('ping', {});
+			const after = Date.now();
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(typeof res.body.pong, 'number');
+			assert.ok(res.body.pong >= before);
+			assert.ok(res.body.pong <= after);
+		});
+
+		test('server-info supports GET and cache header', async () => {
+			const res = await relativeFetch('api/server-info');
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
+
+			const body = await res.json() as {
+				machine: unknown;
+				cpu?: { model?: unknown; cores?: unknown };
+				mem?: { total?: unknown };
+				fs?: { total?: unknown; used?: unknown };
+			};
+			assert.strictEqual(typeof body.machine, 'string');
+			assert.strictEqual(typeof body.cpu?.model, 'string');
+			assert.strictEqual(typeof body.cpu?.cores, 'number');
+			assert.strictEqual(typeof body.mem?.total, 'number');
+			assert.strictEqual(typeof body.fs?.total, 'number');
+			assert.strictEqual(typeof body.fs?.used, 'number');
+		});
+
+		test('test endpoint validates params and applies defaults', async () => {
+			const res = await api('test', {
+				required: true,
+			});
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.required, true);
+			assert.strictEqual(res.body.default, 'hello');
+			assert.strictEqual(res.body.nullableDefault, 'hello');
+
+			const invalid = await relativeFetch('api/test', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ required: 'yes' }),
+			});
+
+			assert.strictEqual(invalid.status, 400);
+			assert.strictEqual(castAsError(await invalid.json() as Record<string, unknown>).error.code, 'INVALID_PARAM');
+		});
+	});
+
+	describe('availability endpoints', () => {
+		test('username availability reflects existing local users', async () => {
+			const available = await api('username/available', {
+				username: 'availableuser',
+			});
+			assert.strictEqual(available.status, 200);
+			assert.strictEqual(available.body.available, true);
+
+			const taken = await api('username/available', {
+				username: alice.username,
+			});
+			assert.strictEqual(taken.status, 200);
+			assert.strictEqual(taken.body.available, false);
+
+			const invalid = await api('username/available', {
+				username: 'invalid.user',
+			});
+			assert.strictEqual(invalid.status, 400);
+		});
+
+		test('email address availability validates format', async () => {
+			const available = await api('email-address/available', {
+				emailAddress: 'available@example.com',
+			});
+			assert.strictEqual(available.status, 200);
+			assert.strictEqual(available.body.available, true);
+			assert.strictEqual(available.body.reason, null);
+
+			const invalid = await api('email-address/available', {
+				emailAddress: 'invalid-email',
+			});
+			assert.strictEqual(invalid.status, 200);
+			assert.strictEqual(invalid.body.available, false);
+			assert.strictEqual(invalid.body.reason, 'format');
+		});
+
+		test('online users count supports GET and cache header', async () => {
+			const res = await relativeFetch('api/get-online-users-count');
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
+
+			const body = await res.json() as { count?: unknown };
+			assert.strictEqual(typeof body.count, 'number');
+		});
+	});
+
+	describe('emoji endpoints', () => {
+		test('emojis and emoji return packed local emoji data', async () => {
+			const config = loadConfig();
+			const emoji = await insertEmojiInDatabase(db, {
+				id: genId(config),
+				name: 'hono_emoji',
+				host: null,
+				category: 'frameworks',
+				originalUrl: 'https://example.com/original.png',
+				publicUrl: 'https://example.com/public.png',
+				aliases: ['hono'],
+				license: 'example license',
+				localOnly: true,
+				isSensitive: true,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			const list = await relativeFetch('api/emojis');
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.headers.get('cache-control'), 'public, max-age=3600');
+
+			const listBody = await list.json() as {
+				emojis?: {
+					name?: unknown;
+					url?: unknown;
+					category?: unknown;
+					aliases?: unknown;
+					localOnly?: unknown;
+					isSensitive?: unknown;
+				}[];
+			};
+			const listedEmoji = listBody.emojis?.find(item => item.name === emoji.name);
+			assert.ok(listedEmoji);
+			assert.strictEqual(listedEmoji.url, emoji.publicUrl);
+			assert.strictEqual(listedEmoji.category, emoji.category);
+			assert.deepStrictEqual(listedEmoji.aliases, emoji.aliases);
+			assert.strictEqual(listedEmoji.localOnly, true);
+			assert.strictEqual(listedEmoji.isSensitive, true);
+
+			const detail = await api('emoji', {
+				name: emoji.name,
+			});
+			assert.strictEqual(detail.status, 200);
+			assert.strictEqual(detail.body.id, emoji.id);
+			assert.strictEqual(detail.body.name, emoji.name);
+			assert.strictEqual(detail.body.host, null);
+			assert.strictEqual(detail.body.url, emoji.publicUrl);
+			assert.strictEqual(detail.body.license, emoji.license);
+			assert.strictEqual(detail.body.localOnly, true);
+			assert.strictEqual(detail.body.isSensitive, true);
+
+			const detailByGet = await relativeFetch(`api/emoji?name=${emoji.name}`);
+			assert.strictEqual(detailByGet.status, 200);
+			assert.strictEqual(detailByGet.headers.get('cache-control'), 'public, max-age=3600');
+		});
+	});
+
+	describe('retention endpoint', () => {
+		test('retention supports GET and returns latest aggregation data', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			await createRetentionAggregationInDatabase(db, {
+				id: genId(config, now),
+				createdAt: new Date(now),
+				updatedAt: new Date(now),
+				dateKey: `hono-retention-${now}`,
+				userIds: [alice.id],
+				usersCount: 1,
+				data: { '1': 1 },
+			});
+			const latest = {
+				id: genId(config, now + 1),
+				createdAt: new Date(now + 1),
+				updatedAt: new Date(now + 1),
+				dateKey: `hono-retention-${now + 1}`,
+				userIds: [alice.id, bob.id],
+				usersCount: 2,
+				data: { '1': 2, '2': 1 },
+			};
+			await createRetentionAggregationInDatabase(db, latest);
+
+			const res = await relativeFetch('api/retention');
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
+
+			const body = await res.json() as { createdAt?: unknown; users?: unknown; data?: Record<string, unknown> }[];
+			const record = body.find(item => item.createdAt === latest.createdAt.toISOString());
+			assert.ok(record);
+			assert.strictEqual(record.users, latest.usersCount);
+			assert.deepStrictEqual(record.data, latest.data);
+		});
+	});
+
+	describe('hashtag endpoints', () => {
+		test('list, search, and show return packed hashtag data', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const primary = `hono_hashtag_primary_${now}`;
+			const secondary = `hono_hashtag_secondary_${now}`;
+			await db.insert(hashtagTable).values([{
+				id: genId(config, now),
+				name: primary,
+				mentionedUserIds: [alice.id, bob.id],
+				mentionedUsersCount: 1000002,
+				mentionedLocalUserIds: [alice.id, bob.id],
+				mentionedLocalUsersCount: 1000002,
+				mentionedRemoteUserIds: [],
+				mentionedRemoteUsersCount: 0,
+				attachedUserIds: [alice.id],
+				attachedUsersCount: 1000001,
+				attachedLocalUserIds: [alice.id],
+				attachedLocalUsersCount: 1000001,
+				attachedRemoteUserIds: [],
+				attachedRemoteUsersCount: 0,
+			}, {
+				id: genId(config, now + 1),
+				name: secondary,
+				mentionedUserIds: [alice.id],
+				mentionedUsersCount: 1000001,
+				mentionedLocalUserIds: [alice.id],
+				mentionedLocalUsersCount: 1000001,
+				mentionedRemoteUserIds: [],
+				mentionedRemoteUsersCount: 0,
+				attachedUserIds: [],
+				attachedUsersCount: 0,
+				attachedLocalUserIds: [],
+				attachedLocalUsersCount: 0,
+				attachedRemoteUserIds: [],
+				attachedRemoteUsersCount: 0,
+			}]);
+
+			const list = await api('hashtags/list', {
+				limit: 5,
+				sort: '+mentionedUsers',
+			});
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body[0].tag, primary);
+			assert.strictEqual(list.body[0].mentionedUsersCount, 1000002);
+			assert.strictEqual(list.body[0].attachedLocalUsersCount, 1000001);
+
+			const search = await api('hashtags/search', {
+				query: `hono_hashtag_`,
+				limit: 10,
+			});
+			assert.strictEqual(search.status, 200);
+			assert.ok(search.body.includes(primary));
+			assert.ok(search.body.includes(secondary));
+
+			const shown = await api('hashtags/show', {
+				tag: primary.toUpperCase(),
+			});
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.tag, primary);
+			assert.strictEqual(shown.body.mentionedLocalUsersCount, 1000002);
+
+			const missing = await api('hashtags/show', {
+				tag: `missing_${primary}`,
+			});
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
+		});
+
+		test('trend returns Redis-backed hashtag ranking charts', async () => {
+			const config = loadConfig();
+			const redis = createRedisClient(config);
+			const tag = `hono_trend_${Date.now()}`;
+			const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
+			const rankingWindow = Math.floor((Date.now() - featuredEpoc) / (1000 * 60 * 60));
+			const chartWindowDate = new Date();
+			chartWindowDate.setMinutes(Math.floor(chartWindowDate.getMinutes() / 10) * 10, 0, 0);
+			const chartWindow = `${chartWindowDate.getUTCFullYear()}${(chartWindowDate.getUTCMonth() + 1).toString().padStart(2, '0')}${chartWindowDate.getUTCDate().toString().padStart(2, '0')}${chartWindowDate.getUTCHours().toString().padStart(2, '0')}${chartWindowDate.getUTCMinutes().toString().padStart(2, '0')}`;
+
+			try {
+				await redis.zadd(`featuredHashtagsRanking:${rankingWindow}`, 5, tag);
+				await redis.pfadd(`hashtagUsers:${tag}:${chartWindow}`, alice.id, bob.id);
+
+				const trend = await api('hashtags/trend', {});
+				assert.strictEqual(trend.status, 200);
+				const ranked = trend.body.find(item => item.tag === tag);
+				assert.ok(ranked);
+				assert.strictEqual(ranked.chart.length, 20);
+				assert.ok(ranked.usersCount >= 1);
+			} finally {
+				await redis.zrem(`featuredHashtagsRanking:${rankingWindow}`, tag);
+				await redis.del(`hashtagUsers:${tag}:${chartWindow}`);
+				await closeRedisConnection(redis);
+			}
+		});
+	});
+
+	describe('avatar decoration endpoints', () => {
+		test('get-avatar-decorations filters unavailable role ids', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const createdRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono avatar decoration role ${now}`,
+				description: 'Hono avatar decoration endpoint test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const decoration = await createAvatarDecorationInDatabase(db, {
+				id: genId(config, now + 1),
+				name: `Hono decoration ${now}`,
+				description: 'Hono avatar decoration',
+				url: 'https://example.com/avatar-decoration.png',
+				roleIdsThatCanBeUsedThisDecoration: [createdRole.id, 'missing-role-id'],
+				category: 'hono',
+			});
+
+			const res = await api('get-avatar-decorations', {});
+			assert.strictEqual(res.status, 200);
+			const listed = res.body.find(item => item.id === decoration.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.name, decoration.name);
+			assert.strictEqual(listed.description, decoration.description);
+			assert.strictEqual(listed.url, decoration.url);
+			assert.deepStrictEqual(listed.roleIdsThatCanBeUsedThisDecoration, [createdRole.id]);
+			assert.strictEqual(listed.category, decoration.category);
+		});
+	});
+
+	describe('federation endpoints', () => {
+		test('instances, show-instance, and stats return packed federation instances', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const alpha = await createInstanceInDatabase(db, {
+				id: genId(config, now),
+				host: `hono-fed-alpha-${now}.example`,
+				firstRetrievedAt: new Date(now),
+				usersCount: 1000001,
+				notesCount: 2000001,
+				followingCount: 3000001,
+				followersCount: 4000001,
+				latestRequestReceivedAt: new Date(now + 1000),
+				isNotResponding: false,
+				suspensionState: 'none',
+				softwareName: 'misskey',
+				softwareVersion: '2024.5.0',
+				openRegistrations: true,
+				name: 'Hono Federation Alpha',
+				description: 'Hono federation endpoint test instance',
+				maintainerName: 'hono maintainer',
+				maintainerEmail: 'hono@example.com',
+				iconUrl: 'https://example.com/icon.png',
+				faviconUrl: null,
+				themeColor: '#86b300',
+				infoUpdatedAt: new Date(now + 2000),
+				moderationNote: 'hidden moderation note',
+			});
+			const beta = await createInstanceInDatabase(db, {
+				id: genId(config, now + 1),
+				host: `hono-fed-beta-${now}.example`,
+				firstRetrievedAt: new Date(now + 1),
+				usersCount: 1000002,
+				notesCount: 2000002,
+				followingCount: 5000001,
+				followersCount: 3000001,
+				latestRequestReceivedAt: null,
+				isNotResponding: true,
+				suspensionState: 'none',
+				softwareName: 'mastodon',
+				softwareVersion: '4.3.0',
+				openRegistrations: false,
+				name: 'Hono Federation Beta',
+				description: null,
+				maintainerName: null,
+				maintainerEmail: null,
+				iconUrl: null,
+				faviconUrl: 'https://example.com/favicon.ico',
+				themeColor: null,
+				infoUpdatedAt: null,
+				moderationNote: '',
+			});
+
+			const instancesQuery = new URLSearchParams({
+				limit: '10',
+				host: `hono-fed-alpha-${now}`,
+				sort: '+followers',
+			});
+			const instances = await relativeFetch(`api/federation/instances?${instancesQuery.toString()}`);
+			assert.strictEqual(instances.status, 200);
+			assert.strictEqual(instances.headers.get('cache-control'), 'public, max-age=3600');
+
+			const instancesBody = await instances.json() as {
+				id?: unknown;
+				host?: unknown;
+				name?: unknown;
+				followersCount?: unknown;
+				isSuspended?: unknown;
+				suspensionState?: unknown;
+				softwareName?: unknown;
+				infoUpdatedAt?: unknown;
+				latestRequestReceivedAt?: unknown;
+				moderationNote?: unknown;
+			}[];
+			const listedAlpha = instancesBody.find(instance => instance.id === alpha.id);
+			assert.ok(listedAlpha);
+			assert.strictEqual(listedAlpha.host, alpha.host);
+			assert.strictEqual(listedAlpha.name, alpha.name);
+			assert.strictEqual(listedAlpha.followersCount, alpha.followersCount);
+			assert.strictEqual(listedAlpha.isSuspended, false);
+			assert.strictEqual(listedAlpha.suspensionState, 'none');
+			assert.strictEqual(listedAlpha.softwareName, alpha.softwareName);
+			assert.strictEqual(listedAlpha.infoUpdatedAt, alpha.infoUpdatedAt?.toISOString());
+			assert.strictEqual(listedAlpha.latestRequestReceivedAt, alpha.latestRequestReceivedAt?.toISOString());
+			assert.strictEqual(listedAlpha.moderationNote, null);
+
+			const shown = await api('federation/show-instance', { host: alpha.host.toUpperCase() });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body?.id, alpha.id);
+			assert.strictEqual(shown.body?.host, alpha.host);
+
+			const stats = await relativeFetch('api/federation/stats?limit=1');
+			assert.strictEqual(stats.status, 200);
+			assert.strictEqual(stats.headers.get('cache-control'), 'public, max-age=3600');
+
+			const statsBody = await stats.json() as {
+				topSubInstances?: { id?: unknown }[];
+				topPubInstances?: { id?: unknown }[];
+				otherFollowersCount?: unknown;
+				otherFollowingCount?: unknown;
+			};
+			assert.strictEqual(statsBody.topSubInstances?.[0]?.id, alpha.id);
+			assert.strictEqual(statsBody.topPubInstances?.[0]?.id, beta.id);
+			assert.strictEqual(typeof statsBody.otherFollowersCount, 'number');
+			assert.strictEqual(typeof statsBody.otherFollowingCount, 'number');
+		});
+	});
+
+	describe('announcement endpoints', () => {
+		test('announcements list and show respect user-specific visibility', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const globalAnnouncement = await createAnnouncementInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: null,
+				title: 'Global announcement',
+				text: 'Visible to everyone',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				needConfirmationToRead: false,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: null,
+			});
+			const userAnnouncement = await createAnnouncementInDatabase(db, {
+				id: genId(config, now + 1),
+				updatedAt: null,
+				title: 'User announcement',
+				text: 'Visible to Alice only',
+				imageUrl: null,
+				icon: 'success',
+				display: 'banner',
+				needConfirmationToRead: true,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: alice.id,
+			});
+			await createAnnouncementReadInDatabase(db, {
+				id: genId(config, now + 2),
+				announcementId: globalAnnouncement.id,
+				userId: alice.id,
+			});
+
+			const anonymousList = await api('announcements', { limit: 10 });
+			assert.strictEqual(anonymousList.status, 200);
+			assert.ok(anonymousList.body.some(announcement => announcement.id === globalAnnouncement.id));
+			assert.ok(!anonymousList.body.some(announcement => announcement.id === userAnnouncement.id));
+
+			const aliceList = await api('announcements', { limit: 10 }, alice);
+			assert.strictEqual(aliceList.status, 200);
+			const listedGlobal = aliceList.body.find(announcement => announcement.id === globalAnnouncement.id);
+			const listedUser = aliceList.body.find(announcement => announcement.id === userAnnouncement.id);
+			assert.strictEqual(listedGlobal?.isRead, true);
+			assert.strictEqual(listedUser?.forYou, true);
+			assert.strictEqual(listedUser?.isRead, false);
+
+			const shownGlobal = await api('announcements/show', {
+				announcementId: globalAnnouncement.id,
+			});
+			assert.strictEqual(shownGlobal.status, 200);
+			assert.strictEqual(shownGlobal.body.title, globalAnnouncement.title);
+
+			const hiddenUser = await api('announcements/show', {
+				announcementId: userAnnouncement.id,
+			});
+			assert.strictEqual(hiddenUser.status, 404);
+			assert.strictEqual(castAsError(hiddenUser.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
+
+			const shownUser = await api('announcements/show', {
+				announcementId: userAnnouncement.id,
+			}, alice);
+			assert.strictEqual(shownUser.status, 200);
+			assert.strictEqual(shownUser.body.forYou, true);
+			assert.strictEqual(shownUser.body.needConfirmationToRead, true);
+		});
+	});
+
 	describe('signin-flow', () => {
 		test('間違ったパスワードでサインインできない', async () => {
 			const res = await api('signin-flow', {
@@ -150,6 +735,214 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body.context, 'string');
 			assert.strictEqual(typeof res.body.option.challenge, 'string');
+		});
+	});
+
+	describe('signin history endpoints', () => {
+		test('i/signin-history returns own signin records', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const older = await createSigninInDatabase(db, {
+				id: genId(config, now - 2000),
+				userId: alice.id,
+				ip: '192.0.2.10',
+				headers: { 'user-agent': 'hono-signin-history-older' },
+				success: true,
+			});
+			const newer = await createSigninInDatabase(db, {
+				id: genId(config, now - 1000),
+				userId: alice.id,
+				ip: '192.0.2.11',
+				headers: { 'user-agent': 'hono-signin-history-newer' },
+				success: false,
+			});
+			const otherUser = await createSigninInDatabase(db, {
+				id: genId(config, now),
+				userId: bob.id,
+				ip: '192.0.2.12',
+				headers: { 'user-agent': 'hono-signin-history-other' },
+				success: true,
+			});
+
+			const history = await api('i/signin-history', { limit: 20 }, alice);
+			assert.strictEqual(history.status, 200);
+			const newerIndex = history.body.findIndex(item => item.id === newer.id);
+			const olderIndex = history.body.findIndex(item => item.id === older.id);
+			assert.ok(newerIndex >= 0);
+			assert.ok(olderIndex >= 0);
+			assert.ok(newerIndex < olderIndex);
+			assert.strictEqual(history.body[newerIndex].createdAt, new Date(now - 1000).toISOString());
+			assert.strictEqual(history.body[newerIndex].ip, newer.ip);
+			assert.deepStrictEqual(history.body[newerIndex].headers, newer.headers);
+			assert.strictEqual(history.body[newerIndex].success, false);
+			assert.strictEqual(history.body.some(item => item.id === otherUser.id), false);
+
+			const afterOlder = await api('i/signin-history', { sinceId: older.id, limit: 20 }, alice);
+			assert.strictEqual(afterOlder.status, 200);
+			assert.strictEqual(afterOlder.body.some(item => item.id === newer.id), true);
+			assert.strictEqual(afterOlder.body.some(item => item.id === older.id), false);
+		});
+	});
+
+	describe('registry endpoints', () => {
+		test('i/registry endpoints store native and app-token scoped values', async () => {
+			const now = Date.now();
+			const nativeScope = ['hono', 'registry'];
+			const nativeKey = `native_${now}`;
+			const nativeValue = {
+				enabled: true,
+				count: 2,
+				items: ['alpha', 'beta'],
+			};
+
+			const setNative = await api('i/registry/set', {
+				scope: nativeScope,
+				key: nativeKey,
+				value: nativeValue,
+			}, alice);
+			assert.strictEqual(setNative.status, 204);
+
+			const gotNative = await api('i/registry/get', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(gotNative.status, 200);
+			assert.deepStrictEqual(gotNative.body, nativeValue);
+
+			const detail = await api('i/registry/get-detail', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(detail.status, 200);
+			assert.strictEqual(typeof detail.body.updatedAt, 'string');
+			assert.deepStrictEqual(detail.body.value, nativeValue);
+
+			const all = await api('i/registry/get-all', {
+				scope: nativeScope,
+			}, alice);
+			assert.strictEqual(all.status, 200);
+			assert.deepStrictEqual(all.body[nativeKey], nativeValue);
+
+			const keys = await api('i/registry/keys', {
+				scope: nativeScope,
+			}, alice);
+			assert.strictEqual(keys.status, 200);
+			assert.ok(keys.body.includes(nativeKey));
+
+			const keysWithType = await api('i/registry/keys-with-type', {
+				scope: nativeScope,
+			}, alice);
+			assert.strictEqual(keysWithType.status, 200);
+			assert.strictEqual(keysWithType.body[nativeKey], 'object');
+
+			const appToken = await createAppToken(alice, ['read:account', 'write:account']);
+			const appScope = ['hono', 'registry_app'];
+			const appKey = `app_${now}`;
+			const appValue = ['from', 'app'];
+			const setApp = await api('i/registry/set', {
+				scope: appScope,
+				key: appKey,
+				value: appValue,
+			}, { token: appToken });
+			assert.strictEqual(setApp.status, 204);
+
+			const gotApp = await api('i/registry/get', {
+				scope: appScope,
+				key: appKey,
+			}, { token: appToken });
+			assert.strictEqual(gotApp.status, 200);
+			assert.deepStrictEqual(gotApp.body, appValue);
+
+			const nativeCannotReadAppDomain = await api('i/registry/get', {
+				scope: appScope,
+				key: appKey,
+			}, alice);
+			assert.strictEqual(nativeCannotReadAppDomain.status, 400);
+			assert.strictEqual(castAsError(nativeCannotReadAppDomain.body as any).error.code, 'NO_SUCH_KEY');
+
+			const scopesWithDomain = await api('i/registry/scopes-with-domain', {}, alice);
+			assert.strictEqual(scopesWithDomain.status, 200);
+			assert.ok(scopesWithDomain.body.some(item => item.domain === null && item.scopes.some(scope => scope.join('.') === nativeScope.join('.'))));
+			assert.ok(scopesWithDomain.body.some(item => item.domain != null && item.scopes.some(scope => scope.join('.') === appScope.join('.'))));
+
+			const appDenied = await api('i/registry/scopes-with-domain', {}, { token: appToken });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const removed = await api('i/registry/remove', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(removed.status, 204);
+			const afterRemove = await api('i/registry/get', {
+				scope: nativeScope,
+				key: nativeKey,
+			}, alice);
+			assert.strictEqual(afterRemove.status, 400);
+			assert.strictEqual(castAsError(afterRemove.body as any).error.code, 'NO_SUCH_KEY');
+		});
+	});
+
+	describe('fetch-rss endpoint', () => {
+		let rssServer: Server | undefined;
+
+		afterAll(async () => {
+			await new Promise<void>((resolve, reject) => {
+				if (rssServer == null || !rssServer.listening) {
+					resolve();
+					return;
+				}
+
+				rssServer.close(error => error ? reject(error) : resolve());
+			});
+		});
+
+		test('fetch-rss parses RSS over POST and GET', async () => {
+			const rssXml = [
+				'<?xml version="1.0" encoding="UTF-8" ?>',
+				'<rss version="2.0">',
+				'<channel>',
+				'<title>Hono RSS Feed</title>',
+				'<link>https://example.com/</link>',
+				'<description>RSS fixture</description>',
+				'<item>',
+				'<title>First entry</title>',
+				'<link>https://example.com/entry</link>',
+				'<guid>entry-1</guid>',
+				'<pubDate>Tue, 01 Jul 2025 00:00:00 GMT</pubDate>',
+				'</item>',
+				'</channel>',
+				'</rss>',
+			].join('');
+
+			rssServer = createServer((req, res) => {
+				res.writeHead(200, {
+					'Content-Type': 'application/rss+xml; charset=utf-8',
+				});
+				res.end(rssXml);
+			});
+			await new Promise<void>((resolve, reject) => {
+				rssServer!.once('error', reject);
+				rssServer!.listen(0, '127.0.0.1', () => {
+					rssServer!.off('error', reject);
+					resolve();
+				});
+			});
+			const address = rssServer.address() as AddressInfo;
+			const url = `http://127.0.0.1:${address.port}/feed.xml`;
+
+			const post = await api('fetch-rss', { url });
+			assert.strictEqual(post.status, 200);
+			assert.strictEqual(post.body.title, 'Hono RSS Feed');
+			assert.strictEqual(post.body.items[0].title, 'First entry');
+			assert.strictEqual(post.body.items[0].guid, 'entry-1');
+
+			const get = await relativeFetch(`api/fetch-rss?url=${encodeURIComponent(url)}`);
+			assert.strictEqual(get.status, 200);
+			assert.strictEqual(get.headers.get('cache-control'), 'public, max-age=180');
+			const getBody = await get.json() as { title?: string; items?: { title?: string }[] };
+			assert.strictEqual(getBody.title, 'Hono RSS Feed');
+			assert.strictEqual(getBody.items?.[0].title, 'First entry');
 		});
 	});
 
@@ -247,6 +1040,50 @@ describe('Endpoints', () => {
 	});
 
 	describe('app', () => {
+		async function createLegacyAppToken(name: string): Promise<{
+			app: { id: string; name: string; description?: string | null };
+			accessToken: string;
+		}> {
+			const created = await api('app/create', {
+				name,
+				description: `${name} description`,
+				permission: ['read:account'],
+				callbackUrl: null,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			const appSecret = created.body.secret;
+			if (typeof appSecret !== 'string') {
+				assert.fail('app secret is missing');
+			}
+
+			const generated = await api('auth/session/generate', {
+				appSecret,
+			});
+			assert.strictEqual(generated.status, 200);
+			const sessionToken = generated.body.token;
+			assert.strictEqual(typeof sessionToken, 'string');
+
+			const accepted = await api('auth/accept', {
+				token: sessionToken,
+			}, alice);
+			assert.strictEqual(accepted.status, 204);
+
+			const userkey = await api('auth/session/userkey', {
+				appSecret,
+				token: sessionToken,
+			});
+			assert.strictEqual(userkey.status, 200);
+			const accessToken = userkey.body.accessToken;
+			if (typeof accessToken !== 'string') {
+				assert.fail('access token is missing');
+			}
+
+			return {
+				app: created.body,
+				accessToken,
+			};
+		}
+
 		test('app/create したアプリを app/show と my/apps で取得できる', async () => {
 			const created = await api('app/create', {
 				name: 'test app',
@@ -271,6 +1108,108 @@ describe('Endpoints', () => {
 			const mine = await api('my/apps', { limit: 100 }, alice);
 			assert.strictEqual(mine.status, 200);
 			assert.ok(mine.body.some(app => app.id === created.body.id));
+		});
+
+		test('i/apps と i/authorized-apps で連携アプリトークンを取得して revoke できる', async () => {
+			const byToken = await createLegacyAppToken(`i apps revoke by token ${Date.now()}`);
+			const byTokenId = await createLegacyAppToken(`i apps revoke by tokenId ${Date.now()}`);
+
+			const list = await api('i/apps', { sort: '-createdAt' }, alice);
+			assert.strictEqual(list.status, 200);
+			const tokenItem = list.body.find(item => item.name === byToken.app.name);
+			const tokenIdItem = list.body.find(item => item.name === byTokenId.app.name);
+			assert.ok(tokenItem);
+			assert.ok(tokenIdItem);
+			assert.strictEqual(tokenItem.permission.includes('read:account'), true);
+			assert.strictEqual(tokenItem.description, `${byToken.app.name} description`);
+			assert.strictEqual(typeof tokenItem.createdAt, 'string');
+
+			const authorized = await api('i/authorized-apps', { limit: 100, sort: 'desc' }, alice);
+			assert.strictEqual(authorized.status, 200);
+			const authorizedApp = authorized.body.find(app => app.id === byToken.app.id);
+			assert.ok(authorizedApp);
+			assert.strictEqual(authorizedApp.name, byToken.app.name);
+			assert.strictEqual(authorizedApp.isAuthorized, true);
+
+			const denied = await api('i/apps', {}, { token: byToken.accessToken });
+			assert.strictEqual(denied.status, 400);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'ACCESS_DENIED');
+
+			const revokedByToken = await api('i/revoke-token', { token: byToken.accessToken }, alice);
+			assert.strictEqual(revokedByToken.status, 204);
+			const revokedCredential = await api('i', {}, { token: byToken.accessToken });
+			assert.strictEqual(revokedCredential.status, 401);
+			assert.strictEqual(castAsError(revokedCredential.body as any).error.code, 'AUTHENTICATION_FAILED');
+
+			const revokedByTokenId = await api('i/revoke-token', { tokenId: tokenIdItem.id }, alice);
+			assert.strictEqual(revokedByTokenId.status, 204);
+			const afterRevoke = await api('i/authorized-apps', { limit: 100 }, alice);
+			assert.strictEqual(afterRevoke.status, 200);
+			assert.strictEqual(afterRevoke.body.some(app => app.id === byToken.app.id), false);
+			assert.strictEqual(afterRevoke.body.some(app => app.id === byTokenId.app.id), false);
+		});
+	});
+
+	describe('role endpoints', () => {
+		test('roles/list and roles/show return packed public role data', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const createdRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 1000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono public role ${now}`,
+				description: 'Hono role endpoint test',
+				color: '#2255aa',
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 4242,
+				policies: {},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now - 999),
+				userId: bob.id,
+				roleId: createdRole.id,
+				expiresAt: null,
+			});
+
+			const unauthorizedList = await api('roles/list', {});
+			assert.strictEqual(unauthorizedList.status, 401);
+			assert.strictEqual(castAsError(unauthorizedList.body as any).error.code, 'CREDENTIAL_REQUIRED');
+
+			const list = await api('roles/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const listedRole = list.body.find(item => item.id === createdRole.id);
+			assert.ok(listedRole);
+			assert.strictEqual(listedRole.name, createdRole.name);
+			assert.strictEqual(listedRole.description, createdRole.description);
+			assert.strictEqual(listedRole.color, createdRole.color);
+			assert.strictEqual(listedRole.isPublic, true);
+			assert.strictEqual(listedRole.isExplorable, true);
+			assert.strictEqual(listedRole.displayOrder, 4242);
+			assert.strictEqual(listedRole.usersCount, 1);
+			assert.strictEqual(listedRole.policies.canInvite.useDefault, true);
+
+			const shown = await api('roles/show', { roleId: createdRole.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, createdRole.id);
+			assert.strictEqual(shown.body.name, createdRole.name);
+			assert.strictEqual(shown.body.usersCount, 1);
+
+			const missing = await api('roles/show', { roleId: '000000000000000000000000' });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
 		});
 	});
 
