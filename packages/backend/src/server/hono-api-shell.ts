@@ -19,7 +19,7 @@ import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
 import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from './hono-api-auth-session.js';
-import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
+import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono-api-error.js';
 import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import {
@@ -35,7 +35,7 @@ import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, 
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
-import { handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsUnfollow } from './hono-api-channels.js';
+import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
 import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
@@ -49,6 +49,7 @@ import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from '.
 import { handleHonoApiPromoRead } from './hono-api-promo.js';
 import { assertHonoApiRateLimit } from './hono-api-rate-limit.js';
 import { handleHonoApiResetDb } from './hono-api-reset-db.js';
+import { getHonoApiRolePolicies } from './hono-api-role-policy.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -506,6 +507,25 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/channels/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:channels');
+			if (!(await getHonoApiRolePolicies(deps, auth.user)).canCreateChannel) {
+				throw rolePermissionDeniedError();
+			}
+			await assertHonoApiRateLimit(deps, 'channels/create', {
+				duration: 60 * 60 * 1000,
+				max: 10,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiChannelsCreate(deps, auth.user, body));
+		});
+	});
+
 	app.post('/channels/featured', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -631,6 +651,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiChannelsUnfollow(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/channels/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:channels');
+
+			return jsonResponse(c, await handleHonoApiChannelsUpdate(deps, auth.user, body));
 		});
 	});
 

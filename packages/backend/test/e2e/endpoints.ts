@@ -2697,6 +2697,228 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('Hono channel write endpoints', () => {
+		const createOwnedDriveFile = async (userId: string, seed: string) => {
+			const config = loadConfig();
+			const md5 = createHash('md5').update(seed).digest('hex');
+			return await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId,
+				userHost: null,
+				md5,
+				name: `${seed}.png`,
+				type: 'image/png',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+		};
+
+		test('create and update return packed channels with caller-scoped flags', async () => {
+			const owner = await signup({ username: `honochnowner${Date.now().toString(36)}` });
+			const createdBanner = await createOwnedDriveFile(owner.id, `hono-channel-create-${Date.now()}`);
+			const created = await api('channels/create', {
+				name: `hono-channel-create-${Date.now().toString(36)}`,
+				description: 'hono channel create target',
+				bannerId: createdBanner.id,
+				color: '#123456',
+				isSensitive: true,
+				allowRenoteToExternal: false,
+			}, owner);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.userId, owner.id);
+			assert.strictEqual(created.body.description, 'hono channel create target');
+			assert.strictEqual(created.body.bannerId, createdBanner.id);
+			assert.strictEqual(created.body.color, '#123456');
+			assert.strictEqual(created.body.isSensitive, true);
+			assert.strictEqual(created.body.allowRenoteToExternal, false);
+			assert.strictEqual(created.body.isFollowing, false);
+			assert.strictEqual(created.body.isFavorited, false);
+			assert.strictEqual(created.body.isMuting, false);
+
+			const updatedBanner = await createOwnedDriveFile(owner.id, `hono-channel-update-${Date.now()}`);
+			const pinnedNoteId = '000000000000000000000001';
+			const updated = await api('channels/update', {
+				channelId: created.body.id,
+				name: 'hono channel updated',
+				description: null,
+				bannerId: updatedBanner.id,
+				isArchived: true,
+				pinnedNoteIds: [pinnedNoteId],
+				color: '#654321',
+				isSensitive: false,
+				allowRenoteToExternal: true,
+			}, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.id, created.body.id);
+			assert.strictEqual(updated.body.name, 'hono channel updated');
+			assert.strictEqual(updated.body.description, null);
+			assert.strictEqual(updated.body.bannerId, updatedBanner.id);
+			assert.strictEqual(updated.body.isArchived, true);
+			assert.deepStrictEqual(updated.body.pinnedNoteIds, [pinnedNoteId]);
+			assert.strictEqual(updated.body.color, '#654321');
+			assert.strictEqual(updated.body.isSensitive, false);
+			assert.strictEqual(updated.body.allowRenoteToExternal, true);
+		});
+
+		test('keeps legacy channel create validation, policy, and moved-account errors', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const deniedUser = await signup({ username: `honochdeny${now.toString(36)}` });
+			const requester = await signup({ username: `honochreq${now.toString(36)}` });
+			const fileOwner = await signup({ username: `honochfile${now.toString(36)}` });
+			const denyRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono channel create deny role ${now}`,
+				description: 'Hono channel create deny role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {
+					canCreateChannel: {
+						useDefault: false,
+						priority: 2,
+						value: false,
+					},
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: deniedUser.id,
+				roleId: denyRole.id,
+				expiresAt: null,
+			});
+
+			const policyDenied = await api('channels/create', {
+				name: 'hono policy denied channel',
+			}, deniedUser);
+			assert.strictEqual(policyDenied.status, 403);
+			assert.strictEqual(castAsError(policyDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			assert.strictEqual(castAsError(policyDenied.body as any).error.id, 'c3d38592-54c0-429d-be96-5636b0431a61');
+
+			const otherFile = await createOwnedDriveFile(fileOwner.id, `hono-channel-other-file-${now}`);
+			const missingFile = await api('channels/create', {
+				name: 'hono channel missing file',
+				bannerId: otherFile.id,
+			}, requester);
+			assert.strictEqual(missingFile.status, 400);
+			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050');
+
+			const readToken = await createAppToken(requester, ['read:channels']);
+			const permissionDenied = await api('channels/create', {
+				name: 'hono channel app denied',
+			}, { token: readToken });
+			assert.strictEqual(permissionDenied.status, 403);
+			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const movedUser = await signup({ username: `honochmoved${now.toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+			const movedDenied = await api('channels/create', {
+				name: 'hono moved denied channel',
+			}, movedUser);
+			assert.strictEqual(movedDenied.status, 403);
+			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+		});
+
+		test('keeps legacy channel update authorization and file errors', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const owner = await signup({ username: `hcupown${now.toString(36)}` });
+			const intruder = await signup({ username: `honochupintr${now.toString(36)}` });
+			const target = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				name: `hono-update-target-${now.toString(36)}`,
+				description: 'hono update target',
+			});
+
+			const missing = await api('channels/update', {
+				channelId: '000000000000000000000000',
+				name: 'missing',
+			}, intruder);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'f9c5467f-d492-4c3c-9a8d-a70dacc86512');
+
+			const denied = await api('channels/update', {
+				channelId: target.id,
+				name: 'denied',
+			}, intruder);
+			assert.strictEqual(denied.status, 400);
+			assert.strictEqual(castAsError(denied.body as any).error.id, '1fb7cb09-d46a-4fdf-b8df-057788cce513');
+
+			const intruderFile = await createOwnedDriveFile(intruder.id, `hono-channel-intruder-file-${now}`);
+			const missingFile = await api('channels/update', {
+				channelId: target.id,
+				bannerId: intruderFile.id,
+			}, owner);
+			assert.strictEqual(missingFile.status, 400);
+			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'e86c14a4-0da2-4032-8df3-e737a04c7f3b');
+
+			const readToken = await createAppToken(owner, ['read:channels']);
+			const permissionDenied = await api('channels/update', {
+				channelId: target.id,
+				name: 'denied by app scope',
+			}, { token: readToken });
+			assert.strictEqual(permissionDenied.status, 403);
+			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const moderator = await signup({ username: `honomod${now.toString(36)}` });
+			const moderatorRole = await createRoleInDatabase(db, {
+				id: genId(config, now + 2),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono channel moderator role ${now}`,
+				description: 'Hono channel moderator role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: true,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 3),
+				userId: moderator.id,
+				roleId: moderatorRole.id,
+				expiresAt: null,
+			});
+
+			const moderatorUpdate = await api('channels/update', {
+				channelId: target.id,
+				name: 'moderator updated channel',
+			}, moderator);
+			assert.strictEqual(moderatorUpdate.status, 200);
+			assert.strictEqual(moderatorUpdate.body.id, target.id);
+			assert.strictEqual(moderatorUpdate.body.name, 'moderator updated channel');
+		});
+	});
+
 	describe('Hono channel follow endpoints', () => {
 		test('follow and unfollow update the channel following row', async () => {
 			const config = loadConfig();

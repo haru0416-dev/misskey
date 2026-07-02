@@ -20,15 +20,17 @@ import {
 	updateChannelMutingExpirationInDatabase,
 } from '@/core/ChannelMutingStore.js';
 import {
+	createChannelInDatabase,
 	listChannelsByIdsFromDatabase,
 	listChannelsBySearchFromDatabase,
 	listOwnedChannelsFromDatabase,
 	listRecentlyActiveChannelsFromDatabase,
 	resolveChannelPagination,
 	fetchChannelByIdFromDatabase,
+	updateChannelInDatabase,
 } from '@/core/ChannelStore.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
-import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -41,6 +43,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
+import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiChannelsDependencies = {
@@ -97,6 +100,61 @@ const emptyParamDef = {
 	required: [],
 } as const;
 
+const channelCreateParamDef = {
+	type: 'object',
+	properties: {
+		name: { type: 'string', minLength: 1, maxLength: 128 },
+		description: { type: 'string', nullable: true, maxLength: 2048 },
+		bannerId: { type: 'string', format: 'misskey:id', nullable: true },
+		color: { type: 'string', minLength: 1, maxLength: 16 },
+		isSensitive: { type: 'boolean', nullable: true },
+		allowRenoteToExternal: { type: 'boolean', nullable: true },
+	},
+	required: ['name'],
+} as const;
+
+type ChannelCreateParams = {
+	name: string;
+	description?: string | null;
+	bannerId?: string | null;
+	color?: string;
+	isSensitive?: boolean | null;
+	allowRenoteToExternal?: boolean | null;
+};
+
+const channelUpdateParamDef = {
+	type: 'object',
+	properties: {
+		channelId: { type: 'string', format: 'misskey:id' },
+		name: { type: 'string', minLength: 1, maxLength: 128 },
+		description: { type: 'string', nullable: true, maxLength: 2048 },
+		bannerId: { type: 'string', format: 'misskey:id', nullable: true },
+		isArchived: { type: 'boolean', nullable: true },
+		pinnedNoteIds: {
+			type: 'array',
+			items: {
+				type: 'string', format: 'misskey:id',
+			},
+		},
+		color: { type: 'string', minLength: 1, maxLength: 16 },
+		isSensitive: { type: 'boolean', nullable: true },
+		allowRenoteToExternal: { type: 'boolean', nullable: true },
+	},
+	required: ['channelId'],
+} as const;
+
+type ChannelUpdateParams = {
+	channelId: string;
+	name?: string;
+	description?: string | null;
+	bannerId?: string | null;
+	isArchived?: boolean | null;
+	pinnedNoteIds?: string[];
+	color?: string;
+	isSensitive?: boolean | null;
+	allowRenoteToExternal?: boolean | null;
+};
+
 const channelFollowParamDef = {
 	type: 'object',
 	properties: {
@@ -138,6 +196,42 @@ const channelMuteDeleteParamDef = {
 type ChannelMuteDeleteParams = {
 	channelId: string;
 };
+
+function channelCreateNoSuchFileError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such file.',
+		code: 'NO_SUCH_FILE',
+		id: 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050',
+	});
+}
+
+function channelUpdateNoSuchChannelError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such channel.',
+		code: 'NO_SUCH_CHANNEL',
+		id: 'f9c5467f-d492-4c3c-9a8d-a70dacc86512',
+	});
+}
+
+function channelUpdateAccessDeniedError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'You do not have edit privilege of the channel.',
+		code: 'ACCESS_DENIED',
+		id: '1fb7cb09-d46a-4fdf-b8df-057788cce513',
+	});
+}
+
+function channelUpdateNoSuchFileError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such file.',
+		code: 'NO_SUCH_FILE',
+		id: 'e86c14a4-0da2-4032-8df3-e737a04c7f3b',
+	});
+}
 
 function channelFollowNoSuchChannelError(): HonoApiError {
 	return new HonoApiError({
@@ -357,6 +451,80 @@ export async function handleHonoApiChannelsMyFavorites(
 		.filter((channel): channel is MiChannel => channel != null);
 
 	return await packChannelsForHonoApi(deps, channels, me);
+}
+
+export async function handleHonoApiChannelsCreate(
+	deps: HonoApiChannelsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<HonoApiPackedChannel> {
+	const params = parseHonoApiParams(channelCreateParamDef, body) as ChannelCreateParams;
+	let bannerId: string | null = null;
+	if (params.bannerId != null) {
+		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.bannerId, me.id);
+		if (banner == null) {
+			throw channelCreateNoSuchFileError();
+		}
+		bannerId = banner.id;
+	}
+
+	const channel = await createChannelInDatabase(deps.db, {
+		id: genId(deps.config),
+		userId: me.id,
+		name: params.name,
+		description: params.description ?? null,
+		bannerId,
+		isSensitive: params.isSensitive ?? false,
+		...(params.color !== undefined ? { color: params.color } : {}),
+		allowRenoteToExternal: params.allowRenoteToExternal ?? true,
+	});
+
+	return packChannelForHonoApi(deps, channel, me, await buildChannelPackHint(deps, [channel], me));
+}
+
+export async function handleHonoApiChannelsUpdate(
+	deps: HonoApiChannelsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<HonoApiPackedChannel> {
+	const params = parseHonoApiParams(channelUpdateParamDef, body) as ChannelUpdateParams;
+	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
+	if (channel == null) {
+		throw channelUpdateNoSuchChannelError();
+	}
+
+	const isModerator = await isHonoApiModerator(deps, me);
+	if (channel.userId !== me.id && !isModerator) {
+		throw channelUpdateAccessDeniedError();
+	}
+
+	let banner: { id: string } | null | undefined;
+	if (params.bannerId != null) {
+		banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.bannerId, me.id);
+		if (banner == null) {
+			throw channelUpdateNoSuchFileError();
+		}
+	} else if (params.bannerId === null) {
+		banner = null;
+	}
+
+	await updateChannelInDatabase(deps.db, channel.id, {
+		...(params.name !== undefined ? { name: params.name } : {}),
+		...(params.description !== undefined ? { description: params.description } : {}),
+		...(params.pinnedNoteIds !== undefined ? { pinnedNoteIds: params.pinnedNoteIds } : {}),
+		...(params.color !== undefined ? { color: params.color } : {}),
+		...(typeof params.isArchived === 'boolean' ? { isArchived: params.isArchived } : {}),
+		...(banner ? { bannerId: banner.id } : {}),
+		...(typeof params.isSensitive === 'boolean' ? { isSensitive: params.isSensitive } : {}),
+		...(typeof params.allowRenoteToExternal === 'boolean' ? { allowRenoteToExternal: params.allowRenoteToExternal } : {}),
+	});
+
+	const updated = await fetchChannelByIdFromDatabase(deps.db, channel.id);
+	if (updated == null) {
+		throw channelUpdateNoSuchChannelError();
+	}
+
+	return packChannelForHonoApi(deps, updated, me, await buildChannelPackHint(deps, [updated], me));
 }
 
 export async function handleHonoApiChannelsFollow(
