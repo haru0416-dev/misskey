@@ -25,6 +25,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileSt
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -433,6 +434,33 @@ describe('Endpoints', () => {
 			});
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
+		});
+
+		test('trend returns Redis-backed hashtag ranking charts', async () => {
+			const config = loadConfig();
+			const redis = createRedisClient(config);
+			const tag = `hono_trend_${Date.now()}`;
+			const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
+			const rankingWindow = Math.floor((Date.now() - featuredEpoc) / (1000 * 60 * 60));
+			const chartWindowDate = new Date();
+			chartWindowDate.setMinutes(Math.floor(chartWindowDate.getMinutes() / 10) * 10, 0, 0);
+			const chartWindow = `${chartWindowDate.getUTCFullYear()}${(chartWindowDate.getUTCMonth() + 1).toString().padStart(2, '0')}${chartWindowDate.getUTCDate().toString().padStart(2, '0')}${chartWindowDate.getUTCHours().toString().padStart(2, '0')}${chartWindowDate.getUTCMinutes().toString().padStart(2, '0')}`;
+
+			try {
+				await redis.zadd(`featuredHashtagsRanking:${rankingWindow}`, 5, tag);
+				await redis.pfadd(`hashtagUsers:${tag}:${chartWindow}`, alice.id, bob.id);
+
+				const trend = await api('hashtags/trend', {});
+				assert.strictEqual(trend.status, 200);
+				const ranked = trend.body.find(item => item.tag === tag);
+				assert.ok(ranked);
+				assert.strictEqual(ranked.chart.length, 20);
+				assert.ok(ranked.usersCount >= 1);
+			} finally {
+				await redis.zrem(`featuredHashtagsRanking:${rankingWindow}`, tag);
+				await redis.del(`hashtagUsers:${tag}:${chartWindow}`);
+				await closeRedisConnection(redis);
+			}
 		});
 	});
 

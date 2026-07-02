@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type * as Redis from 'ioredis';
 import {
 	fetchHashtagByNameFromDatabase,
 	listHashtagsFromDatabase,
@@ -16,9 +17,19 @@ import type { MiHashtag } from '@/models/Hashtag.js';
 import { HonoApiError } from './hono-api-error.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
+const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
+const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
+
 export type HonoApiHashtagDependencies = {
 	db: MiDrizzleDatabase;
+	redis: Redis.Redis;
 };
+
+const hashtagsTrendParamDef = {
+	type: 'object',
+	properties: {},
+	required: [],
+} as const;
 
 const hashtagsListParamDef = {
 	type: 'object',
@@ -54,6 +65,80 @@ type HashtagsListParams = SchemaType<typeof hashtagsListParamDef>;
 type HashtagsSearchParams = SchemaType<typeof hashtagsSearchParamDef>;
 type HashtagsShowParams = SchemaType<typeof hashtagsShowParamDef>;
 
+function getCurrentFeaturedWindow(windowRange: number): number {
+	const passed = new Date().getTime() - featuredEpoc;
+	return Math.floor(passed / windowRange);
+}
+
+async function getFeaturedRanking(
+	redis: Redis.Redis,
+	name: string,
+	windowRange: number,
+	threshold: number,
+): Promise<string[]> {
+	const currentWindow = getCurrentFeaturedWindow(windowRange);
+	const previousWindow = currentWindow - 1;
+
+	const redisPipeline = redis.pipeline();
+	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	const [currentRankingResult, previousRankingResult] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : [[], []]);
+
+	const ranking = new Map<string, number>();
+	for (let i = 0; i < currentRankingResult.length; i += 2) {
+		const noteId = currentRankingResult[i];
+		const score = parseInt(currentRankingResult[i + 1], 10);
+		ranking.set(noteId, score);
+	}
+	for (let i = 0; i < previousRankingResult.length; i += 2) {
+		const noteId = previousRankingResult[i];
+		const score = parseInt(previousRankingResult[i + 1], 10);
+		const exist = ranking.get(noteId);
+		if (exist != null) {
+			ranking.set(noteId, (exist + score) / 2);
+		} else {
+			ranking.set(noteId, score);
+		}
+	}
+
+	return Array.from(ranking.keys());
+}
+
+async function getHashtagCharts(
+	redis: Redis.Redis,
+	hashtags: string[],
+	range: number,
+): Promise<Record<string, number[]>> {
+	const now = new Date();
+	now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
+
+	const redisPipeline = redis.pipeline();
+
+	for (let i = 0; i < range; i++) {
+		const window = `${now.getUTCFullYear()}${(now.getUTCMonth() + 1).toString().padStart(2, '0')}${now.getUTCDate().toString().padStart(2, '0')}${now.getUTCHours().toString().padStart(2, '0')}${now.getUTCMinutes().toString().padStart(2, '0')}`;
+		for (const hashtag of hashtags) {
+			redisPipeline.pfcount(`hashtagUsers:${hashtag}:${window}`);
+		}
+		now.setMinutes(now.getMinutes() - (i * 10), 0, 0);
+	}
+
+	const result = await redisPipeline.exec();
+	if (result == null) return {};
+
+	const charts: Record<string, number[]> = {};
+	for (const hashtag of hashtags) {
+		charts[hashtag] = [];
+	}
+
+	for (let i = 0; i < range; i++) {
+		for (let j = 0; j < hashtags.length; j++) {
+			charts[hashtags[j]].push(result[(i * hashtags.length) + j][1] as number);
+		}
+	}
+
+	return charts;
+}
+
 function noSuchHashtagError(): HonoApiError {
 	return new HonoApiError({
 		status: 400,
@@ -73,6 +158,29 @@ function packHonoApiHashtag(src: MiHashtag): Packed<'Hashtag'> {
 		attachedLocalUsersCount: src.attachedLocalUsersCount,
 		attachedRemoteUsersCount: src.attachedRemoteUsersCount,
 	};
+}
+
+export async function handleHonoApiHashtagsTrend(
+	deps: HonoApiHashtagDependencies,
+	body: Record<string, unknown>,
+): Promise<{
+	tag: string;
+	chart: number[];
+	usersCount: number;
+}[]> {
+	parseHonoApiParams(hashtagsTrendParamDef, body);
+	const ranking = await getFeaturedRanking(deps.redis, 'featuredHashtagsRanking', HASHTAG_RANKING_WINDOW, 10);
+	const charts = ranking.length === 0 ? {} : await getHashtagCharts(deps.redis, ranking, 20);
+
+	return ranking.map(tag => {
+		const chart = charts[tag];
+
+		return {
+			tag,
+			chart,
+			usersCount: Math.max(...chart),
+		};
+	});
 }
 
 export async function handleHonoApiHashtagsList(

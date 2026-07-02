@@ -22,7 +22,7 @@ import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
-import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow } from './hono-api-hashtags.js';
+import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
 import { handleHonoApiI } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
@@ -449,6 +449,13 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiHashtagsShow(deps, body));
+		});
+	});
+
+	app.post('/hashtags/trend', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body));
 		});
 	});
 
