@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as fs from 'node:fs';
 import rename from 'rename';
 import type { Config } from '@/config.js';
 import type { IImageStreamable } from '@/core/ImageProcessingService.js';
@@ -11,9 +10,9 @@ import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
-import { attachStreamCleanup, handleRangeRequest, setFileResponseHeaders, getSafeContentType, needsCleanup } from './FileServerUtils.js';
+import { attachStreamCleanup, handleRangeRequest, setFileResponseHeaders, getSafeContentType } from './FileServerUtils.js';
 import type { FileServerFileResolver } from './FileServerFileResolver.js';
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import { getFileServerHeader, type FileServerReply, type FileServerRequest } from './FileServerTypes.js';
 
 export class FileServerDriveHandler {
 	constructor(
@@ -23,7 +22,7 @@ export class FileServerDriveHandler {
 		private videoProcessingService: VideoProcessingService,
 	) {}
 
-	public async handle(request: FastifyRequest<{ Params: { key: string } }>, reply: FastifyReply) {
+	public async handle(request: FileServerRequest<{ key: string }>, reply: FileServerReply) {
 		const key = request.params.key;
 		const file = await this.fileResolver.resolveFileByAccessKey(key);
 
@@ -77,7 +76,7 @@ export class FileServerDriveHandler {
 				}
 
 				image ??= {
-					data: handleRangeRequest(reply, request.headers.range as string | undefined, file.file.size, file.path),
+					data: handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path),
 					ext: file.ext,
 					type: file.mime,
 				};
@@ -103,10 +102,10 @@ export class FileServerDriveHandler {
 				}).toString();
 
 				setFileResponseHeaders(reply, { mime: file.mime, filename });
-				return handleRangeRequest(reply, request.headers.range as string | undefined, file.file.size, file.path);
+				return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);
 			} else {
 				setFileResponseHeaders(reply, { mime: file.file.type, filename: file.filename, size: file.file.size });
-				return handleRangeRequest(reply, request.headers.range as string | undefined, file.file.size, file.path);
+				return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);
 			}
 		} catch (e) {
 			if (file.kind === 'remote') file.cleanup();

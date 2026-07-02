@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"start": "bun run compile-config && bun ./built/entry.js",
+		"start:hono": "bun run compile-config && bun ./built/hono-entry.js",
 		"start:inspect": "bun run compile-config && bun --inspect ./built/entry.js",
 		"start:test": "cross-env NODE_ENV=test bun run compile-config && cross-env NODE_ENV=test bun ./built/entry.js",
 		"migrate": "bun run compile-config && bun ./built/migration-runner.js up",
@@ -94,6 +95,7 @@
 		"file-type": "22.0.1",
 		"fluent-ffmpeg": "2.1.3",
 		"got": "15.0.5",
+		"hono": "4.12.27",
 		"hpagent": "1.2.0",
 		"http-link-header": "1.1.3",
 		"i18n": "workspace:*",

@@ -104,6 +104,7 @@ export default defineConfig((args) => {
 		return {
 			input: [
 				'./src/boot/entry.ts',
+				'./src/boot/hono-entry.ts',
 				'./src/boot/cli.ts',
 				'./src/config.ts',
 				'./src/drizzle.ts',

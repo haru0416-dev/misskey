@@ -5,14 +5,11 @@
 
 import { Global, Inject, Module } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { Meilisearch } from 'meilisearch';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { DI } from './di-symbols.js';
 import { Config, loadConfig } from './config.js';
 import { createDrizzleDatabase, createDrizzlePool } from './drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from './drizzle.js';
-import { allSettled } from './misc/promise-tracker.js';
-import { GlobalEvents } from './core/GlobalEventService.js';
+import { createMeilisearchClient, createRedisClient, createRedisForPub, createRedisForSub, createRedisForTimelines, createRedisForReactions, disposeRuntimeResources, fetchReactiveMeta } from './runtime-dependencies.js';
 import type { Provider, OnApplicationShutdown } from '@nestjs/common';
 
 const $config: Provider = {
@@ -39,18 +36,7 @@ const $drizzle: Provider = {
 const $meilisearch: Provider = {
 	provide: DI.meilisearch,
 	useFactory: (config: Config) => {
-		if (config.fulltextSearch?.provider === 'meilisearch') {
-			if (!config.meilisearch) {
-				throw new Error('Meilisearch is enabled but no configuration is provided');
-			}
-
-			return new Meilisearch({
-				host: `${config.meilisearch.ssl ? 'https' : 'http'}://${config.meilisearch.host}:${config.meilisearch.port}`,
-				apiKey: config.meilisearch.apiKey,
-			});
-		} else {
-			return null;
-		}
+		return createMeilisearchClient(config);
 	},
 	inject: [DI.config],
 };
@@ -58,7 +44,7 @@ const $meilisearch: Provider = {
 const $redis: Provider = {
 	provide: DI.redis,
 	useFactory: (config: Config) => {
-		return new Redis.Redis(config.redis);
+		return createRedisClient(config);
 	},
 	inject: [DI.config],
 };
@@ -66,8 +52,7 @@ const $redis: Provider = {
 const $redisForPub: Provider = {
 	provide: DI.redisForPub,
 	useFactory: (config: Config) => {
-		const redis = new Redis.Redis(config.redisForPubsub);
-		return redis;
+		return createRedisForPub(config);
 	},
 	inject: [DI.config],
 };
@@ -75,9 +60,7 @@ const $redisForPub: Provider = {
 const $redisForSub: Provider = {
 	provide: DI.redisForSub,
 	useFactory: async (config: Config) => {
-		const redis = new Redis.Redis(config.redisForPubsub);
-		await redis.subscribe(config.host);
-		return redis;
+		return createRedisForSub(config);
 	},
 	inject: [DI.config],
 };
@@ -85,7 +68,7 @@ const $redisForSub: Provider = {
 const $redisForTimelines: Provider = {
 	provide: DI.redisForTimelines,
 	useFactory: (config: Config) => {
-		return new Redis.Redis(config.redisForTimelines);
+		return createRedisForTimelines(config);
 	},
 	inject: [DI.config],
 };
@@ -93,7 +76,7 @@ const $redisForTimelines: Provider = {
 const $redisForReactions: Provider = {
 	provide: DI.redisForReactions,
 	useFactory: (config: Config) => {
-		return new Redis.Redis(config.redisForReactions);
+		return createRedisForReactions(config);
 	},
 	inject: [DI.config],
 };
@@ -101,41 +84,10 @@ const $redisForReactions: Provider = {
 const $meta: Provider = {
 	provide: DI.meta,
 	useFactory: async (db: MiDrizzleDatabase, redisForSub: Redis.Redis) => {
-		const meta = await fetchMetaFromDatabase(db);
-
-		async function onMessage(_: string, data: string): Promise<void> {
-			const obj = JSON.parse(data);
-
-			if (obj.channel === 'internal') {
-				const { type, body } = obj.message as GlobalEvents['internal']['payload'];
-				switch (type) {
-					case 'metaUpdated': {
-						for (const key in body.after) {
-							(meta as any)[key] = (body.after as any)[key];
-						}
-						meta.rootUser = null; // joinなカラムは通常取ってこないので
-						break;
-					}
-					default:
-						break;
-				}
-			}
-		}
-
-		redisForSub.on('message', onMessage);
-
-		return meta;
+		return fetchReactiveMeta(db, redisForSub);
 	},
 	inject: [DI.drizzle, DI.redisForSub],
 };
-
-async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
-	try {
-		await redis.quit();
-	} catch {
-		redis.disconnect();
-	}
-}
 
 @Global()
 @Module({
@@ -154,17 +106,14 @@ export class GlobalModule implements OnApplicationShutdown {
 	) { }
 
 	public async dispose(): Promise<void> {
-		// Wait for all potential DB queries
-		await allSettled();
-		// And then disconnect from DB
-		await Promise.all([
-			this.drizzlePool.end(),
-			closeRedisConnection(this.redisClient),
-			closeRedisConnection(this.redisForPub),
-			closeRedisConnection(this.redisForSub),
-			closeRedisConnection(this.redisForTimelines),
-			closeRedisConnection(this.redisForReactions),
-		]);
+		await disposeRuntimeResources({
+			drizzlePool: this.drizzlePool,
+			redis: this.redisClient,
+			redisForPub: this.redisForPub,
+			redisForSub: this.redisForSub,
+			redisForTimelines: this.redisForTimelines,
+			redisForReactions: this.redisForReactions,
+		});
 	}
 
 	async onApplicationShutdown(signal: string): Promise<void> {
