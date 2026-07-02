@@ -6,7 +6,7 @@
 import bcrypt from 'bcryptjs';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
-import { unsetUserMfaInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, unsetUserMfaInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
@@ -30,7 +30,17 @@ const adminUserMaintenanceParamDef = {
 	required: ['userId'],
 } as const;
 
+const adminUpdateUserNoteParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		text: { type: 'string' },
+	},
+	required: ['userId', 'text'],
+} as const;
+
 type AdminUserMaintenanceParams = SchemaType<typeof adminUserMaintenanceParamDef>;
+type AdminUpdateUserNoteParams = SchemaType<typeof adminUpdateUserNoteParamDef>;
 
 type ResetPasswordResponse = {
 	password: string;
@@ -140,5 +150,28 @@ export async function handleHonoApiAdminUnsetUserBanner(
 		userUsername: user.username,
 		userHost: user.host,
 		fileId: user.bannerId,
+	});
+}
+
+export async function handleHonoApiAdminUpdateUserNote(
+	deps: HonoApiAdminUserMaintenanceDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminUpdateUserNoteParamDef, body) as AdminUpdateUserNoteParams;
+	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	if (user == null) throw new Error('user not found');
+
+	const currentProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+	await updateUserProfileInDatabase(deps.db, user.id, {
+		moderationNote: params.text,
+	});
+
+	await logModerationEventInDatabase(deps, me, 'updateUserNote', {
+		userId: user.id,
+		userUsername: user.username,
+		userHost: user.host,
+		before: currentProfile.moderationNote,
+		after: params.text,
 	});
 }

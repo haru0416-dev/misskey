@@ -3036,6 +3036,66 @@ describe('Endpoints', () => {
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
 		});
+
+		test('admin/update-user-note は moderationNote 更新、token scope、role、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const target = await signup({ username: `haun${suffix}` });
+			await updateUserProfileInDatabase(db, target.id, {
+				moderationNote: 'before note',
+			});
+
+			const text = `after note ${suffix}`;
+			const updated = await api('admin/update-user-note', {
+				userId: target.id,
+				text,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(profile.moderationNote, text);
+
+			const token = await createAppToken(alice, ['write:admin:user-note']);
+			const updatedByToken = await api('admin/update-user-note', {
+				userId: target.id,
+				text: `${text} by token`,
+			}, { token });
+			assert.strictEqual(updatedByToken.status, 204);
+
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(profile.moderationNote, `${text} by token`);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:reset-password']);
+			const scopeDenied = await api('admin/update-user-note', {
+				userId: target.id,
+				text: 'denied',
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hunn${suffix}` });
+			const roleDenied = await api('admin/update-user-note', {
+				userId: target.id,
+				text: 'denied',
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateUserNote',
+					search: target.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).before === 'before note' && (log.info as any).after === text), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('updateUserNote moderation log was not found');
+			}
+		});
 	});
 
 	describe('admin/get-user-ips', () => {
