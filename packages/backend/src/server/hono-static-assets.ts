@@ -116,6 +116,10 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 	app.on('HEAD', '/favicon.ico', async (c) => await serveFile(c, resolve(staticAssets, 'favicon.ico'), 'public, max-age=604800'));
 	app.get('/apple-touch-icon.png', async (c) => await serveFile(c, resolve(staticAssets, 'apple-touch-icon.png'), 'public, max-age=604800'));
 	app.on('HEAD', '/apple-touch-icon.png', async (c) => await serveFile(c, resolve(staticAssets, 'apple-touch-icon.png'), 'public, max-age=604800'));
+	app.get('/sw.js', async (c) => await serveFile(c, resolve(deps.config.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
+	app.on('HEAD', '/sw.js', async (c) => await serveFile(c, resolve(deps.config.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
+	app.get('/embed.js', async (c) => await serveFile(c, resolve(staticAssets, 'embed.js'), 'public, max-age=86400'));
+	app.on('HEAD', '/embed.js', async (c) => await serveFile(c, resolve(staticAssets, 'embed.js'), 'public, max-age=86400'));
 
 	return app;
 }
