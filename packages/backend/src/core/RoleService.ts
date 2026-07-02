@@ -28,27 +28,25 @@ import type { Packed } from '@/misc/json-schema.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import {
-	createRoleAssignmentInDatabase,
-	deleteRoleAssignmentByIdFromDatabase,
-	deleteRoleAssignmentByUserIdAndRoleIdFromDatabase,
-	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
 	listRoleAssignmentsByRoleIdsFromDatabase,
 	listRoleAssignmentsByUserIdFromDatabase,
 } from '@/core/RoleAssignmentStore.js';
 import {
 	fetchRoleByIdFromDatabase,
-	fetchRoleByIdOrFailFromDatabase,
 	listRolesFromDatabase,
-	updateRoleInDatabase,
 } from '@/core/RoleStore.js';
 import {
+	assignRoleWithSideEffects,
 	createRoleWithSideEffects,
 	deleteRoleWithSideEffects,
+	RoleAlreadyAssignedError,
+	RoleNotAssignedError,
 	updateRoleWithSideEffects,
+	unassignRoleWithSideEffects,
 	type RoleCreateOptions,
 	type RoleUpdateOptions,
 } from '@/core/RoleLogic.js';
-import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { DEFAULT_POLICIES, type RolePolicies } from './role-policies.js';
 
@@ -60,8 +58,8 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 	private roleAssignmentByUserIdCache: MemoryKVCache<MiRoleAssignment[]>;
 	private notificationService: NotificationService;
 
-	public static AlreadyAssignedError = class extends Error {};
-	public static NotAssignedError = class extends Error {};
+	public static AlreadyAssignedError = RoleAlreadyAssignedError;
+	public static NotAssignedError = RoleNotAssignedError;
 
 	constructor(
 		private moduleRef: ModuleRef,
@@ -478,86 +476,24 @@ export class RoleService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async assign(userId: MiUser['id'], roleId: MiRole['id'], expiresAt: Date | null = null, moderator?: MiUser): Promise<void> {
-		const now = Date.now();
-
-		const role = await fetchRoleByIdOrFailFromDatabase(this.db, roleId);
-
-		const existing = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
-
-		if (existing) {
-			if (existing.expiresAt && (existing.expiresAt.getTime() < now)) {
-				await deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
-			} else {
-				throw new RoleService.AlreadyAssignedError();
-			}
-		}
-
-		const created = await createRoleAssignmentInDatabase(this.db, {
-			id: this.idService.gen(now),
-			expiresAt: expiresAt,
-			roleId: roleId,
-			userId: userId,
-		});
-
-		await updateRoleInDatabase(this.db, roleId, {
-			lastUsedAt: new Date(),
-		});
-
-		this.globalEventService.publishInternalEvent('userRoleAssigned', created);
-
-		const user = await fetchUserByIdOrFailFromDatabase(this.db, userId);
-
-		if (role.isPublic && user.host === null) {
-			this.notificationService.createNotification(userId, 'roleAssigned', {
-				roleId: roleId,
-			});
-		}
-
-		if (moderator) {
-			this.moderationLogService.log(moderator, 'assignRole', {
-				roleId: roleId,
-				roleName: role.name,
-				userId: userId,
-				userUsername: user.username,
-				userHost: user.host,
-				expiresAt: expiresAt ? expiresAt.toISOString() : null,
-			});
-		}
+		await assignRoleWithSideEffects({
+			db: this.db,
+			genId: time => this.idService.gen(time),
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+			notifyRoleAssigned: (targetUserId, targetRoleId) => this.notificationService.createNotification(targetUserId, 'roleAssigned', {
+				roleId: targetRoleId,
+			}),
+		}, { userId, roleId, expiresAt }, moderator);
 	}
 
 	@bindThis
 	public async unassign(userId: MiUser['id'], roleId: MiRole['id'], moderator?: MiUser): Promise<void> {
-		const now = new Date();
-
-		const existing = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
-		if (existing == null) {
-			throw new RoleService.NotAssignedError();
-		} else if (existing.expiresAt && (existing.expiresAt.getTime() < now.getTime())) {
-			await deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(this.db, userId, roleId);
-			throw new RoleService.NotAssignedError();
-		}
-
-		await deleteRoleAssignmentByIdFromDatabase(this.db, existing.id);
-
-		await updateRoleInDatabase(this.db, roleId, {
-			lastUsedAt: now,
-		});
-
-		this.globalEventService.publishInternalEvent('userRoleUnassigned', existing);
-
-		if (moderator) {
-			const [user, role] = await Promise.all([
-				fetchUserByIdOrFailFromDatabase(this.db, userId),
-				fetchRoleByIdOrFailFromDatabase(this.db, roleId),
-			]);
-			this.moderationLogService.log(moderator, 'unassignRole', {
-				roleId: roleId,
-				roleName: role.name,
-				userId: userId,
-				userUsername: user.username,
-				userHost: user.host,
-			});
-		}
+		await unassignRoleWithSideEffects({
+			db: this.db,
+			publishInternalEvent: (type, value) => this.globalEventService.publishInternalEvent(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, { userId, roleId }, moderator);
 	}
 
 	@bindThis

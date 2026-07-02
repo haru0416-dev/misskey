@@ -4,9 +4,12 @@
  */
 
 import {
+	assignRoleWithSideEffects,
 	createRoleWithSideEffects,
 	deleteRoleWithSideEffects,
+	RoleNotAssignedError,
 	updateRoleWithSideEffects,
+	unassignRoleWithSideEffects,
 	type RoleCreateOptions,
 	type RoleUpdateOptions,
 } from '@/core/RoleLogic.js';
@@ -20,15 +23,19 @@ import {
 } from '@/core/RoleStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { Redis } from 'ioredis';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
+import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
+import { createRoleAssignedNotification } from './hono-api-notification.js';
+import { isHonoApiAdministrator } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 import { packHonoApiRole } from './hono-api-roles.js';
 import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from './hono-api-user.js';
@@ -37,8 +44,23 @@ export type HonoApiAdminRoleDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
+	redis: Redis;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishMainStream?: HonoApiMainStreamPublisher;
 };
+
+const adminRolesAssignParamDef = {
+	type: 'object',
+	properties: {
+		roleId: { type: 'string', format: 'misskey:id' },
+		userId: { type: 'string', format: 'misskey:id' },
+		expiresAt: {
+			type: 'integer',
+			nullable: true,
+		},
+	},
+	required: ['roleId', 'userId'],
+} as const;
 
 const adminRolesCreateParamDef = {
 	type: 'object',
@@ -100,6 +122,15 @@ const adminRolesShowParamDef = {
 	required: ['roleId'],
 } as const;
 
+const adminRolesUnassignParamDef = {
+	type: 'object',
+	properties: {
+		roleId: { type: 'string', format: 'misskey:id' },
+		userId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['roleId', 'userId'],
+} as const;
+
 const adminRolesUpdateParamDef = {
 	type: 'object',
 	properties: {
@@ -148,9 +179,11 @@ const adminRolesUsersParamDef = {
 	required: ['roleId'],
 } as const;
 
+type AdminRolesAssignParams = SchemaType<typeof adminRolesAssignParamDef>;
 type AdminRolesCreateParams = SchemaType<typeof adminRolesCreateParamDef>;
 type AdminRolesDeleteParams = SchemaType<typeof adminRolesDeleteParamDef>;
 type AdminRolesShowParams = SchemaType<typeof adminRolesShowParamDef>;
+type AdminRolesUnassignParams = SchemaType<typeof adminRolesUnassignParamDef>;
 type AdminRolesUpdateParams = SchemaType<typeof adminRolesUpdateParamDef>;
 type AdminRolesUpdateDefaultPoliciesParams = SchemaType<typeof adminRolesUpdateDefaultPoliciesParamDef>;
 type AdminRolesUsersParams = SchemaType<typeof adminRolesUsersParamDef>;
@@ -169,6 +202,66 @@ function noSuchRoleError(id: string): HonoApiError {
 		code: 'NO_SUCH_ROLE',
 		id,
 	});
+}
+
+function noSuchUserError(id: string): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such user.',
+		code: 'NO_SUCH_USER',
+		id,
+	});
+}
+
+function accessDeniedError(id: string): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Only administrators can edit members of the role.',
+		code: 'ACCESS_DENIED',
+		id,
+	});
+}
+
+function notAssignedError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Not assigned.',
+		code: 'NOT_ASSIGNED',
+		id: 'b9060ac7-5c94-4da4-9f55-2047c953df44',
+	});
+}
+
+export async function handleHonoApiAdminRolesAssign(
+	deps: HonoApiAdminRoleDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminRolesAssignParamDef, body) as AdminRolesAssignParams;
+	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
+	if (role == null) throw noSuchRoleError('6503c040-6af4-4ed9-bf07-f2dd16678eab');
+
+	if (!role.canEditMembersByModerator && !(await isHonoApiAdministrator(deps, me))) {
+		throw accessDeniedError('25b5bc31-dc79-4ebd-9bd2-c84978fd052c');
+	}
+
+	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	if (user == null) throw noSuchUserError('558ea170-f653-4700-94d0-5a818371d0df');
+
+	if (params.expiresAt && params.expiresAt <= Date.now()) {
+		return;
+	}
+
+	await assignRoleWithSideEffects({
+		db: deps.db,
+		genId: time => genId(deps.config, time),
+		publishInternalEvent: deps.publishInternalEvent,
+		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		notifyRoleAssigned: (userId, _roleId, assignedRole) => createRoleAssignedNotification(deps, userId, assignedRole),
+	}, {
+		userId: user.id,
+		roleId: role.id,
+		expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
+	}, me);
 }
 
 export async function handleHonoApiAdminRolesCreate(
@@ -237,6 +330,37 @@ export async function handleHonoApiAdminRolesShow(
 	if (role == null) throw noSuchRoleError('07dc7d34-c0d8-49b7-96c6-db3ce64ee0b3');
 
 	return await packHonoApiRole(deps, role);
+}
+
+export async function handleHonoApiAdminRolesUnassign(
+	deps: HonoApiAdminRoleDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminRolesUnassignParamDef, body) as AdminRolesUnassignParams;
+	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
+	if (role == null) throw noSuchRoleError('6e519036-a70d-4c76-b679-bc8fb18194e2');
+
+	if (!role.canEditMembersByModerator && !(await isHonoApiAdministrator(deps, me))) {
+		throw accessDeniedError('24636eee-e8c1-493e-94b2-e16ad401e262');
+	}
+
+	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	if (user == null) throw noSuchUserError('2b730f78-1179-461b-88ad-d24c9af1a5ce');
+
+	try {
+		await unassignRoleWithSideEffects({
+			db: deps.db,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		}, {
+			userId: user.id,
+			roleId: role.id,
+		}, me);
+	} catch (err) {
+		if (err instanceof RoleNotAssignedError) throw notAssignedError();
+		throw err;
+	}
 }
 
 export async function handleHonoApiAdminRolesUpdate(

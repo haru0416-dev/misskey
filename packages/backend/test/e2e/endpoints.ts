@@ -39,7 +39,7 @@ import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
-import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
+import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
 import { isPromoReadExists } from '@/core/PromoReadStore.js';
@@ -2307,12 +2307,53 @@ describe('Endpoints', () => {
 			assert.strictEqual(missingUsersRole.status, 400);
 			assert.strictEqual(castAsError(missingUsersRole.body as any).error.code, 'NO_SUCH_ROLE');
 
+			const assignTarget = await signup({ username: `hrolasg${now.toString(36)}` });
+			const assignableRole = await api('admin/roles/create', {
+				...createPayload,
+				name: `Hono admin assign role ${now}`,
+				isPublic: true,
+				canEditMembersByModerator: true,
+			}, alice);
+			assert.strictEqual(assignableRole.status, 200);
+
 			const scopeDenied = await api('admin/roles/create', {
 				...createPayload,
 				name: `Hono admin role denied ${now}`,
 			}, { token: readToken });
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			const assignScopeDenied = await api('admin/roles/assign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+			}, { token: readToken });
+			assert.strictEqual(assignScopeDenied.status, 403);
+			assert.strictEqual(castAsError(assignScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const assignExpiresAt = now + 60 * 60 * 1000;
+			const assigned = await api('admin/roles/assign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+				expiresAt: assignExpiresAt,
+			}, alice);
+			assert.strictEqual(assigned.status, 204, JSON.stringify(assigned.body));
+			const assignment = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id);
+			assert.ok(assignment);
+			assert.strictEqual(assignment.expiresAt?.toISOString(), new Date(assignExpiresAt).toISOString());
+
+			const redis = createRedisClient(config);
+			try {
+				await new Promise(resolve => setTimeout(resolve, 100));
+				const entries = await redis.xrevrange(`notificationTimeline:${assignTarget.id}`, '+', '-', 'COUNT', 10);
+				const notifications = entries.map(([, values]) => {
+					const dataIndex = values.findIndex(value => value === 'data');
+					return JSON.parse(values[dataIndex + 1]!) as { type?: string; roleId?: string };
+				});
+				const roleAssignedNotification = notifications.find(notification =>
+					notification.type === 'roleAssigned' && notification.roleId === assignableRole.body.id);
+				assert.ok(roleAssignedNotification);
+			} finally {
+				await closeRedisConnection(redis);
+			}
 
 			const normalUser = await signup({ username: `honorole${now.toString(36)}` });
 			const roleDenied = await api('admin/roles/list', {}, normalUser);
@@ -2321,6 +2362,72 @@ describe('Endpoints', () => {
 			const usersRoleDenied = await api('admin/roles/users', { roleId: created.body.id }, normalUser);
 			assert.strictEqual(usersRoleDenied.status, 403);
 			assert.strictEqual(castAsError(usersRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			const assignRoleDenied = await api('admin/roles/assign', { roleId: assignableRole.body.id, userId: assignTarget.id }, normalUser);
+			assert.strictEqual(assignRoleDenied.status, 403);
+			assert.strictEqual(castAsError(assignRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const moderatorRole = await createRoleInDatabase(db, {
+				id: genId(config, now + 2000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono moderator role ${now}`,
+				description: 'Hono moderator role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'a6a0035c-2910-4dac-9b35-f226c07d63ab',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: true,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: true,
+				displayOrder: 1,
+				policies: {},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 2001),
+				userId: normalUser.id,
+				roleId: moderatorRole.id,
+				expiresAt: null,
+			});
+			const accessDenied = await api('admin/roles/assign', {
+				roleId: created.body.id,
+				userId: assignTarget.id,
+			}, normalUser);
+			assert.strictEqual(accessDenied.status, 400);
+			assert.strictEqual(castAsError(accessDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const unassigned = await api('admin/roles/unassign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+			}, alice);
+			assert.strictEqual(unassigned.status, 204);
+			assert.strictEqual(await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id), null);
+
+			const unassignedAgain = await api('admin/roles/unassign', {
+				roleId: assignableRole.body.id,
+				userId: assignTarget.id,
+			}, alice);
+			assert.strictEqual(unassignedAgain.status, 400);
+			assert.strictEqual(castAsError(unassignedAgain.body as any).error.code, 'NOT_ASSIGNED');
+
+			const missingAssignUser = await api('admin/roles/assign', {
+				roleId: assignableRole.body.id,
+				userId: '000000000000000000000000',
+			}, alice);
+			assert.strictEqual(missingAssignUser.status, 400);
+			assert.strictEqual(castAsError(missingAssignUser.body as any).error.code, 'NO_SUCH_USER');
+			const missingUnassignRole = await api('admin/roles/unassign', {
+				roleId: '000000000000000000000000',
+				userId: assignTarget.id,
+			}, alice);
+			assert.strictEqual(missingUnassignRole.status, 400);
+			assert.strictEqual(castAsError(missingUnassignRole.body as any).error.code, 'NO_SUCH_ROLE');
 
 			const defaultPolicyUser = await signup({ username: `honorolepol${now.toString(36)}` });
 			const beforeMeta = await fetchMetaFromDatabase(db);
@@ -2360,6 +2467,27 @@ describe('Endpoints', () => {
 			} finally {
 				await api('admin/roles/update-default-policies', { policies: beforeMeta.policies as any }, alice);
 			}
+
+			const assignmentLogTypes = ['assignRole', 'unassignRole'] as const;
+			const assignmentLogged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of assignmentLogTypes) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: assignableRole.body.id,
+					});
+					if (logs.length > 0) assignmentLogged.add(type);
+				}
+				if (assignmentLogged.size === assignmentLogTypes.length) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...assignmentLogged].sort(), [...assignmentLogTypes].sort());
+
+			const deletedAssignableRole = await api('admin/roles/delete', { roleId: assignableRole.body.id }, alice);
+			assert.strictEqual(deletedAssignableRole.status, 204);
 
 			const deleted = await api('admin/roles/delete', { roleId: created.body.id }, alice);
 			assert.strictEqual(deleted.status, 204);
