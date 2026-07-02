@@ -2370,8 +2370,8 @@ describe('Endpoints', () => {
 
 			const normalUser = await signup({ username: `honoadmininv${Date.now().toString(36)}` });
 			const moderatorDenied = await api('admin/invite/list', {}, normalUser);
-			assert.strictEqual(moderatorDenied.status, 400);
-			assert.strictEqual(castAsError(moderatorDenied.body as any).error.code, 'ACCESS_DENIED');
+			assert.strictEqual(moderatorDenied.status, 403);
+			assert.strictEqual(castAsError(moderatorDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
 			let logged = false;
 			for (let i = 0; i < 10; i++) {
@@ -2431,8 +2431,50 @@ describe('Endpoints', () => {
 
 			const normalUser = await signup({ username: `honomodlog${now.toString(36)}` });
 			const adminDenied = await api('admin/show-moderation-logs', {}, normalUser);
-			assert.strictEqual(adminDenied.status, 400);
-			assert.strictEqual(castAsError(adminDenied.body as any).error.code, 'ACCESS_DENIED');
+			assert.strictEqual(adminDenied.status, 403);
+			assert.strictEqual(castAsError(adminDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
+	describe('admin/captcha', () => {
+		test('admin/captcha/current と admin/captcha/save は設定取得、保存、scope、権限を維持する', async () => {
+			const initial = await api('admin/captcha/current', {}, alice);
+			assert.strictEqual(initial.status, 200);
+			assert.strictEqual(typeof initial.body.provider, 'string');
+			assert.ok(initial.body.hcaptcha);
+			assert.ok(initial.body.mcaptcha);
+			assert.ok(initial.body.recaptcha);
+			assert.ok(initial.body.turnstile);
+
+			try {
+				const invalid = await api('admin/captcha/save', {
+					provider: 'testcaptcha',
+				}, alice);
+				assert.strictEqual(invalid.status, 400);
+				assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAMETERS');
+
+				const saved = await api('admin/captcha/save', {
+					provider: 'testcaptcha',
+					captchaResult: 'testcaptcha-passed',
+				}, alice);
+				assert.strictEqual(saved.status, 204);
+
+				const current = await api('admin/captcha/current', {}, alice);
+				assert.strictEqual(current.status, 200);
+				assert.strictEqual(current.body.provider, 'testcaptcha');
+			} finally {
+				await api('admin/captcha/save', { provider: 'none' }, alice);
+			}
+
+			const readToken = await createAppToken(alice, ['read:admin:meta']);
+			const scopeDenied = await api('admin/captcha/save', { provider: 'none' }, { token: readToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honocaptcha${Date.now().toString(36)}` });
+			const roleDenied = await api('admin/captcha/current', {}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 	});
 
