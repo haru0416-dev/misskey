@@ -4,9 +4,26 @@
  */
 
 import * as os from 'node:os';
-import type { SchemaType } from '@/misc/json-schema.js';
+import type { Config } from '@/config.js';
+import { packMetaDetailed, packMetaLite } from '@/core/MetaEntityPacker.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
+
+export type HonoApiMetaDependencies = {
+	config: Config;
+	db: MiDrizzleDatabase;
+	meta: MiMeta;
+};
+
+const metaParamDef = {
+	type: 'object',
+	properties: {
+		detail: { type: 'boolean', default: true },
+	},
+	required: [],
+} as const;
 
 const testParamDef = {
 	type: 'object',
@@ -20,7 +37,16 @@ const testParamDef = {
 	required: ['required'],
 } as const;
 
+type MetaParams = SchemaType<typeof metaParamDef>;
 type TestParams = SchemaType<typeof testParamDef>;
+
+export async function handleHonoApiMeta(
+	deps: HonoApiMetaDependencies,
+	body: Record<string, unknown>,
+): Promise<Packed<'MetaLite'> | Packed<'MetaDetailed'>> {
+	const params = parseHonoApiParams(metaParamDef, body) as MetaParams;
+	return params.detail ? await packMetaDetailed(deps) : await packMetaLite(deps);
+}
 
 export function handleHonoApiPing(): { pong: number } {
 	return {

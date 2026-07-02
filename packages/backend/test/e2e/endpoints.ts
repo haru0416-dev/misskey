@@ -18,7 +18,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileSt
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { api, castAsError, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
+import { api, castAsError, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Endpoints', () => {
@@ -143,6 +143,30 @@ describe('Endpoints', () => {
 	});
 
 	describe('basic meta endpoints', () => {
+		test('meta returns lite and detailed metadata', async () => {
+			const lite = await api('meta', {
+				detail: false,
+			});
+
+			assert.strictEqual(lite.status, 200);
+			assert.strictEqual(lite.body.uri, origin);
+			assert.strictEqual(typeof lite.body.version, 'string');
+			assert.strictEqual((lite.body as Record<string, unknown>).features, undefined);
+
+			const detailed = await api('meta', {});
+			const detailedBody = detailed.body as {
+				uri: string;
+				features?: { miauth?: boolean };
+				proxyAccountName?: unknown;
+			};
+
+			assert.strictEqual(detailed.status, 200);
+			assert.strictEqual(detailedBody.uri, origin);
+			if (detailedBody.features == null) assert.fail('detailed meta features are missing');
+			assert.strictEqual(detailedBody.features.miauth, true);
+			assert.strictEqual(typeof detailedBody.proxyAccountName, 'string');
+		});
+
 		test('ping returns current timestamp', async () => {
 			const before = Date.now();
 			const res = await api('ping', {});
