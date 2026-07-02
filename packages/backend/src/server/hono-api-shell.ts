@@ -29,6 +29,7 @@ import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from
 import { handleHonoApiAdminSystemWebhookCreate, handleHonoApiAdminSystemWebhookDelete, handleHonoApiAdminSystemWebhookList, handleHonoApiAdminSystemWebhookShow, handleHonoApiAdminSystemWebhookTest, handleHonoApiAdminSystemWebhookUpdate } from './hono-api-admin-system-webhooks.js';
 import { handleHonoApiAdminGetUserIps } from './hono-api-admin-user-ips.js';
 import { handleHonoApiAdminResetPassword, handleHonoApiAdminUnsetMfa, handleHonoApiAdminUnsetUserAvatar, handleHonoApiAdminUnsetUserBanner, handleHonoApiAdminUpdateUserNote } from './hono-api-admin-user-maintenance.js';
+import { handleHonoApiAdminSuspendUser, handleHonoApiAdminUnsuspendUser } from './hono-api-admin-user-suspension.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
@@ -944,6 +945,32 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminUpdateUserNote(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/suspend-user', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:suspend-user');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminSuspendUser(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/unsuspend-user', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:unsuspend-user');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminUnsuspendUser(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});

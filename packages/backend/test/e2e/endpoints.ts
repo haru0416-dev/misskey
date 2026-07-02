@@ -61,7 +61,7 @@ import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DeliverJobData, InboxJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData, InboxJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -75,6 +75,7 @@ describe('Endpoints', () => {
 	let pool: MiDrizzlePool | undefined;
 	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
 	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
+	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 
 	beforeAll(async () => {
@@ -83,6 +84,7 @@ describe('Endpoints', () => {
 		db = createDrizzleDatabase(pool, config);
 		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
 		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
+		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
 		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -94,6 +96,7 @@ describe('Endpoints', () => {
 	afterAll(async () => {
 		await deliverQueue?.close();
 		await inboxQueue?.close();
+		await relationshipQueue?.close();
 		await systemWebhookDeliverQueue?.close();
 		await pool?.end();
 	});
@@ -3242,6 +3245,89 @@ describe('Endpoints', () => {
 			const invalid = await api('admin/send-email', invalidPayload as misskey.Endpoints['admin/send-email']['req'], alice);
 			assert.strictEqual(invalid.status, 400);
 			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+		});
+
+		test('admin/suspend-user と admin/unsuspend-user は状態更新、queue、token scope、role、ログを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const target = await signup({ username: `hsus${suffix}` });
+			const config = loadConfig();
+			const following = await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: target.id,
+				followeeId: bob.id,
+			});
+
+			const suspended = await api('admin/suspend-user', { userId: target.id }, alice);
+			assert.strictEqual(suspended.status, 204);
+
+			let targetUser = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(targetUser.isSuspended, true);
+
+			for (let i = 0; i < 10; i++) {
+				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const job = jobs.find(job =>
+					job.name === 'unfollow' &&
+					job.data.from.id === following.followerId &&
+					job.data.to.id === following.followeeId &&
+					job.data.silent === true);
+				if (job != null) {
+					await job.remove();
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('suspend-user unfollow job was not created');
+			}
+
+			const suspendTokenTarget = await signup({ username: `hstt${suffix}` });
+			const suspendToken = await createAppToken(alice, ['write:admin:suspend-user']);
+			const suspendedByToken = await api('admin/suspend-user', { userId: suspendTokenTarget.id }, { token: suspendToken });
+			assert.strictEqual(suspendedByToken.status, 204);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const suspendScopeDenied = await api('admin/suspend-user', { userId: target.id }, { token: wrongScopeToken });
+			assert.strictEqual(suspendScopeDenied.status, 403);
+			assert.strictEqual(castAsError(suspendScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hsnr${suffix}` });
+			const suspendRoleDenied = await api('admin/suspend-user', { userId: target.id }, normalUser);
+			assert.strictEqual(suspendRoleDenied.status, 403);
+			assert.strictEqual(castAsError(suspendRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const unsuspended = await api('admin/unsuspend-user', { userId: target.id }, alice);
+			assert.strictEqual(unsuspended.status, 204);
+
+			targetUser = await fetchUserByIdOrFailFromDatabase(db, target.id);
+			assert.strictEqual(targetUser.isSuspended, false);
+
+			const unsuspendToken = await createAppToken(alice, ['write:admin:unsuspend-user']);
+			const unsuspendedByToken = await api('admin/unsuspend-user', { userId: target.id }, { token: unsuspendToken });
+			assert.strictEqual(unsuspendedByToken.status, 204);
+
+			const unsuspendScopeDenied = await api('admin/unsuspend-user', { userId: target.id }, { token: wrongScopeToken });
+			assert.strictEqual(unsuspendScopeDenied.status, 403);
+			assert.strictEqual(castAsError(unsuspendScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const unsuspendRoleDenied = await api('admin/unsuspend-user', { userId: target.id }, normalUser);
+			assert.strictEqual(unsuspendRoleDenied.status, 403);
+			assert.strictEqual(castAsError(unsuspendRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const logged = new Set<string>();
+			for (let i = 0; i < 10; i++) {
+				for (const type of ['suspend', 'unsuspend'] as const) {
+					const logs = await listModerationLogsFromDatabase(db, {
+						limit: 10,
+						order: 'desc',
+						type,
+						search: target.id,
+					});
+					if (logs.length > 0) logged.add(type);
+				}
+				if (logged.size === 2) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			assert.deepStrictEqual([...logged].sort(), ['suspend', 'unsuspend']);
 		});
 	});
 
