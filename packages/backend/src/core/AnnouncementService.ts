@@ -14,19 +14,22 @@ import { IdService } from '@/core/IdService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import {
+	createAnnouncementWithSideEffects,
+	deleteAnnouncementWithModerationLog,
+	updateAnnouncementWithModerationLog,
+	type AnnouncementCreateValues,
+	type AnnouncementUpdateValues,
+} from '@/core/AnnouncementLogic.js';
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase, listAnnouncementReadsByUserIdFromDatabase } from '@/core/AnnouncementReadStore.js';
 import {
-	createAnnouncementInDatabase,
-	deleteAnnouncementInDatabase,
 	fetchAnnouncementByIdFromDatabase,
 	fetchAnnouncementByIdOrFailFromDatabase,
 	listUnreadAnnouncementsForUserFromDatabase,
 	updateAnnouncementInDatabase,
 } from '@/core/AnnouncementStore.js';
 import type { AnnouncementReadRow } from '@/db/schema/announcement-read.js';
-import type { AnnouncementInsert } from '@/db/schema/announcement.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 
 @Injectable()
 export class AnnouncementService {
@@ -53,116 +56,30 @@ export class AnnouncementService {
 
 	@bindThis
 	public async create(values: Partial<MiAnnouncement>, moderator?: MiUser): Promise<{ raw: MiAnnouncement; packed: Packed<'Announcement'> }> {
-		const announcement = await createAnnouncementInDatabase(this.drizzle, {
-			id: this.idService.gen(),
-			updatedAt: null,
-			title: values.title,
-			text: values.text,
-			imageUrl: values.imageUrl || null,
-			icon: values.icon,
-			display: values.display,
-			forExistingUsers: values.forExistingUsers,
-			silence: values.silence,
-			needConfirmationToRead: values.needConfirmationToRead,
-			userId: values.userId,
-		} as AnnouncementInsert);
-
-		const packed = await this.announcementEntityService.pack(announcement);
-
-		if (values.userId) {
-			this.globalEventService.publishMainStream(values.userId, 'announcementCreated', {
-				announcement: packed,
-			});
-
-			if (moderator) {
-				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, values.userId);
-				this.moderationLogService.log(moderator, 'createUserAnnouncement', {
-					announcementId: announcement.id,
-					announcement: announcement,
-					userId: values.userId,
-					userUsername: user.username,
-					userHost: user.host,
-				});
-			}
-		} else {
-			this.globalEventService.publishBroadcastStream('announcementCreated', {
-				announcement: packed,
-			});
-
-			if (moderator) {
-				this.moderationLogService.log(moderator, 'createGlobalAnnouncement', {
-					announcementId: announcement.id,
-					announcement: announcement,
-				});
-			}
-		}
-
-		return {
-			raw: announcement,
-			packed: packed,
-		};
+		return await createAnnouncementWithSideEffects({
+			db: this.drizzle,
+			genId: () => this.idService.gen(),
+			packAnnouncement: announcement => this.announcementEntityService.pack(announcement),
+			publishMainStream: (userId, type, value) => this.globalEventService.publishMainStream(userId, type, value),
+			publishBroadcastStream: (type, value) => this.globalEventService.publishBroadcastStream(type, value),
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, values as AnnouncementCreateValues, moderator);
 	}
 
 	@bindThis
 	public async update(announcement: MiAnnouncement, values: Partial<MiAnnouncement>, moderator?: MiUser): Promise<void> {
-		await updateAnnouncementInDatabase(this.drizzle, announcement.id, {
-			updatedAt: new Date(),
-			title: values.title,
-			text: values.text,
-			/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- 空の文字列の場合、nullを渡すようにするため */
-			imageUrl: values.imageUrl || null,
-			display: values.display,
-			icon: values.icon,
-			forExistingUsers: values.forExistingUsers,
-			silence: values.silence,
-			needConfirmationToRead: values.needConfirmationToRead,
-			isActive: values.isActive,
-		});
-
-		const after = await fetchAnnouncementByIdOrFailFromDatabase(this.drizzle, announcement.id);
-
-		if (moderator) {
-			if (announcement.userId) {
-				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, announcement.userId);
-				this.moderationLogService.log(moderator, 'updateUserAnnouncement', {
-					announcementId: announcement.id,
-					before: announcement,
-					after: after,
-					userId: announcement.userId,
-					userUsername: user.username,
-					userHost: user.host,
-				});
-			} else {
-				this.moderationLogService.log(moderator, 'updateGlobalAnnouncement', {
-					announcementId: announcement.id,
-					before: announcement,
-					after: after,
-				});
-			}
-		}
+		await updateAnnouncementWithModerationLog({
+			db: this.drizzle,
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, announcement, values as AnnouncementUpdateValues, moderator);
 	}
 
 	@bindThis
 	public async delete(announcement: MiAnnouncement, moderator?: MiUser): Promise<void> {
-		await deleteAnnouncementInDatabase(this.drizzle, announcement.id);
-
-		if (moderator) {
-			if (announcement.userId) {
-				const user = await fetchUserByIdOrFailFromDatabase(this.drizzle, announcement.userId);
-				this.moderationLogService.log(moderator, 'deleteUserAnnouncement', {
-					announcementId: announcement.id,
-					announcement: announcement,
-					userId: announcement.userId,
-					userUsername: user.username,
-					userHost: user.host,
-				});
-			} else {
-				this.moderationLogService.log(moderator, 'deleteGlobalAnnouncement', {
-					announcementId: announcement.id,
-					announcement: announcement,
-				});
-			}
-		}
+		await deleteAnnouncementWithModerationLog({
+			db: this.drizzle,
+			logModeration: (mod, type, info) => this.moderationLogService.log(mod, type, info),
+		}, announcement, moderator);
 	}
 
 	@bindThis

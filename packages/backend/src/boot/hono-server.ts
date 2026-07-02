@@ -93,6 +93,15 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 					},
 				}));
 			},
+			publishBroadcastStream: (type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: 'broadcast',
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
 			publishMainStream: (userId, type, value) => {
 				deps.redisForPub.publish(config.host, JSON.stringify({
 					channel: `mainStream:${userId}`,
