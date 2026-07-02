@@ -76,6 +76,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		apiShell: {
 			config,
 			db: deps.db,
+			dbPool: deps.drizzlePool,
 			meta: deps.meta,
 			redis: deps.redis,
 			httpRequestService: deps.httpRequestService,

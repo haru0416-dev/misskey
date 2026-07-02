@@ -6,7 +6,7 @@
 import { Hono, type Context } from 'hono';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { UserAuthService } from '@/core/UserAuthService.js';
@@ -23,6 +23,7 @@ import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import { handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
+import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
@@ -30,6 +31,9 @@ import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hon
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
+import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
+import { handleHonoApiPromoRead } from './hono-api-promo.js';
+import { handleHonoApiResetDb } from './hono-api-reset-db.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -45,10 +49,13 @@ import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
+import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
+import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
 
 export type ApiShellDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
+	dbPool: MiDrizzlePool;
 	meta: MiMeta;
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
@@ -443,6 +450,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/fetch-external-resources', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiFetchExternalResources(deps, auth.user, body));
+		});
+	});
+
 	app.get('/fetch-rss', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			return jsonResponse(c, await handleHonoApiFetchRss(deps, c.req.query()), 200, {
@@ -502,6 +520,18 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/promo/read', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiPromoRead(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
 	app.get('/retention', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			return jsonResponse(c, await handleHonoApiRetention(deps, {}), 200, {
@@ -516,6 +546,30 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			return jsonResponse(c, await handleHonoApiRetention(deps, body), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			});
+		});
+	});
+
+	app.post('/request-reset-password', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await handleHonoApiRequestResetPassword(deps, body, getRequestIp(c, deps.config));
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/reset-password', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await handleHonoApiResetPassword(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/reset-db', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await handleHonoApiResetDb(deps, body);
+			return emptyResponse(c);
 		});
 	});
 
@@ -551,6 +605,49 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
 				'Cache-Control': 'public, max-age=60',
 			});
+		});
+	});
+
+	app.post('/sw/register', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiSwRegister(deps, auth.user, body));
+		});
+	});
+
+	app.post('/sw/show-registration', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiSwShowRegistration(deps, auth.user, body));
+		});
+	});
+
+	app.post('/sw/unregister', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			await handleHonoApiSwUnregister(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/sw/update-registration', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiSwUpdateRegistration(deps, auth.user, body));
 		});
 	});
 
@@ -763,6 +860,16 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiUsernameAvailable(deps, body));
+		});
+	});
+
+	app.post('/verify-email', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await authenticateOptionalRequest(deps, c, body);
+
+			await handleHonoApiVerifyEmail(deps, body);
+			return emptyResponse(c);
 		});
 	});
 
