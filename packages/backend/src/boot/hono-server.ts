@@ -77,9 +77,19 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			config,
 			db: deps.db,
 			meta: deps.meta,
+			redis: deps.redis,
 			publishInternalEvent: (type, value) => {
 				deps.redisForPub.publish(config.host, JSON.stringify({
 					channel: 'internal',
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
+			publishMainStream: (userId, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `mainStream:${userId}`,
 					message: {
 						type,
 						body: value,

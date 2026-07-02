@@ -63,6 +63,16 @@ export function invalidJsonBody(): HonoApiError {
 	});
 }
 
+export function invalidParamError(info?: unknown): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Invalid param.',
+		code: 'INVALID_PARAM',
+		id: '3d81ceae-475f-4600-b2a8-2bc116157532',
+		info,
+	});
+}
+
 export function credentialRequiredError(): HonoApiError {
 	return new HonoApiError({
 		status: 401,
@@ -99,6 +109,15 @@ export function permissionDeniedError(): HonoApiError {
 		headers: {
 			'WWW-Authenticate': `Bearer realm="Misskey", error="insufficient_scope", error_description="${message}"`,
 		},
+	});
+}
+
+export function accessDeniedError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Access denied.',
+		code: 'ACCESS_DENIED',
+		id: '56f35758-7dd5-468b-8439-5d6fb8ec9b8e',
 	});
 }
 

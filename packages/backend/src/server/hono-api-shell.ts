@@ -4,20 +4,25 @@
  */
 
 import { Hono, type Context } from 'hono';
+import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
-import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from './hono-api-auth.js';
+import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from './hono-api-auth.js';
 import { HonoApiError, invalidJsonBody } from './hono-api-error.js';
 import { handleHonoApiI } from './hono-api-i.js';
+import { handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
+import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { signupWithHonoApi, type SignupInternalEventPublisher } from './hono-api-signup.js';
 
 export type ApiShellDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
+	redis: Redis.Redis;
 	publishInternalEvent?: SignupInternalEventPublisher;
+	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
 const unknownApiEndpoint = {
@@ -126,6 +131,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:account');
 
 			return jsonResponse(c, await handleHonoApiI(deps, auth.user, auth.token));
+		});
+	});
+
+	app.post('/miauth/gen-token', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			return jsonResponse(c, await handleHonoApiMiauthGenToken(deps, auth.user, body));
 		});
 	});
 
