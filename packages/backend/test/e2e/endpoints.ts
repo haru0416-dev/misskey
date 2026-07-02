@@ -60,6 +60,7 @@ import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
 import type { DeliverJobData, InboxJobData, ObjectStorageJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
@@ -3883,6 +3884,131 @@ describe('Endpoints', () => {
 				await new Promise(resolve => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('updateAbuseReportNote moderation log was not found');
 			}
+		});
+	});
+
+	describe('admin/show-user', () => {
+		test('admin/show-user と admin/show-users は詳細、filter、token scope、roleを維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const config = loadConfig();
+			const target = await signup({ username: `hashow${suffix}` });
+			await updateUserProfileInDatabase(db, target.id, {
+				email: `hashow-${suffix}@example.test`,
+				emailVerified: true,
+				followedMessage: `followed ${suffix}`,
+				moderationNote: `moderation ${suffix}`,
+				mutedWords: [`mute${suffix}`, ['deep', suffix]],
+				mutedInstances: [`muted-${suffix}.example`],
+				notificationRecieveConfig: {
+					follow: {
+						type: 'normal',
+					},
+				} as any,
+				autoAcceptFollowed: true,
+				noCrawle: true,
+				preventAiLearning: false,
+				alwaysMarkNsfw: true,
+				autoSensitive: true,
+				carefulBot: true,
+				injectFeaturedNote: false,
+				receiveAnnouncementEmail: false,
+			});
+			await updateUserInDatabase(db, target.id, {
+				isSuspended: true,
+				isHibernated: true,
+				lastActiveDate: new Date(now - 1234),
+			});
+			const showRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono show user role ${suffix}`,
+				description: 'show user role',
+				color: '#2266aa',
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: '018d87a0-7f78-48b4-9ee8-1e22e6f73089',
+					type: 'isRemote',
+				},
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: true,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 4242,
+				policies: {
+					canPublicNote: {
+						useDefault: false,
+						priority: 0,
+						value: false,
+					},
+				},
+			});
+			const assign = await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: target.id,
+				roleId: showRole.id,
+				expiresAt: new Date(now + 60 * 1000),
+			});
+			const signin = await createSigninInDatabase(db, {
+				id: genId(config, now + 2),
+				userId: target.id,
+				ip: `10.0.0.${Number.parseInt(suffix.slice(-2), 36) % 200}`,
+				headers: {
+					'user-agent': `hono-show-${suffix}`,
+				},
+				success: true,
+			});
+
+			const shown = await api('admin/show-user', { userId: target.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.email, `hashow-${suffix}@example.test`);
+			assert.strictEqual(shown.body.emailVerified, true);
+			assert.strictEqual(shown.body.followedMessage, `followed ${suffix}`);
+			assert.strictEqual(shown.body.moderationNote, `moderation ${suffix}`);
+			assert.deepStrictEqual(shown.body.mutedInstances, [`muted-${suffix}.example`]);
+			assert.strictEqual(shown.body.isModerator, true);
+			assert.strictEqual(shown.body.isSilenced, true);
+			assert.strictEqual(shown.body.isSuspended, true);
+			assert.strictEqual(shown.body.isHibernated, true);
+			assert.strictEqual(shown.body.lastActiveDate, new Date(now - 1234).toISOString());
+			assert.strictEqual(shown.body.policies.canPublicNote, false);
+			assert.ok(shown.body.roles.some(item => item.id === showRole.id && item.name === showRole.name && item.usersCount === 1));
+			assert.ok(shown.body.roleAssigns.some(item => item.roleId === showRole.id && item.createdAt === parseId(config, assign.id).date.toISOString() && item.expiresAt === assign.expiresAt?.toISOString()));
+			assert.ok(shown.body.signins.some(item => item.id === signin.id && item.ip === signin.ip && item.success === true));
+
+			const listed = await api('admin/show-users', {
+				state: 'moderator',
+				username: target.username.slice(0, 6),
+				limit: 10,
+				sort: '+createdAt',
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			const listedTarget = listed.body.find(item => item.id === target.id);
+			assert.ok(listedTarget);
+			assert.strictEqual(listedTarget.username, target.username);
+			assert.strictEqual(listedTarget.moderationNote, `moderation ${suffix}`);
+			assert.strictEqual(listedTarget.isSilenced, true);
+			assert.ok(listedTarget.roles.some(item => item.id === showRole.id && item.displayOrder === 4242));
+
+			const token = await createAppToken(alice, ['read:admin:show-user']);
+			const shownByToken = await api('admin/show-user', { userId: target.id }, { token });
+			assert.strictEqual(shownByToken.status, 200);
+			assert.strictEqual(shownByToken.body.email, `hashow-${suffix}@example.test`);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const scopeDenied = await api('admin/show-users', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `hashown${suffix}` });
+			const roleDenied = await api('admin/show-user', { userId: target.id }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 	});
 
