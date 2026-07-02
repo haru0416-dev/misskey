@@ -22,6 +22,7 @@ import { handleHonoApiAdminAvatarDecorationsCreate, handleHonoApiAdminAvatarDeco
 import { handleHonoApiAdminRolesAssign, handleHonoApiAdminRolesCreate, handleHonoApiAdminRolesDelete, handleHonoApiAdminRolesList, handleHonoApiAdminRolesShow, handleHonoApiAdminRolesUnassign, handleHonoApiAdminRolesUpdate, handleHonoApiAdminRolesUpdateDefaultPolicies, handleHonoApiAdminRolesUsers } from './hono-api-admin-roles.js';
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from './hono-api-admin-stats.js';
 import { handleHonoApiAdminSystemWebhookCreate, handleHonoApiAdminSystemWebhookDelete, handleHonoApiAdminSystemWebhookList, handleHonoApiAdminSystemWebhookShow, handleHonoApiAdminSystemWebhookTest, handleHonoApiAdminSystemWebhookUpdate } from './hono-api-admin-system-webhooks.js';
+import { handleHonoApiAdminGetUserIps } from './hono-api-admin-user-ips.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
@@ -714,6 +715,18 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiAdmin(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminShowModerationLogs(deps, body));
+		});
+	});
+
+	app.post('/admin/get-user-ips', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			await assertHonoApiAdmin(deps, auth);
+			assertTokenPermission(auth, 'read:admin:user-ips');
+
+			return jsonResponse(c, await handleHonoApiAdminGetUserIps(deps, body));
 		});
 	});
 

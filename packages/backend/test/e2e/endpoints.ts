@@ -48,6 +48,7 @@ import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
+import { userIp } from '@/db/schema/user-ip.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
@@ -2658,6 +2659,59 @@ describe('Endpoints', () => {
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+		});
+	});
+
+	describe('admin/get-user-ips', () => {
+		test('admin/get-user-ips は最新30件、admin権限、token scopeを維持する', async () => {
+			const now = Date.now();
+			const createdAtBase = new Date(now - 1000 * 60);
+			const rows = await db
+				.insert(userIp)
+				.values(Array.from({ length: 32 }, (_, i) => ({
+					userId: bob.id,
+					ip: `hono-ip-${now}-${i}`,
+					createdAt: new Date(createdAtBase.getTime() + i * 1000),
+				})))
+				.returning({
+					id: userIp.id,
+					ip: userIp.ip,
+					createdAt: userIp.createdAt,
+				});
+			const expected = rows
+				.sort((a, b) => b.id - a.id)
+				.slice(0, 30)
+				.map(row => ({
+					ip: row.ip,
+					createdAt: row.createdAt.toISOString(),
+				}));
+
+			const listed = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, alice);
+			assert.strictEqual(listed.status, 200);
+			assert.deepStrictEqual(listed.body, expected);
+
+			const readToken = await createAppToken(alice, ['read:admin:user-ips']);
+			const listedWithApp = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, { token: readToken });
+			assert.strictEqual(listedWithApp.status, 200);
+			assert.deepStrictEqual(listedWithApp.body, expected);
+
+			const deniedToken = await createAppToken(alice, ['read:admin:roles']);
+			const scopeDenied = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, { token: deniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoips${now.toString(36)}` });
+			const roleDenied = await api('admin/get-user-ips', {
+				userId: bob.id,
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 	});
 
