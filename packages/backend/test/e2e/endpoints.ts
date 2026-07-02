@@ -12,6 +12,7 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
+import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
@@ -461,6 +462,54 @@ describe('Endpoints', () => {
 				await redis.del(`hashtagUsers:${tag}:${chartWindow}`);
 				await closeRedisConnection(redis);
 			}
+		});
+	});
+
+	describe('avatar decoration endpoints', () => {
+		test('get-avatar-decorations filters unavailable role ids', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const createdRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono avatar decoration role ${now}`,
+				description: 'Hono avatar decoration endpoint test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const decoration = await createAvatarDecorationInDatabase(db, {
+				id: genId(config, now + 1),
+				name: `Hono decoration ${now}`,
+				description: 'Hono avatar decoration',
+				url: 'https://example.com/avatar-decoration.png',
+				roleIdsThatCanBeUsedThisDecoration: [createdRole.id, 'missing-role-id'],
+				category: 'hono',
+			});
+
+			const res = await api('get-avatar-decorations', {});
+			assert.strictEqual(res.status, 200);
+			const listed = res.body.find(item => item.id === decoration.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.name, decoration.name);
+			assert.strictEqual(listed.description, decoration.description);
+			assert.strictEqual(listed.url, decoration.url);
+			assert.deepStrictEqual(listed.roleIdsThatCanBeUsedThisDecoration, [createdRole.id]);
+			assert.strictEqual(listed.category, decoration.category);
 		});
 	});
 
