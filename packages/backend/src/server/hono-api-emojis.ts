@@ -7,6 +7,7 @@ import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
 import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DbQueue } from '@/core/QueueModule.js';
@@ -20,7 +21,7 @@ import type { HonoApiBroadcastStreamPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
-export type HonoApiEmojiDependencies = {
+export type HonoApiEmojiDependencies = DriveFileUploadDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
@@ -171,6 +172,14 @@ const adminEmojiDeleteBulkParamDef = {
 	required: ['ids'],
 } as const;
 
+const adminEmojiCopyParamDef = {
+	type: 'object',
+	properties: {
+		emojiId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['emojiId'],
+} as const;
+
 const adminEmojiImportZipParamDef = {
 	type: 'object',
 	properties: {
@@ -229,6 +238,7 @@ type AdminEmojiUpdateParams = {
 type AdminEmojiAliasesBulkParams = SchemaType<typeof adminEmojiAliasesBulkParamDef>;
 type AdminEmojiDeleteParams = SchemaType<typeof adminEmojiDeleteParamDef>;
 type AdminEmojiDeleteBulkParams = SchemaType<typeof adminEmojiDeleteBulkParamDef>;
+type AdminEmojiCopyParams = SchemaType<typeof adminEmojiCopyParamDef>;
 type AdminEmojiImportZipParams = SchemaType<typeof adminEmojiImportZipParamDef>;
 type AdminEmojiSetCategoryBulkParams = SchemaType<typeof adminEmojiSetCategoryBulkParamDef>;
 type AdminEmojiSetLicenseBulkParams = SchemaType<typeof adminEmojiSetLicenseBulkParamDef>;
@@ -362,6 +372,20 @@ function adminUnsupportedFileTypeError(): HonoApiError {
 
 function adminDuplicateEmojiNameError(): HonoApiError {
 	return adminEmojiClientError('Duplicate name.', 'DUPLICATE_NAME', 'f7a3462c-4e6e-4069-8421-b9bd4f4c3975');
+}
+
+function adminCopyNoSuchEmojiError(): HonoApiError {
+	return adminEmojiClientError('No such emoji.', 'NO_SUCH_EMOJI', 'e2785b66-dca3-4087-9cac-b93c541cc425');
+}
+
+function adminCopyInternalError(): HonoApiError {
+	return new HonoApiError({
+		status: 500,
+		message: 'Internal error occurred. Please contact us if the error persists.',
+		code: 'INTERNAL_ERROR',
+		id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
+		kind: 'server',
+	});
 }
 
 function adminSameNameEmojiExistsError(): HonoApiError {
@@ -556,6 +580,50 @@ export async function handleHonoApiAdminEmojiDeleteBulk(
 
 	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiDeleted(deps, emojis);
+}
+
+export async function handleHonoApiAdminEmojiCopy(
+	deps: HonoApiEmojiDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'EmojiDetailed'>> {
+	const params = parseHonoApiParams(adminEmojiCopyParamDef, body) as AdminEmojiCopyParams;
+	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.emojiId);
+	if (emoji == null) throw adminCopyNoSuchEmojiError();
+
+	const driveFile = await uploadSystemDriveFileFromUrl(deps, emoji.originalUrl)
+		.catch(() => {
+			throw adminCopyInternalError();
+		});
+
+	if (await emojiExistsWithLocalNameInDatabase(deps.db, emoji.name)) {
+		throw adminDuplicateEmojiNameError();
+	}
+
+	const addedEmoji = await insertEmojiInDatabase(deps.db, {
+		id: genId(deps.config),
+		updatedAt: new Date(),
+		originalUrl: driveFile.url,
+		publicUrl: driveFile.webpublicUrl ?? driveFile.url,
+		type: driveFile.webpublicType ?? driveFile.type,
+		name: emoji.name,
+		category: emoji.category,
+		aliases: emoji.aliases,
+		host: null,
+		license: emoji.license,
+		isSensitive: emoji.isSensitive,
+		localOnly: emoji.localOnly,
+		roleIdsThatCanBeUsedThisEmojiAsReaction: emoji.roleIdsThatCanBeUsedThisEmojiAsReaction,
+	});
+
+	await refreshHonoApiLocalEmojisCache(deps);
+	await publishHonoApiEmojiAdded(deps, addedEmoji);
+	await logModerationEventInDatabase(deps, me, 'addCustomEmoji', {
+		emojiId: addedEmoji.id,
+		emoji: addedEmoji,
+	});
+
+	return packHonoEmojiDetailed(addedEmoji);
 }
 
 export async function handleHonoApiAdminEmojiImportZip(

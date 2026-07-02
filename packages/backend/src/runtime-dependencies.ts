@@ -19,6 +19,7 @@ import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { ImageProcessingService } from '@/core/ImageProcessingService.js';
 import { InternalStorageService } from '@/core/InternalStorageService.js';
 import { LoggerService } from '@/core/LoggerService.js';
+import { S3Service } from '@/core/S3Service.js';
 import { EmailService } from '@/core/EmailService.js';
 import { UserAuthService } from '@/core/UserAuthService.js';
 import { UtilityService } from '@/core/UtilityService.js';
@@ -62,6 +63,7 @@ export type RuntimeDependencies = {
 	imageProcessingService: ImageProcessingService;
 	internalStorageService: InternalStorageService;
 	loggerService: LoggerService;
+	s3Service: S3Service;
 	userAuthService: UserAuthService;
 	utilityService: UtilityService;
 	urlPreviewService: UrlPreviewService;
@@ -227,6 +229,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const imageProcessingService = new ImageProcessingService();
 	const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
 	const internalStorageService = new InternalStorageService(config);
+	const s3Service = new S3Service(httpRequestService);
 	const utilityService = new UtilityService(config, meta);
 	const emailService = new EmailService(config, meta, db, loggerService, utilityService, httpRequestService);
 	const userAuthService = new UserAuthService(redis, db);
@@ -246,6 +249,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		imageProcessingService,
 		internalStorageService,
 		loggerService,
+		s3Service,
 		userAuthService,
 		utilityService,
 		urlPreviewService,

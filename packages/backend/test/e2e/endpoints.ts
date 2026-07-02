@@ -26,7 +26,7 @@ import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
 import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
 import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
@@ -514,6 +514,42 @@ describe('Endpoints', () => {
 			} finally {
 				await removeDeleteAccountJobs();
 			}
+		});
+	});
+
+	describe('admin/accounts/create', () => {
+		test('root native token のみアカウント作成でき、external token と非rootは拒否される', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const created = await api('admin/accounts/create', {
+				username: `hacreate${suffix}`,
+				password: 'test',
+				setupPassword: null,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.username, `hacreate${suffix}`);
+			assert.strictEqual(typeof (created.body as { token?: unknown }).token, 'string');
+
+			const user = await fetchUserByIdOrFailFromDatabase(db, created.body.id);
+			assert.strictEqual(user.username, `hacreate${suffix}`);
+			assert.strictEqual(user.host, null);
+
+			const token = await createAppToken(alice, ['write:admin:account']);
+			const appDenied = await api('admin/accounts/create', {
+				username: `hacreatet${suffix}`,
+				password: 'test',
+				setupPassword: null,
+			}, { token });
+			assert.strictEqual(appDenied.status, 400);
+			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+			assert.strictEqual(castAsError(appDenied.body as any).error.id, '1fb7cb09-d46a-4fff-b8df-057708cce513');
+
+			const nonRootDenied = await api('admin/accounts/create', {
+				username: `hacreateb${suffix}`,
+				password: 'test',
+				setupPassword: null,
+			}, bob);
+			assert.strictEqual(nonRootDenied.status, 400);
+			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
 		});
 	});
 
@@ -1751,6 +1787,124 @@ describe('Endpoints', () => {
 				assert.ok(logs.some(log => log.type === 'addCustomEmoji'));
 				assert.ok(logs.some(log => log.type === 'updateCustomEmoji'));
 			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
+		test('admin/emoji/copy は remote emoji を Drive に取り込み、local emoji、cache、log、scope、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `haemc${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono emoji copy manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64');
+			let imageServer: Server | undefined;
+			await new Promise<void>((resolve) => {
+				imageServer = createServer((_req, res) => {
+					res.writeHead(200, {
+						'Content-Type': 'image/png',
+						'Content-Disposition': `inline; filename="honoemoji_copy_${suffix}.png"`,
+					});
+					res.end(png);
+				});
+				imageServer.listen(0, '127.0.0.1', () => resolve());
+			});
+			const address = imageServer!.address() as AddressInfo;
+			const imageUrl = `http://127.0.0.1:${address.port}/honoemoji_copy_${suffix}.png`;
+
+			const remote = await insertEmojiInDatabase(db, {
+				id: genId(config, now),
+				name: `honoemoji_copy_${suffix}`,
+				host: `copy-${suffix}.remote`,
+				aliases: [`copy_alias_${suffix}`],
+				category: `copy_category_${suffix}`,
+				originalUrl: imageUrl,
+				publicUrl: '',
+				license: `copy license ${suffix}`,
+				isSensitive: true,
+				localOnly: true,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
+				const scopeDenied = await api('admin/emoji/copy', { emojiId: remote.id }, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const roleDenied = await api('admin/emoji/copy', { emojiId: remote.id }, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const copied = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
+				assert.strictEqual(copied.status, 200);
+				const copiedBody = copied.body as any;
+				assert.strictEqual(copiedBody.name, remote.name);
+				assert.strictEqual(copiedBody.host, null);
+				assert.deepStrictEqual(copiedBody.aliases, [`copy_alias_${suffix}`]);
+				assert.strictEqual(copiedBody.category, `copy_category_${suffix}`);
+				assert.strictEqual(copiedBody.license, `copy license ${suffix}`);
+				assert.strictEqual(copiedBody.isSensitive, true);
+				assert.strictEqual(copiedBody.localOnly, true);
+
+				const copiedEmoji = await fetchEmojiByIdOrFailFromDatabase(db, copiedBody.id);
+				assert.strictEqual(copiedEmoji.host, null);
+				assert.strictEqual(copiedEmoji.name, remote.name);
+				assert.notStrictEqual(copiedEmoji.originalUrl, remote.originalUrl);
+				assert.strictEqual(copiedEmoji.publicUrl, copiedEmoji.originalUrl);
+				assert.strictEqual(copiedEmoji.type, 'image/png');
+
+				const driveFile = await fetchDriveFileByUrlFromDatabase(db, copiedEmoji.originalUrl);
+				assert.ok(driveFile);
+				assert.strictEqual(driveFile.userId, null);
+				assert.strictEqual(driveFile.userHost, null);
+				assert.strictEqual(driveFile.src, imageUrl);
+				assert.strictEqual(driveFile.type, 'image/png');
+
+				const redis = createRedisClient(config);
+				try {
+					const cached = await redis.get('singlecache:localEmojis');
+					assert.ok(cached);
+					const cachedEmojis = JSON.parse(cached) as any[];
+					const cachedCopied = cachedEmojis.find(emoji => emoji.id === copiedEmoji.id);
+					assert.ok(cachedCopied);
+					assert.strictEqual(cachedCopied.name, remote.name);
+				} finally {
+					await closeRedisConnection(redis);
+				}
+
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'addCustomEmoji',
+					userId: manager.id,
+					search: suffix,
+				});
+				assert.ok(logs.some(log => (log.info as any).emojiId === copiedEmoji.id));
+
+				const duplicate = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
+				assert.strictEqual(duplicate.status, 400);
+				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
+			} finally {
+				await new Promise<void>((resolve, reject) => {
+					imageServer?.close(err => err ? reject(err) : resolve());
+				});
 				await api('admin/roles/unassign', {
 					roleId: emojiRole.id,
 					userId: manager.id,

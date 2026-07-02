@@ -12,17 +12,31 @@ import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js'
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiUser } from '@/models/_.js';
-import { descriptionSchema } from '@/models/User.js';
+import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
+import bcrypt from 'bcryptjs';
 import { HonoApiError } from './hono-api-error.js';
+import type { HonoApiAuthenticated } from './hono-api-auth.js';
+import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
+import { createLocalSignupAccount, packSignupUser, type SignupDependencies, type SignupResponse } from './hono-api-signup.js';
 import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
-export type HonoApiAdminAccountsDependencies = UserPackingDependencies & {
+export type HonoApiAdminAccountsDependencies = UserPackingDependencies & SignupDependencies & {
 	dbQueue: DbQueue;
 	deliverQueue: DeliverQueue;
-	publishInternalEvent?: <K extends 'userChangeDeletedState'>(type: K, value: { id: MiUser['id']; isDeleted: true }) => void;
+	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
+
+const adminAccountCreateParamDef = {
+	type: 'object',
+	properties: {
+		username: localUsernameSchema,
+		password: passwordSchema,
+		setupPassword: { type: 'string', nullable: true },
+	},
+	required: ['username', 'password'],
+} as const;
 
 const adminAccountsFindByEmailParamDef = {
 	type: 'object',
@@ -47,6 +61,7 @@ const adminUpdateProxyAccountParamDef = {
 	},
 } as const;
 
+type AdminAccountCreateParams = SchemaType<typeof adminAccountCreateParamDef>;
 type AdminAccountsFindByEmailParams = SchemaType<typeof adminAccountsFindByEmailParamDef>;
 type AdminAccountDeleteParams = SchemaType<typeof adminAccountDeleteParamDef>;
 type AdminUpdateProxyAccountParams = SchemaType<typeof adminUpdateProxyAccountParamDef>;
@@ -58,6 +73,54 @@ function userNotFoundError(): HonoApiError {
 		code: 'USER_NOT_FOUND',
 		id: 'cb865949-8af5-4062-a88c-ef55e8786d1d',
 	});
+}
+
+function adminAccountCreateAccessDeniedError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Access denied.',
+		code: 'ACCESS_DENIED',
+		id: '1fb7cb09-d46a-4fff-b8df-057708cce513',
+	});
+}
+
+function adminAccountCreateWrongInitialPasswordError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Initial password is incorrect.',
+		code: 'INCORRECT_INITIAL_PASSWORD',
+		id: '97147c55-1ae1-4f6f-91d6-e1c3e0e76d62',
+	});
+}
+
+export async function handleHonoApiAdminAccountsCreate(
+	deps: HonoApiAdminAccountsDependencies,
+	auth: HonoApiAuthenticated,
+	body: Record<string, unknown>,
+): Promise<SignupResponse> {
+	const params = parseHonoApiParams(adminAccountCreateParamDef, body) as AdminAccountCreateParams;
+
+	if (deps.meta.rootUserId == null && auth.user == null && auth.token == null) {
+		if (deps.config.setupPassword != null) {
+			if (params.setupPassword !== deps.config.setupPassword) {
+				throw adminAccountCreateWrongInitialPasswordError();
+			}
+		} else if (params.setupPassword != null && params.setupPassword.trim() !== '') {
+			throw adminAccountCreateWrongInitialPasswordError();
+		}
+	} else if ((deps.meta.rootUserId != null && (deps.meta.rootUserId !== auth.user?.id)) || auth.token !== null) {
+		throw adminAccountCreateAccessDeniedError();
+	}
+
+	const salt = await bcrypt.genSalt(8);
+	const { account, token } = await createLocalSignupAccount(deps, {
+		username: params.username,
+		passwordHash: await bcrypt.hash(params.password, salt),
+		host: null,
+		ignorePreservedUsernames: true,
+	});
+
+	return await packSignupUser(deps, account, token);
 }
 
 export async function handleHonoApiAdminAccountsFindByEmail(
