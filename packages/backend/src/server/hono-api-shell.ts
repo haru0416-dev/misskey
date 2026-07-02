@@ -41,6 +41,7 @@ import { handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
+import { handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
@@ -861,6 +862,67 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body));
+		});
+	});
+
+	app.post('/invite/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:invite-codes');
+			const policies = await getHonoApiRolePolicies(deps, auth.user);
+			if (!policies.canInvite) {
+				throw rolePermissionDeniedError();
+			}
+
+			return jsonResponse(c, await handleHonoApiInviteCreate(deps, auth.user, policies, body));
+		});
+	});
+
+	app.post('/invite/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:invite-codes');
+			const policies = await getHonoApiRolePolicies(deps, auth.user);
+			if (!policies.canInvite) {
+				throw rolePermissionDeniedError();
+			}
+
+			await handleHonoApiInviteDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/invite/limit', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:invite-codes');
+			const policies = await getHonoApiRolePolicies(deps, auth.user);
+			if (!policies.canInvite) {
+				throw rolePermissionDeniedError();
+			}
+
+			return jsonResponse(c, await handleHonoApiInviteLimit(deps, auth.user, policies, body));
+		});
+	});
+
+	app.post('/invite/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:invite-codes');
+			const policies = await getHonoApiRolePolicies(deps, auth.user);
+			if (!policies.canInvite) {
+				throw rolePermissionDeniedError();
+			}
+
+			return jsonResponse(c, await handleHonoApiInviteList(deps, auth.user, body));
 		});
 	});
 

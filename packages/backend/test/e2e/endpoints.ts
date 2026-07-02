@@ -36,6 +36,7 @@ import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
+import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
@@ -2193,10 +2194,126 @@ describe('Endpoints', () => {
 	});
 
 	describe('invite', () => {
+		test('invite/limit keeps role policy, token scope, and remaining count semantics', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const inviter = await signup({ username: `honoinv${now.toString(36)}` });
+			const deniedUser = await signup({ username: `honoinvdeny${now.toString(36)}` });
+			const inviterRole = await createRoleInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono invite role ${now}`,
+				description: 'Hono invite role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {
+					canInvite: {
+						useDefault: false,
+						priority: 1,
+						value: true,
+					},
+					inviteLimit: {
+						useDefault: false,
+						priority: 1,
+						value: 2,
+					},
+					inviteLimitCycle: {
+						useDefault: false,
+						priority: 1,
+						value: 60,
+					},
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 1),
+				userId: inviter.id,
+				roleId: inviterRole.id,
+				expiresAt: null,
+			});
+			await createRegistrationTicketInDatabase(db, {
+				id: genId(config, now - 1000),
+				code: `hono-invite-recent-${now}`,
+				createdById: inviter.id,
+			});
+			await createRegistrationTicketInDatabase(db, {
+				id: genId(config, now - (1000 * 60 * 120)),
+				code: `hono-invite-old-${now}`,
+				createdById: inviter.id,
+			});
+
+			const allowed = await api('invite/limit', {}, inviter);
+			assert.strictEqual(allowed.status, 200);
+			assert.strictEqual(allowed.body.remaining, 1);
+
+			const roleDenied = await api('invite/limit', {}, deniedUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			assert.strictEqual(castAsError(roleDenied.body as any).error.id, 'c3d38592-54c0-429d-be96-5636b0431a61');
+
+			const readAccountToken = await createAppToken(inviter, ['read:account']);
+			const scopeDenied = await api('invite/limit', {}, { token: readAccountToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+
 		test('invite/create したコードを invite/list で取得でき、invite/delete で削除できる', async () => {
-			const inviterRole = await role(alice, {}, { canInvite: { priority: 0, useDefault: false, value: true } });
-			await api('admin/roles/assign', { userId: bob.id, roleId: inviterRole.id }, alice);
-			await api('admin/roles/assign', { userId: carol.id, roleId: inviterRole.id }, alice);
+			const config = loadConfig();
+			const now = Date.now();
+			const inviterRole = await createRoleInDatabase(db, {
+				id: genId(config, now + 10),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Invite role ${now}`,
+				description: 'Invite role',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: {
+					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
+					type: 'isRemote',
+				},
+				isPublic: false,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {
+					canInvite: {
+						priority: 0,
+						useDefault: false,
+						value: true,
+					},
+				},
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 11),
+				userId: bob.id,
+				roleId: inviterRole.id,
+				expiresAt: null,
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now + 12),
+				userId: carol.id,
+				roleId: inviterRole.id,
+				expiresAt: null,
+			});
 
 			const created = await api('invite/create', {}, bob);
 			assert.strictEqual(created.status, 200);
