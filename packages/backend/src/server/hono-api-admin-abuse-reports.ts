@@ -4,7 +4,7 @@
  */
 
 import { listAbuseReportNotificationRecipientsFromDatabase } from '@/core/AbuseReportNotificationRecipientStore.js';
-import { fetchAbuseUserReportByIdFromDatabase, resolveAbuseUserReportInDatabase } from '@/core/AbuseUserReportStore.js';
+import { fetchAbuseUserReportByIdFromDatabase, resolveAbuseUserReportInDatabase, updateAbuseUserReportModerationNoteInDatabase } from '@/core/AbuseUserReportStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
@@ -36,14 +36,34 @@ const adminResolveAbuseUserReportParamDef = {
 	required: ['reportId'],
 } as const;
 
-type AdminResolveAbuseUserReportParams = SchemaType<typeof adminResolveAbuseUserReportParamDef>;
+const adminUpdateAbuseUserReportParamDef = {
+	type: 'object',
+	properties: {
+		reportId: { type: 'string', format: 'misskey:id' },
+		moderationNote: { type: 'string' },
+	},
+	required: ['reportId'],
+} as const;
 
-function noSuchAbuseReportError(): HonoApiError {
+type AdminResolveAbuseUserReportParams = SchemaType<typeof adminResolveAbuseUserReportParamDef>;
+type AdminUpdateAbuseUserReportParams = SchemaType<typeof adminUpdateAbuseUserReportParamDef>;
+
+function noSuchAbuseReportForResolveError(): HonoApiError {
 	return new HonoApiError({
 		status: 404,
 		message: 'No such abuse report.',
 		code: 'NO_SUCH_ABUSE_REPORT',
 		id: 'ac3794dd-2ce4-d878-e546-73c60c06b398',
+		kind: 'server',
+	});
+}
+
+function noSuchAbuseReportForUpdateError(): HonoApiError {
+	return new HonoApiError({
+		status: 404,
+		message: 'No such abuse report.',
+		code: 'NO_SUCH_ABUSE_REPORT',
+		id: '15f51cf5-46d1-4b1d-a618-b35bcbed0662',
 		kind: 'server',
 	});
 }
@@ -97,7 +117,7 @@ export async function handleHonoApiAdminResolveAbuseUserReport(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminResolveAbuseUserReportParamDef, body) as AdminResolveAbuseUserReportParams;
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
-	if (report == null) throw noSuchAbuseReportError();
+	if (report == null) throw noSuchAbuseReportForResolveError();
 
 	const resolvedAs = params.resolvedAs ?? null;
 	await resolveAbuseUserReportInDatabase(deps.db, report.id, {
@@ -114,5 +134,26 @@ export async function handleHonoApiAdminResolveAbuseUserReport(
 	const resolvedReport = await fetchAbuseUserReportByIdFromDatabase(deps.db, report.id);
 	if (resolvedReport != null) {
 		await notifyAbuseReportResolvedSystemWebhook(deps, resolvedReport);
+	}
+}
+
+export async function handleHonoApiAdminUpdateAbuseUserReport(
+	deps: HonoApiAdminAbuseReportsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminUpdateAbuseUserReportParamDef, body) as AdminUpdateAbuseUserReportParams;
+	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
+	if (report == null) throw noSuchAbuseReportForUpdateError();
+
+	await updateAbuseUserReportModerationNoteInDatabase(deps.db, report.id, params.moderationNote);
+
+	if (params.moderationNote != null && report.moderationNote !== params.moderationNote) {
+		await logModerationEventInDatabase(deps, me, 'updateAbuseReportNote', {
+			reportId: report.id,
+			report,
+			before: report.moderationNote,
+			after: params.moderationNote,
+		});
 	}
 }

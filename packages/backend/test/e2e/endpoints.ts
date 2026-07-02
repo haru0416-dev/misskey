@@ -3025,6 +3025,71 @@ describe('Endpoints', () => {
 				if (i === 9) assert.fail('resolveAbuseReport moderation log was not found');
 			}
 		});
+
+		test('admin/update-abuse-user-report は moderationNote 更新、token scope、role、ログ、404を維持する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const report = await createReport(`${suffix}note`);
+			const moderationNote = `updated moderation note ${suffix}`;
+
+			const updated = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.moderationNote, moderationNote);
+
+			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
+			const updatedByToken = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote: `${moderationNote} by token`,
+			}, { token });
+			assert.strictEqual(updatedByToken.status, 204);
+
+			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			assert.strictEqual(after.moderationNote, `${moderationNote} by token`);
+
+			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
+			const scopeDenied = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote: 'denied',
+			}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `haur${suffix}` });
+			const roleDenied = await api('admin/update-abuse-user-report', {
+				reportId: report.id,
+				moderationNote: 'denied',
+			}, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			const missing = await api('admin/update-abuse-user-report', {
+				reportId: '000000000000000000000000',
+				moderationNote: 'missing',
+			}, alice);
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '15f51cf5-46d1-4b1d-a618-b35bcbed0662');
+
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'updateAbuseReportNote',
+					search: report.id,
+				});
+				if (logs.length > 0) {
+					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id && (log.info as any).before === report.moderationNote && (log.info as any).after === moderationNote), true);
+					break;
+				}
+				await new Promise(resolve => setTimeout(resolve, 100));
+				if (i === 9) assert.fail('updateAbuseReportNote moderation log was not found');
+			}
+		});
 	});
 
 	describe('admin/user-maintenance', () => {
