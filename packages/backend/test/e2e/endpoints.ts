@@ -18,7 +18,9 @@ import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
-import { channelFavoriteExistsInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
+import { createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
@@ -2607,20 +2609,138 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('Hono channel read endpoints', () => {
+		test('featured, owned, followed, and my-favorites preserve caller-scoped flags', async () => {
+			const config = loadConfig();
+			const stamp = Date.now().toString(36);
+			const owned = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-owned-${stamp}`,
+				description: 'hono owned channel',
+				lastNotedAt: new Date('2024-01-01T00:00:00.000Z'),
+			});
+			const followed = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-followed-${stamp}`,
+				description: 'hono followed channel',
+				lastNotedAt: new Date('2024-01-02T00:00:00.000Z'),
+			});
+			const archived = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-archived-${stamp}`,
+				description: 'hono archived channel',
+				lastNotedAt: new Date('2024-01-03T00:00:00.000Z'),
+				isArchived: true,
+			});
+			await createChannelFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: alice.id,
+				followeeId: followed.id,
+			});
+			await createChannelFavoriteInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				channelId: followed.id,
+			});
+			await createChannelMutingInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				channelId: followed.id,
+			});
+
+			const featuredAnonymous = await api('channels/featured', {});
+			assert.strictEqual(featuredAnonymous.status, 200);
+			const anonymousFeatured = (featuredAnonymous.body as any[]).find(channel => channel.id === followed.id);
+			assert.ok(anonymousFeatured);
+			assert.strictEqual(Object.hasOwn(anonymousFeatured, 'isFollowing'), false);
+			assert.strictEqual((featuredAnonymous.body as any[]).some(channel => channel.id === archived.id), false);
+
+			const featured = await api('channels/featured', {}, alice);
+			assert.strictEqual(featured.status, 200);
+			const featuredFollowed = (featured.body as any[]).find(channel => channel.id === followed.id);
+			assert.ok(featuredFollowed);
+			assert.strictEqual(featuredFollowed.isFollowing, true);
+			assert.strictEqual(featuredFollowed.isFavorited, true);
+			assert.strictEqual(featuredFollowed.isMuting, true);
+
+			const ownedList = await api('channels/owned', { limit: 20 }, alice);
+			assert.strictEqual(ownedList.status, 200);
+			assert.strictEqual((ownedList.body as any[]).some(channel => channel.id === owned.id), true);
+			assert.strictEqual((ownedList.body as any[]).some(channel => channel.id === archived.id), false);
+
+			const followedList = await api('channels/followed', { limit: 20 }, alice);
+			assert.strictEqual(followedList.status, 200);
+			assert.deepStrictEqual((followedList.body as any[]).filter(channel => channel.id === followed.id).map(channel => channel.isFollowing), [true]);
+
+			const favorites = await api('channels/my-favorites', {}, alice);
+			assert.strictEqual(favorites.status, 200);
+			const favorite = (favorites.body as any[]).find(channel => channel.id === followed.id);
+			assert.ok(favorite);
+			assert.strictEqual(favorite.isFavorited, true);
+		});
+
+		test('channel account read endpoints require read:channels app token permission', async () => {
+			const readAccountToken = await createAppToken(alice, ['read:account']);
+
+			for (const [endpoint, params] of [
+				['channels/owned', {}],
+				['channels/followed', {}],
+				['channels/my-favorites', {}],
+			] as const) {
+				const denied = await api(endpoint, params, { token: readAccountToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+		});
+	});
+
 	describe('channels/search', () => {
+		let channelSearchFixture: {
+			prefix: string;
+			aaa: { id: string; name: string; description: string };
+			ccc1: { id: string; name: string; description: string };
+			ccc2: { id: string; name: string; description: string };
+		} | null = null;
+
+		async function ensureChannelSearchFixture() {
+			if (channelSearchFixture != null) return channelSearchFixture;
+
+			const config = loadConfig();
+			const prefix = `hono-search-${Date.now().toString(36)}`;
+			const aaa = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `${prefix}-aaa`,
+				description: `${prefix}-bbb`,
+			});
+			const ccc1 = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `${prefix}-ccc1`,
+				description: `${prefix}-ddd1`,
+			});
+			const ccc2 = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `${prefix}-ccc2`,
+				description: `${prefix}-ddd2`,
+			});
+
+			const fixture = {
+				prefix,
+				aaa: { id: aaa.id, name: aaa.name, description: aaa.description! },
+				ccc1: { id: ccc1.id, name: ccc1.name, description: ccc1.description! },
+				ccc2: { id: ccc2.id, name: ccc2.name, description: ccc2.description! },
+			};
+			channelSearchFixture = fixture;
+			return fixture;
+		}
+
 		test('空白検索で一覧を取得できる', async () => {
-			await api('channels/create', {
-				name: 'aaa',
-				description: 'bbb',
-			}, bob);
-			await api('channels/create', {
-				name: 'ccc1',
-				description: 'ddd1',
-			}, bob);
-			await api('channels/create', {
-				name: 'ccc2',
-				description: 'ddd2',
-			}, bob);
+			const fixture = await ensureChannelSearchFixture();
 
 			const res = await api('channels/search', {
 				query: '',
@@ -2628,22 +2748,27 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 3);
+			const ids = (res.body as any[]).map(channel => channel.id);
+			assert.strictEqual(ids.includes(fixture.aaa.id), true);
+			assert.strictEqual(ids.includes(fixture.ccc1.id), true);
+			assert.strictEqual(ids.includes(fixture.ccc2.id), true);
 		});
 		test('名前のみの検索で名前を検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'aaa',
+				query: fixture.aaa.name,
 				type: 'nameOnly',
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].name, 'aaa');
+			assert.strictEqual(res.body[0].id, fixture.aaa.id);
 		});
 		test('名前のみの検索で名前を複数検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ccc',
+				query: `${fixture.prefix}-ccc`,
 				type: 'nameOnly',
 			}, bob);
 
@@ -2652,8 +2777,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.length, 2);
 		});
 		test('名前のみの検索で説明は検索できない', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'bbb',
+				query: fixture.aaa.description,
 				type: 'nameOnly',
 			}, bob);
 
@@ -2662,28 +2788,31 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.length, 0);
 		});
 		test('名前と説明の検索で名前を検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ccc1',
+				query: fixture.ccc1.name,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].name, 'ccc1');
+			assert.strictEqual(res.body[0].id, fixture.ccc1.id);
 		});
 		test('名前と説明での検索で説明を検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ddd1',
+				query: fixture.ccc1.description,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].name, 'ccc1');
+			assert.strictEqual(res.body[0].id, fixture.ccc1.id);
 		});
 		test('名前と説明の検索で名前を複数検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ccc',
+				query: `${fixture.prefix}-ccc`,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
@@ -2691,8 +2820,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.length, 2);
 		});
 		test('名前と説明での検索で説明を複数検索できる', async () => {
+			const fixture = await ensureChannelSearchFixture();
 			const res = await api('channels/search', {
-				query: 'ddd',
+				query: `${fixture.prefix}-ddd`,
 			}, bob);
 
 			assert.strictEqual(res.status, 200);
