@@ -5,6 +5,8 @@
 
 process.env.NODE_ENV = 'test';
 
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import bcrypt from 'bcryptjs';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
@@ -878,6 +880,69 @@ describe('Endpoints', () => {
 			}, alice);
 			assert.strictEqual(afterRemove.status, 400);
 			assert.strictEqual(castAsError(afterRemove.body as any).error.code, 'NO_SUCH_KEY');
+		});
+	});
+
+	describe('fetch-rss endpoint', () => {
+		let rssServer: Server | undefined;
+
+		afterAll(async () => {
+			await new Promise<void>((resolve, reject) => {
+				if (rssServer == null || !rssServer.listening) {
+					resolve();
+					return;
+				}
+
+				rssServer.close(error => error ? reject(error) : resolve());
+			});
+		});
+
+		test('fetch-rss parses RSS over POST and GET', async () => {
+			const rssXml = [
+				'<?xml version="1.0" encoding="UTF-8" ?>',
+				'<rss version="2.0">',
+				'<channel>',
+				'<title>Hono RSS Feed</title>',
+				'<link>https://example.com/</link>',
+				'<description>RSS fixture</description>',
+				'<item>',
+				'<title>First entry</title>',
+				'<link>https://example.com/entry</link>',
+				'<guid>entry-1</guid>',
+				'<pubDate>Tue, 01 Jul 2025 00:00:00 GMT</pubDate>',
+				'</item>',
+				'</channel>',
+				'</rss>',
+			].join('');
+
+			rssServer = createServer((req, res) => {
+				res.writeHead(200, {
+					'Content-Type': 'application/rss+xml; charset=utf-8',
+				});
+				res.end(rssXml);
+			});
+			await new Promise<void>((resolve, reject) => {
+				rssServer!.once('error', reject);
+				rssServer!.listen(0, '127.0.0.1', () => {
+					rssServer!.off('error', reject);
+					resolve();
+				});
+			});
+			const address = rssServer.address() as AddressInfo;
+			const url = `http://127.0.0.1:${address.port}/feed.xml`;
+
+			const post = await api('fetch-rss', { url });
+			assert.strictEqual(post.status, 200);
+			assert.strictEqual(post.body.title, 'Hono RSS Feed');
+			assert.strictEqual(post.body.items[0].title, 'First entry');
+			assert.strictEqual(post.body.items[0].guid, 'entry-1');
+
+			const get = await relativeFetch(`api/fetch-rss?url=${encodeURIComponent(url)}`);
+			assert.strictEqual(get.status, 200);
+			assert.strictEqual(get.headers.get('cache-control'), 'public, max-age=180');
+			const getBody = await get.json() as { title?: string; items?: { title?: string }[] };
+			assert.strictEqual(getBody.title, 'Hono RSS Feed');
+			assert.strictEqual(getBody.items?.[0].title, 'First entry');
 		});
 	});
 
