@@ -279,6 +279,36 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('admin/meta', () => {
+		test('admin/meta は設定値、proxy account、scope、管理者権限を維持する', async () => {
+			const meta = await fetchMetaFromDatabase(db);
+			const res = await api('admin/meta', {}, alice);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.uri, origin);
+			assert.strictEqual(typeof res.body.version, 'string');
+			assert.strictEqual(res.body.emailRequiredForSignup, meta.emailRequiredForSignup);
+			assert.strictEqual(res.body.federation, meta.federation);
+			assert.strictEqual(res.body.summalyProxy, meta.urlPreviewSummaryProxyUrl);
+			assert.strictEqual(typeof res.body.proxyAccountId, 'string');
+			assert.strictEqual((res.body.policies as { canPublicNote?: boolean }).canPublicNote, true);
+
+			const readToken = await createAppToken(alice, ['read:admin:meta']);
+			const byToken = await api('admin/meta', {}, { token: readToken });
+			assert.strictEqual(byToken.status, 200);
+			assert.strictEqual(byToken.body.proxyAccountId, res.body.proxyAccountId);
+
+			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
+			const scopeDenied = await api('admin/meta', {}, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const roleDenied = await api('admin/meta', {}, bob);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+	});
+
 	describe('availability endpoints', () => {
 		test('username availability reflects existing local users', async () => {
 			const available = await api('username/available', {
