@@ -140,6 +140,16 @@ export function userSuspendedError(): HonoApiError {
 	});
 }
 
+export function accountMovedError(): HonoApiError {
+	return new HonoApiError({
+		status: 403,
+		message: 'You have moved your account.',
+		code: 'YOUR_ACCOUNT_MOVED',
+		id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31',
+		kind: 'permission',
+	});
+}
+
 export function userDeletedError(): HonoApiError {
 	return new HonoApiError({
 		status: 403,

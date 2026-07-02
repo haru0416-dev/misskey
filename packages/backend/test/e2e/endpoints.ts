@@ -18,9 +18,20 @@ import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
+import { channelFavoriteExistsInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { createChannelInDatabase } from '@/core/ChannelStore.js';
+import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
+import { createClipInDatabase } from '@/core/ClipStore.js';
+import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
+import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
+import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
+import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
+import { createPageInDatabase } from '@/core/PageStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
@@ -29,9 +40,12 @@ import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
+import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
@@ -1241,6 +1255,577 @@ describe('Endpoints', () => {
 			const denied = await api('promo/read', { noteId }, { token: appToken });
 			assert.strictEqual(denied.status, 403);
 			assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+	});
+
+	describe('favorite and like endpoints', () => {
+		async function createFavoriteFixtures(prefix: string) {
+			const config = loadConfig();
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `${prefix}-list`,
+				isPublic: true,
+			});
+			const clip = await createClipInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `${prefix}-clip`,
+				isPublic: true,
+			});
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `${prefix}-channel`,
+			});
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `${prefix} page`,
+				name: `${prefix}-page`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `${prefix} flash`,
+				summary: '',
+				userId: alice.id,
+				script: '',
+				permissions: [],
+				visibility: 'public',
+			});
+
+			return { userList, clip, channel, page, flash };
+		}
+
+		test('users/lists favorite endpoints create, reject duplicates, and delete favorites', async () => {
+			const { userList } = await createFavoriteFixtures(`hono-favorite-list-${Date.now()}`);
+
+			const favorite = await api('users/lists/favorite', { listId: userList.id }, bob);
+			assert.strictEqual(favorite.status, 204);
+			assert.strictEqual(await userListFavoriteExistsInDatabase(db, bob.id, userList.id), true);
+
+			const duplicate = await api('users/lists/favorite', { listId: userList.id }, bob);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FAVORITED');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '6425bba0-985b-461e-af1b-518070e72081');
+
+			const unfavorite = await api('users/lists/unfavorite', { listId: userList.id }, bob);
+			assert.strictEqual(unfavorite.status, 204);
+			assert.strictEqual(await userListFavoriteExistsInDatabase(db, bob.id, userList.id), false);
+
+			const missingFavorite = await api('users/lists/unfavorite', { listId: userList.id }, bob);
+			assert.strictEqual(missingFavorite.status, 400);
+			assert.strictEqual(castAsError(missingFavorite.body as any).error.id, '835c4b27-463d-4cfa-969b-a9058678d465');
+		});
+
+		test('clip, channel, page, and flash endpoints keep lifecycle semantics', async () => {
+			const { clip, channel, page, flash } = await createFavoriteFixtures(`hono-favorite-${Date.now()}`);
+
+			const clipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
+			assert.strictEqual(clipFavorite.status, 204);
+			assert.strictEqual(await clipFavoriteExistsInDatabase(db, bob.id, clip.id), true);
+
+			const duplicateClipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
+			assert.strictEqual(duplicateClipFavorite.status, 400);
+			assert.strictEqual(castAsError(duplicateClipFavorite.body as any).error.id, '92658936-c625-4273-8326-2d790129256e');
+
+			const clipUnfavorite = await api('clips/unfavorite', { clipId: clip.id }, bob);
+			assert.strictEqual(clipUnfavorite.status, 204);
+			assert.strictEqual(await clipFavoriteExistsInDatabase(db, bob.id, clip.id), false);
+
+			const channelFavorite = await api('channels/favorite', { channelId: channel.id }, bob);
+			assert.strictEqual(channelFavorite.status, 204);
+			assert.strictEqual(await channelFavoriteExistsInDatabase(db, bob.id, channel.id), true);
+
+			const channelUnfavorite = await api('channels/unfavorite', { channelId: channel.id }, bob);
+			assert.strictEqual(channelUnfavorite.status, 204);
+			assert.strictEqual(await channelFavoriteExistsInDatabase(db, bob.id, channel.id), false);
+
+			const pageLike = await api('pages/like', { pageId: page.id }, bob);
+			assert.strictEqual(pageLike.status, 204);
+			assert.strictEqual(await pageLikeExistsInDatabase(db, bob.id, page.id), true);
+
+			const ownPageLike = await api('pages/like', { pageId: page.id }, alice);
+			assert.strictEqual(ownPageLike.status, 400);
+			assert.strictEqual(castAsError(ownPageLike.body as any).error.id, '28800466-e6db-40f2-8fae-bf9e82aa92b8');
+
+			const pageUnlike = await api('pages/unlike', { pageId: page.id }, bob);
+			assert.strictEqual(pageUnlike.status, 204);
+			assert.strictEqual(await pageLikeExistsInDatabase(db, bob.id, page.id), false);
+
+			const flashLike = await api('flash/like', { flashId: flash.id }, bob);
+			assert.strictEqual(flashLike.status, 204);
+			assert.strictEqual(await flashLikeExistsInDatabase(db, bob.id, flash.id), true);
+
+			const ownFlashLike = await api('flash/like', { flashId: flash.id }, alice);
+			assert.strictEqual(ownFlashLike.status, 400);
+			assert.strictEqual(castAsError(ownFlashLike.body as any).error.id, '3fd8a0e7-5955-4ba9-85bb-bf3e0c30e13b');
+
+			const flashUnlike = await api('flash/unlike', { flashId: flash.id }, bob);
+			assert.strictEqual(flashUnlike.status, 204);
+			assert.strictEqual(await flashLikeExistsInDatabase(db, bob.id, flash.id), false);
+		});
+
+		test('favorite and like endpoints require matching app token permissions', async () => {
+			const { userList, clip, channel, page, flash } = await createFavoriteFixtures(`hono-favorite-permission-${Date.now()}`);
+			const appToken = await createAppToken(bob, ['read:account']);
+
+			for (const [endpoint, params] of [
+				['users/lists/favorite', { listId: userList.id }],
+				['clips/favorite', { clipId: clip.id }],
+				['channels/favorite', { channelId: channel.id }],
+				['pages/like', { pageId: page.id }],
+				['flash/like', { flashId: flash.id }],
+			] as const) {
+				const denied = await api(endpoint, params as any, { token: appToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+		});
+
+		test('prohibitMoved endpoints reject moved users before side effects', async () => {
+			const { page } = await createFavoriteFixtures(`hono-favorite-moved-${Date.now()}`);
+			const movedUser = await signup({ username: `mvfav${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+
+			const denied = await api('pages/like', { pageId: page.id }, movedUser);
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+			assert.strictEqual(await pageLikeExistsInDatabase(db, movedUser.id, page.id), false);
+		});
+	});
+
+	describe('Hono account data endpoints', () => {
+		test('drive/files/check-existence returns ownership-scoped md5 existence', async () => {
+			const config = loadConfig();
+			const md5 = createHash('md5').update(`hono-drive-${Date.now()}`).digest('hex');
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: 'hono-drive-check.txt',
+				type: 'text/plain',
+				size: 11,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+
+			const exists = await api('drive/files/check-existence', { md5 }, alice);
+			assert.strictEqual(exists.status, 200);
+			assert.strictEqual(exists.body, true);
+
+			const otherUser = await api('drive/files/check-existence', { md5 }, bob);
+			assert.strictEqual(otherUser.status, 200);
+			assert.strictEqual(otherUser.body, false);
+
+			const missing = await api('drive/files/check-existence', { md5: '0'.repeat(32) }, alice);
+			assert.strictEqual(missing.status, 200);
+			assert.strictEqual(missing.body, false);
+		});
+
+		test('notes/drafts/count returns the caller draft count and rejects moved users', async () => {
+			const config = loadConfig();
+			const before = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(before.status, 200);
+
+			await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'hono draft 1',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+			await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'hono draft 2',
+				visibility: 'home',
+				pollMultiple: false,
+			});
+			await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				text: 'other user draft',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+
+			const after = await api('notes/drafts/count', {}, alice);
+			assert.strictEqual(after.status, 200);
+			assert.strictEqual(after.body, (before.body as number) + 2);
+
+			const movedUser = await signup({ username: `mvdraft${Date.now().toString(36)}` });
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+
+			const denied = await api('notes/drafts/count', {}, movedUser);
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+		});
+
+		test('users/achievements returns profile achievements without credentials', async () => {
+			const achievements = [{
+				name: 'notes1' as const,
+				unlockedAt: Date.now(),
+			}];
+			await updateUserProfileInDatabase(db, alice.id, { achievements });
+
+			const res = await api('users/achievements', { userId: alice.id });
+			assert.strictEqual(res.status, 200);
+			assert.deepStrictEqual(res.body, achievements);
+		});
+
+		test('i/webhooks list, show, update, and delete are scoped to the caller', async () => {
+			const config = loadConfig();
+			const latestSentAt = new Date('2024-01-02T03:04:05.000Z');
+			const webhook = await createWebhookInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: 'hono webhook',
+				on: ['mention', 'reply'],
+				url: 'https://example.com/hono-webhook',
+				secret: 'hono-secret',
+				active: true,
+				latestSentAt,
+				latestStatus: 204,
+			});
+			const otherWebhook = await createWebhookInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: 'other webhook',
+				on: ['follow'],
+				url: 'https://example.com/other-webhook',
+				secret: 'other-secret',
+				active: false,
+			});
+			const expected = {
+				id: webhook.id,
+				userId: alice.id,
+				name: webhook.name,
+				on: webhook.on,
+				url: webhook.url,
+				secret: webhook.secret,
+				active: webhook.active,
+				latestSentAt: latestSentAt.toISOString(),
+				latestStatus: webhook.latestStatus,
+			};
+
+			const list = await api('i/webhooks/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			const listed = (list.body as any[]).find(item => item.id === webhook.id);
+			assert.deepStrictEqual(listed, expected);
+			assert.strictEqual((list.body as any[]).some(item => item.id === otherWebhook.id), false);
+
+			const show = await api('i/webhooks/show', { webhookId: webhook.id }, alice);
+			assert.strictEqual(show.status, 200);
+			assert.deepStrictEqual(show.body, expected);
+
+			const noSuch = await api('i/webhooks/show', { webhookId: otherWebhook.id }, alice);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '50f614d9-3047-4f7e-90d8-ad6b2d5fb098');
+
+			const updateOther = await api('i/webhooks/update', { webhookId: otherWebhook.id, name: 'bad update' }, alice);
+			assert.strictEqual(updateOther.status, 400);
+			assert.strictEqual(castAsError(updateOther.body as any).error.id, 'fb0fea69-da18-45b1-828d-bd4fd1612518');
+
+			const update = await api('i/webhooks/update', {
+				webhookId: webhook.id,
+				name: 'hono webhook updated',
+				on: ['followed'],
+				url: 'https://example.com/hono-webhook-updated',
+				secret: null,
+				active: false,
+			}, alice);
+			assert.strictEqual(update.status, 204);
+
+			const updated = await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id);
+			assert.strictEqual(updated?.name, 'hono webhook updated');
+			assert.deepStrictEqual(updated?.on, ['followed']);
+			assert.strictEqual(updated?.url, 'https://example.com/hono-webhook-updated');
+			assert.strictEqual(updated?.secret, '');
+			assert.strictEqual(updated?.active, false);
+
+			const deleteOther = await api('i/webhooks/delete', { webhookId: otherWebhook.id }, alice);
+			assert.strictEqual(deleteOther.status, 400);
+			assert.strictEqual(castAsError(deleteOther.body as any).error.id, 'bae73e5a-5522-4965-ae19-3a8688e71d82');
+
+			const deleted = await api('i/webhooks/delete', { webhookId: webhook.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id), null);
+		});
+
+		test('users/lists/delete removes only the caller list and preserves error id', async () => {
+			const config = loadConfig();
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-delete-list-${Date.now()}`,
+				isPublic: false,
+			});
+
+			const otherUser = await api('users/lists/delete', { listId: userList.id }, bob);
+			assert.strictEqual(otherUser.status, 400);
+			assert.strictEqual(castAsError(otherUser.body as any).error.id, '78436795-db79-42f5-b1e2-55ea2cf19166');
+			assert.notStrictEqual(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id), null);
+
+			const deleted = await api('users/lists/delete', { listId: userList.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id), null);
+
+			const missing = await api('users/lists/delete', { listId: userList.id }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '78436795-db79-42f5-b1e2-55ea2cf19166');
+		});
+
+		test('users/lists list, show, and update preserve visibility and ownership semantics', async () => {
+			const config = loadConfig();
+			const privateList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-private-list-${Date.now()}`,
+				isPublic: false,
+			});
+			const publicList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-public-list-${Date.now()}`,
+				isPublic: true,
+			});
+			await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-bob-list-${Date.now()}`,
+				isPublic: true,
+			});
+
+			const ownList = await api('users/lists/list', {}, alice);
+			assert.strictEqual(ownList.status, 200);
+			assert.strictEqual((ownList.body as any[]).some(item => item.id === privateList.id), true);
+			assert.strictEqual((ownList.body as any[]).some(item => item.id === publicList.id), true);
+
+			const publicOnly = await api('users/lists/list', { userId: alice.id });
+			assert.strictEqual(publicOnly.status, 200);
+			assert.strictEqual((publicOnly.body as any[]).some(item => item.id === publicList.id), true);
+			assert.strictEqual((publicOnly.body as any[]).some(item => item.id === privateList.id), false);
+
+			const invalidAnonymousList = await api('users/lists/list', {});
+			assert.strictEqual(invalidAnonymousList.status, 400);
+			assert.strictEqual(castAsError(invalidAnonymousList.body as any).error.id, 'ab36de0e-29e9-48cb-9732-d82f1281620d');
+
+			const privateShowByOwner = await api('users/lists/show', { listId: privateList.id }, alice);
+			assert.strictEqual(privateShowByOwner.status, 200);
+			assert.strictEqual(privateShowByOwner.body.id, privateList.id);
+
+			const privateShowAnonymous = await api('users/lists/show', { listId: privateList.id });
+			assert.strictEqual(privateShowAnonymous.status, 400);
+			assert.strictEqual(castAsError(privateShowAnonymous.body as any).error.id, '7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+
+			const favorite = await api('users/lists/favorite', { listId: publicList.id }, bob);
+			assert.strictEqual(favorite.status, 204);
+			const publicShow = await api('users/lists/show', { listId: publicList.id, forPublic: true }, bob);
+			assert.strictEqual(publicShow.status, 200);
+			assert.strictEqual(publicShow.body.id, publicList.id);
+			assert.strictEqual(publicShow.body.likedCount, 1);
+			assert.strictEqual(publicShow.body.isLiked, true);
+
+			const otherUserUpdate = await api('users/lists/update', { listId: privateList.id, name: 'bad update' }, bob);
+			assert.strictEqual(otherUserUpdate.status, 400);
+			assert.strictEqual(castAsError(otherUserUpdate.body as any).error.id, '796666fe-3dff-4d39-becb-8a5932c1d5b7');
+
+			const update = await api('users/lists/update', {
+				listId: privateList.id,
+				name: 'hono updated list',
+				isPublic: true,
+			}, alice);
+			assert.strictEqual(update.status, 200);
+			assert.strictEqual(update.body.id, privateList.id);
+			assert.strictEqual(update.body.name, 'hono updated list');
+			assert.strictEqual(update.body.isPublic, true);
+
+			const fetched = await fetchUserListByIdAndUserIdFromDatabase(db, privateList.id, alice.id);
+			assert.strictEqual(fetched?.name, 'hono updated list');
+			assert.strictEqual(fetched?.isPublic, true);
+		});
+
+		test('Hono account data endpoints require matching app token permissions', async () => {
+			const readAccountToken = await createAppToken(alice, ['read:account']);
+			const readDriveToken = await createAppToken(alice, ['read:drive']);
+			const config = loadConfig();
+
+			for (const [endpoint, params, token] of [
+				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
+				['notes/drafts/count', {}, readDriveToken],
+				['i/webhooks/list', {}, readDriveToken],
+				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
+				['i/webhooks/delete', { webhookId: genId(config) }, readAccountToken],
+				['i/webhooks/update', { webhookId: genId(config) }, readAccountToken],
+				['users/lists/list', {}, readDriveToken],
+				['users/lists/show', { listId: genId(config) }, readDriveToken],
+				['users/lists/delete', { listId: genId(config) }, readAccountToken],
+				['users/lists/update', { listId: genId(config) }, readAccountToken],
+			] as const) {
+				const denied = await api(endpoint, params as any, { token });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
+		});
+	});
+
+	describe('Hono rate limited write endpoints', () => {
+		test('following/update-all updates only the caller followings', async () => {
+			const config = loadConfig();
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: alice.id,
+				followeeId: bob.id,
+				notify: 'normal',
+				withReplies: false,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: alice.id,
+				followeeId: carol.id,
+				notify: 'normal',
+				withReplies: false,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: bob.id,
+				followeeId: alice.id,
+				notify: 'normal',
+				withReplies: false,
+			});
+
+			const res = await api('following/update-all', {
+				notify: 'none',
+				withReplies: true,
+			}, alice);
+			assert.strictEqual(res.status, 204);
+
+			const aliceToBob = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, alice.id, bob.id);
+			const aliceToCarol = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, alice.id, carol.id);
+			const bobToAlice = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, bob.id, alice.id);
+			assert.strictEqual(aliceToBob?.notify, null);
+			assert.strictEqual(aliceToBob?.withReplies, true);
+			assert.strictEqual(aliceToCarol?.notify, null);
+			assert.strictEqual(aliceToCarol?.withReplies, true);
+			assert.strictEqual(bobToAlice?.notify, 'normal');
+			assert.strictEqual(bobToAlice?.withReplies, false);
+		});
+
+		test('flash/update updates own flash and preserves ownership errors', async () => {
+			const config = loadConfig();
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'old title',
+				summary: 'old summary',
+				userId: alice.id,
+				script: 'old script',
+				permissions: [],
+				visibility: 'public',
+			});
+			const otherFlash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'other title',
+				summary: 'other summary',
+				userId: bob.id,
+				script: 'other script',
+				permissions: [],
+				visibility: 'public',
+			});
+
+			const updated = await api('flash/update', {
+				flashId: flash.id,
+				title: 'new title',
+				summary: 'new summary',
+				script: 'new script',
+				permissions: ['read:account'],
+				visibility: 'private',
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const fetched = await fetchFlashByIdFromDatabase(db, flash.id);
+			assert.strictEqual(fetched?.title, 'new title');
+			assert.strictEqual(fetched?.summary, 'new summary');
+			assert.strictEqual(fetched?.script, 'new script');
+			assert.deepStrictEqual(fetched?.permissions, ['read:account']);
+			assert.strictEqual(fetched?.visibility, 'private');
+
+			const denied = await api('flash/update', { flashId: otherFlash.id, title: 'bad update' }, alice);
+			assert.strictEqual(denied.status, 400);
+			assert.strictEqual(castAsError(denied.body as any).error.id, '08e60c88-5948-478e-a132-02ec701d67b2');
+
+			const missing = await api('flash/update', { flashId: genId(config) }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '611e13d2-309e-419a-a5e4-e0422da39b02');
+		});
+
+		test('flash/update rejects moved users before side effects', async () => {
+			const config = loadConfig();
+			const movedUser = await signup({ username: `mvflash${Date.now().toString(36)}` });
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'moved title',
+				summary: 'moved summary',
+				userId: movedUser.id,
+				script: 'moved script',
+				permissions: [],
+				visibility: 'public',
+			});
+			await updateUserInDatabase(db, movedUser.id, {
+				movedToUri: `${origin}/users/${alice.id}`,
+			});
+
+			const denied = await api('flash/update', { flashId: flash.id, title: 'updated by moved user' }, movedUser);
+			assert.strictEqual(denied.status, 403);
+			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+
+			const unchanged = await fetchFlashByIdFromDatabase(db, flash.id);
+			assert.strictEqual(unchanged?.title, 'moved title');
+		});
+
+		test('Hono rate limited write endpoints require matching app token permissions', async () => {
+			const config = loadConfig();
+			const readAccountToken = await createAppToken(alice, ['read:account']);
+			const flash = await createFlashInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: 'permission title',
+				summary: 'permission summary',
+				userId: alice.id,
+				script: 'permission script',
+				permissions: [],
+				visibility: 'public',
+			});
+
+			for (const [endpoint, params] of [
+				['following/update-all', { notify: 'normal' }],
+				['flash/update', { flashId: flash.id, title: 'denied update' }],
+			] as const) {
+				const denied = await api(endpoint, params as any, { token: readAccountToken });
+				assert.strictEqual(denied.status, 403, endpoint);
+				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+			}
 		});
 	});
 
