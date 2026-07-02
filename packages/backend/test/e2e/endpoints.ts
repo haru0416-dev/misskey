@@ -31,6 +31,7 @@ import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
@@ -2342,15 +2343,52 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/invite/create したコードを admin/invite/list で取得できる', async () => {
-			const created = await api('admin/invite/create', { count: 2 }, alice);
+			const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString();
+			const created = await api('admin/invite/create', { count: 2, expiresAt }, alice);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.length, 2);
+			assert.strictEqual(created.body[0].createdBy?.id, alice.id);
+			assert.strictEqual(created.body[0].used, false);
+			assert.strictEqual(created.body[0].usedAt, null);
+			assert.strictEqual(created.body[0].expiresAt, expiresAt);
 
 			const list = await api('admin/invite/list', { type: 'unused' }, alice);
 			assert.strictEqual(list.status, 200);
 			for (const ticket of created.body) {
 				assert.ok(list.body.some(x => x.id === ticket.id));
 			}
+
+			const invalidDate = await api('admin/invite/create', { expiresAt: 'invalid-date' }, alice);
+			assert.strictEqual(invalidDate.status, 400);
+			assert.strictEqual(castAsError(invalidDate.body as any).error.code, 'INVALID_DATE_TIME');
+			assert.strictEqual(castAsError(invalidDate.body as any).error.id, 'f1380b15-3760-4c6c-a1db-5c3aaf1cbd49');
+
+			const readAdminInviteToken = await createAppToken(alice, ['read:admin:invite-codes']);
+			const scopeDenied = await api('admin/invite/create', {}, { token: readAdminInviteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoadmininv${Date.now().toString(36)}` });
+			const moderatorDenied = await api('admin/invite/list', {}, normalUser);
+			assert.strictEqual(moderatorDenied.status, 400);
+			assert.strictEqual(castAsError(moderatorDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			let logged = false;
+			for (let i = 0; i < 10; i++) {
+				const logs = await listModerationLogsFromDatabase(db, {
+					limit: 10,
+					order: 'desc',
+					type: 'createInvitation',
+					userId: alice.id,
+				});
+				logged = logs.some(log => {
+					const info = log.info as { invitations?: { id?: string }[] };
+					return info.invitations?.some(ticket => ticket.id === created.body[0].id) === true;
+				});
+				if (logged) break;
+				await new Promise(resolve => setTimeout(resolve, 10));
+			}
+			assert.ok(logged);
 		});
 	});
 

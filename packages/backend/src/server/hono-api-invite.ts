@@ -10,8 +10,10 @@ import {
 	deleteRegistrationTicketInDatabase,
 	fetchRegistrationTicketByIdFromDatabase,
 	listRegistrationTicketsCreatedByFromDatabase,
+	listRegistrationTicketsForAdminFromDatabase,
 	resolveRegistrationTicketPagination,
 } from '@/core/RegistrationTicketStore.js';
+import { createModerationLogInDatabase } from '@/core/ModerationLogStore.js';
 import type { RolePolicies } from '@/core/role-policies.js';
 import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -58,8 +60,39 @@ const inviteListParamDef = {
 	required: [],
 } as const;
 
+const adminInviteCreateParamDef = {
+	type: 'object',
+	properties: {
+		count: { type: 'integer', minimum: 1, maximum: 100, default: 1 },
+		expiresAt: { type: 'string', nullable: true },
+	},
+	required: [],
+} as const;
+
+const adminInviteListParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
+		offset: { type: 'integer', default: 0 },
+		type: { type: 'string', enum: ['unused', 'used', 'expired', 'all'], default: 'all' },
+		sort: { type: 'string', enum: ['+createdAt', '-createdAt', '+usedAt', '-usedAt'] },
+	},
+	required: [],
+} as const;
+
 type InviteDeleteParams = SchemaType<typeof inviteDeleteParamDef>;
 type InviteListParams = SchemaType<typeof inviteListParamDef>;
+type AdminInviteCreateParams = SchemaType<typeof adminInviteCreateParamDef>;
+type AdminInviteListParams = SchemaType<typeof adminInviteListParamDef>;
+
+function adminInviteCreateInvalidDateTimeError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Invalid date-time format',
+		code: 'INVALID_DATE_TIME',
+		id: 'f1380b15-3760-4c6c-a1db-5c3aaf1cbd49',
+	});
+}
 
 function inviteCreateExceededCreateLimitError(): HonoApiError {
 	return new HonoApiError({
@@ -122,6 +155,50 @@ async function packInviteCodeForHonoApi(
 	ticket: RegistrationTicketRow,
 ): Promise<Packed<'InviteCode'>> {
 	return (await packInviteCodesForHonoApi(deps, [ticket]))[0];
+}
+
+export async function handleHonoApiAdminInviteCreate(
+	deps: HonoApiInviteDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'InviteCode'>[]> {
+	const params = parseHonoApiParams(adminInviteCreateParamDef, body) as AdminInviteCreateParams;
+	if (params.expiresAt && isNaN(Date.parse(params.expiresAt))) {
+		throw adminInviteCreateInvalidDateTimeError();
+	}
+
+	const tickets = await Promise.all(Array.from({ length: params.count }, () => createRegistrationTicketInDatabase(deps.db, {
+		id: genId(deps.config),
+		createdById: me.id,
+		expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
+		code: generateInviteCode(),
+	})));
+
+	void createModerationLogInDatabase(deps.db, {
+		id: genId(deps.config),
+		userId: me.id,
+		type: 'createInvitation',
+		info: {
+			invitations: tickets,
+		},
+	});
+
+	return await packInviteCodesForHonoApi(deps, tickets);
+}
+
+export async function handleHonoApiAdminInviteList(
+	deps: HonoApiInviteDependencies,
+	body: Record<string, unknown>,
+): Promise<Packed<'InviteCode'>[]> {
+	const params = parseHonoApiParams(adminInviteListParamDef, body) as AdminInviteListParams;
+	const tickets = await listRegistrationTicketsForAdminFromDatabase(deps.db, {
+		limit: params.limit,
+		offset: params.offset,
+		type: params.type,
+		sort: params.sort,
+	});
+
+	return await packInviteCodesForHonoApi(deps, tickets);
 }
 
 export async function handleHonoApiInviteCreate(
