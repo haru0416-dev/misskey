@@ -9,7 +9,6 @@ import { CoreModule } from '@/core/CoreModule.js';
 import { ApiCallService } from './api/ApiCallService.js';
 import { FileServerService } from './FileServerService.js';
 import { ServerService } from './ServerService.js';
-import { WellKnownServerService } from './WellKnownServerService.js';
 import { GetterService } from './api/GetterService.js';
 import { ActivityPubServerService } from './ActivityPubServerService.js';
 import { ApiLoggerService } from './api/ApiLoggerService.js';
@@ -59,7 +58,6 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		ActivityPubServerService,
 		FileServerService,
 		ServerService,
-		WellKnownServerService,
 		GetterService,
 		MainStreamConnection,
 		ApiCallService,

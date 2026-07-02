@@ -19,7 +19,6 @@ import { bindThis } from '@/decorators.js';
 import { ActivityPubServerService } from './ActivityPubServerService.js';
 import { ApiServerService } from './api/ApiServerService.js';
 import { StreamingApiServerService } from './api/StreamingApiServerService.js';
-import { WellKnownServerService } from './WellKnownServerService.js';
 import { FileServerService } from './FileServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
@@ -41,7 +40,6 @@ export class ServerService implements OnApplicationShutdown {
 		private apiServerService: ApiServerService,
 		private streamingApiServerService: StreamingApiServerService,
 		private activityPubServerService: ActivityPubServerService,
-		private wellKnownServerService: WellKnownServerService,
 		private fileServerService: FileServerService,
 		private clientServerService: ClientServerService,
 		private loggerService: LoggerService,
@@ -121,7 +119,6 @@ export class ServerService implements OnApplicationShutdown {
 		fastify.register(this.apiServerService.createServer, { prefix: '/api' });
 		fastify.register(this.fileServerService.createServer);
 		fastify.register(this.activityPubServerService.createServer);
-		fastify.register(this.wellKnownServerService.createServer);
 		fastify.register(this.oauth2ProviderService.createServer, { prefix: '/oauth' });
 		fastify.register(this.oauth2ProviderService.createTokenServer, { prefix: '/oauth/token' });
 
