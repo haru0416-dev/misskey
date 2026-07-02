@@ -73,6 +73,15 @@ export function invalidParamError(info?: unknown): HonoApiError {
 	});
 }
 
+export function rateLimitExceededError(): HonoApiError {
+	return new HonoApiError({
+		status: 429,
+		message: 'Rate limit exceeded. Please try again later.',
+		code: 'RATE_LIMIT_EXCEEDED',
+		id: 'd5826d14-3982-4d2e-8011-b9e9f02499ef',
+	});
+}
+
 export function credentialRequiredError(): HonoApiError {
 	return new HonoApiError({
 		status: 401,
