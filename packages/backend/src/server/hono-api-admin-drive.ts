@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, listDriveFilesForAdminFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, listAllDriveFilesByUserIdFromDatabase, listDriveFilesForAdminFromDatabase, listOrphanDriveFilesFromDatabase } from '@/core/DriveFileStore.js';
+import { startDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
+import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import type { ObjectStorageQueue } from '@/core/QueueModule.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -15,19 +17,30 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFolderForHonoApi } from './hono-api-drive.js';
 import { packUserLiteManyForHonoApi } from './hono-api-user.js';
+import type { HonoApiDriveStreamPublisher } from './hono-api-events.js';
 import type { HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { HonoApiError } from './hono-api-error.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiAdminDriveDependencies = HonoApiRolePolicyDependencies & {
+	internalStorageService: Pick<InternalStorageService, 'del'>;
 	objectStorageQueue: ObjectStorageQueue;
+	publishDriveStream?: HonoApiDriveStreamPublisher;
 };
 
 const adminDriveNoParamsDef = {
 	type: 'object',
 	properties: {},
 	required: [],
+} as const;
+
+const adminDriveUserParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['userId'],
 } as const;
 
 const adminDriveShowFileParamDef = {
@@ -78,6 +91,7 @@ type AdminDriveFilesParams = SchemaType<typeof adminDriveFilesParamDef> & {
 	origin: 'combined' | 'local' | 'remote';
 	hostname: string | null;
 };
+type AdminDriveUserParams = SchemaType<typeof adminDriveUserParamDef>;
 
 type AdminDriveFileResponse = {
 	id: string;
@@ -159,6 +173,32 @@ function getAdminDriveFileThumbnailUrl(deps: HonoApiAdminDriveDependencies, file
 	return file.thumbnailUrl ?? (isMimeImage(file.type, 'sharp-convertible-image') ? url : null);
 }
 
+function enqueueDeleteObjectStorageFile(queue: ObjectStorageQueue, key: string): unknown {
+	return queue.add('deleteFile', { key }, {
+		removeOnComplete: {
+			age: 3600 * 24 * 7,
+			count: 30,
+		},
+		removeOnFail: {
+			age: 3600 * 24 * 7,
+			count: 100,
+		},
+	});
+}
+
+export function startHonoApiAdminDriveFileDeletion(
+	deps: HonoApiAdminDriveDependencies,
+	file: MiDriveFile,
+): void {
+	startDriveFileDeletion({
+		db: deps.db,
+		meta: deps.meta,
+		deleteInternalFile: key => deps.internalStorageService.del(key),
+		enqueueDeleteObjectStorageFile: key => enqueueDeleteObjectStorageFile(deps.objectStorageQueue, key),
+		publishDriveStream: deps.publishDriveStream,
+	}, file);
+}
+
 async function packAdminDriveFilesForHonoApi(
 	deps: HonoApiAdminDriveDependencies,
 	files: MiDriveFile[],
@@ -209,6 +249,30 @@ export async function handleHonoApiAdminDriveCleanRemoteFiles(
 			count: 100,
 		},
 	});
+}
+
+export async function handleHonoApiAdminDriveCleanup(
+	deps: HonoApiAdminDriveDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	parseHonoApiParams(adminDriveNoParamsDef, body);
+	const files = await listOrphanDriveFilesFromDatabase(deps.db);
+
+	for (const file of files) {
+		startHonoApiAdminDriveFileDeletion(deps, file);
+	}
+}
+
+export async function handleHonoApiAdminDeleteAllFilesOfAUser(
+	deps: HonoApiAdminDriveDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminDriveUserParamDef, body) as AdminDriveUserParams;
+	const files = await listAllDriveFilesByUserIdFromDatabase(deps.db, params.userId);
+
+	for (const file of files) {
+		startHonoApiAdminDriveFileDeletion(deps, file);
+	}
 }
 
 export async function handleHonoApiAdminDriveFiles(

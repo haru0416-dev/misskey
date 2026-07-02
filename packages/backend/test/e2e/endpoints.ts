@@ -26,7 +26,7 @@ import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
-import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
 import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
@@ -1347,6 +1347,131 @@ describe('Endpoints', () => {
 			const scopeDenied = await api('admin/drive/clean-remote-files', {}, { token: wrongScopeToken });
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+		});
+
+		test('admin drive deletion endpoints は DB削除、objectStorage job、scope、roleを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const remoteHost = `hono-drive-delete-${suffix}.remote`;
+			const makeFile = async (params: {
+				seed: string;
+				userId: string | null;
+				userHost: string | null;
+			}) => {
+				const md5 = createHash('md5').update(`hono-drive-delete-${params.seed}-${suffix}`).digest('hex');
+				return await createDriveFileInDatabase(db, {
+					id: genId(config),
+					userId: params.userId,
+					userHost: params.userHost,
+					md5,
+					name: `hono-drive-delete-${params.seed}-${suffix}.bin`,
+					type: 'application/octet-stream',
+					size: 256,
+					comment: null,
+					blurhash: null,
+					properties: {},
+					storedInternal: false,
+					url: `${origin}/files/hono-drive-delete-${params.seed}-${suffix}`,
+					thumbnailUrl: null,
+					webpublicUrl: null,
+					webpublicType: null,
+					accessKey: `hono-drive-delete-${params.seed}-${suffix}`,
+					thumbnailAccessKey: null,
+					webpublicAccessKey: null,
+					uri: null,
+					src: null,
+					folderId: null,
+					isSensitive: false,
+					maybeSensitive: false,
+					maybePorn: false,
+					isLink: false,
+					requestHeaders: null,
+					requestIp: null,
+				});
+			};
+
+			const orphan = await makeFile({ seed: 'orphan', userId: null, userHost: null });
+			const userFile = await makeFile({ seed: 'user', userId: bob.id, userHost: null });
+			const remoteFile = await makeFile({ seed: 'remote', userId: null, userHost: remoteHost });
+			const targetIds = [orphan.id, userFile.id, remoteFile.id];
+			const targetKeys = [orphan.accessKey!, userFile.accessKey!, remoteFile.accessKey!];
+			const waitDeleted = async (fileId: string) => {
+				for (let i = 0; i < 10; i++) {
+					if (await fetchDriveFileByIdFromDatabase(db, fileId) == null) return;
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.fail(`drive file was not deleted: ${fileId}`);
+			};
+			const waitDeleteObjectStorageJob = async (key: string) => {
+				for (let i = 0; i < 10; i++) {
+					const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+					const job = jobs.find(job => job.name === 'deleteFile' && (job.data as { key: string }).key === key);
+					if (job != null) return job;
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+				assert.fail(`deleteFile objectStorage job was not found: ${key}`);
+			};
+			const removeObjectStorageJobs = async () => {
+				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				await Promise.all(jobs
+					.filter(job => job.name === 'deleteFile' && targetKeys.includes((job.data as { key: string }).key))
+					.map(job => job.remove()));
+			};
+
+			try {
+				const cleaned = await api('admin/drive/cleanup', {}, alice);
+				assert.strictEqual(cleaned.status, 204);
+				const userDeleted = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, alice);
+				assert.strictEqual(userDeleted.status, 204);
+				const remoteDeleted = await api('admin/federation/delete-all-files', { host: remoteHost }, alice);
+				assert.strictEqual(remoteDeleted.status, 204);
+
+				await Promise.all(targetIds.map(waitDeleted));
+				const jobs = await Promise.all(targetKeys.map(waitDeleteObjectStorageJob));
+				assert.deepStrictEqual(jobs.map(job => job.data.key).sort(), targetKeys.sort());
+
+				const driveToken = await createAppToken(alice, ['write:admin:drive']);
+				const cleanupByToken = await api('admin/drive/cleanup', {}, { token: driveToken });
+				assert.strictEqual(cleanupByToken.status, 204);
+
+				const deleteFilesToken = await createAppToken(alice, ['write:admin:delete-all-files-of-a-user']);
+				const userDeleteByToken = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, { token: deleteFilesToken });
+				assert.strictEqual(userDeleteByToken.status, 204);
+
+				const federationToken = await createAppToken(alice, ['write:admin:federation']);
+				const federationDeleteByToken = await api('admin/federation/delete-all-files', { host: remoteHost }, { token: federationToken });
+				assert.strictEqual(federationDeleteByToken.status, 204);
+
+				const driveScopeDeniedToken = await createAppToken(alice, ['read:admin:drive']);
+				const cleanupScopeDenied = await api('admin/drive/cleanup', {}, { token: driveScopeDeniedToken });
+				assert.strictEqual(cleanupScopeDenied.status, 403);
+				assert.strictEqual(castAsError(cleanupScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const userDeleteScopeDeniedToken = await createAppToken(alice, ['write:admin:account']);
+				const userDeleteScopeDenied = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, { token: userDeleteScopeDeniedToken });
+				assert.strictEqual(userDeleteScopeDenied.status, 403);
+				assert.strictEqual(castAsError(userDeleteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const federationScopeDeniedToken = await createAppToken(alice, ['write:admin:user-note']);
+				const federationScopeDenied = await api('admin/federation/delete-all-files', { host: remoteHost }, { token: federationScopeDeniedToken });
+				assert.strictEqual(federationScopeDenied.status, 403);
+				assert.strictEqual(castAsError(federationScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const cleanupRoleDenied = await api('admin/drive/cleanup', {}, bob);
+				assert.strictEqual(cleanupRoleDenied.status, 403);
+				assert.strictEqual(castAsError(cleanupRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const userDeleteRoleDenied = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, bob);
+				assert.strictEqual(userDeleteRoleDenied.status, 403);
+				assert.strictEqual(castAsError(userDeleteRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const federationRoleDenied = await api('admin/federation/delete-all-files', { host: remoteHost }, bob);
+				assert.strictEqual(federationRoleDenied.status, 403);
+				assert.strictEqual(castAsError(federationRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await removeObjectStorageJobs();
+			}
 		});
 	});
 

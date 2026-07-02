@@ -18,6 +18,7 @@ import {
 	listInstancesOrderByFollowingCountDescFromDatabase,
 	updateInstanceInDatabase,
 } from '@/core/InstanceStore.js';
+import { listAllDriveFilesByUserHostFromDatabase } from '@/core/DriveFileStore.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import {
 	countFollowingsWithRemoteFolloweeHostFromDatabase,
@@ -32,6 +33,7 @@ import type { MiInstance, MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import type Logger from '@/logger.js';
+import { startHonoApiAdminDriveFileDeletion, type HonoApiAdminDriveDependencies } from './hono-api-admin-drive.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -41,7 +43,7 @@ export type HonoApiFederationDependencies = {
 	meta: MiMeta;
 };
 
-export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies & {
+export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies & HonoApiAdminDriveDependencies & {
 	redis: Redis.Redis;
 	httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
 	logger: Pick<Logger, 'error' | 'info'>;
@@ -449,6 +451,18 @@ export async function handleHonoApiAdminFederationRefreshRemoteInstanceMetadata(
 			await updateFederatedInstanceCache(deps, updated);
 		},
 	}, instance, true);
+}
+
+export async function handleHonoApiAdminFederationDeleteAllFiles(
+	deps: HonoApiAdminFederationDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(adminFederationHostParamDef, body) as AdminFederationHostParams;
+	const files = await listAllDriveFilesByUserHostFromDatabase(deps.db, params.host);
+
+	for (const file of files) {
+		startHonoApiAdminDriveFileDeletion(deps, file);
+	}
 }
 
 export async function handleHonoApiAdminFederationRemoveAllFollowing(

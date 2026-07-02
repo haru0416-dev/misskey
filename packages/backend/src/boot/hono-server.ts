@@ -80,6 +80,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			meta: deps.meta,
 			redis: deps.redis,
 			httpRequestService: deps.httpRequestService,
+			internalStorageService: deps.internalStorageService,
 			userAuthService: deps.userAuthService,
 			webAuthnService: deps.webAuthnService,
 			emailService: deps.emailService,

@@ -18,7 +18,6 @@ import {
 } from '@/core/DriveFolderStore.js';
 import {
 	createDriveFileInDatabase,
-	deleteDriveFileByIdInDatabase,
 	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByMd5AndUserIdFromDatabase,
 	fetchDriveFileByUriAndUserIdFromDatabase,
@@ -60,6 +59,7 @@ import { correctFilename } from '@/misc/correct-filename.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import { finishDriveFileDeletionSync, startDriveFileDeletion, type DriveFileDeletionDependencies } from '@/core/DriveFileDeletionLogic.js';
 
 type AddFileArgs = {
 	/** User who wish to add file */
@@ -729,29 +729,7 @@ export class DriveService {
 
 	@bindThis
 	public async deleteFile(file: MiDriveFile, isExpired = false, deleter?: MiUser) {
-		if (file.storedInternal) {
-			this.internalStorageService.del(file.accessKey!);
-
-			if (file.thumbnailUrl) {
-				this.internalStorageService.del(file.thumbnailAccessKey!);
-			}
-
-			if (file.webpublicUrl) {
-				this.internalStorageService.del(file.webpublicAccessKey!);
-			}
-		} else if (!file.isLink) {
-			this.queueService.createDeleteObjectStorageFileJob(file.accessKey!);
-
-			if (file.thumbnailUrl) {
-				this.queueService.createDeleteObjectStorageFileJob(file.thumbnailAccessKey!);
-			}
-
-			if (file.webpublicUrl) {
-				this.queueService.createDeleteObjectStorageFileJob(file.webpublicAccessKey!);
-			}
-		}
-
-		this.deletePostProcess(file, isExpired, deleter);
+		startDriveFileDeletion(this.driveFileDeletionDependencies(), file, isExpired, deleter);
 	}
 
 	@bindThis
@@ -782,51 +760,23 @@ export class DriveService {
 			await Promise.all(promises);
 		}
 
-		await this.deletePostProcess(file, isExpired, deleter);
+		await finishDriveFileDeletionSync(this.driveFileDeletionDependencies(), file, isExpired, deleter);
 	}
 
 	@bindThis
-	private async deletePostProcess(file: MiDriveFile, isExpired = false, deleter?: MiUser) {
-		// リモートファイル期限切れ削除後は直リンクにする
-		if (isExpired && file.userHost !== null && file.uri != null) {
-			await updateDriveFileInDatabase(this.db, file.id, {
-				isLink: true,
-				url: file.uri,
-				thumbnailUrl: null,
-				webpublicUrl: null,
-				storedInternal: false,
-				// ローカルプロキシ用
-				accessKey: randomUUID(),
-				thumbnailAccessKey: 'thumbnail-' + randomUUID(),
-				webpublicAccessKey: 'webpublic-' + randomUUID(),
-			});
-		} else {
-			await deleteDriveFileByIdInDatabase(this.db, file.id);
-		}
-
-		this.driveChart.update(file, false);
-		if (file.userHost == null) {
-			// ローカルユーザーのみ
-			this.perUserDriveChart.update(file, false);
-		} else {
-			if (this.meta.enableChartsForFederatedInstances) {
-				this.instanceChart.updateDrive(file, false);
-			}
-		}
-
-		if (file.userId) {
-			this.globalEventService.publishDriveStream(file.userId, 'fileDeleted', file.id);
-		}
-
-		if (deleter && await this.roleService.isModerator(deleter) && (file.userId !== deleter.id)) {
-			const user = file.userId ? await fetchUserByIdOrFailFromDatabase(this.db, file.userId) : null;
-			this.moderationLogService.log(deleter, 'deleteDriveFile', {
-				fileId: file.id,
-				fileUserId: file.userId,
-				fileUserUsername: user?.username ?? null,
-				fileUserHost: user?.host ?? null,
-			});
-		}
+	private driveFileDeletionDependencies(): DriveFileDeletionDependencies {
+		return {
+			db: this.db,
+			meta: this.meta,
+			deleteInternalFile: key => this.internalStorageService.del(key),
+			enqueueDeleteObjectStorageFile: key => this.queueService.createDeleteObjectStorageFileJob(key),
+			updateDriveChart: (file, isAdditional) => this.driveChart.update(file, isAdditional),
+			updatePerUserDriveChart: (file, isAdditional) => this.perUserDriveChart.update(file, isAdditional),
+			updateInstanceDriveChart: (file, isAdditional) => this.instanceChart.updateDrive(file, isAdditional),
+			publishDriveStream: (userId, type, value) => this.globalEventService.publishDriveStream(userId, type, value),
+			isModerator: user => this.roleService.isModerator(user),
+			logDriveFileDeletion: (deleter, info) => this.moderationLogService.log(deleter, 'deleteDriveFile', info),
+		};
 	}
 
 	@bindThis

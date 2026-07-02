@@ -9,6 +9,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import type { UserAuthService } from '@/core/UserAuthService.js';
 import type { WebAuthnService } from '@/core/WebAuthnService.js';
 import type { EmailService } from '@/core/EmailService.js';
@@ -47,14 +48,14 @@ import {
 	handleHonoApiDriveFoldersShow,
 	handleHonoApiDriveFoldersUpdate,
 } from './hono-api-drive.js';
-import { handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
+import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
 import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
 import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from './hono-api-captcha.js';
 import { handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats, type HonoApiAdminQueueDependencies } from './hono-api-admin-queue.js';
-import { handleHonoApiAdminDriveCleanRemoteFiles, handleHonoApiAdminDriveFiles, handleHonoApiAdminDriveShowFile } from './hono-api-admin-drive.js';
+import { handleHonoApiAdminDeleteAllFilesOfAUser, handleHonoApiAdminDriveCleanRemoteFiles, handleHonoApiAdminDriveCleanup, handleHonoApiAdminDriveFiles, handleHonoApiAdminDriveShowFile } from './hono-api-admin-drive.js';
 import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
@@ -99,6 +100,7 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	meta: MiMeta;
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
+	internalStorageService: Pick<InternalStorageService, 'del'>;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
@@ -1044,6 +1046,19 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/admin/federation/delete-all-files', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:federation');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminFederationDeleteAllFiles(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
 	app.post('/admin/drive/clean-remote-files', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -1053,6 +1068,32 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminDriveCleanRemoteFiles(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/drive/cleanup', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:drive');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminDriveCleanup(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/delete-all-files-of-a-user', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:delete-all-files-of-a-user');
+			await assertHonoApiAdmin(deps, auth);
+
+			await handleHonoApiAdminDeleteAllFilesOfAUser(deps, body);
 			return emptyResponse(c);
 		});
 	});
