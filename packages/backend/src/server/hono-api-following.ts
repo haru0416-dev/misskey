@@ -9,7 +9,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import type * as Redis from 'ioredis';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { createFollowRequestInDatabase, deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
+import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase, type FollowRequestOrder } from '@/core/FollowRequestStore.js';
+import type { FollowRequestRow } from '@/db/schema/follow-request.js';
 import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
@@ -19,7 +20,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileSt
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import type { IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
+import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -34,7 +35,7 @@ import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { HonoApiError } from './hono-api-error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { xaddHonoApiNotification } from './hono-api-notification.js';
-import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserLiteForHonoApi, type UserPackingDependencies } from './hono-api-user.js';
+import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiFollowingDependencies = UserPackingDependencies & {
@@ -83,6 +84,18 @@ const followingUpdateAllParamDef = {
 	},
 } as const;
 
+const followingRequestsListParamDef = {
+	type: 'object',
+	properties: {
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+	},
+	required: [],
+} as const;
+
 type FollowingCreateParams = {
 	userId: string;
 	withReplies?: boolean;
@@ -101,6 +114,14 @@ type FollowingUpdateParams = {
 type FollowingUpdateAllParams = {
 	notify?: 'normal' | 'none';
 	withReplies?: boolean;
+};
+
+type FollowingRequestsListParams = {
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	limit: number;
 };
 
 type FollowingNotificationType = 'follow' | 'receiveFollowRequest' | 'followRequestAccepted';
@@ -162,6 +183,26 @@ function followingInvalidateNotFollowingError(): HonoApiError {
 	return clientError('The other use is not following you.', 'NOT_FOLLOWING', '918faac3-074f-41ae-9c43-ed5d2946770d');
 }
 
+function followingRequestsAcceptNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', '66ce1645-d66c-46bb-8b79-96739af885bd');
+}
+
+function followingRequestsAcceptNoFollowRequestError(): HonoApiError {
+	return clientError('No follow request.', 'NO_FOLLOW_REQUEST', 'bcde4f8b-0913-4614-8881-614e522fb041');
+}
+
+function followingRequestsCancelNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', '4e68c551-fc4c-4e46-bb41-7d4a37bf9dab');
+}
+
+function followingRequestsCancelFollowRequestNotFoundError(): HonoApiError {
+	return clientError('Follow request not found.', 'FOLLOW_REQUEST_NOT_FOUND', '089b125b-d338-482a-9a09-e2622ac9f8d4');
+}
+
+function followingRequestsRejectNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', 'abc2ffa6-25b2-4380-ba99-321ff3a94555');
+}
+
 function isLocalUser(user: MiUser): user is MiUser & { host: null } {
 	return user.host === null;
 }
@@ -202,6 +243,14 @@ function renderUndo(config: Config, object: string | IObject, user: { id: MiUser
 function renderReject(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IReject {
 	return {
 		type: 'Reject',
+		actor: genLocalUserUri(config, user.id),
+		object,
+	};
+}
+
+function renderAccept(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IAccept {
+	return {
+		type: 'Accept',
 		actor: genLocalUserUri(config, user.id),
 		object,
 	};
@@ -744,4 +793,162 @@ export async function handleHonoApiFollowingInvalidate(
 	await deleteFollowingWithSideEffects(deps, follower, followee, following.id);
 
 	return await packUserLiteForHonoApi(deps, follower);
+}
+
+export async function handleHonoApiFollowingRequestsAccept(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const followee = me;
+	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
+
+	const request = await fetchFollowRequestFromDatabase(deps.db, follower.id, followee.id);
+	if (request == null) {
+		throw followingRequestsAcceptNoFollowRequestError();
+	}
+
+	const followeeProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, followee.id);
+	await insertFollowingWithSideEffects(deps, follower, followee, {
+		withReplies: request.withReplies ?? undefined,
+		followeeProfile,
+	});
+
+	if (isRemoteUser(follower) && isLocalUser(followee)) {
+		const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, request.requestId ?? undefined), followee));
+		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
+	}
+}
+
+export async function handleHonoApiFollowingRequestsCancel(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'UserLite'>> {
+	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const follower = me;
+	const followee = await getTargetUserOrThrow(deps, params.userId, followingRequestsCancelNoSuchUserError);
+
+	if (isRemoteUser(followee)) {
+		const content = addActivityContext(deps.config, renderUndo(deps.config, renderFollow(deps.config, follower, followee), follower));
+		if (isLocalUser(follower)) {
+			enqueueDeliverJob(deps.deliverQueue, deps.config, follower, content as IActivity, followee.inbox, false);
+		}
+	}
+
+	const requestExists = await followRequestExistsInDatabase(deps.db, follower.id, followee.id);
+	if (!requestExists) {
+		throw followingRequestsCancelFollowRequestNotFoundError();
+	}
+
+	await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
+
+	if (isLocalUser(followee)) {
+		deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, followee, {
+			includeSecrets: false,
+		}));
+	}
+
+	return await packUserLiteForHonoApi(deps, followee);
+}
+
+export async function handleHonoApiFollowingRequestsReject(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const followee = me;
+	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsRejectNoSuchUserError);
+
+	const request = await fetchFollowRequestFromDatabase(deps.db, follower.id, followee.id);
+
+	if (isRemoteUser(follower)) {
+		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee, request?.requestId ?? undefined), followee));
+		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
+	}
+
+	if (request != null) {
+		await deleteFollowRequestByIdFromDatabase(deps.db, request.id);
+	}
+
+	if (isLocalUser(follower)) {
+		await publishUnfollowToLocalFollower(deps, follower, followee);
+	}
+}
+
+function resolveFollowRequestListPagination(
+	config: Config,
+	params: FollowingRequestsListParams,
+): {
+	sinceId: string | null;
+	untilId: string | null;
+	order: FollowRequestOrder;
+} {
+	if (params.sinceId && params.untilId) {
+		return { sinceId: params.sinceId, untilId: params.untilId, order: 'desc' };
+	} else if (params.sinceId) {
+		return { sinceId: params.sinceId, untilId: null, order: 'asc' };
+	} else if (params.untilId) {
+		return { sinceId: null, untilId: params.untilId, order: 'desc' };
+	} else if (params.sinceDate && params.untilDate) {
+		return { sinceId: genId(config, params.sinceDate), untilId: genId(config, params.untilDate), order: 'desc' };
+	} else if (params.sinceDate) {
+		return { sinceId: genId(config, params.sinceDate), untilId: null, order: 'asc' };
+	} else if (params.untilDate) {
+		return { sinceId: null, untilId: genId(config, params.untilDate), order: 'desc' };
+	}
+
+	return { sinceId: null, untilId: null, order: 'desc' };
+}
+
+async function packFollowRequestsForHonoApi(
+	deps: HonoApiFollowingDependencies,
+	requests: FollowRequestRow[],
+	me: MiLocalUser,
+): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
+	const userIds = [...requests.map(r => r.followerId), ...requests.map(r => r.followeeId)];
+	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
+	const userById = new Map(packedUsers.map(user => [user.id, user]));
+
+	return requests.map(request => ({
+		id: request.id,
+		follower: userById.get(request.followerId)!,
+		followee: userById.get(request.followeeId)!,
+	}));
+}
+
+export async function handleHonoApiFollowingRequestsList(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
+	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
+	const pagination = resolveFollowRequestListPagination(deps.config, params);
+	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packFollowRequestsForHonoApi(deps, requests, me);
+}
+
+export async function handleHonoApiFollowingRequestsSent(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
+	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
+	const pagination = resolveFollowRequestListPagination(deps.config, params);
+	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packFollowRequestsForHonoApi(deps, requests, me);
 }

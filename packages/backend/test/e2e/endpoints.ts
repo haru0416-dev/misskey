@@ -3904,6 +3904,133 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('following/requests/accept は保留リクエストを承認しfollowレコードを作成する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hra${suffix}` });
+			const follower = await signup({ username: `hrae${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			const wrongWriteToken = await createAppToken(followee, ['read:following']);
+			const scopeDenied = await api('following/requests/accept', { userId: follower.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const noSuch = await api('following/requests/accept', { userId: genId(config, Date.now() - 1000) }, followee);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '66ce1645-d66c-46bb-8b79-96739af885bd');
+
+			const noRequest = await api('following/requests/accept', { userId: follower.id }, followee);
+			assert.strictEqual(noRequest.status, 400);
+			assert.strictEqual(castAsError(noRequest.body as any).error.code, 'NO_FOLLOW_REQUEST');
+			assert.strictEqual(castAsError(noRequest.body as any).error.id, 'bcde4f8b-0913-4614-8881-614e522fb041');
+
+			const created = await api('following/create', { userId: followee.id, withReplies: true }, follower);
+			assert.strictEqual(created.status, 200);
+			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
+
+			const accepted = await api('following/requests/accept', { userId: follower.id }, followee);
+			assert.strictEqual(accepted.status, 204);
+
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
+			assert.ok(following);
+			assert.strictEqual(following.withReplies, true);
+
+			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
+			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
+			assert.strictEqual(refreshedFollower.followingCount, 1);
+			assert.strictEqual(refreshedFollowee.followersCount, 1);
+		});
+
+		test('following/requests/cancel は送信済みリクエストを取消しUserLiteを返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hrc${suffix}` });
+			const followee = await signup({ username: `hrce${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			const wrongWriteToken = await createAppToken(follower, ['read:following']);
+			const scopeDenied = await api('following/requests/cancel', { userId: followee.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const noSuch = await api('following/requests/cancel', { userId: genId(config, Date.now() - 1000) }, follower);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '4e68c551-fc4c-4e46-bb41-7d4a37bf9dab');
+
+			const notFound = await api('following/requests/cancel', { userId: followee.id }, follower);
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.code, 'FOLLOW_REQUEST_NOT_FOUND');
+			assert.strictEqual(castAsError(notFound.body as any).error.id, '089b125b-d338-482a-9a09-e2622ac9f8d4');
+
+			await api('following/create', { userId: followee.id }, follower);
+			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
+
+			const cancelled = await api('following/requests/cancel', { userId: followee.id }, follower);
+			assert.strictEqual(cancelled.status, 200);
+			assert.strictEqual(cancelled.body.id, followee.id);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+		});
+
+		test('following/requests/reject は受信済みリクエストを拒否し再実行しても冪等', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hrr${suffix}` });
+			const follower = await signup({ username: `hrre${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			const wrongWriteToken = await createAppToken(followee, ['read:following']);
+			const scopeDenied = await api('following/requests/reject', { userId: follower.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const noSuch = await api('following/requests/reject', { userId: genId(config, Date.now() - 1000) }, followee);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'abc2ffa6-25b2-4380-ba99-321ff3a94555');
+
+			await api('following/create', { userId: followee.id }, follower);
+			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
+
+			const rejected = await api('following/requests/reject', { userId: follower.id }, followee);
+			assert.strictEqual(rejected.status, 204);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+
+			const rejectedAgain = await api('following/requests/reject', { userId: follower.id }, followee);
+			assert.strictEqual(rejectedAgain.status, 204);
+		});
+
+		test('following/requests/list と sent はページングして follower/followee を含む', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hrl${suffix}` });
+			const followerA = await signup({ username: `hrla${suffix}` });
+			const followerB = await signup({ username: `hrlb${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			await api('following/create', { userId: followee.id }, followerA);
+			await api('following/create', { userId: followee.id }, followerB);
+
+			const list = await api('following/requests/list', {}, followee);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body.length, 2);
+			const listFollowerIds = list.body.map((r: any) => r.follower.id).sort();
+			assert.deepStrictEqual(listFollowerIds, [followerA.id, followerB.id].sort());
+			assert.strictEqual(list.body[0].followee.id, followee.id);
+
+			const sentA = await api('following/requests/sent', {}, followerA);
+			assert.strictEqual(sentA.status, 200);
+			assert.strictEqual(sentA.body.length, 1);
+			assert.strictEqual(sentA.body[0].follower.id, followerA.id);
+			assert.strictEqual(sentA.body[0].followee.id, followee.id);
+
+			const limited = await api('following/requests/list', { limit: 1 }, followee);
+			assert.strictEqual(limited.status, 200);
+			assert.strictEqual(limited.body.length, 1);
+		});
+
 		test('following/update-all updates only the caller followings', async () => {
 			const config = loadConfig();
 			await createFollowingInDatabase(db, {
