@@ -51,6 +51,8 @@ export async function authenticateHonoApiToken(
 			user,
 			token: {
 				id: accessToken.id,
+				name: accessToken.name,
+				iconUrl: accessToken.iconUrl,
 				permission: app.permission,
 			} as MiAccessToken,
 		};

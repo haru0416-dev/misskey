@@ -17,7 +17,7 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
-import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
+import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
 import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
@@ -33,6 +33,7 @@ import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmo
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
@@ -1375,6 +1376,75 @@ describe('Endpoints', () => {
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 		});
+
+		test('federation/users はhostでフィルタしUserDetailedNotMeを返す', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const host = `hono-fed-users-${suffix}.example`;
+			const remoteId = genId(config, now);
+			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hfu${suffix}`,
+					usernameLower: `hfu${suffix}`,
+					host,
+					inbox: `https://${host}/inbox`,
+					uri: `https://${host}/users/${remoteId}`,
+				},
+				profile: {
+					userId: remoteId,
+					userHost: host,
+				},
+			});
+
+			const users = await api('federation/users', { host });
+			assert.strictEqual(users.status, 200);
+			assert.strictEqual(users.body.length, 1);
+			assert.strictEqual(users.body[0].id, remoteUser.id);
+			assert.strictEqual(users.body[0].host, host);
+			assert.strictEqual('email' in users.body[0], false);
+
+			const empty = await api('federation/users', { host: `hono-fed-users-none-${suffix}.example` });
+			assert.strictEqual(empty.status, 200);
+			assert.strictEqual(empty.body.length, 0);
+		});
+
+		test('federation/followers と federation/following はhostでフィルタしFollowingを返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const remoteFollowerHost = `hono-fed-follower-${suffix}.example`;
+			const remoteFolloweeHost = `hono-fed-followee-${suffix}.example`;
+			const follower = await signup({ username: `hff${suffix}` });
+			const followee = await signup({ username: `hffe${suffix}` });
+
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: follower.id,
+				followeeId: followee.id,
+				followeeHost: remoteFolloweeHost,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: followee.id,
+				followeeId: follower.id,
+				followerHost: remoteFollowerHost,
+			});
+
+			const followers = await api('federation/followers', { host: remoteFolloweeHost });
+			assert.strictEqual(followers.status, 200);
+			assert.strictEqual(followers.body.length, 1);
+			assert.strictEqual(followers.body[0].followerId, follower.id);
+			assert.strictEqual(followers.body[0].followeeId, followee.id);
+			assert.strictEqual(followers.body[0].followee.id, followee.id);
+
+			const following = await api('federation/following', { host: remoteFollowerHost });
+			assert.strictEqual(following.status, 200);
+			assert.strictEqual(following.body.length, 1);
+			assert.strictEqual(following.body[0].followerId, followee.id);
+			assert.strictEqual(following.body[0].followeeId, follower.id);
+			assert.strictEqual(following.body[0].followee.id, follower.id);
+		});
 	});
 
 	describe('admin/drive', () => {
@@ -2573,6 +2643,36 @@ describe('Endpoints', () => {
 			assert.strictEqual(shownUser.status, 200);
 			assert.strictEqual(shownUser.body.forYou, true);
 			assert.strictEqual(shownUser.body.needConfirmationToRead, true);
+		});
+
+		test('i/read-announcement は既読化し全既読ならreadAllAnnouncementsを発行する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const reader = await signup({ username: `hra${suffix}` });
+			const announcement = await createAnnouncementInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: null,
+				title: 'Read test announcement',
+				text: 'text',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				needConfirmationToRead: false,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: reader.id,
+			});
+
+			const res = await api('i/read-announcement', { announcementId: announcement.id }, reader);
+			assert.strictEqual(res.status, 204);
+
+			const read = await announcementReadExistsInDatabase(db, reader.id, announcement.id);
+			assert.strictEqual(read, true);
+
+			const stillUnread = await api('i/read-announcement', { announcementId: announcement.id }, reader);
+			assert.strictEqual(stillUnread.status, 204);
 		});
 	});
 
@@ -4198,6 +4298,223 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('export jobs', () => {
+		const getExportJobs = async (jobName: string, userId: string) => {
+			const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			return jobs.filter(job => job.name === jobName && (job.data as any).user?.id === userId);
+		};
+		const waitExportJob = async (jobName: string, userId: string) => {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await getExportJobs(jobName, userId);
+				if (jobs[0] != null) return jobs[0];
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.fail(`${jobName} job was not found for ${userId}`);
+		};
+
+		test.each([
+			['export-custom-emojis', 'exportCustomEmojis'],
+			['i/export-notes', 'exportNotes'],
+			['i/export-clips', 'exportClips'],
+			['i/export-favorites', 'exportFavorites'],
+			['i/export-mute', 'exportMuting'],
+			['i/export-blocking', 'exportBlocking'],
+			['i/export-user-lists', 'exportUserLists'],
+			['i/export-antennas', 'exportAntennas'],
+		] as const)('%s は %s ジョブを積む', async (endpoint, jobName) => {
+			const suffix = Date.now().toString(36).slice(-8) + Math.random().toString(36).slice(-4);
+			const user = await signup({ username: `hej${suffix}` });
+
+			const res = await api(endpoint, {}, user);
+			assert.strictEqual(res.status, 204, JSON.stringify(res.body));
+
+			const job = await waitExportJob(jobName, user.id);
+			await job.remove();
+		});
+
+		test('i/export-following はジョブにexcludeMuting/excludeInactiveを渡す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hejf${suffix}` });
+
+			const res = await api('i/export-following', { excludeMuting: true, excludeInactive: true }, user);
+			assert.strictEqual(res.status, 204);
+
+			const job = await waitExportJob('exportFollowing', user.id);
+			assert.strictEqual((job.data as any).excludeMuting, true);
+			assert.strictEqual((job.data as any).excludeInactive, true);
+			await job.remove();
+		});
+	});
+
+	describe('i/claim-achievement', () => {
+		test('達成を記録しachievementEarned通知を作成、二重取得しない', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hca${suffix}` });
+
+			const res = await api('i/claim-achievement', { name: 'notes1' }, user);
+			assert.strictEqual(res.status, 204);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.ok(profile.achievements.some(a => a.name === 'notes1'));
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const redis = createRedisClient(config);
+			try {
+				const entries = await redis.xrevrange(`notificationTimeline:${user.id}`, '+', '-', 'COUNT', 10);
+				const notifications = entries.map(([, values]) => {
+					const dataIndex = values.findIndex(value => value === 'data');
+					return JSON.parse(values[dataIndex + 1]!) as { type?: string; achievement?: string };
+				});
+				assert.ok(notifications.some(n => n.type === 'achievementEarned' && n.achievement === 'notes1'));
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const again = await api('i/claim-achievement', { name: 'notes1' }, user);
+			assert.strictEqual(again.status, 204);
+			const profileAfter = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profileAfter.achievements.filter(a => a.name === 'notes1').length, 1);
+		});
+	});
+
+	describe('i/webhooks/create', () => {
+		test('webhookを作成しTOO_MANY_WEBHOOKSでscope保護される', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hwc${suffix}` });
+
+			const wrongScopeToken = await createAppToken(user, ['read:account']);
+			const scopeDenied = await api('i/webhooks/create', { name: 'hook', url: 'https://example.com/hook', on: ['note'] }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const created = await api('i/webhooks/create', { name: 'hook', url: 'https://example.com/hook', on: ['note'], secret: 'sh' }, user);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, 'hook');
+			assert.strictEqual(created.body.url, 'https://example.com/hook');
+			assert.deepStrictEqual(created.body.on, ['note']);
+			assert.strictEqual(created.body.secret, 'sh');
+			assert.strictEqual(created.body.active, true);
+			assert.strictEqual(created.body.userId, user.id);
+
+			const shown = await api('i/webhooks/show', { webhookId: created.body.id }, user);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+		});
+	});
+
+	describe('notifications', () => {
+		async function readNotificationTimeline(config: ReturnType<typeof loadConfig>, userId: string) {
+			const redis = createRedisClient(config);
+			try {
+				const entries = await redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 10);
+				return entries.map(([, values]) => {
+					const dataIndex = values.findIndex(value => value === 'data');
+					return JSON.parse(values[dataIndex + 1]!) as { type?: string; body?: string; header?: string | null; icon?: string | null };
+				});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		}
+
+		test('notifications/create は scope 保護つきで app 通知を作成しwrite:notifications 以外は拒否される', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnc${suffix}` });
+
+			const wrongScopeToken = await createAppToken(user, ['read:account']);
+			const scopeDenied = await api('notifications/create', { body: 'hello' }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const created = await api('notifications/create', { body: 'hello world', header: 'my header', icon: 'https://example.com/icon.png' }, user);
+			assert.strictEqual(created.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const notifications = await readNotificationTimeline(config, user.id);
+			const appNotification = notifications.find(n => n.type === 'app');
+			assert.ok(appNotification);
+			assert.strictEqual(appNotification.body, 'hello world');
+			assert.strictEqual(appNotification.header, 'my header');
+			assert.strictEqual(appNotification.icon, 'https://example.com/icon.png');
+		});
+
+		test('notifications/create は通知設定が never の場合は作成しない', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hncn${suffix}` });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			await updateUserProfileInDatabase(db, user.id, {
+				notificationRecieveConfig: {
+					...profile.notificationRecieveConfig,
+					app: { type: 'never' },
+				},
+			});
+
+			const created = await api('notifications/create', { body: 'should be suppressed' }, user);
+			assert.strictEqual(created.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const notifications = await readNotificationTimeline(config, user.id);
+			assert.strictEqual(notifications.some(n => n.type === 'app'), false);
+		});
+
+		test('notifications/test-notification はテスト通知を作成する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hntn${suffix}` });
+
+			const res = await api('notifications/test-notification', {}, user);
+			assert.strictEqual(res.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const notifications = await readNotificationTimeline(config, user.id);
+			assert.ok(notifications.some(n => n.type === 'test'));
+		});
+
+		test('notifications/mark-all-as-read は既読状態を更新しreadAllNotificationsを発行する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnmar${suffix}` });
+
+			await api('notifications/test-notification', {}, user);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('notifications/mark-all-as-read', {}, user);
+			assert.strictEqual(res.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const redis = createRedisClient(config);
+			try {
+				const latestReadNotificationId = await redis.get(`latestReadNotification:${user.id}`);
+				assert.ok(latestReadNotificationId);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+
+		test('notifications/flush はタイムラインと既読状態を消去する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnf${suffix}` });
+
+			await api('notifications/test-notification', {}, user);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('notifications/flush', {}, user);
+			assert.strictEqual(res.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const redis = createRedisClient(config);
+			try {
+				const exists = await redis.exists(`notificationTimeline:${user.id}`);
+				assert.strictEqual(exists, 0);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+	});
+
 	describe('auth/session', () => {
 		test('legacy auth session flow', async () => {
 			const app = await api('app/create', {
@@ -4462,6 +4779,398 @@ describe('Endpoints', () => {
 			const missing = await api('roles/show', { roleId: '000000000000000000000000' });
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
+		});
+
+		test('roles/users は explorable な role のみ users を一覧しUserDetailedを返す', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const explorableRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 2000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono explorable role ${suffix}`,
+				description: 'Hono roles/users test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: { id: 'ebef1684-672d-49b6-ad82-1b3ec3784f86', type: 'isRemote' },
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const nonExplorableRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 1999),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono non-explorable role ${suffix}`,
+				description: 'Hono roles/users test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: { id: 'ebef1684-672d-49b6-ad82-1b3ec3784f87', type: 'isRemote' },
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const member = await signup({ username: `hru${suffix}` });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now - 1998),
+				userId: member.id,
+				roleId: explorableRole.id,
+				expiresAt: null,
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now - 1997),
+				userId: member.id,
+				roleId: nonExplorableRole.id,
+				expiresAt: null,
+			});
+
+			const users = await api('roles/users', { roleId: explorableRole.id }, member);
+			assert.strictEqual(users.status, 200);
+			assert.strictEqual(users.body.length, 1);
+			assert.strictEqual(users.body[0].user.id, member.id);
+			assert.strictEqual(users.body[0].user.username, member.username);
+
+			const asSelf = users.body[0].user as any;
+			assert.ok('policies' in asSelf);
+
+			const asOthers = await api('roles/users', { roleId: explorableRole.id }, alice);
+			assert.strictEqual(asOthers.status, 200);
+			assert.strictEqual('policies' in (asOthers.body[0].user as any), false);
+
+			const forbidden = await api('roles/users', { roleId: nonExplorableRole.id });
+			assert.strictEqual(forbidden.status, 400);
+			assert.strictEqual(castAsError(forbidden.body as any).error.code, 'NO_SUCH_ROLE');
+			assert.strictEqual(castAsError(forbidden.body as any).error.id, '30aaaee3-4792-48dc-ab0d-cf501a575ac5');
+		});
+	});
+
+	describe('gallery', () => {
+		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hgc${suffix}` });
+			const stranger = await signup({ username: `hgcs${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-gallery-create-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-gallery-${suffix}.png`,
+				type: 'image/png',
+				size: 123,
+				blurhash: null,
+				properties: { width: 100, height: 200 },
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: `${origin}/files/${fileMd5}.thumbnail`,
+				comment: null,
+				folderId: null,
+			});
+
+			const created = await api('gallery/posts/create', {
+				title: `Hono gallery post ${suffix}`,
+				description: 'created via e2e',
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.title, `Hono gallery post ${suffix}`);
+			assert.strictEqual(created.body.userId, owner.id);
+			assert.strictEqual(created.body.user.id, owner.id);
+			assert.strictEqual(created.body.fileIds.length, 1);
+			assert.strictEqual(created.body.files.length, 1);
+			assert.strictEqual(created.body.files[0].id, file.id);
+			assert.strictEqual(created.body.likedCount, 0);
+			assert.strictEqual(created.body.isSensitive, false);
+
+			const shown = await api('gallery/posts/show', { postId: created.body.id }, stranger);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.isLiked, false);
+
+			const missing = await api('gallery/posts/show', { postId: genId(config) });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_POST');
+
+			const updated = await api('gallery/posts/update', {
+				postId: created.body.id,
+				title: `${created.body.title} updated`,
+				isSensitive: true,
+			}, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.title, `${created.body.title} updated`);
+			assert.strictEqual(updated.body.isSensitive, true);
+
+			const deleteDenied = await api('gallery/posts/delete', { postId: created.body.id }, stranger);
+			assert.strictEqual(deleteDenied.status, 400);
+			assert.strictEqual(castAsError(deleteDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const deletedByMod = await api('gallery/posts/delete', { postId: created.body.id }, alice);
+			assert.strictEqual(deletedByMod.status, 204);
+			assert.strictEqual(await fetchGalleryPostByIdFromDatabase(db, created.body.id), null);
+
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const log = logs.find(l => l.type === 'deleteGalleryPost' && (l.info as any).postId === created.body.id);
+			assert.ok(log);
+			assert.strictEqual((log!.info as any).postUserId, owner.id);
+		});
+
+		test('gallery/posts/{like,unlike} はカウント、ランキング、二重操作エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hgl${suffix}` });
+			const liker = await signup({ username: `hgll${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-gallery-like-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-gallery-like-${suffix}.png`,
+				type: 'image/png',
+				size: 123,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `Hono gallery like ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const selfLikeDenied = await api('gallery/posts/like', { postId: post.body.id }, owner);
+			assert.strictEqual(selfLikeDenied.status, 400);
+			assert.strictEqual(castAsError(selfLikeDenied.body as any).error.code, 'YOUR_POST');
+
+			const unlikeNotLiked = await api('gallery/posts/unlike', { postId: post.body.id }, liker);
+			assert.strictEqual(unlikeNotLiked.status, 400);
+			assert.strictEqual(castAsError(unlikeNotLiked.body as any).error.code, 'NOT_LIKED');
+
+			const liked = await api('gallery/posts/like', { postId: post.body.id }, liker);
+			assert.strictEqual(liked.status, 204);
+
+			const alreadyLiked = await api('gallery/posts/like', { postId: post.body.id }, liker);
+			assert.strictEqual(alreadyLiked.status, 400);
+			assert.strictEqual(castAsError(alreadyLiked.body as any).error.code, 'ALREADY_LIKED');
+
+			const afterLike = await fetchGalleryPostByIdFromDatabase(db, post.body.id);
+			assert.strictEqual(afterLike?.likedCount, 1);
+
+			const shownAsLiker = await api('gallery/posts/show', { postId: post.body.id }, liker);
+			assert.strictEqual(shownAsLiker.body.isLiked, true);
+
+			const unliked = await api('gallery/posts/unlike', { postId: post.body.id }, liker);
+			assert.strictEqual(unliked.status, 204);
+
+			const afterUnlike = await fetchGalleryPostByIdFromDatabase(db, post.body.id);
+			assert.strictEqual(afterUnlike?.likedCount, 0);
+		});
+
+		test('gallery/posts と gallery/popular はページングして投稿を返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hgp${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-gallery-list-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-gallery-list-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `Hono gallery list ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const list = await api('gallery/posts', { limit: 100 });
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some((p: any) => p.id === post.body.id));
+
+			const liker = await signup({ username: `hgpl${suffix}` });
+			await api('gallery/posts/like', { postId: post.body.id }, liker);
+
+			const popular = await api('gallery/popular', {});
+			assert.strictEqual(popular.status, 200);
+			assert.ok(popular.body.some((p: any) => p.id === post.body.id));
+		});
+	});
+
+	describe('clips', () => {
+		test('clips/{create,list,show,update,delete} は所有権とpublic可視性を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcc${suffix}` });
+			const stranger = await signup({ username: `hccs${suffix}` });
+
+			const created = await api('clips/create', { name: `Hono clip ${suffix}`, isPublic: false, description: 'desc' }, owner);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `Hono clip ${suffix}`);
+			assert.strictEqual(created.body.isPublic, false);
+			assert.strictEqual(created.body.userId, owner.id);
+			assert.strictEqual(created.body.favoritedCount, 0);
+			assert.strictEqual(created.body.notesCount, 0);
+
+			const hiddenFromStranger = await api('clips/show', { clipId: created.body.id }, stranger);
+			assert.strictEqual(hiddenFromStranger.status, 400);
+			assert.strictEqual(castAsError(hiddenFromStranger.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const visibleToOwner = await api('clips/show', { clipId: created.body.id }, owner);
+			assert.strictEqual(visibleToOwner.status, 200);
+			assert.strictEqual(visibleToOwner.body.notesCount, 0);
+
+			const list = await api('clips/list', {}, owner);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some((c: any) => c.id === created.body.id));
+
+			const updated = await api('clips/update', { clipId: created.body.id, isPublic: true, name: `${created.body.name} updated` }, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.isPublic, true);
+			assert.strictEqual(updated.body.name, `${created.body.name} updated`);
+
+			const nowVisible = await api('clips/show', { clipId: created.body.id }, stranger);
+			assert.strictEqual(nowVisible.status, 200);
+			assert.strictEqual(nowVisible.body.notesCount, undefined);
+
+			const updateDenied = await api('clips/update', { clipId: created.body.id, name: 'nope' }, stranger);
+			assert.strictEqual(updateDenied.status, 400);
+			assert.strictEqual(castAsError(updateDenied.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const deleteDenied = await api('clips/delete', { clipId: created.body.id }, stranger);
+			assert.strictEqual(deleteDenied.status, 400);
+			assert.strictEqual(castAsError(deleteDenied.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const deleted = await api('clips/delete', { clipId: created.body.id }, owner);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('clips/show', { clipId: created.body.id });
+			assert.strictEqual(afterDelete.status, 400);
+		});
+
+		test('clips/{add-note,remove-note} はNOTEカウント、重複、404を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcn${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: `hono clip note ${suffix}`,
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const clip = await api('clips/create', { name: `Hono clip notes ${suffix}` }, owner);
+			assert.strictEqual(clip.status, 200);
+
+			const missingClip = await api('clips/add-note', { clipId: genId(config), noteId }, owner);
+			assert.strictEqual(missingClip.status, 400);
+			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const missingNote = await api('clips/add-note', { clipId: clip.body.id, noteId: genId(config) }, owner);
+			assert.strictEqual(missingNote.status, 400);
+			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const added = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
+			assert.strictEqual(added.status, 204);
+
+			const duplicate = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_CLIPPED');
+
+			const shownAfterAdd = await api('clips/show', { clipId: clip.body.id }, owner);
+			assert.strictEqual(shownAfterAdd.body.notesCount, 1);
+			assert.ok(shownAfterAdd.body.lastClippedAt);
+
+			const removed = await api('clips/remove-note', { clipId: clip.body.id, noteId }, owner);
+			assert.strictEqual(removed.status, 204);
+
+			const shownAfterRemove = await api('clips/show', { clipId: clip.body.id }, owner);
+			assert.strictEqual(shownAfterRemove.body.notesCount, 0);
+		});
+
+		test('clips/my-favorites はfavoriteしたclipを一覧する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcf${suffix}` });
+			const favoriter = await signup({ username: `hcff${suffix}` });
+			const clip = await api('clips/create', { name: `Hono clip fav ${suffix}`, isPublic: true }, owner);
+			assert.strictEqual(clip.status, 200);
+
+			const favorited = await api('clips/favorite', { clipId: clip.body.id }, favoriter);
+			assert.strictEqual(favorited.status, 204);
+			assert.strictEqual(await clipFavoriteExistsInDatabase(db, favoriter.id, clip.body.id), true);
+
+			const myFavorites = await api('clips/my-favorites', {}, favoriter);
+			assert.strictEqual(myFavorites.status, 200);
+			assert.strictEqual(myFavorites.body.length, 1);
+			assert.strictEqual(myFavorites.body[0].id, clip.body.id);
+			assert.strictEqual(myFavorites.body[0].isFavorited, true);
+		});
+	});
+
+	describe('page-push', () => {
+		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hpp${suffix}` });
+			const pusher = await signup({ username: `hppp${suffix}` });
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `page-push ${suffix}`,
+				name: `hpp-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: owner.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const appToken = await createAppToken(pusher, ['write:account']);
+			const secureDenied = await api('page-push', { pageId: page.id, event: 'ping' }, { token: appToken });
+			assert.strictEqual(secureDenied.status, 400);
+			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const missing = await api('page-push', { pageId: genId(config), event: 'ping' }, pusher);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_PAGE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '4a13ad31-6729-46b4-b9af-e86b265c2e74');
+
+			const pushed = await api('page-push', { pageId: page.id, event: 'ping', var: { hello: 'world' } }, pusher);
+			assert.strictEqual(pushed.status, 204);
 		});
 	});
 
