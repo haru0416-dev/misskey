@@ -17,7 +17,7 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
-import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
+import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
 import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
@@ -2574,6 +2574,36 @@ describe('Endpoints', () => {
 			assert.strictEqual(shownUser.body.forYou, true);
 			assert.strictEqual(shownUser.body.needConfirmationToRead, true);
 		});
+
+		test('i/read-announcement は既読化し全既読ならreadAllAnnouncementsを発行する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const reader = await signup({ username: `hra${suffix}` });
+			const announcement = await createAnnouncementInDatabase(db, {
+				id: genId(config, now),
+				updatedAt: null,
+				title: 'Read test announcement',
+				text: 'text',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				needConfirmationToRead: false,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: reader.id,
+			});
+
+			const res = await api('i/read-announcement', { announcementId: announcement.id }, reader);
+			assert.strictEqual(res.status, 204);
+
+			const read = await announcementReadExistsInDatabase(db, reader.id, announcement.id);
+			assert.strictEqual(read, true);
+
+			const stillUnread = await api('i/read-announcement', { announcementId: announcement.id }, reader);
+			assert.strictEqual(stillUnread.status, 204);
+		});
 	});
 
 	describe('signin-flow', () => {
@@ -4243,6 +4273,63 @@ describe('Endpoints', () => {
 			assert.strictEqual((job.data as any).excludeMuting, true);
 			assert.strictEqual((job.data as any).excludeInactive, true);
 			await job.remove();
+		});
+	});
+
+	describe('i/claim-achievement', () => {
+		test('達成を記録しachievementEarned通知を作成、二重取得しない', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hca${suffix}` });
+
+			const res = await api('i/claim-achievement', { name: 'notes1' }, user);
+			assert.strictEqual(res.status, 204);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.ok(profile.achievements.some(a => a.name === 'notes1'));
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const redis = createRedisClient(config);
+			try {
+				const entries = await redis.xrevrange(`notificationTimeline:${user.id}`, '+', '-', 'COUNT', 10);
+				const notifications = entries.map(([, values]) => {
+					const dataIndex = values.findIndex(value => value === 'data');
+					return JSON.parse(values[dataIndex + 1]!) as { type?: string; achievement?: string };
+				});
+				assert.ok(notifications.some(n => n.type === 'achievementEarned' && n.achievement === 'notes1'));
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const again = await api('i/claim-achievement', { name: 'notes1' }, user);
+			assert.strictEqual(again.status, 204);
+			const profileAfter = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profileAfter.achievements.filter(a => a.name === 'notes1').length, 1);
+		});
+	});
+
+	describe('i/webhooks/create', () => {
+		test('webhookを作成しTOO_MANY_WEBHOOKSでscope保護される', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hwc${suffix}` });
+
+			const wrongScopeToken = await createAppToken(user, ['read:account']);
+			const scopeDenied = await api('i/webhooks/create', { name: 'hook', url: 'https://example.com/hook', on: ['note'] }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const created = await api('i/webhooks/create', { name: 'hook', url: 'https://example.com/hook', on: ['note'], secret: 'sh' }, user);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, 'hook');
+			assert.strictEqual(created.body.url, 'https://example.com/hook');
+			assert.deepStrictEqual(created.body.on, ['note']);
+			assert.strictEqual(created.body.secret, 'sh');
+			assert.strictEqual(created.body.active, true);
+			assert.strictEqual(created.body.userId, user.id);
+
+			const shown = await api('i/webhooks/show', { webhookId: created.body.id }, user);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
 		});
 	});
 

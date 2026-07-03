@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { deleteWebhookFromDatabase, fetchWebhookByIdAndUserIdFromDatabase, listWebhooksByUserIdFromDatabase, updateWebhookInDatabase } from '@/core/WebhookStore.js';
+import { countWebhooksByUserIdFromDatabase, createWebhookInDatabase, deleteWebhookFromDatabase, fetchWebhookByIdAndUserIdFromDatabase, listWebhooksByUserIdFromDatabase, updateWebhookInDatabase } from '@/core/WebhookStore.js';
+import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { genId } from '@/misc/id/gen-id.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { webhookEventTypes, type MiWebhook, type WebhookEventTypes } from '@/models/Webhook.js';
 import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
@@ -12,6 +14,7 @@ import { HonoApiError } from './hono-api-error.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiWebhookDependencies = {
+	config: Config;
 	db: MiDrizzleDatabase;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
@@ -33,6 +36,26 @@ const webhooksListParamDef = {
 	properties: {},
 	required: [],
 } as const;
+
+const webhooksCreateParamDef = {
+	type: 'object',
+	properties: {
+		name: { type: 'string', minLength: 1, maxLength: 100 },
+		url: { type: 'string', minLength: 1, maxLength: 1024 },
+		secret: { type: 'string', maxLength: 1024, default: '' },
+		on: { type: 'array', items: {
+			type: 'string', enum: webhookEventTypes,
+		} },
+	},
+	required: ['name', 'url', 'on'],
+} as const;
+
+type WebhooksCreateParams = {
+	name: string;
+	url: string;
+	secret: string;
+	on: WebhookEventTypes[];
+};
 
 const webhooksShowParamDef = {
 	type: 'object',
@@ -177,4 +200,36 @@ export async function handleHonoApiIWebhooksUpdate(
 	}
 
 	deps.publishInternalEvent?.('webhookUpdated', updated);
+}
+
+export async function handleHonoApiIWebhooksCreate(
+	deps: HonoApiWebhookDependencies,
+	me: MiLocalUser,
+	webhookLimit: number,
+	body: Record<string, unknown>,
+): Promise<HonoApiUserWebhook> {
+	const params = parseHonoApiParams(webhooksCreateParamDef, body) as WebhooksCreateParams;
+
+	const currentWebhooksCount = await countWebhooksByUserIdFromDatabase(deps.db, me.id);
+	if (currentWebhooksCount >= webhookLimit) {
+		throw new HonoApiError({
+			status: 400,
+			message: 'You cannot create webhook any more.',
+			code: 'TOO_MANY_WEBHOOKS',
+			id: '87a9bb19-111e-4e37-81d3-a3e7426453b0',
+		});
+	}
+
+	const webhook = await createWebhookInDatabase(deps.db, {
+		id: genId(deps.config),
+		userId: me.id,
+		name: params.name,
+		url: params.url,
+		secret: params.secret,
+		on: params.on,
+	});
+
+	deps.publishInternalEvent?.('webhookCreated', webhook);
+
+	return packUserWebhook(webhook);
 }

@@ -6,7 +6,7 @@
 import { ReplyError, type Redis } from 'ioredis';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Config } from '@/config.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseAidFull } from '@/misc/id/aid.js';
 import { parseAidxFull } from '@/misc/id/aidx.js';
@@ -20,6 +20,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
+import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
 import { packHonoApiRole } from './hono-api-roles.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
@@ -70,7 +71,14 @@ type TestNotification = {
 	type: 'test';
 };
 
-type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification;
+type AchievementEarnedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'achievementEarned';
+	achievement: typeof ACHIEVEMENT_TYPES[number];
+};
+
+type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification;
 
 type HonoPackedRoleAssignedNotification = {
 	id: string;
@@ -102,6 +110,18 @@ type NotificationsCreateParams = {
 	body: string;
 	header?: string | null;
 	icon?: string | null;
+};
+
+const claimAchievementParamDef = {
+	type: 'object',
+	properties: {
+		name: { type: 'string', enum: ACHIEVEMENT_TYPES },
+	},
+	required: ['name'],
+} as const;
+
+type ClaimAchievementParams = {
+	name: typeof ACHIEVEMENT_TYPES[number];
 };
 
 function parseIdFull(config: Config, id: string): { date: number; additional: bigint } {
@@ -277,6 +297,55 @@ export function createTestNotification(deps: HonoApiNotificationDependencies, us
 		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
 		deps.publishMainStream?.(userId, 'unreadNotification', notification);
 	})());
+}
+
+function createAchievementEarnedNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	achievement: typeof ACHIEVEMENT_TYPES[number],
+): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.achievementEarned?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'achievementEarned',
+			achievement,
+		} satisfies AchievementEarnedNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+
+		deps.publishMainStream?.(userId, 'notification', notification);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', notification);
+		}).catch(() => {}));
+	})());
+}
+
+export async function handleHonoApiIClaimAchievement(
+	deps: HonoApiNotificationDependencies,
+	me: MiUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(claimAchievementParamDef, body) as ClaimAchievementParams;
+	if (!(ACHIEVEMENT_TYPES as readonly string[]).includes(params.name)) return;
+
+	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, me.id);
+	if (profile == null) return;
+	if (profile.achievements.some(a => a.name === params.name)) return;
+
+	await updateUserProfileInDatabase(deps.db, me.id, {
+		achievements: [...profile.achievements, {
+			name: params.name,
+			unlockedAt: Date.now(),
+		}],
+	});
+
+	createAchievementEarnedNotification(deps, me.id, params.name);
 }
 
 async function flushAllHonoApiNotifications(deps: HonoApiNotificationDependencies, userId: MiUser['id']): Promise<void> {
