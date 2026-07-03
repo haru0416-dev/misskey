@@ -3,11 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
+import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listAllFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteFavoriteInDatabase, deleteNoteFavoriteByIdFromDatabase, fetchNoteFavoriteFromDatabase, noteFavoriteExistsInDatabase } from '@/core/NoteFavoriteStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteByIdOrFailFromDatabase,
 	listChildNotesFromDatabase,
+	listFeaturedNotesByIdsFromDatabase,
+	listGlobalTimelineNotesFromDatabase,
+	listHybridTimelineNotesFromDatabase,
+	listLocalTimelineNotesFromDatabase,
 	listMentionNotesFromDatabase,
 	listRenoteNotesFromDatabase,
 	listReplyNotesFromDatabase,
@@ -16,12 +25,14 @@ import { createNoteThreadMutingInDatabase, deleteNoteThreadMutingFromDatabase, n
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import { isUserRelated } from '@/misc/is-user-related.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { HonoApiError } from './hono-api-error.js';
 import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
 import { grantAchievementForHonoApi, type HonoApiNotificationDependencies } from './hono-api-notification.js';
+import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiNotesDependencies = HonoApiNoteDependencies & HonoApiNotificationDependencies & {
@@ -425,4 +436,321 @@ export async function handleHonoApiNotesShow(
 	return await packNoteForHonoApi(deps, note, me, {
 		detail: true,
 	});
+}
+
+function notesGlobalTimelineDisabledError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Global timeline has been disabled.', code: 'GTL_DISABLED', id: '0332fc13-6ab2-4427-ae80-a9fadffd1a6b' });
+}
+
+const notesGlobalTimelineParamDef = {
+	type: 'object',
+	properties: {
+		withFiles: { type: 'boolean', default: false },
+		withRenotes: { type: 'boolean', default: true },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: [],
+} as const;
+
+type NotesGlobalTimelineParams = {
+	withFiles: boolean;
+	withRenotes: boolean;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiNotesGlobalTimeline(
+	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesGlobalTimelineParamDef, body) as NotesGlobalTimelineParams;
+
+	const policies = await getHonoApiRolePolicies(deps, me);
+	if (!policies.gtlAvailable) throw notesGlobalTimelineDisabledError();
+
+	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+
+	const timeline = await listGlobalTimelineNotesFromDatabase(deps.db, {
+		limit: params.limit,
+		sinceId,
+		untilId,
+		withFiles: params.withFiles,
+		withRenotes: params.withRenotes,
+		me: me ?? null,
+		blockedHosts: deps.meta.blockedHosts,
+	});
+
+	return await packNoteManyForHonoApi(deps, timeline, me);
+}
+
+function notesLocalTimelineDisabledError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Local timeline has been disabled.', code: 'LTL_DISABLED', id: '45a6eb02-7695-4393-b023-dd3be9aaaefd' });
+}
+
+function notesLocalTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dd9c8400-1cb5-4eef-8a31-200c5f933793' });
+}
+
+const notesLocalTimelineParamDef = {
+	type: 'object',
+	properties: {
+		withFiles: { type: 'boolean', default: false },
+		withRenotes: { type: 'boolean', default: true },
+		withReplies: { type: 'boolean', default: false },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		allowPartial: { type: 'boolean', default: false },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: [],
+} as const;
+
+type NotesLocalTimelineParams = {
+	withFiles: boolean;
+	withRenotes: boolean;
+	withReplies: boolean;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	allowPartial: boolean;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiNotesLocalTimeline(
+	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesLocalTimelineParamDef, body) as NotesLocalTimelineParams;
+	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+
+	const policies = await getHonoApiRolePolicies(deps, me);
+	if (!policies.ltlAvailable) throw notesLocalTimelineDisabledError();
+
+	if (params.withReplies && params.withFiles) throw notesLocalTimelineBothWithRepliesAndWithFilesError();
+
+	let mutedChannelIds: string[] = [];
+	if (me) {
+		mutedChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	}
+
+	const timeline = await listLocalTimelineNotesFromDatabase(deps.db, {
+		limit: params.limit,
+		sinceId,
+		untilId,
+		withFiles: params.withFiles,
+		withReplies: params.withReplies,
+		me,
+		blockedHosts: deps.meta.blockedHosts,
+		mutedChannelIds,
+	});
+
+	return await packNoteManyForHonoApi(deps, timeline, me);
+}
+
+function notesHybridTimelineDisabledError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Hybrid timeline has been disabled.', code: 'STL_DISABLED', id: '620763f4-f621-4533-ab33-0577a1a3c342' });
+}
+
+function notesHybridTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dfaa3eb7-8002-4cb7-bcc4-1095df46656f' });
+}
+
+const notesHybridTimelineParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		allowPartial: { type: 'boolean', default: false },
+		includeMyRenotes: { type: 'boolean', default: true },
+		includeRenotedMyNotes: { type: 'boolean', default: true },
+		includeLocalRenotes: { type: 'boolean', default: true },
+		withFiles: { type: 'boolean', default: false },
+		withRenotes: { type: 'boolean', default: true },
+		withReplies: { type: 'boolean', default: false },
+	},
+	required: [],
+} as const;
+
+type NotesHybridTimelineParams = {
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	allowPartial: boolean;
+	includeMyRenotes: boolean;
+	includeRenotedMyNotes: boolean;
+	includeLocalRenotes: boolean;
+	withFiles: boolean;
+	withRenotes: boolean;
+	withReplies: boolean;
+};
+
+export async function handleHonoApiNotesHybridTimeline(
+	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesHybridTimelineParamDef, body) as NotesHybridTimelineParams;
+	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+
+	const policies = await getHonoApiRolePolicies(deps, me);
+	if (!policies.ltlAvailable) throw notesHybridTimelineDisabledError();
+
+	if (params.withReplies && params.withFiles) throw notesHybridTimelineBothWithRepliesAndWithFilesError();
+
+	const followees = await listAllFollowingsByFollowerIdFromDatabase(deps.db, me.id);
+	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
+		.filter(id => !mutingChannelIds.includes(id));
+
+	const notes = await listHybridTimelineNotesFromDatabase(deps.db, {
+		me,
+		followeeIds: followees.map(f => f.followeeId),
+		followingChannelIds,
+		mutingChannelIds,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		includeMyRenotes: params.includeMyRenotes,
+		includeRenotedMyNotes: params.includeRenotedMyNotes,
+		includeLocalRenotes: params.includeLocalRenotes,
+		withFiles: params.withFiles,
+		withReplies: params.withReplies,
+		blockedHosts: deps.meta.blockedHosts,
+	});
+
+	return await packNoteManyForHonoApi(deps, notes, me);
+}
+
+const GLOBAL_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
+const notesFeaturedEpoc = new Date('2023-01-01T00:00:00Z').getTime();
+
+function getCurrentNotesFeaturedWindow(windowRange: number): number {
+	const passed = new Date().getTime() - notesFeaturedEpoc;
+	return Math.floor(passed / windowRange);
+}
+
+async function getNotesFeaturedRanking(
+	deps: HonoApiNotesDependencies,
+	name: string,
+	threshold: number,
+): Promise<string[]> {
+	const currentWindow = getCurrentNotesFeaturedWindow(GLOBAL_NOTES_RANKING_WINDOW);
+	const previousWindow = currentWindow - 1;
+
+	const redisPipeline = deps.redis.pipeline();
+	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	const [currentRankingResult, previousRankingResult] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : [[], []]);
+
+	const ranking = new Map<string, number>();
+	for (let i = 0; i < currentRankingResult.length; i += 2) {
+		ranking.set(currentRankingResult[i]!, parseInt(currentRankingResult[i + 1]!, 10));
+	}
+	for (let i = 0; i < previousRankingResult.length; i += 2) {
+		const id = previousRankingResult[i]!;
+		const score = parseInt(previousRankingResult[i + 1]!, 10);
+		const exist = ranking.get(id);
+		ranking.set(id, exist != null ? (exist + score) / 2 : score);
+	}
+
+	return [...ranking.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]).slice(0, threshold);
+}
+
+let globalNotesRankingCache: string[] = [];
+let globalNotesRankingCacheLastFetchedAt = 0;
+
+const notesFeaturedParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		untilId: { type: 'string', format: 'misskey:id' },
+		channelId: { type: 'string', nullable: true, format: 'misskey:id' },
+	},
+	required: [],
+} as const;
+
+type NotesFeaturedParams = {
+	limit: number;
+	untilId?: string;
+	channelId?: string | null;
+};
+
+export function normalizeHonoApiNotesFeaturedQuery(query: Record<string, string>): Record<string, unknown> {
+	const body: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(query)) {
+		if (key === 'limit') {
+			const numeric = Number(value);
+			body[key] = Number.isInteger(numeric) ? numeric : value;
+		} else if (key === 'channelId' && value === 'null') {
+			body[key] = null;
+		} else {
+			body[key] = value;
+		}
+	}
+	return body;
+}
+
+export async function handleHonoApiNotesFeatured(
+	deps: HonoApiNotesDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesFeaturedParamDef, body) as NotesFeaturedParams;
+
+	let noteIds: string[];
+	if (params.channelId) {
+		noteIds = await getNotesFeaturedRanking(deps, `featuredInChannelNotesRanking:${params.channelId}`, 50);
+	} else {
+		if (globalNotesRankingCacheLastFetchedAt !== 0 && (Date.now() - globalNotesRankingCacheLastFetchedAt < 1000 * 60 * 30)) {
+			noteIds = globalNotesRankingCache;
+		} else {
+			noteIds = await getNotesFeaturedRanking(deps, 'featuredGlobalNotesRanking', 100);
+			globalNotesRankingCache = noteIds;
+			globalNotesRankingCacheLastFetchedAt = Date.now();
+		}
+	}
+
+	noteIds = [...noteIds].sort((a, b) => a > b ? -1 : 1);
+	if (params.untilId) {
+		noteIds = noteIds.filter(id => id < params.untilId!);
+	}
+	noteIds = noteIds.slice(0, params.limit);
+
+	if (noteIds.length === 0) return [];
+
+	const [mutedByMe, blockedByOthers] = me
+		? await Promise.all([
+			listMuteeIdsByMuterIdFromDatabase(deps.db, me.id),
+			listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id),
+		])
+		: [[], []];
+	const mutedSet = new Set(mutedByMe);
+	const blockedSet = new Set(blockedByOthers);
+
+	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter(note => {
+		if (me && isUserRelated(note, blockedSet)) return false;
+		if (me && isUserRelated(note, mutedSet)) return false;
+		return true;
+	});
+
+	notes.sort((a, b) => a.id > b.id ? -1 : 1);
+
+	return await packNoteManyForHonoApi(deps, notes, me);
 }

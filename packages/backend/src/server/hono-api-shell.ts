@@ -78,7 +78,7 @@ import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-ap
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
 import { handleHonoApiIClaimAchievement, handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification, type HonoApiMainStreamPublisher } from './hono-api-notification.js';
-import { handleHonoApiNotesChildren, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesMentions, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesShow, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete } from './hono-api-notes.js';
+import { handleHonoApiNotesChildren, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesFeatured, handleHonoApiNotesGlobalTimeline, handleHonoApiNotesHybridTimeline, handleHonoApiNotesLocalTimeline, handleHonoApiNotesMentions, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesShow, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete, normalizeHonoApiNotesFeaturedQuery } from './hono-api-notes.js';
 import { handleHonoApiPagePush } from './hono-api-page-push.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiAdminPromoCreate, handleHonoApiPromoRead } from './hono-api-promo.js';
@@ -2441,6 +2441,53 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiNotesThreadMutingDelete(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notes/global-timeline', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotesGlobalTimeline(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/local-timeline', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotesLocalTimeline(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/hybrid-timeline', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiNotesHybridTimeline(deps, auth.user, body));
+		});
+	});
+
+	app.get('/notes/featured', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const query = normalizeHonoApiNotesFeaturedQuery(c.req.query());
+			const auth = await authenticateOptionalRequest(deps, c, query);
+
+			return jsonResponse(c, await handleHonoApiNotesFeatured(deps, auth.user, query), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+		});
+	});
+
+	app.post('/notes/featured', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotesFeatured(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 

@@ -5555,6 +5555,118 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes timelines (global/local/hybrid/featured)', () => {
+		test('global-timeline と local-timeline は可視性・ホスト条件を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `htl${suffix}` });
+
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'global/local timeline public note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const homeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: homeNoteId,
+				text: 'home-only note (excluded from global/local)',
+				userId: author.id,
+				userHost: null,
+				visibility: 'home',
+			});
+
+			const global = await api('notes/global-timeline', { limit: 100 });
+			assert.strictEqual(global.status, 200);
+			assert.ok(global.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(global.body.some((n: any) => n.id === homeNoteId), false);
+
+			const local = await api('notes/local-timeline', { limit: 100 });
+			assert.strictEqual(local.status, 200);
+			assert.ok(local.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(local.body.some((n: any) => n.id === homeNoteId), false);
+		});
+
+		test('hybrid-timeline はfolloweeの投稿のみ含む', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const viewer = await signup({ username: `hht${suffix}` });
+			const followee = await signup({ username: `hhtf${suffix}` });
+			const stranger = await signup({ username: `hhts${suffix}` });
+			await api('following/create', { userId: followee.id }, viewer);
+
+			const followeeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: followeeNoteId,
+				text: 'from followee',
+				userId: followee.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const strangerNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: strangerNoteId,
+				text: 'from stranger, not followed, not local timeline eligible',
+				userId: stranger.id,
+				userHost: null,
+				visibility: 'home',
+			});
+
+			const hybrid = await api('notes/hybrid-timeline', { limit: 100 }, viewer);
+			assert.strictEqual(hybrid.status, 200);
+			assert.ok(hybrid.body.some((n: any) => n.id === followeeNoteId));
+			assert.strictEqual(hybrid.body.some((n: any) => n.id === strangerNoteId), false);
+		});
+
+		test('notes/featured はランキング、mute/blockフィルタを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnff2${suffix}` });
+			const viewer = await signup({ username: `hnff2v${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'featured note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const mutedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: mutedNoteId,
+				text: 'featured note from muted user',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const redis = createRedisClient(config);
+			const windowKey = `featuredGlobalNotesRanking:${Math.floor((Date.now() - new Date('2023-01-01T00:00:00Z').getTime()) / (1000 * 60 * 60 * 24 * 3))}`;
+			try {
+				await redis.zadd(windowKey, 1, noteId, 1, mutedNoteId);
+
+				const featured = await api('notes/featured', { limit: 100 });
+				assert.strictEqual(featured.status, 200);
+				assert.ok(featured.body.some((n: any) => n.id === noteId));
+
+				await api('mute/create', { userId: author.id }, viewer);
+				const featuredAsViewer = await api('notes/featured', { limit: 100 }, viewer);
+				assert.strictEqual(featuredAsViewer.status, 200);
+				assert.strictEqual(featuredAsViewer.body.some((n: any) => n.id === noteId), false);
+
+				const getFeatured = await relativeFetch(`api/notes/featured?limit=100`);
+				assert.strictEqual(getFeatured.status, 200);
+				const getFeaturedBody = await getFeatured.json() as { id?: unknown }[];
+				assert.ok(getFeaturedBody.some(n => n.id === noteId));
+			} finally {
+				await redis.del(windowKey);
+				await closeRedisConnection(redis);
+			}
+		});
+	});
+
 	describe('page-push', () => {
 		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
 			const config = loadConfig();
