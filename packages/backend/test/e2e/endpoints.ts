@@ -10043,6 +10043,50 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('i/notifications-grouped', () => {
+		test('同じノートへの複数のリアクション通知がまとめられる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hngra${suffix}` });
+			const reactor1 = await signup({ username: `hngr1${suffix}` });
+			const reactor2 = await signup({ username: `hngr2${suffix}` });
+			const note = await post(author, { text: 'hi' });
+			await api('notes/reactions/create', { noteId: note.id, reaction: '🚀' }, reactor1);
+			await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, reactor2);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('i/notifications-grouped', {}, author);
+
+			assert.strictEqual(res.status, 200);
+			const grouped = res.body.filter((n: any) => n.type === 'reaction:grouped');
+			assert.strictEqual(grouped.length, 1);
+			assert.strictEqual(grouped[0].reactions.length, 2);
+			const userIds = grouped[0].reactions.map((r: any) => r.user.id);
+			assert.ok(userIds.includes(reactor1.id));
+			assert.ok(userIds.includes(reactor2.id));
+		});
+
+		test('同じノートへの複数のリノート通知がまとめられる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hngna${suffix}` });
+			const renoter1 = await signup({ username: `hngn1${suffix}` });
+			const renoter2 = await signup({ username: `hngn2${suffix}` });
+			const note = await post(author, { text: 'hi' });
+			await post(renoter1, { renoteId: note.id });
+			await post(renoter2, { renoteId: note.id });
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('i/notifications-grouped', {}, author);
+
+			assert.strictEqual(res.status, 200);
+			const grouped = res.body.filter((n: any) => n.type === 'renote:grouped');
+			assert.strictEqual(grouped.length, 1);
+			assert.strictEqual(grouped[0].users.length, 2);
+			const userIds = grouped[0].users.map((u: any) => u.id);
+			assert.ok(userIds.includes(renoter1.id));
+			assert.ok(userIds.includes(renoter2.id));
+		});
+	});
+
 	describe('notes/show', () => {
 		test('投稿が取得できる', async () => {
 			const myPost = await post(alice, {

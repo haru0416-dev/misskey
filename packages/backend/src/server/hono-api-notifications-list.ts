@@ -267,3 +267,85 @@ export async function handleHonoApiINotifications(
 
 	return await packNotificationsForHonoApi(deps, notifications, me.id);
 }
+
+function groupHonoApiNotifications(notifications: MiNotification[]): MiGroupedNotification[] {
+	let groupedNotifications: MiGroupedNotification[] = [notifications[0]];
+	for (let i = 1; i < notifications.length; i++) {
+		const notification = notifications[i];
+		const prev = notifications[i - 1];
+		let prevGroupedNotification = groupedNotifications.at(-1)!;
+
+		if (prev.type === 'reaction' && notification.type === 'reaction' && prev.noteId === notification.noteId) {
+			if (prevGroupedNotification.type !== 'reaction:grouped') {
+				groupedNotifications[groupedNotifications.length - 1] = {
+					type: 'reaction:grouped',
+					id: '',
+					createdAt: prev.createdAt,
+					noteId: prev.noteId,
+					reactions: [{ userId: prev.notifierId, reaction: prev.reaction }],
+				};
+				prevGroupedNotification = groupedNotifications.at(-1)!;
+			}
+			if (prevGroupedNotification.type === 'reaction:grouped') {
+				prevGroupedNotification.reactions.push({ userId: notification.notifierId, reaction: notification.reaction });
+			}
+			prevGroupedNotification.id = notification.id;
+			continue;
+		}
+		if (prev.type === 'renote' && notification.type === 'renote' && prev.targetNoteId === notification.targetNoteId) {
+			if (prevGroupedNotification.type !== 'renote:grouped') {
+				groupedNotifications[groupedNotifications.length - 1] = {
+					type: 'renote:grouped',
+					id: '',
+					createdAt: notification.createdAt,
+					noteId: prev.noteId,
+					userIds: [prev.notifierId],
+				};
+				prevGroupedNotification = groupedNotifications.at(-1)!;
+			}
+			if (prevGroupedNotification.type === 'renote:grouped') {
+				prevGroupedNotification.userIds.push(notification.notifierId);
+			}
+			prevGroupedNotification.id = notification.id;
+			continue;
+		}
+
+		groupedNotifications.push(notification);
+	}
+
+	return groupedNotifications;
+}
+
+export async function handleHonoApiINotificationsGrouped(
+	deps: HonoApiNotificationsListDependencies,
+	me: MiUser,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>[]> {
+	const params = parseHonoApiParams(notificationsParamDef, body) as NotificationsParams;
+	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
+
+	if (params.includeTypes && params.includeTypes.length === 0) return [];
+	if (notificationTypes.every(type => params.excludeTypes?.includes(type))) return [];
+
+	const includeTypes = params.includeTypes?.filter(type => !(obsoleteNotificationTypes as readonly string[]).includes(type));
+	const excludeTypes = params.excludeTypes?.filter(type => !(obsoleteNotificationTypes as readonly string[]).includes(type));
+
+	const notifications = await getHonoApiNotifications(deps, me.id, {
+		sinceId,
+		untilId,
+		limit: params.limit,
+		includeTypes,
+		excludeTypes,
+	});
+
+	if (notifications.length === 0) return [];
+
+	if (params.markAsRead) {
+		void markAllHonoApiNotificationsAsRead(deps, me.id, false);
+	}
+
+	const groupedNotifications = groupHonoApiNotifications(notifications).slice(0, params.limit);
+
+	return await packNotificationsForHonoApi(deps, groupedNotifications, me.id);
+}

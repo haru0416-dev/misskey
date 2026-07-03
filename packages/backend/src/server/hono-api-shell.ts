@@ -101,7 +101,7 @@ import { handleHonoApiAdminDeleteAllFilesOfAUser, handleHonoApiAdminDriveCleanRe
 import { handleHonoApiIUpdate } from './hono-api-account-update.js';
 import { handleHonoApiIMove } from './hono-api-account-move.js';
 import { handleHonoApiIPin, handleHonoApiIUnpin } from './hono-api-account-pin.js';
-import { handleHonoApiINotifications } from './hono-api-notifications-list.js';
+import { handleHonoApiINotifications, handleHonoApiINotificationsGrouped } from './hono-api-notifications-list.js';
 import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll, handleHonoApiUsersFollowers, handleHonoApiUsersFollowing } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from './hono-api-hashtags.js';
@@ -4534,6 +4534,21 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			}, auth.user.id);
 
 			return jsonResponse(c, await handleHonoApiINotifications(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/notifications-grouped', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:notifications');
+			await assertHonoApiRateLimit(deps, 'i/notifications-grouped', {
+				duration: 30000,
+				max: 30,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiINotificationsGrouped(deps, auth.user, body));
 		});
 	});
 
