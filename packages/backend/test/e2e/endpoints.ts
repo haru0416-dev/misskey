@@ -3809,6 +3809,53 @@ describe('Endpoints', () => {
 			assert.strictEqual((limited.body as any[]).length, 1);
 		});
 
+		test('charts/notes returns a chart shaped array of the requested length', async () => {
+			const res = await api('charts/notes', { span: 'day', limit: 5 });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { local: { total: number[] }; remote: { total: number[] } };
+			assert.strictEqual(body.local.total.length, 5);
+			assert.strictEqual(body.remote.total.length, 5);
+			assert.strictEqual(body.local.total.every(v => typeof v === 'number'), true);
+		});
+
+		test('charts/notes via GET sets a public cache-control header for anonymous requests', async () => {
+			const res = await relativeFetch('api/charts/notes?span=hour&limit=3');
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
+			const body = await res.json() as { local: { total: number[] } };
+			assert.strictEqual(body.local.total.length, 3);
+		});
+
+		test('charts/instance groups results by the given host', async () => {
+			const config = loadConfig();
+			const host = `chart-${Date.now().toString(36)}.example.com`;
+			await createInstanceInDatabase(db, {
+				id: genId(config),
+				host,
+				firstRetrievedAt: new Date(),
+			});
+
+			const res = await api('charts/instance', { span: 'day', limit: 5, host });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { notes: { total: number[] } };
+			assert.strictEqual(body.notes.total.length, 5);
+		});
+
+		test('charts/user/notes returns a per-user chart scoped to the given userId', async () => {
+			const res = await api('charts/user/notes', { span: 'day', limit: 5, userId: alice.id });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { total: number[] };
+			assert.strictEqual(body.total.length, 5);
+		});
+
+		test('charts/user/drive returns a per-user drive chart scoped to the given userId', async () => {
+			const res = await api('charts/user/drive', { span: 'day', limit: 5, userId: alice.id });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { totalCount: number[]; totalSize: number[] };
+			assert.strictEqual(body.totalCount.length, 5);
+			assert.strictEqual(body.totalSize.length, 5);
+		});
+
 		test('users/achievements returns profile achievements without credentials', async () => {
 			const achievements = [{
 				name: 'notes1' as const,
