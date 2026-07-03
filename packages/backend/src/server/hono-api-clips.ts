@@ -428,3 +428,44 @@ export async function handleHonoApiClipsNotes(
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
+
+const usersClipsParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: ['userId'],
+} as const;
+
+type UsersClipsParams = {
+	userId: string;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiUsersClips(
+	deps: HonoApiClipDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'Clip'>[]> {
+	const params = parseHonoApiParams(usersClipsParamDef, body) as UsersClipsParams;
+	const pagination = resolveClipPagination({ gen: (time) => genId(deps.config, time) }, params);
+	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
+		userId: params.userId,
+		isPublic: true,
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packClipsManyForHonoApi(deps, clips, me);
+}

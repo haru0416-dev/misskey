@@ -6625,6 +6625,83 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/clips, users/flashs, users/gallery/posts', () => {
+		test('users/clips は公開clipのみをページングして返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `huc${suffix}` });
+
+			const pub = await api('clips/create', { name: `hono users/clips public ${suffix}`, isPublic: true }, owner);
+			assert.strictEqual(pub.status, 200);
+			const priv = await api('clips/create', { name: `hono users/clips private ${suffix}`, isPublic: false }, owner);
+			assert.strictEqual(priv.status, 200);
+
+			const listed = await api('users/clips', { userId: owner.id, limit: 100 });
+			assert.strictEqual(listed.status, 200);
+			assert.ok(listed.body.some((c: any) => c.id === pub.body.id));
+			assert.ok(!listed.body.some((c: any) => c.id === priv.body.id));
+		});
+
+		test('users/flashs は公開flashのみをページングして返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `huf${suffix}` });
+
+			const pub = await api('flash/create', {
+				title: `hono users/flashs public ${suffix}`,
+				summary: 's',
+				script: '1',
+				permissions: [],
+				visibility: 'public',
+			}, owner);
+			assert.strictEqual(pub.status, 200);
+			const priv = await api('flash/create', {
+				title: `hono users/flashs private ${suffix}`,
+				summary: 's',
+				script: '1',
+				permissions: [],
+				visibility: 'private',
+			}, owner);
+			assert.strictEqual(priv.status, 200);
+
+			const listed = await api('users/flashs', { userId: owner.id, limit: 100 });
+			assert.strictEqual(listed.status, 200);
+			assert.ok(listed.body.some((f: any) => f.id === pub.body.id));
+			assert.ok(!listed.body.some((f: any) => f.id === priv.body.id));
+			assert.strictEqual(listed.body.find((f: any) => f.id === pub.body.id).isLiked, undefined);
+		});
+
+		test('users/gallery/posts はページングして投稿を返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hug${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-users-gallery-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-users-gallery-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `hono users/gallery/posts ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const listed = await api('users/gallery/posts', { userId: owner.id, limit: 100 });
+			assert.strictEqual(listed.status, 200);
+			assert.ok(listed.body.some((p: any) => p.id === post.body.id));
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
