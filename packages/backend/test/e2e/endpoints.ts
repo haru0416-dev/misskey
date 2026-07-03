@@ -1375,6 +1375,75 @@ describe('Endpoints', () => {
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 		});
+
+		test('federation/users はhostでフィルタしUserDetailedNotMeを返す', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const host = `hono-fed-users-${suffix}.example`;
+			const remoteId = genId(config, now);
+			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hfu${suffix}`,
+					usernameLower: `hfu${suffix}`,
+					host,
+					inbox: `https://${host}/inbox`,
+					uri: `https://${host}/users/${remoteId}`,
+				},
+				profile: {
+					userId: remoteId,
+					userHost: host,
+				},
+			});
+
+			const users = await api('federation/users', { host });
+			assert.strictEqual(users.status, 200);
+			assert.strictEqual(users.body.length, 1);
+			assert.strictEqual(users.body[0].id, remoteUser.id);
+			assert.strictEqual(users.body[0].host, host);
+			assert.strictEqual('email' in users.body[0], false);
+
+			const empty = await api('federation/users', { host: `hono-fed-users-none-${suffix}.example` });
+			assert.strictEqual(empty.status, 200);
+			assert.strictEqual(empty.body.length, 0);
+		});
+
+		test('federation/followers と federation/following はhostでフィルタしFollowingを返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const remoteFollowerHost = `hono-fed-follower-${suffix}.example`;
+			const remoteFolloweeHost = `hono-fed-followee-${suffix}.example`;
+			const follower = await signup({ username: `hff${suffix}` });
+			const followee = await signup({ username: `hffe${suffix}` });
+
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: follower.id,
+				followeeId: followee.id,
+				followeeHost: remoteFolloweeHost,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config),
+				followerId: followee.id,
+				followeeId: follower.id,
+				followerHost: remoteFollowerHost,
+			});
+
+			const followers = await api('federation/followers', { host: remoteFolloweeHost });
+			assert.strictEqual(followers.status, 200);
+			assert.strictEqual(followers.body.length, 1);
+			assert.strictEqual(followers.body[0].followerId, follower.id);
+			assert.strictEqual(followers.body[0].followeeId, followee.id);
+			assert.strictEqual(followers.body[0].followee.id, followee.id);
+
+			const following = await api('federation/following', { host: remoteFollowerHost });
+			assert.strictEqual(following.status, 200);
+			assert.strictEqual(following.body.length, 1);
+			assert.strictEqual(following.body[0].followerId, followee.id);
+			assert.strictEqual(following.body[0].followeeId, follower.id);
+			assert.strictEqual(following.body[0].followee.id, follower.id);
+		});
 	});
 
 	describe('admin/drive', () => {
