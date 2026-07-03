@@ -67,6 +67,33 @@ import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleH
 import { handleHonoApiClipsAddNote, handleHonoApiClipsCreate, handleHonoApiClipsDelete, handleHonoApiClipsList, handleHonoApiClipsMyFavorites, handleHonoApiClipsNotes, handleHonoApiClipsRemoveNote, handleHonoApiClipsShow, handleHonoApiClipsUpdate } from './hono-api-clips.js';
 import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsShow, handleHonoApiChannelsTimeline, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
 import { handleHonoApiChartsActiveUsers, handleHonoApiChartsApRequest, handleHonoApiChartsDrive, handleHonoApiChartsFederation, handleHonoApiChartsInstance, handleHonoApiChartsNotes, handleHonoApiChartsUserDrive, handleHonoApiChartsUserFollowing, handleHonoApiChartsUserNotes, handleHonoApiChartsUserPv, handleHonoApiChartsUserReactions, handleHonoApiChartsUsers, normalizeHonoApiChartQuery } from './hono-api-charts.js';
+import {
+	handleHonoApiChatHistory,
+	handleHonoApiChatMessagesCreateToRoom,
+	handleHonoApiChatMessagesCreateToUser,
+	handleHonoApiChatMessagesDelete,
+	handleHonoApiChatMessagesReact,
+	handleHonoApiChatMessagesRoomTimeline,
+	handleHonoApiChatMessagesSearch,
+	handleHonoApiChatMessagesShow,
+	handleHonoApiChatMessagesUnreact,
+	handleHonoApiChatMessagesUserTimeline,
+	handleHonoApiChatReadAll,
+	handleHonoApiChatRoomsCreate,
+	handleHonoApiChatRoomsDelete,
+	handleHonoApiChatRoomsInvitationsCreate,
+	handleHonoApiChatRoomsInvitationsIgnore,
+	handleHonoApiChatRoomsInvitationsInbox,
+	handleHonoApiChatRoomsInvitationsOutbox,
+	handleHonoApiChatRoomsJoin,
+	handleHonoApiChatRoomsJoining,
+	handleHonoApiChatRoomsLeave,
+	handleHonoApiChatRoomsMembers,
+	handleHonoApiChatRoomsMute,
+	handleHonoApiChatRoomsOwned,
+	handleHonoApiChatRoomsShow,
+	handleHonoApiChatRoomsUpdate,
+} from './hono-api-chat.js';
 import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from './hono-api-captcha.js';
 import { handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats, type HonoApiAdminQueueDependencies } from './hono-api-admin-queue.js';
 import { handleHonoApiAdminDeleteAllFilesOfAUser, handleHonoApiAdminDriveCleanRemoteFiles, handleHonoApiAdminDriveCleanup, handleHonoApiAdminDriveFiles, handleHonoApiAdminDriveShowFile } from './hono-api-admin-drive.js';
@@ -105,7 +132,7 @@ import { handleHonoApiRetention } from './hono-api-retention.js';
 import { handleHonoApiRolesList, handleHonoApiRolesNotes, handleHonoApiRolesShow, handleHonoApiRolesUsers } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
-import type { HonoApiBroadcastStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiUserListStreamPublisher } from './hono-api-events.js';
+import type { HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiUserListStreamPublisher } from './hono-api-events.js';
 import { signupPendingWithHonoApi, signupWithHonoApi } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
@@ -136,6 +163,8 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 	publishDriveStream?: HonoApiDriveStreamPublisher;
 	publishUserListStream?: HonoApiUserListStreamPublisher;
+	publishChatUserStream?: HonoApiChatUserStreamPublisher;
+	publishChatRoomStream?: HonoApiChatRoomStreamPublisher;
 };
 
 const unknownApiEndpoint = {
@@ -2580,6 +2609,310 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(c, await handleHonoApiChartsUserReactions(deps, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+		});
+	});
+
+	app.post('/chat/history', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatHistory(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/read-all', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatReadAll(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/messages/create-to-user', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:chat');
+			await assertHonoApiRateLimit(deps, 'chat/messages/create-to-user', {
+				duration: 60 * 60 * 1000,
+				max: 500,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiChatMessagesCreateToUser(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/messages/create-to-room', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:chat');
+			await assertHonoApiRateLimit(deps, 'chat/messages/create-to-room', {
+				duration: 60 * 60 * 1000,
+				max: 500,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiChatMessagesCreateToRoom(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/messages/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatMessagesDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/messages/react', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatMessagesReact(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/messages/unreact', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatMessagesUnreact(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/messages/room-timeline', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatMessagesRoomTimeline(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/messages/search', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatMessagesSearch(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/messages/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatMessagesShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/messages/user-timeline', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatMessagesUserTimeline(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:chat');
+			await assertHonoApiRateLimit(deps, 'chat/rooms/create', {
+				duration: 24 * 60 * 60 * 1000,
+				max: 10,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiChatRoomsCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatRoomsDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/rooms/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			return jsonResponse(c, await handleHonoApiChatRoomsUpdate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatRoomsShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/owned', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatRoomsOwned(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/join', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatRoomsJoin(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/rooms/joining', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatRoomsJoining(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/leave', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatRoomsLeave(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/rooms/members', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			return jsonResponse(c, await handleHonoApiChatRoomsMembers(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/mute', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatRoomsMute(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/rooms/invitations/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:chat');
+			await assertHonoApiRateLimit(deps, 'chat/rooms/invitations/create', {
+				duration: 24 * 60 * 60 * 1000,
+				max: 50,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/invitations/ignore', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:chat');
+
+			await handleHonoApiChatRoomsInvitationsIgnore(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/chat/rooms/invitations/inbox', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsInbox(deps, auth.user, body));
+		});
+	});
+
+	app.post('/chat/rooms/invitations/outbox', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:chat');
+
+			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsOutbox(deps, auth.user, body));
 		});
 	});
 

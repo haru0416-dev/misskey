@@ -146,6 +146,24 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 					},
 				}));
 			},
+			publishChatUserStream: (fromUserId, toUserId, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `chatUserStream:${fromUserId}-${toUserId}`,
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
+			publishChatRoomStream: (toRoomId, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `chatRoomStream:${toRoomId}`,
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
 		},
 		clientBase: {
 			config,

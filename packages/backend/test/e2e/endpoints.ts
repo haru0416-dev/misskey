@@ -1249,6 +1249,178 @@ describe('Endpoints', () => {
 			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, null);
 		});
 
+		test('chat/messages/create-to-user, show, react, unreact, and delete manage a 1-on-1 message lifecycle', async () => {
+			const suffix = Date.now().toString(36);
+			const sender = await signup({ username: `chatsender${suffix}` });
+			const recipient = await signup({ username: `chatrecipient${suffix}` });
+
+			const selfSend = await api('chat/messages/create-to-user', { text: 'hi', toUserId: sender.id }, sender);
+			assert.strictEqual(selfSend.status, 400);
+			assert.strictEqual(castAsError(selfSend.body as any).error.id, '17e2ba79-e22a-4cbc-bf91-d327643f4a7e');
+
+			const noContent = await api('chat/messages/create-to-user', { toUserId: recipient.id }, sender);
+			assert.strictEqual(noContent.status, 400);
+			assert.strictEqual(castAsError(noContent.body as any).error.id, '25587321-b0e6-449c-9239-f8925092942c');
+
+			const noSuchUser = await api('chat/messages/create-to-user', { text: 'hi', toUserId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, sender);
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '11795c64-40ea-4198-b06e-3c873ed9039d');
+
+			const created = await api('chat/messages/create-to-user', { text: 'hello there', toUserId: recipient.id }, sender);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.text, 'hello there');
+			assert.strictEqual(created.body.toUserId, recipient.id);
+
+			const shownBySender = await api('chat/messages/show', { messageId: created.body.id }, sender);
+			assert.strictEqual(shownBySender.status, 200);
+			assert.strictEqual(shownBySender.body.fromUserId, sender.id);
+
+			const shownByOutsider = await api('chat/messages/show', { messageId: created.body.id }, await signup({ username: `chatoutsider${suffix}` }));
+			assert.strictEqual(shownByOutsider.status, 400);
+			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '3710865b-1848-4da9-8d61-cfed15510b93');
+
+			const reacted = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, recipient);
+			assert.strictEqual(reacted.status, 204);
+
+			const shownAfterReact = await api('chat/messages/show', { messageId: created.body.id }, sender);
+			assert.strictEqual(shownAfterReact.status, 200);
+			assert.strictEqual(shownAfterReact.body.reactions.length, 1);
+			assert.strictEqual(shownAfterReact.body.reactions[0].reaction, '👍');
+
+			const unreacted = await api('chat/messages/unreact', { messageId: created.body.id, reaction: '👍' }, recipient);
+			assert.strictEqual(unreacted.status, 204);
+
+			const deleteByOther = await api('chat/messages/delete', { messageId: created.body.id }, recipient);
+			assert.strictEqual(deleteByOther.status, 400);
+			assert.strictEqual(castAsError(deleteByOther.body as any).error.id, '36b67f0e-66a6-414b-83df-992a55294f17');
+
+			const deleted = await api('chat/messages/delete', { messageId: created.body.id }, sender);
+			assert.strictEqual(deleted.status, 204);
+		});
+
+		test('chat/messages/user-timeline and chat/history reflect sent messages and read state', async () => {
+			const suffix = Date.now().toString(36);
+			const sender = await signup({ username: `chattimeline${suffix}` });
+			const recipient = await signup({ username: `chattlrecv${suffix}` });
+
+			const created = await api('chat/messages/create-to-user', { text: 'timeline message', toUserId: recipient.id }, sender);
+			assert.strictEqual(created.status, 200);
+
+			const timeline = await api('chat/messages/user-timeline', { userId: recipient.id }, sender);
+			assert.strictEqual(timeline.status, 200);
+			assert.strictEqual((timeline.body as any[]).some(m => m.id === created.body.id), true);
+
+			const history = await api('chat/history', {}, sender);
+			assert.strictEqual(history.status, 200);
+			const historyEntry = (history.body as any[]).find(m => m.id === created.body.id);
+			assert.ok(historyEntry);
+
+			const readAll = await api('chat/read-all', {}, recipient);
+			assert.strictEqual(readAll.status, 204);
+		});
+
+		test('chat/rooms lifecycle: create, invite, join, message, members, mute, and leave', async () => {
+			const suffix = Date.now().toString(36);
+			const owner = await signup({ username: `chatroomowner${suffix}` });
+			const invitee = await signup({ username: `chatroominvitee${suffix}` });
+
+			const room = await api('chat/rooms/create', { name: `hono-chat-room-${suffix}`, description: 'test room' }, owner);
+			assert.strictEqual(room.status, 200);
+			assert.strictEqual(room.body.name, `hono-chat-room-${suffix}`);
+
+			const shown = await api('chat/rooms/show', { roomId: room.body.id }, owner);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, room.body.id);
+
+			const shownByOutsider = await api('chat/rooms/show', { roomId: room.body.id }, invitee);
+			assert.strictEqual(shownByOutsider.status, 400);
+			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '857ae02f-8759-4d20-9adb-6e95fffe4fd7');
+
+			const owned = await api('chat/rooms/owned', {}, owner);
+			assert.strictEqual(owned.status, 200);
+			assert.strictEqual((owned.body as any[]).some(r => r.id === room.body.id), true);
+
+			const invitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			assert.strictEqual(invitation.status, 200);
+			assert.strictEqual(invitation.body.userId, invitee.id);
+
+			const outbox = await api('chat/rooms/invitations/outbox', { roomId: room.body.id }, owner);
+			assert.strictEqual(outbox.status, 200);
+			assert.strictEqual((outbox.body as any[]).some(i => i.id === invitation.body.id), true);
+
+			const inbox = await api('chat/rooms/invitations/inbox', {}, invitee);
+			assert.strictEqual(inbox.status, 200);
+			assert.strictEqual((inbox.body as any[]).some(i => i.id === invitation.body.id), true);
+
+			const joined = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
+			assert.strictEqual(joined.status, 204);
+
+			const joining = await api('chat/rooms/joining', {}, invitee);
+			assert.strictEqual(joining.status, 200);
+			assert.strictEqual((joining.body as any[]).some(m => m.roomId === room.body.id), true);
+
+			const roomMessage = await api('chat/messages/create-to-room', { text: 'hello room', toRoomId: room.body.id }, owner);
+			assert.strictEqual(roomMessage.status, 200);
+			assert.strictEqual(roomMessage.body.toRoomId, room.body.id);
+
+			const roomTimeline = await api('chat/messages/room-timeline', { roomId: room.body.id }, invitee);
+			assert.strictEqual(roomTimeline.status, 200);
+			assert.strictEqual((roomTimeline.body as any[]).some(m => m.id === roomMessage.body.id), true);
+
+			const members = await api('chat/rooms/members', { roomId: room.body.id }, owner);
+			assert.strictEqual(members.status, 200);
+			assert.strictEqual((members.body as any[]).some(m => m.user.id === invitee.id), true);
+
+			// chat/rooms/members requires write:chat (not read:chat) per its original meta.kind.
+			const readOnlyToken = await createAppToken(owner, ['read:chat']);
+			const membersWithReadOnlyToken = await api('chat/rooms/members', { roomId: room.body.id }, { token: readOnlyToken });
+			assert.strictEqual(membersWithReadOnlyToken.status, 403);
+
+			const muted = await api('chat/rooms/mute', { roomId: room.body.id, mute: true }, invitee);
+			assert.strictEqual(muted.status, 204);
+
+			const searchResult = await api('chat/messages/search', { query: 'hello room', roomId: room.body.id }, owner);
+			assert.strictEqual(searchResult.status, 200);
+			assert.strictEqual((searchResult.body as any[]).some(m => m.id === roomMessage.body.id), true);
+
+			const updated = await api('chat/rooms/update', { roomId: room.body.id, name: `hono-chat-room-renamed-${suffix}` }, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.name, `hono-chat-room-renamed-${suffix}`);
+
+			const left = await api('chat/rooms/leave', { roomId: room.body.id }, invitee);
+			assert.strictEqual(left.status, 204);
+
+			const deniedDelete = await api('chat/rooms/delete', { roomId: room.body.id }, invitee);
+			assert.strictEqual(deniedDelete.status, 400);
+			assert.strictEqual(castAsError(deniedDelete.body as any).error.id, 'd4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
+
+			const deleted = await api('chat/rooms/delete', { roomId: room.body.id }, owner);
+			assert.strictEqual(deleted.status, 204);
+		});
+
+		test('chat/rooms/invitations/ignore lets a user decline without joining', async () => {
+			const suffix = Date.now().toString(36);
+			const owner = await signup({ username: `chatignoreowner${suffix}` });
+			const invitee = await signup({ username: `chatignoreinvitee${suffix}` });
+
+			const room = await api('chat/rooms/create', { name: `hono-ignore-room-${suffix}` }, owner);
+			assert.strictEqual(room.status, 200);
+
+			const invitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			assert.strictEqual(invitation.status, 200);
+
+			const ignored = await api('chat/rooms/invitations/ignore', { roomId: room.body.id }, invitee);
+			assert.strictEqual(ignored.status, 204);
+
+			// Ignoring hides the invitation from the default inbox listing (ignored: false) without revoking it.
+			const inboxAfterIgnore = await api('chat/rooms/invitations/inbox', {}, invitee);
+			assert.strictEqual(inboxAfterIgnore.status, 200);
+			assert.strictEqual((inboxAfterIgnore.body as any[]).some(i => i.id === invitation.body.id), false);
+
+			const joinAfterIgnore = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
+			assert.strictEqual(joinAfterIgnore.status, 204);
+		});
+
 		test('hashtags/users finds users tagged with the given hashtag', async () => {
 			const suffix = Date.now().toString(36);
 			const tag = `hono_hashtag_users_${suffix}`;
