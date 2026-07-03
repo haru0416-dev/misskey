@@ -5839,6 +5839,26 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('i/webhooks/test', () => {
+		test('自分のwebhookに各イベント種別をテスト送信でき、他人のwebhookはNO_SUCH_WEBHOOKになる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hwt${suffix}` });
+			const stranger = await signup({ username: `hwts${suffix}` });
+
+			const created = await api('i/webhooks/create', { name: 'test-hook', url: 'https://example.com/test-hook', on: ['note'] }, owner);
+			assert.strictEqual(created.status, 200);
+
+			for (const type of ['note', 'reply', 'renote', 'mention', 'follow', 'followed', 'unfollow', 'reaction']) {
+				const res = await api('i/webhooks/test', { webhookId: created.body.id, type }, owner);
+				assert.strictEqual(res.status, 204, `type=${type} should succeed`);
+			}
+
+			const noSuch = await api('i/webhooks/test', { webhookId: created.body.id, type: 'note' }, stranger);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_WEBHOOK');
+		});
+	});
+
 	describe('notifications', () => {
 		async function readNotificationTimeline(config: ReturnType<typeof loadConfig>, userId: string) {
 			const redis = createRedisClient(config);

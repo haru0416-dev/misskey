@@ -148,7 +148,7 @@ import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApi
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
 import { handleHonoApiUsersListsCreate, handleHonoApiUsersListsCreateFromPublic, handleHonoApiUsersListsGetMemberships, handleHonoApiUsersListsPull, handleHonoApiUsersListsPush, handleHonoApiUsersListsUpdateMembership } from './hono-api-users-lists.js';
 import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
-import { handleHonoApiIWebhooksCreate, handleHonoApiIWebhooksDelete, handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow, handleHonoApiIWebhooksUpdate } from './hono-api-webhooks.js';
+import { handleHonoApiIWebhooksCreate, handleHonoApiIWebhooksDelete, handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow, handleHonoApiIWebhooksTest, handleHonoApiIWebhooksUpdate } from './hono-api-webhooks.js';
 
 export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	config: Config;
@@ -5025,6 +5025,23 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const policies = await getHonoApiRolePolicies(deps, auth.user);
 
 			return jsonResponse(c, await handleHonoApiIWebhooksCreate(deps, auth.user, policies.webhookLimit, body));
+		});
+	});
+
+	app.post('/i/webhooks/test', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+			await assertHonoApiRateLimit(deps, 'i/webhooks/test', {
+				duration: 15 * 60 * 1000,
+				max: 60,
+			}, auth.user.id);
+
+			await handleHonoApiIWebhooksTest(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 
