@@ -3856,6 +3856,214 @@ describe('Endpoints', () => {
 			assert.strictEqual(body.totalSize.length, 5);
 		});
 
+		test('antennas/create creates an antenna, rejects empty keywords, and validates the user list', async () => {
+			const suffix = Date.now().toString(36);
+
+			const created = await api('antennas/create', {
+				name: `antenna-${suffix}`,
+				src: 'home',
+				keywords: [['hello']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `antenna-${suffix}`);
+			assert.strictEqual(created.body.src, 'home');
+			assert.strictEqual(created.body.isActive, true);
+
+			const empty = await api('antennas/create', {
+				name: `antenna-empty-${suffix}`,
+				src: 'home',
+				keywords: [['']],
+				excludeKeywords: [['']],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(empty.status, 400);
+			assert.strictEqual(castAsError(empty.body as any).error.id, '53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
+
+			const noSuchList = await api('antennas/create', {
+				name: `antenna-nolist-${suffix}`,
+				src: 'list',
+				userListId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				keywords: [['hello']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+
+			const config = loadConfig();
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `antenna-list-${suffix}`,
+			});
+			const withList = await api('antennas/create', {
+				name: `antenna-list-src-${suffix}`,
+				src: 'list',
+				userListId: userList.id,
+				keywords: [['hello']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(withList.status, 200);
+			assert.strictEqual(withList.body.userListId, userList.id);
+		});
+
+		test('antennas/update updates an antenna and rejects foreign or missing antennas', async () => {
+			const suffix = Date.now().toString(36);
+			const created = await api('antennas/create', {
+				name: `antenna-upd-${suffix}`,
+				src: 'home',
+				keywords: [['before']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+
+			const updated = await api('antennas/update', {
+				antennaId: created.body.id,
+				name: `antenna-upd-renamed-${suffix}`,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.name, `antenna-upd-renamed-${suffix}`);
+
+			const emptyKeywordUpdate = await api('antennas/update', {
+				antennaId: created.body.id,
+				keywords: [['']],
+				excludeKeywords: [['']],
+			}, alice);
+			assert.strictEqual(emptyKeywordUpdate.status, 400);
+			assert.strictEqual(castAsError(emptyKeywordUpdate.body as any).error.id, '721aaff6-4e1b-4d88-8de6-877fae9f68c4');
+
+			const foreignUpdate = await api('antennas/update', {
+				antennaId: created.body.id,
+				name: 'hijack',
+			}, bob);
+			assert.strictEqual(foreignUpdate.status, 400);
+			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
+
+			const missingUpdate = await api('antennas/update', {
+				antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				name: 'missing',
+			}, alice);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
+		});
+
+		test('antennas/show and antennas/list scope antennas to the caller', async () => {
+			const suffix = Date.now().toString(36);
+			const created = await api('antennas/create', {
+				name: `antenna-show-${suffix}`,
+				src: 'home',
+				keywords: [['x']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+
+			const shown = await api('antennas/show', { antennaId: created.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+
+			const shownByBob = await api('antennas/show', { antennaId: created.body.id }, bob);
+			assert.strictEqual(shownByBob.status, 400);
+			assert.strictEqual(castAsError(shownByBob.body as any).error.id, 'c06569fb-b025-4f23-b22d-1fcd20d2816b');
+
+			const list = await api('antennas/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual((list.body as any[]).some(a => a.id === created.body.id), true);
+		});
+
+		test('antennas/delete removes an antenna, rejecting foreign or missing antennas', async () => {
+			const suffix = Date.now().toString(36);
+			const created = await api('antennas/create', {
+				name: `antenna-del-${suffix}`,
+				src: 'home',
+				keywords: [['x']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+
+			const foreignDelete = await api('antennas/delete', { antennaId: created.body.id }, bob);
+			assert.strictEqual(foreignDelete.status, 400);
+			assert.strictEqual(castAsError(foreignDelete.body as any).error.id, 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+
+			const deleted = await api('antennas/delete', { antennaId: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const missingDelete = await api('antennas/delete', { antennaId: created.body.id }, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+		});
+
+		test('antennas/notes returns fanout-timeline notes and antennas/remove-note removes one', async () => {
+			const config = loadConfig();
+			const created = await api('antennas/create', {
+				name: `antenna-notes-${Date.now().toString(36)}`,
+				src: 'home',
+				keywords: [['x']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			const antennaId = created.body.id;
+
+			const note = await createNoteInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'antenna timeline note',
+				visibility: 'public',
+			});
+
+			const redis = createRedisClient(config);
+			try {
+				await redis.lpush(`list:antennaTimeline:${antennaId}`, note.id);
+
+				const notes = await api('antennas/notes', { antennaId, limit: 10 }, alice);
+				assert.strictEqual(notes.status, 200);
+				assert.strictEqual((notes.body as any[]).some(n => n.id === note.id), true);
+
+				const removed = await api('antennas/remove-note', { antennaId, noteId: note.id }, alice);
+				assert.strictEqual(removed.status, 204);
+
+				const remaining = await redis.lrange(`list:antennaTimeline:${antennaId}`, 0, -1);
+				assert.strictEqual(remaining.includes(note.id), false);
+
+				const missingAntenna = await api('antennas/remove-note', { antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', noteId: note.id }, alice);
+				assert.strictEqual(missingAntenna.status, 400);
+				assert.strictEqual(castAsError(missingAntenna.body as any).error.id, '850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
+			} finally {
+				await redis.del(`list:antennaTimeline:${antennaId}`);
+				await closeRedisConnection(redis);
+			}
+		});
+
 		test('users/achievements returns profile achievements without credentials', async () => {
 			const achievements = [{
 				name: 'notes1' as const,

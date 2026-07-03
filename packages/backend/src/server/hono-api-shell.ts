@@ -37,6 +37,7 @@ import { handleHonoApiAdminGetUserIps } from './hono-api-admin-user-ips.js';
 import { handleHonoApiAdminResetPassword, handleHonoApiAdminUnsetMfa, handleHonoApiAdminUnsetUserAvatar, handleHonoApiAdminUnsetUserBanner, handleHonoApiAdminUpdateUserNote } from './hono-api-admin-user-maintenance.js';
 import { handleHonoApiAdminSuspendUser, handleHonoApiAdminUnsuspendUser } from './hono-api-admin-user-suspension.js';
 import { handleHonoApiAdminShowUser, handleHonoApiAdminShowUsers } from './hono-api-admin-users.js';
+import { handleHonoApiAntennasCreate, handleHonoApiAntennasDelete, handleHonoApiAntennasList, handleHonoApiAntennasNotes, handleHonoApiAntennasRemoveNote, handleHonoApiAntennasShow, handleHonoApiAntennasUpdate } from './hono-api-antennas.js';
 import { handleHonoApiGetAvatarDecorations } from './hono-api-avatar-decorations.js';
 import { handleHonoApiEmailAddressAvailable, handleHonoApiGetOnlineUsersCount, handleHonoApiUsernameAvailable } from './hono-api-availability.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow, handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken, handleHonoApiMyApps } from './hono-api-app.js';
@@ -360,6 +361,88 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 				headers: c.req.raw.headers,
 				ip: getRequestIp(c, deps.config),
 			}));
+		});
+	});
+
+	app.post('/antennas/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			return jsonResponse(c, await handleHonoApiAntennasCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/antennas/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			return jsonResponse(c, await handleHonoApiAntennasUpdate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/antennas/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiAntennasDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/antennas/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiAntennasList(deps, auth.user, body));
+		});
+	});
+
+	app.post('/antennas/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiAntennasShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/antennas/remove-note', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiAntennasRemoveNote(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/antennas/notes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiAntennasNotes(deps, auth.user, body));
 		});
 	});
 
