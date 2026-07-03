@@ -3856,6 +3856,54 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('following/invalidate は他人のフォローを解除、カウント減算、キャッシュ更新、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hfi${suffix}` });
+			const follower = await signup({ username: `hfie${suffix}` });
+
+			const wrongWriteToken = await createAppToken(followee, ['read:following']);
+			const scopeDenied = await api('following/invalidate', { userId: follower.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfInvalidate = await api('following/invalidate', { userId: followee.id }, followee);
+			assert.strictEqual(selfInvalidate.status, 400);
+			assert.strictEqual(castAsError(selfInvalidate.body as any).error.code, 'FOLLOWER_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfInvalidate.body as any).error.id, '07dc03b9-03da-422d-885b-438313707662');
+
+			const noSuch = await api('following/invalidate', { userId: genId(config, Date.now() - 1000) }, followee);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'b77e6ae6-a3e5-40da-9cc8-c240115479cc');
+
+			const notFollowing = await api('following/invalidate', { userId: follower.id }, followee);
+			assert.strictEqual(notFollowing.status, 400);
+			assert.strictEqual(castAsError(notFollowing.body as any).error.code, 'NOT_FOLLOWING');
+			assert.strictEqual(castAsError(notFollowing.body as any).error.id, '918faac3-074f-41ae-9c43-ed5d2946770d');
+
+			await api('following/create', { userId: followee.id, withReplies: true }, follower);
+			assert.ok(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id));
+
+			const invalidated = await api('following/invalidate', { userId: follower.id }, followee);
+			assert.strictEqual(invalidated.status, 200);
+			assert.strictEqual(invalidated.body.id, follower.id);
+
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id), null);
+
+			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
+			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
+			assert.strictEqual(refreshedFollower.followingCount, 0);
+			assert.strictEqual(refreshedFollowee.followersCount, 0);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+
 		test('following/update-all updates only the caller followings', async () => {
 			const config = loadConfig();
 			await createFollowingInDatabase(db, {

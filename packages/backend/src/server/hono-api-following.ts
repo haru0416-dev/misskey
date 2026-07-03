@@ -150,6 +150,18 @@ function followingUpdateNotFollowingError(): HonoApiError {
 	return clientError('You are not following that user.', 'NOT_FOLLOWING', 'b8dc75cf-1cb5-46c9-b14b-5f1ffbd782c9');
 }
 
+function followingInvalidateNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', 'b77e6ae6-a3e5-40da-9cc8-c240115479cc');
+}
+
+function followingInvalidateFollowerIsYourselfError(): HonoApiError {
+	return clientError('Follower is yourself.', 'FOLLOWER_IS_YOURSELF', '07dc03b9-03da-422d-885b-438313707662');
+}
+
+function followingInvalidateNotFollowingError(): HonoApiError {
+	return clientError('The other use is not following you.', 'NOT_FOLLOWING', '918faac3-074f-41ae-9c43-ed5d2946770d');
+}
+
 function isLocalUser(user: MiUser): user is MiUser & { host: null } {
 	return user.host === null;
 }
@@ -706,6 +718,30 @@ export async function handleHonoApiFollowingUpdate(
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
 	});
+
+	return await packUserLiteForHonoApi(deps, follower);
+}
+
+export async function handleHonoApiFollowingInvalidate(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'UserLite'>> {
+	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const followee = me;
+
+	if (me.id === params.userId) {
+		throw followingInvalidateFollowerIsYourselfError();
+	}
+
+	const follower = await getTargetUserOrThrow(deps, params.userId, followingInvalidateNoSuchUserError);
+
+	const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
+	if (following == null) {
+		throw followingInvalidateNotFollowingError();
+	}
+
+	await deleteFollowingWithSideEffects(deps, follower, followee, following.id);
 
 	return await packUserLiteForHonoApi(deps, follower);
 }
