@@ -16,6 +16,7 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
+import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
@@ -6105,6 +6106,98 @@ describe('Endpoints', () => {
 			const userListsFile = await makeDriveFile(user.id, `${suffix}u`, 1024);
 			const userListsRes = await api('i/import-user-lists', { fileId: userListsFile.id }, user);
 			assert.strictEqual(userListsRes.status, 204);
+		});
+
+		// i/import-antennas はファイル内容を自分自身のURL(config.url)からHTTPダウンロードする。
+		test('i/import-antennas はrole policy、ファイル検証、ダウンロードしたJSON件数によるantennaLimitを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hia${suffix}` });
+
+			const deniedBeforeGrant = await api('i/import-antennas', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(deniedBeforeGrant.status, 403);
+			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			await grantImportPolicy(user.id, suffix, 'canImportAntennas');
+
+			const noSuchFile = await api('i/import-antennas', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
+
+			const emptyFile = await makeDriveFile(user.id, `${suffix}e`, 0);
+			const emptyRes = await api('i/import-antennas', { fileId: emptyFile.id }, user);
+			assert.strictEqual(emptyRes.status, 400);
+			assert.strictEqual(castAsError(emptyRes.body as any).error.code, 'EMPTY_FILE');
+
+			// i/import-antennas はファイル内容(DriveFile.url)を実際にHTTPダウンロードするため、
+			// admin/emoji/copy のテストと同様にループバックの一時HTTPサーバーでJSONを配信して検証する。
+			const antennas = [{ name: `hono-antenna-${suffix}`, keywords: [['hono']], excludeKeywords: [], src: 'all', userListId: null, userListAccts: null }];
+			const antennasJson = Buffer.from(JSON.stringify(antennas));
+			let antennaServer: Server | undefined;
+			await new Promise<void>((resolve) => {
+				antennaServer = createServer((_req, res) => {
+					res.writeHead(200, { 'Content-Type': 'application/json' });
+					res.end(antennasJson);
+				});
+				antennaServer.listen(0, '127.0.0.1', () => resolve());
+			});
+			const address = antennaServer!.address() as AddressInfo;
+			const antennasUrl = `http://127.0.0.1:${address.port}/${suffix}.json`;
+
+			try {
+				const antennaFile = await createDriveFileInDatabase(db, {
+					id: genId(config),
+					userId: user.id,
+					userHost: null,
+					md5: createHash('md5').update(`hono-import-antennas-${suffix}`).digest('hex'),
+					name: `hono-import-antennas-${suffix}.json`,
+					type: 'application/json',
+					size: antennasJson.length,
+					blurhash: null,
+					properties: {},
+					storedInternal: false,
+					url: antennasUrl,
+					thumbnailUrl: null,
+					comment: null,
+					folderId: null,
+				});
+
+				const beforeCount = await countAntennasByUserIdFromDatabase(db, user.id);
+				const okRes = await api('i/import-antennas', { fileId: antennaFile.id }, user);
+				assert.strictEqual(okRes.status, 204);
+
+				const zeroLimitRole = await role(alice, {
+					name: `hono import antennas zero limit ${suffix}`,
+				}, {
+					antennaLimit: { priority: 1, useDefault: false, value: beforeCount },
+				});
+				const assignZeroLimit = await api('admin/roles/assign', { roleId: zeroLimitRole.id, userId: user.id }, alice);
+				assert.strictEqual(assignZeroLimit.status, 204);
+
+				const antennaFile2 = await createDriveFileInDatabase(db, {
+					id: genId(config),
+					userId: user.id,
+					userHost: null,
+					md5: createHash('md5').update(`hono-import-antennas-2-${suffix}`).digest('hex'),
+					name: `hono-import-antennas-2-${suffix}.json`,
+					type: 'application/json',
+					size: antennasJson.length,
+					blurhash: null,
+					properties: {},
+					storedInternal: false,
+					url: antennasUrl,
+					thumbnailUrl: null,
+					comment: null,
+					folderId: null,
+				});
+				const tooManyRes = await api('i/import-antennas', { fileId: antennaFile2.id }, user);
+				assert.strictEqual(tooManyRes.status, 400);
+				assert.strictEqual(castAsError(tooManyRes.body as any).error.code, 'TOO_MANY_ANTENNAS');
+			} finally {
+				await new Promise<void>((resolve, reject) => {
+					antennaServer?.close(err => err ? reject(err) : resolve());
+				});
+			}
 		});
 	});
 

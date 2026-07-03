@@ -64,7 +64,7 @@ import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoAp
 import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationFollowers, handleHonoApiFederationFollowing, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, handleHonoApiFederationUsers, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiExportCustomEmojis, handleHonoApiIExportAntennas, handleHonoApiIExportBlocking, handleHonoApiIExportClips, handleHonoApiIExportFavorites, handleHonoApiIExportFollowing, handleHonoApiIExportMute, handleHonoApiIExportNotes, handleHonoApiIExportUserLists } from './hono-api-export-jobs.js';
-import { handleHonoApiIImportBlocking, handleHonoApiIImportFollowing, handleHonoApiIImportMuting, handleHonoApiIImportUserLists } from './hono-api-import-jobs.js';
+import { handleHonoApiIImportAntennas, handleHonoApiIImportBlocking, handleHonoApiIImportFollowing, handleHonoApiIImportMuting, handleHonoApiIImportUserLists } from './hono-api-import-jobs.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiIFavorites, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
 import { handleHonoApiIChangePassword, handleHonoApiIDeleteAccount, handleHonoApiIRegenerateToken, handleHonoApiIUpdateEmail } from './hono-api-account-security.js';
@@ -162,7 +162,7 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	redis: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
-	downloadService: Pick<DownloadService, 'downloadUrl'>;
+	downloadService: Pick<DownloadService, 'downloadUrl' | 'downloadTextFile'>;
 	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 	httpRequestService: HttpRequestService;
 	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
@@ -3834,6 +3834,26 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			}, auth.user.id);
 
 			await handleHonoApiIImportUserLists(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/import-antennas', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			assertProhibitMoved(auth.user);
+			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportAntennas) {
+				throw rolePermissionDeniedError();
+			}
+			await assertHonoApiRateLimit(deps, 'i/import-antennas', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			await handleHonoApiIImportAntennas(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});
