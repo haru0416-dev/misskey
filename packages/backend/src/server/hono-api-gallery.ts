@@ -1,0 +1,478 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type * as Redis from 'ioredis';
+import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
+import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase } from '@/core/GalleryLikeStore.js';
+import {
+	createGalleryPostInDatabase,
+	decrementGalleryPostLikedCountInDatabase,
+	deleteGalleryPostByIdFromDatabase,
+	fetchGalleryPostByIdFromDatabase,
+	fetchGalleryPostByIdOrFailFromDatabase,
+	incrementGalleryPostLikedCountInDatabase,
+	listGalleryPostsByIdsFromDatabase,
+	listGalleryPostsWithPaginationFromDatabase,
+	listPopularGalleryPostsFromDatabase,
+	resolveGalleryPostPagination,
+	updateGalleryPostByIdAndUserIdInDatabase,
+} from '@/core/GalleryPostStore.js';
+import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
+import type { Packed } from '@/misc/json-schema.js';
+import type { MiGalleryPost } from '@/models/GalleryPost.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
+import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './hono-api-drive-file.js';
+import { HonoApiError } from './hono-api-error.js';
+import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
+import { packUserLiteForHonoApi } from './hono-api-user.js';
+import { parseHonoApiParams } from './hono-api-validation.js';
+
+export type HonoApiGalleryDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies & {
+	redis: Redis.Redis;
+};
+
+const GALLERY_POSTS_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
+const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
+
+function getCurrentFeaturedWindow(windowRange: number): number {
+	const passed = new Date().getTime() - featuredEpoc;
+	return Math.floor(passed / windowRange);
+}
+
+async function updateGalleryPostsRanking(deps: HonoApiGalleryDependencies, galleryPostId: string, score = 1): Promise<void> {
+	const currentWindow = getCurrentFeaturedWindow(GALLERY_POSTS_RANKING_WINDOW);
+	const redisTransaction = deps.redis.multi();
+	redisTransaction.zincrby(`featuredGalleryPostsRanking:${currentWindow}`, score, galleryPostId);
+	redisTransaction.expire(`featuredGalleryPostsRanking:${currentWindow}`, (GALLERY_POSTS_RANKING_WINDOW * 3) / 1000, 'NX');
+	await redisTransaction.exec();
+}
+
+async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshold: number): Promise<string[]> {
+	const currentWindow = getCurrentFeaturedWindow(GALLERY_POSTS_RANKING_WINDOW);
+	const previousWindow = currentWindow - 1;
+
+	const redisPipeline = deps.redis.pipeline();
+	redisPipeline.zrange(`featuredGalleryPostsRanking:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`featuredGalleryPostsRanking:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	const [currentRankingResult, previousRankingResult] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : [[], []]);
+
+	const ranking = new Map<string, number>();
+	for (let i = 0; i < currentRankingResult.length; i += 2) {
+		ranking.set(currentRankingResult[i]!, parseInt(currentRankingResult[i + 1]!, 10));
+	}
+	for (let i = 0; i < previousRankingResult.length; i += 2) {
+		const id = previousRankingResult[i]!;
+		const score = parseInt(previousRankingResult[i + 1]!, 10);
+		const exist = ranking.get(id);
+		ranking.set(id, exist != null ? (exist + score) / 2 : score);
+	}
+
+	return [...ranking.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]).slice(0, threshold);
+}
+
+let galleryPostsRankingCache: string[] = [];
+let galleryPostsRankingCacheLastFetchedAt = 0;
+
+const galleryFeaturedParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		untilId: { type: 'string', format: 'misskey:id' },
+	},
+	required: [],
+} as const;
+
+type GalleryFeaturedParams = {
+	limit: number;
+	untilId?: string;
+};
+
+const galleryPopularParamDef = {
+	type: 'object',
+	properties: {},
+	required: [],
+} as const;
+
+const galleryPostsParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: [],
+} as const;
+
+type GalleryPostsParams = {
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+const galleryPostsCreateParamDef = {
+	type: 'object',
+	properties: {
+		title: { type: 'string', minLength: 1 },
+		description: { type: 'string', nullable: true },
+		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 32, items: {
+			type: 'string', format: 'misskey:id',
+		} },
+		isSensitive: { type: 'boolean', default: false },
+	},
+	required: ['title', 'fileIds'],
+} as const;
+
+type GalleryPostsCreateParams = {
+	title: string;
+	description?: string | null;
+	fileIds: string[];
+	isSensitive: boolean;
+};
+
+const galleryPostsUpdateParamDef = {
+	type: 'object',
+	properties: {
+		postId: { type: 'string', format: 'misskey:id' },
+		title: { type: 'string', minLength: 1 },
+		description: { type: 'string', nullable: true },
+		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 32, items: {
+			type: 'string', format: 'misskey:id',
+		} },
+		isSensitive: { type: 'boolean', default: false },
+	},
+	required: ['postId'],
+} as const;
+
+type GalleryPostsUpdateParams = {
+	postId: string;
+	title?: string;
+	description?: string | null;
+	fileIds?: string[];
+	isSensitive: boolean;
+};
+
+const galleryPostsPostIdParamDef = {
+	type: 'object',
+	properties: {
+		postId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['postId'],
+} as const;
+
+type GalleryPostsPostIdParams = {
+	postId: string;
+};
+
+function galleryPostsShowNoSuchPostError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such post.',
+		code: 'NO_SUCH_POST',
+		id: '1137bf14-c5b0-4604-85bb-5b5371b1cd45',
+	});
+}
+
+function galleryPostsDeleteNoSuchPostError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such post.',
+		code: 'NO_SUCH_POST',
+		id: 'ae52f367-4bd7-4ecd-afc6-5672fff427f5',
+	});
+}
+
+function galleryPostsDeleteAccessDeniedError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Access denied.',
+		code: 'ACCESS_DENIED',
+		id: 'c86e09de-1c48-43ac-a435-1c7e42ed4496',
+	});
+}
+
+function galleryPostsLikeNoSuchPostError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such post.',
+		code: 'NO_SUCH_POST',
+		id: '56c06af3-1287-442f-9701-c93f7c4a62ff',
+	});
+}
+
+function galleryPostsLikeYourPostError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'You cannot like your post.',
+		code: 'YOUR_POST',
+		id: 'f78f1511-5ebc-4478-a888-1198d752da68',
+	});
+}
+
+function galleryPostsLikeAlreadyLikedError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'The post has already been liked.',
+		code: 'ALREADY_LIKED',
+		id: '40e9ed56-a59c-473a-bf3f-f289c54fb5a7',
+	});
+}
+
+function galleryPostsUnlikeNoSuchPostError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such post.',
+		code: 'NO_SUCH_POST',
+		id: 'c32e6dd0-b555-4413-925e-b3757d19ed84',
+	});
+}
+
+function galleryPostsUnlikeNotLikedError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'You have not liked that post.',
+		code: 'NOT_LIKED',
+		id: 'e3e8e06e-be37-41f7-a5b4-87a8250288f0',
+	});
+}
+
+async function packGalleryPostForHonoApi(
+	deps: HonoApiGalleryDependencies,
+	post: MiGalleryPost,
+	me: { id: MiUser['id'] } | null | undefined,
+): Promise<Packed<'GalleryPost'>> {
+	const meId = me ? me.id : null;
+
+	const [user, files, isLiked] = await Promise.all([
+		packUserLiteForHonoApi(deps, post.userId),
+		packDriveFileManyByIdsForHonoApi(deps, post.fileIds),
+		meId ? galleryLikeExistsInDatabase(deps.db, meId, post.id) : Promise.resolve(undefined),
+	]);
+
+	return {
+		id: post.id,
+		createdAt: parseId(deps.config, post.id).date.toISOString(),
+		updatedAt: post.updatedAt.toISOString(),
+		userId: post.userId,
+		user,
+		title: post.title,
+		description: post.description,
+		fileIds: post.fileIds,
+		files,
+		tags: post.tags.length > 0 ? post.tags : undefined,
+		isSensitive: post.isSensitive,
+		likedCount: post.likedCount,
+		isLiked,
+	};
+}
+
+async function packGalleryPostsManyForHonoApi(
+	deps: HonoApiGalleryDependencies,
+	posts: MiGalleryPost[],
+	me: { id: MiUser['id'] } | null | undefined,
+): Promise<Packed<'GalleryPost'>[]> {
+	return await Promise.all(posts.map(post => packGalleryPostForHonoApi(deps, post, me)));
+}
+
+export async function handleHonoApiGalleryFeatured(
+	deps: HonoApiGalleryDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'GalleryPost'>[]> {
+	const params = parseHonoApiParams(galleryFeaturedParamDef, body) as GalleryFeaturedParams;
+
+	let postIds: string[];
+	if (galleryPostsRankingCacheLastFetchedAt !== 0 && (Date.now() - galleryPostsRankingCacheLastFetchedAt < 1000 * 60 * 30)) {
+		postIds = galleryPostsRankingCache;
+	} else {
+		postIds = await getGalleryPostsRanking(deps, 100);
+		galleryPostsRankingCache = postIds;
+		galleryPostsRankingCacheLastFetchedAt = Date.now();
+	}
+
+	postIds = [...postIds].sort((a, b) => a > b ? -1 : 1);
+	if (params.untilId) {
+		postIds = postIds.filter(id => id < params.untilId!);
+	}
+	postIds = postIds.slice(0, params.limit);
+
+	if (postIds.length === 0) return [];
+
+	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
+	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+}
+
+export async function handleHonoApiGalleryPopular(
+	deps: HonoApiGalleryDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'GalleryPost'>[]> {
+	parseHonoApiParams(galleryPopularParamDef, body);
+	const posts = await listPopularGalleryPostsFromDatabase(deps.db);
+	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+}
+
+export async function handleHonoApiGalleryPosts(
+	deps: HonoApiGalleryDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'GalleryPost'>[]> {
+	const params = parseHonoApiParams(galleryPostsParamDef, body) as GalleryPostsParams;
+	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(deps.config, time) }, params);
+	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+}
+
+export async function handleHonoApiGalleryPostsShow(
+	deps: HonoApiGalleryDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'GalleryPost'>> {
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
+	if (post == null) throw galleryPostsShowNoSuchPostError();
+
+	return await packGalleryPostForHonoApi(deps, post, me);
+}
+
+export async function handleHonoApiGalleryPostsCreate(
+	deps: HonoApiGalleryDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'GalleryPost'>> {
+	const params = parseHonoApiParams(galleryPostsCreateParamDef, body) as GalleryPostsCreateParams;
+	const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
+	if (files.length === 0) throw new Error();
+
+	const post = await createGalleryPostInDatabase(deps.db, {
+		id: genId(deps.config),
+		updatedAt: new Date(),
+		title: params.title,
+		description: params.description,
+		userId: me.id,
+		isSensitive: params.isSensitive,
+		fileIds: files.map(file => file.id),
+	});
+
+	return await packGalleryPostForHonoApi(deps, post, me);
+}
+
+export async function handleHonoApiGalleryPostsUpdate(
+	deps: HonoApiGalleryDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'GalleryPost'>> {
+	const params = parseHonoApiParams(galleryPostsUpdateParamDef, body) as GalleryPostsUpdateParams;
+
+	let files;
+	if (params.fileIds) {
+		files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
+		if (files.length === 0) throw new Error();
+	}
+
+	await updateGalleryPostByIdAndUserIdInDatabase(deps.db, params.postId, me.id, {
+		updatedAt: new Date(),
+		title: params.title,
+		description: params.description,
+		isSensitive: params.isSensitive,
+		fileIds: files ? files.map(file => file.id) : undefined,
+	});
+
+	const post = await fetchGalleryPostByIdOrFailFromDatabase(deps.db, params.postId);
+	return await packGalleryPostForHonoApi(deps, post, me);
+}
+
+export async function handleHonoApiGalleryPostsDelete(
+	deps: HonoApiGalleryDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
+	if (post == null) throw galleryPostsDeleteNoSuchPostError();
+
+	if (!(await isHonoApiModerator(deps, me)) && post.userId !== me.id) {
+		throw galleryPostsDeleteAccessDeniedError();
+	}
+
+	await deleteGalleryPostByIdFromDatabase(deps.db, post.id);
+
+	if (post.userId !== me.id) {
+		const user = await fetchUserByIdOrFailFromDatabase(deps.db, post.userId);
+		await logModerationEventInDatabase(deps, me, 'deleteGalleryPost', {
+			postId: post.id,
+			postUserId: post.userId,
+			postUserUsername: user.username,
+			post,
+		});
+	}
+}
+
+export async function handleHonoApiGalleryPostsLike(
+	deps: HonoApiGalleryDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
+	if (post == null) throw galleryPostsLikeNoSuchPostError();
+	if (post.userId === me.id) throw galleryPostsLikeYourPostError();
+
+	const exist = await galleryLikeExistsInDatabase(deps.db, me.id, post.id);
+	if (exist) throw galleryPostsLikeAlreadyLikedError();
+
+	try {
+		await createGalleryLikeInDatabase(deps.db, {
+			id: genId(deps.config),
+			postId: post.id,
+			userId: me.id,
+		});
+	} catch (error) {
+		if (isDuplicateKeyValueDatabaseError(error)) {
+			throw galleryPostsLikeAlreadyLikedError();
+		}
+		throw error;
+	}
+
+	if (Date.now() - parseId(deps.config, post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {
+		await updateGalleryPostsRanking(deps, post.id, 1);
+	}
+
+	await incrementGalleryPostLikedCountInDatabase(deps.db, post.id);
+}
+
+export async function handleHonoApiGalleryPostsUnlike(
+	deps: HonoApiGalleryDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
+	if (post == null) throw galleryPostsUnlikeNoSuchPostError();
+
+	const exist = await fetchGalleryLikeFromDatabase(deps.db, me.id, post.id);
+	if (exist == null) throw galleryPostsUnlikeNotLikedError();
+
+	await deleteGalleryLikeByIdFromDatabase(deps.db, exist.id);
+
+	if (Date.now() - parseId(deps.config, post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {
+		await updateGalleryPostsRanking(deps, post.id, -1);
+	}
+
+	await decrementGalleryPostLikedCountInDatabase(deps.db, post.id);
+}
