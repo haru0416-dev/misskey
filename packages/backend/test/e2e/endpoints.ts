@@ -64,6 +64,7 @@ import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.j
 import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
@@ -4062,6 +4063,120 @@ describe('Endpoints', () => {
 				await redis.del(`list:antennaTimeline:${antennaId}`);
 				await closeRedisConnection(redis);
 			}
+		});
+
+		test('i/2fa/register and i/2fa/done enable TOTP two-factor authentication', async () => {
+			const user = await signup({ username: `twofa${Date.now().toString(36)}` });
+
+			const wrongPassword = await api('i/2fa/register', { password: 'wrong' }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '78d6c839-20c9-4c66-b90a-fc0542168b48');
+
+			const registered = await api('i/2fa/register', { password: 'test' }, user);
+			assert.strictEqual(registered.status, 200);
+			assert.strictEqual(typeof registered.body.secret, 'string');
+			assert.strictEqual(typeof registered.body.qr, 'string');
+
+			// MISSKEY_TEST_CHECK_DUPLICATED_TOTP is unset here, so the server accepts any TOTP token in test env.
+			const done = await api('i/2fa/done', { token: '000000' }, user);
+			assert.strictEqual(done.status, 200);
+			assert.strictEqual((done.body as any).backupCodes.length, 5);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profile.twoFactorEnabled, true);
+
+			const unregistered = await api('i/2fa/unregister', { password: 'test', token: '000000' }, user);
+			assert.strictEqual(unregistered.status, 204);
+
+			const afterUnregister = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(afterUnregister.twoFactorEnabled, false);
+		});
+
+		test('i/2fa/register-key requires two-factor authentication to already be enabled', async () => {
+			const user = await signup({ username: `twofakey${Date.now().toString(36)}` });
+
+			const notEnabled = await api('i/2fa/register-key', { password: 'test' }, user);
+			assert.strictEqual(notEnabled.status, 400);
+			assert.strictEqual(castAsError(notEnabled.body as any).error.id, 'bf32b864-449b-47b8-974e-f9a5468546f1');
+
+			const wrongPassword = await api('i/2fa/register-key', { password: 'wrong' }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '38769596-efe2-4faf-9bec-abbb3f2cd9ba');
+		});
+
+		test('i/2fa/key-done requires a matching password and two-factor authentication to already be enabled', async () => {
+			const user = await signup({ username: `twofakeydone${Date.now().toString(36)}` });
+
+			const wrongPassword = await api('i/2fa/key-done', { password: 'wrong', name: 'my key', credential: {} }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
+
+			const notEnabled = await api('i/2fa/key-done', { password: 'test', name: 'my key', credential: {} }, user);
+			assert.strictEqual(notEnabled.status, 400);
+			assert.strictEqual(castAsError(notEnabled.body as any).error.id, '798d6847-b1ed-4f9c-b1f9-163c42655995');
+		});
+
+		test('i/2fa/update-key and i/2fa/remove-key manage an existing security key', async () => {
+			const user = await signup({ username: `twofaupdkey${Date.now().toString(36)}` });
+			const keyId = `hono-key-${Date.now().toString(36)}`;
+			await createUserSecurityKeyInDatabase(db, {
+				id: keyId,
+				userId: user.id,
+				name: 'original name',
+				publicKey: 'dummy-public-key',
+				counter: 0,
+				credentialDeviceType: 'singleDevice',
+				credentialBackedUp: false,
+				transports: [],
+			});
+
+			const noSuchKey = await api('i/2fa/update-key', { name: 'renamed', credentialId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, user);
+			assert.strictEqual(noSuchKey.status, 400);
+			assert.strictEqual(castAsError(noSuchKey.body as any).error.id, 'f9c5467f-d492-4d3c-9a8g-a70dacc86512');
+
+			const accessDenied = await api('i/2fa/update-key', { name: 'renamed', credentialId: keyId }, alice);
+			assert.strictEqual(accessDenied.status, 400);
+			assert.strictEqual(castAsError(accessDenied.body as any).error.id, '1fb7cb09-d46a-4fff-b8df-057708cce513');
+
+			const updated = await api('i/2fa/update-key', { name: 'renamed', credentialId: keyId }, user);
+			assert.strictEqual(updated.status, 200);
+			assert.deepStrictEqual(updated.body, {});
+
+			const wrongPassword = await api('i/2fa/remove-key', { password: 'wrong', credentialId: keyId }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '141c598d-a825-44c8-9173-cfb9d92be493');
+
+			const removed = await api('i/2fa/remove-key', { password: 'test', credentialId: keyId }, user);
+			assert.strictEqual(removed.status, 200);
+			assert.deepStrictEqual(removed.body, {});
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profile.usePasswordLessLogin, false);
+		});
+
+		test('i/2fa/password-less requires a security key before it can be enabled', async () => {
+			const user = await signup({ username: `twofapwless${Date.now().toString(36)}` });
+
+			const noKey = await api('i/2fa/password-less', { value: true }, user);
+			assert.strictEqual(noKey.status, 400);
+			assert.strictEqual(castAsError(noKey.body as any).error.id, 'f9c54d7f-d4c2-4d3c-9a8g-a70daac86512');
+
+			await createUserSecurityKeyInDatabase(db, {
+				id: `hono-pwless-key-${Date.now().toString(36)}`,
+				userId: user.id,
+				name: 'a key',
+				publicKey: 'dummy-public-key',
+				counter: 0,
+				credentialDeviceType: 'singleDevice',
+				credentialBackedUp: false,
+				transports: [],
+			});
+
+			const enabled = await api('i/2fa/password-less', { value: true }, user);
+			assert.strictEqual(enabled.status, 204);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profile.usePasswordLessLogin, true);
 		});
 
 		test('users/achievements returns profile achievements without credentials', async () => {
