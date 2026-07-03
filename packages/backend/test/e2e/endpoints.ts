@@ -24,7 +24,7 @@ import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/Blockin
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
-import { createChannelInDatabase } from '@/core/ChannelStore.js';
+import { createChannelInDatabase, updateChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
@@ -39,10 +39,12 @@ import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/cor
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
-import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
+import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/NoteDraftStore.js';
+import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
+import { createPollInDatabase } from '@/core/PollStore.js';
 import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
 import { fetchRenoteMutingFromDatabase } from '@/core/RenoteMutingStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
@@ -68,7 +70,7 @@ import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type 
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, PostScheduledNoteJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -86,6 +88,7 @@ describe('Endpoints', () => {
 	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
 	let objectStorageQueue: Bull.Queue<ObjectStorageJobData> | undefined;
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
+	let postScheduledNoteQueue: Bull.Queue<PostScheduledNoteJobData> | undefined;
 
 	beforeAll(async () => {
 		const config = loadConfig();
@@ -97,6 +100,7 @@ describe('Endpoints', () => {
 		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
 		objectStorageQueue = new Bull.Queue<ObjectStorageJobData>(QUEUE.OBJECT_STORAGE, baseQueueOptions(config, QUEUE.OBJECT_STORAGE));
 		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
+		postScheduledNoteQueue = new Bull.Queue<PostScheduledNoteJobData>(QUEUE.POST_SCHEDULED_NOTE, baseQueueOptions(config, QUEUE.POST_SCHEDULED_NOTE));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		carol = await signup({ username: 'carol' });
@@ -111,6 +115,7 @@ describe('Endpoints', () => {
 		await relationshipQueue?.close();
 		await objectStorageQueue?.close();
 		await systemWebhookDeliverQueue?.close();
+		await postScheduledNoteQueue?.close();
 		await pool?.end();
 	});
 
@@ -3577,6 +3582,233 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
 		});
 
+		test('notes/drafts/create creates a draft with reply/renote/poll/channel and schedules it', async () => {
+			const config = loadConfig();
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: 'draft channel',
+			});
+			const replyTarget = await post(alice, { text: 'reply target' });
+			const renoteTarget = await post(alice, { text: 'renote target' });
+			const file = await uploadFile(alice);
+
+			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
+			const created = await api('notes/drafts/create', {
+				text: 'hono draft create',
+				replyId: replyTarget.id,
+				renoteId: renoteTarget.id,
+				channelId: channel.id,
+				fileIds: [file.body!.id],
+				poll: { choices: ['a', 'b'], multiple: false },
+				isActuallyScheduled: true,
+				scheduledAt: futureScheduledAt,
+			}, alice);
+
+			assert.strictEqual(created.status, 200);
+			const createdDraft = (created.body as any).createdDraft;
+			assert.strictEqual(createdDraft.text, 'hono draft create');
+			assert.strictEqual(createdDraft.userId, alice.id);
+			assert.strictEqual(createdDraft.replyId, replyTarget.id);
+			assert.strictEqual(createdDraft.reply.id, replyTarget.id);
+			assert.strictEqual(createdDraft.renoteId, renoteTarget.id);
+			assert.strictEqual(createdDraft.renote.id, renoteTarget.id);
+			assert.strictEqual(createdDraft.channelId, channel.id);
+			assert.strictEqual(createdDraft.channel.id, channel.id);
+			assert.deepStrictEqual(createdDraft.fileIds, [file.body!.id]);
+			assert.strictEqual(createdDraft.files[0].id, file.body!.id);
+			assert.deepStrictEqual(createdDraft.poll.choices, ['a', 'b']);
+			assert.strictEqual(createdDraft.isActuallyScheduled, true);
+			assert.strictEqual(createdDraft.scheduledAt, futureScheduledAt);
+
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobs.some(job => job.data.noteDraftId === createdDraft.id), true);
+		});
+
+		test('notes/drafts/create validates scheduling and referenced entities', async () => {
+			const noSuchId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
+
+			const scheduledAtRequired = await api('notes/drafts/create', {
+				isActuallyScheduled: true,
+			}, alice);
+			assert.strictEqual(scheduledAtRequired.status, 400);
+			assert.strictEqual(castAsError(scheduledAtRequired.body as any).error.id, '15e28a55-e74c-4d65-89b7-8880cdaaa87d');
+
+			const scheduledAtPast = await api('notes/drafts/create', {
+				isActuallyScheduled: true,
+				scheduledAt: Date.now() - 1000 * 60,
+			}, alice);
+			assert.strictEqual(scheduledAtPast.status, 400);
+			assert.strictEqual(castAsError(scheduledAtPast.body as any).error.id, 'e4bed6c9-017e-4934-aed0-01c22cc60ec1');
+
+			const noSuchFile = await api('notes/drafts/create', {
+				fileIds: [noSuchId],
+			}, alice);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b6992544-63e7-67f0-fa7f-32444b1b5306');
+
+			const noSuchRenoteTarget = await api('notes/drafts/create', {
+				renoteId: noSuchId,
+			}, alice);
+			assert.strictEqual(noSuchRenoteTarget.status, 400);
+			assert.strictEqual(castAsError(noSuchRenoteTarget.body as any).error.id, 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
+
+			const original = await post(alice, { text: 'pure renote source' });
+			const pureRenote = await post(alice, { renoteId: original.id });
+			const cannotReRenote = await api('notes/drafts/create', {
+				renoteId: pureRenote.id,
+			}, alice);
+			assert.strictEqual(cannotReRenote.status, 400);
+			assert.strictEqual(castAsError(cannotReRenote.body as any).error.id, 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
+
+			const noSuchReplyTarget = await api('notes/drafts/create', {
+				replyId: noSuchId,
+			}, alice);
+			assert.strictEqual(noSuchReplyTarget.status, 400);
+			assert.strictEqual(castAsError(noSuchReplyTarget.body as any).error.id, '749ee0f6-d3da-459a-bf02-282e2da4292c');
+
+			const noSuchChannel = await api('notes/drafts/create', {
+				channelId: noSuchId,
+			}, alice);
+			assert.strictEqual(noSuchChannel.status, 400);
+			assert.strictEqual(castAsError(noSuchChannel.body as any).error.id, 'b1653923-5453-4edc-b786-7c4f39bb0bbb');
+		});
+
+		test('notes/drafts/update updates a draft, reschedules it, and rejects foreign or missing drafts', async () => {
+			const config = loadConfig();
+			const draft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'before update',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+
+			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
+			const updated = await api('notes/drafts/update', {
+				draftId: draft.id,
+				text: 'after update',
+				isActuallyScheduled: true,
+				scheduledAt: futureScheduledAt,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			const updatedDraft = (updated.body as any).updatedDraft;
+			assert.strictEqual(updatedDraft.id, draft.id);
+			assert.strictEqual(updatedDraft.text, 'after update');
+			assert.strictEqual(updatedDraft.isActuallyScheduled, true);
+			assert.strictEqual(updatedDraft.scheduledAt, futureScheduledAt);
+
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobs.some(job => job.data.noteDraftId === draft.id), true);
+
+			// Omitting scheduledAt on update always clears it to null, matching the original
+			// notes/drafts/update endpoint's `scheduledAt: ps.scheduledAt ? new Date(ps.scheduledAt) : null` behavior.
+			const clearedBySchedule = await api('notes/drafts/update', {
+				draftId: draft.id,
+				text: 'schedule omitted on update',
+			}, alice);
+			assert.strictEqual(clearedBySchedule.status, 200);
+			assert.strictEqual((clearedBySchedule.body as any).updatedDraft.scheduledAt, null);
+
+			const jobsAfterClear = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobsAfterClear.some(job => job.data.noteDraftId === draft.id), false);
+
+			const original = await post(alice, { text: 'update pure renote source' });
+			const pureRenote = await post(alice, { renoteId: original.id });
+			const cannotRenote = await api('notes/drafts/update', {
+				draftId: draft.id,
+				renoteId: pureRenote.id,
+			}, alice);
+			assert.strictEqual(cannotRenote.status, 400);
+			assert.strictEqual(castAsError(cannotRenote.body as any).error.id, '76cc5583-5a14-4ad3-8717-0298507e32db');
+			assert.strictEqual(castAsError(cannotRenote.body as any).error.code, 'CANNOT_RENOTE');
+
+			const foreignDraft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				text: 'bob draft',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+			const foreignUpdate = await api('notes/drafts/update', {
+				draftId: foreignDraft.id,
+				text: 'hijack attempt',
+			}, alice);
+			assert.strictEqual(foreignUpdate.status, 400);
+			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+
+			const missingUpdate = await api('notes/drafts/update', {
+				draftId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				text: 'missing',
+			}, alice);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+		});
+
+		test('notes/drafts/delete removes a draft and its schedule, rejecting missing drafts', async () => {
+			const config = loadConfig();
+			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
+			const draft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'to be deleted',
+				visibility: 'public',
+				pollMultiple: false,
+				isActuallyScheduled: true,
+				scheduledAt: new Date(futureScheduledAt),
+			});
+			await postScheduledNoteQueue!.add(draft.id, { noteDraftId: draft.id }, { delay: 1000 * 60 * 60 });
+
+			const deleted = await api('notes/drafts/delete', { draftId: draft.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await fetchNoteDraftByIdFromDatabase(db, draft.id);
+			assert.strictEqual(afterDelete, null);
+
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobs.some(job => job.data.noteDraftId === draft.id), false);
+
+			const missingDelete = await api('notes/drafts/delete', { draftId: draft.id }, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+		});
+
+		test('notes/drafts/list paginates and filters by scheduled state', async () => {
+			const config = loadConfig();
+			const scheduledDraft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'list scheduled draft',
+				visibility: 'public',
+				pollMultiple: false,
+				isActuallyScheduled: true,
+				scheduledAt: new Date(Date.now() + 1000 * 60 * 60),
+			});
+			const plainDraft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'list plain draft',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+
+			const scheduledOnly = await api('notes/drafts/list', { scheduled: true }, alice);
+			assert.strictEqual(scheduledOnly.status, 200);
+			const scheduledIds = (scheduledOnly.body as any[]).map(d => d.id);
+			assert.strictEqual(scheduledIds.includes(scheduledDraft.id), true);
+			assert.strictEqual(scheduledIds.includes(plainDraft.id), false);
+
+			const unscheduledOnly = await api('notes/drafts/list', { scheduled: false }, alice);
+			assert.strictEqual(unscheduledOnly.status, 200);
+			const unscheduledIds = (unscheduledOnly.body as any[]).map(d => d.id);
+			assert.strictEqual(unscheduledIds.includes(plainDraft.id), true);
+			assert.strictEqual(unscheduledIds.includes(scheduledDraft.id), false);
+
+			const limited = await api('notes/drafts/list', { limit: 1, untilId: plainDraft.id }, alice);
+			assert.strictEqual(limited.status, 200);
+			assert.strictEqual((limited.body as any[]).length, 1);
+		});
+
 		test('users/achievements returns profile achievements without credentials', async () => {
 			const achievements = [{
 				name: 'notes1' as const,
@@ -4857,6 +5089,62 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(forbidden.body as any).error.code, 'NO_SUCH_ROLE');
 			assert.strictEqual(castAsError(forbidden.body as any).error.id, '30aaaee3-4792-48dc-ab0d-cf501a575ac5');
 		});
+
+		test('roles/notes はfanoutタイムラインの投稿をpublicのみpackして返す', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const explorableRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 3000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono roles/notes role ${suffix}`,
+				description: 'Hono roles/notes test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: { id: 'ebef1684-672d-49b6-ad82-1b3ec3784f88', type: 'isRemote' },
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const author = await signup({ username: `hrn${suffix}` });
+			const publicNoteId = genId(config, now - 2000);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'roles/notes public note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const followersNoteId = genId(config, now - 1000);
+			await createNoteInDatabase(db, {
+				id: followersNoteId,
+				text: 'roles/notes followers-only note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'followers',
+			});
+
+			const redis = createRedisClient(config);
+			try {
+				await redis.lpush(`list:roleTimeline:${explorableRole.id}`, followersNoteId, publicNoteId);
+
+				const notes = await api('roles/notes', { roleId: explorableRole.id }, author);
+				assert.strictEqual(notes.status, 200);
+				assert.strictEqual(notes.body.length, 1);
+				assert.strictEqual(notes.body[0].id, publicNoteId);
+			} finally {
+				await redis.del(`list:roleTimeline:${explorableRole.id}`);
+				await closeRedisConnection(redis);
+			}
+		});
 	});
 
 	describe('gallery', () => {
@@ -5133,6 +5421,685 @@ describe('Endpoints', () => {
 			assert.strictEqual(myFavorites.body.length, 1);
 			assert.strictEqual(myFavorites.body[0].id, clip.body.id);
 			assert.strictEqual(myFavorites.body[0].isFavorited, true);
+		});
+
+		test('clips/notes は可視性とNO_SUCH_CLIPを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcn2${suffix}` });
+			const stranger = await signup({ username: `hcn2s${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: `clip note ${suffix}`,
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const privateClip = await api('clips/create', { name: `Hono clip notes private ${suffix}`, isPublic: false }, owner);
+			assert.strictEqual(privateClip.status, 200);
+			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
+
+			const deniedForStranger = await api('clips/notes', { clipId: privateClip.body.id }, stranger);
+			assert.strictEqual(deniedForStranger.status, 400);
+			assert.strictEqual(castAsError(deniedForStranger.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const visibleForOwner = await api('clips/notes', { clipId: privateClip.body.id }, owner);
+			assert.strictEqual(visibleForOwner.status, 200);
+			assert.strictEqual(visibleForOwner.body.length, 1);
+			assert.strictEqual(visibleForOwner.body[0].id, noteId);
+
+			const publicClip = await api('clips/create', { name: `Hono clip notes public ${suffix}`, isPublic: true }, owner);
+			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
+			const visibleForAnyone = await api('clips/notes', { clipId: publicClip.body.id });
+			assert.strictEqual(visibleForAnyone.status, 200);
+			assert.strictEqual(visibleForAnyone.body.length, 1);
+
+			const missingClip = await api('clips/notes', { clipId: genId(config) });
+			assert.strictEqual(missingClip.status, 400);
+			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
+		});
+	});
+
+	describe('notes/show', () => {
+		test('基本フィールド、reply/renote、poll、reactionを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hns${suffix}` });
+			const reactor = await signup({ username: `hnsr${suffix}` });
+
+			const replyTargetId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyTargetId,
+				text: 'reply target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const renoteTargetId = genId(config);
+			await createNoteInDatabase(db, {
+				id: renoteTargetId,
+				text: 'renote target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const pollNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pollNoteId,
+				text: 'poll note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				hasPoll: true,
+			});
+			await createPollInDatabase(db, {
+				noteId: pollNoteId,
+				expiresAt: null,
+				multiple: false,
+				choices: ['A', 'B'],
+				votes: [3, 5],
+				noteVisibility: 'public',
+				userId: author.id,
+				userHost: null,
+				channelId: null,
+			});
+
+			const mainNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: mainNoteId,
+				text: 'hono notes/show main note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: replyTargetId,
+				renoteId: renoteTargetId,
+				reactions: { '👍': 2 },
+			});
+			await createNoteReactionInDatabase(db, {
+				id: genId(config),
+				noteId: mainNoteId,
+				userId: reactor.id,
+				reaction: '👍',
+			});
+
+			const shown = await api('notes/show', { noteId: mainNoteId });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, mainNoteId);
+			assert.strictEqual(shown.body.text, 'hono notes/show main note');
+			assert.strictEqual(shown.body.userId, author.id);
+			assert.strictEqual(shown.body.user.id, author.id);
+			assert.strictEqual(shown.body.replyId, replyTargetId);
+			assert.strictEqual(shown.body.reply?.id, replyTargetId);
+			assert.strictEqual(shown.body.renoteId, renoteTargetId);
+			assert.strictEqual(shown.body.renote?.id, renoteTargetId);
+			assert.strictEqual(shown.body.reactions?.['👍'], 2);
+			assert.strictEqual(shown.body.reactionCount, 2);
+
+			const pollShown = await api('notes/show', { noteId: pollNoteId }, author);
+			assert.strictEqual(pollShown.status, 200);
+			assert.strictEqual(pollShown.body.poll?.multiple, false);
+			assert.strictEqual(pollShown.body.poll?.choices.length, 2);
+			assert.strictEqual(pollShown.body.poll?.choices.find((c: any) => c.text === 'A')?.votes, 3);
+			assert.strictEqual(pollShown.body.poll?.choices.find((c: any) => c.text === 'B')?.votes, 5);
+
+			const reactedAsReactor = await api('notes/show', { noteId: mainNoteId }, reactor);
+			assert.strictEqual(reactedAsReactor.body.myReaction, '👍');
+
+			const missing = await api('notes/show', { noteId: genId(config) });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '24fcbfc6-2e37-42b6-8388-c29b3861a08d');
+		});
+
+		test('可視性(specified/followers)とrequireSigninToViewContentsを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnv${suffix}` });
+			const addressee = await signup({ username: `hnva${suffix}` });
+			const stranger = await signup({ username: `hnvs${suffix}` });
+			const follower = await signup({ username: `hnvf${suffix}` });
+			await api('following/create', { userId: author.id }, follower);
+
+			const specifiedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: specifiedNoteId,
+				text: 'specified note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'specified',
+				visibleUserIds: [addressee.id],
+			});
+
+			const hiddenFromStranger = await api('notes/show', { noteId: specifiedNoteId }, stranger);
+			assert.strictEqual(hiddenFromStranger.status, 200);
+			assert.strictEqual(hiddenFromStranger.body.isHidden, true);
+			assert.strictEqual(hiddenFromStranger.body.text, null);
+
+			const visibleToAddressee = await api('notes/show', { noteId: specifiedNoteId }, addressee);
+			assert.strictEqual(visibleToAddressee.status, 200);
+			assert.strictEqual(visibleToAddressee.body.isHidden, undefined);
+			assert.strictEqual(visibleToAddressee.body.text, 'specified note');
+
+			const followersNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: followersNoteId,
+				text: 'followers only note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'followers',
+			});
+
+			const hiddenFromNonFollower = await api('notes/show', { noteId: followersNoteId }, stranger);
+			assert.strictEqual(hiddenFromNonFollower.body.isHidden, true);
+
+			const visibleToFollower = await api('notes/show', { noteId: followersNoteId }, follower);
+			assert.strictEqual(visibleToFollower.body.isHidden, undefined);
+			assert.strictEqual(visibleToFollower.body.text, 'followers only note');
+
+			await updateUserInDatabase(db, author.id, { requireSigninToViewContents: true });
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'public but restricted',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const restrictedAnonymous = await api('notes/show', { noteId: publicNoteId });
+			assert.strictEqual(restrictedAnonymous.status, 400);
+			assert.strictEqual(castAsError(restrictedAnonymous.body as any).error.code, 'CONTENT_RESTRICTED_BY_USER');
+
+			const allowedSignedIn = await api('notes/show', { noteId: publicNoteId }, stranger);
+			assert.strictEqual(allowedSignedIn.status, 200);
+			assert.strictEqual(allowedSignedIn.body.text, 'public but restricted');
+		});
+	});
+
+	describe('notes relations (children/conversation/mentions/replies/renotes)', () => {
+		test('reply/renoteの親子関係とmentionsを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnr${suffix}` });
+			const mentioned = await signup({ username: `hnrm${suffix}` });
+			const stranger = await signup({ username: `hnrs${suffix}` });
+
+			const rootId = genId(config);
+			await createNoteInDatabase(db, {
+				id: rootId,
+				text: 'root note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const replyId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyId,
+				text: 'reply note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: rootId,
+			});
+			const grandReplyId = genId(config);
+			await createNoteInDatabase(db, {
+				id: grandReplyId,
+				text: 'grand reply note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: replyId,
+			});
+			const renoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: renoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				renoteId: rootId,
+			});
+			const mentionNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: mentionNoteId,
+				text: `@${mentioned.username} hi`,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				mentions: [mentioned.id],
+			});
+
+			const children = await api('notes/children', { noteId: rootId });
+			assert.strictEqual(children.status, 200);
+			const childIds = children.body.map((n: any) => n.id).sort();
+			assert.deepStrictEqual(childIds, [replyId, renoteId].sort());
+
+			const replies = await api('notes/replies', { noteId: rootId });
+			assert.strictEqual(replies.status, 200);
+			assert.strictEqual(replies.body.length, 1);
+			assert.strictEqual(replies.body[0].id, replyId);
+
+			const renotes = await api('notes/renotes', { noteId: rootId });
+			assert.strictEqual(renotes.status, 200);
+			assert.strictEqual(renotes.body.length, 1);
+			assert.strictEqual(renotes.body[0].id, renoteId);
+
+			const missingRenotes = await api('notes/renotes', { noteId: genId(config) });
+			assert.strictEqual(missingRenotes.status, 400);
+			assert.strictEqual(castAsError(missingRenotes.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const conversation = await api('notes/conversation', { noteId: grandReplyId });
+			assert.strictEqual(conversation.status, 200);
+			const conversationIds = conversation.body.map((n: any) => n.id).sort();
+			assert.deepStrictEqual(conversationIds, [rootId, replyId].sort());
+
+			const missingConversation = await api('notes/conversation', { noteId: genId(config) });
+			assert.strictEqual(missingConversation.status, 400);
+			assert.strictEqual(castAsError(missingConversation.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const mentions = await api('notes/mentions', {}, mentioned);
+			assert.strictEqual(mentions.status, 200);
+			assert.ok(mentions.body.some((n: any) => n.id === mentionNoteId));
+			assert.strictEqual(mentions.body.some((n: any) => n.id === rootId), false);
+
+			const noMentionsForStranger = await api('notes/mentions', {}, stranger);
+			assert.strictEqual(noMentionsForStranger.status, 200);
+			assert.strictEqual(noMentionsForStranger.body.some((n: any) => n.id === mentionNoteId), false);
+		});
+	});
+
+	describe('notes/state and notes/favorites', () => {
+		test('notes/state、notes/favorites/{create,delete}はfavorite状態とachievementを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnf${suffix}` });
+			const favoriter = await signup({ username: `hnff${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'favorite target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const stateBefore = await api('notes/state', { noteId }, favoriter);
+			assert.strictEqual(stateBefore.status, 200);
+			assert.strictEqual(stateBefore.body.isFavorited, false);
+			assert.strictEqual(stateBefore.body.isMutedThread, false);
+
+			const missingFavorite = await api('notes/favorites/delete', { noteId }, favoriter);
+			assert.strictEqual(missingFavorite.status, 400);
+			assert.strictEqual(castAsError(missingFavorite.body as any).error.code, 'NOT_FAVORITED');
+
+			const favorited = await api('notes/favorites/create', { noteId }, favoriter);
+			assert.strictEqual(favorited.status, 204);
+
+			const duplicateFavorite = await api('notes/favorites/create', { noteId }, favoriter);
+			assert.strictEqual(duplicateFavorite.status, 400);
+			assert.strictEqual(castAsError(duplicateFavorite.body as any).error.code, 'ALREADY_FAVORITED');
+
+			const stateAfter = await api('notes/state', { noteId }, favoriter);
+			assert.strictEqual(stateAfter.body.isFavorited, true);
+
+			const authorProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, author.id);
+			assert.ok(authorProfile.achievements.some(a => a.name === 'myNoteFavorited1'));
+
+			const unfavorited = await api('notes/favorites/delete', { noteId }, favoriter);
+			assert.strictEqual(unfavorited.status, 204);
+
+			const stateFinal = await api('notes/state', { noteId }, favoriter);
+			assert.strictEqual(stateFinal.body.isFavorited, false);
+		});
+
+		test('notes/thread-muting/{create,delete}はミュート状態を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `htm${suffix}` });
+			const muter = await signup({ username: `htmm${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'thread mute target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const muted = await api('notes/thread-muting/create', { noteId }, muter);
+			assert.strictEqual(muted.status, 204);
+
+			const stateAfterMute = await api('notes/state', { noteId }, muter);
+			assert.strictEqual(stateAfterMute.body.isMutedThread, true);
+
+			const unmuted = await api('notes/thread-muting/delete', { noteId }, muter);
+			assert.strictEqual(unmuted.status, 204);
+
+			const stateAfterUnmute = await api('notes/state', { noteId }, muter);
+			assert.strictEqual(stateAfterUnmute.body.isMutedThread, false);
+
+			const missingNote = await api('notes/thread-muting/create', { noteId: genId(config) }, muter);
+			assert.strictEqual(missingNote.status, 400);
+			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
+		});
+	});
+
+	describe('notes timelines (global/local/hybrid/featured)', () => {
+		test('global-timeline と local-timeline は可視性・ホスト条件を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `htl${suffix}` });
+
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'global/local timeline public note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const homeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: homeNoteId,
+				text: 'home-only note (excluded from global/local)',
+				userId: author.id,
+				userHost: null,
+				visibility: 'home',
+			});
+
+			const global = await api('notes/global-timeline', { limit: 100 });
+			assert.strictEqual(global.status, 200);
+			assert.ok(global.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(global.body.some((n: any) => n.id === homeNoteId), false);
+
+			const local = await api('notes/local-timeline', { limit: 100 });
+			assert.strictEqual(local.status, 200);
+			assert.ok(local.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(local.body.some((n: any) => n.id === homeNoteId), false);
+		});
+
+		test('hybrid-timeline はfolloweeの投稿のみ含む', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const viewer = await signup({ username: `hht${suffix}` });
+			const followee = await signup({ username: `hhtf${suffix}` });
+			const stranger = await signup({ username: `hhts${suffix}` });
+			await api('following/create', { userId: followee.id }, viewer);
+
+			const followeeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: followeeNoteId,
+				text: 'from followee',
+				userId: followee.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const strangerNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: strangerNoteId,
+				text: 'from stranger, not followed, not local timeline eligible',
+				userId: stranger.id,
+				userHost: null,
+				visibility: 'home',
+			});
+
+			const hybrid = await api('notes/hybrid-timeline', { limit: 100 }, viewer);
+			assert.strictEqual(hybrid.status, 200);
+			assert.ok(hybrid.body.some((n: any) => n.id === followeeNoteId));
+			assert.strictEqual(hybrid.body.some((n: any) => n.id === strangerNoteId), false);
+		});
+
+		test('notes/featured はランキング、mute/blockフィルタを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnff2${suffix}` });
+			const viewer = await signup({ username: `hnff2v${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'featured note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const mutedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: mutedNoteId,
+				text: 'featured note from muted user',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const redis = createRedisClient(config);
+			const windowKey = `featuredGlobalNotesRanking:${Math.floor((Date.now() - new Date('2023-01-01T00:00:00Z').getTime()) / (1000 * 60 * 60 * 24 * 3))}`;
+			try {
+				await redis.zadd(windowKey, 1, noteId, 1, mutedNoteId);
+
+				const featured = await api('notes/featured', { limit: 100 });
+				assert.strictEqual(featured.status, 200);
+				assert.ok(featured.body.some((n: any) => n.id === noteId));
+
+				await api('mute/create', { userId: author.id }, viewer);
+				const featuredAsViewer = await api('notes/featured', { limit: 100 }, viewer);
+				assert.strictEqual(featuredAsViewer.status, 200);
+				assert.strictEqual(featuredAsViewer.body.some((n: any) => n.id === noteId), false);
+
+				const getFeatured = await relativeFetch(`api/notes/featured?limit=100`);
+				assert.strictEqual(getFeatured.status, 200);
+				const getFeaturedBody = await getFeatured.json() as { id?: unknown }[];
+				assert.ok(getFeaturedBody.some(n => n.id === noteId));
+			} finally {
+				await redis.del(windowKey);
+				await closeRedisConnection(redis);
+			}
+		});
+	});
+
+	describe('notes/clips, search-by-tag, show-partial-bulk, timeline, user-list-timeline, polls/recommendation', () => {
+		test('notes/clips はpublicなclipのみ返しNO_SUCH_NOTEを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hncl${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'clipped note',
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const publicClip = await api('clips/create', { name: `hono notes/clips public ${suffix}`, isPublic: true }, owner);
+			const privateClip = await api('clips/create', { name: `hono notes/clips private ${suffix}`, isPublic: false }, owner);
+			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
+			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
+
+			const clips = await api('notes/clips', { noteId });
+			assert.strictEqual(clips.status, 200);
+			assert.strictEqual(clips.body.length, 1);
+			assert.strictEqual(clips.body[0].id, publicClip.body.id);
+
+			const missing = await api('notes/clips', { noteId: genId(config) });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+		});
+
+		test('notes/search-by-tag はtagで検索する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnst${suffix}` });
+			const tag = `hono-tag-${suffix}`;
+			const taggedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: taggedNoteId,
+				text: `#${tag}`,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				tags: [tag.toLowerCase()],
+			});
+			const untaggedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: untaggedNoteId,
+				text: 'no tag here',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const res = await api('notes/search-by-tag', { tag });
+			assert.strictEqual(res.status, 200);
+			assert.ok(res.body.some((n: any) => n.id === taggedNoteId));
+			assert.strictEqual(res.body.some((n: any) => n.id === untaggedNoteId), false);
+		});
+
+		test('notes/show-partial-bulk はreactionsとreactionEmojisを返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnsp${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'partial bulk target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				reactions: { '👍': 3 },
+			});
+
+			const res = await api('notes/show-partial-bulk', { noteIds: [noteId] });
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].id, noteId);
+			assert.strictEqual(res.body[0].reactions['👍'], 3);
+		});
+
+		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const viewer = await signup({ username: `hnt${suffix}` });
+			const followee = await signup({ username: `hntf${suffix}` });
+			const stranger = await signup({ username: `hnts${suffix}` });
+			await api('following/create', { userId: followee.id }, viewer);
+
+			const followeeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: followeeNoteId,
+				text: 'timeline from followee',
+				userId: followee.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const strangerNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: strangerNoteId,
+				text: 'timeline from stranger',
+				userId: stranger.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const timeline = await api('notes/timeline', { limit: 100 }, viewer);
+			assert.strictEqual(timeline.status, 200);
+			assert.ok(timeline.body.some((n: any) => n.id === followeeNoteId));
+			assert.strictEqual(timeline.body.some((n: any) => n.id === strangerNoteId), false);
+		});
+
+		test('notes/user-list-timeline はリストメンバーの投稿のみ含みNO_SUCH_LISTを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hult${suffix}` });
+			const member = await signup({ username: `hultm${suffix}` });
+			const nonMember = await signup({ username: `hultn${suffix}` });
+			const list = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				name: `hono user-list-timeline ${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userListId: list.id,
+				userListUserId: member.id,
+			});
+
+			const memberNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: memberNoteId,
+				text: 'from list member',
+				userId: member.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const nonMemberNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: nonMemberNoteId,
+				text: 'from non member',
+				userId: nonMember.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const timeline = await api('notes/user-list-timeline', { listId: list.id, limit: 100 }, owner);
+			assert.strictEqual(timeline.status, 200);
+			assert.ok(timeline.body.some((n: any) => n.id === memberNoteId));
+			assert.strictEqual(timeline.body.some((n: any) => n.id === nonMemberNoteId), false);
+
+			const missingList = await api('notes/user-list-timeline', { listId: genId(config) }, owner);
+			assert.strictEqual(missingList.status, 400);
+			assert.strictEqual(castAsError(missingList.body as any).error.code, 'NO_SUCH_LIST');
+		});
+
+		test('notes/polls/recommendation は未投票のpublic pollのみ返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnpr${suffix}` });
+			const voter = await signup({ username: `hnprv${suffix}` });
+
+			const unvotedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: unvotedNoteId,
+				text: 'unvoted poll',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				hasPoll: true,
+			});
+			await createPollInDatabase(db, {
+				noteId: unvotedNoteId,
+				expiresAt: null,
+				multiple: false,
+				choices: ['A', 'B'],
+				votes: [0, 0],
+				noteVisibility: 'public',
+				userId: author.id,
+				userHost: null,
+				channelId: null,
+			});
+
+			const recommendation = await api('notes/polls/recommendation', { limit: 100 }, voter);
+			assert.strictEqual(recommendation.status, 200);
+			assert.ok(recommendation.body.some((n: any) => n.id === unvotedNoteId));
+		});
+
+		test('notes/search はテキスト全文検索とROLE制限を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnse${suffix}` });
+			const searchNoteId = genId(config);
+			const uniqueText = `hono-search-unique-${suffix}`;
+			await createNoteInDatabase(db, {
+				id: searchNoteId,
+				text: uniqueText,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const searched = await api('notes/search', { query: uniqueText }, author);
+			assert.strictEqual(searched.status, 200);
+			assert.ok(searched.body.some((n: any) => n.id === searchNoteId));
 		});
 	});
 
@@ -8623,6 +9590,50 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 2);
+		});
+	});
+
+	describe('channels/show and channels/timeline', () => {
+		test('channels/show はpinnedNotesを含み、channels/timelineはNO_SUCH_CHANNELと投稿一覧を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcs${suffix}` });
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				name: `hono-channel-show-${suffix}`,
+				description: 'hono channel show test',
+			});
+			const pinnedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pinnedNoteId,
+				text: 'channel pinned note',
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+				channelId: channel.id,
+			});
+			await updateChannelInDatabase(db, channel.id, { pinnedNoteIds: [pinnedNoteId] });
+
+			const shown = await api('channels/show', { channelId: channel.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, channel.id);
+			assert.strictEqual(shown.body.pinnedNoteIds?.[0], pinnedNoteId);
+			assert.strictEqual(shown.body.pinnedNotes?.[0]?.id, pinnedNoteId);
+
+			const missingChannel = await api('channels/show', { channelId: genId(config) });
+			assert.strictEqual(missingChannel.status, 400);
+			assert.strictEqual(castAsError(missingChannel.body as any).error.code, 'NO_SUCH_CHANNEL');
+
+			const timeline = await api('channels/timeline', { channelId: channel.id });
+			assert.strictEqual(timeline.status, 200);
+			assert.strictEqual(timeline.body.length, 1);
+			assert.strictEqual(timeline.body[0].id, pinnedNoteId);
+			assert.strictEqual(timeline.body[0].channelId, channel.id);
+
+			const missingTimeline = await api('channels/timeline', { channelId: genId(config) });
+			assert.strictEqual(missingTimeline.status, 400);
+			assert.strictEqual(castAsError(missingTimeline.body as any).error.code, 'NO_SUCH_CHANNEL');
 		});
 	});
 

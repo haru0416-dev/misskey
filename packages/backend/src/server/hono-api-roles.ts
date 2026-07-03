@@ -4,6 +4,8 @@
  */
 
 import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase, type RoleAssignmentOrder } from '@/core/RoleAssignmentStore.js';
+import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchPublicExplorableRoleByIdFromDatabase, fetchPublicRoleByIdFromDatabase, listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import type { Config } from '@/config.js';
@@ -14,6 +16,7 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
+import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
 import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -21,6 +24,8 @@ export type HonoApiRoleDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
+
+export type HonoApiRoleNotesDependencies = HonoApiNoteDependencies;
 
 const rolesListParamDef = {
 	type: 'object',
@@ -94,6 +99,30 @@ function rolesUsersNoSuchRoleError(): HonoApiError {
 		id: '30aaaee3-4792-48dc-ab0d-cf501a575ac5',
 	});
 }
+
+function rolesNotesNoSuchRoleError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such role.',
+		code: 'NO_SUCH_ROLE',
+		id: 'eb70323a-df61-4dd4-ad90-89c83c7cf26e',
+	});
+}
+
+const rolesNotesParamDef = {
+	type: 'object',
+	properties: {
+		roleId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: ['roleId'],
+} as const;
+
+type RolesNotesParams = SchemaType<typeof rolesNotesParamDef>;
 
 export async function packHonoApiRole(
 	deps: HonoApiRoleDependencies,
@@ -177,4 +206,43 @@ export async function handleHonoApiRolesUsers(
 		id: assign.id,
 		user: packedUsers[index]!,
 	}));
+}
+
+export async function handleHonoApiRolesNotes(
+	deps: HonoApiRoleNotesDependencies,
+	me: { id: MiUser['id'] },
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(rolesNotesParamDef, body) as RolesNotesParams;
+	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
+
+	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
+	if (role == null) throw rolesNotesNoSuchRoleError();
+	if (!role.isExplorable) return [];
+
+	const rawIds = await deps.redis.lrange(`list:roleTimeline:${role.id}`, 0, -1);
+	let noteIds = untilId && sinceId
+		? rawIds.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1)
+		: untilId
+			? rawIds.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1)
+			: sinceId
+				? rawIds.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1)
+				: rawIds.sort((a, b) => a > b ? -1 : 1);
+	noteIds = noteIds.slice(0, params.limit);
+
+	if (noteIds.length === 0) return [];
+
+	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+
+	const notes = await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
+		ids: noteIds,
+		me,
+		blockedHosts: deps.meta.blockedHosts,
+		publicOnly: true,
+		mutingChannelIds,
+	});
+	notes.sort((a, b) => a.id > b.id ? -1 : 1);
+
+	return await packNoteManyForHonoApi(deps, notes, me);
 }

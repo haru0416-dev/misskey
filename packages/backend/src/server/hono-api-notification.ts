@@ -326,26 +326,34 @@ function createAchievementEarnedNotification(
 	})());
 }
 
+export async function grantAchievementForHonoApi(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	name: typeof ACHIEVEMENT_TYPES[number],
+): Promise<void> {
+	if (!(ACHIEVEMENT_TYPES as readonly string[]).includes(name)) return;
+
+	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+	if (profile == null) return;
+	if (profile.achievements.some(a => a.name === name)) return;
+
+	await updateUserProfileInDatabase(deps.db, userId, {
+		achievements: [...profile.achievements, {
+			name,
+			unlockedAt: Date.now(),
+		}],
+	});
+
+	createAchievementEarnedNotification(deps, userId, name);
+}
+
 export async function handleHonoApiIClaimAchievement(
 	deps: HonoApiNotificationDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(claimAchievementParamDef, body) as ClaimAchievementParams;
-	if (!(ACHIEVEMENT_TYPES as readonly string[]).includes(params.name)) return;
-
-	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, me.id);
-	if (profile == null) return;
-	if (profile.achievements.some(a => a.name === params.name)) return;
-
-	await updateUserProfileInDatabase(deps.db, me.id, {
-		achievements: [...profile.achievements, {
-			name: params.name,
-			unlockedAt: Date.now(),
-		}],
-	});
-
-	createAchievementEarnedNotification(deps, me.id, params.name);
+	await grantAchievementForHonoApi(deps, me.id, params.name);
 }
 
 async function flushAllHonoApiNotifications(deps: HonoApiNotificationDependencies, userId: MiUser['id']): Promise<void> {
