@@ -64,7 +64,7 @@ import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederatio
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiExportCustomEmojis, handleHonoApiIExportAntennas, handleHonoApiIExportBlocking, handleHonoApiIExportClips, handleHonoApiIExportFavorites, handleHonoApiIExportFollowing, handleHonoApiIExportMute, handleHonoApiIExportNotes, handleHonoApiIExportUserLists } from './hono-api-export-jobs.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
-import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
+import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiIFavorites, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
 import { handleHonoApiClipsAddNote, handleHonoApiClipsCreate, handleHonoApiClipsDelete, handleHonoApiClipsList, handleHonoApiClipsMyFavorites, handleHonoApiClipsNotes, handleHonoApiClipsRemoveNote, handleHonoApiClipsShow, handleHonoApiClipsUpdate } from './hono-api-clips.js';
 import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsShow, handleHonoApiChannelsTimeline, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
 import { handleHonoApiChartsActiveUsers, handleHonoApiChartsApRequest, handleHonoApiChartsDrive, handleHonoApiChartsFederation, handleHonoApiChartsInstance, handleHonoApiChartsNotes, handleHonoApiChartsUserDrive, handleHonoApiChartsUserFollowing, handleHonoApiChartsUserNotes, handleHonoApiChartsUserPv, handleHonoApiChartsUserReactions, handleHonoApiChartsUsers, normalizeHonoApiChartQuery } from './hono-api-charts.js';
@@ -4549,6 +4549,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			}, auth.user.id);
 
 			return jsonResponse(c, await handleHonoApiINotificationsGrouped(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/favorites', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:favorites');
+
+			return jsonResponse(c, await handleHonoApiIFavorites(deps, auth.user, body));
 		});
 	});
 

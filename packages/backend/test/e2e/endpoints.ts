@@ -10087,6 +10087,32 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('i/favorites', () => {
+		test('お気に入りに登録したノートが取得できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnfav${suffix}` });
+			const note = await post(user, { text: 'test' });
+			await api('notes/favorites/create', { noteId: note.id }, user);
+
+			const res = await api('i/favorites', {}, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].noteId, note.id);
+			assert.strictEqual(res.body[0].note.id, note.id);
+		});
+
+		test('お気に入りがない場合は空配列が返る', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnfav2${suffix}` });
+
+			const res = await api('i/favorites', {}, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.deepStrictEqual(res.body, []);
+		});
+	});
+
 	describe('notes/show', () => {
 		test('投稿が取得できる', async () => {
 			const myPost = await post(alice, {

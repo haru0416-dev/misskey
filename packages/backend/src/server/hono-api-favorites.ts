@@ -10,6 +10,8 @@ import { clipFavoriteExistsInDatabase, createClipFavoriteInDatabase, deleteClipF
 import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
 import { createFlashLikeInDatabase, deleteFlashLikeByIdFromDatabase, fetchFlashLikeFromDatabase, flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { decrementFlashLikedCountInDatabase, fetchFlashByIdFromDatabase, incrementFlashLikedCountInDatabase } from '@/core/FlashStore.js';
+import { listNoteFavoritesByUserIdFromDatabase } from '@/core/NoteFavoriteStore.js';
+import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { createPageLikeInDatabase, deletePageLikeByIdFromDatabase, fetchPageLikeFromDatabase, pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { decrementPageLikedCountInDatabase, fetchPageByIdFromDatabase, incrementPageLikedCountInDatabase } from '@/core/PageStore.js';
 import { createUserListFavoriteInDatabase, deleteUserListFavoriteByIdFromDatabase, fetchUserListFavoriteFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
@@ -17,14 +19,19 @@ import { userListExistsByIdAndPublicFromDatabase } from '@/core/UserListStore.js
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
+import { resolveHonoApiIdPagination } from './hono-api-following.js';
+import { packNoteForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiFavoriteDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
+
+export type HonoApiIFavoritesDependencies = HonoApiNoteDependencies;
 
 const userListParamDef = {
 	type: 'object',
@@ -301,4 +308,50 @@ export async function handleHonoApiFlashUnlike(
 
 	await deleteFlashLikeByIdFromDatabase(deps.db, like.id);
 	void decrementFlashLikedCountInDatabase(deps.db, flash.id);
+}
+
+const iFavoritesParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: [],
+} as const;
+
+type IFavoritesParams = {
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiIFavorites(
+	deps: HonoApiIFavoritesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>[]> {
+	const params = parseHonoApiParams(iFavoritesParamDef, body) as IFavoritesParams;
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
+
+	const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, me.id, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	const notes = favorites.length === 0 ? [] : await listNotesByIdsFromDatabase(deps.db, favorites.map(f => f.noteId));
+	const noteMap = new Map(notes.map(note => [note.id, note]));
+
+	return await Promise.all(favorites.map(async favorite => ({
+		id: favorite.id,
+		createdAt: parseId(deps.config, favorite.id).date.toISOString(),
+		noteId: favorite.noteId,
+		note: await packNoteForHonoApi(deps, noteMap.get(favorite.noteId) ?? favorite.noteId, me),
+	})));
 }
