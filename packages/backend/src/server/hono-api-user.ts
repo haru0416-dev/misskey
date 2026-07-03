@@ -14,6 +14,7 @@ import {
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
+	listUsersByUrisOrIdsFromDatabase,
 } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -175,12 +176,26 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	)));
 }
 
-function packUserDetailedNotMeCoreForHonoApi(
+async function resolveAlsoKnownAsForHonoApi(deps: UserPackingDependencies, alsoKnownAs: string[] | null): Promise<string[] | null> {
+	if (alsoKnownAs == null || alsoKnownAs.length === 0) return null;
+
+	const localPrefix = `${deps.config.url}/users/`;
+	const remoteUris = alsoKnownAs.filter(uri => !uri.startsWith(localPrefix));
+	const remoteUsers = remoteUris.length > 0 ? await listUsersByUrisOrIdsFromDatabase(deps.db, { uris: remoteUris, ids: [] }) : [];
+	const remoteIdByUri = new Map(remoteUsers.map(u => [u.uri, u.id]));
+
+	return alsoKnownAs
+		.map(uri => uri.startsWith(localPrefix) ? uri.slice(localPrefix.length) : (remoteIdByUri.get(uri) ?? null))
+		.filter((id): id is string => id != null);
+}
+
+async function packUserDetailedNotMeCoreForHonoApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	profile: MiUserProfile,
-): UserDetailedNotMeHonoApiResponse {
+): Promise<UserDetailedNotMeHonoApiResponse> {
 	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
+	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
 
 	return {
 		id: user.id,
@@ -202,7 +217,7 @@ function packUserDetailedNotMeCoreForHonoApi(
 		url: profile.url,
 		uri: user.uri,
 		movedTo: null,
-		alsoKnownAs: user.alsoKnownAs,
+		alsoKnownAs,
 		createdAt: parseId(deps.config, user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
 		lastFetchedAt: user.lastFetchedAt ? user.lastFetchedAt.toISOString() : null,
@@ -247,7 +262,7 @@ function getOnlineStatus(user: MiUser): 'unknown' | 'online' | 'active' | 'offli
 	);
 }
 
-function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
+export function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
 	if ((user.host == null || user.host === config.host) && user.username.includes('.') && meta.iconUrl) {
 		return meta.iconUrl;
 	}
@@ -269,6 +284,7 @@ export async function packMeDetailedForHonoApi(
 	const profile = options.profile ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
 	const isRoot = deps.meta.rootUserId === user.id;
+	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
 
 	return {
 		id: user.id,
@@ -290,7 +306,7 @@ export async function packMeDetailedForHonoApi(
 		url: profile.url,
 		uri: user.uri,
 		movedTo: null,
-		alsoKnownAs: user.alsoKnownAs,
+		alsoKnownAs,
 		createdAt: parseId(deps.config, user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
 		lastFetchedAt: user.lastFetchedAt ? user.lastFetchedAt.toISOString() : null,
