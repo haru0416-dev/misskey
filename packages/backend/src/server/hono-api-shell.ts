@@ -49,6 +49,7 @@ import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono
 import { handleHonoApiAdminEmojiAdd, handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiCopy, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiImportZip, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiAdminEmojiUpdate, handleHonoApiEmoji, handleHonoApiEmojis, handleHonoApiV2AdminEmojiList } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import {
+	handleHonoApiDrive,
 	handleHonoApiDriveFilesCheckExistence,
 	handleHonoApiDriveFolders,
 	handleHonoApiDriveFoldersCreate,
@@ -1858,6 +1859,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiDriveFilesMoveBulk(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/drive', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDrive(deps, auth.user));
 		});
 	});
 

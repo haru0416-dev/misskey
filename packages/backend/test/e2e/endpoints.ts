@@ -68,6 +68,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase
 import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
+import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -12564,7 +12565,26 @@ describe('Endpoints', () => {
 			const res = await api('drive', {}, alice);
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			expect(res.body).toHaveProperty('usage', 0);
+			// alice は他のテストでも共有されアップロードが行われるため、0固定ではなく非負の数値であることのみ検証する
+			assert.strictEqual(typeof res.body.usage, 'number');
+			assert.ok(res.body.usage >= 0);
+		});
+
+		test('アップロード後にusageが増加し、capacityはrole policyのdriveCapacityMbと一致する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hdrv${suffix}` });
+
+			const before = await api('drive', {}, user);
+			assert.strictEqual(before.status, 200);
+			assert.strictEqual(before.body.usage, 0);
+			assert.strictEqual(before.body.capacity, 1024 * 1024 * DEFAULT_POLICIES.driveCapacityMb);
+
+			const uploaded = await uploadFile(user);
+			assert.strictEqual(uploaded.status, 200);
+
+			const after = await api('drive', {}, user);
+			assert.strictEqual(after.status, 200);
+			assert.strictEqual(after.body.usage, uploaded.body!.size);
 		});
 	});
 
