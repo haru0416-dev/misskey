@@ -11,12 +11,13 @@ import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listAllFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
-import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
+import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
-import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
@@ -30,6 +31,7 @@ import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiInstance } from '@/models/Instance.js';
 import type { MiMeta } from '@/models/_.js';
+import { birthdaySchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
@@ -37,7 +39,7 @@ import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { HonoApiError } from './hono-api-error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { xaddHonoApiNotification } from './hono-api-notification.js';
-import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
+import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, resolveAlsoKnownAsForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiFollowingDependencies = UserPackingDependencies & {
@@ -688,6 +690,29 @@ async function insertFollowingWithSideEffects(
 	]);
 }
 
+// 鍵アカウントであっても、moveした後のアカウントで、move前に既にフォローが承認されていた場合は自動承認する。
+// AccountMoveService.validateAlsoKnownAs(follower, check, instant=true) の簡易移植 (ローカルの follower のみが本エンドポイントに到達するため、
+// リモートユーザーの AP 再取得ブランチは対象外)。
+async function checkAutoAcceptIfMovedForHonoApi(
+	deps: HonoApiFollowingDependencies,
+	follower: MiUser,
+	followee: MiUser,
+): Promise<boolean> {
+	const oldSelfIds = await resolveAlsoKnownAsForHonoApi(deps, follower.alsoKnownAs);
+	if (!oldSelfIds || oldSelfIds.length === 0) return false;
+
+	const followerUri = getUserUri(deps.config, follower);
+
+	for (const oldSelfId of oldSelfIds) {
+		const oldSelf = await fetchUserByIdFromDatabase(deps.db, oldSelfId);
+		if (oldSelf == null) continue;
+		if (oldSelf.movedToUri !== followerUri) continue;
+		if (await followingExistsInDatabase(deps.db, oldSelf.id, followee.id)) return true;
+	}
+
+	return false;
+}
+
 export async function handleHonoApiFollowingCreate(
 	deps: HonoApiFollowingDependencies,
 	me: MiLocalUser,
@@ -723,6 +748,10 @@ export async function handleHonoApiFollowingCreate(
 		let autoAccept = false;
 		if (isLocalUser(followee) && followeeProfile.autoAcceptFollowed) {
 			autoAccept = await followingExistsInDatabase(deps.db, followee.id, follower.id);
+		}
+
+		if (!autoAccept && followee.isLocked) {
+			autoAccept = await checkAutoAcceptIfMovedForHonoApi(deps, follower, followee);
 		}
 
 		if (!autoAccept) {
@@ -1044,6 +1073,200 @@ export async function handleHonoApiFollowingList(
 		untilId: pagination.untilId,
 		notification: params.notification,
 	});
+
+	return await packFollowingsForHonoApi(deps, followings);
+}
+
+export type FollowerListItem = {
+	id: string;
+	createdAt: string;
+	followeeId: string;
+	followerId: string;
+	follower: UserDetailedNotMeHonoApiResponse;
+};
+
+async function packFollowersForHonoApi(
+	deps: UserPackingDependencies,
+	followings: MiFollowing[],
+): Promise<FollowerListItem[]> {
+	const packedFollowers = await packUserDetailedNotMeManyForHonoApi(deps, followings.map(f => f.follower ?? f.followerId));
+
+	return followings.map((following, index) => ({
+		id: following.id,
+		createdAt: parseId(deps.config, following.id).date.toISOString(),
+		followeeId: following.followeeId,
+		followerId: following.followerId,
+		follower: packedFollowers[index],
+	}));
+}
+
+function toPunyNullableForHonoApi(host: string | null | undefined): string | null {
+	return host == null ? null : domainToASCII(host.toLowerCase());
+}
+
+const usersFollowersOrFollowingParamDef = {
+	allOf: [
+		{
+			anyOf: [
+				{
+					type: 'object',
+					properties: {
+						userId: { type: 'string', format: 'misskey:id' },
+					},
+					required: ['userId'],
+				},
+				{
+					type: 'object',
+					properties: {
+						username: { type: 'string' },
+						host: { type: 'string', nullable: true },
+					},
+					required: ['username', 'host'],
+				},
+			],
+		},
+		{
+			type: 'object',
+			properties: {
+				sinceId: { type: 'string', format: 'misskey:id' },
+				untilId: { type: 'string', format: 'misskey:id' },
+				sinceDate: { type: 'integer' },
+				untilDate: { type: 'integer' },
+				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+			},
+		},
+	],
+} as const;
+
+const usersFollowingParamDef = {
+	allOf: [
+		usersFollowersOrFollowingParamDef.allOf[0],
+		{
+			type: 'object',
+			properties: {
+				...usersFollowersOrFollowingParamDef.allOf[1].properties,
+				birthday: { ...birthdaySchema, nullable: true },
+			},
+		},
+	],
+} as const;
+
+type UsersFollowersOrFollowingParams = {
+	userId?: string;
+	username?: string;
+	host?: string | null;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	limit: number;
+};
+
+type UsersFollowingParams = UsersFollowersOrFollowingParams & {
+	birthday?: string | null;
+};
+
+function usersFollowersNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', '27fa5435-88ab-43de-9360-387de88727cd');
+}
+function usersFollowersForbiddenError(): HonoApiError {
+	return clientError('Forbidden.', 'FORBIDDEN', '3c6a84db-d619-26af-ca14-06232a21df8a');
+}
+function usersFollowingNoSuchUserError(): HonoApiError {
+	return clientError('No such user.', 'NO_SUCH_USER', '63e4aba4-4156-4e53-be25-c9559e42d71b');
+}
+function usersFollowingForbiddenError(): HonoApiError {
+	return clientError('Forbidden.', 'FORBIDDEN', 'f6cdb0df-c19f-ec5c-7dbb-0ba84a1f92ba');
+}
+function usersFollowingBirthdayInvalidError(): HonoApiError {
+	return clientError('Birthday date format is invalid.', 'BIRTHDAY_DATE_FORMAT_INVALID', 'a2b007b9-4782-4eba-abd3-93b05ed4130d');
+}
+
+export async function handleHonoApiUsersFollowers(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<FollowerListItem[]> {
+	const params = parseHonoApiParams(usersFollowersOrFollowingParamDef, body) as UsersFollowersOrFollowingParams;
+	const user = params.userId != null
+		? await fetchUserByIdFromDatabase(deps.db, params.userId)
+		: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForHonoApi(params.host));
+	if (user == null) throw usersFollowersNoSuchUserError();
+
+	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+
+	if (profile.followersVisibility !== 'public' && !await isHonoApiModerator(deps, me)) {
+		if (profile.followersVisibility === 'private') {
+			if (me == null || me.id !== user.id) throw usersFollowersForbiddenError();
+		} else if (profile.followersVisibility === 'followers') {
+			if (me == null) throw usersFollowersForbiddenError();
+			if (me.id !== user.id) {
+				const isFollowing = await followingExistsInDatabase(deps.db, me.id, user.id);
+				if (!isFollowing) throw usersFollowersForbiddenError();
+			}
+		}
+	}
+
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const followings = await listFollowersByFolloweeIdWithPaginationFromDatabase(deps.db, user.id, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packFollowersForHonoApi(deps, followings);
+}
+
+export async function handleHonoApiUsersFollowing(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<FollowingListItem[]> {
+	const params = parseHonoApiParams(usersFollowingParamDef, body) as UsersFollowingParams;
+	const user = params.userId != null
+		? await fetchUserByIdFromDatabase(deps.db, params.userId)
+		: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForHonoApi(params.host));
+	if (user == null) throw usersFollowingNoSuchUserError();
+
+	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+
+	if (profile.followingVisibility !== 'public' && !await isHonoApiModerator(deps, me)) {
+		if (profile.followingVisibility === 'private') {
+			if (me == null || me.id !== user.id) throw usersFollowingForbiddenError();
+		} else if (profile.followingVisibility === 'followers') {
+			if (me == null) throw usersFollowingForbiddenError();
+			if (me.id !== user.id) {
+				const isFollowing = await followingExistsInDatabase(deps.db, me.id, user.id);
+				if (!isFollowing) throw usersFollowingForbiddenError();
+			}
+		}
+	}
+
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	let followings: MiFollowing[];
+	if (params.birthday) {
+		try {
+			const parts = params.birthday.split('-');
+			parts.shift();
+			const birthdayNum = parseInt(parts.join(''));
+			followings = await listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase(deps.db, user.id, birthdayNum, {
+				limit: params.limit,
+				order: pagination.order,
+				sinceId: pagination.sinceId,
+				untilId: pagination.untilId,
+			});
+		} catch {
+			throw usersFollowingBirthdayInvalidError();
+		}
+	} else {
+		followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, user.id, {
+			limit: params.limit,
+			order: pagination.order,
+			sinceId: pagination.sinceId,
+			untilId: pagination.untilId,
+		});
+	}
 
 	return await packFollowingsForHonoApi(deps, followings);
 }

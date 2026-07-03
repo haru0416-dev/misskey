@@ -176,7 +176,7 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	)));
 }
 
-async function resolveAlsoKnownAsForHonoApi(deps: UserPackingDependencies, alsoKnownAs: string[] | null): Promise<string[] | null> {
+export async function resolveAlsoKnownAsForHonoApi(deps: UserPackingDependencies, alsoKnownAs: string[] | null): Promise<string[] | null> {
 	if (alsoKnownAs == null || alsoKnownAs.length === 0) return null;
 
 	const localPrefix = `${deps.config.url}/users/`;

@@ -101,7 +101,7 @@ import { handleHonoApiAdminDeleteAllFilesOfAUser, handleHonoApiAdminDriveCleanRe
 import { handleHonoApiIUpdate } from './hono-api-account-update.js';
 import { handleHonoApiIMove } from './hono-api-account-move.js';
 import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
-import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
+import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll, handleHonoApiUsersFollowers, handleHonoApiUsersFollowing } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiI2faDone, handleHonoApiI2faKeyDone, handleHonoApiI2faPasswordLess, handleHonoApiI2faRegister, handleHonoApiI2faRegisterKey, handleHonoApiI2faRemoveKey, handleHonoApiI2faUnregister, handleHonoApiI2faUpdateKey } from './hono-api-i-2fa.js';
@@ -4906,6 +4906,24 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const ip = getRequestIp(c, deps.config);
 
 			return jsonResponse(c, await handleHonoApiUsersShow(deps, auth.user, body, ip));
+		});
+	});
+
+	app.post('/users/followers', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiUsersFollowers(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/following', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiUsersFollowing(deps, auth.user, body));
 		});
 	});
 

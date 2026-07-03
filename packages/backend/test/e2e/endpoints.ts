@@ -9877,6 +9877,57 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/followers', () => {
+		test('フォロワーが取得できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hnflwee${suffix}` });
+			const follower = await signup({ username: `hnflwer${suffix}` });
+			await api('following/create', { userId: followee.id }, follower);
+
+			const res = await api('users/followers', { userId: followee.id }, followee);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].followerId, follower.id);
+		});
+
+		test('ユーザーが存在しなかったら怒る', async () => {
+			const res = await api('users/followers', { userId: '000000000000000000000000' });
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_USER');
+		});
+	});
+
+	describe('users/following', () => {
+		test('フォロー中のユーザーが取得できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hnflge${suffix}` });
+			const follower = await signup({ username: `hnflgr${suffix}` });
+			await api('following/create', { userId: followee.id }, follower);
+
+			const res = await api('users/following', { userId: follower.id }, follower);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].followeeId, followee.id);
+		});
+
+		test('不正なbirthday形式で怒られる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hnflgb${suffix}` });
+
+			const res = await api('users/following', { userId: follower.id, birthday: 'not-a-date' });
+
+			assert.strictEqual(res.status, 400);
+		});
+
+		test('ユーザーが存在しなかったら怒る', async () => {
+			const res = await api('users/following', { userId: '000000000000000000000000' });
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_USER');
+		});
+	});
+
 	describe('notes/show', () => {
 		test('投稿が取得できる', async () => {
 			const myPost = await post(alice, {
