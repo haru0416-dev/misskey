@@ -6516,6 +6516,112 @@ describe('Endpoints', () => {
 			assert.strictEqual(popular.status, 200);
 			assert.ok(popular.body.some((p: any) => p.id === post.body.id));
 		});
+
+		test('i/gallery/posts は自分の投稿のみをページングして返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `higp${suffix}` });
+			const other = await signup({ username: `higpo${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-i-gallery-posts-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-i-gallery-posts-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `Hono i gallery posts ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const otherFileMd5 = createHash('md5').update(`hono-i-gallery-posts-other-${suffix}`).digest('hex');
+			const otherFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: other.id,
+				userHost: null,
+				md5: otherFileMd5,
+				name: `hono-i-gallery-posts-other-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${otherFileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const otherPost = await api('gallery/posts/create', {
+				title: `Hono i gallery posts other ${suffix}`,
+				fileIds: [otherFile.id],
+			}, other);
+			assert.strictEqual(otherPost.status, 200);
+
+			const mine = await api('i/gallery/posts', { limit: 100 }, owner);
+			assert.strictEqual(mine.status, 200);
+			assert.ok(mine.body.some((p: any) => p.id === post.body.id));
+			assert.ok(!mine.body.some((p: any) => p.id === otherPost.body.id));
+
+			const unauthorized = await api('i/gallery/posts', {});
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+		});
+
+		test('i/gallery/likes はいいねした投稿一覧を返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `higl${suffix}` });
+			const liker = await signup({ username: `higll${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-i-gallery-likes-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-i-gallery-likes-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `Hono i gallery likes ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const empty = await api('i/gallery/likes', {}, liker);
+			assert.strictEqual(empty.status, 200);
+			assert.deepStrictEqual(empty.body, []);
+
+			const liked = await api('gallery/posts/like', { postId: post.body.id }, liker);
+			assert.strictEqual(liked.status, 204);
+
+			const likes = await api('i/gallery/likes', {}, liker);
+			assert.strictEqual(likes.status, 200);
+			assert.strictEqual(likes.body.length, 1);
+			assert.strictEqual(likes.body[0].post.id, post.body.id);
+
+			const unauthorized = await api('i/gallery/likes', {});
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+		});
 	});
 
 	describe('clips', () => {

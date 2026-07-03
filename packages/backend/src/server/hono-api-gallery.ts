@@ -5,7 +5,7 @@
 
 import type * as Redis from 'ioredis';
 import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
-import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase } from '@/core/GalleryLikeStore.js';
+import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase, listGalleryLikesByUserIdFromDatabase } from '@/core/GalleryLikeStore.js';
 import {
 	createGalleryPostInDatabase,
 	decrementGalleryPostLikedCountInDatabase,
@@ -29,6 +29,7 @@ import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './hono-api-drive-file.js';
 import { HonoApiError } from './hono-api-error.js';
+import { resolveHonoApiIdPagination } from './hono-api-following.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { packUserLiteForHonoApi } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
@@ -245,12 +246,13 @@ function galleryPostsUnlikeNotLikedError(): HonoApiError {
 	});
 }
 
-async function packGalleryPostForHonoApi(
+export async function packGalleryPostForHonoApi(
 	deps: HonoApiGalleryDependencies,
-	post: MiGalleryPost,
+	src: MiGalleryPost['id'] | MiGalleryPost,
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'GalleryPost'>> {
 	const meId = me ? me.id : null;
+	const post = typeof src === 'object' ? src : await fetchGalleryPostByIdOrFailFromDatabase(deps.db, src);
 
 	const [user, files, isLiked] = await Promise.all([
 		packUserLiteForHonoApi(deps, post.userId),
@@ -275,7 +277,7 @@ async function packGalleryPostForHonoApi(
 	};
 }
 
-async function packGalleryPostsManyForHonoApi(
+export async function packGalleryPostsManyForHonoApi(
 	deps: HonoApiGalleryDependencies,
 	posts: MiGalleryPost[],
 	me: { id: MiUser['id'] } | null | undefined,
@@ -475,4 +477,89 @@ export async function handleHonoApiGalleryPostsUnlike(
 	}
 
 	await decrementGalleryPostLikedCountInDatabase(deps.db, post.id);
+}
+
+const iGalleryPostsParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: [],
+} as const;
+
+type IGalleryPostsParams = {
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiIGalleryPosts(
+	deps: HonoApiGalleryDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'GalleryPost'>[]> {
+	const params = parseHonoApiParams(iGalleryPostsParamDef, body) as IGalleryPostsParams;
+	const pagination = resolveGalleryPostPagination({ gen: time => genId(deps.config, time) }, params);
+	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
+		userId: me.id,
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+}
+
+const iGalleryLikesParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: [],
+} as const;
+
+type IGalleryLikesParams = {
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiIGalleryLikes(
+	deps: HonoApiGalleryDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>[]> {
+	const params = parseHonoApiParams(iGalleryLikesParamDef, body) as IGalleryLikesParams;
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
+
+	const likes = await listGalleryLikesByUserIdFromDatabase(deps.db, me.id, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	if (likes.length === 0) return [];
+
+	const postIds = likes.map(like => like.postId);
+	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
+	const postById = new Map(posts.map(post => [post.id, post]));
+
+	return await Promise.all(likes.map(async like => ({
+		id: like.id,
+		post: await packGalleryPostForHonoApi(deps, postById.get(like.postId) ?? like.postId, me),
+	})));
 }
