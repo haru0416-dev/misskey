@@ -6625,6 +6625,502 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/clips, users/flashs, users/gallery/posts', () => {
+		test('users/clips は公開clipのみをページングして返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `huc${suffix}` });
+
+			const pub = await api('clips/create', { name: `hono users/clips public ${suffix}`, isPublic: true }, owner);
+			assert.strictEqual(pub.status, 200);
+			const priv = await api('clips/create', { name: `hono users/clips private ${suffix}`, isPublic: false }, owner);
+			assert.strictEqual(priv.status, 200);
+
+			const listed = await api('users/clips', { userId: owner.id, limit: 100 });
+			assert.strictEqual(listed.status, 200);
+			assert.ok(listed.body.some((c: any) => c.id === pub.body.id));
+			assert.ok(!listed.body.some((c: any) => c.id === priv.body.id));
+		});
+
+		test('users/flashs は公開flashのみをページングして返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `huf${suffix}` });
+
+			const pub = await api('flash/create', {
+				title: `hono users/flashs public ${suffix}`,
+				summary: 's',
+				script: '1',
+				permissions: [],
+				visibility: 'public',
+			}, owner);
+			assert.strictEqual(pub.status, 200);
+			const priv = await api('flash/create', {
+				title: `hono users/flashs private ${suffix}`,
+				summary: 's',
+				script: '1',
+				permissions: [],
+				visibility: 'private',
+			}, owner);
+			assert.strictEqual(priv.status, 200);
+
+			const listed = await api('users/flashs', { userId: owner.id, limit: 100 });
+			assert.strictEqual(listed.status, 200);
+			assert.ok(listed.body.some((f: any) => f.id === pub.body.id));
+			assert.ok(!listed.body.some((f: any) => f.id === priv.body.id));
+			assert.strictEqual(listed.body.find((f: any) => f.id === pub.body.id).isLiked, undefined);
+		});
+
+		test('users/gallery/posts はページングして投稿を返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hug${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-users-gallery-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-users-gallery-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `hono users/gallery/posts ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const listed = await api('users/gallery/posts', { userId: owner.id, limit: 100 });
+			assert.strictEqual(listed.status, 200);
+			assert.ok(listed.body.some((p: any) => p.id === post.body.id));
+		});
+	});
+
+	describe('users/search', () => {
+		test('users/search はname/username/description一致、origin絞り込み、mute除外、detailスキーマを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const byName = await signup({ username: `husn${suffix}` });
+			await api('i/update', { name: `Hono Search Target ${suffix}` }, byName);
+
+			const byUsername = await signup({ username: `hussrch${suffix}` });
+
+			const byDescription = await signup({ username: `husd${suffix}` });
+			await updateUserProfileInDatabase(db, byDescription.id, {
+				description: `hono search description marker ${suffix}`,
+			});
+
+			const muter = await signup({ username: `husm${suffix}` });
+			const muted = await signup({ username: `hussrchmuted${suffix}` });
+			const muteRes = await api('mute/create', { userId: muted.id }, muter);
+			assert.strictEqual(muteRes.status, 204);
+
+			const byNameResult = await api('users/search', { query: `Hono Search Target ${suffix}` });
+			assert.strictEqual(byNameResult.status, 200);
+			assert.ok(byNameResult.body.some((u: any) => u.id === byName.id));
+
+			const byUsernameResult = await api('users/search', { query: `@hussrch${suffix}` });
+			assert.strictEqual(byUsernameResult.status, 200);
+			assert.ok(byUsernameResult.body.some((u: any) => u.id === byUsername.id));
+
+			const byDescriptionResult = await api('users/search', { query: `hono search description marker ${suffix}` });
+			assert.strictEqual(byDescriptionResult.status, 200);
+			assert.ok(byDescriptionResult.body.some((u: any) => u.id === byDescription.id));
+
+			const mutedIncludedForAnon = await api('users/search', { query: `hussrchmuted${suffix}` });
+			assert.strictEqual(mutedIncludedForAnon.status, 200);
+			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
+
+			const mutedExcludedForMuter = await api('users/search', { query: `hussrchmuted${suffix}` }, muter);
+			assert.strictEqual(mutedExcludedForMuter.status, 200);
+			assert.ok(!mutedExcludedForMuter.body.some((u: any) => u.id === muted.id));
+
+			const localOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'local' });
+			assert.strictEqual(localOnly.status, 200);
+			assert.ok(localOnly.body.some((u: any) => u.id === byUsername.id));
+
+			const remoteOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'remote' });
+			assert.strictEqual(remoteOnly.status, 200);
+			assert.ok(!remoteOnly.body.some((u: any) => u.id === byUsername.id));
+
+			const detailed = await api('users/search', { query: `@hussrch${suffix}`, detail: true });
+			assert.strictEqual(detailed.status, 200);
+			assert.ok(Object.prototype.hasOwnProperty.call(detailed.body[0], 'isLocked'));
+
+			const lite = await api('users/search', { query: `@hussrch${suffix}`, detail: false });
+			assert.strictEqual(lite.status, 200);
+			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
+		});
+	});
+
+	describe('users/search-by-username-and-host', () => {
+		test('username/hostによる前方一致検索、ログイン時のフォロー優先、detailスキーマを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const target = await signup({ username: `hsbuh${suffix}` });
+			const otherPrefixed = await signup({ username: `hsbuh${suffix}x` });
+			const searcher = await signup({ username: `hsbuhs${suffix}` });
+			const remoteHost = `hono-sbuh-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `remote${suffix}`,
+					usernameLower: `remote${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+
+			const byUsername = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 100 });
+			assert.strictEqual(byUsername.status, 200);
+			assert.ok(byUsername.body.some((u: any) => u.id === target.id));
+			assert.ok(byUsername.body.some((u: any) => u.id === otherPrefixed.id));
+
+			const byHost = await api('users/search-by-username-and-host', { host: remoteHost, limit: 100 });
+			assert.strictEqual(byHost.status, 200);
+			assert.ok(byHost.body.some((u: any) => u.id === remoteUser.id));
+
+			await api('following/create', { userId: target.id }, searcher);
+			const followedFirst = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 1 }, searcher);
+			assert.strictEqual(followedFirst.status, 200);
+			assert.strictEqual(followedFirst.body[0].id, target.id);
+
+			// @ts-expect-error params must include username or host
+			const missingBoth = await api('users/search-by-username-and-host', { limit: 10 });
+			assert.strictEqual(missingBoth.status, 400);
+
+			const detailed = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: true });
+			assert.strictEqual(detailed.status, 200);
+			assert.ok(Object.prototype.hasOwnProperty.call(detailed.body[0], 'isLocked'));
+
+			const lite = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: false });
+			assert.strictEqual(lite.status, 200);
+			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
+		});
+	});
+
+	describe('users/get-following-users-by-birthday', () => {
+		test('単一birthday指定と範囲指定でフォロー中ユーザーを誕生日順に返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const me = await signup({ username: `hgfb${suffix}` });
+			const followee1 = await signup({ username: `hgfb1${suffix}` });
+			const followee2 = await signup({ username: `hgfb2${suffix}` });
+			const notFollowed = await signup({ username: `hgfb3${suffix}` });
+
+			await api('i/update', { birthday: '2000-06-15' }, followee1);
+			await api('i/update', { birthday: '2000-06-20' }, followee2);
+			await api('i/update', { birthday: '2000-06-16' }, notFollowed);
+
+			await api('following/create', { userId: followee1.id }, me);
+			await api('following/create', { userId: followee2.id }, me);
+
+			const single = await api('users/get-following-users-by-birthday', {
+				birthday: { month: 6, day: 15 },
+			}, me);
+			assert.strictEqual(single.status, 200);
+			assert.strictEqual(single.body.length, 1);
+			assert.strictEqual(single.body[0].id, followee1.id);
+			assert.strictEqual(single.body[0].user.id, followee1.id);
+
+			const range = await api('users/get-following-users-by-birthday', {
+				birthday: { begin: { month: 6, day: 14 }, end: { month: 6, day: 21 } },
+			}, me);
+			assert.strictEqual(range.status, 200);
+			assert.deepStrictEqual(range.body.map((u: any) => u.id), [followee1.id, followee2.id]);
+			assert.ok(!range.body.some((u: any) => u.id === notFollowed.id));
+
+			const unauthorized = await api('users/get-following-users-by-birthday', { birthday: { month: 6, day: 15 } });
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+		});
+	});
+
+	describe('users/recommendation', () => {
+		test('鍵垢/非表示/フォロー済み/リモート/自分自身を除外したおすすめユーザーを返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const me = await signup({ username: `hur${suffix}` });
+			const candidate = await signup({ username: `hurc${suffix}` });
+			await updateUserInDatabase(db, candidate.id, { updatedAt: new Date() });
+			const lockedUser = await signup({ username: `hurl${suffix}` });
+			await updateUserInDatabase(db, lockedUser.id, { isLocked: true, updatedAt: new Date() });
+			const notExplorable = await signup({ username: `hurn${suffix}` });
+			await updateUserInDatabase(db, notExplorable.id, { isExplorable: false, updatedAt: new Date() });
+			const alreadyFollowed = await signup({ username: `huraf${suffix}` });
+			await updateUserInDatabase(db, alreadyFollowed.id, { updatedAt: new Date() });
+			await api('following/create', { userId: alreadyFollowed.id }, me);
+			const remoteHost = `hono-recommend-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hurr${suffix}`,
+					usernameLower: `hurr${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+					updatedAt: new Date(),
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+
+			const res = await api('users/recommendation', { limit: 100 }, me);
+			assert.strictEqual(res.status, 200);
+			const ids = res.body.map((u: any) => u.id);
+			assert.ok(ids.includes(candidate.id));
+			assert.ok(!ids.includes(lockedUser.id));
+			assert.ok(!ids.includes(notExplorable.id));
+			assert.ok(!ids.includes(alreadyFollowed.id));
+			assert.ok(!ids.includes(remoteId));
+			assert.ok(!ids.includes(me.id));
+
+			const unauthorized = await api('users/recommendation', {});
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+		});
+	});
+
+	describe('users/get-frequently-replied-users', () => {
+		test('返信頻度に応じたweightでユーザーを返し、返信が無い場合は空配列、存在しないユーザーはNO_SUCH_USERになる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hgfr${suffix}` });
+			const frequentTarget = await signup({ username: `hgfrf${suffix}` });
+			const rareTarget = await signup({ username: `hgfrr${suffix}` });
+			const neverReplied = await signup({ username: `hgfrn${suffix}` });
+
+			const frequentNote1 = await post(frequentTarget, { text: 'freq target 1' });
+			const frequentNote2 = await post(frequentTarget, { text: 'freq target 2' });
+			const rareNote = await post(rareTarget, { text: 'rare target' });
+
+			await post(author, { text: 'reply 1', replyId: frequentNote1.id });
+			await post(author, { text: 'reply 2', replyId: frequentNote2.id });
+			await post(author, { text: 'reply 3', replyId: rareNote.id });
+
+			const res = await api('users/get-frequently-replied-users', { userId: author.id, limit: 100 });
+			assert.strictEqual(res.status, 200);
+			const byUserId = new Map(res.body.map((r: any) => [r.user.id, r.weight]));
+			assert.strictEqual(byUserId.get(frequentTarget.id), 1);
+			assert.strictEqual(byUserId.get(rareTarget.id), 0.5);
+
+			const empty = await api('users/get-frequently-replied-users', { userId: neverReplied.id });
+			assert.strictEqual(empty.status, 200);
+			assert.deepStrictEqual(empty.body, []);
+
+			const noSuchUser = await api('users/get-frequently-replied-users', { userId: genId(loadConfig()) });
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.code, 'NO_SUCH_USER');
+		});
+	});
+
+	describe('users/reactions', () => {
+		test('公開範囲、リモートユーザー、ブロック、moderatorバイパスを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hurx${suffix}` });
+			const stranger = await signup({ username: `hurxs${suffix}` });
+			const noteAuthor = await signup({ username: `hurxn${suffix}` });
+			const note = await post(noteAuthor, { text: 'hono users/reactions target' });
+			const reacted = await api('notes/reactions/create', { noteId: note.id, reaction: '🚀' }, owner);
+			assert.strictEqual(reacted.status, 204);
+
+			const strangerSeesPublic = await api('users/reactions', { userId: owner.id }, stranger);
+			assert.strictEqual(strangerSeesPublic.status, 200);
+			assert.strictEqual(strangerSeesPublic.body.length, 1);
+			assert.strictEqual(strangerSeesPublic.body[0].note.id, note.id);
+			assert.strictEqual(strangerSeesPublic.body[0].user.id, owner.id);
+
+			await api('i/update', { publicReactions: false }, owner);
+
+			const strangerDenied = await api('users/reactions', { userId: owner.id }, stranger);
+			assert.strictEqual(strangerDenied.status, 400);
+			assert.strictEqual(castAsError(strangerDenied.body as any).error.code, 'REACTIONS_NOT_PUBLIC');
+
+			const ownerSeesSelf = await api('users/reactions', { userId: owner.id }, owner);
+			assert.strictEqual(ownerSeesSelf.status, 200);
+			assert.strictEqual(ownerSeesSelf.body.length, 1);
+
+			const moderatorRole = await role(alice, { name: `hono users/reactions moderator ${suffix}`, isModerator: true });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(loadConfig()),
+				roleId: moderatorRole.id,
+				userId: stranger.id,
+				expiresAt: null,
+			});
+			const moderatorSees = await api('users/reactions', { userId: owner.id }, stranger);
+			assert.strictEqual(moderatorSees.status, 200);
+			assert.strictEqual(moderatorSees.body.length, 1);
+
+			const remoteHost = `hono-reactions-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hurxr${suffix}`,
+					usernameLower: `hurxr${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+					updatedAt: new Date(),
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+			const nonModeratorRemote = await signup({ username: `hurxnm${suffix}` });
+			const remoteDenied = await api('users/reactions', { userId: remoteId }, nonModeratorRemote);
+			assert.strictEqual(remoteDenied.status, 400);
+			assert.strictEqual(castAsError(remoteDenied.body as any).error.code, 'IS_REMOTE_USER');
+
+			const blocker = await signup({ username: `hurxb${suffix}` });
+			await api('i/update', { publicReactions: true }, blocker);
+			const blockerReacted = await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, blocker);
+			assert.strictEqual(blockerReacted.status, 204);
+			const blockedViewer = await signup({ username: `hurxbv${suffix}` });
+			const nonBlockedView = await api('users/reactions', { userId: blocker.id }, blockedViewer);
+			assert.strictEqual(nonBlockedView.status, 200);
+			assert.strictEqual(nonBlockedView.body.length, 1);
+			await api('blocking/create', { userId: blockedViewer.id }, blocker);
+			const blockedResult = await api('users/reactions', { userId: blocker.id }, blockedViewer);
+			assert.strictEqual(blockedResult.status, 200);
+			assert.deepStrictEqual(blockedResult.body, []);
+		});
+	});
+
+	describe('users/featured-notes', () => {
+		const FEATURED_EPOCH = new Date('2023-01-01T00:00:00Z').getTime();
+		const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
+
+		function currentFeaturedWindow() {
+			return Math.floor((Date.now() - FEATURED_EPOCH) / PER_USER_NOTES_RANKING_WINDOW);
+		}
+
+		// ランキング書き込み側 (ReactionService.create 等の30%確率更新) はHono未移植のため、
+		// ここではRedis ZSETに直接書き込んで読み取りロジックのみを単体検証する。
+		test('per-userランキングに載ったノートをid降順で返し、untilId絞り込み、ブロックによる早期returnを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hufn${suffix}` });
+			const noteOld = await post(owner, { text: 'hono featured old' });
+			const noteNew = await post(owner, { text: 'hono featured new' });
+
+			const redis = createRedisClient(config);
+			try {
+				const key = `featuredPerUserNotesRanking:${owner.id}:${currentFeaturedWindow()}`;
+				await redis.zadd(key, 5, noteOld.id);
+				await redis.zadd(key, 3, noteNew.id);
+
+				const res = await api('users/featured-notes', { userId: owner.id, limit: 100 });
+				assert.strictEqual(res.status, 200);
+				const ids = res.body.map((n: any) => n.id);
+				assert.ok(ids.includes(noteOld.id));
+				assert.ok(ids.includes(noteNew.id));
+				assert.ok(ids.indexOf(noteNew.id) < ids.indexOf(noteOld.id));
+
+				const untilFiltered = await api('users/featured-notes', { userId: owner.id, untilId: noteNew.id, limit: 100 });
+				assert.strictEqual(untilFiltered.status, 200);
+				assert.ok(!untilFiltered.body.some((n: any) => n.id === noteNew.id));
+
+				const blocker = await signup({ username: `hufnb${suffix}` });
+				const blockerNote = await post(blocker, { text: 'hono featured blocker note' });
+				const blockerKey = `featuredPerUserNotesRanking:${blocker.id}:${currentFeaturedWindow()}`;
+				await redis.zadd(blockerKey, 1, blockerNote.id);
+				const blockedViewer = await signup({ username: `hufnbv${suffix}` });
+				await api('blocking/create', { userId: blockedViewer.id }, blocker);
+				const blockedResult = await api('users/featured-notes', { userId: blocker.id }, blockedViewer);
+				assert.strictEqual(blockedResult.status, 200);
+				assert.deepStrictEqual(blockedResult.body, []);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+	});
+
+	describe('users/report-abuse', () => {
+		test('通報を作成し、自分自身・管理者・存在しないユーザーへの通報を拒否する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const reporter = await signup({ username: `hura${suffix}` });
+			const target = await signup({ username: `hurat${suffix}` });
+
+			const reported = await api('users/report-abuse', { userId: target.id, comment: `hono report abuse ${suffix}` }, reporter);
+			assert.strictEqual(reported.status, 204);
+
+			const listed = await api('admin/abuse-user-reports', { limit: 100 }, alice);
+			assert.strictEqual(listed.status, 200);
+			const found = listed.body.find((r: any) => r.reporterId === reporter.id && r.targetUserId === target.id);
+			assert.ok(found);
+			assert.strictEqual(found.comment, `hono report abuse ${suffix}`);
+			assert.strictEqual(found.resolved, false);
+
+			const reportSelf = await api('users/report-abuse', { userId: reporter.id, comment: 'self report' }, reporter);
+			assert.strictEqual(reportSelf.status, 400);
+			assert.strictEqual(castAsError(reportSelf.body as any).error.code, 'CANNOT_REPORT_YOURSELF');
+
+			const reportAdmin = await api('users/report-abuse', { userId: alice.id, comment: 'admin report' }, reporter);
+			assert.strictEqual(reportAdmin.status, 400);
+			assert.strictEqual(castAsError(reportAdmin.body as any).error.code, 'CANNOT_REPORT_THE_ADMIN');
+
+			const reportMissing = await api('users/report-abuse', { userId: genId(loadConfig()), comment: 'no such user' }, reporter);
+			assert.strictEqual(reportMissing.status, 400);
+			assert.strictEqual(castAsError(reportMissing.body as any).error.code, 'NO_SUCH_USER');
+		});
+
+		test('通報時にmoderatorのadminStreamへnewAbuseUserReportイベントを配信する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const reporter = await signup({ username: `hurs${suffix}` });
+			const target = await signup({ username: `hurst${suffix}` });
+
+			// alice はrootUserIdだが明示的なmoderatorロールを持たないため、
+			// getModeratorIds({includeAdmins:true, excludeExpire:true})の対象に含まれない(元実装と同様、includeRootは渡されない)。
+			// 通知対象として検証可能にするため、専用のmoderatorロールを付与したユーザーを用意する。
+			const moderator = await signup({ username: `hursm${suffix}` });
+			const moderatorRole = await role(alice, { name: `hono report-abuse moderator ${suffix}`, isModerator: true });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config),
+				roleId: moderatorRole.id,
+				userId: moderator.id,
+				expiresAt: null,
+			});
+
+			const sub = createRedisClient(config);
+			try {
+				const received = new Promise<{ channel: string; message: { type: string; body: any } }>((resolve, reject) => {
+					const timer = setTimeout(() => reject(new Error('timed out waiting for adminStream event')), 8000);
+					sub.on('message', (_ch: string, data: string) => {
+						const parsed = JSON.parse(data);
+						if (parsed.channel === `adminStream:${moderator.id}` && parsed.message?.type === 'newAbuseUserReport') {
+							clearTimeout(timer);
+							resolve(parsed);
+						}
+					});
+				});
+				await sub.subscribe(config.host);
+
+				const reported = await api('users/report-abuse', { userId: target.id, comment: `hono adminStream ${suffix}` }, reporter);
+				assert.strictEqual(reported.status, 204);
+
+				const event = await received;
+				assert.strictEqual(event.message.body.targetUserId, target.id);
+				assert.strictEqual(event.message.body.reporterId, reporter.id);
+				assert.strictEqual(event.message.body.comment, `hono adminStream ${suffix}`);
+			} finally {
+				await closeRedisConnection(sub);
+			}
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
@@ -10300,6 +10796,24 @@ describe('Endpoints', () => {
 			const res = await api('users/following', { userId: follower.id, birthday: 'not-a-date' });
 
 			assert.strictEqual(res.status, 400);
+		});
+
+		test('birthdayでフォロー中ユーザーを絞り込める', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hnflgbd${suffix}` });
+			const matchingFollowee = await signup({ username: `hnflgbdm${suffix}` });
+			const otherFollowee = await signup({ username: `hnflgbdo${suffix}` });
+
+			await api('i/update', { birthday: '2000-06-15' }, matchingFollowee);
+			await api('i/update', { birthday: '2000-07-20' }, otherFollowee);
+			await api('following/create', { userId: matchingFollowee.id }, follower);
+			await api('following/create', { userId: otherFollowee.id }, follower);
+
+			const res = await api('users/following', { userId: follower.id, birthday: '2024-06-15' }, follower);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].followeeId, matchingFollowee.id);
 		});
 
 		test('ユーザーが存在しなかったら怒る', async () => {

@@ -563,3 +563,43 @@ export async function handleHonoApiIGalleryLikes(
 		post: await packGalleryPostForHonoApi(deps, postById.get(like.postId) ?? like.postId, me),
 	})));
 }
+
+const usersGalleryPostsParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: ['userId'],
+} as const;
+
+type UsersGalleryPostsParams = {
+	userId: string;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiUsersGalleryPosts(
+	deps: HonoApiGalleryDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>[]> {
+	const params = parseHonoApiParams(usersGalleryPostsParamDef, body) as UsersGalleryPostsParams;
+	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(deps.config, time) }, params);
+	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
+		userId: params.userId,
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+}

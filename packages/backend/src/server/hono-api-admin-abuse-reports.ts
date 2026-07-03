@@ -4,27 +4,34 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { listAbuseReportNotificationRecipientsFromDatabase } from '@/core/AbuseReportNotificationRecipientStore.js';
-import { fetchAbuseUserReportByIdFromDatabase, listAbuseUserReportsFromDatabase, markAbuseUserReportForwardedInDatabase, resolveAbuseUserReportInDatabase, resolveAbuseUserReportPagination, updateAbuseUserReportModerationNoteInDatabase } from '@/core/AbuseUserReportStore.js';
+import sanitizeHtml from 'sanitize-html';
+import { deleteAbuseReportNotificationRecipientsFromDatabase, listAbuseReportNotificationRecipientsFromDatabase } from '@/core/AbuseReportNotificationRecipientStore.js';
+import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdFromDatabase, listAbuseUserReportsFromDatabase, markAbuseUserReportForwardedInDatabase, resolveAbuseUserReportInDatabase, resolveAbuseUserReportPagination, updateAbuseUserReportModerationNoteInDatabase } from '@/core/AbuseUserReportStore.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IActivity, IFlag, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { DeliverQueue, SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { EmailService } from '@/core/EmailService.js';
 import type { SystemWebhookPayload } from '@/core/SystemWebhookService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
+import type { MiAbuseReportNotificationRecipient } from '@/models/AbuseReportNotificationRecipient.js';
 import type { MiMeta } from '@/models/_.js';
-import type { MiLocalUser } from '@/models/User.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { HonoApiAdminStreamPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
+import { isHonoApiAdministrator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { packUserDetailedNotMeManyForHonoApi, packUserLiteManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -34,6 +41,11 @@ export type HonoApiAdminAbuseReportsDependencies = {
 	meta: MiMeta;
 	deliverQueue: DeliverQueue;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
+};
+
+export type HonoApiUsersReportAbuseDependencies = HonoApiAdminAbuseReportsDependencies & HonoApiRolePolicyDependencies & {
+	emailService: Pick<EmailService, 'sendEmail'>;
+	publishAdminStream?: HonoApiAdminStreamPublisher;
 };
 
 const adminResolveAbuseUserReportParamDef = {
@@ -152,10 +164,10 @@ function addActivityContext<T extends IObject>(config: Config, activity: T): T &
 	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
 }
 
-async function packAbuseReportForSystemWebhook(
+async function packAbuseReportForSystemWebhook<T extends 'abuseReport' | 'abuseReportResolved'>(
 	deps: HonoApiAdminAbuseReportsDependencies,
 	report: MiAbuseUserReport,
-): Promise<SystemWebhookPayload<'abuseReportResolved'>> {
+): Promise<SystemWebhookPayload<T>> {
 	const userIds = [...new Set([
 		report.reporterId,
 		report.targetUserId,
@@ -169,13 +181,16 @@ async function packAbuseReportForSystemWebhook(
 		reporter: usersMap.get(report.reporterId) ?? null,
 		targetUser: usersMap.get(report.targetUserId) ?? null,
 		assignee: report.assigneeId == null ? null : usersMap.get(report.assigneeId) ?? null,
-	};
+	} as SystemWebhookPayload<T>;
 }
 
-async function notifyAbuseReportResolvedSystemWebhook(
+export async function notifyAbuseReportSystemWebhookForHonoApi(
 	deps: HonoApiAdminAbuseReportsDependencies,
-	report: MiAbuseUserReport,
+	reports: MiAbuseUserReport[],
+	type: 'abuseReport' | 'abuseReportResolved',
 ): Promise<void> {
+	if (reports.length === 0) return;
+
 	const inactiveRecipients = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, {
 		method: ['webhook'],
 		joinSystemWebhook: true,
@@ -183,15 +198,23 @@ async function notifyAbuseReportResolvedSystemWebhook(
 	const excludes = new Set(inactiveRecipients.map(recipient => recipient.systemWebhookId).filter(x => x != null));
 	const webhooks = await listSystemWebhooksFromDatabase(deps.db, {
 		isActive: true,
-		on: ['abuseReportResolved'],
+		on: [type],
 	});
 	const targetWebhooks = webhooks.filter(webhook => !excludes.has(webhook.id));
 	if (targetWebhooks.length === 0) return;
 
-	const content = await packAbuseReportForSystemWebhook(deps, report);
+	await Promise.all(reports.map(async report => {
+		const content = await packAbuseReportForSystemWebhook(deps, report);
+		await Promise.all(targetWebhooks
+			.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, type, content)));
+	}));
+}
 
-	await Promise.all(targetWebhooks
-		.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, 'abuseReportResolved', content)));
+async function notifyAbuseReportResolvedSystemWebhook(
+	deps: HonoApiAdminAbuseReportsDependencies,
+	report: MiAbuseUserReport,
+): Promise<void> {
+	await notifyAbuseReportSystemWebhookForHonoApi(deps, [report], 'abuseReportResolved');
 }
 
 async function packAbuseUserReportsForHonoApi(
@@ -318,4 +341,194 @@ export async function handleHonoApiAdminUpdateAbuseUserReport(
 			after: params.moderationNote,
 		});
 	}
+}
+
+async function getModeratorIdsExcludeExpireForHonoApi(deps: HonoApiUsersReportAbuseDependencies): Promise<MiUser['id'][]> {
+	const roles = await listRolesFromDatabase(deps.db);
+	const moderatorRoles = roles.filter(role => role.isModerator || role.isAdministrator);
+	const assigns = moderatorRoles.length > 0
+		? await listRoleAssignmentsByRoleIdsFromDatabase(deps.db, moderatorRoles.map(role => role.id))
+		: [];
+
+	const now = Date.now();
+	return [...new Set(
+		assigns
+			.filter(assign => assign.expiresAt == null || assign.expiresAt.getTime() > now)
+			.map(assign => assign.userId),
+	)];
+}
+
+async function notifyAbuseReportAdminStreamForHonoApi(
+	deps: HonoApiUsersReportAbuseDependencies,
+	reports: MiAbuseUserReport[],
+): Promise<void> {
+	if (reports.length === 0 || deps.publishAdminStream == null) return;
+
+	const moderatorIds = await getModeratorIdsExcludeExpireForHonoApi(deps);
+
+	for (const moderatorId of moderatorIds) {
+		for (const report of reports) {
+			deps.publishAdminStream(moderatorId, 'newAbuseUserReport', {
+				id: report.id,
+				targetUserId: report.targetUserId,
+				reporterId: report.reporterId,
+				comment: report.comment,
+			});
+		}
+	}
+}
+
+async function removeUnauthorizedRecipientUsersForHonoApi(
+	deps: HonoApiUsersReportAbuseDependencies,
+	recipients: MiAbuseReportNotificationRecipient[],
+): Promise<MiAbuseReportNotificationRecipient[]> {
+	const userRecipients = recipients.filter(recipient => recipient.userId !== null);
+	const recipientUserIds = new Set(userRecipients.map(recipient => recipient.userId).filter(x => x != null));
+	if (recipientUserIds.size === 0) return recipients;
+
+	const authorizedUserIds = await getModeratorIdsExcludeExpireForHonoApi(deps);
+	const authorizedSet = new Set(authorizedUserIds);
+	const authorizedUserRecipients: MiAbuseReportNotificationRecipient[] = [];
+	const unauthorizedUserRecipients: MiAbuseReportNotificationRecipient[] = [];
+	for (const recipient of userRecipients) {
+		if (authorizedSet.has(recipient.userId!)) {
+			authorizedUserRecipients.push(recipient);
+		} else {
+			unauthorizedUserRecipients.push(recipient);
+		}
+	}
+
+	if (unauthorizedUserRecipients.length > 0) {
+		await deleteAbuseReportNotificationRecipientsFromDatabase(deps.db, unauthorizedUserRecipients.map(recipient => recipient.id));
+	}
+
+	const nonUserRecipients = recipients.filter(recipient => recipient.userId === null);
+	return [...nonUserRecipients, ...authorizedUserRecipients].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+async function notifyAbuseReportMailForHonoApi(
+	deps: HonoApiUsersReportAbuseDependencies,
+	reports: MiAbuseUserReport[],
+): Promise<void> {
+	if (reports.length === 0) return;
+
+	const emailRecipientsRaw = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, {
+		method: ['email'],
+		joinUser: true,
+	});
+	const emailRecipients = await removeUnauthorizedRecipientUsersForHonoApi(deps, emailRecipientsRaw);
+	const recipientEmailAddresses = emailRecipients
+		.filter(recipient => recipient.isActive && recipient.userProfile?.emailVerified)
+		.map(recipient => recipient.userProfile?.email)
+		.filter((email): email is string => email != null);
+
+	if (deps.meta.email) recipientEmailAddresses.push(deps.meta.email);
+	if (recipientEmailAddresses.length === 0) return;
+
+	for (const mailAddress of recipientEmailAddresses) {
+		await Promise.all(reports.map(report => deps.emailService.sendEmail(
+			mailAddress,
+			'New Abuse Report',
+			sanitizeHtml(report.comment),
+			sanitizeHtml(report.comment),
+		)));
+	}
+}
+
+async function reportAbuseForHonoApi(
+	deps: HonoApiUsersReportAbuseDependencies,
+	params: {
+		targetUserId: MiUser['id'];
+		targetUserHost: MiUser['host'];
+		reporterId: MiUser['id'];
+		reporterHost: MiUser['host'];
+		comment: string;
+	}[],
+): Promise<void> {
+	const reports: MiAbuseUserReport[] = [];
+	for (const param of params) {
+		const report = await createAbuseUserReportInDatabase(deps.db, {
+			id: genId(deps.config),
+			targetUserId: param.targetUserId,
+			targetUserHost: param.targetUserHost,
+			reporterId: param.reporterId,
+			reporterHost: param.reporterHost,
+			comment: param.comment,
+		});
+		reports.push(report);
+	}
+
+	await Promise.all([
+		notifyAbuseReportAdminStreamForHonoApi(deps, reports),
+		notifyAbuseReportSystemWebhookForHonoApi(deps, reports, 'abuseReport'),
+		notifyAbuseReportMailForHonoApi(deps, reports),
+	]);
+}
+
+function usersReportAbuseNoSuchUserError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such user.',
+		code: 'NO_SUCH_USER',
+		id: '1acefcb5-0959-43fd-9685-b48305736cb5',
+	});
+}
+
+function usersReportAbuseCannotReportYourselfError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Cannot report yourself.',
+		code: 'CANNOT_REPORT_YOURSELF',
+		id: '1e13149e-b1e8-43cf-902e-c01dbfcb202f',
+	});
+}
+
+function usersReportAbuseCannotReportAdminError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Cannot report the admin.',
+		code: 'CANNOT_REPORT_THE_ADMIN',
+		id: '35e166f5-05fb-4f87-a2d5-adb42676d48f',
+	});
+}
+
+const usersReportAbuseParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		comment: { type: 'string', minLength: 1, maxLength: 2048 },
+	},
+	required: ['userId', 'comment'],
+} as const;
+
+type UsersReportAbuseParams = {
+	userId: string;
+	comment: string;
+};
+
+export async function handleHonoApiUsersReportAbuse(
+	deps: HonoApiUsersReportAbuseDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(usersReportAbuseParamDef, body) as UsersReportAbuseParams;
+
+	const targetUser = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	if (targetUser == null) throw usersReportAbuseNoSuchUserError();
+
+	if (targetUser.id === me.id) {
+		throw usersReportAbuseCannotReportYourselfError();
+	}
+
+	if (await isHonoApiAdministrator(deps, targetUser)) {
+		throw usersReportAbuseCannotReportAdminError();
+	}
+
+	await reportAbuseForHonoApi(deps, [{
+		targetUserId: targetUser.id,
+		targetUserHost: targetUser.host,
+		reporterId: me.id,
+		reporterHost: null,
+		comment: params.comment,
+	}]);
 }

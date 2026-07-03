@@ -8,20 +8,24 @@ import type * as Redis from 'ioredis';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { Config } from '@/config.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
+import { isUserRelated } from '@/misc/is-user-related.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './hono-api-drive-file.js';
 import { packUserLiteForHonoApi, type UserPackingDependencies } from './hono-api-user.js';
+import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiNoteDependencies = HonoApiDriveFileDependencies & UserPackingDependencies & {
 	redis: Redis.Redis;
@@ -457,4 +461,115 @@ export async function fetchNoteDiffsForHonoApi(
 
 		return { id: note.id, reactions, reactionEmojis };
 	}));
+}
+
+const FEATURED_EPOCH = new Date('2023-01-01T00:00:00Z').getTime();
+const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
+
+function getFeaturedRankingCurrentWindowForHonoApi(windowRange: number): number {
+	const passed = new Date().getTime() - FEATURED_EPOCH;
+	return Math.floor(passed / windowRange);
+}
+
+async function getFeaturedRankingOfForHonoApi(
+	redis: Redis.Redis,
+	name: string,
+	windowRange: number,
+	threshold: number,
+): Promise<string[]> {
+	const currentWindow = getFeaturedRankingCurrentWindowForHonoApi(windowRange);
+	const previousWindow = currentWindow - 1;
+
+	const redisPipeline = redis.pipeline();
+	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	const [currentRankingResult, previousRankingResult] = await redisPipeline.exec()
+		.then(result => result ? result.map(r => (r[1] ?? []) as string[]) : [[], []]);
+
+	const ranking = new Map<string, number>();
+	for (let i = 0; i < currentRankingResult!.length; i += 2) {
+		const noteId = currentRankingResult![i]!;
+		const score = parseInt(currentRankingResult![i + 1]!, 10);
+		ranking.set(noteId, score);
+	}
+	for (let i = 0; i < previousRankingResult!.length; i += 2) {
+		const noteId = previousRankingResult![i]!;
+		const score = parseInt(previousRankingResult![i + 1]!, 10);
+		const exist = ranking.get(noteId);
+		if (exist != null) {
+			ranking.set(noteId, (exist + score) / 2);
+		} else {
+			ranking.set(noteId, score);
+		}
+	}
+
+	return Array.from(ranking.keys());
+}
+
+export function normalizeHonoApiUsersFeaturedNotesQuery(query: Record<string, string>): Record<string, unknown> {
+	const body: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(query)) {
+		if (key === 'limit') {
+			const numeric = Number(value);
+			body[key] = Number.isInteger(numeric) ? numeric : value;
+		} else {
+			body[key] = value;
+		}
+	}
+	return body;
+}
+
+const usersFeaturedNotesParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		untilId: { type: 'string', format: 'misskey:id' },
+		userId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['userId'],
+} as const;
+
+type UsersFeaturedNotesParams = {
+	limit: number;
+	untilId?: string;
+	userId: string;
+};
+
+export async function handleHonoApiUsersFeaturedNotes(
+	deps: HonoApiNoteDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(usersFeaturedNotesParamDef, body) as UsersFeaturedNotesParams;
+
+	const userIdsWhoBlockingMe = me ? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id)) : new Set<string>();
+
+	if (userIdsWhoBlockingMe.has(params.userId)) {
+		return [];
+	}
+
+	let noteIds = await getFeaturedRankingOfForHonoApi(deps.redis, `featuredPerUserNotesRanking:${params.userId}`, PER_USER_NOTES_RANKING_WINDOW, 50);
+
+	noteIds.sort((a, b) => a > b ? -1 : 1);
+	if (params.untilId) {
+		noteIds = noteIds.filter(id => id < params.untilId!);
+	}
+	noteIds = noteIds.slice(0, params.limit);
+
+	if (noteIds.length === 0) {
+		return [];
+	}
+
+	const userIdsWhoMeMuting = me ? new Set(await listMuteeIdsByMuterIdFromDatabase(deps.db, me.id)) : new Set<string>();
+
+	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter(note => {
+		if (me && isUserRelated(note, userIdsWhoBlockingMe, false)) return false;
+		if (me && isUserRelated(note, userIdsWhoMeMuting, true)) return false;
+
+		return true;
+	});
+
+	notes.sort((a, b) => a.id > b.id ? -1 : 1);
+
+	return await packNoteManyForHonoApi(deps, notes, me);
 }
