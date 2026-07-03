@@ -1048,6 +1048,27 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
 		});
 
+		test('hashtags/users finds users tagged with the given hashtag', async () => {
+			const suffix = Date.now().toString(36);
+			const tag = `hono_hashtag_users_${suffix}`;
+			const tagged = await signup({ username: `htu${suffix}` });
+			await updateUserInDatabase(db, tagged.id, { tags: [tag] });
+
+			const found = await api('hashtags/users', {
+				tag,
+				sort: '+follower',
+			});
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(u => u.id === tagged.id), true);
+
+			const notFound = await api('hashtags/users', {
+				tag: `missing_${tag}`,
+				sort: '+follower',
+			});
+			assert.strictEqual(notFound.status, 200);
+			assert.strictEqual((notFound.body as any[]).length, 0);
+		});
+
 		test('trend returns Redis-backed hashtag ranking charts', async () => {
 			const config = loadConfig();
 			const redis = createRedisClient(config);
