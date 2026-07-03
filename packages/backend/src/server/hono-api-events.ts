@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { BroadcastTypes, DriveEventTypes, InternalEventTypes, MainEventTypes } from '@/core/GlobalEventService.js';
+import type { BroadcastTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, UserListEventTypes } from '@/core/GlobalEventService.js';
 import type { MiUser } from '@/models/User.js';
+import type { MiUserList } from '@/models/UserList.js';
 
 export type HonoApiInternalEventPublisher = <K extends keyof InternalEventTypes>(
 	type: K,
@@ -26,4 +27,10 @@ export type HonoApiDriveStreamPublisher = <K extends keyof DriveEventTypes>(
 	userId: MiUser['id'],
 	type: K,
 	value?: DriveEventTypes[K],
+) => void;
+
+export type HonoApiUserListStreamPublisher = <K extends keyof UserListEventTypes>(
+	listId: MiUserList['id'],
+	type: K,
+	value?: UserListEventTypes[K],
 ) => void;
