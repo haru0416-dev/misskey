@@ -24,7 +24,7 @@ import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/Blockin
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
-import { createChannelInDatabase } from '@/core/ChannelStore.js';
+import { createChannelInDatabase, updateChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
@@ -4859,6 +4859,62 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(forbidden.body as any).error.code, 'NO_SUCH_ROLE');
 			assert.strictEqual(castAsError(forbidden.body as any).error.id, '30aaaee3-4792-48dc-ab0d-cf501a575ac5');
 		});
+
+		test('roles/notes はfanoutタイムラインの投稿をpublicのみpackして返す', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const explorableRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 3000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono roles/notes role ${suffix}`,
+				description: 'Hono roles/notes test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: { id: 'ebef1684-672d-49b6-ad82-1b3ec3784f88', type: 'isRemote' },
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const author = await signup({ username: `hrn${suffix}` });
+			const publicNoteId = genId(config, now - 2000);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'roles/notes public note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const followersNoteId = genId(config, now - 1000);
+			await createNoteInDatabase(db, {
+				id: followersNoteId,
+				text: 'roles/notes followers-only note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'followers',
+			});
+
+			const redis = createRedisClient(config);
+			try {
+				await redis.lpush(`list:roleTimeline:${explorableRole.id}`, followersNoteId, publicNoteId);
+
+				const notes = await api('roles/notes', { roleId: explorableRole.id }, author);
+				assert.strictEqual(notes.status, 200);
+				assert.strictEqual(notes.body.length, 1);
+				assert.strictEqual(notes.body[0].id, publicNoteId);
+			} finally {
+				await redis.del(`list:roleTimeline:${explorableRole.id}`);
+				await closeRedisConnection(redis);
+			}
+		});
 	});
 
 	describe('gallery', () => {
@@ -5135,6 +5191,43 @@ describe('Endpoints', () => {
 			assert.strictEqual(myFavorites.body.length, 1);
 			assert.strictEqual(myFavorites.body[0].id, clip.body.id);
 			assert.strictEqual(myFavorites.body[0].isFavorited, true);
+		});
+
+		test('clips/notes は可視性とNO_SUCH_CLIPを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcn2${suffix}` });
+			const stranger = await signup({ username: `hcn2s${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: `clip note ${suffix}`,
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const privateClip = await api('clips/create', { name: `Hono clip notes private ${suffix}`, isPublic: false }, owner);
+			assert.strictEqual(privateClip.status, 200);
+			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
+
+			const deniedForStranger = await api('clips/notes', { clipId: privateClip.body.id }, stranger);
+			assert.strictEqual(deniedForStranger.status, 400);
+			assert.strictEqual(castAsError(deniedForStranger.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const visibleForOwner = await api('clips/notes', { clipId: privateClip.body.id }, owner);
+			assert.strictEqual(visibleForOwner.status, 200);
+			assert.strictEqual(visibleForOwner.body.length, 1);
+			assert.strictEqual(visibleForOwner.body[0].id, noteId);
+
+			const publicClip = await api('clips/create', { name: `Hono clip notes public ${suffix}`, isPublic: true }, owner);
+			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
+			const visibleForAnyone = await api('clips/notes', { clipId: publicClip.body.id });
+			assert.strictEqual(visibleForAnyone.status, 200);
+			assert.strictEqual(visibleForAnyone.body.length, 1);
+
+			const missingClip = await api('clips/notes', { clipId: genId(config) });
+			assert.strictEqual(missingClip.status, 400);
+			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
 		});
 	});
 
@@ -8781,6 +8874,50 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 2);
+		});
+	});
+
+	describe('channels/show and channels/timeline', () => {
+		test('channels/show はpinnedNotesを含み、channels/timelineはNO_SUCH_CHANNELと投稿一覧を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcs${suffix}` });
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				name: `hono-channel-show-${suffix}`,
+				description: 'hono channel show test',
+			});
+			const pinnedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pinnedNoteId,
+				text: 'channel pinned note',
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+				channelId: channel.id,
+			});
+			await updateChannelInDatabase(db, channel.id, { pinnedNoteIds: [pinnedNoteId] });
+
+			const shown = await api('channels/show', { channelId: channel.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, channel.id);
+			assert.strictEqual(shown.body.pinnedNoteIds?.[0], pinnedNoteId);
+			assert.strictEqual(shown.body.pinnedNotes?.[0]?.id, pinnedNoteId);
+
+			const missingChannel = await api('channels/show', { channelId: genId(config) });
+			assert.strictEqual(missingChannel.status, 400);
+			assert.strictEqual(castAsError(missingChannel.body as any).error.code, 'NO_SUCH_CHANNEL');
+
+			const timeline = await api('channels/timeline', { channelId: channel.id });
+			assert.strictEqual(timeline.status, 200);
+			assert.strictEqual(timeline.body.length, 1);
+			assert.strictEqual(timeline.body[0].id, pinnedNoteId);
+			assert.strictEqual(timeline.body[0].channelId, channel.id);
+
+			const missingTimeline = await api('channels/timeline', { channelId: genId(config) });
+			assert.strictEqual(missingTimeline.status, 400);
+			assert.strictEqual(castAsError(missingTimeline.body as any).error.code, 'NO_SUCH_CHANNEL');
 		});
 	});
 

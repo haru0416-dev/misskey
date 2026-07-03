@@ -17,19 +17,26 @@ import {
 	resolveClipPagination,
 	updateClipInDatabase,
 } from '@/core/ClipStore.js';
-import { adjustNoteClippedCountInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { adjustNoteClippedCountInDatabase, fetchNoteByIdFromDatabase, listClipNotesFromDatabase } from '@/core/NoteStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiClip } from '@/models/Clip.js';
+import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
+import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiClipDependencies = UserPackingDependencies & HonoApiRolePolicyDependencies;
+
+export type HonoApiClipNotesDependencies = HonoApiNoteDependencies & {
+	meta: MiMeta;
+};
 
 const emptyParamDef = {
 	type: 'object',
@@ -81,6 +88,30 @@ const clipIdParamDef = {
 	},
 	required: ['clipId'],
 } as const;
+
+const clipNotesParamDef = {
+	type: 'object',
+	properties: {
+		clipId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		search: { type: 'string', minLength: 1, maxLength: 100, nullable: true },
+	},
+	required: ['clipId'],
+} as const;
+
+type ClipNotesParams = {
+	clipId: string;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	search?: string | null;
+};
 
 type ClipIdParams = {
 	clipId: string;
@@ -362,4 +393,38 @@ export async function handleHonoApiClipsRemoveNote(
 
 	await deleteClipNoteInDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
 	await adjustNoteClippedCountInDatabase(deps.db, params.noteId, -1);
+}
+
+function clipsNotesNoSuchClipError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such clip.', code: 'NO_SUCH_CLIP', id: '1d7645e6-2b6d-4635-b0fe-fe22b0e72e00' });
+}
+
+export async function handleHonoApiClipsNotes(
+	deps: HonoApiClipNotesDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(clipNotesParamDef, body) as ClipNotesParams;
+	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
+	if (clip == null) throw clipsNotesNoSuchClipError();
+	if (!clip.isPublic && (me == null || clip.userId !== me.id)) throw clipsNotesNoSuchClipError();
+
+	let sinceId = params.sinceId ?? null;
+	let untilId = params.untilId ?? null;
+	if (sinceId == null && untilId == null) {
+		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
+		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+	}
+
+	const notes = await listClipNotesFromDatabase(deps.db, {
+		clipId: clip.id,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		searchWords: params.search != null ? params.search.trim().split(' ').map(word => sqlLikeEscape(word)) : undefined,
+		me: me ?? null,
+		blockedHosts: deps.meta.blockedHosts,
+	});
+
+	return await packNoteManyForHonoApi(deps, notes, me);
 }
