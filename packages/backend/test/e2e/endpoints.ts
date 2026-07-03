@@ -6702,6 +6702,62 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/search', () => {
+		test('users/search はname/username/description一致、origin絞り込み、mute除外、detailスキーマを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const byName = await signup({ username: `husn${suffix}` });
+			await api('i/update', { name: `Hono Search Target ${suffix}` }, byName);
+
+			const byUsername = await signup({ username: `hussrch${suffix}` });
+
+			const byDescription = await signup({ username: `husd${suffix}` });
+			await updateUserProfileInDatabase(db, byDescription.id, {
+				description: `hono search description marker ${suffix}`,
+			});
+
+			const muter = await signup({ username: `husm${suffix}` });
+			const muted = await signup({ username: `hussrchmuted${suffix}` });
+			const muteRes = await api('mute/create', { userId: muted.id }, muter);
+			assert.strictEqual(muteRes.status, 204);
+
+			const byNameResult = await api('users/search', { query: `Hono Search Target ${suffix}` });
+			assert.strictEqual(byNameResult.status, 200);
+			assert.ok(byNameResult.body.some((u: any) => u.id === byName.id));
+
+			const byUsernameResult = await api('users/search', { query: `@hussrch${suffix}` });
+			assert.strictEqual(byUsernameResult.status, 200);
+			assert.ok(byUsernameResult.body.some((u: any) => u.id === byUsername.id));
+
+			const byDescriptionResult = await api('users/search', { query: `hono search description marker ${suffix}` });
+			assert.strictEqual(byDescriptionResult.status, 200);
+			assert.ok(byDescriptionResult.body.some((u: any) => u.id === byDescription.id));
+
+			const mutedIncludedForAnon = await api('users/search', { query: `hussrchmuted${suffix}` });
+			assert.strictEqual(mutedIncludedForAnon.status, 200);
+			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
+
+			const mutedExcludedForMuter = await api('users/search', { query: `hussrchmuted${suffix}` }, muter);
+			assert.strictEqual(mutedExcludedForMuter.status, 200);
+			assert.ok(!mutedExcludedForMuter.body.some((u: any) => u.id === muted.id));
+
+			const localOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'local' });
+			assert.strictEqual(localOnly.status, 200);
+			assert.ok(localOnly.body.some((u: any) => u.id === byUsername.id));
+
+			const remoteOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'remote' });
+			assert.strictEqual(remoteOnly.status, 200);
+			assert.ok(!remoteOnly.body.some((u: any) => u.id === byUsername.id));
+
+			const detailed = await api('users/search', { query: `@hussrch${suffix}`, detail: true });
+			assert.strictEqual(detailed.status, 200);
+			assert.ok(Object.prototype.hasOwnProperty.call(detailed.body[0], 'isLocked'));
+
+			const lite = await api('users/search', { query: `@hussrch${suffix}`, detail: false });
+			assert.strictEqual(lite.status, 200);
+			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();

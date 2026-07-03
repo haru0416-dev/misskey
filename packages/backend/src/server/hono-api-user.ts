@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { sql, type SQL } from 'drizzle-orm';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
 import {
+	deserializeUser,
 	fetchLocalUserByUsernameFromDatabase,
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
@@ -21,6 +23,8 @@ import { followRequestExistsInDatabase, listFollowRequestFolloweeIdsByFollowerId
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listAllFollowingsByFollowerIdFromDatabase, listFollowerIdsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import type { UserRow } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -665,4 +669,126 @@ export async function handleHonoApiUsersRelation(
 	return Array.isArray(params.userId)
 		? await getUserRelationsForHonoApi(deps, me.id, params.userId).then(it => [...it.values()])
 		: await getUserRelationForHonoApi(deps, me.id, params.userId).then(it => [it]);
+}
+
+function limitOffsetSqlForHonoApi(options: { limit?: number; offset?: number }): SQL {
+	return sql.join([
+		options.limit == null ? sql`` : sql`LIMIT ${options.limit}`,
+		options.offset == null ? sql`` : sql`OFFSET ${options.offset}`,
+	], sql` `);
+}
+
+async function searchUsersForHonoApi(
+	deps: { db: MiDrizzleDatabase },
+	query: string,
+	meId: MiUser['id'] | null,
+	options: { limit?: number; offset?: number; origin?: 'local' | 'remote' | 'combined' } = {},
+): Promise<MiUser[]> {
+	const activeThreshold = new Date(Date.now() - (1000 * 60 * 60 * 24 * 30));
+	const isUsername = query.startsWith('@') && !query.includes(' ') && query.indexOf('@', 1) === -1;
+	const isLocalUsername = /^\w{1,20}$/.test(query);
+
+	const nameConditions: SQL[] = [
+		sql`("user"."name" ILIKE ${'%' + sqlLikeEscape(query) + '%'} ${
+			isUsername
+				? sql`OR "user"."usernameLower" LIKE ${sqlLikeEscape(query.replace('@', '').toLowerCase()) + '%'}`
+				: isLocalUsername
+					? sql`OR "user"."usernameLower" LIKE ${'%' + sqlLikeEscape(query.toLowerCase()) + '%'}`
+					: sql``
+		})`,
+		sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`,
+		sql`"user"."isSuspended" = FALSE`,
+	];
+
+	if (meId != null) {
+		nameConditions.push(sql`"user"."id" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
+	}
+
+	if (options.origin === 'local') {
+		nameConditions.push(sql`"user"."host" IS NULL`);
+	} else if (options.origin === 'remote') {
+		nameConditions.push(sql`"user"."host" IS NOT NULL`);
+	}
+
+	const nameResult = await deps.db.execute<UserRow>(sql`
+		SELECT "user".*
+		FROM "user"
+		WHERE ${sql.join(nameConditions, sql` AND `)}
+		ORDER BY "user"."updatedAt" DESC NULLS LAST
+		${limitOffsetSqlForHonoApi(options)}
+	`);
+	let users = nameResult.rows.map(row => deserializeUser(row));
+
+	if (users.length < (options.limit ?? 30)) {
+		const profileConditions: SQL[] = [
+			sql`"prof"."description" ILIKE ${'%' + sqlLikeEscape(query) + '%'}`,
+		];
+
+		if (meId != null) {
+			profileConditions.push(sql`"prof"."userId" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
+		}
+
+		if (options.origin === 'local') {
+			profileConditions.push(sql`"prof"."userHost" IS NULL`);
+		} else if (options.origin === 'remote') {
+			profileConditions.push(sql`"prof"."userHost" IS NOT NULL`);
+		}
+
+		const profileUserQuery = sql`
+			SELECT "prof"."userId"
+			FROM "user_profile" AS "prof"
+			WHERE ${sql.join(profileConditions, sql` AND `)}
+		`;
+
+		const profileResult = await deps.db.execute<UserRow>(sql`
+			SELECT "user".*
+			FROM "user"
+			WHERE "user"."id" IN (${profileUserQuery})
+				AND ("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})
+				AND "user"."isSuspended" = FALSE
+			ORDER BY "user"."updatedAt" DESC NULLS LAST
+			${limitOffsetSqlForHonoApi(options)}
+		`);
+
+		users = users.concat(profileResult.rows.map(row => deserializeUser(row)));
+	}
+
+	return users;
+}
+
+const usersSearchParamDef = {
+	type: 'object',
+	properties: {
+		query: { type: 'string' },
+		offset: { type: 'integer', default: 0 },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		origin: { type: 'string', enum: ['local', 'remote', 'combined'], default: 'combined' },
+		detail: { type: 'boolean', default: true },
+	},
+	required: ['query'],
+} as const;
+
+type UsersSearchParams = {
+	query: string;
+	offset: number;
+	limit: number;
+	origin: 'local' | 'remote' | 'combined';
+	detail: boolean;
+};
+
+export async function handleHonoApiUsersSearch(
+	deps: UserPackingDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<unknown[]> {
+	const params = parseHonoApiParams(usersSearchParamDef, body) as UsersSearchParams;
+	const users = await searchUsersForHonoApi(deps, params.query.trim(), me?.id ?? null, {
+		offset: params.offset,
+		limit: params.limit,
+		origin: params.origin,
+	});
+
+	return params.detail
+		? await packUserDetailedManyForHonoApi(deps, users, me)
+		: await packUserLiteManyForHonoApi(deps, users);
 }
