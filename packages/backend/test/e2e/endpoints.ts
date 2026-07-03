@@ -7195,6 +7195,53 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/translate', () => {
+		test('role policy、可視性、DeepL未設定によるUNAVAILABLEを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnt${suffix}` });
+			const viewer = await signup({ username: `hntv${suffix}` });
+			const publicNote = await post(author, { text: 'hono translate target', visibility: 'public' });
+			const specifiedNote = await post(author, { text: 'hono translate specified', visibility: 'specified', visibleUserIds: [author.id] });
+
+			// deeplAuthKeyがテスト環境では未設定のため、可視な公開ノートに対してもUNAVAILABLEになる
+			const unavailableNoKey = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
+			assert.strictEqual(unavailableNoKey.status, 400);
+			assert.strictEqual(castAsError(unavailableNoKey.body as any).error.code, 'UNAVAILABLE');
+
+			const noSuchNote = await api('notes/translate', { noteId: genId(loadConfig()), targetLang: 'en' }, viewer);
+			assert.strictEqual(noSuchNote.status, 400);
+			assert.strictEqual(castAsError(noSuchNote.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const invisible = await api('notes/translate', { noteId: specifiedNote.id, targetLang: 'en' }, viewer);
+			assert.strictEqual(invisible.status, 400);
+			assert.strictEqual(castAsError(invisible.body as any).error.code, 'CANNOT_TRANSLATE_INVISIBLE_NOTE');
+
+			const noTranslatorRole = await role(alice, {
+				name: `hono notes translate denied ${suffix}`,
+			}, {
+				canUseTranslator: { priority: 1, useDefault: false, value: false },
+			});
+			const assignDenied = await api('admin/roles/assign', { roleId: noTranslatorRole.id, userId: viewer.id }, alice);
+			assert.strictEqual(assignDenied.status, 204);
+
+			const roleDenied = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
+			assert.strictEqual(roleDenied.status, 400);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'UNAVAILABLE');
+		});
+
+		test('本文が無いノートは204(本文無し)を返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hntn${suffix}` });
+			const file = await uploadFile(author);
+			const textlessNote = await post(author, { fileIds: [file.body!.id], visibility: 'public' });
+			assert.strictEqual(textlessNote.text, null);
+
+			const res = await api('notes/translate', { noteId: textlessNote.id, targetLang: 'en' }, author);
+			assert.strictEqual(res.status, 204);
+			assert.strictEqual(res.body, null);
+		});
+	});
+
 	describe('users/report-abuse', () => {
 		test('通報を作成し、自分自身・管理者・存在しないユーザーへの通報を拒否する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);

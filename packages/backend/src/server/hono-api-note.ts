@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { domainToASCII, URLSearchParams } from 'node:url';
 import type * as Redis from 'ioredis';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
@@ -16,6 +16,7 @@ import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { Config } from '@/config.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -24,6 +25,8 @@ import { isUserRelated } from '@/misc/is-user-related.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './hono-api-drive-file.js';
+import { HonoApiError } from './hono-api-error.js';
+import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { packUserLiteForHonoApi, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -572,4 +575,108 @@ export async function handleHonoApiUsersFeaturedNotes(
 	notes.sort((a, b) => a.id > b.id ? -1 : 1);
 
 	return await packNoteManyForHonoApi(deps, notes, me);
+}
+
+function notesTranslateUnavailableError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Translate of notes unavailable.',
+		code: 'UNAVAILABLE',
+		id: '50a70314-2d8a-431b-b433-efa5cc56444c',
+	});
+}
+
+function notesTranslateNoSuchNoteError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: 'bea9b03f-36e0-49c5-a4db-627a029f8971',
+	});
+}
+
+function notesTranslateCannotTranslateInvisibleNoteError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Cannot translate invisible note.',
+		code: 'CANNOT_TRANSLATE_INVISIBLE_NOTE',
+		id: 'ea29f2ca-c368-43b3-aaf1-5ac3e74bbe5d',
+	});
+}
+
+const notesTranslateParamDef = {
+	type: 'object',
+	properties: {
+		noteId: { type: 'string', format: 'misskey:id' },
+		targetLang: { type: 'string' },
+	},
+	required: ['noteId', 'targetLang'],
+} as const;
+
+type NotesTranslateParams = {
+	noteId: string;
+	targetLang: string;
+};
+
+export type HonoApiNotesTranslateDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies & {
+	httpRequestService: Pick<HttpRequestService, 'send'>;
+};
+
+export async function handleHonoApiNotesTranslate(
+	deps: HonoApiNotesTranslateDependencies,
+	me: MiUser,
+	body: Record<string, unknown>,
+): Promise<{ sourceLang: string; text: string } | undefined> {
+	const params = parseHonoApiParams(notesTranslateParamDef, body) as NotesTranslateParams;
+
+	const policies = await getHonoApiRolePolicies(deps, me);
+	if (!policies.canUseTranslator) {
+		throw notesTranslateUnavailableError();
+	}
+
+	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
+	if (note == null) throw notesTranslateNoSuchNoteError();
+
+	if (!(await isVisibleForMeForHonoApi(deps, note, me.id))) {
+		throw notesTranslateCannotTranslateInvisibleNoteError();
+	}
+
+	if (note.text == null) {
+		return undefined;
+	}
+
+	if (deps.meta.deeplAuthKey == null) {
+		throw notesTranslateUnavailableError();
+	}
+
+	let targetLang = params.targetLang;
+	if (targetLang.includes('-')) targetLang = targetLang.split('-')[0]!;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('text', note.text);
+	searchParams.append('target_lang', targetLang);
+
+	const endpoint = deps.meta.deeplIsPro ? 'https://api.deepl.com/v2/translate' : 'https://api-free.deepl.com/v2/translate';
+
+	const res = await deps.httpRequestService.send(endpoint, {
+		method: 'POST',
+		headers: {
+			'Authorization': `DeepL-Auth-Key ${deps.meta.deeplAuthKey}`,
+			'Content-Type': 'application/x-www-form-urlencoded',
+			Accept: 'application/json, */*',
+		},
+		body: searchParams.toString(),
+	});
+
+	const json = (await res.json()) as {
+		translations: {
+			detected_source_language: string;
+			text: string;
+		}[];
+	};
+
+	return {
+		sourceLang: json.translations[0]!.detected_source_language,
+		text: json.translations[0]!.text,
+	};
 }
