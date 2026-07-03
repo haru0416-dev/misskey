@@ -20,7 +20,7 @@ import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.j
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
-import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
@@ -64,6 +64,7 @@ import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.j
 import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
@@ -1045,6 +1046,27 @@ describe('Endpoints', () => {
 			});
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
+		});
+
+		test('hashtags/users finds users tagged with the given hashtag', async () => {
+			const suffix = Date.now().toString(36);
+			const tag = `hono_hashtag_users_${suffix}`;
+			const tagged = await signup({ username: `htu${suffix}` });
+			await updateUserInDatabase(db, tagged.id, { tags: [tag] });
+
+			const found = await api('hashtags/users', {
+				tag,
+				sort: '+follower',
+			});
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(u => u.id === tagged.id), true);
+
+			const notFound = await api('hashtags/users', {
+				tag: `missing_${tag}`,
+				sort: '+follower',
+			});
+			assert.strictEqual(notFound.status, 200);
+			assert.strictEqual((notFound.body as any[]).length, 0);
 		});
 
 		test('trend returns Redis-backed hashtag ranking charts', async () => {
@@ -3807,6 +3829,777 @@ describe('Endpoints', () => {
 			const limited = await api('notes/drafts/list', { limit: 1, untilId: plainDraft.id }, alice);
 			assert.strictEqual(limited.status, 200);
 			assert.strictEqual((limited.body as any[]).length, 1);
+		});
+
+		test('charts/notes returns a chart shaped array of the requested length', async () => {
+			const res = await api('charts/notes', { span: 'day', limit: 5 });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { local: { total: number[] }; remote: { total: number[] } };
+			assert.strictEqual(body.local.total.length, 5);
+			assert.strictEqual(body.remote.total.length, 5);
+			assert.strictEqual(body.local.total.every(v => typeof v === 'number'), true);
+		});
+
+		test('charts/notes via GET sets a public cache-control header for anonymous requests', async () => {
+			const res = await relativeFetch('api/charts/notes?span=hour&limit=3');
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
+			const body = await res.json() as { local: { total: number[] } };
+			assert.strictEqual(body.local.total.length, 3);
+		});
+
+		test('charts/instance groups results by the given host', async () => {
+			const config = loadConfig();
+			const host = `chart-${Date.now().toString(36)}.example.com`;
+			await createInstanceInDatabase(db, {
+				id: genId(config),
+				host,
+				firstRetrievedAt: new Date(),
+			});
+
+			const res = await api('charts/instance', { span: 'day', limit: 5, host });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { notes: { total: number[] } };
+			assert.strictEqual(body.notes.total.length, 5);
+		});
+
+		test('charts/user/notes returns a per-user chart scoped to the given userId', async () => {
+			const res = await api('charts/user/notes', { span: 'day', limit: 5, userId: alice.id });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { total: number[] };
+			assert.strictEqual(body.total.length, 5);
+		});
+
+		test('charts/user/drive returns a per-user drive chart scoped to the given userId', async () => {
+			const res = await api('charts/user/drive', { span: 'day', limit: 5, userId: alice.id });
+			assert.strictEqual(res.status, 200);
+			const body = res.body as { totalCount: number[]; totalSize: number[] };
+			assert.strictEqual(body.totalCount.length, 5);
+			assert.strictEqual(body.totalSize.length, 5);
+		});
+
+		test('antennas/create creates an antenna, rejects empty keywords, and validates the user list', async () => {
+			const suffix = Date.now().toString(36);
+
+			const created = await api('antennas/create', {
+				name: `antenna-${suffix}`,
+				src: 'home',
+				keywords: [['hello']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `antenna-${suffix}`);
+			assert.strictEqual(created.body.src, 'home');
+			assert.strictEqual(created.body.isActive, true);
+
+			const empty = await api('antennas/create', {
+				name: `antenna-empty-${suffix}`,
+				src: 'home',
+				keywords: [['']],
+				excludeKeywords: [['']],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(empty.status, 400);
+			assert.strictEqual(castAsError(empty.body as any).error.id, '53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
+
+			const noSuchList = await api('antennas/create', {
+				name: `antenna-nolist-${suffix}`,
+				src: 'list',
+				userListId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				keywords: [['hello']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+
+			const config = loadConfig();
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `antenna-list-${suffix}`,
+			});
+			const withList = await api('antennas/create', {
+				name: `antenna-list-src-${suffix}`,
+				src: 'list',
+				userListId: userList.id,
+				keywords: [['hello']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(withList.status, 200);
+			assert.strictEqual(withList.body.userListId, userList.id);
+		});
+
+		test('antennas/update updates an antenna and rejects foreign or missing antennas', async () => {
+			const suffix = Date.now().toString(36);
+			const created = await api('antennas/create', {
+				name: `antenna-upd-${suffix}`,
+				src: 'home',
+				keywords: [['before']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+
+			const updated = await api('antennas/update', {
+				antennaId: created.body.id,
+				name: `antenna-upd-renamed-${suffix}`,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.name, `antenna-upd-renamed-${suffix}`);
+
+			const emptyKeywordUpdate = await api('antennas/update', {
+				antennaId: created.body.id,
+				keywords: [['']],
+				excludeKeywords: [['']],
+			}, alice);
+			assert.strictEqual(emptyKeywordUpdate.status, 400);
+			assert.strictEqual(castAsError(emptyKeywordUpdate.body as any).error.id, '721aaff6-4e1b-4d88-8de6-877fae9f68c4');
+
+			const foreignUpdate = await api('antennas/update', {
+				antennaId: created.body.id,
+				name: 'hijack',
+			}, bob);
+			assert.strictEqual(foreignUpdate.status, 400);
+			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
+
+			const missingUpdate = await api('antennas/update', {
+				antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				name: 'missing',
+			}, alice);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
+		});
+
+		test('antennas/show and antennas/list scope antennas to the caller', async () => {
+			const suffix = Date.now().toString(36);
+			const created = await api('antennas/create', {
+				name: `antenna-show-${suffix}`,
+				src: 'home',
+				keywords: [['x']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+
+			const shown = await api('antennas/show', { antennaId: created.body.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+
+			const shownByBob = await api('antennas/show', { antennaId: created.body.id }, bob);
+			assert.strictEqual(shownByBob.status, 400);
+			assert.strictEqual(castAsError(shownByBob.body as any).error.id, 'c06569fb-b025-4f23-b22d-1fcd20d2816b');
+
+			const list = await api('antennas/list', {}, alice);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual((list.body as any[]).some(a => a.id === created.body.id), true);
+		});
+
+		test('antennas/delete removes an antenna, rejecting foreign or missing antennas', async () => {
+			const suffix = Date.now().toString(36);
+			const created = await api('antennas/create', {
+				name: `antenna-del-${suffix}`,
+				src: 'home',
+				keywords: [['x']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+
+			const foreignDelete = await api('antennas/delete', { antennaId: created.body.id }, bob);
+			assert.strictEqual(foreignDelete.status, 400);
+			assert.strictEqual(castAsError(foreignDelete.body as any).error.id, 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+
+			const deleted = await api('antennas/delete', { antennaId: created.body.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const missingDelete = await api('antennas/delete', { antennaId: created.body.id }, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+		});
+
+		test('antennas/notes returns fanout-timeline notes and antennas/remove-note removes one', async () => {
+			const config = loadConfig();
+			const created = await api('antennas/create', {
+				name: `antenna-notes-${Date.now().toString(36)}`,
+				src: 'home',
+				keywords: [['x']],
+				excludeKeywords: [[]],
+				users: [],
+				caseSensitive: false,
+				withReplies: false,
+				withFile: false,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			const antennaId = created.body.id;
+
+			const note = await createNoteInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'antenna timeline note',
+				visibility: 'public',
+			});
+
+			const redis = createRedisClient(config);
+			try {
+				await redis.lpush(`list:antennaTimeline:${antennaId}`, note.id);
+
+				const notes = await api('antennas/notes', { antennaId, limit: 10 }, alice);
+				assert.strictEqual(notes.status, 200);
+				assert.strictEqual((notes.body as any[]).some(n => n.id === note.id), true);
+
+				const removed = await api('antennas/remove-note', { antennaId, noteId: note.id }, alice);
+				assert.strictEqual(removed.status, 204);
+
+				const remaining = await redis.lrange(`list:antennaTimeline:${antennaId}`, 0, -1);
+				assert.strictEqual(remaining.includes(note.id), false);
+
+				const missingAntenna = await api('antennas/remove-note', { antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', noteId: note.id }, alice);
+				assert.strictEqual(missingAntenna.status, 400);
+				assert.strictEqual(castAsError(missingAntenna.body as any).error.id, '850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
+			} finally {
+				await redis.del(`list:antennaTimeline:${antennaId}`);
+				await closeRedisConnection(redis);
+			}
+		});
+
+		test('i/2fa/register and i/2fa/done enable TOTP two-factor authentication', async () => {
+			const user = await signup({ username: `twofa${Date.now().toString(36)}` });
+
+			const wrongPassword = await api('i/2fa/register', { password: 'wrong' }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '78d6c839-20c9-4c66-b90a-fc0542168b48');
+
+			const registered = await api('i/2fa/register', { password: 'test' }, user);
+			assert.strictEqual(registered.status, 200);
+			assert.strictEqual(typeof registered.body.secret, 'string');
+			assert.strictEqual(typeof registered.body.qr, 'string');
+
+			// MISSKEY_TEST_CHECK_DUPLICATED_TOTP is unset here, so the server accepts any TOTP token in test env.
+			const done = await api('i/2fa/done', { token: '000000' }, user);
+			assert.strictEqual(done.status, 200);
+			assert.strictEqual((done.body as any).backupCodes.length, 5);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profile.twoFactorEnabled, true);
+
+			const unregistered = await api('i/2fa/unregister', { password: 'test', token: '000000' }, user);
+			assert.strictEqual(unregistered.status, 204);
+
+			const afterUnregister = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(afterUnregister.twoFactorEnabled, false);
+		});
+
+		test('i/2fa/register-key requires two-factor authentication to already be enabled', async () => {
+			const user = await signup({ username: `twofakey${Date.now().toString(36)}` });
+
+			const notEnabled = await api('i/2fa/register-key', { password: 'test' }, user);
+			assert.strictEqual(notEnabled.status, 400);
+			assert.strictEqual(castAsError(notEnabled.body as any).error.id, 'bf32b864-449b-47b8-974e-f9a5468546f1');
+
+			const wrongPassword = await api('i/2fa/register-key', { password: 'wrong' }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '38769596-efe2-4faf-9bec-abbb3f2cd9ba');
+		});
+
+		test('i/2fa/key-done requires a matching password and two-factor authentication to already be enabled', async () => {
+			const user = await signup({ username: `twofakeydone${Date.now().toString(36)}` });
+
+			const wrongPassword = await api('i/2fa/key-done', { password: 'wrong', name: 'my key', credential: {} }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
+
+			const notEnabled = await api('i/2fa/key-done', { password: 'test', name: 'my key', credential: {} }, user);
+			assert.strictEqual(notEnabled.status, 400);
+			assert.strictEqual(castAsError(notEnabled.body as any).error.id, '798d6847-b1ed-4f9c-b1f9-163c42655995');
+		});
+
+		test('i/2fa/update-key and i/2fa/remove-key manage an existing security key', async () => {
+			const user = await signup({ username: `twofaupdkey${Date.now().toString(36)}` });
+			const keyId = `hono-key-${Date.now().toString(36)}`;
+			await createUserSecurityKeyInDatabase(db, {
+				id: keyId,
+				userId: user.id,
+				name: 'original name',
+				publicKey: 'dummy-public-key',
+				counter: 0,
+				credentialDeviceType: 'singleDevice',
+				credentialBackedUp: false,
+				transports: [],
+			});
+
+			const noSuchKey = await api('i/2fa/update-key', { name: 'renamed', credentialId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, user);
+			assert.strictEqual(noSuchKey.status, 400);
+			assert.strictEqual(castAsError(noSuchKey.body as any).error.id, 'f9c5467f-d492-4d3c-9a8g-a70dacc86512');
+
+			const accessDenied = await api('i/2fa/update-key', { name: 'renamed', credentialId: keyId }, alice);
+			assert.strictEqual(accessDenied.status, 400);
+			assert.strictEqual(castAsError(accessDenied.body as any).error.id, '1fb7cb09-d46a-4fff-b8df-057708cce513');
+
+			const updated = await api('i/2fa/update-key', { name: 'renamed', credentialId: keyId }, user);
+			assert.strictEqual(updated.status, 200);
+			assert.deepStrictEqual(updated.body, {});
+
+			const wrongPassword = await api('i/2fa/remove-key', { password: 'wrong', credentialId: keyId }, user);
+			assert.strictEqual(wrongPassword.status, 400);
+			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '141c598d-a825-44c8-9173-cfb9d92be493');
+
+			const removed = await api('i/2fa/remove-key', { password: 'test', credentialId: keyId }, user);
+			assert.strictEqual(removed.status, 200);
+			assert.deepStrictEqual(removed.body, {});
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profile.usePasswordLessLogin, false);
+		});
+
+		test('i/2fa/password-less requires a security key before it can be enabled', async () => {
+			const user = await signup({ username: `twofapwless${Date.now().toString(36)}` });
+
+			const noKey = await api('i/2fa/password-less', { value: true }, user);
+			assert.strictEqual(noKey.status, 400);
+			assert.strictEqual(castAsError(noKey.body as any).error.id, 'f9c54d7f-d4c2-4d3c-9a8g-a70daac86512');
+
+			await createUserSecurityKeyInDatabase(db, {
+				id: `hono-pwless-key-${Date.now().toString(36)}`,
+				userId: user.id,
+				name: 'a key',
+				publicKey: 'dummy-public-key',
+				counter: 0,
+				credentialDeviceType: 'singleDevice',
+				credentialBackedUp: false,
+				transports: [],
+			});
+
+			const enabled = await api('i/2fa/password-less', { value: true }, user);
+			assert.strictEqual(enabled.status, 204);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(profile.usePasswordLessLogin, true);
+		});
+
+		test('pages/create creates a page and rejects missing files or duplicate names', async () => {
+			const suffix = Date.now().toString(36);
+			const file = await uploadFile(alice);
+
+			const created = await api('pages/create', {
+				title: `hono page ${suffix}`,
+				name: `hono-page-${suffix}`,
+				content: [{ id: 'block1', type: 'text', text: 'hello' }],
+				variables: [],
+				script: '',
+				eyeCatchingImageId: file.body!.id,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `hono-page-${suffix}`);
+			assert.strictEqual(created.body.userId, alice.id);
+			assert.strictEqual(created.body.eyeCatchingImageId, file.body!.id);
+			assert.strictEqual(created.body.eyeCatchingImage.id, file.body!.id);
+
+			const noSuchFile = await api('pages/create', {
+				title: 'no file',
+				name: `hono-page-nofile-${suffix}`,
+				content: [],
+				variables: [],
+				script: '',
+				eyeCatchingImageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+			}, alice);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b7b97489-0f66-4b12-a5ff-b21bd63f6e1c');
+
+			const duplicateName = await api('pages/create', {
+				title: 'dup',
+				name: `hono-page-${suffix}`,
+				content: [],
+				variables: [],
+				script: '',
+			}, alice);
+			assert.strictEqual(duplicateName.status, 400);
+			assert.strictEqual(castAsError(duplicateName.body as any).error.id, '4650348e-301c-499a-83c9-6aa988c66bc1');
+		});
+
+		test('pages/update updates a page and rejects missing pages, foreign pages, and name conflicts', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const other = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `other page ${suffix}`,
+				name: `hono-other-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `before update ${suffix}`,
+				name: `hono-update-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const updated = await api('pages/update', {
+				pageId: page.id,
+				title: `after update ${suffix}`,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const shown = await api('pages/show', { pageId: page.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.title, `after update ${suffix}`);
+
+			const missing = await api('pages/update', {
+				pageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				title: 'missing',
+			}, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '21149b9e-3616-4778-9592-c4ce89f5a864');
+
+			const foreign = await api('pages/update', {
+				pageId: page.id,
+				title: 'hijack',
+			}, bob);
+			assert.strictEqual(foreign.status, 400);
+			assert.strictEqual(castAsError(foreign.body as any).error.id, '3c15cd52-3b4b-4274-967d-6456fc4f792b');
+
+			const nameConflict = await api('pages/update', {
+				pageId: page.id,
+				name: other.name,
+			}, alice);
+			assert.strictEqual(nameConflict.status, 400);
+			assert.strictEqual(castAsError(nameConflict.body as any).error.id, '2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab');
+		});
+
+		test('pages/delete removes a page, rejects foreign pages, and allows moderators to delete others\' pages', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `to delete ${suffix}`,
+				name: `hono-delete-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const foreign = await api('pages/delete', { pageId: page.id }, bob);
+			assert.strictEqual(foreign.status, 400);
+			assert.strictEqual(castAsError(foreign.body as any).error.id, '8b741b3e-2c22-44b3-a15f-29949aa1601e');
+
+			const moderatorRole = await role(alice, { isModerator: true });
+			const moderator = await signup({ username: `pagemod${suffix}` });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config),
+				roleId: moderatorRole.id,
+				userId: moderator.id,
+			});
+
+			const deleted = await api('pages/delete', { pageId: page.id }, moderator);
+			assert.strictEqual(deleted.status, 204);
+
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const log = logs.find(l => l.userId === moderator.id && l.type === 'deletePage' && (l.info as any).pageId === page.id);
+			assert.ok(log);
+			assert.strictEqual((log!.info as any).pageUserId, alice.id);
+
+			const missing = await api('pages/delete', { pageId: page.id }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'eb0c6e1d-d519-4764-9486-52a7e1c6392a');
+		});
+
+		test('pages/show finds a page by id or by name and username, and pages/featured lists liked pages', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `show page ${suffix}`,
+				name: `hono-show-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const byId = await api('pages/show', { pageId: page.id });
+			assert.strictEqual(byId.status, 200);
+			assert.strictEqual(byId.body.id, page.id);
+
+			const byName = await api('pages/show', { name: page.name, username: alice.username });
+			assert.strictEqual(byName.status, 200);
+			assert.strictEqual(byName.body.id, page.id);
+
+			const notFound = await api('pages/show', { pageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' });
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.id, '222120c0-3ead-4528-811b-b96f233388d7');
+
+			const liked = await api('pages/like', { pageId: page.id }, bob);
+			assert.strictEqual(liked.status, 204);
+
+			const featured = await api('pages/featured', {});
+			assert.strictEqual(featured.status, 200);
+			assert.strictEqual((featured.body as any[]).some(p => p.id === page.id), true);
+		});
+
+		test('i/pages lists the caller\'s pages and i/page-likes lists liked pages', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `i pages ${suffix}`,
+				name: `hono-i-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const ownPages = await api('i/pages', {}, alice);
+			assert.strictEqual(ownPages.status, 200);
+			assert.strictEqual((ownPages.body as any[]).some(p => p.id === page.id), true);
+
+			const liked = await api('pages/like', { pageId: page.id }, bob);
+			assert.strictEqual(liked.status, 204);
+
+			const likes = await api('i/page-likes', {}, bob);
+			assert.strictEqual(likes.status, 200);
+			const likeEntry = (likes.body as any[]).find(l => l.page.id === page.id);
+			assert.ok(likeEntry);
+			assert.strictEqual(typeof likeEntry.id, 'string');
+		});
+
+		test('users/pages lists only a user\'s public pages without credentials', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const publicPage = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `users pages public ${suffix}`,
+				name: `hono-users-page-public-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const shown = await api('users/pages', { userId: alice.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual((shown.body as any[]).some(p => p.id === publicPage.id), true);
+		});
+
+		test('users/lists/push adds a member, rejects duplicates, missing lists/users, and blocked users', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-push-list-${suffix}`,
+			});
+			const blocker = await signup({ username: `pushblocker${suffix}` });
+			await createBlockingInDatabase(db, {
+				id: genId(config),
+				blockerId: blocker.id,
+				blockeeId: alice.id,
+			});
+
+			const noSuchList = await api('users/lists/push', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', userId: bob.id }, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '2214501d-ac96-4049-b717-91e42272a711');
+
+			const noSuchUser = await api('users/lists/push', { listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
+
+			const blocked = await api('users/lists/push', { listId: userList.id, userId: blocker.id }, alice);
+			assert.strictEqual(blocked.status, 400);
+			assert.strictEqual(castAsError(blocked.body as any).error.id, '990232c5-3f9d-4d83-9f3f-ef27b6332a4b');
+
+			const pushed = await api('users/lists/push', { listId: userList.id, userId: bob.id }, alice);
+			assert.strictEqual(pushed.status, 204);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, bob.id, userList.id), true);
+
+			const duplicate = await api('users/lists/push', { listId: userList.id, userId: bob.id }, alice);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '1de7c884-1595-49e9-857e-61f12f4d4fc5');
+		});
+
+		test('users/lists/pull removes a member and rejects missing lists or users', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-pull-list-${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userListId: userList.id,
+				userListUserId: alice.id,
+			});
+
+			const noSuchList = await api('users/lists/pull', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', userId: bob.id }, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
+
+			const noSuchUser = await api('users/lists/pull', { listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '588e7f72-c744-4a61-b180-d354e912bda2');
+
+			const pulled = await api('users/lists/pull', { listId: userList.id, userId: bob.id }, alice);
+			assert.strictEqual(pulled.status, 204);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, bob.id, userList.id), false);
+		});
+
+		test('users/lists/update-membership toggles withReplies for a member', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-membership-list-${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userListId: userList.id,
+				userListUserId: alice.id,
+				withReplies: false,
+			});
+
+			const updated = await api('users/lists/update-membership', { listId: userList.id, userId: bob.id, withReplies: true }, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const memberships = await api('users/lists/get-memberships', { listId: userList.id }, alice);
+			assert.strictEqual(memberships.status, 200);
+			const membership = (memberships.body as any[]).find(m => m.userId === bob.id);
+			assert.ok(membership);
+			assert.strictEqual(membership.withReplies, true);
+			assert.strictEqual(membership.user.id, bob.id);
+		});
+
+		test('users/lists/get-memberships supports forPublic without credentials', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-public-memberships-list-${suffix}`,
+				isPublic: true,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userListId: userList.id,
+				userListUserId: alice.id,
+			});
+
+			const publicMemberships = await api('users/lists/get-memberships', { listId: userList.id, forPublic: true });
+			assert.strictEqual(publicMemberships.status, 200);
+			assert.strictEqual((publicMemberships.body as any[]).some(m => m.userId === bob.id), true);
+
+			const missing = await api('users/lists/get-memberships', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', forPublic: true });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+		});
+
+		test('users/lists/create-from-public copies members from an existing public list', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const sourceList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-source-list-${suffix}`,
+				isPublic: true,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: carol.id,
+				userListId: sourceList.id,
+				userListUserId: bob.id,
+			});
+
+			const privateList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-private-source-list-${suffix}`,
+				isPublic: false,
+			});
+
+			const noSuchList = await api('users/lists/create-from-public', { name: 'copy', listId: privateList.id }, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '9292f798-6175-4f7d-93f4-b6742279667d');
+
+			const copied = await api('users/lists/create-from-public', { name: `hono-copied-list-${suffix}`, listId: sourceList.id }, alice);
+			assert.strictEqual(copied.status, 200);
+			assert.strictEqual(copied.body.name, `hono-copied-list-${suffix}`);
+			assert.deepStrictEqual(copied.body.userIds, [carol.id]);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, carol.id, copied.body.id), true);
 		});
 
 		test('users/achievements returns profile achievements without credentials', async () => {
