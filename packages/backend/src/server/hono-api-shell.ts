@@ -73,7 +73,7 @@ import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta, handleHonoApiMeta
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
-import type { HonoApiMainStreamPublisher } from './hono-api-notification.js';
+import { handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification, type HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiAdminPromoCreate, handleHonoApiPromoRead } from './hono-api-promo.js';
 import { assertHonoApiRateLimit } from './hono-api-rate-limit.js';
@@ -2502,6 +2502,62 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			}
 
 			return jsonResponse(c, await handleHonoApiInviteList(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notifications/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:notifications');
+			await assertHonoApiRateLimit(deps, 'notifications/create', {
+				duration: 1000 * 60,
+				max: 10,
+			}, auth.user.id);
+
+			await handleHonoApiNotificationsCreate(deps, auth.user, auth.token, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notifications/flush', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:notifications');
+
+			handleHonoApiNotificationsFlush(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notifications/mark-all-as-read', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:notifications');
+
+			handleHonoApiNotificationsMarkAllAsRead(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notifications/test-notification', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:notifications');
+			await assertHonoApiRateLimit(deps, 'notifications/test-notification', {
+				duration: 1000 * 60,
+				max: 10,
+			}, auth.user.id);
+
+			handleHonoApiNotificationsTestNotification(deps, auth.user);
+			return emptyResponse(c);
 		});
 	});
 

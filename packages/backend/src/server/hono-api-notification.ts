@@ -17,10 +17,12 @@ import { parseObjectIdFull } from '@/misc/id/object-id.js';
 import { parseUlidFull } from '@/misc/id/ulid.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { Packed } from '@/misc/json-schema.js';
+import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { packHonoApiRole } from './hono-api-roles.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-events.js';
+import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 
@@ -52,13 +54,54 @@ type RoleAssignedNotification = {
 	roleId: string;
 };
 
-type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification;
+type AppNotification = {
+	id: string;
+	createdAt: string;
+	type: 'app';
+	appAccessTokenId: string | null;
+	customBody: string;
+	customHeader: string | null;
+	customIcon: string | null;
+};
+
+type TestNotification = {
+	id: string;
+	createdAt: string;
+	type: 'test';
+};
+
+type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification;
 
 type HonoPackedRoleAssignedNotification = {
 	id: string;
 	createdAt: string;
 	type: 'roleAssigned';
 	role: Packed<'Role'>;
+};
+
+type HonoPackedAppNotification = {
+	id: string;
+	createdAt: string;
+	type: 'app';
+	body: string;
+	header: string | null;
+	icon: string | null;
+};
+
+const notificationsCreateParamDef = {
+	type: 'object',
+	properties: {
+		body: { type: 'string' },
+		header: { type: 'string', nullable: true },
+		icon: { type: 'string', nullable: true },
+	},
+	required: ['body'],
+} as const;
+
+type NotificationsCreateParams = {
+	body: string;
+	header?: string | null;
+	icon?: string | null;
 };
 
 function parseIdFull(config: Config, id: string): { date: number; additional: bigint } {
@@ -171,4 +214,117 @@ export function createRoleAssignedNotification(
 			deps.publishMainStream?.(userId, 'unreadNotification', packed);
 		}).catch(() => {}));
 	})());
+}
+
+export function createAppNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	data: {
+		appAccessTokenId: string | null;
+		customBody: string;
+		customHeader: string | null;
+		customIcon: string | null;
+	},
+): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.app?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'app',
+			appAccessTokenId: data.appAccessTokenId,
+			customBody: data.customBody,
+			customHeader: data.customHeader,
+			customIcon: data.customIcon,
+		} satisfies AppNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+		const packed = {
+			id: notification.id,
+			createdAt: notification.createdAt,
+			type: notification.type,
+			body: notification.customBody,
+			header: notification.customHeader,
+			icon: notification.customIcon,
+		} satisfies HonoPackedAppNotification;
+
+		deps.publishMainStream?.(userId, 'notification', packed);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', packed);
+		}).catch(() => {}));
+	})());
+}
+
+export function createTestNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.test?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'test',
+		} satisfies TestNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+
+		deps.publishMainStream?.(userId, 'notification', notification);
+
+		const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+		deps.publishMainStream?.(userId, 'unreadNotification', notification);
+	})());
+}
+
+async function flushAllHonoApiNotifications(deps: HonoApiNotificationDependencies, userId: MiUser['id']): Promise<void> {
+	await Promise.all([
+		deps.redis.del(`notificationTimeline:${userId}`),
+		deps.redis.del(`latestReadNotification:${userId}`),
+	]);
+	deps.publishMainStream?.(userId, 'notificationFlushed');
+}
+
+async function markAllHonoApiNotificationsAsRead(deps: HonoApiNotificationDependencies, userId: MiUser['id'], force: boolean): Promise<void> {
+	const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+
+	const latestNotificationIdsRes = await deps.redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 1);
+	const latestNotificationId = latestNotificationIdsRes[0]?.[0];
+
+	if (latestNotificationId == null) return;
+
+	await deps.redis.set(`latestReadNotification:${userId}`, latestNotificationId);
+
+	if (force || latestReadNotificationId == null || latestReadNotificationId < latestNotificationId) {
+		deps.publishMainStream?.(userId, 'readAllNotifications');
+	}
+}
+
+export async function handleHonoApiNotificationsCreate(
+	deps: HonoApiNotificationDependencies,
+	me: MiUser,
+	token: MiAccessToken | null,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(notificationsCreateParamDef, body) as NotificationsCreateParams;
+	createAppNotification(deps, me.id, {
+		appAccessTokenId: token ? token.id : null,
+		customBody: params.body,
+		customHeader: params.header ?? token?.name ?? null,
+		customIcon: params.icon ?? token?.iconUrl ?? null,
+	});
+}
+
+export function handleHonoApiNotificationsFlush(deps: HonoApiNotificationDependencies, me: MiUser): void {
+	trackPromise(flushAllHonoApiNotifications(deps, me.id));
+}
+
+export function handleHonoApiNotificationsMarkAllAsRead(deps: HonoApiNotificationDependencies, me: MiUser): void {
+	trackPromise(markAllHonoApiNotificationsAsRead(deps, me.id, true));
+}
+
+export function handleHonoApiNotificationsTestNotification(deps: HonoApiNotificationDependencies, me: MiUser): void {
+	createTestNotification(deps, me.id);
 }

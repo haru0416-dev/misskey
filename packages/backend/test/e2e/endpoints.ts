@@ -4198,6 +4198,118 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notifications', () => {
+		async function readNotificationTimeline(config: ReturnType<typeof loadConfig>, userId: string) {
+			const redis = createRedisClient(config);
+			try {
+				const entries = await redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 10);
+				return entries.map(([, values]) => {
+					const dataIndex = values.findIndex(value => value === 'data');
+					return JSON.parse(values[dataIndex + 1]!) as { type?: string; body?: string; header?: string | null; icon?: string | null };
+				});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		}
+
+		test('notifications/create は scope 保護つきで app 通知を作成しwrite:notifications 以外は拒否される', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnc${suffix}` });
+
+			const wrongScopeToken = await createAppToken(user, ['read:account']);
+			const scopeDenied = await api('notifications/create', { body: 'hello' }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const created = await api('notifications/create', { body: 'hello world', header: 'my header', icon: 'https://example.com/icon.png' }, user);
+			assert.strictEqual(created.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const notifications = await readNotificationTimeline(config, user.id);
+			const appNotification = notifications.find(n => n.type === 'app');
+			assert.ok(appNotification);
+			assert.strictEqual(appNotification.body, 'hello world');
+			assert.strictEqual(appNotification.header, 'my header');
+			assert.strictEqual(appNotification.icon, 'https://example.com/icon.png');
+		});
+
+		test('notifications/create は通知設定が never の場合は作成しない', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hncn${suffix}` });
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			await updateUserProfileInDatabase(db, user.id, {
+				notificationRecieveConfig: {
+					...profile.notificationRecieveConfig,
+					app: { type: 'never' },
+				},
+			});
+
+			const created = await api('notifications/create', { body: 'should be suppressed' }, user);
+			assert.strictEqual(created.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const notifications = await readNotificationTimeline(config, user.id);
+			assert.strictEqual(notifications.some(n => n.type === 'app'), false);
+		});
+
+		test('notifications/test-notification はテスト通知を作成する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hntn${suffix}` });
+
+			const res = await api('notifications/test-notification', {}, user);
+			assert.strictEqual(res.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const notifications = await readNotificationTimeline(config, user.id);
+			assert.ok(notifications.some(n => n.type === 'test'));
+		});
+
+		test('notifications/mark-all-as-read は既読状態を更新しreadAllNotificationsを発行する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnmar${suffix}` });
+
+			await api('notifications/test-notification', {}, user);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('notifications/mark-all-as-read', {}, user);
+			assert.strictEqual(res.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const redis = createRedisClient(config);
+			try {
+				const latestReadNotificationId = await redis.get(`latestReadNotification:${user.id}`);
+				assert.ok(latestReadNotificationId);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+
+		test('notifications/flush はタイムラインと既読状態を消去する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnf${suffix}` });
+
+			await api('notifications/test-notification', {}, user);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('notifications/flush', {}, user);
+			assert.strictEqual(res.status, 204);
+
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const redis = createRedisClient(config);
+			try {
+				const exists = await redis.exists(`notificationTimeline:${user.id}`);
+				assert.strictEqual(exists, 0);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+	});
+
 	describe('auth/session', () => {
 		test('legacy auth session flow', async () => {
 			const app = await api('app/create', {
