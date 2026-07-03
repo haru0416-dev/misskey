@@ -31,6 +31,7 @@ import {
 } from '@/core/ChannelStore.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { listChannelTimelineNotesFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -43,6 +44,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
+import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -196,6 +198,48 @@ const channelMuteDeleteParamDef = {
 type ChannelMuteDeleteParams = {
 	channelId: string;
 };
+
+const channelShowParamDef = {
+	type: 'object',
+	properties: {
+		channelId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['channelId'],
+} as const;
+
+type ChannelShowParams = {
+	channelId: string;
+};
+
+const channelTimelineParamDef = {
+	type: 'object',
+	properties: {
+		channelId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: ['channelId'],
+} as const;
+
+type ChannelTimelineParams = {
+	channelId: string;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+function channelsShowNoSuchChannelError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such channel.', code: 'NO_SUCH_CHANNEL', id: '6f6c314b-7486-4897-8966-c04a66a02923' });
+}
+
+function channelsTimelineNoSuchChannelError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such channel.', code: 'NO_SUCH_CHANNEL', id: '4d0eeeba-a02c-4c3c-9966-ef60d38d2e7f' });
+}
 
 function channelCreateNoSuchFileError(): HonoApiError {
 	return new HonoApiError({
@@ -365,6 +409,26 @@ async function packChannelsForHonoApi(
 ): Promise<HonoApiPackedChannel[]> {
 	const hint = await buildChannelPackHint(deps, channels, me);
 	return channels.map(channel => packChannelForHonoApi(deps, channel, me, hint));
+}
+
+async function packChannelDetailedForHonoApi(
+	deps: HonoApiChannelsDependencies & HonoApiNoteDependencies,
+	channel: MiChannel,
+	me: MiLocalUser | null,
+): Promise<HonoApiPackedChannel> {
+	const hint = await buildChannelPackHint(deps, [channel], me);
+	const packed = packChannelForHonoApi(deps, channel, me, hint);
+
+	const pinnedNotes = channel.pinnedNoteIds.length > 0
+		? await listNotesByIdsFromDatabase(deps.db, channel.pinnedNoteIds)
+		: [];
+	const packedPinnedNotes = (await packNoteManyForHonoApi(deps, pinnedNotes, me))
+		.sort((a, b) => channel.pinnedNoteIds.indexOf(a.id) - channel.pinnedNoteIds.indexOf(b.id));
+
+	return {
+		...packed,
+		pinnedNotes: packedPinnedNotes,
+	};
 }
 
 export async function handleHonoApiChannelsFeatured(
@@ -646,4 +710,47 @@ export async function handleHonoApiChannelsMuteList(
 		.sort((a, b) => a.id.localeCompare(b.id));
 
 	return await packChannelsForHonoApi(deps, channels, me);
+}
+
+export async function handleHonoApiChannelsShow(
+	deps: HonoApiChannelsDependencies & HonoApiNoteDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<HonoApiPackedChannel> {
+	const params = parseHonoApiParams(channelShowParamDef, body) as ChannelShowParams;
+	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
+	if (channel == null) throw channelsShowNoSuchChannelError();
+
+	return await packChannelDetailedForHonoApi(deps, channel, me);
+}
+
+export async function handleHonoApiChannelsTimeline(
+	deps: HonoApiChannelsDependencies & HonoApiNoteDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(channelTimelineParamDef, body) as ChannelTimelineParams;
+	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
+
+	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
+	if (channel == null) throw channelsTimelineNoSuchChannelError();
+
+	let mutingChannelIds: string[] = [];
+	if (me) {
+		mutingChannelIds = (await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date()))
+			.filter(id => id !== channel.id);
+	}
+
+	const notes = await listChannelTimelineNotesFromDatabase(deps.db, {
+		channelId: channel.id,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		me,
+		blockedHosts: deps.meta.blockedHosts,
+		mutedChannelIds: mutingChannelIds,
+	});
+
+	return await packNoteManyForHonoApi(deps, notes, me);
 }
