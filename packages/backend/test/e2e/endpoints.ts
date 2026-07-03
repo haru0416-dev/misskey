@@ -1095,6 +1095,60 @@ describe('Endpoints', () => {
 			assert.strictEqual((foundByHash.body as any[]).some(f => f.id === file.id), true);
 		});
 
+		test('drive/stream は自分のファイルのみtype絞り込み・ページングして返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hdsm${suffix}` });
+			const otherUser = await signup({ username: `hdso${suffix}` });
+
+			const imageMd5 = createHash('md5').update(`hono-drive-stream-image-${suffix}`).digest('hex');
+			const imageFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: user.id,
+				userHost: null,
+				md5: imageMd5,
+				name: `hono-drive-stream-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${imageMd5}`,
+			});
+			const textMd5 = createHash('md5').update(`hono-drive-stream-text-${suffix}`).digest('hex');
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: user.id,
+				userHost: null,
+				md5: textMd5,
+				name: `hono-drive-stream-${suffix}.txt`,
+				type: 'text/plain',
+				size: 5,
+				storedInternal: true,
+				url: `${origin}/files/${textMd5}`,
+			});
+			const otherMd5 = createHash('md5').update(`hono-drive-stream-other-${suffix}`).digest('hex');
+			const otherFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: otherUser.id,
+				userHost: null,
+				md5: otherMd5,
+				name: `hono-drive-stream-other-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${otherMd5}`,
+			});
+
+			const all = await api('drive/stream', { limit: 100 }, user);
+			assert.strictEqual(all.status, 200);
+			assert.strictEqual(all.body.length, 2);
+			assert.ok(!all.body.some((f: any) => f.id === otherFile.id));
+			assert.strictEqual(all.body[0].user, null);
+
+			const imagesOnly = await api('drive/stream', { limit: 100, type: 'image/png' }, user);
+			assert.strictEqual(imagesOnly.status, 200);
+			assert.deepStrictEqual(imagesOnly.body.map((f: any) => f.id), [imageFile.id]);
+		});
+
 		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
