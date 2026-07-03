@@ -56,6 +56,7 @@ import {
 	handleHonoApiDriveFoldersShow,
 	handleHonoApiDriveFoldersUpdate,
 } from './hono-api-drive.js';
+import { handleHonoApiDriveFilesAttachedNotes, handleHonoApiDriveFilesFind, handleHonoApiDriveFilesFindByHash, handleHonoApiDriveFilesList, handleHonoApiDriveFilesShow } from './hono-api-drive-files.js';
 import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoApiGalleryPosts, handleHonoApiGalleryPostsCreate, handleHonoApiGalleryPostsDelete, handleHonoApiGalleryPostsLike, handleHonoApiGalleryPostsShow, handleHonoApiGalleryPostsUnlike, handleHonoApiGalleryPostsUpdate } from './hono-api-gallery.js';
 import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationFollowers, handleHonoApiFederationFollowing, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, handleHonoApiFederationUsers, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
@@ -1649,6 +1650,61 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body));
+		});
+	});
+
+	app.post('/drive/files', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFilesList(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/files/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFilesShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/files/find', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFilesFind(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/files/find-by-hash', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFilesFindByHash(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/files/attached-notes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFilesAttachedNotes(deps, auth.user, body));
 		});
 	});
 

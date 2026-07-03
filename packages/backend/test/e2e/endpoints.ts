@@ -1048,6 +1048,83 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
 		});
 
+		test('drive/files, drive/files/show, drive/files/find, and drive/files/find-by-hash scope results to the caller', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-drive-files-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-drive-files-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+
+			const list = await api('drive/files', { limit: 100 }, alice);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual((list.body as any[]).some(f => f.id === file.id), true);
+
+			const shownById = await api('drive/files/show', { fileId: file.id }, alice);
+			assert.strictEqual(shownById.status, 200);
+			assert.strictEqual(shownById.body.id, file.id);
+
+			const shownByUrl = await api('drive/files/show', { url: file.url }, alice);
+			assert.strictEqual(shownByUrl.status, 200);
+			assert.strictEqual(shownByUrl.body.id, file.id);
+
+			const notFound = await api('drive/files/show', { fileId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.id, '067bc436-2718-4795-b0fb-ecbe43949e31');
+
+			const deniedForBob = await api('drive/files/show', { fileId: file.id }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '25b73c73-68b1-41d0-bad1-381cfdf6579f');
+
+			const found = await api('drive/files/find', { name: file.name }, alice);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(f => f.id === file.id), true);
+
+			const foundByHash = await api('drive/files/find-by-hash', { md5 }, alice);
+			assert.strictEqual(foundByHash.status, 200);
+			assert.strictEqual((foundByHash.body as any[]).some(f => f.id === file.id), true);
+		});
+
+		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-attached-notes-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-attached-notes-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+			const note = await createNoteInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'attached file note',
+				visibility: 'public',
+				fileIds: [file.id],
+			});
+
+			const found = await api('drive/files/attached-notes', { fileId: file.id }, alice);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(n => n.id === note.id), true);
+
+			const deniedForBob = await api('drive/files/attached-notes', { fileId: file.id }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, 'c118ece3-2e4b-4296-99d1-51756e32d232');
+		});
+
 		test('hashtags/users finds users tagged with the given hashtag', async () => {
 			const suffix = Date.now().toString(36);
 			const tag = `hono_hashtag_users_${suffix}`;
