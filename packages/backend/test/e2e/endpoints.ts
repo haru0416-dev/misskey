@@ -5387,6 +5387,174 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes relations (children/conversation/mentions/replies/renotes)', () => {
+		test('reply/renoteの親子関係とmentionsを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnr${suffix}` });
+			const mentioned = await signup({ username: `hnrm${suffix}` });
+			const stranger = await signup({ username: `hnrs${suffix}` });
+
+			const rootId = genId(config);
+			await createNoteInDatabase(db, {
+				id: rootId,
+				text: 'root note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const replyId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyId,
+				text: 'reply note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: rootId,
+			});
+			const grandReplyId = genId(config);
+			await createNoteInDatabase(db, {
+				id: grandReplyId,
+				text: 'grand reply note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: replyId,
+			});
+			const renoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: renoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				renoteId: rootId,
+			});
+			const mentionNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: mentionNoteId,
+				text: `@${mentioned.username} hi`,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				mentions: [mentioned.id],
+			});
+
+			const children = await api('notes/children', { noteId: rootId });
+			assert.strictEqual(children.status, 200);
+			const childIds = children.body.map((n: any) => n.id).sort();
+			assert.deepStrictEqual(childIds, [replyId, renoteId].sort());
+
+			const replies = await api('notes/replies', { noteId: rootId });
+			assert.strictEqual(replies.status, 200);
+			assert.strictEqual(replies.body.length, 1);
+			assert.strictEqual(replies.body[0].id, replyId);
+
+			const renotes = await api('notes/renotes', { noteId: rootId });
+			assert.strictEqual(renotes.status, 200);
+			assert.strictEqual(renotes.body.length, 1);
+			assert.strictEqual(renotes.body[0].id, renoteId);
+
+			const missingRenotes = await api('notes/renotes', { noteId: genId(config) });
+			assert.strictEqual(missingRenotes.status, 400);
+			assert.strictEqual(castAsError(missingRenotes.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const conversation = await api('notes/conversation', { noteId: grandReplyId });
+			assert.strictEqual(conversation.status, 200);
+			const conversationIds = conversation.body.map((n: any) => n.id).sort();
+			assert.deepStrictEqual(conversationIds, [rootId, replyId].sort());
+
+			const missingConversation = await api('notes/conversation', { noteId: genId(config) });
+			assert.strictEqual(missingConversation.status, 400);
+			assert.strictEqual(castAsError(missingConversation.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const mentions = await api('notes/mentions', {}, mentioned);
+			assert.strictEqual(mentions.status, 200);
+			assert.ok(mentions.body.some((n: any) => n.id === mentionNoteId));
+			assert.strictEqual(mentions.body.some((n: any) => n.id === rootId), false);
+
+			const noMentionsForStranger = await api('notes/mentions', {}, stranger);
+			assert.strictEqual(noMentionsForStranger.status, 200);
+			assert.strictEqual(noMentionsForStranger.body.some((n: any) => n.id === mentionNoteId), false);
+		});
+	});
+
+	describe('notes/state and notes/favorites', () => {
+		test('notes/state、notes/favorites/{create,delete}はfavorite状態とachievementを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnf${suffix}` });
+			const favoriter = await signup({ username: `hnff${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'favorite target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const stateBefore = await api('notes/state', { noteId }, favoriter);
+			assert.strictEqual(stateBefore.status, 200);
+			assert.strictEqual(stateBefore.body.isFavorited, false);
+			assert.strictEqual(stateBefore.body.isMutedThread, false);
+
+			const missingFavorite = await api('notes/favorites/delete', { noteId }, favoriter);
+			assert.strictEqual(missingFavorite.status, 400);
+			assert.strictEqual(castAsError(missingFavorite.body as any).error.code, 'NOT_FAVORITED');
+
+			const favorited = await api('notes/favorites/create', { noteId }, favoriter);
+			assert.strictEqual(favorited.status, 204);
+
+			const duplicateFavorite = await api('notes/favorites/create', { noteId }, favoriter);
+			assert.strictEqual(duplicateFavorite.status, 400);
+			assert.strictEqual(castAsError(duplicateFavorite.body as any).error.code, 'ALREADY_FAVORITED');
+
+			const stateAfter = await api('notes/state', { noteId }, favoriter);
+			assert.strictEqual(stateAfter.body.isFavorited, true);
+
+			const authorProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, author.id);
+			assert.ok(authorProfile.achievements.some(a => a.name === 'myNoteFavorited1'));
+
+			const unfavorited = await api('notes/favorites/delete', { noteId }, favoriter);
+			assert.strictEqual(unfavorited.status, 204);
+
+			const stateFinal = await api('notes/state', { noteId }, favoriter);
+			assert.strictEqual(stateFinal.body.isFavorited, false);
+		});
+
+		test('notes/thread-muting/{create,delete}はミュート状態を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `htm${suffix}` });
+			const muter = await signup({ username: `htmm${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'thread mute target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const muted = await api('notes/thread-muting/create', { noteId }, muter);
+			assert.strictEqual(muted.status, 204);
+
+			const stateAfterMute = await api('notes/state', { noteId }, muter);
+			assert.strictEqual(stateAfterMute.body.isMutedThread, true);
+
+			const unmuted = await api('notes/thread-muting/delete', { noteId }, muter);
+			assert.strictEqual(unmuted.status, 204);
+
+			const stateAfterUnmute = await api('notes/state', { noteId }, muter);
+			assert.strictEqual(stateAfterUnmute.body.isMutedThread, false);
+
+			const missingNote = await api('notes/thread-muting/create', { noteId: genId(config) }, muter);
+			assert.strictEqual(missingNote.status, 400);
+			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
+		});
+	});
+
 	describe('page-push', () => {
 		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
 			const config = loadConfig();

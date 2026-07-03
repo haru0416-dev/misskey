@@ -78,7 +78,7 @@ import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-ap
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
 import { handleHonoApiIClaimAchievement, handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification, type HonoApiMainStreamPublisher } from './hono-api-notification.js';
-import { handleHonoApiNotesShow } from './hono-api-notes.js';
+import { handleHonoApiNotesChildren, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesMentions, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesShow, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete } from './hono-api-notes.js';
 import { handleHonoApiPagePush } from './hono-api-page-push.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiAdminPromoCreate, handleHonoApiPromoRead } from './hono-api-promo.js';
@@ -2326,6 +2326,121 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(c, await handleHonoApiNotesShow(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/children', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotesChildren(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/conversation', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotesConversation(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/mentions', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiNotesMentions(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/replies', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotesReplies(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/renotes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotesRenotes(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/state', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiNotesState(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/favorites/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:favorites');
+			await assertHonoApiRateLimit(deps, 'notes/favorites/create', {
+				duration: 60 * 60 * 1000,
+				max: 20,
+			}, auth.user.id);
+
+			await handleHonoApiNotesFavoritesCreate(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notes/favorites/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:favorites');
+
+			await handleHonoApiNotesFavoritesDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notes/thread-muting/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+			await assertHonoApiRateLimit(deps, 'notes/thread-muting/create', {
+				duration: 60 * 60 * 1000,
+				max: 10,
+			}, auth.user.id);
+
+			await handleHonoApiNotesThreadMutingCreate(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notes/thread-muting/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiNotesThreadMutingDelete(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 
