@@ -10,6 +10,7 @@ import {
 	decrementNoteRepliesCountInDatabase,
 	deleteNoteByIdAndUserIdFromDatabase,
 	fetchNoteByIdFromDatabase,
+	listNotesByUserIdAndRenoteIdFromDatabase,
 } from '@/core/NoteStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiNote } from '@/models/Note.js';
@@ -52,7 +53,7 @@ type NotesDeleteParams = {
 	noteId: string;
 };
 
-async function deleteNoteForHonoApi(
+export async function deleteNoteForHonoApi(
 	deps: HonoApiNotesDeleteDependencies,
 	user: { id: MiUser['id']; uri: MiUser['uri']; host: MiUser['host']; isBot: MiUser['isBot'] },
 	note: MiNote,
@@ -128,6 +129,46 @@ export async function handleHonoApiNotesDelete(
 }
 
 export const notesDeleteRateLimit = {
+	duration: ms('1hour'),
+	max: 300,
+	minInterval: ms('1sec'),
+};
+
+function notesUnrenoteNoSuchNoteError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'efd4a259-2442-496b-8dd7-b255aa1a160f' });
+}
+
+const notesUnrenoteParamDef = {
+	type: 'object',
+	properties: {
+		noteId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['noteId'],
+} as const;
+
+type NotesUnrenoteParams = {
+	noteId: string;
+};
+
+export async function handleHonoApiNotesUnrenote(
+	deps: HonoApiNotesDeleteDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(notesUnrenoteParamDef, body) as NotesUnrenoteParams;
+
+	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
+	if (note == null) throw notesUnrenoteNoSuchNoteError();
+
+	const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(deps.db, me.id, note.id);
+	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
+
+	for (const renote of renotes) {
+		void deleteNoteForHonoApi(deps, user, renote);
+	}
+}
+
+export const notesUnrenoteRateLimit = {
 	duration: ms('1hour'),
 	max: 300,
 	minInterval: ms('1sec'),

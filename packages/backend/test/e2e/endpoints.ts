@@ -10005,6 +10005,34 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/unrenote', () => {
+		test('自分のRenoteを取り消せる', async () => {
+			const target = await api('notes/create', { text: 'to be unrenoted' }, alice);
+			assert.strictEqual(target.status, 200);
+
+			const renote = await api('notes/create', { renoteId: target.body.createdNote.id }, bob);
+			assert.strictEqual(renote.status, 200);
+
+			const res = await api('notes/unrenote', { noteId: target.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 204);
+
+			// fire-and-forget な削除が反映されるまでポーリングする
+			let shown;
+			for (let i = 0; i < 20; i++) {
+				shown = await api('notes/show', { noteId: renote.body.createdNote.id }, bob);
+				if (shown.status === 400) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.strictEqual(shown!.status, 400);
+		});
+
+		test('存在しない投稿のunrenoteで怒られる', async () => {
+			const res = await api('notes/unrenote', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'efd4a259-2442-496b-8dd7-b255aa1a160f');
+		});
+	});
+
 	describe('notes/reactions/create', () => {
 		test('リアクションできる', async () => {
 			const bobPost = await post(bob, { text: 'hi' });
