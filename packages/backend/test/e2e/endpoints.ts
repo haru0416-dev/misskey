@@ -10001,6 +10001,48 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('i/notifications', () => {
+		test('includeTypesで指定したtypeの通知のみ返る', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hnnfie${suffix}` });
+			const follower = await signup({ username: `hnnfir${suffix}` });
+			await api('following/create', { userId: followee.id }, follower);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('i/notifications', { includeTypes: ['follow'] }, followee);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].type, 'follow');
+		});
+
+		test('excludeTypesで指定したtypeの通知が除外される', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hnnexe${suffix}` });
+			const follower = await signup({ username: `hnnexr${suffix}` });
+			await api('following/create', { userId: followee.id }, follower);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('i/notifications', { excludeTypes: ['follow'] }, followee);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 0);
+		});
+
+		test('includeTypesが空配列の場合、空配列が返る', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hnniee${suffix}` });
+			const follower = await signup({ username: `hnnier${suffix}` });
+			await api('following/create', { userId: followee.id }, follower);
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const res = await api('i/notifications', { includeTypes: [] }, followee);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 0);
+		});
+	});
+
 	describe('notes/show', () => {
 		test('投稿が取得できる', async () => {
 			const myPost = await post(alice, {
