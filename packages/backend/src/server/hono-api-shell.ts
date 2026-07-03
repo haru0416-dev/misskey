@@ -18,6 +18,7 @@ import type { UserAuthService } from '@/core/UserAuthService.js';
 import type { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import type { WebAuthnService } from '@/core/WebAuthnService.js';
 import type { EmailService } from '@/core/EmailService.js';
+import type { HonoChartWriters } from './hono-chart-runtime.js';
 import type Logger from '@/logger.js';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertOptionalCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken, type HonoApiAuthenticated } from './hono-api-auth.js';
@@ -56,7 +57,7 @@ import {
 	handleHonoApiDriveFoldersShow,
 	handleHonoApiDriveFoldersUpdate,
 } from './hono-api-drive.js';
-import { handleHonoApiDriveFilesAttachedNotes, handleHonoApiDriveFilesFind, handleHonoApiDriveFilesFindByHash, handleHonoApiDriveFilesList, handleHonoApiDriveFilesShow } from './hono-api-drive-files.js';
+import { handleHonoApiDriveFilesAttachedNotes, handleHonoApiDriveFilesDelete, handleHonoApiDriveFilesFind, handleHonoApiDriveFilesFindByHash, handleHonoApiDriveFilesList, handleHonoApiDriveFilesMoveBulk, handleHonoApiDriveFilesShow, handleHonoApiDriveFilesUpdate } from './hono-api-drive-files.js';
 import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoApiGalleryPosts, handleHonoApiGalleryPostsCreate, handleHonoApiGalleryPostsDelete, handleHonoApiGalleryPostsLike, handleHonoApiGalleryPostsShow, handleHonoApiGalleryPostsUnlike, handleHonoApiGalleryPostsUpdate } from './hono-api-gallery.js';
 import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationFollowers, handleHonoApiFederationFollowing, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, handleHonoApiFederationUsers, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
@@ -128,6 +129,7 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication' | 'initiateRegistration' | 'verifyRegistration'>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
+	chartWriters: HonoChartWriters;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
@@ -1705,6 +1707,41 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:drive');
 
 			return jsonResponse(c, await handleHonoApiDriveFilesAttachedNotes(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/files/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:drive');
+
+			await handleHonoApiDriveFilesDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/drive/files/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:drive');
+
+			return jsonResponse(c, await handleHonoApiDriveFilesUpdate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/files/move-bulk', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:drive');
+
+			await handleHonoApiDriveFilesMoveBulk(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 

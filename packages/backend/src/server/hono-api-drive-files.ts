@@ -3,24 +3,38 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { startDriveFileDeletion, type DriveFileDeletionDependencies } from '@/core/DriveFileDeletionLogic.js';
 import {
 	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByUrlFromDatabase,
 	listDriveFilesByMd5AndUserIdFromDatabase,
 	listDriveFilesByNameUserIdAndFolderIdFromDatabase,
 	listDriveFilesForUserFromDatabase,
+	updateDriveFileInDatabase,
+	updateDriveFilesFolderByIdsAndUserIdInDatabase,
+	type DriveFileUpdate,
 } from '@/core/DriveFileStore.js';
+import { fetchDriveFolderByIdAndUserIdFromDatabase, fetchDriveFolderByIdAndUserIdOrFailFromDatabase } from '@/core/DriveFolderStore.js';
+import type { InternalStorageService } from '@/core/InternalStorageService.js';
+import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { listNotesByAttachedFileIdFromDatabase } from '@/core/NoteStore.js';
+import type { ObjectStorageQueue } from '@/core/QueueModule.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
 import { packDriveFileManyForHonoApi, packDriveFileOrFailForHonoApi, type HonoApiDriveFileDependencies } from './hono-api-drive-file.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
-import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
+import { getHonoApiRolePolicies, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
+import type { HonoChartWriters } from './hono-chart-runtime.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
-export type HonoApiDriveFilesDependencies = HonoApiNoteDependencies & HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies;
+export type HonoApiDriveFilesDependencies = HonoApiNoteDependencies & HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies & {
+	objectStorageQueue: ObjectStorageQueue;
+	internalStorageService: Pick<InternalStorageService, 'del'>;
+	chartWriters: HonoChartWriters;
+};
 
 function noSuchFileError(id: string): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such file.', code: 'NO_SUCH_FILE', id });
@@ -230,4 +244,167 @@ export async function handleHonoApiDriveFilesAttachedNotes(
 	});
 
 	return await packNoteManyForHonoApi(deps, notes, me, { detail: true });
+}
+
+function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDependencies): DriveFileDeletionDependencies {
+	return {
+		db: deps.db,
+		meta: deps.meta,
+		deleteInternalFile: key => deps.internalStorageService.del(key),
+		enqueueDeleteObjectStorageFile: key => deps.objectStorageQueue.add('deleteFile', { key }, {
+			removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
+			removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+		}),
+		updateDriveChart: (file, isAdditional) => deps.chartWriters.driveChart.update(file, isAdditional),
+		updatePerUserDriveChart: (file, isAdditional) => deps.chartWriters.perUserDriveChart.update(file, isAdditional),
+		updateInstanceDriveChart: (file, isAdditional) => deps.chartWriters.instanceChart.updateDrive(file, isAdditional),
+		publishDriveStream: (userId, type, value) => deps.publishDriveStream?.(userId, type, value),
+		isModerator: user => isHonoApiModerator(deps, user),
+		logDriveFileDeletion: (deleter, info) => logModerationEventInDatabase(deps, deleter, 'deleteDriveFile', info),
+	};
+}
+
+const driveFilesDeleteParamDef = {
+	type: 'object',
+	properties: {
+		fileId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['fileId'],
+} as const;
+
+type DriveFilesDeleteParams = {
+	fileId: string;
+};
+
+export async function handleHonoApiDriveFilesDelete(
+	deps: HonoApiDriveFilesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(driveFilesDeleteParamDef, body) as DriveFilesDeleteParams;
+
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
+	if (file == null) throw noSuchFileError('908939ec-e52b-4458-b395-1025195cea58');
+
+	if (!await isHonoApiModerator(deps, me) && file.userId !== me.id) {
+		throw accessDeniedError('5eb8d909-2540-4970-90b8-dd6f86088121');
+	}
+
+	startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, false, me);
+}
+
+const driveFilesUpdateParamDef = {
+	type: 'object',
+	properties: {
+		fileId: { type: 'string', format: 'misskey:id' },
+		folderId: { type: 'string', format: 'misskey:id', nullable: true },
+		name: { type: 'string' },
+		isSensitive: { type: 'boolean' },
+		comment: { type: 'string', nullable: true, maxLength: 512 },
+	},
+	required: ['fileId'],
+} as const;
+
+type DriveFilesUpdateParams = {
+	fileId: string;
+	folderId?: string | null;
+	name?: string;
+	isSensitive?: boolean;
+	comment?: string | null;
+};
+
+function validateHonoApiDriveFileName(name: string): boolean {
+	return (
+		(name.trim().length > 0) &&
+		(name.length <= 200) &&
+		(name.indexOf('\\') === -1) &&
+		(name.indexOf('/') === -1) &&
+		(name.indexOf('..') === -1)
+	);
+}
+
+export async function handleHonoApiDriveFilesUpdate(
+	deps: HonoApiDriveFilesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'DriveFile'>> {
+	const params = parseHonoApiParams(driveFilesUpdateParamDef, body) as DriveFilesUpdateParams;
+
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
+	if (file == null) throw noSuchFileError('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
+
+	if (!await isHonoApiModerator(deps, me) && file.userId !== me.id) {
+		throw accessDeniedError('01a53b27-82fc-445b-a0c1-b558465a8ed2');
+	}
+
+	const owner = file.userId != null ? await fetchUserByIdOrFailFromDatabase(deps.db, file.userId) : null;
+	const policies = await getHonoApiRolePolicies(deps, owner);
+
+	if (params.name != null && !validateHonoApiDriveFileName(params.name)) {
+		throw new HonoApiError({ status: 400, message: 'Invalid file name.', code: 'INVALID_FILE_NAME', id: '395e7156-f9f0-475e-af89-53c3c23080c2' });
+	}
+
+	if (params.isSensitive !== undefined && params.isSensitive !== file.isSensitive && policies.alwaysMarkNsfw && !params.isSensitive) {
+		throw new HonoApiError({ status: 400, message: 'This feature is restricted by your role.', code: 'RESTRICTED_BY_ROLE', id: '7f59dccb-f465-75ab-5cf4-3ce44e3282f7' });
+	}
+
+	if (params.folderId != null) {
+		const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, file.userId);
+		if (folder == null) {
+			throw new HonoApiError({ status: 400, message: 'No such folder.', code: 'NO_SUCH_FOLDER', id: 'ea8fb7a5-af77-4a08-b608-c0218176cd73' });
+		}
+	}
+
+	const values: DriveFileUpdate = {
+		folderId: params.folderId,
+		name: params.name,
+		isSensitive: params.isSensitive,
+		comment: params.comment,
+	};
+	await updateDriveFileInDatabase(deps.db, file.id, values);
+
+	const packed = await packDriveFileOrFailForHonoApi(deps, file.id, { self: true });
+
+	if (file.userId) {
+		deps.publishDriveStream?.(file.userId, 'fileUpdated', packed);
+	}
+
+	if (await isHonoApiModerator(deps, me) && file.userId !== me.id) {
+		if (params.isSensitive !== undefined && params.isSensitive !== file.isSensitive) {
+			await logModerationEventInDatabase(deps, me, params.isSensitive ? 'markSensitiveDriveFile' : 'unmarkSensitiveDriveFile', {
+				fileId: file.id,
+				fileUserId: file.userId,
+				fileUserUsername: owner?.username ?? null,
+				fileUserHost: owner?.host ?? null,
+			});
+		}
+	}
+
+	return packed;
+}
+
+const driveFilesMoveBulkParamDef = {
+	type: 'object',
+	properties: {
+		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 100, items: { type: 'string', format: 'misskey:id' } },
+		folderId: { type: 'string', format: 'misskey:id', nullable: true },
+	},
+	required: ['fileIds'],
+} as const;
+
+type DriveFilesMoveBulkParams = {
+	fileIds: string[];
+	folderId?: string | null;
+};
+
+export async function handleHonoApiDriveFilesMoveBulk(
+	deps: HonoApiDriveFilesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(driveFilesMoveBulkParamDef, body) as DriveFilesMoveBulkParams;
+
+	const folder = params.folderId ? await fetchDriveFolderByIdAndUserIdOrFailFromDatabase(deps.db, params.folderId, me.id) : null;
+
+	await updateDriveFilesFolderByIdsAndUserIdInDatabase(deps.db, params.fileIds, me.id, folder ? folder.id : null);
 }

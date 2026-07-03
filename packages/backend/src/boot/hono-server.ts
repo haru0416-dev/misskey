@@ -89,6 +89,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			videoProcessingService: deps.videoProcessingService,
 			webAuthnService: deps.webAuthnService,
 			emailService: deps.emailService,
+			chartWriters: deps.chartWriters,
 			systemQueue: deps.systemQueue,
 			endedPollNotificationQueue: deps.endedPollNotificationQueue,
 			postScheduledNoteQueue: deps.postScheduledNoteQueue,

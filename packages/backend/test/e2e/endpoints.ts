@@ -1125,6 +1125,130 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, 'c118ece3-2e4b-4296-99d1-51756e32d232');
 		});
 
+		test('drive/files/update renames, moves, and toggles sensitivity, rejecting invalid input and foreign access', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-drive-update-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-drive-update-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+				isSensitive: false,
+			});
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-drive-update-folder-${suffix}`,
+			});
+
+			const deniedForBob = await api('drive/files/update', { fileId: file.id, name: 'hijack.bin' }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '01a53b27-82fc-445b-a0c1-b558465a8ed2');
+
+			const invalidName = await api('drive/files/update', { fileId: file.id, name: 'has/slash' }, alice);
+			assert.strictEqual(invalidName.status, 400);
+			assert.strictEqual(castAsError(invalidName.body as any).error.id, '395e7156-f9f0-475e-af89-53c3c23080c2');
+
+			const noSuchFolder = await api('drive/files/update', { fileId: file.id, folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchFolder.status, 400);
+			assert.strictEqual(castAsError(noSuchFolder.body as any).error.id, 'ea8fb7a5-af77-4a08-b608-c0218176cd73');
+
+			const updated = await api('drive/files/update', {
+				fileId: file.id,
+				name: `hono-drive-updated-${suffix}.bin`,
+				folderId: folder.id,
+				isSensitive: true,
+				comment: 'updated comment',
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.name, `hono-drive-updated-${suffix}.bin`);
+			assert.strictEqual(updated.body.folderId, folder.id);
+			assert.strictEqual(updated.body.isSensitive, true);
+			assert.strictEqual(updated.body.comment, 'updated comment');
+
+			const missing = await api('drive/files/update', { fileId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', name: 'x' }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
+		});
+
+		test('drive/files/delete removes a file, rejecting foreign access and missing files', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-drive-delete-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-drive-delete-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+
+			const deniedForBob = await api('drive/files/delete', { fileId: file.id }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '5eb8d909-2540-4970-90b8-dd6f86088121');
+
+			const deleted = await api('drive/files/delete', { fileId: file.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const missing = await api('drive/files/delete', { fileId: file.id }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '908939ec-e52b-4458-b395-1025195cea58');
+		});
+
+		test('drive/files/move-bulk moves multiple files into a folder', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5A = createHash('md5').update(`hono-drive-move-a-${suffix}`).digest('hex');
+			const fileA = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: md5A,
+				name: `hono-drive-move-a-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5A}`,
+			});
+			const md5B = createHash('md5').update(`hono-drive-move-b-${suffix}`).digest('hex');
+			const fileB = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: md5B,
+				name: `hono-drive-move-b-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5B}`,
+			});
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-drive-move-folder-${suffix}`,
+			});
+
+			const moved = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: folder.id }, alice);
+			assert.strictEqual(moved.status, 204);
+
+			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, folder.id);
+			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileB.id))?.folderId, folder.id);
+
+			const movedBack = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: null }, alice);
+			assert.strictEqual(movedBack.status, 204);
+			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, null);
+		});
+
 		test('hashtags/users finds users tagged with the given hashtag', async () => {
 			const suffix = Date.now().toString(36);
 			const tag = `hono_hashtag_users_${suffix}`;
