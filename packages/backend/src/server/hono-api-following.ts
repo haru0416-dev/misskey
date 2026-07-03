@@ -19,7 +19,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileSt
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import type { IActivity, IFollow, IObject, IUndo } from '@/core/activitypub/type.js';
+import type { IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -134,6 +134,22 @@ function followingUpdateNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', '14318698-f67e-492a-99da-5353a5ac52be');
 }
 
+function followingDeleteFolloweeIsYourselfError(): HonoApiError {
+	return clientError('Followee is yourself.', 'FOLLOWEE_IS_YOURSELF', 'd9e400b9-36b0-4808-b1d8-79e707f1296c');
+}
+
+function followingDeleteNotFollowingError(): HonoApiError {
+	return clientError('You are not following that user.', 'NOT_FOLLOWING', '5dbf82f5-c92b-40b1-87d1-6c8c0741fd09');
+}
+
+function followingUpdateFolloweeIsYourselfError(): HonoApiError {
+	return clientError('Followee is yourself.', 'FOLLOWEE_IS_YOURSELF', '4c4cbaf9-962a-463b-8418-a5e365dbf2eb');
+}
+
+function followingUpdateNotFollowingError(): HonoApiError {
+	return clientError('You are not following that user.', 'NOT_FOLLOWING', 'b8dc75cf-1cb5-46c9-b14b-5f1ffbd782c9');
+}
+
 function isLocalUser(user: MiUser): user is MiUser & { host: null } {
 	return user.host === null;
 }
@@ -168,6 +184,14 @@ function renderUndo(config: Config, object: string | IObject, user: { id: MiUser
 		actor: genLocalUserUri(config, user.id),
 		object,
 		published: new Date().toISOString(),
+	};
+}
+
+function renderReject(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IReject {
+	return {
+		type: 'Reject',
+		actor: genLocalUserUri(config, user.id),
+		object,
 	};
 }
 
@@ -315,7 +339,7 @@ function createFollowingNotification(
 async function enqueueUserWebhook(
 	deps: HonoApiFollowingDependencies,
 	userId: MiUser['id'],
-	type: 'follow' | 'followed',
+	type: 'follow' | 'followed' | 'unfollow',
 	user: Packed<'UserDetailedNotMe'> | Packed<'UserLite'>,
 ): Promise<void> {
 	const webhooks = (await listWebhooksFromDatabase(deps.db, {
@@ -375,6 +399,18 @@ async function publishFollowedToLocalFollowee(
 	deps.publishMainStream?.(followee.id, 'followed', packedFollower);
 	await enqueueUserWebhook(deps, followee.id, 'followed', packedFollower);
 	createFollowingNotification(deps, followee.id, 'follow', follower);
+}
+
+async function publishUnfollowToLocalFollower(
+	deps: HonoApiFollowingDependencies,
+	follower: MiUser,
+	followee: MiUser,
+): Promise<void> {
+	if (!isLocalUser(follower)) return;
+
+	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee) as Packed<'UserDetailedNotMe'>;
+	deps.publishMainStream?.(follower.id, 'unfollow', packedFollowee);
+	await enqueueUserWebhook(deps, follower.id, 'unfollow', packedFollowee);
 }
 
 async function deliverFollowActivity(
@@ -455,6 +491,67 @@ async function incrementFollowing(
 			followingCount: nonMovedFollowees,
 			followersCount: nonMovedFollowers,
 		});
+	}
+}
+
+async function decrementFollowing(
+	deps: HonoApiFollowingDependencies,
+	follower: MiUser,
+	followee: MiUser,
+): Promise<void> {
+	deps.publishInternalEvent?.('unfollow', { followerId: follower.id, followeeId: followee.id });
+
+	if (!follower.movedToUri && !followee.movedToUri) {
+		await Promise.all([
+			adjustUserFollowingCountInDatabase(deps.db, follower.id, -1),
+			adjustUserFollowersCountInDatabase(deps.db, followee.id, -1),
+		]);
+
+		if (deps.meta.enableStatsForFederatedInstances) {
+			if (isRemoteUser(follower) && isLocalUser(followee)) {
+				const instance = await fetchOrRegisterFederatedInstance(deps, follower.host);
+				await adjustInstanceFollowingCountFromDatabase(deps.db, instance.id, -1);
+			} else if (isLocalUser(follower) && isRemoteUser(followee)) {
+				const instance = await fetchOrRegisterFederatedInstance(deps, followee.host);
+				await adjustInstanceFollowersCountFromDatabase(deps.db, instance.id, -1);
+			}
+		}
+		return;
+	}
+
+	for (const user of [follower, followee]) {
+		if (user.movedToUri) continue;
+
+		const [nonMovedFollowees, nonMovedFollowers] = await Promise.all([
+			countNonMovedFolloweesByFollowerIdFromDatabase(deps.db, user.id),
+			countNonMovedFollowersByFolloweeIdFromDatabase(deps.db, user.id),
+		]);
+		await updateUserInDatabase(deps.db, user.id, {
+			followingCount: nonMovedFollowees,
+			followersCount: nonMovedFollowers,
+		});
+	}
+}
+
+async function deleteFollowingWithSideEffects(
+	deps: HonoApiFollowingDependencies,
+	follower: MiUser,
+	followee: MiUser,
+	followingId: string,
+): Promise<void> {
+	await deleteFollowingByIdInDatabase(deps.db, followingId);
+	await refreshUserFollowingsCache(deps, follower.id);
+	await decrementFollowing(deps, follower, followee);
+	await publishUnfollowToLocalFollower(deps, follower, followee);
+
+	if (isLocalUser(follower) && isRemoteUser(followee)) {
+		const content = addActivityContext(deps.config, renderUndo(deps.config, renderFollow(deps.config, follower, followee), follower));
+		enqueueDeliverJob(deps.deliverQueue, deps.config, follower, content as IActivity, followee.inbox, false);
+	}
+
+	if (isLocalUser(followee) && isRemoteUser(follower)) {
+		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee), followee));
+		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 	}
 }
 
@@ -560,4 +657,55 @@ export async function handleHonoApiFollowingUpdateAll(
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
 	});
+}
+
+export async function handleHonoApiFollowingDelete(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'UserLite'>> {
+	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const follower = me;
+
+	if (me.id === params.userId) {
+		throw followingDeleteFolloweeIsYourselfError();
+	}
+
+	const followee = await getTargetUserOrThrow(deps, params.userId, followingDeleteNoSuchUserError);
+
+	const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
+	if (following == null) {
+		throw followingDeleteNotFollowingError();
+	}
+
+	await deleteFollowingWithSideEffects(deps, follower, followee, following.id);
+
+	return await packUserLiteForHonoApi(deps, followee);
+}
+
+export async function handleHonoApiFollowingUpdate(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'UserLite'>> {
+	const params = parseHonoApiParams(followingUpdateParamDef, body) as FollowingUpdateParams;
+	const follower = me;
+
+	if (me.id === params.userId) {
+		throw followingUpdateFolloweeIsYourselfError();
+	}
+
+	const followee = await getTargetUserOrThrow(deps, params.userId, followingUpdateNoSuchUserError);
+
+	const exist = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
+	if (exist == null) {
+		throw followingUpdateNotFollowingError();
+	}
+
+	await updateFollowingByIdInDatabase(deps.db, exist.id, {
+		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
+		withReplies: params.withReplies != null ? params.withReplies : undefined,
+	});
+
+	return await packUserLiteForHonoApi(deps, follower);
 }
