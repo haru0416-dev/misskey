@@ -196,11 +196,11 @@ function pushFanoutTimelineForHonoApi(deps: HonoApiNotesCreateDependencies, tl: 
 	}
 }
 
-async function createNoteNotificationForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+export async function createNoteNotificationForHonoApi(
+	deps: HonoApiNotificationDependencies,
 	notifieeId: MiUser['id'],
 	notifierId: MiUser['id'],
-	type: 'mention' | 'reply' | 'renote' | 'quote' | 'note',
+	type: 'mention' | 'reply' | 'renote' | 'quote' | 'note' | 'reaction',
 	extra: Record<string, unknown>,
 ): Promise<void> {
 	if (notifieeId === notifierId) return;
@@ -234,7 +234,7 @@ async function createNoteNotificationForHonoApi(
 		id: genId(deps.config),
 		createdAt: new Date().toISOString(),
 		type,
-		userId: notifierId,
+		notifierId,
 		...extra,
 	};
 	await xaddHonoApiNotification(deps, notifieeId, notification);

@@ -10086,6 +10086,32 @@ describe('Endpoints', () => {
 			assert.deepStrictEqual(resNote.body.reactions, { '🚀': 1 });
 		});
 
+		test('同じリアクションを二重にすると怒られる', async () => {
+			const bobPost = await post(bob, { text: 'hi' });
+
+			const first = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
+			assert.strictEqual(first.status, 204);
+
+			const second = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
+			assert.strictEqual(second.status, 400);
+			assert.strictEqual(castAsError(second.body as any).error.id, '71efcf98-86d6-4e2b-b2ad-9d032369366b');
+		});
+
+		test('ブロックされているとリアクションできない', async () => {
+			const bobPost = await post(bob, { text: 'hi' });
+
+			const block = await api('blocking/create', { userId: alice.id }, bob);
+			assert.strictEqual(block.status, 200);
+
+			try {
+				const res = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
+				assert.strictEqual(res.status, 400);
+				assert.strictEqual(castAsError(res.body as any).error.id, '20ef5475-9f38-4e4c-bd33-de6d979498ec');
+			} finally {
+				await api('blocking/delete', { userId: alice.id }, bob);
+			}
+		});
+
 		test('存在しない投稿にはリアクションできない', async () => {
 			const res = await api('notes/reactions/create', {
 				noteId: '000000000000000000000000',
@@ -10171,6 +10197,35 @@ describe('Endpoints', () => {
 			}, alice);
 
 			assert.strictEqual(res.status, 400);
+		});
+	});
+
+	describe('notes/reactions/delete', () => {
+		test('リアクションを取り消せる', async () => {
+			const bobNote = await post(bob, { text: 'hi' });
+
+			const created = await api('notes/reactions/create', { noteId: bobNote.id, reaction: '🚀' }, alice);
+			assert.strictEqual(created.status, 204);
+
+			const res = await api('notes/reactions/delete', { noteId: bobNote.id }, alice);
+			assert.strictEqual(res.status, 204);
+
+			const reactions = await api('notes/reactions', { noteId: bobNote.id });
+			assert.strictEqual(reactions.body.length, 0);
+		});
+
+		test('リアクションしていないと怒られる', async () => {
+			const bobNote = await post(bob, { text: 'hi' });
+
+			const res = await api('notes/reactions/delete', { noteId: bobNote.id }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '92f4426d-4196-4125-aa5b-02943e2ec8fc');
+		});
+
+		test('存在しない投稿で怒られる', async () => {
+			const res = await api('notes/reactions/delete', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37');
 		});
 	});
 

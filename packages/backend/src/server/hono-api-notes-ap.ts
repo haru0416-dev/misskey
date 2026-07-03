@@ -41,9 +41,7 @@ function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): str
 	return `${config.url}/users/${userId}`;
 }
 
-// renderCreateForHonoApi/renderAnnounceForHonoApi always set `id`, so unlike the original
-// addContext() this never needs the randomUUID fallback for note activities specifically.
-function addActivityContext<T extends Record<string, unknown>>(config: Pick<Config, 'url'>, activity: T): T & { '@context': typeof CONTEXT; id: string } {
+export function addActivityContext<T extends Record<string, unknown>>(config: Pick<Config, 'url'>, activity: T): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
 		(activity as Record<string, unknown>).id = `${config.url}/${randomUUID()}`;
 	}
@@ -332,7 +330,7 @@ function renderDeleteForHonoApi(config: Pick<Config, 'url'>, object: Record<stri
 	};
 }
 
-function renderUndoForHonoApi(config: Pick<Config, 'url'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
+export function renderUndoForHonoApi(config: Pick<Config, 'url'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
 	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
 	return {
 		type: 'Undo',
@@ -341,6 +339,33 @@ function renderUndoForHonoApi(config: Pick<Config, 'url'>, object: string | Reco
 		object,
 		published: new Date().toISOString(),
 	};
+}
+
+export async function renderLikeForHonoApi(
+	deps: HonoApiNoteApDependencies,
+	noteReaction: { id: string; userId: MiUser['id']; reaction: string },
+	note: { uri: string | null; id: MiNote['id'] },
+): Promise<Record<string, unknown>> {
+	const reaction = noteReaction.reaction;
+
+	const object: Record<string, unknown> = {
+		type: 'Like',
+		id: `${deps.config.url}/likes/${noteReaction.id}`,
+		actor: `${deps.config.url}/users/${noteReaction.userId}`,
+		object: note.uri ? note.uri : `${deps.config.url}/notes/${note.id}`,
+		content: reaction,
+		_misskey_reaction: reaction,
+	};
+
+	if (reaction.startsWith(':')) {
+		const name = reaction.replaceAll(':', '');
+		const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, name, null);
+		if (emoji != null && !emoji.localOnly) {
+			object.tag = [renderEmoji(deps.config, emoji)];
+		}
+	}
+
+	return object;
 }
 
 export async function renderNoteDeleteOrUndoAnnounceActivityForHonoApi(
