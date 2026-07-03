@@ -130,6 +130,15 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 					},
 				}));
 			},
+			publishAdminStream: (userId, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `adminStream:${userId}`,
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
 			publishDriveStream: (userId, type, value) => {
 				deps.redisForPub.publish(config.host, JSON.stringify({
 					channel: `driveStream:${userId}`,

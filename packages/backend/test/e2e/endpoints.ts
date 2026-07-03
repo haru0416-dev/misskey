@@ -7047,6 +7047,80 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/report-abuse', () => {
+		test('通報を作成し、自分自身・管理者・存在しないユーザーへの通報を拒否する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const reporter = await signup({ username: `hura${suffix}` });
+			const target = await signup({ username: `hurat${suffix}` });
+
+			const reported = await api('users/report-abuse', { userId: target.id, comment: `hono report abuse ${suffix}` }, reporter);
+			assert.strictEqual(reported.status, 204);
+
+			const listed = await api('admin/abuse-user-reports', { limit: 100 }, alice);
+			assert.strictEqual(listed.status, 200);
+			const found = listed.body.find((r: any) => r.reporterId === reporter.id && r.targetUserId === target.id);
+			assert.ok(found);
+			assert.strictEqual(found.comment, `hono report abuse ${suffix}`);
+			assert.strictEqual(found.resolved, false);
+
+			const reportSelf = await api('users/report-abuse', { userId: reporter.id, comment: 'self report' }, reporter);
+			assert.strictEqual(reportSelf.status, 400);
+			assert.strictEqual(castAsError(reportSelf.body as any).error.code, 'CANNOT_REPORT_YOURSELF');
+
+			const reportAdmin = await api('users/report-abuse', { userId: alice.id, comment: 'admin report' }, reporter);
+			assert.strictEqual(reportAdmin.status, 400);
+			assert.strictEqual(castAsError(reportAdmin.body as any).error.code, 'CANNOT_REPORT_THE_ADMIN');
+
+			const reportMissing = await api('users/report-abuse', { userId: genId(loadConfig()), comment: 'no such user' }, reporter);
+			assert.strictEqual(reportMissing.status, 400);
+			assert.strictEqual(castAsError(reportMissing.body as any).error.code, 'NO_SUCH_USER');
+		});
+
+		test('通報時にmoderatorのadminStreamへnewAbuseUserReportイベントを配信する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const reporter = await signup({ username: `hurs${suffix}` });
+			const target = await signup({ username: `hurst${suffix}` });
+
+			// alice はrootUserIdだが明示的なmoderatorロールを持たないため、
+			// getModeratorIds({includeAdmins:true, excludeExpire:true})の対象に含まれない(元実装と同様、includeRootは渡されない)。
+			// 通知対象として検証可能にするため、専用のmoderatorロールを付与したユーザーを用意する。
+			const moderator = await signup({ username: `hursm${suffix}` });
+			const moderatorRole = await role(alice, { name: `hono report-abuse moderator ${suffix}`, isModerator: true });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config),
+				roleId: moderatorRole.id,
+				userId: moderator.id,
+				expiresAt: null,
+			});
+
+			const sub = createRedisClient(config);
+			try {
+				const received = new Promise<{ channel: string; message: { type: string; body: any } }>((resolve, reject) => {
+					const timer = setTimeout(() => reject(new Error('timed out waiting for adminStream event')), 8000);
+					sub.on('message', (_ch: string, data: string) => {
+						const parsed = JSON.parse(data);
+						if (parsed.channel === `adminStream:${moderator.id}` && parsed.message?.type === 'newAbuseUserReport') {
+							clearTimeout(timer);
+							resolve(parsed);
+						}
+					});
+				});
+				await sub.subscribe(config.host);
+
+				const reported = await api('users/report-abuse', { userId: target.id, comment: `hono adminStream ${suffix}` }, reporter);
+				assert.strictEqual(reported.status, 204);
+
+				const event = await received;
+				assert.strictEqual(event.message.body.targetUserId, target.id);
+				assert.strictEqual(event.message.body.reporterId, reporter.id);
+				assert.strictEqual(event.message.body.comment, `hono adminStream ${suffix}`);
+			} finally {
+				await closeRedisConnection(sub);
+			}
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
