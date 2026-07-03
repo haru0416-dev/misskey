@@ -10,18 +10,20 @@ import {
 	searchHashtagNamesFromDatabase,
 	type HashtagSort,
 } from '@/core/HashtagStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { listUsersByTagFromDatabase, type UserListOrigin, type UserListSort, type UserListState } from '@/core/UserStore.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
+import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
+import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
+import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
 const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
-export type HonoApiHashtagDependencies = {
-	db: MiDrizzleDatabase;
+export type HonoApiHashtagDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
 };
 
@@ -220,4 +222,48 @@ export async function handleHonoApiHashtagsShow(
 	if (hashtag == null) throw noSuchHashtagError();
 
 	return packHonoApiHashtag(hashtag);
+}
+
+const hashtagsUsersParamDef = {
+	type: 'object',
+	properties: {
+		tag: { type: 'string' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		offset: { type: 'integer', default: 0 },
+		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt'] },
+		state: { type: 'string', enum: ['all', 'alive'], default: 'all' },
+		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'local' },
+	},
+	required: ['tag', 'sort'],
+} as const;
+
+type HashtagsUsersParams = {
+	tag: string;
+	limit: number;
+	offset: number;
+	sort: UserListSort;
+	state: UserListState;
+	origin: UserListOrigin;
+};
+
+export async function handleHonoApiHashtagsUsers(
+	deps: HonoApiHashtagDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
+	const params = parseHonoApiParams(hashtagsUsersParamDef, body) as HashtagsUsersParams;
+
+	const tag = normalizeForSearch(params.tag);
+	if (!safeForSql(tag)) throw new Error('Injection');
+
+	const users = await listUsersByTagFromDatabase(deps.db, {
+		tag,
+		limit: params.limit,
+		offset: params.offset,
+		sort: params.sort,
+		state: params.state,
+		origin: params.origin,
+	});
+
+	return await packUserDetailedManyForHonoApi(deps, users, me);
 }
