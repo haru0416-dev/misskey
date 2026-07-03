@@ -76,7 +76,7 @@ import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHon
 import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta, handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-api-miauth.js';
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
-import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
+import { handleHonoApiNotesDraftsCount, handleHonoApiNotesDraftsCreate, handleHonoApiNotesDraftsDelete, handleHonoApiNotesDraftsList, handleHonoApiNotesDraftsUpdate } from './hono-api-note-drafts.js';
 import { handleHonoApiIClaimAchievement, handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification, type HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiNotesChildren, handleHonoApiNotesClips, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesFeatured, handleHonoApiNotesGlobalTimeline, handleHonoApiNotesHybridTimeline, handleHonoApiNotesLocalTimeline, handleHonoApiNotesMentions, handleHonoApiNotesPollsRecommendation, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesSearch, handleHonoApiNotesSearchByTag, handleHonoApiNotesShow, handleHonoApiNotesShowPartialBulk, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete, handleHonoApiNotesTimeline, handleHonoApiNotesUserListTimeline, normalizeHonoApiNotesFeaturedQuery } from './hono-api-notes.js';
 import { handleHonoApiPagePush } from './hono-api-page-push.js';
@@ -3715,6 +3715,63 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:account');
 
 			return jsonResponse(c, await handleHonoApiNotesDraftsCount(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/drafts/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+			await assertHonoApiRateLimit(deps, 'notes/drafts/create', {
+				duration: 60 * 60 * 1000,
+				max: 300,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiNotesDraftsCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/drafts/update', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+			await assertHonoApiRateLimit(deps, 'notes/drafts/update', {
+				duration: 60 * 60 * 1000,
+				max: 300,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiNotesDraftsUpdate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/notes/drafts/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiNotesDraftsDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notes/drafts/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiNotesDraftsList(deps, auth.user, body));
 		});
 	});
 

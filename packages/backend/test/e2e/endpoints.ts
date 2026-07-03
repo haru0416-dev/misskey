@@ -39,7 +39,7 @@ import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/cor
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
-import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
+import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
@@ -70,7 +70,7 @@ import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type 
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, PostScheduledNoteJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -88,6 +88,7 @@ describe('Endpoints', () => {
 	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
 	let objectStorageQueue: Bull.Queue<ObjectStorageJobData> | undefined;
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
+	let postScheduledNoteQueue: Bull.Queue<PostScheduledNoteJobData> | undefined;
 
 	beforeAll(async () => {
 		const config = loadConfig();
@@ -99,6 +100,7 @@ describe('Endpoints', () => {
 		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
 		objectStorageQueue = new Bull.Queue<ObjectStorageJobData>(QUEUE.OBJECT_STORAGE, baseQueueOptions(config, QUEUE.OBJECT_STORAGE));
 		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
+		postScheduledNoteQueue = new Bull.Queue<PostScheduledNoteJobData>(QUEUE.POST_SCHEDULED_NOTE, baseQueueOptions(config, QUEUE.POST_SCHEDULED_NOTE));
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 		carol = await signup({ username: 'carol' });
@@ -113,6 +115,7 @@ describe('Endpoints', () => {
 		await relationshipQueue?.close();
 		await objectStorageQueue?.close();
 		await systemWebhookDeliverQueue?.close();
+		await postScheduledNoteQueue?.close();
 		await pool?.end();
 	});
 
@@ -3577,6 +3580,233 @@ describe('Endpoints', () => {
 			assert.strictEqual(denied.status, 403);
 			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
 			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+		});
+
+		test('notes/drafts/create creates a draft with reply/renote/poll/channel and schedules it', async () => {
+			const config = loadConfig();
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: 'draft channel',
+			});
+			const replyTarget = await post(alice, { text: 'reply target' });
+			const renoteTarget = await post(alice, { text: 'renote target' });
+			const file = await uploadFile(alice);
+
+			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
+			const created = await api('notes/drafts/create', {
+				text: 'hono draft create',
+				replyId: replyTarget.id,
+				renoteId: renoteTarget.id,
+				channelId: channel.id,
+				fileIds: [file.body!.id],
+				poll: { choices: ['a', 'b'], multiple: false },
+				isActuallyScheduled: true,
+				scheduledAt: futureScheduledAt,
+			}, alice);
+
+			assert.strictEqual(created.status, 200);
+			const createdDraft = (created.body as any).createdDraft;
+			assert.strictEqual(createdDraft.text, 'hono draft create');
+			assert.strictEqual(createdDraft.userId, alice.id);
+			assert.strictEqual(createdDraft.replyId, replyTarget.id);
+			assert.strictEqual(createdDraft.reply.id, replyTarget.id);
+			assert.strictEqual(createdDraft.renoteId, renoteTarget.id);
+			assert.strictEqual(createdDraft.renote.id, renoteTarget.id);
+			assert.strictEqual(createdDraft.channelId, channel.id);
+			assert.strictEqual(createdDraft.channel.id, channel.id);
+			assert.deepStrictEqual(createdDraft.fileIds, [file.body!.id]);
+			assert.strictEqual(createdDraft.files[0].id, file.body!.id);
+			assert.deepStrictEqual(createdDraft.poll.choices, ['a', 'b']);
+			assert.strictEqual(createdDraft.isActuallyScheduled, true);
+			assert.strictEqual(createdDraft.scheduledAt, futureScheduledAt);
+
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobs.some(job => job.data.noteDraftId === createdDraft.id), true);
+		});
+
+		test('notes/drafts/create validates scheduling and referenced entities', async () => {
+			const noSuchId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
+
+			const scheduledAtRequired = await api('notes/drafts/create', {
+				isActuallyScheduled: true,
+			}, alice);
+			assert.strictEqual(scheduledAtRequired.status, 400);
+			assert.strictEqual(castAsError(scheduledAtRequired.body as any).error.id, '15e28a55-e74c-4d65-89b7-8880cdaaa87d');
+
+			const scheduledAtPast = await api('notes/drafts/create', {
+				isActuallyScheduled: true,
+				scheduledAt: Date.now() - 1000 * 60,
+			}, alice);
+			assert.strictEqual(scheduledAtPast.status, 400);
+			assert.strictEqual(castAsError(scheduledAtPast.body as any).error.id, 'e4bed6c9-017e-4934-aed0-01c22cc60ec1');
+
+			const noSuchFile = await api('notes/drafts/create', {
+				fileIds: [noSuchId],
+			}, alice);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b6992544-63e7-67f0-fa7f-32444b1b5306');
+
+			const noSuchRenoteTarget = await api('notes/drafts/create', {
+				renoteId: noSuchId,
+			}, alice);
+			assert.strictEqual(noSuchRenoteTarget.status, 400);
+			assert.strictEqual(castAsError(noSuchRenoteTarget.body as any).error.id, 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
+
+			const original = await post(alice, { text: 'pure renote source' });
+			const pureRenote = await post(alice, { renoteId: original.id });
+			const cannotReRenote = await api('notes/drafts/create', {
+				renoteId: pureRenote.id,
+			}, alice);
+			assert.strictEqual(cannotReRenote.status, 400);
+			assert.strictEqual(castAsError(cannotReRenote.body as any).error.id, 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
+
+			const noSuchReplyTarget = await api('notes/drafts/create', {
+				replyId: noSuchId,
+			}, alice);
+			assert.strictEqual(noSuchReplyTarget.status, 400);
+			assert.strictEqual(castAsError(noSuchReplyTarget.body as any).error.id, '749ee0f6-d3da-459a-bf02-282e2da4292c');
+
+			const noSuchChannel = await api('notes/drafts/create', {
+				channelId: noSuchId,
+			}, alice);
+			assert.strictEqual(noSuchChannel.status, 400);
+			assert.strictEqual(castAsError(noSuchChannel.body as any).error.id, 'b1653923-5453-4edc-b786-7c4f39bb0bbb');
+		});
+
+		test('notes/drafts/update updates a draft, reschedules it, and rejects foreign or missing drafts', async () => {
+			const config = loadConfig();
+			const draft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'before update',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+
+			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
+			const updated = await api('notes/drafts/update', {
+				draftId: draft.id,
+				text: 'after update',
+				isActuallyScheduled: true,
+				scheduledAt: futureScheduledAt,
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			const updatedDraft = (updated.body as any).updatedDraft;
+			assert.strictEqual(updatedDraft.id, draft.id);
+			assert.strictEqual(updatedDraft.text, 'after update');
+			assert.strictEqual(updatedDraft.isActuallyScheduled, true);
+			assert.strictEqual(updatedDraft.scheduledAt, futureScheduledAt);
+
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobs.some(job => job.data.noteDraftId === draft.id), true);
+
+			// Omitting scheduledAt on update always clears it to null, matching the original
+			// notes/drafts/update endpoint's `scheduledAt: ps.scheduledAt ? new Date(ps.scheduledAt) : null` behavior.
+			const clearedBySchedule = await api('notes/drafts/update', {
+				draftId: draft.id,
+				text: 'schedule omitted on update',
+			}, alice);
+			assert.strictEqual(clearedBySchedule.status, 200);
+			assert.strictEqual((clearedBySchedule.body as any).updatedDraft.scheduledAt, null);
+
+			const jobsAfterClear = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobsAfterClear.some(job => job.data.noteDraftId === draft.id), false);
+
+			const original = await post(alice, { text: 'update pure renote source' });
+			const pureRenote = await post(alice, { renoteId: original.id });
+			const cannotRenote = await api('notes/drafts/update', {
+				draftId: draft.id,
+				renoteId: pureRenote.id,
+			}, alice);
+			assert.strictEqual(cannotRenote.status, 400);
+			assert.strictEqual(castAsError(cannotRenote.body as any).error.id, '76cc5583-5a14-4ad3-8717-0298507e32db');
+			assert.strictEqual(castAsError(cannotRenote.body as any).error.code, 'CANNOT_RENOTE');
+
+			const foreignDraft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				text: 'bob draft',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+			const foreignUpdate = await api('notes/drafts/update', {
+				draftId: foreignDraft.id,
+				text: 'hijack attempt',
+			}, alice);
+			assert.strictEqual(foreignUpdate.status, 400);
+			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+
+			const missingUpdate = await api('notes/drafts/update', {
+				draftId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				text: 'missing',
+			}, alice);
+			assert.strictEqual(missingUpdate.status, 400);
+			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+		});
+
+		test('notes/drafts/delete removes a draft and its schedule, rejecting missing drafts', async () => {
+			const config = loadConfig();
+			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
+			const draft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'to be deleted',
+				visibility: 'public',
+				pollMultiple: false,
+				isActuallyScheduled: true,
+				scheduledAt: new Date(futureScheduledAt),
+			});
+			await postScheduledNoteQueue!.add(draft.id, { noteDraftId: draft.id }, { delay: 1000 * 60 * 60 });
+
+			const deleted = await api('notes/drafts/delete', { draftId: draft.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await fetchNoteDraftByIdFromDatabase(db, draft.id);
+			assert.strictEqual(afterDelete, null);
+
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobs.some(job => job.data.noteDraftId === draft.id), false);
+
+			const missingDelete = await api('notes/drafts/delete', { draftId: draft.id }, alice);
+			assert.strictEqual(missingDelete.status, 400);
+			assert.strictEqual(castAsError(missingDelete.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+		});
+
+		test('notes/drafts/list paginates and filters by scheduled state', async () => {
+			const config = loadConfig();
+			const scheduledDraft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'list scheduled draft',
+				visibility: 'public',
+				pollMultiple: false,
+				isActuallyScheduled: true,
+				scheduledAt: new Date(Date.now() + 1000 * 60 * 60),
+			});
+			const plainDraft = await createNoteDraftInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'list plain draft',
+				visibility: 'public',
+				pollMultiple: false,
+			});
+
+			const scheduledOnly = await api('notes/drafts/list', { scheduled: true }, alice);
+			assert.strictEqual(scheduledOnly.status, 200);
+			const scheduledIds = (scheduledOnly.body as any[]).map(d => d.id);
+			assert.strictEqual(scheduledIds.includes(scheduledDraft.id), true);
+			assert.strictEqual(scheduledIds.includes(plainDraft.id), false);
+
+			const unscheduledOnly = await api('notes/drafts/list', { scheduled: false }, alice);
+			assert.strictEqual(unscheduledOnly.status, 200);
+			const unscheduledIds = (unscheduledOnly.body as any[]).map(d => d.id);
+			assert.strictEqual(unscheduledIds.includes(plainDraft.id), true);
+			assert.strictEqual(unscheduledIds.includes(scheduledDraft.id), false);
+
+			const limited = await api('notes/drafts/list', { limit: 1, untilId: plainDraft.id }, alice);
+			assert.strictEqual(limited.status, 200);
+			assert.strictEqual((limited.body as any[]).length, 1);
 		});
 
 		test('users/achievements returns profile achievements without credentials', async () => {

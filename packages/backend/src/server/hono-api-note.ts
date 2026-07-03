@@ -12,6 +12,7 @@ import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -282,6 +283,33 @@ function hideNote(packedNote: Packed<'Note'>): void {
 	packedNote.poll = undefined;
 	packedNote.cw = null;
 	packedNote.isHidden = true;
+}
+
+export async function isVisibleForMeForHonoApi(
+	deps: HonoApiNoteDependencies,
+	note: MiNote,
+	meId: MiUser['id'] | null,
+): Promise<boolean> {
+	if (note.visibility === 'specified') {
+		if (meId == null) return false;
+		if (meId === note.userId) return true;
+		return note.visibleUserIds.some(id => meId === id);
+	}
+
+	if (note.visibility === 'followers') {
+		if (meId == null) return false;
+		if (meId === note.userId) return true;
+		if (note.reply && meId === note.reply.userId) return true;
+		if (note.mentions?.some(id => meId === id)) return true;
+
+		const [isFollowing, user] = await Promise.all([
+			followingExistsInDatabase(deps.db, meId, note.userId),
+			fetchUserByIdOrFailFromDatabase(deps.db, meId),
+		]);
+		return isFollowing || (note.userHost != null && user.host != null);
+	}
+
+	return true;
 }
 
 export async function packNoteForHonoApi(
