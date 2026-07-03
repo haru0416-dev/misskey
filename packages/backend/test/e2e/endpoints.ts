@@ -4179,6 +4179,258 @@ describe('Endpoints', () => {
 			assert.strictEqual(profile.usePasswordLessLogin, true);
 		});
 
+		test('pages/create creates a page and rejects missing files or duplicate names', async () => {
+			const suffix = Date.now().toString(36);
+			const file = await uploadFile(alice);
+
+			const created = await api('pages/create', {
+				title: `hono page ${suffix}`,
+				name: `hono-page-${suffix}`,
+				content: [{ id: 'block1', type: 'text', text: 'hello' }],
+				variables: [],
+				script: '',
+				eyeCatchingImageId: file.body!.id,
+			}, alice);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `hono-page-${suffix}`);
+			assert.strictEqual(created.body.userId, alice.id);
+			assert.strictEqual(created.body.eyeCatchingImageId, file.body!.id);
+			assert.strictEqual(created.body.eyeCatchingImage.id, file.body!.id);
+
+			const noSuchFile = await api('pages/create', {
+				title: 'no file',
+				name: `hono-page-nofile-${suffix}`,
+				content: [],
+				variables: [],
+				script: '',
+				eyeCatchingImageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+			}, alice);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b7b97489-0f66-4b12-a5ff-b21bd63f6e1c');
+
+			const duplicateName = await api('pages/create', {
+				title: 'dup',
+				name: `hono-page-${suffix}`,
+				content: [],
+				variables: [],
+				script: '',
+			}, alice);
+			assert.strictEqual(duplicateName.status, 400);
+			assert.strictEqual(castAsError(duplicateName.body as any).error.id, '4650348e-301c-499a-83c9-6aa988c66bc1');
+		});
+
+		test('pages/update updates a page and rejects missing pages, foreign pages, and name conflicts', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const other = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `other page ${suffix}`,
+				name: `hono-other-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `before update ${suffix}`,
+				name: `hono-update-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const updated = await api('pages/update', {
+				pageId: page.id,
+				title: `after update ${suffix}`,
+			}, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const shown = await api('pages/show', { pageId: page.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.title, `after update ${suffix}`);
+
+			const missing = await api('pages/update', {
+				pageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				title: 'missing',
+			}, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '21149b9e-3616-4778-9592-c4ce89f5a864');
+
+			const foreign = await api('pages/update', {
+				pageId: page.id,
+				title: 'hijack',
+			}, bob);
+			assert.strictEqual(foreign.status, 400);
+			assert.strictEqual(castAsError(foreign.body as any).error.id, '3c15cd52-3b4b-4274-967d-6456fc4f792b');
+
+			const nameConflict = await api('pages/update', {
+				pageId: page.id,
+				name: other.name,
+			}, alice);
+			assert.strictEqual(nameConflict.status, 400);
+			assert.strictEqual(castAsError(nameConflict.body as any).error.id, '2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab');
+		});
+
+		test('pages/delete removes a page, rejects foreign pages, and allows moderators to delete others\' pages', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `to delete ${suffix}`,
+				name: `hono-delete-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const foreign = await api('pages/delete', { pageId: page.id }, bob);
+			assert.strictEqual(foreign.status, 400);
+			assert.strictEqual(castAsError(foreign.body as any).error.id, '8b741b3e-2c22-44b3-a15f-29949aa1601e');
+
+			const moderatorRole = await role(alice, { isModerator: true });
+			const moderator = await signup({ username: `pagemod${suffix}` });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config),
+				roleId: moderatorRole.id,
+				userId: moderator.id,
+			});
+
+			const deleted = await api('pages/delete', { pageId: page.id }, moderator);
+			assert.strictEqual(deleted.status, 204);
+
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const log = logs.find(l => l.userId === moderator.id && l.type === 'deletePage' && (l.info as any).pageId === page.id);
+			assert.ok(log);
+			assert.strictEqual((log!.info as any).pageUserId, alice.id);
+
+			const missing = await api('pages/delete', { pageId: page.id }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'eb0c6e1d-d519-4764-9486-52a7e1c6392a');
+		});
+
+		test('pages/show finds a page by id or by name and username, and pages/featured lists liked pages', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `show page ${suffix}`,
+				name: `hono-show-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const byId = await api('pages/show', { pageId: page.id });
+			assert.strictEqual(byId.status, 200);
+			assert.strictEqual(byId.body.id, page.id);
+
+			const byName = await api('pages/show', { name: page.name, username: alice.username });
+			assert.strictEqual(byName.status, 200);
+			assert.strictEqual(byName.body.id, page.id);
+
+			const notFound = await api('pages/show', { pageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' });
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.id, '222120c0-3ead-4528-811b-b96f233388d7');
+
+			const liked = await api('pages/like', { pageId: page.id }, bob);
+			assert.strictEqual(liked.status, 204);
+
+			const featured = await api('pages/featured', {});
+			assert.strictEqual(featured.status, 200);
+			assert.strictEqual((featured.body as any[]).some(p => p.id === page.id), true);
+		});
+
+		test('i/pages lists the caller\'s pages and i/page-likes lists liked pages', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `i pages ${suffix}`,
+				name: `hono-i-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const ownPages = await api('i/pages', {}, alice);
+			assert.strictEqual(ownPages.status, 200);
+			assert.strictEqual((ownPages.body as any[]).some(p => p.id === page.id), true);
+
+			const liked = await api('pages/like', { pageId: page.id }, bob);
+			assert.strictEqual(liked.status, 204);
+
+			const likes = await api('i/page-likes', {}, bob);
+			assert.strictEqual(likes.status, 200);
+			const likeEntry = (likes.body as any[]).find(l => l.page.id === page.id);
+			assert.ok(likeEntry);
+			assert.strictEqual(typeof likeEntry.id, 'string');
+		});
+
+		test('users/pages lists only a user\'s public pages without credentials', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const publicPage = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `users pages public ${suffix}`,
+				name: `hono-users-page-public-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: alice.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const shown = await api('users/pages', { userId: alice.id });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual((shown.body as any[]).some(p => p.id === publicPage.id), true);
+		});
+
 		test('users/achievements returns profile achievements without credentials', async () => {
 			const achievements = [{
 				name: 'notes1' as const,
