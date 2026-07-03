@@ -246,7 +246,7 @@ export async function handleHonoApiDriveFilesAttachedNotes(
 	return await packNoteManyForHonoApi(deps, notes, me, { detail: true });
 }
 
-function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDependencies): DriveFileDeletionDependencies {
+export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDependencies): DriveFileDeletionDependencies {
 	return {
 		db: deps.db,
 		meta: deps.meta,
@@ -313,7 +313,7 @@ type DriveFilesUpdateParams = {
 	comment?: string | null;
 };
 
-function validateHonoApiDriveFileName(name: string): boolean {
+export function validateHonoApiDriveFileName(name: string): boolean {
 	return (
 		(name.trim().length > 0) &&
 		(name.length <= 200) &&

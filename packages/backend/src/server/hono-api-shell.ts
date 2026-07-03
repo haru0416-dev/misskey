@@ -58,6 +58,7 @@ import {
 	handleHonoApiDriveFoldersUpdate,
 } from './hono-api-drive.js';
 import { handleHonoApiDriveFilesAttachedNotes, handleHonoApiDriveFilesDelete, handleHonoApiDriveFilesFind, handleHonoApiDriveFilesFindByHash, handleHonoApiDriveFilesList, handleHonoApiDriveFilesMoveBulk, handleHonoApiDriveFilesShow, handleHonoApiDriveFilesUpdate } from './hono-api-drive-files.js';
+import { handleHonoApiDriveFilesCreate, handleHonoApiDriveFilesUploadFromUrl, readHonoApiMultipartRequest } from './hono-api-drive-file-upload.js';
 import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoApiGalleryPosts, handleHonoApiGalleryPostsCreate, handleHonoApiGalleryPostsDelete, handleHonoApiGalleryPostsLike, handleHonoApiGalleryPostsShow, handleHonoApiGalleryPostsUnlike, handleHonoApiGalleryPostsUpdate } from './hono-api-gallery.js';
 import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationFollowers, handleHonoApiFederationFollowing, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, handleHonoApiFederationUsers, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
@@ -198,6 +199,17 @@ function emptyResponse(c: Context): Response {
 	setApiHeaders(c);
 	return new Response(null, {
 		status: 204,
+		headers: {
+			'Access-Control-Allow-Origin': '*',
+			'Cache-Control': 'private, max-age=0, must-revalidate',
+		},
+	});
+}
+
+function rawStatusResponse(c: Context, status: number): Response {
+	setApiHeaders(c);
+	return new Response(null, {
+		status,
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
@@ -1692,6 +1704,53 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'read:drive');
 
 			return jsonResponse(c, await handleHonoApiDriveFilesList(deps, auth.user, body));
+		});
+	});
+
+	app.post('/drive/files/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const parsed = await readHonoApiMultipartRequest(c, deps.config);
+			if (parsed.status === 'missing-file') return rawStatusResponse(c, 400);
+			if (parsed.status === 'too-large') return rawStatusResponse(c, 413);
+
+			const { file, cleanup, fields } = parsed;
+			try {
+				const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, fields));
+				assertCredential(auth);
+				assertProhibitMoved(auth.user);
+				assertTokenPermission(auth, 'write:drive');
+				await assertHonoApiRateLimit(deps, 'drive/files/create', {
+					duration: 60 * 60 * 1000,
+					max: 120,
+				}, auth.user.id);
+
+				const ip = getRequestIp(c, deps.config);
+				const headers = Object.fromEntries(c.req.raw.headers.entries());
+
+				return jsonResponse(c, await handleHonoApiDriveFilesCreate(deps, auth.user, fields, file, ip, headers));
+			} finally {
+				cleanup();
+			}
+		});
+	});
+
+	app.post('/drive/files/upload-from-url', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:drive');
+			await assertHonoApiRateLimit(deps, 'drive/files/upload-from-url', {
+				duration: 60 * 60 * 1000,
+				max: 60,
+			}, auth.user.id);
+
+			const ip = getRequestIp(c, deps.config);
+			const headers = Object.fromEntries(c.req.raw.headers.entries());
+
+			handleHonoApiDriveFilesUploadFromUrl(deps, auth.user, body, ip, headers);
+			return emptyResponse(c);
 		});
 	});
 

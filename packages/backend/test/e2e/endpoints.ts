@@ -5,7 +5,7 @@
 
 process.env.NODE_ENV = 'test';
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
@@ -1191,6 +1191,7 @@ describe('Endpoints', () => {
 				size: 10,
 				storedInternal: true,
 				url: `${origin}/files/${md5}`,
+				accessKey: randomUUID(),
 			});
 
 			const deniedForBob = await api('drive/files/delete', { fileId: file.id }, bob);
@@ -1200,9 +1201,15 @@ describe('Endpoints', () => {
 			const deleted = await api('drive/files/delete', { fileId: file.id }, alice);
 			assert.strictEqual(deleted.status, 204);
 
-			const missing = await api('drive/files/delete', { fileId: file.id }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, '908939ec-e52b-4458-b395-1025195cea58');
+			// 実ファイルの削除はレスポンスを待たない fire-and-forget のため、DB からの削除が反映されるまでポーリングする
+			let missing;
+			for (let i = 0; i < 20; i++) {
+				missing = await api('drive/files/delete', { fileId: file.id }, alice);
+				if (missing.status === 400) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.strictEqual(missing!.status, 400);
+			assert.strictEqual(castAsError(missing!.body as any).error.id, '908939ec-e52b-4458-b395-1025195cea58');
 		});
 
 		test('drive/files/move-bulk moves multiple files into a folder', async () => {
@@ -11013,6 +11020,28 @@ describe('Endpoints', () => {
 				await cleanupRole(bob.id, allowAllTypesRole.id);
 			}
 		});
+	});
+
+	describe('drive/files/upload-from-url', () => {
+		test('URLからファイルをアップロードできる', async () => {
+			const res = await api('drive/files/upload-from-url', {
+				url: 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
+				force: true,
+			}, alice);
+			assert.strictEqual(res.status, 204);
+
+			// upload-from-url はサーバー側でダウンロードを待たずに応答するため、ファイルの出現をポーリングで待つ
+			let found: misskey.entities.DriveFile | undefined;
+			for (let i = 0; i < 20; i++) {
+				const list = await api('drive/files/find', { name: '192.jpg' }, alice);
+				found = (list.body as misskey.entities.DriveFile[]).find(f => f.name === '192.jpg');
+				if (found) break;
+				await new Promise(resolve => setTimeout(resolve, 500));
+			}
+
+			assert.ok(found);
+			assert.strictEqual(found!.name, '192.jpg');
+		}, 1000 * 15);
 	});
 
 	describe('drive/files/update', () => {
