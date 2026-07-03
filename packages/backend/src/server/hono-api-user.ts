@@ -792,3 +792,167 @@ export async function handleHonoApiUsersSearch(
 		? await packUserDetailedManyForHonoApi(deps, users, me)
 		: await packUserLiteManyForHonoApi(deps, users);
 }
+
+function buildBaseUserSearchConditionsForHonoApi(
+	config: Config,
+	params: { username?: string | null; host?: string | null },
+): SQL[] {
+	const conditions: SQL[] = [];
+
+	if (params.username) {
+		conditions.push(sql`"user"."usernameLower" LIKE ${sqlLikeEscape(params.username.toLowerCase()) + '%'}`);
+	}
+
+	if (params.host) {
+		if (params.host === config.hostname || params.host === '.') {
+			conditions.push(sql`"user"."host" IS NULL`);
+		} else {
+			conditions.push(sql`"user"."host" LIKE ${sqlLikeEscape(params.host.toLowerCase()) + '%'}`);
+		}
+	}
+
+	conditions.push(sql`"user"."isSuspended" = FALSE`);
+
+	return conditions;
+}
+
+function defaultActiveThresholdForHonoApi(): Date {
+	return new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
+}
+
+function buildSearchUserQueriesForHonoApi(
+	config: Config,
+	me: MiUser,
+	params: { username?: string | null; host?: string | null; activeThreshold?: Date },
+): SQL[][] {
+	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForHonoApi();
+	const followingUserQuery = sql`SELECT "followeeId" FROM "following" WHERE "followerId" = ${me.id}`;
+	const baseConditions = buildBaseUserSearchConditionsForHonoApi(config, params);
+
+	return [
+		[
+			...baseConditions,
+			sql`"user"."id" IN (${followingUserQuery})`,
+			sql`"user"."updatedAt" > ${activeThreshold}`,
+		],
+		[
+			...baseConditions,
+			sql`"user"."id" IN (${followingUserQuery})`,
+			sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" <= ${activeThreshold})`,
+		],
+		[
+			...baseConditions,
+			sql`"user"."id" NOT IN (${followingUserQuery})`,
+			sql`"user"."updatedAt" > ${activeThreshold}`,
+		],
+		[
+			...baseConditions,
+			sql`"user"."id" NOT IN (${followingUserQuery})`,
+			sql`"user"."updatedAt" <= ${activeThreshold}`,
+		],
+	];
+}
+
+function buildSearchUserNoLoginQueriesForHonoApi(
+	config: Config,
+	params: { username?: string | null; host?: string | null; activeThreshold?: Date },
+): SQL[][] {
+	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForHonoApi();
+	const baseConditions = buildBaseUserSearchConditionsForHonoApi(config, params);
+
+	return [
+		[
+			...baseConditions,
+			sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`,
+		],
+		[
+			...baseConditions,
+			sql`"user"."updatedAt" <= ${activeThreshold}`,
+		],
+	];
+}
+
+async function selectSearchUserIdsForHonoApi(
+	deps: { db: MiDrizzleDatabase },
+	conditions: SQL[],
+	limit: number,
+): Promise<MiUser['id'][]> {
+	if (limit <= 0) return [];
+
+	const result = await deps.db.execute<{ id: MiUser['id'] }>(sql`
+		SELECT "user"."id" AS "id"
+		FROM "user"
+		WHERE ${sql.join(conditions, sql` AND `)}
+		ORDER BY "user"."usernameLower" ASC
+		LIMIT ${limit}
+	`);
+
+	return result.rows.map(row => row.id);
+}
+
+const usersSearchByUsernameAndHostParamDef = {
+	allOf: [
+		{
+			anyOf: [
+				{
+					type: 'object',
+					properties: {
+						username: { type: 'string', nullable: true },
+					},
+					required: ['username'],
+				},
+				{
+					type: 'object',
+					properties: {
+						host: { type: 'string', nullable: true },
+					},
+					required: ['host'],
+				},
+			],
+		},
+		{
+			type: 'object',
+			properties: {
+				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+				detail: { type: 'boolean', default: true },
+			},
+		},
+	],
+} as const;
+
+type UsersSearchByUsernameAndHostParams = {
+	username?: string | null;
+	host?: string | null;
+	limit: number;
+	detail: boolean;
+};
+
+export async function handleHonoApiUsersSearchByUsernameAndHost(
+	deps: UserPackingDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<unknown[]> {
+	const params = parseHonoApiParams(usersSearchByUsernameAndHostParamDef, body) as UsersSearchByUsernameAndHostParams;
+
+	const searchParams = {
+		username: 'username' in params ? params.username : undefined,
+		host: 'host' in params ? params.host : undefined,
+	};
+
+	const queries = me
+		? buildSearchUserQueriesForHonoApi(deps.config, me, searchParams)
+		: buildSearchUserNoLoginQueriesForHonoApi(deps.config, searchParams);
+
+	let resultSet = new Set<MiUser['id']>();
+	const limit = params.limit;
+	for (const conditions of queries) {
+		const ids = await selectSearchUserIdsForHonoApi(deps, conditions, limit - resultSet.size);
+		resultSet = new Set([...resultSet, ...ids]);
+		if (resultSet.size >= limit) break;
+	}
+
+	const ids = [...resultSet].slice(0, limit);
+	return params.detail
+		? await packUserDetailedManyForHonoApi(deps, ids, me)
+		: await packUserLiteManyForHonoApi(deps, ids);
+}

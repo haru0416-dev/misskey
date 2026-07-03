@@ -6758,6 +6758,57 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/search-by-username-and-host', () => {
+		test('username/hostによる前方一致検索、ログイン時のフォロー優先、detailスキーマを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const target = await signup({ username: `hsbuh${suffix}` });
+			const otherPrefixed = await signup({ username: `hsbuh${suffix}x` });
+			const searcher = await signup({ username: `hsbuhs${suffix}` });
+			const remoteHost = `hono-sbuh-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `remote${suffix}`,
+					usernameLower: `remote${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+
+			const byUsername = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 100 });
+			assert.strictEqual(byUsername.status, 200);
+			assert.ok(byUsername.body.some((u: any) => u.id === target.id));
+			assert.ok(byUsername.body.some((u: any) => u.id === otherPrefixed.id));
+
+			const byHost = await api('users/search-by-username-and-host', { host: remoteHost, limit: 100 });
+			assert.strictEqual(byHost.status, 200);
+			assert.ok(byHost.body.some((u: any) => u.id === remoteUser.id));
+
+			await api('following/create', { userId: target.id }, searcher);
+			const followedFirst = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 1 }, searcher);
+			assert.strictEqual(followedFirst.status, 200);
+			assert.strictEqual(followedFirst.body[0].id, target.id);
+
+			// @ts-expect-error params must include username or host
+			const missingBoth = await api('users/search-by-username-and-host', { limit: 10 });
+			assert.strictEqual(missingBoth.status, 400);
+
+			const detailed = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: true });
+			assert.strictEqual(detailed.status, 200);
+			assert.ok(Object.prototype.hasOwnProperty.call(detailed.body[0], 'isLocked'));
+
+			const lite = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: false });
+			assert.strictEqual(lite.status, 200);
+			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
