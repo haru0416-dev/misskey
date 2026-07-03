@@ -10229,6 +10229,116 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/polls/vote', () => {
+		test('投票できる', async () => {
+			const created = await api('notes/create', {
+				text: 'poll',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(res.status, 204);
+
+			const shown = await api('notes/show', { noteId: created.body.createdNote.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.poll.choices[0].votes, 1);
+			assert.strictEqual(shown.body.poll.choices[0].isVoted, true);
+		});
+
+		test('複数投票可能な場合は複数選べる', async () => {
+			const created = await api('notes/create', {
+				text: 'multi poll',
+				poll: { choices: ['a', 'b', 'c'], multiple: true },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(first.status, 204);
+			const second = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 1 }, alice);
+			assert.strictEqual(second.status, 204);
+
+			const dup = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(dup.status, 400);
+			assert.strictEqual(castAsError(dup.body as any).error.id, '0963fc77-efac-419b-9424-b391608dc6d8');
+		});
+
+		test('複数投票不可の場合は二重投票できない', async () => {
+			const created = await api('notes/create', {
+				text: 'single poll',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(first.status, 204);
+
+			const second = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 1 }, alice);
+			assert.strictEqual(second.status, 400);
+			assert.strictEqual(castAsError(second.body as any).error.id, '0963fc77-efac-419b-9424-b391608dc6d8');
+		});
+
+		test('無効な選択肢では怒られる', async () => {
+			const created = await api('notes/create', {
+				text: 'poll for invalid choice',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 5 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'e0cc9a04-f2e8-41e4-a5f1-4127293260cc');
+		});
+
+		test('投票が無い投稿には投票できない', async () => {
+			const created = await api('notes/create', { text: 'no poll here' }, bob);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '5f979967-52d9-4314-a911-1c673727f92f');
+		});
+
+		test('期限切れの投票には投票できない', async () => {
+			const created = await api('notes/create', {
+				text: 'expiring poll',
+				poll: { choices: ['a', 'b'], multiple: false, expiredAfter: 100 },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			await new Promise(resolve => setTimeout(resolve, 300));
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '1022a357-b085-4054-9083-8f8de358337e');
+		});
+
+		test('存在しない投稿には投票できない', async () => {
+			const res = await api('notes/polls/vote', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', choice: 0 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'ecafbd2e-c283-4d6d-aecb-1a0a33b75396');
+		});
+
+		test('ブロックされていると投票できない', async () => {
+			const created = await api('notes/create', {
+				text: 'blocked poll',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const block = await api('blocking/create', { userId: alice.id }, bob);
+			assert.strictEqual(block.status, 200);
+
+			try {
+				const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+				assert.strictEqual(res.status, 400);
+				assert.strictEqual(castAsError(res.body as any).error.id, '85a5377e-b1e9-4617-b0b9-5bea73331e49');
+			} finally {
+				await api('blocking/delete', { userId: alice.id }, bob);
+			}
+		});
+	});
+
 	describe('following/create', () => {
 		test('フォローできる', async () => {
 			const res = await api('following/create', {

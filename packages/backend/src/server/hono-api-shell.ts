@@ -115,6 +115,7 @@ import { handleHonoApiNotesChildren, handleHonoApiNotesClips, handleHonoApiNotes
 import { handleHonoApiNotesCreate } from './hono-api-notes-create.js';
 import { handleHonoApiNotesDelete, handleHonoApiNotesUnrenote, notesDeleteRateLimit, notesUnrenoteRateLimit } from './hono-api-notes-delete.js';
 import { handleHonoApiNotesReactions, handleHonoApiNotesReactionsCreate, handleHonoApiNotesReactionsDelete, normalizeHonoApiNotesReactionsQuery, reactionsDeleteRateLimit } from './hono-api-notes-reactions.js';
+import { handleHonoApiNotesPollsVote } from './hono-api-notes-polls-vote.js';
 import { handleHonoApiPagePush } from './hono-api-page-push.js';
 import { handleHonoApiIPageLikes, handleHonoApiIPages, handleHonoApiPagesCreate, handleHonoApiPagesDelete, handleHonoApiPagesFeatured, handleHonoApiPagesShow, handleHonoApiPagesUpdate, handleHonoApiUsersPages } from './hono-api-pages.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
@@ -3210,6 +3211,19 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(c, await handleHonoApiNotesReactions(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 60));
+		});
+	});
+
+	app.post('/notes/polls/vote', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:votes');
+
+			await handleHonoApiNotesPollsVote(deps, auth.user, body);
+			return emptyResponse(c);
 		});
 	});
 

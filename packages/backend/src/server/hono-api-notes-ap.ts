@@ -7,6 +7,8 @@ import { randomUUID } from 'node:crypto';
 import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
+import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverQueue } from '@/core/QueueModule.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
@@ -398,4 +400,63 @@ export async function resolveMentionedAndInvolvedRemoteUsersForHonoApi(deps: Hon
 
 	const all = [...byUriOrId, ...renotedOrReplied];
 	return all.filter((u, i, self) => i === self.findIndex(u2 => u.id === u2.id));
+}
+
+export function renderUpdateForHonoApi(config: Pick<Config, 'url'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
+	return {
+		id: `${config.url}/users/${user.id}#updates/${Date.now()}`,
+		actor: genLocalUserUri(config, user.id),
+		type: 'Update',
+		to: ['https://www.w3.org/ns/activitystreams#Public'],
+		object,
+		published: new Date().toISOString(),
+	};
+}
+
+export function renderVoteForHonoApi(
+	config: Pick<Config, 'url'>,
+	user: { id: MiUser['id'] },
+	vote: { id: string; choice: number },
+	note: { uri: string | null },
+	poll: { choices: string[] },
+	pollOwner: { uri: string },
+): Record<string, unknown> {
+	return {
+		id: `${config.url}/users/${user.id}#votes/${vote.id}/activity`,
+		actor: genLocalUserUri(config, user.id),
+		type: 'Create',
+		to: [pollOwner.uri],
+		published: new Date().toISOString(),
+		object: {
+			id: `${config.url}/users/${user.id}#votes/${vote.id}`,
+			type: 'Note',
+			attributedTo: genLocalUserUri(config, user.id),
+			to: [pollOwner.uri],
+			inReplyTo: note.uri,
+			name: poll.choices[vote.choice],
+		},
+	};
+}
+
+export async function deliverSingleActivityForHonoApi(
+	deps: HonoApiNoteApDependencies,
+	author: { id: MiUser['id'] },
+	activity: Record<string, unknown>,
+	inbox: string,
+): Promise<void> {
+	enqueueDeliverJob(deps.deliverQueue, deps.config as Config, author, activity as unknown as IActivity, inbox, false);
+}
+
+export async function deliverQuestionUpdateForHonoApi(deps: HonoApiNoteApDependencies, noteId: MiNote['id']): Promise<void> {
+	const note = await fetchNoteByIdFromDatabase(deps.db, noteId);
+	if (note == null) throw new Error('note not found');
+	if (note.localOnly) return;
+
+	const user = await fetchUserByIdFromDatabase(deps.db, note.userId);
+	if (user == null) throw new Error('note not found');
+
+	if (!isRemoteUser(user)) {
+		const content = addActivityContext(deps.config, renderUpdateForHonoApi(deps.config, await renderNoteForHonoApi(deps, note, false), user));
+		await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
+	}
 }
