@@ -292,7 +292,7 @@ function renderKeyForHonoApi(config: Pick<Config, 'url'>, user: MiLocalUser, key
 	};
 }
 
-async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependencies, user: MiLocalUser): Promise<Record<string, unknown>> {
+export async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependencies, user: MiLocalUser): Promise<Record<string, unknown>> {
 	const id = genLocalUserUri(deps.config, user.id);
 	const isSystem = user.username.includes('.');
 
