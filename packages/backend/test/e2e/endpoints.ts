@@ -5859,6 +5859,89 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('i/import-blocking, i/import-following, i/import-muting, i/import-user-lists', () => {
+		async function grantImportPolicy(userId: string, suffix: string, policyKey: string) {
+			const importRole = await role(alice, {
+				name: `hono import role ${policyKey} ${suffix}`,
+			}, {
+				[policyKey]: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', { roleId: importRole.id, userId }, alice);
+			assert.strictEqual(assign.status, 204);
+		}
+
+		async function makeDriveFile(userId: string, suffix: string, size: number) {
+			const config = loadConfig();
+			const md5 = createHash('md5').update(`hono-import-${suffix}-${size}`).digest('hex');
+			return await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId,
+				userHost: null,
+				md5,
+				name: `hono-import-${suffix}.csv`,
+				type: 'text/csv',
+				size,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+		}
+
+		test('i/import-blocking はrole policy、ファイル検証、キュー投入を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hib${suffix}` });
+
+			const deniedBeforeGrant = await api('i/import-blocking', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(deniedBeforeGrant.status, 403);
+			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			await grantImportPolicy(user.id, suffix, 'canImportBlocking');
+
+			const noSuchFile = await api('i/import-blocking', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
+
+			const emptyFile = await makeDriveFile(user.id, `${suffix}e`, 0);
+			const emptyRes = await api('i/import-blocking', { fileId: emptyFile.id }, user);
+			assert.strictEqual(emptyRes.status, 400);
+			assert.strictEqual(castAsError(emptyRes.body as any).error.code, 'EMPTY_FILE');
+
+			const bigFile = await makeDriveFile(user.id, `${suffix}b`, 65 * 1024);
+			const bigRes = await api('i/import-blocking', { fileId: bigFile.id }, user);
+			assert.strictEqual(bigRes.status, 400);
+			assert.strictEqual(castAsError(bigRes.body as any).error.code, 'TOO_BIG_FILE');
+
+			const okFile = await makeDriveFile(user.id, `${suffix}o`, 1024);
+			const okRes = await api('i/import-blocking', { fileId: okFile.id }, user);
+			assert.strictEqual(okRes.status, 204);
+		});
+
+		test('i/import-following, i/import-muting, i/import-user-lists はrole policyを維持しファイルがあれば成功する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hifm${suffix}` });
+
+			await grantImportPolicy(user.id, `${suffix}f`, 'canImportFollowing');
+			await grantImportPolicy(user.id, `${suffix}m`, 'canImportMuting');
+			await grantImportPolicy(user.id, `${suffix}u`, 'canImportUserLists');
+
+			const followingFile = await makeDriveFile(user.id, `${suffix}f`, 1024);
+			const followingRes = await api('i/import-following', { fileId: followingFile.id, withReplies: true }, user);
+			assert.strictEqual(followingRes.status, 204);
+
+			const mutingFile = await makeDriveFile(user.id, `${suffix}m`, 1024);
+			const mutingRes = await api('i/import-muting', { fileId: mutingFile.id }, user);
+			assert.strictEqual(mutingRes.status, 204);
+
+			const userListsFile = await makeDriveFile(user.id, `${suffix}u`, 1024);
+			const userListsRes = await api('i/import-user-lists', { fileId: userListsFile.id }, user);
+			assert.strictEqual(userListsRes.status, 204);
+		});
+	});
+
 	describe('notifications', () => {
 		async function readNotificationTimeline(config: ReturnType<typeof loadConfig>, userId: string) {
 			const redis = createRedisClient(config);
