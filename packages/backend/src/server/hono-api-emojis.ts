@@ -8,9 +8,10 @@ import type * as Redis from 'ioredis';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
-import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
+import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DbQueue } from '@/core/QueueModule.js';
+import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/RoleStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -771,4 +772,165 @@ export async function handleHonoApiAdminEmojiListRemote(
 	});
 
 	return emojis.map(packHonoEmojiDetailed);
+}
+
+const fetchEmojisHostTypes = ['local', 'remote', 'all'] as const;
+const fetchEmojisSortKeys = [
+	'+id', '-id',
+	'+updatedAt', '-updatedAt',
+	'+name', '-name',
+	'+host', '-host',
+	'+uri', '-uri',
+	'+publicUrl', '-publicUrl',
+	'+type', '-type',
+	'+aliases', '-aliases',
+	'+category', '-category',
+	'+license', '-license',
+	'+isSensitive', '-isSensitive',
+	'+localOnly', '-localOnly',
+	'+roleIdsThatCanBeUsedThisEmojiAsReaction', '-roleIdsThatCanBeUsedThisEmojiAsReaction',
+] as const;
+
+const v2AdminEmojiListQueryParamDef = {
+	type: 'object',
+	nullable: true,
+	properties: {
+		updatedAtFrom: { type: 'string' },
+		updatedAtTo: { type: 'string' },
+		name: { type: 'string' },
+		host: { type: 'string' },
+		uri: { type: 'string' },
+		publicUrl: { type: 'string' },
+		originalUrl: { type: 'string' },
+		type: { type: 'string' },
+		aliases: { type: 'string' },
+		category: { type: 'string' },
+		license: { type: 'string' },
+		isSensitive: { type: 'boolean' },
+		localOnly: { type: 'boolean' },
+		hostType: {
+			type: 'string',
+			enum: fetchEmojisHostTypes,
+			default: 'all',
+		},
+		roleIds: {
+			type: 'array',
+			items: { type: 'string', format: 'misskey:id' },
+		},
+	},
+} as const;
+
+const v2AdminEmojiListParamDef = {
+	type: 'object',
+	properties: {
+		query: v2AdminEmojiListQueryParamDef,
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		page: { type: 'integer' },
+		sortKeys: {
+			type: 'array',
+			default: ['-id'],
+			items: {
+				type: 'string',
+				enum: fetchEmojisSortKeys,
+			},
+		},
+	},
+	required: [],
+} as const;
+
+type V2AdminEmojiListParams = SchemaType<typeof v2AdminEmojiListParamDef>;
+
+async function packHonoEmojiDetailedAdmin(
+	deps: HonoApiEmojiDependencies,
+	emoji: MiEmoji,
+	hintRoles: ReadonlyMap<RoleSummary['id'], RoleSummary>,
+): Promise<Packed<'EmojiDetailedAdmin'>> {
+	const roles = Array.of<RoleSummary>();
+	if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
+		roles.push(
+			...emoji.roleIdsThatCanBeUsedThisEmojiAsReaction
+				.filter(id => hintRoles.has(id))
+				.map(id => hintRoles.get(id)!),
+		);
+		roles.sort((a, b) => {
+			if (a.displayOrder !== b.displayOrder) return b.displayOrder - a.displayOrder;
+			return a.id.localeCompare(b.id);
+		});
+	}
+
+	return {
+		id: emoji.id,
+		updatedAt: emoji.updatedAt?.toISOString() ?? null,
+		name: emoji.name,
+		host: emoji.host,
+		uri: emoji.uri,
+		type: emoji.type,
+		aliases: emoji.aliases,
+		category: emoji.category,
+		publicUrl: emoji.publicUrl,
+		originalUrl: emoji.originalUrl,
+		license: emoji.license,
+		localOnly: emoji.localOnly,
+		isSensitive: emoji.isSensitive,
+		roleIdsThatCanBeUsedThisEmojiAsReaction: roles.map(it => ({ id: it.id, name: it.name })),
+	};
+}
+
+async function packHonoEmojiDetailedAdminMany(
+	deps: HonoApiEmojiDependencies,
+	emojis: MiEmoji[],
+): Promise<Packed<'EmojiDetailedAdmin'>[]> {
+	const roleIds = [...new Set(emojis.flatMap(emoji => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction))];
+	const roles = roleIds.length > 0 ? await listRoleSummariesByIdsFromDatabase(deps.db, roleIds) : [];
+	const hintRoles = new Map(roles.map(role => [role.id, role]));
+
+	return Promise.all(emojis.map(emoji => packHonoEmojiDetailedAdmin(deps, emoji, hintRoles)));
+}
+
+export async function handleHonoApiV2AdminEmojiList(
+	deps: HonoApiEmojiDependencies,
+	body: Record<string, unknown>,
+): Promise<{ emojis: Packed<'EmojiDetailedAdmin'>[]; count: number; allCount: number; allPages: number }> {
+	const params = parseHonoApiParams(v2AdminEmojiListParamDef, body) as V2AdminEmojiListParams;
+
+	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
+
+	const q = params.query;
+	const limit = params.limit;
+	const result = await fetchEmojisFromDatabase(deps.db, {
+		query: {
+			updatedAtFrom: q?.updatedAtFrom,
+			updatedAtTo: q?.updatedAtTo,
+			name: q?.name,
+			host: q?.host,
+			uri: q?.uri,
+			publicUrl: q?.publicUrl,
+			type: q?.type,
+			aliases: q?.aliases,
+			category: q?.category,
+			license: q?.license,
+			isSensitive: q?.isSensitive,
+			localOnly: q?.localOnly,
+			hostType: q?.hostType,
+			roleIds: q?.roleIds,
+		},
+		sinceId,
+		untilId,
+	}, {
+		limit,
+		page: params.page,
+		sortKeys: params.sortKeys,
+	});
+
+	return {
+		emojis: await packHonoEmojiDetailedAdminMany(deps, result.emojis),
+		count: (result.allCount > limit ? result.emojis.length : result.allCount),
+		allCount: result.allCount,
+		allPages: Math.ceil(result.allCount / limit),
+	};
 }

@@ -16,6 +16,11 @@ import {
 	listUsersByIdsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
 } from '@/core/UserStore.js';
+import { blockingExistsInDatabase, listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { followRequestExistsInDatabase, listFollowRequestFolloweeIdsByFollowerIdFromDatabase, listFollowRequestFollowerIdsByFolloweeIdFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listAllFollowingsByFollowerIdFromDatabase, listFollowerIdsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
+import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -546,4 +551,118 @@ export async function handleHonoApiUsersShow(
 	}
 
 	return await packUserDetailedForHonoApi(deps, user, me);
+}
+
+const usersRelationParamDef = {
+	type: 'object',
+	properties: {
+		userId: {
+			oneOf: [
+				{ type: 'string', format: 'misskey:id' },
+				{
+					type: 'array',
+					items: { type: 'string', format: 'misskey:id' },
+				},
+			],
+		},
+	},
+	required: ['userId'],
+} as const;
+
+type UsersRelationParams = { userId: string | string[] };
+
+export type HonoApiUsersRelationDependencies = {
+	db: MiDrizzleDatabase;
+};
+
+async function getUserRelationForHonoApi(deps: HonoApiUsersRelationDependencies, me: MiUser['id'], target: MiUser['id']) {
+	const [
+		following,
+		isFollowed,
+		hasPendingFollowRequestFromYou,
+		hasPendingFollowRequestToYou,
+		isBlocking,
+		isBlocked,
+		isMuted,
+		isRenoteMuted,
+	] = await Promise.all([
+		fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, me, target),
+		followingExistsInDatabase(deps.db, target, me),
+		followRequestExistsInDatabase(deps.db, me, target),
+		followRequestExistsInDatabase(deps.db, target, me),
+		blockingExistsInDatabase(deps.db, me, target),
+		blockingExistsInDatabase(deps.db, target, me),
+		mutingExistsInDatabase(deps.db, me, target),
+		renoteMutingExistsInDatabase(deps.db, me, target),
+	]);
+
+	return {
+		id: target,
+		following,
+		isFollowing: following != null,
+		isFollowed,
+		hasPendingFollowRequestFromYou,
+		hasPendingFollowRequestToYou,
+		isBlocking,
+		isBlocked,
+		isMuted,
+		isRenoteMuted,
+	};
+}
+
+async function getUserRelationsForHonoApi(deps: HonoApiUsersRelationDependencies, me: MiUser['id'], targets: MiUser['id'][]) {
+	const [
+		followers,
+		followees,
+		followersRequests,
+		followeesRequests,
+		blockers,
+		blockees,
+		muters,
+		renoteMuters,
+	] = await Promise.all([
+		listAllFollowingsByFollowerIdFromDatabase(deps.db, me)
+			.then(f => new Map(f.map(it => [it.followeeId, it]))),
+		listFollowerIdsByFolloweeIdFromDatabase(deps.db, me),
+		listFollowRequestFolloweeIdsByFollowerIdFromDatabase(deps.db, me),
+		listFollowRequestFollowerIdsByFolloweeIdFromDatabase(deps.db, me),
+		listBlockeeIdsByBlockerIdFromDatabase(deps.db, me),
+		listBlockerIdsByBlockeeIdFromDatabase(deps.db, me),
+		listMuteeIdsByMuterIdFromDatabase(deps.db, me),
+		listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, me),
+	]);
+
+	return new Map(
+		targets.map(target => {
+			const following = followers.get(target) ?? null;
+
+			return [
+				target,
+				{
+					id: target,
+					following,
+					isFollowing: following != null,
+					isFollowed: followees.includes(target),
+					hasPendingFollowRequestFromYou: followersRequests.includes(target),
+					hasPendingFollowRequestToYou: followeesRequests.includes(target),
+					isBlocking: blockers.includes(target),
+					isBlocked: blockees.includes(target),
+					isMuted: muters.includes(target),
+					isRenoteMuted: renoteMuters.includes(target),
+				},
+			];
+		}),
+	);
+}
+
+export async function handleHonoApiUsersRelation(
+	deps: HonoApiUsersRelationDependencies,
+	me: { id: MiUser['id'] },
+	body: Record<string, unknown>,
+): Promise<unknown> {
+	const params = parseHonoApiParams(usersRelationParamDef, body) as UsersRelationParams;
+
+	return Array.isArray(params.userId)
+		? await getUserRelationsForHonoApi(deps, me.id, params.userId).then(it => [...it.values()])
+		: await getUserRelationForHonoApi(deps, me.id, params.userId).then(it => [it]);
 }
