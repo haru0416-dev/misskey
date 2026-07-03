@@ -4198,6 +4198,54 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('export jobs', () => {
+		const getExportJobs = async (jobName: string, userId: string) => {
+			const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			return jobs.filter(job => job.name === jobName && (job.data as any).user?.id === userId);
+		};
+		const waitExportJob = async (jobName: string, userId: string) => {
+			for (let i = 0; i < 10; i++) {
+				const jobs = await getExportJobs(jobName, userId);
+				if (jobs[0] != null) return jobs[0];
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.fail(`${jobName} job was not found for ${userId}`);
+		};
+
+		test.each([
+			['export-custom-emojis', 'exportCustomEmojis'],
+			['i/export-notes', 'exportNotes'],
+			['i/export-clips', 'exportClips'],
+			['i/export-favorites', 'exportFavorites'],
+			['i/export-mute', 'exportMuting'],
+			['i/export-blocking', 'exportBlocking'],
+			['i/export-user-lists', 'exportUserLists'],
+			['i/export-antennas', 'exportAntennas'],
+		] as const)('%s は %s ジョブを積む', async (endpoint, jobName) => {
+			const suffix = Date.now().toString(36).slice(-8) + Math.random().toString(36).slice(-4);
+			const user = await signup({ username: `hej${suffix}` });
+
+			const res = await api(endpoint, {}, user);
+			assert.strictEqual(res.status, 204, JSON.stringify(res.body));
+
+			const job = await waitExportJob(jobName, user.id);
+			await job.remove();
+		});
+
+		test('i/export-following はジョブにexcludeMuting/excludeInactiveを渡す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hejf${suffix}` });
+
+			const res = await api('i/export-following', { excludeMuting: true, excludeInactive: true }, user);
+			assert.strictEqual(res.status, 204);
+
+			const job = await waitExportJob('exportFollowing', user.id);
+			assert.strictEqual((job.data as any).excludeMuting, true);
+			assert.strictEqual((job.data as any).excludeInactive, true);
+			await job.remove();
+		});
+	});
+
 	describe('notifications', () => {
 		async function readNotificationTimeline(config: ReturnType<typeof loadConfig>, userId: string) {
 			const redis = createRedisClient(config);

@@ -57,6 +57,7 @@ import {
 } from './hono-api-drive.js';
 import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
+import { handleHonoApiExportCustomEmojis, handleHonoApiIExportAntennas, handleHonoApiIExportBlocking, handleHonoApiIExportClips, handleHonoApiIExportFavorites, handleHonoApiIExportFollowing, handleHonoApiIExportMute, handleHonoApiIExportNotes, handleHonoApiIExportUserLists } from './hono-api-export-jobs.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
 import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
@@ -2208,6 +2209,150 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertSecureCredential(auth);
 
 			return jsonResponse(c, await handleHonoApiFetchExternalResources(deps, auth.user, body));
+		});
+	});
+
+	app.post('/export-custom-emojis', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'export-custom-emojis', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiExportCustomEmojis(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-notes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-notes', {
+				duration: 24 * 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportNotes(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-clips', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-clips', {
+				duration: 24 * 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportClips(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-favorites', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-favorites', {
+				duration: 24 * 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportFavorites(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-following', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-following', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportFollowing(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-mute', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-mute', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportMute(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-blocking', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-blocking', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportBlocking(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-user-lists', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-user-lists', {
+				duration: 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportUserLists(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/export-antennas', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/export-antennas', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			handleHonoApiIExportAntennas(deps, auth.user);
+			return emptyResponse(c);
 		});
 	});
 
