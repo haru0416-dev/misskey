@@ -9977,6 +9977,34 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/delete', () => {
+		test('自分の投稿を削除できる', async () => {
+			const created = await api('notes/create', { text: 'to be deleted' }, alice);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/delete', { noteId: created.body.createdNote.id }, alice);
+			assert.strictEqual(res.status, 204);
+
+			const shown = await api('notes/show', { noteId: created.body.createdNote.id }, alice);
+			assert.strictEqual(shown.status, 400);
+		});
+
+		test('他人の投稿は削除できない', async () => {
+			const created = await api('notes/create', { text: 'not yours' }, alice);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/delete', { noteId: created.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9');
+		});
+
+		test('存在しない投稿の削除で怒られる', async () => {
+			const res = await api('notes/delete', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '490be23f-8c1f-4796-819f-94cb4f9d1630');
+		});
+	});
+
 	describe('notes/reactions/create', () => {
 		test('リアクションできる', async () => {
 			const bobPost = await post(bob, { text: 'hi' });

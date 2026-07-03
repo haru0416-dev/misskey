@@ -3,16 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { randomUUID } from 'node:crypto';
 import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
 import type { DeliverQueue } from '@/core/QueueModule.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase, listUsersByUrisOrIdsFromDatabase } from '@/core/UserStore.js';
 import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { MfmService } from '@/core/MfmService.js';
 import type { Config } from '@/config.js';
@@ -42,8 +43,11 @@ function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): str
 
 // renderCreateForHonoApi/renderAnnounceForHonoApi always set `id`, so unlike the original
 // addContext() this never needs the randomUUID fallback for note activities specifically.
-function addActivityContext<T extends Record<string, unknown>>(activity: T): T & { '@context': typeof CONTEXT } {
-	return Object.assign({ '@context': CONTEXT }, activity);
+function addActivityContext<T extends Record<string, unknown>>(config: Pick<Config, 'url'>, activity: T): T & { '@context': typeof CONTEXT; id: string } {
+	if (activity.id == null) {
+		(activity as Record<string, unknown>).id = `${config.url}/${randomUUID()}`;
+	}
+	return Object.assign({ '@context': CONTEXT }, activity) as T & { '@context': typeof CONTEXT; id: string };
 }
 
 function renderMention(config: Pick<Config, 'url'>, user: MiUser): { type: 'Mention'; href: string; name: string } {
@@ -258,7 +262,7 @@ export async function renderNoteOrRenoteActivityForHonoApi(
 		? renderAnnounceForHonoApi(deps.config, data.renote.uri ?? `${deps.config.url}/notes/${data.renote.id}`, note)
 		: renderCreateForHonoApi(deps.config, await renderNoteForHonoApi(deps, note, false), note);
 
-	return addActivityContext(content);
+	return addActivityContext(deps.config, content);
 }
 
 export async function deliverNoteActivityForHonoApi(
@@ -313,4 +317,60 @@ export async function resolveRemoteRecipientForHonoApi(deps: HonoApiNoteApDepend
 	const u = await fetchUserByIdFromDatabase(deps.db, userId);
 	if (u == null || !isRemoteUser(u)) return null;
 	return u;
+}
+
+function renderTombstoneForHonoApi(id: string): Record<string, unknown> {
+	return { id, type: 'Tombstone' };
+}
+
+function renderDeleteForHonoApi(config: Pick<Config, 'url'>, object: Record<string, unknown> | string, user: { id: MiUser['id'] }): Record<string, unknown> {
+	return {
+		type: 'Delete',
+		actor: genLocalUserUri(config, user.id),
+		object,
+		published: new Date().toISOString(),
+	};
+}
+
+function renderUndoForHonoApi(config: Pick<Config, 'url'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
+	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
+	return {
+		type: 'Undo',
+		...(id ? { id } : {}),
+		actor: genLocalUserUri(config, user.id),
+		object,
+		published: new Date().toISOString(),
+	};
+}
+
+export async function renderNoteDeleteOrUndoAnnounceActivityForHonoApi(
+	deps: HonoApiNoteApDependencies,
+	note: MiNote,
+	user: { id: MiUser['id'] },
+): Promise<Record<string, unknown>> {
+	let renote: MiNote | null = null;
+	if (note.renoteId != null) {
+		const isQuote = note.text != null || note.replyId != null || note.cw != null || note.hasPoll || note.fileIds.length > 0;
+		if (!isQuote) {
+			renote = await fetchNoteByIdFromDatabase(deps.db, note.renoteId);
+		}
+	}
+
+	const content = renote != null
+		? renderUndoForHonoApi(deps.config, renderAnnounceForHonoApi(deps.config, renote.uri ?? `${deps.config.url}/notes/${renote.id}`, note), user)
+		: renderDeleteForHonoApi(deps.config, renderTombstoneForHonoApi(`${deps.config.url}/notes/${note.id}`), user);
+
+	return addActivityContext(deps.config, content);
+}
+
+export async function resolveMentionedAndInvolvedRemoteUsersForHonoApi(deps: HonoApiNoteApDependencies, note: MiNote): Promise<MiUser[]> {
+	const mentionUris = (JSON.parse(note.mentionedRemoteUsers) as IMentionedRemoteUsers).map(x => x.uri);
+	const byUriOrId = await listUsersByUrisOrIdsFromDatabase(deps.db, {
+		uris: mentionUris,
+		ids: note.renoteUserId ? [note.renoteUserId] : [],
+	});
+	const renotedOrReplied = await listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(deps.db, note.id);
+
+	const all = [...byUriOrId, ...renotedOrReplied];
+	return all.filter((u, i, self) => i === self.findIndex(u2 => u.id === u2.id));
 }

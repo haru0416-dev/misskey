@@ -174,6 +174,21 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 					},
 				}));
 			},
+			publishNoteStream: (note, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `noteStream:${note.id}`,
+					message: {
+						type,
+						body: {
+							id: note.id,
+							userId: note.userId,
+							visibility: note.visibility,
+							visibleUserIds: note.visibleUserIds,
+							body: value,
+						},
+					},
+				}));
+			},
 		},
 		clientBase: {
 			config,

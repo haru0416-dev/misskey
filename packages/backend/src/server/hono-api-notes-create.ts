@@ -289,7 +289,7 @@ class HonoNotificationManager {
 	}
 }
 
-async function fetchOrRegisterInstanceForHonoApi(deps: HonoApiNotesCreateDependencies, host: string): Promise<{ id: string; host: string }> {
+export async function fetchOrRegisterInstanceForHonoApi(deps: { db: MiDrizzleDatabase; config: Pick<Config, 'id'> }, host: string): Promise<{ id: string; host: string }> {
 	const puny = domainToASCII(host.toLowerCase());
 	const existing = await fetchInstanceByHostFromDatabase(deps.db, puny);
 	if (existing != null) return existing;
