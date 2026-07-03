@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, UserListEventTypes } from '@/core/GlobalEventService.js';
+import type { BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, NoteEventTypes, UserListEventTypes } from '@/core/GlobalEventService.js';
+import type { Packed } from '@/misc/json-schema.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
+import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 
@@ -47,4 +49,12 @@ export type HonoApiChatRoomStreamPublisher = <K extends keyof ChatEventTypes>(
 	toRoomId: MiChatRoom['id'],
 	type: K,
 	value?: ChatEventTypes[K],
+) => void;
+
+export type HonoApiNotesStreamPublisher = (note: Packed<'Note'>) => void;
+
+export type HonoApiNoteStreamPublisher = <K extends keyof NoteEventTypes>(
+	note: Pick<MiNote, 'id' | 'userId' | 'visibility' | 'visibleUserIds'>,
+	type: K,
+	value?: NoteEventTypes[K],
 ) => void;

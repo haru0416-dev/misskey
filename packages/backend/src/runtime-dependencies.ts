@@ -236,7 +236,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const emailService = new EmailService(config, meta, db, loggerService, utilityService, httpRequestService);
 	const userAuthService = new UserAuthService(redis, db);
 	const webAuthnService = new WebAuthnService(config, meta, redis, db);
-	const chartWriters = createHonoChartWriters({ db, redis, logger: loggerService.getLogger('chart', 'white') });
+	const chartWriters = createHonoChartWriters({ db, redis, config, logger: loggerService.getLogger('chart', 'white') });
 	const chartWriterSaveIntervalId = startHonoChartWriterSaveInterval(chartWriters);
 
 	return {

@@ -9908,6 +9908,131 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/create', () => {
+		test('テキストのみで投稿できる', async () => {
+			const res = await api('notes/create', { text: 'hello hono' }, alice);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.text, 'hello hono');
+			assert.strictEqual(res.body.createdNote.userId, alice.id);
+			assert.strictEqual(res.body.createdNote.visibility, 'public');
+		});
+
+		test('テキストもファイルもRenoteもPollも無いと怒られる', async () => {
+			// @ts-expect-error params must not be empty
+			const res = await api('notes/create', {}, alice);
+			assert.strictEqual(res.status, 400);
+		});
+
+		test('返信を作成できる', async () => {
+			const parent = await api('notes/create', { text: 'parent' }, alice);
+			const res = await api('notes/create', { text: 'child', replyId: parent.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.replyId, parent.body.createdNote.id);
+
+			const noSuchReply = await api('notes/create', { text: 'x', replyId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchReply.status, 400);
+			assert.strictEqual(castAsError(noSuchReply.body as any).error.id, '749ee0f6-d3da-459a-bf02-282e2da4292c');
+		});
+
+		test('Renoteを作成できる', async () => {
+			const target = await api('notes/create', { text: 'to be renoted' }, alice);
+			const res = await api('notes/create', { renoteId: target.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.renoteId, target.body.createdNote.id);
+
+			const pureRenoteOfRenote = await api('notes/create', { renoteId: res.body.createdNote.id }, alice);
+			assert.strictEqual(pureRenoteOfRenote.status, 400);
+			assert.strictEqual(castAsError(pureRenoteOfRenote.body as any).error.id, 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
+
+			const noSuchRenote = await api('notes/create', { renoteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchRenote.status, 400);
+			assert.strictEqual(castAsError(noSuchRenote.body as any).error.id, 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
+		});
+
+		test('投票を作成できる', async () => {
+			const res = await api('notes/create', {
+				text: 'poll time',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, alice);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.poll.choices.length, 2);
+
+			const expired = await api('notes/create', {
+				text: 'expired poll',
+				poll: { choices: ['a', 'b'], expiresAt: Date.now() - 10000 },
+			}, alice);
+			assert.strictEqual(expired.status, 400);
+			assert.strictEqual(castAsError(expired.body as any).error.id, '04da457d-b083-4055-9082-955525eda5a5');
+		});
+
+		test('visibility: specified で visibleUserIds を保存できる', async () => {
+			const res = await api('notes/create', {
+				text: 'secret',
+				visibility: 'specified',
+				visibleUserIds: [bob.id],
+			}, alice);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.visibility, 'specified');
+			assert.deepStrictEqual(res.body.createdNote.visibleUserIds, [bob.id]);
+		});
+	});
+
+	describe('notes/delete', () => {
+		test('自分の投稿を削除できる', async () => {
+			const created = await api('notes/create', { text: 'to be deleted' }, alice);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/delete', { noteId: created.body.createdNote.id }, alice);
+			assert.strictEqual(res.status, 204);
+
+			const shown = await api('notes/show', { noteId: created.body.createdNote.id }, alice);
+			assert.strictEqual(shown.status, 400);
+		});
+
+		test('他人の投稿は削除できない', async () => {
+			const created = await api('notes/create', { text: 'not yours' }, alice);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/delete', { noteId: created.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9');
+		});
+
+		test('存在しない投稿の削除で怒られる', async () => {
+			const res = await api('notes/delete', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '490be23f-8c1f-4796-819f-94cb4f9d1630');
+		});
+	});
+
+	describe('notes/unrenote', () => {
+		test('自分のRenoteを取り消せる', async () => {
+			const target = await api('notes/create', { text: 'to be unrenoted' }, alice);
+			assert.strictEqual(target.status, 200);
+
+			const renote = await api('notes/create', { renoteId: target.body.createdNote.id }, bob);
+			assert.strictEqual(renote.status, 200);
+
+			const res = await api('notes/unrenote', { noteId: target.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 204);
+
+			// fire-and-forget な削除が反映されるまでポーリングする
+			let shown;
+			for (let i = 0; i < 20; i++) {
+				shown = await api('notes/show', { noteId: renote.body.createdNote.id }, bob);
+				if (shown.status === 400) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.strictEqual(shown!.status, 400);
+		});
+
+		test('存在しない投稿のunrenoteで怒られる', async () => {
+			const res = await api('notes/unrenote', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'efd4a259-2442-496b-8dd7-b255aa1a160f');
+		});
+	});
+
 	describe('notes/reactions/create', () => {
 		test('リアクションできる', async () => {
 			const bobPost = await post(bob, { text: 'hi' });
@@ -9959,6 +10084,32 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(resNote.status, 200);
 			assert.deepStrictEqual(resNote.body.reactions, { '🚀': 1 });
+		});
+
+		test('同じリアクションを二重にすると怒られる', async () => {
+			const bobPost = await post(bob, { text: 'hi' });
+
+			const first = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
+			assert.strictEqual(first.status, 204);
+
+			const second = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
+			assert.strictEqual(second.status, 400);
+			assert.strictEqual(castAsError(second.body as any).error.id, '71efcf98-86d6-4e2b-b2ad-9d032369366b');
+		});
+
+		test('ブロックされているとリアクションできない', async () => {
+			const bobPost = await post(bob, { text: 'hi' });
+
+			const block = await api('blocking/create', { userId: alice.id }, bob);
+			assert.strictEqual(block.status, 200);
+
+			try {
+				const res = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
+				assert.strictEqual(res.status, 400);
+				assert.strictEqual(castAsError(res.body as any).error.id, '20ef5475-9f38-4e4c-bd33-de6d979498ec');
+			} finally {
+				await api('blocking/delete', { userId: alice.id }, bob);
+			}
 		});
 
 		test('存在しない投稿にはリアクションできない', async () => {
@@ -10046,6 +10197,145 @@ describe('Endpoints', () => {
 			}, alice);
 
 			assert.strictEqual(res.status, 400);
+		});
+	});
+
+	describe('notes/reactions/delete', () => {
+		test('リアクションを取り消せる', async () => {
+			const bobNote = await post(bob, { text: 'hi' });
+
+			const created = await api('notes/reactions/create', { noteId: bobNote.id, reaction: '🚀' }, alice);
+			assert.strictEqual(created.status, 204);
+
+			const res = await api('notes/reactions/delete', { noteId: bobNote.id }, alice);
+			assert.strictEqual(res.status, 204);
+
+			const reactions = await api('notes/reactions', { noteId: bobNote.id });
+			assert.strictEqual(reactions.body.length, 0);
+		});
+
+		test('リアクションしていないと怒られる', async () => {
+			const bobNote = await post(bob, { text: 'hi' });
+
+			const res = await api('notes/reactions/delete', { noteId: bobNote.id }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '92f4426d-4196-4125-aa5b-02943e2ec8fc');
+		});
+
+		test('存在しない投稿で怒られる', async () => {
+			const res = await api('notes/reactions/delete', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37');
+		});
+	});
+
+	describe('notes/polls/vote', () => {
+		test('投票できる', async () => {
+			const created = await api('notes/create', {
+				text: 'poll',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(res.status, 204);
+
+			const shown = await api('notes/show', { noteId: created.body.createdNote.id }, alice);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.poll.choices[0].votes, 1);
+			assert.strictEqual(shown.body.poll.choices[0].isVoted, true);
+		});
+
+		test('複数投票可能な場合は複数選べる', async () => {
+			const created = await api('notes/create', {
+				text: 'multi poll',
+				poll: { choices: ['a', 'b', 'c'], multiple: true },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(first.status, 204);
+			const second = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 1 }, alice);
+			assert.strictEqual(second.status, 204);
+
+			const dup = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(dup.status, 400);
+			assert.strictEqual(castAsError(dup.body as any).error.id, '0963fc77-efac-419b-9424-b391608dc6d8');
+		});
+
+		test('複数投票不可の場合は二重投票できない', async () => {
+			const created = await api('notes/create', {
+				text: 'single poll',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(first.status, 204);
+
+			const second = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 1 }, alice);
+			assert.strictEqual(second.status, 400);
+			assert.strictEqual(castAsError(second.body as any).error.id, '0963fc77-efac-419b-9424-b391608dc6d8');
+		});
+
+		test('無効な選択肢では怒られる', async () => {
+			const created = await api('notes/create', {
+				text: 'poll for invalid choice',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 5 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'e0cc9a04-f2e8-41e4-a5f1-4127293260cc');
+		});
+
+		test('投票が無い投稿には投票できない', async () => {
+			const created = await api('notes/create', { text: 'no poll here' }, bob);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '5f979967-52d9-4314-a911-1c673727f92f');
+		});
+
+		test('期限切れの投票には投票できない', async () => {
+			const created = await api('notes/create', {
+				text: 'expiring poll',
+				poll: { choices: ['a', 'b'], multiple: false, expiredAfter: 100 },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			await new Promise(resolve => setTimeout(resolve, 300));
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, '1022a357-b085-4054-9083-8f8de358337e');
+		});
+
+		test('存在しない投稿には投票できない', async () => {
+			const res = await api('notes/polls/vote', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', choice: 0 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.id, 'ecafbd2e-c283-4d6d-aecb-1a0a33b75396');
+		});
+
+		test('ブロックされていると投票できない', async () => {
+			const created = await api('notes/create', {
+				text: 'blocked poll',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const block = await api('blocking/create', { userId: alice.id }, bob);
+			assert.strictEqual(block.status, 200);
+
+			try {
+				const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+				assert.strictEqual(res.status, 400);
+				assert.strictEqual(castAsError(res.body as any).error.id, '85a5377e-b1e9-4617-b0b9-5bea73331e49');
+			} finally {
+				await api('blocking/delete', { userId: alice.id }, bob);
+			}
 		});
 	});
 

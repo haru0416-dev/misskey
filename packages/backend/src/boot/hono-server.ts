@@ -79,6 +79,8 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			dbPool: deps.drizzlePool,
 			meta: deps.meta,
 			redis: deps.redis,
+			redisForTimelines: deps.redisForTimelines,
+			redisForReactions: deps.redisForReactions,
 			downloadService: deps.downloadService,
 			fileInfoService: deps.fileInfoService,
 			httpRequestService: deps.httpRequestService,
@@ -161,6 +163,30 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 					message: {
 						type,
 						body: value,
+					},
+				}));
+			},
+			publishNotesStream: (note) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: 'notesStream',
+					message: {
+						type: null,
+						body: note,
+					},
+				}));
+			},
+			publishNoteStream: (note, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `noteStream:${note.id}`,
+					message: {
+						type,
+						body: {
+							id: note.id,
+							userId: note.userId,
+							visibility: note.visibility,
+							visibleUserIds: note.visibleUserIds,
+							body: value,
+						},
 					},
 				}));
 			},
