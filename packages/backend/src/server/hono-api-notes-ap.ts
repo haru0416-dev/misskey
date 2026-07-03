@@ -56,7 +56,7 @@ function renderMention(config: Pick<Config, 'url'>, user: MiUser): { type: 'Ment
 	return { type: 'Mention', href, name };
 }
 
-function renderEmoji(config: Pick<Config, 'url'>, emoji: MiEmoji): Record<string, unknown> {
+export function renderEmoji(config: Pick<Config, 'url'>, emoji: MiEmoji): Record<string, unknown> {
 	return {
 		id: `${config.url}/emojis/${emoji.name}`,
 		type: 'Emoji',
