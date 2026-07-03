@@ -147,7 +147,7 @@ type FollowingListParams = {
 	limit: number;
 };
 
-type FollowingListItem = {
+export type FollowingListItem = {
 	id: string;
 	createdAt: string;
 	followeeId: string;
@@ -909,7 +909,7 @@ export async function handleHonoApiFollowingRequestsReject(
 	}
 }
 
-function resolveHonoApiIdPagination(
+export function resolveHonoApiIdPagination(
 	config: Config,
 	params: {
 		sinceId?: string;
@@ -989,8 +989,8 @@ export async function handleHonoApiFollowingRequestsSent(
 	return await packFollowRequestsForHonoApi(deps, requests, me);
 }
 
-async function packFollowingsForHonoApi(
-	deps: HonoApiFollowingDependencies,
+export async function packFollowingsForHonoApi(
+	deps: UserPackingDependencies,
 	followings: MiFollowing[],
 ): Promise<FollowingListItem[]> {
 	const packedFollowees = await packUserDetailedNotMeManyForHonoApi(deps, followings.map(f => f.followee ?? f.followeeId));

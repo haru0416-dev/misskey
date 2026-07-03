@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { announcementReadExistsInDatabase } from '@/core/AnnouncementReadStore.js';
-import { fetchAnnouncementByIdFromDatabase, listAnnouncementsForUserFromDatabase, resolveAnnouncementPagination } from '@/core/AnnouncementStore.js';
+import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
+import { fetchAnnouncementByIdFromDatabase, listAnnouncementsForUserFromDatabase, listUnreadAnnouncementsForUserFromDatabase, resolveAnnouncementPagination, updateAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -12,11 +12,13 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiAnnouncement, MiUser } from '@/models/_.js';
 import { HonoApiError } from './hono-api-error.js';
+import type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiAnnouncementDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
+	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
 const announcementsParamDef = {
@@ -40,8 +42,17 @@ const announcementShowParamDef = {
 	required: ['announcementId'],
 } as const;
 
+const readAnnouncementParamDef = {
+	type: 'object',
+	properties: {
+		announcementId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['announcementId'],
+} as const;
+
 type AnnouncementsParams = SchemaType<typeof announcementsParamDef>;
 type AnnouncementShowParams = SchemaType<typeof announcementShowParamDef>;
+type ReadAnnouncementParams = SchemaType<typeof readAnnouncementParamDef>;
 
 function noSuchAnnouncementError(): HonoApiError {
 	return new HonoApiError({
@@ -107,4 +118,31 @@ export async function handleHonoApiAnnouncementShow(
 	if (announcement.userId != null && announcement.userId !== user?.id) throw noSuchAnnouncementError();
 
 	return await packHonoApiAnnouncement(deps, announcement, user);
+}
+
+export async function handleHonoApiIReadAnnouncement(
+	deps: HonoApiAnnouncementDependencies,
+	me: MiUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(readAnnouncementParamDef, body) as ReadAnnouncementParams;
+
+	const created = await createAnnouncementReadInDatabase(deps.db, {
+		id: genId(deps.config),
+		announcementId: params.announcementId,
+		userId: me.id,
+	});
+	if (!created) return;
+
+	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.announcementId);
+	if (announcement != null && announcement.userId === me.id) {
+		await updateAnnouncementInDatabase(deps.db, params.announcementId, {
+			isActive: false,
+		});
+	}
+
+	const unread = await listUnreadAnnouncementsForUserFromDatabase(deps.db, me.id);
+	if (unread.length === 0) {
+		deps.publishMainStream?.(me.id, 'readAllAnnouncements');
+	}
 }

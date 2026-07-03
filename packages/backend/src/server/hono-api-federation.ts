@@ -24,7 +24,9 @@ import {
 	countFollowingsWithRemoteFolloweeHostFromDatabase,
 	countFollowingsWithRemoteFollowerHostFromDatabase,
 	listFollowingsByFollowerHostFromDatabase,
+	listFollowingsByHostWithPaginationFromDatabase,
 } from '@/core/FollowingStore.js';
+import { listUsersByHostWithPaginationFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -34,7 +36,9 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import type Logger from '@/logger.js';
 import { startHonoApiAdminDriveFileDeletion, type HonoApiAdminDriveDependencies } from './hono-api-admin-drive.js';
+import { packFollowingsForHonoApi, resolveHonoApiIdPagination, type FollowingListItem } from './hono-api-following.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
+import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiFederationDependencies = {
@@ -510,4 +514,90 @@ export async function handleHonoApiFederationStats(
 		topPubInstances: packHonoApiFederationInstancesWithModerator(deps.meta, topPubInstances, isModerator),
 		otherFollowingCount: Math.max(0, allPubCount - gotPubCount),
 	};
+}
+
+const federationUsersParamDef = {
+	type: 'object',
+	properties: {
+		host: { type: 'string' },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+	},
+	required: ['host'],
+} as const;
+
+type FederationUsersParams = SchemaType<typeof federationUsersParamDef>;
+
+export async function handleHonoApiFederationUsers(
+	deps: HonoApiFederationDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<UserDetailedNotMeHonoApiResponse[]> {
+	const params = parseHonoApiParams(federationUsersParamDef, body) as FederationUsersParams;
+
+	let sinceId = params.sinceId ?? null;
+	let untilId = params.untilId ?? null;
+	if (sinceId == null && untilId == null) {
+		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
+		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+	}
+
+	const users = await listUsersByHostWithPaginationFromDatabase(deps.db, {
+		host: params.host,
+		limit: params.limit,
+		sinceId,
+		untilId,
+	});
+
+	return await packUserDetailedNotMeManyForHonoApi(deps, users);
+}
+
+const federationHostFollowingParamDef = {
+	type: 'object',
+	properties: {
+		host: { type: 'string' },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+	},
+	required: ['host'],
+} as const;
+
+type FederationHostFollowingParams = SchemaType<typeof federationHostFollowingParamDef>;
+
+export async function handleHonoApiFederationFollowers(
+	deps: HonoApiFederationDependencies,
+	body: Record<string, unknown>,
+): Promise<FollowingListItem[]> {
+	const params = parseHonoApiParams(federationHostFollowingParamDef, body) as FederationHostFollowingParams;
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'followee', params.host, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packFollowingsForHonoApi(deps, followings);
+}
+
+export async function handleHonoApiFederationFollowing(
+	deps: HonoApiFederationDependencies,
+	body: Record<string, unknown>,
+): Promise<FollowingListItem[]> {
+	const params = parseHonoApiParams(federationHostFollowingParamDef, body) as FederationHostFollowingParams;
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'follower', params.host, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+	});
+
+	return await packFollowingsForHonoApi(deps, followings);
 }
