@@ -20,6 +20,7 @@ import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.j
 import { createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
+import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
@@ -31,15 +32,18 @@ import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@
 import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
+import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
 import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
+import { fetchRenoteMutingFromDatabase } from '@/core/RenoteMutingStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
@@ -54,6 +58,7 @@ import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { userIp } from '@/db/schema/user-ip.js';
 import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
@@ -550,6 +555,243 @@ describe('Endpoints', () => {
 			}, bob);
 			assert.strictEqual(nonRootDenied.status, 400);
 			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
+		});
+	});
+
+	describe('account blocking endpoints', () => {
+		test('blocking はDB、cache、follow cleanup、list membership cleanup、list、delete、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const blocker = await signup({ username: `hblock${suffix}` });
+			const blockee = await signup({ username: `hblockee${suffix}` });
+
+			await createFollowingInDatabase(db, {
+				id: genId(config, now),
+				followerId: blocker.id,
+				followeeId: blockee.id,
+			});
+			await createFollowingInDatabase(db, {
+				id: genId(config, now + 1),
+				followerId: blockee.id,
+				followeeId: blocker.id,
+			});
+			await updateUserInDatabase(db, blocker.id, {
+				followingCount: 1,
+				followersCount: 1,
+			});
+			await updateUserInDatabase(db, blockee.id, {
+				followingCount: 1,
+				followersCount: 1,
+			});
+
+			await createFollowRequestInDatabase(db, {
+				id: genId(config, now + 2),
+				followerId: blocker.id,
+				followeeId: blockee.id,
+			});
+			await createFollowRequestInDatabase(db, {
+				id: genId(config, now + 3),
+				followerId: blockee.id,
+				followeeId: blocker.id,
+			});
+
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config, now + 4),
+				userId: blockee.id,
+				name: `hblock-list-${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config, now + 5),
+				userId: blocker.id,
+				userListId: userList.id,
+				userListUserId: blockee.id,
+			});
+
+			const wrongWriteToken = await createAppToken(blocker, ['read:blocks']);
+			const createScopeDenied = await api('blocking/create', { userId: blockee.id }, { token: wrongWriteToken });
+			assert.strictEqual(createScopeDenied.status, 403);
+			assert.strictEqual(castAsError(createScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfBlock = await api('blocking/create', { userId: blocker.id }, blocker);
+			assert.strictEqual(selfBlock.status, 400);
+			assert.strictEqual(castAsError(selfBlock.body as any).error.code, 'BLOCKEE_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfBlock.body as any).error.id, '88b19138-f28d-42c0-8499-6a31bbd0fdc6');
+
+			const noSuch = await api('blocking/create', { userId: genId(config, now - 1000) }, blocker);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '7cc4f851-e2f1-4621-9633-ec9e1d00c01e');
+
+			const created = await api('blocking/create', { userId: blockee.id }, blocker);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.id, blockee.id);
+
+			const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id);
+			assert.ok(blocking);
+			assert.strictEqual(blocking.blockerId, blocker.id);
+			assert.strictEqual(blocking.blockeeId, blockee.id);
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blocker.id, blockee.id), null);
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blockee.id, blocker.id), null);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, blocker.id, blockee.id), null);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, blockee.id, blocker.id), null);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, blocker.id, userList.id), false);
+
+			const refreshedBlocker = await fetchUserByIdOrFailFromDatabase(db, blocker.id);
+			const refreshedBlockee = await fetchUserByIdOrFailFromDatabase(db, blockee.id);
+			assert.strictEqual(refreshedBlocker.followingCount, 0);
+			assert.strictEqual(refreshedBlocker.followersCount, 0);
+			assert.strictEqual(refreshedBlockee.followingCount, 0);
+			assert.strictEqual(refreshedBlockee.followersCount, 0);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userBlocking:${blocker.id}`) ?? '[]'), [blockee.id]);
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userBlocked:${blockee.id}`) ?? '[]'), [blocker.id]);
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${blocker.id}`) ?? '{}'), {});
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${blockee.id}`) ?? '{}'), {});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const duplicate = await api('blocking/create', { userId: blockee.id }, blocker);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_BLOCKING');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '787fed64-acb9-464a-82eb-afbd745b9614');
+
+			const readToken = await createAppToken(blocker, ['read:blocks']);
+			const list = await api('blocking/list', { limit: 10 }, { token: readToken });
+			assert.strictEqual(list.status, 200);
+			const listed = (list.body as any[]).find(item => item.blockeeId === blockee.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.id, blocking.id);
+			assert.strictEqual(listed.blockee.id, blockee.id);
+
+			const wrongReadToken = await createAppToken(blocker, ['write:blocks']);
+			const listScopeDenied = await api('blocking/list', {}, { token: wrongReadToken });
+			assert.strictEqual(listScopeDenied.status, 403);
+			assert.strictEqual(castAsError(listScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const deleted = await api('blocking/delete', { userId: blockee.id }, blocker);
+			assert.strictEqual(deleted.status, 200);
+			assert.strictEqual(deleted.body.id, blockee.id);
+			assert.strictEqual(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id), null);
+
+			const redisAfterDelete = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redisAfterDelete.get(`kvcache:userBlocking:${blocker.id}`) ?? '[]'), []);
+				assert.deepStrictEqual(JSON.parse(await redisAfterDelete.get(`kvcache:userBlocked:${blockee.id}`) ?? '[]'), []);
+			} finally {
+				await closeRedisConnection(redisAfterDelete);
+			}
+
+			const notBlocking = await api('blocking/delete', { userId: blockee.id }, blocker);
+			assert.strictEqual(notBlocking.status, 400);
+			assert.strictEqual(castAsError(notBlocking.body as any).error.code, 'NOT_BLOCKING');
+			assert.strictEqual(castAsError(notBlocking.body as any).error.id, '291b2efa-60c6-45c0-9f6a-045c8f9b02cd');
+		});
+	});
+
+	describe('account mute endpoints', () => {
+		test('mute と renote-mute はDB、cache、list、delete、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const muter = await signup({ username: `hmute${suffix}` });
+			const mutee = await signup({ username: `hmutee${suffix}` });
+			const renoteMutee = await signup({ username: `hrmutee${suffix}` });
+			const expiresAt = Date.now() + 1000 * 60 * 60;
+
+			const wrongWriteToken = await createAppToken(muter, ['read:mutes']);
+			const muteScopeDenied = await api('mute/create', { userId: mutee.id }, { token: wrongWriteToken });
+			assert.strictEqual(muteScopeDenied.status, 403);
+			assert.strictEqual(castAsError(muteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const created = await api('mute/create', { userId: mutee.id, expiresAt }, muter);
+			assert.strictEqual(created.status, 204);
+			const muting = await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id);
+			assert.ok(muting);
+			assert.strictEqual(muting.muterId, muter.id);
+			assert.strictEqual(muting.muteeId, mutee.id);
+			assert.strictEqual(muting.expiresAt?.getTime(), expiresAt);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userMutings:${muter.id}`) ?? '[]'), [mutee.id]);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const duplicate = await api('mute/create', { userId: mutee.id }, muter);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_MUTING');
+
+			const selfMute = await api('mute/create', { userId: muter.id }, muter);
+			assert.strictEqual(selfMute.status, 400);
+			assert.strictEqual(castAsError(selfMute.body as any).error.code, 'MUTEE_IS_YOURSELF');
+
+			const pastMuteTarget = await signup({ username: `hpmute${suffix}` });
+			const pastMute = await api('mute/create', { userId: pastMuteTarget.id, expiresAt: Date.now() - 1000 }, muter);
+			assert.strictEqual(pastMute.status, 204);
+			assert.strictEqual(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, pastMuteTarget.id), null);
+
+			const readToken = await createAppToken(muter, ['read:mutes']);
+			const list = await api('mute/list', { limit: 10 }, { token: readToken });
+			assert.strictEqual(list.status, 200);
+			const listed = (list.body as any[]).find(item => item.muteeId === mutee.id);
+			assert.ok(listed);
+			assert.strictEqual(listed.id, muting.id);
+			assert.strictEqual(listed.mutee.id, mutee.id);
+			assert.strictEqual(listed.expiresAt, new Date(expiresAt).toISOString());
+
+			const wrongReadToken = await createAppToken(muter, ['write:mutes']);
+			const listScopeDenied = await api('mute/list', {}, { token: wrongReadToken });
+			assert.strictEqual(listScopeDenied.status, 403);
+			assert.strictEqual(castAsError(listScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const deleted = await api('mute/delete', { userId: mutee.id }, muter);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id), null);
+
+			const notMuting = await api('mute/delete', { userId: mutee.id }, muter);
+			assert.strictEqual(notMuting.status, 400);
+			assert.strictEqual(castAsError(notMuting.body as any).error.code, 'NOT_MUTING');
+
+			const renoteScopeDenied = await api('renote-mute/create', { userId: renoteMutee.id }, { token: wrongWriteToken });
+			assert.strictEqual(renoteScopeDenied.status, 403);
+			assert.strictEqual(castAsError(renoteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const renoteCreated = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteCreated.status, 204);
+			const renoteMuting = await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id);
+			assert.ok(renoteMuting);
+			assert.strictEqual(renoteMuting.muterId, muter.id);
+			assert.strictEqual(renoteMuting.muteeId, renoteMutee.id);
+
+			const redisAfterRenote = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redisAfterRenote.get(`kvcache:renoteMutings:${muter.id}`) ?? '[]'), [renoteMutee.id]);
+			} finally {
+				await closeRedisConnection(redisAfterRenote);
+			}
+
+			const renoteDuplicate = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteDuplicate.status, 400);
+			assert.strictEqual(castAsError(renoteDuplicate.body as any).error.code, 'ALREADY_MUTING');
+
+			const renoteList = await api('renote-mute/list', { limit: 10 }, { token: readToken });
+			assert.strictEqual(renoteList.status, 200);
+			const renoteListed = (renoteList.body as any[]).find(item => item.muteeId === renoteMutee.id);
+			assert.ok(renoteListed);
+			assert.strictEqual(renoteListed.id, renoteMuting.id);
+			assert.strictEqual(renoteListed.mutee.id, renoteMutee.id);
+
+			const renoteDeleted = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteDeleted.status, 204);
+			assert.strictEqual(await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id), null);
+
+			const renoteNotMuting = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
+			assert.strictEqual(renoteNotMuting.status, 400);
+			assert.strictEqual(castAsError(renoteNotMuting.body as any).error.code, 'NOT_MUTING');
 		});
 	});
 
@@ -3450,6 +3692,372 @@ describe('Endpoints', () => {
 	});
 
 	describe('Hono rate limited write endpoints', () => {
+		test('following/create は follow 作成、locked follow request、blocking、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const follower = await signup({ username: `hfc${suffix}` });
+			const followee = await signup({ username: `hfce${suffix}` });
+
+			const wrongWriteToken = await createAppToken(follower, ['read:following']);
+			const scopeDenied = await api('following/create', { userId: followee.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfFollow = await api('following/create', { userId: follower.id }, follower);
+			assert.strictEqual(selfFollow.status, 400);
+			assert.strictEqual(castAsError(selfFollow.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfFollow.body as any).error.id, '26fbe7bb-a331-4857-af17-205b426669a9');
+
+			const noSuch = await api('following/create', { userId: genId(config, now - 1000) }, follower);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
+
+			const created = await api('following/create', { userId: followee.id, withReplies: true }, follower);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.id, followee.id);
+
+			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
+			assert.ok(following);
+			assert.strictEqual(following.withReplies, true);
+
+			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
+			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
+			assert.strictEqual(refreshedFollower.followingCount, 1);
+			assert.strictEqual(refreshedFollowee.followersCount, 1);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {
+					[followee.id]: { withReplies: true },
+				});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+
+			const duplicate = await api('following/create', { userId: followee.id }, follower);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FOLLOWING');
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '35387507-38c7-4cb9-9197-300b93783fa0');
+
+			const blocker = await signup({ username: `hfcb${suffix}` });
+			const blockedUser = await signup({ username: `hfcbu${suffix}` });
+			const block = await api('blocking/create', { userId: blockedUser.id }, blocker);
+			assert.strictEqual(block.status, 200);
+
+			const blocked = await api('following/create', { userId: blocker.id }, blockedUser);
+			assert.strictEqual(blocked.status, 400);
+			assert.strictEqual(castAsError(blocked.body as any).error.code, 'BLOCKED');
+			assert.strictEqual(castAsError(blocked.body as any).error.id, 'c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
+
+			const lockedFollowee = await signup({ username: `hfcl${suffix}` });
+			const requestFollower = await signup({ username: `hfcr${suffix}` });
+			await updateUserInDatabase(db, lockedFollowee.id, { isLocked: true });
+
+			const requested = await api('following/create', { userId: lockedFollowee.id, withReplies: false }, requestFollower);
+			assert.strictEqual(requested.status, 200);
+			assert.strictEqual(requested.body.id, lockedFollowee.id);
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id), null);
+
+			const followRequest = await fetchFollowRequestFromDatabase(db, requestFollower.id, lockedFollowee.id);
+			assert.ok(followRequest);
+			assert.strictEqual(followRequest.withReplies, false);
+		});
+
+		test('following/update は notify/withReplies 変更、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hfu${suffix}` });
+			const followee = await signup({ username: `hfue${suffix}` });
+
+			const wrongWriteToken = await createAppToken(follower, ['read:following']);
+			const scopeDenied = await api('following/update', { userId: followee.id, notify: 'normal' }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfUpdate = await api('following/update', { userId: follower.id, notify: 'normal' }, follower);
+			assert.strictEqual(selfUpdate.status, 400);
+			assert.strictEqual(castAsError(selfUpdate.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfUpdate.body as any).error.id, '4c4cbaf9-962a-463b-8418-a5e365dbf2eb');
+
+			const noSuch = await api('following/update', { userId: genId(config, Date.now() - 1000), notify: 'normal' }, follower);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '14318698-f67e-492a-99da-5353a5ac52be');
+
+			const notFollowing = await api('following/update', { userId: followee.id, notify: 'normal' }, follower);
+			assert.strictEqual(notFollowing.status, 400);
+			assert.strictEqual(castAsError(notFollowing.body as any).error.code, 'NOT_FOLLOWING');
+			assert.strictEqual(castAsError(notFollowing.body as any).error.id, 'b8dc75cf-1cb5-46c9-b14b-5f1ffbd782c9');
+
+			await api('following/create', { userId: followee.id, withReplies: false }, follower);
+
+			const updated = await api('following/update', { userId: followee.id, notify: 'normal', withReplies: true }, follower);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.id, follower.id);
+
+			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
+			assert.strictEqual(following?.notify, 'normal');
+			assert.strictEqual(following?.withReplies, true);
+
+			const clearedNotify = await api('following/update', { userId: followee.id, notify: 'none' }, follower);
+			assert.strictEqual(clearedNotify.status, 200);
+			const refreshed = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
+			assert.strictEqual(refreshed?.notify, null);
+			assert.strictEqual(refreshed?.withReplies, true);
+		});
+
+		test('following/delete は unfollow、カウント減算、キャッシュ更新、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hfd${suffix}` });
+			const followee = await signup({ username: `hfde${suffix}` });
+
+			const wrongWriteToken = await createAppToken(follower, ['read:following']);
+			const scopeDenied = await api('following/delete', { userId: followee.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfUnfollow = await api('following/delete', { userId: follower.id }, follower);
+			assert.strictEqual(selfUnfollow.status, 400);
+			assert.strictEqual(castAsError(selfUnfollow.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfUnfollow.body as any).error.id, 'd9e400b9-36b0-4808-b1d8-79e707f1296c');
+
+			const noSuch = await api('following/delete', { userId: genId(config, Date.now() - 1000) }, follower);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '5b12c78d-2b28-4dca-99d2-f56139b42ff8');
+
+			const notFollowing = await api('following/delete', { userId: followee.id }, follower);
+			assert.strictEqual(notFollowing.status, 400);
+			assert.strictEqual(castAsError(notFollowing.body as any).error.code, 'NOT_FOLLOWING');
+			assert.strictEqual(castAsError(notFollowing.body as any).error.id, '5dbf82f5-c92b-40b1-87d1-6c8c0741fd09');
+
+			await api('following/create', { userId: followee.id, withReplies: true }, follower);
+			assert.ok(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id));
+
+			const deleted = await api('following/delete', { userId: followee.id }, follower);
+			assert.strictEqual(deleted.status, 200);
+			assert.strictEqual(deleted.body.id, followee.id);
+
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id), null);
+
+			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
+			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
+			assert.strictEqual(refreshedFollower.followingCount, 0);
+			assert.strictEqual(refreshedFollowee.followersCount, 0);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+
+		test('following/invalidate は他人のフォローを解除、カウント減算、キャッシュ更新、scope、エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hfi${suffix}` });
+			const follower = await signup({ username: `hfie${suffix}` });
+
+			const wrongWriteToken = await createAppToken(followee, ['read:following']);
+			const scopeDenied = await api('following/invalidate', { userId: follower.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const selfInvalidate = await api('following/invalidate', { userId: followee.id }, followee);
+			assert.strictEqual(selfInvalidate.status, 400);
+			assert.strictEqual(castAsError(selfInvalidate.body as any).error.code, 'FOLLOWER_IS_YOURSELF');
+			assert.strictEqual(castAsError(selfInvalidate.body as any).error.id, '07dc03b9-03da-422d-885b-438313707662');
+
+			const noSuch = await api('following/invalidate', { userId: genId(config, Date.now() - 1000) }, followee);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'b77e6ae6-a3e5-40da-9cc8-c240115479cc');
+
+			const notFollowing = await api('following/invalidate', { userId: follower.id }, followee);
+			assert.strictEqual(notFollowing.status, 400);
+			assert.strictEqual(castAsError(notFollowing.body as any).error.code, 'NOT_FOLLOWING');
+			assert.strictEqual(castAsError(notFollowing.body as any).error.id, '918faac3-074f-41ae-9c43-ed5d2946770d');
+
+			await api('following/create', { userId: followee.id, withReplies: true }, follower);
+			assert.ok(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id));
+
+			const invalidated = await api('following/invalidate', { userId: follower.id }, followee);
+			assert.strictEqual(invalidated.status, 200);
+			assert.strictEqual(invalidated.body.id, follower.id);
+
+			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id), null);
+
+			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
+			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
+			assert.strictEqual(refreshedFollower.followingCount, 0);
+			assert.strictEqual(refreshedFollowee.followersCount, 0);
+
+			const redis = createRedisClient(config);
+			try {
+				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {});
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+
+		test('following/requests/accept は保留リクエストを承認しfollowレコードを作成する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hra${suffix}` });
+			const follower = await signup({ username: `hrae${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			const wrongWriteToken = await createAppToken(followee, ['read:following']);
+			const scopeDenied = await api('following/requests/accept', { userId: follower.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const noSuch = await api('following/requests/accept', { userId: genId(config, Date.now() - 1000) }, followee);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '66ce1645-d66c-46bb-8b79-96739af885bd');
+
+			const noRequest = await api('following/requests/accept', { userId: follower.id }, followee);
+			assert.strictEqual(noRequest.status, 400);
+			assert.strictEqual(castAsError(noRequest.body as any).error.code, 'NO_FOLLOW_REQUEST');
+			assert.strictEqual(castAsError(noRequest.body as any).error.id, 'bcde4f8b-0913-4614-8881-614e522fb041');
+
+			const created = await api('following/create', { userId: followee.id, withReplies: true }, follower);
+			assert.strictEqual(created.status, 200);
+			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
+
+			const accepted = await api('following/requests/accept', { userId: follower.id }, followee);
+			assert.strictEqual(accepted.status, 204);
+
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
+			assert.ok(following);
+			assert.strictEqual(following.withReplies, true);
+
+			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
+			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
+			assert.strictEqual(refreshedFollower.followingCount, 1);
+			assert.strictEqual(refreshedFollowee.followersCount, 1);
+		});
+
+		test('following/requests/cancel は送信済みリクエストを取消しUserLiteを返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hrc${suffix}` });
+			const followee = await signup({ username: `hrce${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			const wrongWriteToken = await createAppToken(follower, ['read:following']);
+			const scopeDenied = await api('following/requests/cancel', { userId: followee.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const noSuch = await api('following/requests/cancel', { userId: genId(config, Date.now() - 1000) }, follower);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, '4e68c551-fc4c-4e46-bb41-7d4a37bf9dab');
+
+			const notFound = await api('following/requests/cancel', { userId: followee.id }, follower);
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.code, 'FOLLOW_REQUEST_NOT_FOUND');
+			assert.strictEqual(castAsError(notFound.body as any).error.id, '089b125b-d338-482a-9a09-e2622ac9f8d4');
+
+			await api('following/create', { userId: followee.id }, follower);
+			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
+
+			const cancelled = await api('following/requests/cancel', { userId: followee.id }, follower);
+			assert.strictEqual(cancelled.status, 200);
+			assert.strictEqual(cancelled.body.id, followee.id);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+		});
+
+		test('following/requests/reject は受信済みリクエストを拒否し再実行しても冪等', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hrr${suffix}` });
+			const follower = await signup({ username: `hrre${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			const wrongWriteToken = await createAppToken(followee, ['read:following']);
+			const scopeDenied = await api('following/requests/reject', { userId: follower.id }, { token: wrongWriteToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const noSuch = await api('following/requests/reject', { userId: genId(config, Date.now() - 1000) }, followee);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'abc2ffa6-25b2-4380-ba99-321ff3a94555');
+
+			await api('following/create', { userId: followee.id }, follower);
+			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
+
+			const rejected = await api('following/requests/reject', { userId: follower.id }, followee);
+			assert.strictEqual(rejected.status, 204);
+			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+
+			const rejectedAgain = await api('following/requests/reject', { userId: follower.id }, followee);
+			assert.strictEqual(rejectedAgain.status, 204);
+		});
+
+		test('following/requests/list と sent はページングして follower/followee を含む', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const followee = await signup({ username: `hrl${suffix}` });
+			const followerA = await signup({ username: `hrla${suffix}` });
+			const followerB = await signup({ username: `hrlb${suffix}` });
+			await updateUserInDatabase(db, followee.id, { isLocked: true });
+
+			await api('following/create', { userId: followee.id }, followerA);
+			await api('following/create', { userId: followee.id }, followerB);
+
+			const list = await api('following/requests/list', {}, followee);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body.length, 2);
+			const listFollowerIds = list.body.map((r: any) => r.follower.id).sort();
+			assert.deepStrictEqual(listFollowerIds, [followerA.id, followerB.id].sort());
+			assert.strictEqual(list.body[0].followee.id, followee.id);
+
+			const sentA = await api('following/requests/sent', {}, followerA);
+			assert.strictEqual(sentA.status, 200);
+			assert.strictEqual(sentA.body.length, 1);
+			assert.strictEqual(sentA.body[0].follower.id, followerA.id);
+			assert.strictEqual(sentA.body[0].followee.id, followee.id);
+
+			const limited = await api('following/requests/list', { limit: 1 }, followee);
+			assert.strictEqual(limited.status, 200);
+			assert.strictEqual(limited.body.length, 1);
+		});
+
+		test('following/list はフォロー中一覧を followee 情報付きでページングする', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hfl${suffix}` });
+			const followeeA = await signup({ username: `hfla${suffix}` });
+			const followeeB = await signup({ username: `hflb${suffix}` });
+
+			await api('following/create', { userId: followeeA.id }, follower);
+			await api('following/create', { userId: followeeB.id }, follower);
+
+			const list = await api('following/list', {}, follower);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body.length, 2);
+			const followeeIds = list.body.map((f: any) => f.followeeId).sort();
+			assert.deepStrictEqual(followeeIds, [followeeA.id, followeeB.id].sort());
+			assert.strictEqual(list.body[0].followerId, follower.id);
+			assert.ok(list.body[0].followee.id);
+			assert.strictEqual(list.body[0].follower, undefined);
+
+			const limited = await api('following/list', { limit: 1 }, follower);
+			assert.strictEqual(limited.status, 200);
+			assert.strictEqual(limited.body.length, 1);
+
+			const strangerList = await api('following/list', {}, followeeA);
+			assert.strictEqual(strangerList.status, 200);
+			assert.strictEqual(strangerList.body.length, 0);
+		});
+
 		test('following/update-all updates only the caller followings', async () => {
 			const config = loadConfig();
 			await createFollowingInDatabase(db, {

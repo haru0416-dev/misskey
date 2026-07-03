@@ -78,10 +78,10 @@ function toXListId(config: Config, id: string): string {
 	return `${date}-${BigInt.asUintN(64, additional).toString()}`;
 }
 
-async function xaddNotification(
+export async function xaddHonoApiNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
-	notification: HonoStoredNotification,
+	notification: { id: string } & Record<string, unknown>,
 ): Promise<string> {
 	while (true) {
 		try {
@@ -96,6 +96,14 @@ async function xaddNotification(
 			throw err;
 		}
 	}
+}
+
+async function xaddNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	notification: HonoStoredNotification,
+): Promise<string> {
+	return await xaddHonoApiNotification(deps, userId, notification);
 }
 
 function createSimpleNotification(
