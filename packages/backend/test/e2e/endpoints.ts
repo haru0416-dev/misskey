@@ -10073,7 +10073,7 @@ describe('Endpoints', () => {
 			const note = await post(author, { text: 'hi' });
 			await post(renoter1, { renoteId: note.id });
 			await post(renoter2, { renoteId: note.id });
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise(resolve => setTimeout(resolve, 300));
 
 			const res = await api('i/notifications-grouped', {}, author);
 
@@ -10110,6 +10110,96 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.deepStrictEqual(res.body, []);
+		});
+	});
+
+	describe('i/change-password', () => {
+		test('パスワードを変更できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hncp${suffix}`, password: 'oldpassword' });
+
+			const res = await api('i/change-password', { currentPassword: 'oldpassword', newPassword: 'newpassword' }, user);
+			assert.strictEqual(res.status, 204);
+
+			const relogged = await api('signin-flow', {
+				username: user.username,
+				password: 'newpassword',
+				'g-recaptcha-response': null,
+				'hcaptcha-response': null,
+			});
+			assert.strictEqual(relogged.status, 200);
+			assert.strictEqual(relogged.body.finished, true);
+		});
+
+		test('現在のパスワードが間違っていると失敗する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hncp2${suffix}`, password: 'oldpassword' });
+
+			const res = await api('i/change-password', { currentPassword: 'wrongpassword', newPassword: 'newpassword' }, user);
+			assert.notStrictEqual(res.status, 204);
+		});
+	});
+
+	describe('i/regenerate-token', () => {
+		test('トークンを再生成できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnrt${suffix}`, password: 'password' });
+			const before = await api('i', {}, user);
+
+			const res = await api('i/regenerate-token', { password: 'password' }, user);
+			assert.strictEqual(res.status, 204);
+
+			const withOldToken = await api('i', {}, user);
+			assert.strictEqual(withOldToken.status, 401);
+
+			assert.strictEqual(before.status, 200);
+		});
+	});
+
+	describe('i/update-email', () => {
+		test('メールアドレスを更新できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnue${suffix}`, password: 'password' });
+
+			const res = await api('i/update-email', { password: 'password', email: `hnue${suffix}@example.com` }, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.email, `hnue${suffix}@example.com`);
+			assert.strictEqual(res.body.emailVerified, false);
+		});
+
+		test('パスワードが間違っていると失敗する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnue2${suffix}`, password: 'password' });
+
+			const res = await api('i/update-email', { password: 'wrongpassword', email: `hnue2${suffix}@example.com` }, user);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body).error.code, 'INCORRECT_PASSWORD');
+		});
+	});
+
+	describe('i/delete-account', () => {
+		test('アカウントを削除できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnda${suffix}`, password: 'password' });
+
+			const res = await api('i/delete-account', { password: 'password' }, user);
+			assert.strictEqual(res.status, 204);
+
+			const deletedUser = await fetchUserByIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(deletedUser.isDeleted, true);
+		});
+
+		test('パスワードが間違っていると失敗する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnda2${suffix}`, password: 'password' });
+
+			const res = await api('i/delete-account', { password: 'wrongpassword' }, user);
+			assert.notStrictEqual(res.status, 204);
+
+			const notDeletedUser = await fetchUserByIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(notDeletedUser.isDeleted, false);
 		});
 	});
 
