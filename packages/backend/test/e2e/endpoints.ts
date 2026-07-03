@@ -6809,6 +6809,42 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/get-following-users-by-birthday', () => {
+		test('単一birthday指定と範囲指定でフォロー中ユーザーを誕生日順に返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const me = await signup({ username: `hgfb${suffix}` });
+			const followee1 = await signup({ username: `hgfb1${suffix}` });
+			const followee2 = await signup({ username: `hgfb2${suffix}` });
+			const notFollowed = await signup({ username: `hgfb3${suffix}` });
+
+			await api('i/update', { birthday: '2000-06-15' }, followee1);
+			await api('i/update', { birthday: '2000-06-20' }, followee2);
+			await api('i/update', { birthday: '2000-06-16' }, notFollowed);
+
+			await api('following/create', { userId: followee1.id }, me);
+			await api('following/create', { userId: followee2.id }, me);
+
+			const single = await api('users/get-following-users-by-birthday', {
+				birthday: { month: 6, day: 15 },
+			}, me);
+			assert.strictEqual(single.status, 200);
+			assert.strictEqual(single.body.length, 1);
+			assert.strictEqual(single.body[0].id, followee1.id);
+			assert.strictEqual(single.body[0].user.id, followee1.id);
+
+			const range = await api('users/get-following-users-by-birthday', {
+				birthday: { begin: { month: 6, day: 14 }, end: { month: 6, day: 21 } },
+			}, me);
+			assert.strictEqual(range.status, 200);
+			assert.deepStrictEqual(range.body.map((u: any) => u.id), [followee1.id, followee2.id]);
+			assert.ok(!range.body.some((u: any) => u.id === notFollowed.id));
+
+			const unauthorized = await api('users/get-following-users-by-birthday', { birthday: { month: 6, day: 15 } });
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
@@ -10484,6 +10520,24 @@ describe('Endpoints', () => {
 			const res = await api('users/following', { userId: follower.id, birthday: 'not-a-date' });
 
 			assert.strictEqual(res.status, 400);
+		});
+
+		test('birthdayでフォロー中ユーザーを絞り込める', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hnflgbd${suffix}` });
+			const matchingFollowee = await signup({ username: `hnflgbdm${suffix}` });
+			const otherFollowee = await signup({ username: `hnflgbdo${suffix}` });
+
+			await api('i/update', { birthday: '2000-06-15' }, matchingFollowee);
+			await api('i/update', { birthday: '2000-07-20' }, otherFollowee);
+			await api('following/create', { userId: matchingFollowee.id }, follower);
+			await api('following/create', { userId: otherFollowee.id }, follower);
+
+			const res = await api('users/following', { userId: follower.id, birthday: '2024-06-15' }, follower);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].followeeId, matchingFollowee.id);
 		});
 
 		test('ユーザーが存在しなかったら怒る', async () => {

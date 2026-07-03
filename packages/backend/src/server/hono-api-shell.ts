@@ -105,7 +105,7 @@ import { handleHonoApiIMove } from './hono-api-account-move.js';
 import { handleHonoApiIPin, handleHonoApiIUnpin } from './hono-api-account-pin.js';
 import { handleHonoApiINotifications, handleHonoApiINotificationsGrouped } from './hono-api-notifications-list.js';
 import { handleHonoApiFlashCreate, handleHonoApiFlashDelete, handleHonoApiFlashFeatured, handleHonoApiFlashMy, handleHonoApiFlashMyLikes, handleHonoApiFlashSearch, handleHonoApiFlashShow, handleHonoApiFlashUpdate, handleHonoApiUsersFlashs } from './hono-api-flash.js';
-import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll, handleHonoApiUsersFollowers, handleHonoApiUsersFollowing } from './hono-api-following.js';
+import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll, handleHonoApiUsersFollowers, handleHonoApiUsersFollowing, handleHonoApiUsersGetFollowingUsersByBirthday } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiI2faDone, handleHonoApiI2faKeyDone, handleHonoApiI2faPasswordLess, handleHonoApiI2faRegister, handleHonoApiI2faRegisterKey, handleHonoApiI2faRemoveKey, handleHonoApiI2faUnregister, handleHonoApiI2faUpdateKey } from './hono-api-i-2fa.js';
@@ -5292,6 +5292,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(c, await handleHonoApiUsersFollowing(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/get-following-users-by-birthday', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiUsersGetFollowingUsersByBirthday(deps, auth.user, body));
 		});
 	});
 
