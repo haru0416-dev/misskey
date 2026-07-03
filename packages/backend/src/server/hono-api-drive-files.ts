@@ -15,6 +15,7 @@ import {
 	type DriveFileUpdate,
 } from '@/core/DriveFileStore.js';
 import { fetchDriveFolderByIdAndUserIdFromDatabase, fetchDriveFolderByIdAndUserIdOrFailFromDatabase } from '@/core/DriveFolderStore.js';
+import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/ChatMessageStore.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { listNotesByAttachedFileIdFromDatabase } from '@/core/NoteStore.js';
@@ -24,13 +25,14 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
+import { checkChatAvailabilityForHonoApi, packChatMessagesDetailedForHonoApi, type HonoApiChatDependencies } from './hono-api-chat.js';
 import { packDriveFileManyForHonoApi, packDriveFileOrFailForHonoApi, type HonoApiDriveFileDependencies } from './hono-api-drive-file.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
 import { getHonoApiRolePolicies, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import type { HonoChartWriters } from './hono-chart-runtime.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
-export type HonoApiDriveFilesDependencies = HonoApiNoteDependencies & HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies & {
+export type HonoApiDriveFilesDependencies = HonoApiNoteDependencies & HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies & HonoApiChatDependencies & {
 	objectStorageQueue: ObjectStorageQueue;
 	internalStorageService: Pick<InternalStorageService, 'del'>;
 	chartWriters: HonoChartWriters;
@@ -407,4 +409,53 @@ export async function handleHonoApiDriveFilesMoveBulk(
 	const folder = params.folderId ? await fetchDriveFolderByIdAndUserIdOrFailFromDatabase(deps.db, params.folderId, me.id) : null;
 
 	await updateDriveFilesFolderByIdsAndUserIdInDatabase(deps.db, params.fileIds, me.id, folder ? folder.id : null);
+}
+
+const driveFilesAttachedChatMessagesParamDef = {
+	type: 'object',
+	properties: {
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		fileId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['fileId'],
+} as const;
+
+type DriveFilesAttachedChatMessagesParams = {
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	limit: number;
+	fileId: string;
+};
+
+export async function handleHonoApiDriveFilesAttachedChatMessages(
+	deps: HonoApiDriveFilesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'ChatMessage'>[]> {
+	const params = parseHonoApiParams(driveFilesAttachedChatMessagesParamDef, body) as DriveFilesAttachedChatMessagesParams;
+
+	const isModerator = await isHonoApiModerator(deps, me);
+
+	if (!isModerator) {
+		await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	}
+
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
+
+	if (file == null || (!isModerator && file.userId !== me.id)) {
+		throw noSuchFileError('485ce26d-f5d2-4313-9783-e689d131eafb');
+	}
+
+	const messages = await listChatMessagesByFileIdFromDatabase(deps.db, file.id, {
+		limit: params.limit,
+		...resolveChatMessagePagination({ gen: (time) => genId(deps.config, time) }, params),
+	});
+
+	return await packChatMessagesDetailedForHonoApi(deps, messages, me);
 }

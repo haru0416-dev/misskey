@@ -1125,6 +1125,36 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, 'c118ece3-2e4b-4296-99d1-51756e32d232');
 		});
 
+		test('drive/files/attached-chat-messages finds chat messages referencing a file and rejects non-owners', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const sender = await signup({ username: `achatsend${suffix}` });
+			const recipient = await signup({ username: `achatrecv${suffix}` });
+			const md5 = createHash('md5').update(`hono-attached-chat-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: sender.id,
+				userHost: null,
+				md5,
+				name: `hono-attached-chat-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+
+			const message = await api('chat/messages/create-to-user', { toUserId: recipient.id, fileId: file.id }, sender);
+			assert.strictEqual(message.status, 200);
+
+			const found = await api('drive/files/attached-chat-messages', { fileId: file.id }, sender);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(m => m.id === message.body.id), true);
+
+			const deniedForCarol = await api('drive/files/attached-chat-messages', { fileId: file.id }, carol);
+			assert.strictEqual(deniedForCarol.status, 400);
+			assert.strictEqual(castAsError(deniedForCarol.body as any).error.id, '485ce26d-f5d2-4313-9783-e689d131eafb');
+		});
+
 		test('drive/files/update renames, moves, and toggles sensitivity, rejecting invalid input and foreign access', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
