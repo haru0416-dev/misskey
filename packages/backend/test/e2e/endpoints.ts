@@ -8172,6 +8172,203 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes (bare, インスタンス全体のpublicノート一覧)', () => {
+		test('publicかつlocalOnly=falseなノートのみ返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hn${suffix}` });
+
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'bare notes public',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const homeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: homeNoteId,
+				text: 'bare notes home (excluded)',
+				userId: author.id,
+				userHost: null,
+				visibility: 'home',
+			});
+			const localOnlyNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: localOnlyNoteId,
+				text: 'bare notes localOnly (excluded)',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				localOnly: true,
+			});
+
+			const res = await api('notes', { limit: 100 });
+			assert.strictEqual(res.status, 200);
+			assert.ok(res.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(res.body.some((n: any) => n.id === homeNoteId), false);
+			assert.strictEqual(res.body.some((n: any) => n.id === localOnlyNoteId), false);
+		});
+
+		test('local/reply/renote/withFiles/pollフィルタを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnf${suffix}` });
+			const file = await uploadFile(author);
+
+			const localNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: localNoteId,
+				text: 'bare notes local',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const remoteNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: remoteNoteId,
+				text: 'bare notes remote (excluded by local)',
+				userId: author.id,
+				userHost: 'remote.example.com',
+				visibility: 'public',
+			});
+
+			const rootNote = await post(author, { text: 'bare notes root', visibility: 'public' });
+			const replyNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyNoteId,
+				text: 'bare notes reply',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: rootNote.id,
+			});
+
+			const fileNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: fileNoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				fileIds: [file.body!.id],
+			});
+
+			const renoteNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: renoteNoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				renoteId: rootNote.id,
+			});
+
+			const local = await api('notes', { local: true, limit: 100 });
+			assert.strictEqual(local.status, 200);
+			assert.ok(local.body.some((n: any) => n.id === localNoteId));
+			assert.strictEqual(local.body.some((n: any) => n.id === remoteNoteId), false);
+
+			const replies = await api('notes', { reply: true, limit: 100 });
+			assert.strictEqual(replies.status, 200);
+			assert.ok(replies.body.some((n: any) => n.id === replyNoteId));
+			assert.strictEqual(replies.body.some((n: any) => n.id === localNoteId), false);
+
+			const renotes = await api('notes', { renote: true, limit: 100 });
+			assert.strictEqual(renotes.status, 200);
+			assert.ok(renotes.body.some((n: any) => n.id === renoteNoteId));
+			assert.strictEqual(renotes.body.some((n: any) => n.id === localNoteId), false);
+
+			const withFiles = await api('notes', { withFiles: true, limit: 100 });
+			assert.strictEqual(withFiles.status, 200);
+			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
+			assert.strictEqual(withFiles.body.some((n: any) => n.id === localNoteId), false);
+
+			const pollNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pollNoteId,
+				text: 'bare notes poll',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				hasPoll: true,
+			});
+			await createPollInDatabase(db, {
+				noteId: pollNoteId,
+				expiresAt: null,
+				multiple: false,
+				choices: ['a', 'b'],
+				votes: [0, 0],
+				noteVisibility: 'public',
+				userId: author.id,
+				userHost: null,
+			});
+
+			const polls = await api('notes', { poll: true, limit: 100 });
+			assert.strictEqual(polls.status, 200);
+			assert.ok(polls.body.some((n: any) => n.id === pollNoteId));
+			assert.strictEqual(polls.body.some((n: any) => n.id === localNoteId), false);
+		});
+
+		test('認証済みで呼んでもmeを渡さず常に匿名としてパックする(元実装がpackMany(notes)をme無しで呼ぶため)', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnm${suffix}` });
+			const reactor = await signup({ username: `hnmr${suffix}` });
+
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'bare notes anonymous packing',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const reacted = await api('notes/reactions/create', { noteId, reaction: '👍' }, reactor);
+			assert.strictEqual(reacted.status, 204);
+
+			const asReactor = await api('notes', { limit: 100 }, reactor);
+			assert.strictEqual(asReactor.status, 200);
+			const packed = asReactor.body.find((n: any) => n.id === noteId);
+			assert.ok(packed);
+			assert.strictEqual(packed.myReaction, undefined);
+		});
+
+		test('sinceId/untilIdによるページネーションを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnp${suffix}` });
+
+			const oldNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: oldNoteId,
+				text: 'bare notes pagination old',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const newNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: newNoteId,
+				text: 'bare notes pagination new',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const afterOld = await api('notes', { sinceId: oldNoteId, limit: 100 });
+			assert.strictEqual(afterOld.status, 200);
+			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
+			assert.strictEqual(afterOld.body.some((n: any) => n.id === oldNoteId), false);
+
+			const beforeNew = await api('notes', { untilId: newNoteId, limit: 100 });
+			assert.strictEqual(beforeNew.status, 200);
+			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
+			assert.strictEqual(beforeNew.body.some((n: any) => n.id === newNoteId), false);
+		});
+	});
+
 	describe('notes/clips, search-by-tag, show-partial-bulk, timeline, user-list-timeline, polls/recommendation', () => {
 		test('notes/clips はpublicなclipのみ返しNO_SUCH_NOTEを維持する', async () => {
 			const config = loadConfig();

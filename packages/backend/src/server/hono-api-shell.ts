@@ -118,7 +118,7 @@ import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-ap
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount, handleHonoApiNotesDraftsCreate, handleHonoApiNotesDraftsDelete, handleHonoApiNotesDraftsList, handleHonoApiNotesDraftsUpdate } from './hono-api-note-drafts.js';
 import { handleHonoApiIClaimAchievement, handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification, type HonoApiMainStreamPublisher } from './hono-api-notification.js';
-import { handleHonoApiNotesChildren, handleHonoApiNotesClips, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesFeatured, handleHonoApiNotesGlobalTimeline, handleHonoApiNotesHybridTimeline, handleHonoApiNotesLocalTimeline, handleHonoApiNotesMentions, handleHonoApiNotesPollsRecommendation, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesSearch, handleHonoApiNotesSearchByTag, handleHonoApiNotesShow, handleHonoApiNotesShowPartialBulk, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete, handleHonoApiNotesTimeline, handleHonoApiNotesUserListTimeline, normalizeHonoApiNotesFeaturedQuery } from './hono-api-notes.js';
+import { handleHonoApiNotes, handleHonoApiNotesChildren, handleHonoApiNotesClips, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesFeatured, handleHonoApiNotesGlobalTimeline, handleHonoApiNotesHybridTimeline, handleHonoApiNotesLocalTimeline, handleHonoApiNotesMentions, handleHonoApiNotesPollsRecommendation, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesSearch, handleHonoApiNotesSearchByTag, handleHonoApiNotesShow, handleHonoApiNotesShowPartialBulk, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete, handleHonoApiNotesTimeline, handleHonoApiNotesUserListTimeline, normalizeHonoApiNotesFeaturedQuery } from './hono-api-notes.js';
 import { handleHonoApiNotesTranslate, handleHonoApiUsersFeaturedNotes, normalizeHonoApiUsersFeaturedNotesQuery } from './hono-api-note.js';
 import { handleHonoApiNotesCreate } from './hono-api-notes-create.js';
 import { handleHonoApiNotesDelete, handleHonoApiNotesUnrenote, notesDeleteRateLimit, notesUnrenoteRateLimit } from './hono-api-notes-delete.js';
@@ -3401,6 +3401,15 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiNotesThreadMutingDelete(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiNotes(deps, body));
 		});
 	});
 
