@@ -4710,6 +4710,121 @@ describe('Endpoints', () => {
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
 		});
+
+		test('roles/users は explorable な role のみ users を一覧しUserDetailedを返す', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const explorableRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 2000),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono explorable role ${suffix}`,
+				description: 'Hono roles/users test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: { id: 'ebef1684-672d-49b6-ad82-1b3ec3784f86', type: 'isRemote' },
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: true,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const nonExplorableRole = await createRoleInDatabase(db, {
+				id: genId(config, now - 1999),
+				updatedAt: new Date(now),
+				lastUsedAt: new Date(now),
+				name: `Hono non-explorable role ${suffix}`,
+				description: 'Hono roles/users test',
+				color: null,
+				iconUrl: null,
+				target: 'manual',
+				condFormula: { id: 'ebef1684-672d-49b6-ad82-1b3ec3784f87', type: 'isRemote' },
+				isPublic: true,
+				isAdministrator: false,
+				isModerator: false,
+				isExplorable: false,
+				asBadge: false,
+				preserveAssignmentOnMoveAccount: false,
+				canEditMembersByModerator: false,
+				displayOrder: 1,
+				policies: {},
+			});
+			const member = await signup({ username: `hru${suffix}` });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now - 1998),
+				userId: member.id,
+				roleId: explorableRole.id,
+				expiresAt: null,
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config, now - 1997),
+				userId: member.id,
+				roleId: nonExplorableRole.id,
+				expiresAt: null,
+			});
+
+			const users = await api('roles/users', { roleId: explorableRole.id }, member);
+			assert.strictEqual(users.status, 200);
+			assert.strictEqual(users.body.length, 1);
+			assert.strictEqual(users.body[0].user.id, member.id);
+			assert.strictEqual(users.body[0].user.username, member.username);
+
+			const asSelf = users.body[0].user as any;
+			assert.ok('policies' in asSelf);
+
+			const asOthers = await api('roles/users', { roleId: explorableRole.id }, alice);
+			assert.strictEqual(asOthers.status, 200);
+			assert.strictEqual('policies' in (asOthers.body[0].user as any), false);
+
+			const forbidden = await api('roles/users', { roleId: nonExplorableRole.id });
+			assert.strictEqual(forbidden.status, 400);
+			assert.strictEqual(castAsError(forbidden.body as any).error.code, 'NO_SUCH_ROLE');
+			assert.strictEqual(castAsError(forbidden.body as any).error.id, '30aaaee3-4792-48dc-ab0d-cf501a575ac5');
+		});
+	});
+
+	describe('page-push', () => {
+		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hpp${suffix}` });
+			const pusher = await signup({ username: `hppp${suffix}` });
+			const page = await createPageInDatabase(db, {
+				id: genId(config),
+				updatedAt: new Date(),
+				title: `page-push ${suffix}`,
+				name: `hpp-page-${suffix}`,
+				summary: null,
+				alignCenter: false,
+				hideTitleWhenPinned: false,
+				font: 'sans-serif',
+				userId: owner.id,
+				eyeCatchingImageId: null,
+				content: [],
+				variables: [],
+				script: '',
+				visibility: 'public',
+			});
+
+			const appToken = await createAppToken(pusher, ['write:account']);
+			const secureDenied = await api('page-push', { pageId: page.id, event: 'ping' }, { token: appToken });
+			assert.strictEqual(secureDenied.status, 400);
+			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const missing = await api('page-push', { pageId: genId(config), event: 'ping' }, pusher);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_PAGE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '4a13ad31-6729-46b4-b9af-e86b265c2e74');
+
+			const pushed = await api('page-push', { pageId: page.id, event: 'ping', var: { hello: 'world' } }, pusher);
+			assert.strictEqual(pushed.status, 204);
+		});
 	});
 
 	describe('admin/roles', () => {

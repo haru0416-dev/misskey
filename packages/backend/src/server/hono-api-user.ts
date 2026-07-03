@@ -4,16 +4,18 @@
  */
 
 import type { Config } from '@/config.js';
+import * as Acct from '@/misc/acct.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
-import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
+import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
 export type UserDetailedNotMeHonoApiResponse = Record<string, unknown>;
@@ -353,4 +355,70 @@ export async function packMeDetailedForHonoApi(
 			securityKeysList: [],
 		} : {}),
 	};
+}
+
+export async function packUserDetailedForHonoApi(
+	deps: UserPackingDependencies,
+	user: MiUser,
+	me: { id: MiUser['id'] } | null | undefined,
+): Promise<MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse> {
+	if (me != null && me.id === user.id) {
+		return await packMeDetailedForHonoApi(deps, user, { includeSecrets: false });
+	}
+
+	return await packUserDetailedNotMeForHonoApi(deps, user);
+}
+
+export async function packUserDetailedManyForHonoApi(
+	deps: UserPackingDependencies,
+	srcs: (MiUser['id'] | MiUser)[],
+	me: { id: MiUser['id'] } | null | undefined,
+): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
+	if (me == null) {
+		return await packUserDetailedNotMeManyForHonoApi(deps, srcs);
+	}
+
+	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
+	const ids = srcs.filter((src): src is string => typeof src === 'string');
+	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
+	const userById = new Map([...explicitUsers, ...fetchedUsers].map(user => [user.id, user]));
+	for (const missingId of ids.filter(id => !userById.has(id))) {
+		const user = await fetchUserByIdOrFailFromDatabase(deps.db, missingId);
+		userById.set(user.id, user);
+	}
+
+	const users = srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
+	const meIndex = users.findIndex(user => user.id === me.id);
+	const others = meIndex === -1 ? users : users.filter((_, index) => index !== meIndex);
+	const packedOthers = await packUserDetailedNotMeManyForHonoApi(deps, others);
+
+	if (meIndex === -1) return packedOthers;
+
+	const packedMe = await packMeDetailedForHonoApi(deps, users[meIndex]!, { includeSecrets: false });
+	const result: (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[] = [];
+	let otherIndex = 0;
+	for (let i = 0; i < users.length; i++) {
+		result.push(i === meIndex ? packedMe : packedOthers[otherIndex++]!);
+	}
+	return result;
+}
+
+const pinnedUsersParamDef = {
+	type: 'object',
+	properties: {},
+	required: [],
+} as const;
+
+export async function handleHonoApiPinnedUsers(
+	deps: UserPackingDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
+	parseHonoApiParams(pinnedUsersParamDef, body);
+
+	const users = await Promise.all(deps.meta.pinnedUsers
+		.map(acct => Acct.parse(acct))
+		.map(acct => fetchUserByUsernameAndHostFromDatabase(deps.db, acct.username, acct.host)));
+
+	return await packUserDetailedManyForHonoApi(deps, users.filter(user => user != null), me);
 }

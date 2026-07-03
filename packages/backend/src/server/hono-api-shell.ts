@@ -68,6 +68,7 @@ import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
+import { handleHonoApiPinnedUsers } from './hono-api-user.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow, handleHonoApiIReadAnnouncement } from './hono-api-announcements.js';
 import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
 import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta, handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
@@ -75,6 +76,7 @@ import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from './hono-ap
 import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.js';
 import { handleHonoApiNotesDraftsCount } from './hono-api-note-drafts.js';
 import { handleHonoApiIClaimAchievement, handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification, type HonoApiMainStreamPublisher } from './hono-api-notification.js';
+import { handleHonoApiPagePush } from './hono-api-page-push.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
 import { handleHonoApiAdminPromoCreate, handleHonoApiPromoRead } from './hono-api-promo.js';
 import { assertHonoApiRateLimit } from './hono-api-rate-limit.js';
@@ -91,7 +93,7 @@ import {
 	handleHonoApiRegistrySet,
 } from './hono-api-registry.js';
 import { handleHonoApiRetention } from './hono-api-retention.js';
-import { handleHonoApiRolesList, handleHonoApiRolesShow } from './hono-api-roles.js';
+import { handleHonoApiRolesList, handleHonoApiRolesShow, handleHonoApiRolesUsers } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
 import type { HonoApiBroadcastStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher } from './hono-api-events.js';
@@ -1531,6 +1533,27 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/pinned-users', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiPinnedUsers(deps, auth.user, body));
+		});
+	});
+
+	app.post('/page-push', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			await handleHonoApiPagePush(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
 	app.post('/email-address/available', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -2839,6 +2862,15 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiRolesShow(deps, body));
+		});
+	});
+
+	app.post('/roles/users', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiRolesUsers(deps, auth.user, body));
 		});
 	});
 
