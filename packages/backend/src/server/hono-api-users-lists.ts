@@ -169,6 +169,40 @@ async function getUserForHonoApi(deps: HonoApiUsersListsDependencies, userId: st
 	return user;
 }
 
+const createParamDef = {
+	type: 'object',
+	properties: {
+		name: { type: 'string', minLength: 1, maxLength: 100 },
+	},
+	required: ['name'],
+} as const;
+
+type CreateParams = {
+	name: string;
+};
+
+export async function handleHonoApiUsersListsCreate(
+	deps: HonoApiUsersListsDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
+	const params = parseHonoApiParams(createParamDef, body) as CreateParams;
+
+	const policies = await getHonoApiRolePolicies(deps, me);
+	const currentCount = await countUserListsByUserIdFromDatabase(deps.db, me.id);
+	if (currentCount >= policies.userListLimit) {
+		throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: '0cf21a28-7715-4f39-a20d-777bfdb8d138' });
+	}
+
+	const userList = await createUserListInDatabase(deps.db, {
+		id: genId(deps.config),
+		userId: me.id,
+		name: params.name,
+	});
+
+	return await packUserListByRowForHonoApi(deps, userList);
+}
+
 const createFromPublicParamDef = {
 	type: 'object',
 	properties: {

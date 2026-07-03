@@ -13,6 +13,7 @@ import { name as notesChartName, schema as notesChartSchema } from '@/core/chart
 import { name as perUserDriveChartName, schema as perUserDriveChartSchema } from '@/core/chart/charts/entities/per-user-drive.js';
 import { name as perUserNotesChartName, schema as perUserNotesChartSchema } from '@/core/chart/charts/entities/per-user-notes.js';
 import { name as perUserReactionsChartName, schema as perUserReactionsChartSchema } from '@/core/chart/charts/entities/per-user-reactions.js';
+import { name as perUserPvChartName, schema as perUserPvChartSchema } from '@/core/chart/charts/entities/per-user-pv.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type Logger from '@/logger.js';
@@ -178,6 +179,30 @@ class HonoPerUserReactionsChartWriter extends Chart<typeof perUserReactionsChart
 	}
 }
 
+class HonoPerUserPvChartWriter extends Chart<typeof perUserPvChartSchema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof perUserPvChartSchema>>> {
+		return {};
+	}
+
+	protected async tickMinor(): Promise<Partial<KVs<typeof perUserPvChartSchema>>> {
+		return {};
+	}
+
+	public async commitByUser(user: { id: MiUser['id'] }, key: string): Promise<void> {
+		await this.commit({
+			'upv.user': [key],
+			'pv.user': 1,
+		}, user.id);
+	}
+
+	public async commitByVisitor(user: { id: MiUser['id'] }, key: string): Promise<void> {
+		await this.commit({
+			'upv.visitor': [key],
+			'pv.visitor': 1,
+		}, user.id);
+	}
+}
+
 class HonoActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 	constructor(
 		db: MiDrizzleDatabase,
@@ -229,6 +254,7 @@ export type HonoChartWriters = {
 	perUserNotesChart: HonoPerUserNotesChartWriter;
 	activeUsersChart: HonoActiveUsersChartWriter;
 	perUserReactionsChart: HonoPerUserReactionsChartWriter;
+	perUserPvChart: HonoPerUserPvChartWriter;
 };
 
 export function createHonoChartWriters(deps: HonoChartWriterDependencies): HonoChartWriters {
@@ -243,6 +269,7 @@ export function createHonoChartWriters(deps: HonoChartWriterDependencies): HonoC
 		perUserNotesChart: new HonoPerUserNotesChartWriter(deps.db, lock, logger, perUserNotesChartName, perUserNotesChartSchema, true),
 		activeUsersChart: new HonoActiveUsersChartWriter(deps.db, lock, logger, deps.config),
 		perUserReactionsChart: new HonoPerUserReactionsChartWriter(deps.db, lock, logger, perUserReactionsChartName, perUserReactionsChartSchema, true),
+		perUserPvChart: new HonoPerUserPvChartWriter(deps.db, lock, logger, perUserPvChartName, perUserPvChartSchema, true),
 	};
 }
 
@@ -255,6 +282,7 @@ export async function saveHonoChartWriters(writers: HonoChartWriters): Promise<v
 		writers.perUserNotesChart.save(),
 		writers.activeUsersChart.save(),
 		writers.perUserReactionsChart.save(),
+		writers.perUserPvChart.save(),
 	]);
 }
 

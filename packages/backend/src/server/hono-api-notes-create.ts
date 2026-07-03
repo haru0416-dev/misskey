@@ -102,7 +102,7 @@ function concatNoteContentsForKeyWordCheck(content: { cw?: string | null; text?:
 	return `${content.cw ?? ''}${content.text ?? ''}\n${(content.pollChoices ?? []).join('\n')}\n${(content.others ?? []).join('\n')}`;
 }
 
-function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): boolean {
+export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): boolean {
 	if (keyWords.length === 0) return false;
 	if (text === '') return false;
 
