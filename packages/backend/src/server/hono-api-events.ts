@@ -4,6 +4,7 @@
  */
 
 import type { BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, UserListEventTypes } from '@/core/GlobalEventService.js';
+import type { Packed } from '@/misc/json-schema.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
@@ -48,3 +49,5 @@ export type HonoApiChatRoomStreamPublisher = <K extends keyof ChatEventTypes>(
 	type: K,
 	value?: ChatEventTypes[K],
 ) => void;
+
+export type HonoApiNotesStreamPublisher = (note: Packed<'Note'>) => void;

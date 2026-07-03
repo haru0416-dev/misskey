@@ -112,6 +112,7 @@ import { handleHonoApiAdminShowModerationLogs } from './hono-api-moderation-log.
 import { handleHonoApiNotesDraftsCount, handleHonoApiNotesDraftsCreate, handleHonoApiNotesDraftsDelete, handleHonoApiNotesDraftsList, handleHonoApiNotesDraftsUpdate } from './hono-api-note-drafts.js';
 import { handleHonoApiIClaimAchievement, handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification, type HonoApiMainStreamPublisher } from './hono-api-notification.js';
 import { handleHonoApiNotesChildren, handleHonoApiNotesClips, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesFeatured, handleHonoApiNotesGlobalTimeline, handleHonoApiNotesHybridTimeline, handleHonoApiNotesLocalTimeline, handleHonoApiNotesMentions, handleHonoApiNotesPollsRecommendation, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesSearch, handleHonoApiNotesSearchByTag, handleHonoApiNotesShow, handleHonoApiNotesShowPartialBulk, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete, handleHonoApiNotesTimeline, handleHonoApiNotesUserListTimeline, normalizeHonoApiNotesFeaturedQuery } from './hono-api-notes.js';
+import { handleHonoApiNotesCreate } from './hono-api-notes-create.js';
 import { handleHonoApiPagePush } from './hono-api-page-push.js';
 import { handleHonoApiIPageLikes, handleHonoApiIPages, handleHonoApiPagesCreate, handleHonoApiPagesDelete, handleHonoApiPagesFeatured, handleHonoApiPagesShow, handleHonoApiPagesUpdate, handleHonoApiUsersPages } from './hono-api-pages.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './hono-api-password-reset.js';
@@ -133,7 +134,7 @@ import { handleHonoApiRetention } from './hono-api-retention.js';
 import { handleHonoApiRolesList, handleHonoApiRolesNotes, handleHonoApiRolesShow, handleHonoApiRolesUsers } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
-import type { HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiUserListStreamPublisher } from './hono-api-events.js';
+import type { HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiNotesStreamPublisher, HonoApiUserListStreamPublisher } from './hono-api-events.js';
 import { signupPendingWithHonoApi, signupWithHonoApi } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
@@ -147,6 +148,7 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	dbPool: MiDrizzlePool;
 	meta: MiMeta;
 	redis: Redis.Redis;
+	redisForTimelines: Redis.Redis;
 	downloadService: Pick<DownloadService, 'downloadUrl'>;
 	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 	httpRequestService: HttpRequestService;
@@ -166,6 +168,7 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	publishUserListStream?: HonoApiUserListStreamPublisher;
 	publishChatUserStream?: HonoApiChatUserStreamPublisher;
 	publishChatRoomStream?: HonoApiChatRoomStreamPublisher;
+	publishNotesStream?: HonoApiNotesStreamPublisher;
 };
 
 const unknownApiEndpoint = {
@@ -3117,6 +3120,22 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiClipsRemoveNote(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notes/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:notes');
+			await assertHonoApiRateLimit(deps, 'notes/create', {
+				duration: 60 * 60 * 1000,
+				max: 300,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiNotesCreate(deps, auth.user, body));
 		});
 	});
 

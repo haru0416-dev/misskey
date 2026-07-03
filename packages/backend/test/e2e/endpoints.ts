@@ -9908,6 +9908,75 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/create', () => {
+		test('テキストのみで投稿できる', async () => {
+			const res = await api('notes/create', { text: 'hello hono' }, alice);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.text, 'hello hono');
+			assert.strictEqual(res.body.createdNote.userId, alice.id);
+			assert.strictEqual(res.body.createdNote.visibility, 'public');
+		});
+
+		test('テキストもファイルもRenoteもPollも無いと怒られる', async () => {
+			// @ts-expect-error params must not be empty
+			const res = await api('notes/create', {}, alice);
+			assert.strictEqual(res.status, 400);
+		});
+
+		test('返信を作成できる', async () => {
+			const parent = await api('notes/create', { text: 'parent' }, alice);
+			const res = await api('notes/create', { text: 'child', replyId: parent.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.replyId, parent.body.createdNote.id);
+
+			const noSuchReply = await api('notes/create', { text: 'x', replyId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchReply.status, 400);
+			assert.strictEqual(castAsError(noSuchReply.body as any).error.id, '749ee0f6-d3da-459a-bf02-282e2da4292c');
+		});
+
+		test('Renoteを作成できる', async () => {
+			const target = await api('notes/create', { text: 'to be renoted' }, alice);
+			const res = await api('notes/create', { renoteId: target.body.createdNote.id }, bob);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.renoteId, target.body.createdNote.id);
+
+			const pureRenoteOfRenote = await api('notes/create', { renoteId: res.body.createdNote.id }, alice);
+			assert.strictEqual(pureRenoteOfRenote.status, 400);
+			assert.strictEqual(castAsError(pureRenoteOfRenote.body as any).error.id, 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
+
+			const noSuchRenote = await api('notes/create', { renoteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchRenote.status, 400);
+			assert.strictEqual(castAsError(noSuchRenote.body as any).error.id, 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
+		});
+
+		test('投票を作成できる', async () => {
+			const res = await api('notes/create', {
+				text: 'poll time',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, alice);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.poll.choices.length, 2);
+
+			const expired = await api('notes/create', {
+				text: 'expired poll',
+				poll: { choices: ['a', 'b'], expiresAt: Date.now() - 10000 },
+			}, alice);
+			assert.strictEqual(expired.status, 400);
+			assert.strictEqual(castAsError(expired.body as any).error.id, '04da457d-b083-4055-9082-955525eda5a5');
+		});
+
+		test('visibility: specified で visibleUserIds を保存できる', async () => {
+			const res = await api('notes/create', {
+				text: 'secret',
+				visibility: 'specified',
+				visibleUserIds: [bob.id],
+			}, alice);
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.createdNote.visibility, 'specified');
+			assert.deepStrictEqual(res.body.createdNote.visibleUserIds, [bob.id]);
+		});
+	});
+
 	describe('notes/reactions/create', () => {
 		test('リアクションできる', async () => {
 			const bobPost = await post(bob, { text: 'hi' });
