@@ -235,7 +235,7 @@ async function packClipForHonoApi(
 	};
 }
 
-async function packClipsManyForHonoApi(
+export async function packClipsManyForHonoApi(
 	deps: HonoApiClipDependencies,
 	clips: MiClip[],
 	me: { id: MiUser['id'] } | null | undefined,

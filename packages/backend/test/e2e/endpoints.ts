@@ -5667,6 +5667,212 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/clips, search-by-tag, show-partial-bulk, timeline, user-list-timeline, polls/recommendation', () => {
+		test('notes/clips はpublicなclipのみ返しNO_SUCH_NOTEを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hncl${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'clipped note',
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const publicClip = await api('clips/create', { name: `hono notes/clips public ${suffix}`, isPublic: true }, owner);
+			const privateClip = await api('clips/create', { name: `hono notes/clips private ${suffix}`, isPublic: false }, owner);
+			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
+			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
+
+			const clips = await api('notes/clips', { noteId });
+			assert.strictEqual(clips.status, 200);
+			assert.strictEqual(clips.body.length, 1);
+			assert.strictEqual(clips.body[0].id, publicClip.body.id);
+
+			const missing = await api('notes/clips', { noteId: genId(config) });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+		});
+
+		test('notes/search-by-tag はtagで検索する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnst${suffix}` });
+			const tag = `hono-tag-${suffix}`;
+			const taggedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: taggedNoteId,
+				text: `#${tag}`,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				tags: [tag.toLowerCase()],
+			});
+			const untaggedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: untaggedNoteId,
+				text: 'no tag here',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const res = await api('notes/search-by-tag', { tag });
+			assert.strictEqual(res.status, 200);
+			assert.ok(res.body.some((n: any) => n.id === taggedNoteId));
+			assert.strictEqual(res.body.some((n: any) => n.id === untaggedNoteId), false);
+		});
+
+		test('notes/show-partial-bulk はreactionsとreactionEmojisを返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnsp${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'partial bulk target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				reactions: { '👍': 3 },
+			});
+
+			const res = await api('notes/show-partial-bulk', { noteIds: [noteId] });
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].id, noteId);
+			assert.strictEqual(res.body[0].reactions['👍'], 3);
+		});
+
+		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const viewer = await signup({ username: `hnt${suffix}` });
+			const followee = await signup({ username: `hntf${suffix}` });
+			const stranger = await signup({ username: `hnts${suffix}` });
+			await api('following/create', { userId: followee.id }, viewer);
+
+			const followeeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: followeeNoteId,
+				text: 'timeline from followee',
+				userId: followee.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const strangerNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: strangerNoteId,
+				text: 'timeline from stranger',
+				userId: stranger.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const timeline = await api('notes/timeline', { limit: 100 }, viewer);
+			assert.strictEqual(timeline.status, 200);
+			assert.ok(timeline.body.some((n: any) => n.id === followeeNoteId));
+			assert.strictEqual(timeline.body.some((n: any) => n.id === strangerNoteId), false);
+		});
+
+		test('notes/user-list-timeline はリストメンバーの投稿のみ含みNO_SUCH_LISTを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hult${suffix}` });
+			const member = await signup({ username: `hultm${suffix}` });
+			const nonMember = await signup({ username: `hultn${suffix}` });
+			const list = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				name: `hono user-list-timeline ${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userListId: list.id,
+				userListUserId: member.id,
+			});
+
+			const memberNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: memberNoteId,
+				text: 'from list member',
+				userId: member.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const nonMemberNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: nonMemberNoteId,
+				text: 'from non member',
+				userId: nonMember.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const timeline = await api('notes/user-list-timeline', { listId: list.id, limit: 100 }, owner);
+			assert.strictEqual(timeline.status, 200);
+			assert.ok(timeline.body.some((n: any) => n.id === memberNoteId));
+			assert.strictEqual(timeline.body.some((n: any) => n.id === nonMemberNoteId), false);
+
+			const missingList = await api('notes/user-list-timeline', { listId: genId(config) }, owner);
+			assert.strictEqual(missingList.status, 400);
+			assert.strictEqual(castAsError(missingList.body as any).error.code, 'NO_SUCH_LIST');
+		});
+
+		test('notes/polls/recommendation は未投票のpublic pollのみ返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnpr${suffix}` });
+			const voter = await signup({ username: `hnprv${suffix}` });
+
+			const unvotedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: unvotedNoteId,
+				text: 'unvoted poll',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				hasPoll: true,
+			});
+			await createPollInDatabase(db, {
+				noteId: unvotedNoteId,
+				expiresAt: null,
+				multiple: false,
+				choices: ['A', 'B'],
+				votes: [0, 0],
+				noteVisibility: 'public',
+				userId: author.id,
+				userHost: null,
+				channelId: null,
+			});
+
+			const recommendation = await api('notes/polls/recommendation', { limit: 100 }, voter);
+			assert.strictEqual(recommendation.status, 200);
+			assert.ok(recommendation.body.some((n: any) => n.id === unvotedNoteId));
+		});
+
+		test('notes/search はテキスト全文検索とROLE制限を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnse${suffix}` });
+			const searchNoteId = genId(config);
+			const uniqueText = `hono-search-unique-${suffix}`;
+			await createNoteInDatabase(db, {
+				id: searchNoteId,
+				text: uniqueText,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const searched = await api('notes/search', { query: uniqueText }, author);
+			assert.strictEqual(searched.status, 200);
+			assert.ok(searched.body.some((n: any) => n.id === searchNoteId));
+		});
+	});
+
 	describe('page-push', () => {
 		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
 			const config = loadConfig();

@@ -6,6 +6,8 @@
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/ClipNoteStore.js';
+import { listClipsByIdsFromDatabase } from '@/core/ClipStore.js';
 import { listAllFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteFavoriteInDatabase, deleteNoteFavoriteByIdFromDatabase, fetchNoteFavoriteFromDatabase, noteFavoriteExistsInDatabase } from '@/core/NoteFavoriteStore.js';
@@ -15,22 +17,32 @@ import {
 	listChildNotesFromDatabase,
 	listFeaturedNotesByIdsFromDatabase,
 	listGlobalTimelineNotesFromDatabase,
+	listHomeTimelineNotesFromDatabase,
 	listHybridTimelineNotesFromDatabase,
 	listLocalTimelineNotesFromDatabase,
 	listMentionNotesFromDatabase,
+	listNotesByIdsFromDatabase,
+	listNotesByTagSearchFromDatabase,
 	listRenoteNotesFromDatabase,
 	listReplyNotesFromDatabase,
+	listUserListTimelineNotesFromDatabase,
+	searchNotesByTextFromDatabase,
 } from '@/core/NoteStore.js';
 import { createNoteThreadMutingInDatabase, deleteNoteThreadMutingFromDatabase, noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
+import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
+import { normalizeForSearch } from '@/misc/normalize-for-search.js';
+import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { packClipsManyForHonoApi, type HonoApiClipDependencies } from './hono-api-clips.js';
 import { HonoApiError } from './hono-api-error.js';
-import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
+import { fetchNoteDiffsForHonoApi, packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
 import { grantAchievementForHonoApi, type HonoApiNotificationDependencies } from './hono-api-notification.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
@@ -753,4 +765,398 @@ export async function handleHonoApiNotesFeatured(
 	notes.sort((a, b) => a.id > b.id ? -1 : 1);
 
 	return await packNoteManyForHonoApi(deps, notes, me);
+}
+
+function notesClipsNoSuchNoteError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '47db1a1c-b0af-458d-8fb4-986e4efafe1e' });
+}
+
+export async function handleHonoApiNotesClips(
+	deps: HonoApiNotesDependencies & HonoApiClipDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'Clip'>[]> {
+	const params = parseHonoApiParams(noteIdOnlyParamDef, body) as NoteIdOnlyParams;
+	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
+	if (note == null) throw notesClipsNoSuchNoteError();
+
+	const clipIds = await listClipNoteClipIdsByNoteIdFromDatabase(deps.db, note.id);
+	if (clipIds.length === 0) return [];
+
+	const clips = await listClipsByIdsFromDatabase(deps.db, clipIds, { isPublic: true });
+
+	return await packClipsManyForHonoApi(deps, clips, me);
+}
+
+function notesSearchUnavailableError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Search of notes unavailable.', code: 'UNAVAILABLE', id: '0b44998d-77aa-4427-80d0-d2c9b8523011' });
+}
+
+const notesSearchParamDef = {
+	type: 'object',
+	properties: {
+		query: { type: 'string' },
+		rangeStartAt: { type: 'integer', nullable: true },
+		rangeEndAt: { type: 'integer', nullable: true },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		offset: { type: 'integer', default: 0 },
+		host: { type: 'string' },
+		userId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
+		channelId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
+	},
+	required: ['query'],
+} as const;
+
+type NotesSearchParams = {
+	query: string;
+	rangeStartAt?: number | null;
+	rangeEndAt?: number | null;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	limit: number;
+	offset: number;
+	host?: string;
+	userId?: string | null;
+	channelId?: string | null;
+};
+
+export async function handleHonoApiNotesSearch(
+	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+	me: MiLocalUser | null,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesSearchParamDef, body) as NotesSearchParams;
+	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
+
+	const policies = await getHonoApiRolePolicies(deps, me);
+	if (!policies.canSearchNotes) throw notesSearchUnavailableError();
+
+	const provider = deps.config.fulltextSearch?.provider ?? 'sqlLike';
+	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
+		// Meilisearch-backed search is not ported to hono; this hono route is only
+		// reachable when the sql-based fulltext search provider is configured.
+		throw notesSearchUnavailableError();
+	}
+
+	const notes = await searchNotesByTextFromDatabase(deps.db, {
+		query: params.query,
+		usePgroonga: provider === 'sqlPgroonga',
+		me,
+		blockedHosts: deps.meta.blockedHosts,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		userId: params.userId,
+		channelId: params.channelId,
+		host: params.host,
+		rangeStartId: params.rangeStartAt != null ? genId(deps.config, params.rangeStartAt - 1) : null,
+		rangeEndId: params.rangeEndAt != null ? genId(deps.config, params.rangeEndAt + 1) : null,
+	});
+
+	return await packNoteManyForHonoApi(deps, notes, me);
+}
+
+const notesSearchByTagParamDef = {
+	allOf: [
+		{
+			anyOf: [
+				{
+					type: 'object',
+					properties: {
+						tag: { type: 'string', minLength: 1 },
+					},
+					required: ['tag'],
+				},
+				{
+					type: 'object',
+					properties: {
+						query: {
+							type: 'array',
+							items: {
+								type: 'array',
+								items: {
+									type: 'string',
+									minLength: 1,
+								},
+								minItems: 1,
+							},
+							minItems: 1,
+						},
+					},
+					required: ['query'],
+				},
+			],
+		},
+		{
+			type: 'object',
+			properties: {
+				reply: { type: 'boolean', nullable: true, default: null },
+				renote: { type: 'boolean', nullable: true, default: null },
+				withFiles: { type: 'boolean', default: false },
+				poll: { type: 'boolean', nullable: true, default: null },
+				sinceId: { type: 'string', format: 'misskey:id' },
+				untilId: { type: 'string', format: 'misskey:id' },
+				sinceDate: { type: 'integer' },
+				untilDate: { type: 'integer' },
+				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+			},
+		},
+	],
+} as const;
+
+type NotesSearchByTagParams = {
+	tag?: string;
+	query?: string[][];
+	reply?: boolean | null;
+	renote?: boolean | null;
+	withFiles: boolean;
+	poll?: boolean | null;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	limit: number;
+};
+
+export async function handleHonoApiNotesSearchByTag(
+	deps: HonoApiNotesDependencies,
+	me: { id: MiUser['id'] } | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesSearchByTagParamDef, body) as NotesSearchByTagParams;
+
+	try {
+		const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+
+		let tagQuery: string[][];
+		if (params.tag != null) {
+			const tag = normalizeForSearch(params.tag);
+			if (!safeForSql(tag)) throw new Error('Injection');
+			tagQuery = [[tag]];
+		} else {
+			tagQuery = params.query!.map(tags => tags.map(tag => {
+				const normalized = normalizeForSearch(tag);
+				if (!safeForSql(normalized)) throw new Error('Injection');
+				return normalized;
+			}));
+		}
+
+		const notes = await listNotesByTagSearchFromDatabase(deps.db, {
+			limit: params.limit,
+			sinceId,
+			untilId,
+			tagQuery,
+			reply: params.reply,
+			renote: params.renote,
+			withFiles: params.withFiles,
+			poll: params.poll,
+			me: me ?? null,
+			blockedHosts: deps.meta.blockedHosts,
+		});
+
+		return await packNoteManyForHonoApi(deps, notes, me);
+	} catch (e) {
+		if (e instanceof Error && e.message === 'Injection') return [];
+		throw e;
+	}
+}
+
+const notesShowPartialBulkParamDef = {
+	type: 'object',
+	properties: {
+		noteIds: { type: 'array', items: { type: 'string', format: 'misskey:id' }, maxItems: 100, minItems: 1 },
+	},
+	required: ['noteIds'],
+} as const;
+
+type NotesShowPartialBulkParams = {
+	noteIds: string[];
+};
+
+export async function handleHonoApiNotesShowPartialBulk(
+	deps: HonoApiNotesDependencies,
+	body: Record<string, unknown>,
+): Promise<{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string> }[]> {
+	const params = parseHonoApiParams(notesShowPartialBulkParamDef, body) as NotesShowPartialBulkParams;
+	const notes = await listNotesByIdsFromDatabase(deps.db, params.noteIds);
+	return await fetchNoteDiffsForHonoApi(deps, notes);
+}
+
+const notesTimelineParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		allowPartial: { type: 'boolean', default: false },
+		includeMyRenotes: { type: 'boolean', default: true },
+		includeRenotedMyNotes: { type: 'boolean', default: true },
+		includeLocalRenotes: { type: 'boolean', default: true },
+		withFiles: { type: 'boolean', default: false },
+		withRenotes: { type: 'boolean', default: true },
+	},
+	required: [],
+} as const;
+
+type NotesTimelineParams = {
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	allowPartial: boolean;
+	includeMyRenotes: boolean;
+	includeRenotedMyNotes: boolean;
+	includeLocalRenotes: boolean;
+	withFiles: boolean;
+	withRenotes: boolean;
+};
+
+export async function handleHonoApiNotesTimeline(
+	deps: HonoApiNotesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesTimelineParamDef, body) as NotesTimelineParams;
+	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+
+	const followees = await listAllFollowingsByFollowerIdFromDatabase(deps.db, me.id);
+	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
+		.filter(id => !mutingChannelIds.includes(id));
+
+	const notes = await listHomeTimelineNotesFromDatabase(deps.db, {
+		me,
+		followeeIds: followees.map(f => f.followeeId),
+		followingChannelIds,
+		mutingChannelIds,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		includeMyRenotes: params.includeMyRenotes,
+		includeRenotedMyNotes: params.includeRenotedMyNotes,
+		includeLocalRenotes: params.includeLocalRenotes,
+		withFiles: params.withFiles,
+		withRenotes: params.withRenotes,
+		blockedHosts: deps.meta.blockedHosts,
+	});
+
+	return await packNoteManyForHonoApi(deps, notes, me);
+}
+
+function notesUserListTimelineNoSuchListError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such list.', code: 'NO_SUCH_LIST', id: '8fb1fbd5-e476-4c37-9fb0-43d55b63a2ff' });
+}
+
+const notesUserListTimelineParamDef = {
+	type: 'object',
+	properties: {
+		listId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		allowPartial: { type: 'boolean', default: false },
+		includeMyRenotes: { type: 'boolean', default: true },
+		includeRenotedMyNotes: { type: 'boolean', default: true },
+		includeLocalRenotes: { type: 'boolean', default: true },
+		withRenotes: { type: 'boolean', default: true },
+		withFiles: { type: 'boolean', default: false },
+	},
+	required: ['listId'],
+} as const;
+
+type NotesUserListTimelineParams = {
+	listId: string;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	allowPartial: boolean;
+	includeMyRenotes: boolean;
+	includeRenotedMyNotes: boolean;
+	includeLocalRenotes: boolean;
+	withRenotes: boolean;
+	withFiles: boolean;
+};
+
+export async function handleHonoApiNotesUserListTimeline(
+	deps: HonoApiNotesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesUserListTimelineParamDef, body) as NotesUserListTimelineParams;
+	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+
+	const list = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
+	if (list == null) throw notesUserListTimelineNoSuchListError();
+
+	const mutedChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+
+	const notes = await listUserListTimelineNotesFromDatabase(deps.db, {
+		listId: list.id,
+		me,
+		mutedChannelIds,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		includeMyRenotes: params.includeMyRenotes,
+		includeRenotedMyNotes: params.includeRenotedMyNotes,
+		includeLocalRenotes: params.includeLocalRenotes,
+		withRenotes: params.withRenotes,
+		withFiles: params.withFiles,
+		blockedHosts: deps.meta.blockedHosts,
+	});
+
+	return await packNoteManyForHonoApi(deps, notes, me);
+}
+
+const notesPollsRecommendationParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		offset: { type: 'integer', default: 0 },
+		excludeChannels: { type: 'boolean', default: false },
+	},
+	required: [],
+} as const;
+
+type NotesPollsRecommendationParams = {
+	limit: number;
+	offset: number;
+	excludeChannels: boolean;
+};
+
+export async function handleHonoApiNotesPollsRecommendation(
+	deps: HonoApiNotesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesPollsRecommendationParamDef, body) as NotesPollsRecommendationParams;
+	const noteIds = await listUnvotedPublicPollNoteIdsFromDatabase(deps.db, {
+		meId: me.id,
+		excludeChannels: params.excludeChannels,
+		limit: params.limit,
+		offset: params.offset,
+	});
+
+	if (noteIds.length === 0) return [];
+
+	const notes = await listNotesByIdsFromDatabase(deps.db, noteIds);
+	notes.sort((a, b) => b.id.localeCompare(a.id));
+
+	return await packNoteManyForHonoApi(deps, notes, me, {
+		detail: true,
+	});
 }

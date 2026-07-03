@@ -408,3 +408,20 @@ export async function packNoteManyForHonoApi(
 
 	return await Promise.all(notes.map(n => packNoteForHonoApi(deps, n, me, options)));
 }
+
+export async function fetchNoteDiffsForHonoApi(
+	deps: HonoApiNoteDependencies,
+	notes: MiNote[],
+): Promise<{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string> }[]> {
+	return await Promise.all(notes.map(async note => {
+		const bufferedReactions = await getBufferedReactions(deps, note.id);
+		const reactions = convertLegacyReactions(mergeReactions(note.reactions, bufferedReactions.deltas));
+
+		const reactionEmojiNames = Object.keys(reactions)
+			.filter(x => x.startsWith(':') && x.includes('@') && !x.includes('@.'))
+			.map(x => decodeReaction(x).reaction.replaceAll(':', ''));
+		const reactionEmojis = await populateEmojis(deps, reactionEmojiNames, note.userHost);
+
+		return { id: note.id, reactions, reactionEmojis };
+	}));
+}
