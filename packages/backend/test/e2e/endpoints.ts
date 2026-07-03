@@ -63,6 +63,7 @@ import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDat
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
@@ -9947,6 +9948,56 @@ describe('Endpoints', () => {
 			const res = await api('users/lists/create', { name: '' }, user);
 
 			assert.strictEqual(res.status, 400);
+		});
+	});
+
+	describe('i/pin, i/unpin', () => {
+		test('ノートをピン留めできる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnpin${suffix}` });
+			const note = await post(user, { text: 'test' });
+
+			const res = await api('i/pin', { noteId: note.id }, user);
+
+			assert.strictEqual(res.status, 200);
+			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
+			assert.strictEqual(pinings.length, 1);
+			assert.strictEqual(pinings[0].noteId, note.id);
+		});
+
+		test('同じノートを二重にピン留めできない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnpin2${suffix}` });
+			const note = await post(user, { text: 'test' });
+			await api('i/pin', { noteId: note.id }, user);
+
+			const res = await api('i/pin', { noteId: note.id }, user);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body).error.code, 'ALREADY_PINNED');
+		});
+
+		test('存在しないノートはピン留めできない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnpin3${suffix}` });
+
+			const res = await api('i/pin', { noteId: '000000000000000000000000' }, user);
+
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_NOTE');
+		});
+
+		test('ピン留めを解除できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnunpin${suffix}` });
+			const note = await post(user, { text: 'test' });
+			await api('i/pin', { noteId: note.id }, user);
+
+			const res = await api('i/unpin', { noteId: note.id }, user);
+
+			assert.strictEqual(res.status, 200);
+			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
+			assert.strictEqual(pinings.length, 0);
 		});
 	});
 
