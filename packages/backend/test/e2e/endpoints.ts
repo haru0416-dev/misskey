@@ -6845,6 +6845,53 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/recommendation', () => {
+		test('鍵垢/非表示/フォロー済み/リモート/自分自身を除外したおすすめユーザーを返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const me = await signup({ username: `hur${suffix}` });
+			const candidate = await signup({ username: `hurc${suffix}` });
+			await updateUserInDatabase(db, candidate.id, { updatedAt: new Date() });
+			const lockedUser = await signup({ username: `hurl${suffix}` });
+			await updateUserInDatabase(db, lockedUser.id, { isLocked: true, updatedAt: new Date() });
+			const notExplorable = await signup({ username: `hurn${suffix}` });
+			await updateUserInDatabase(db, notExplorable.id, { isExplorable: false, updatedAt: new Date() });
+			const alreadyFollowed = await signup({ username: `huraf${suffix}` });
+			await updateUserInDatabase(db, alreadyFollowed.id, { updatedAt: new Date() });
+			await api('following/create', { userId: alreadyFollowed.id }, me);
+			const remoteHost = `hono-recommend-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hurr${suffix}`,
+					usernameLower: `hurr${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+					updatedAt: new Date(),
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+
+			const res = await api('users/recommendation', { limit: 100 }, me);
+			assert.strictEqual(res.status, 200);
+			const ids = res.body.map((u: any) => u.id);
+			assert.ok(ids.includes(candidate.id));
+			assert.ok(!ids.includes(lockedUser.id));
+			assert.ok(!ids.includes(notExplorable.id));
+			assert.ok(!ids.includes(alreadyFollowed.id));
+			assert.ok(!ids.includes(remoteId));
+			assert.ok(!ids.includes(me.id));
+
+			const unauthorized = await api('users/recommendation', {});
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import ms from 'ms';
 import { sql, type SQL } from 'drizzle-orm';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
@@ -15,6 +16,7 @@ import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
+	listRecommendedUsersFromDatabase,
 	listUsersByIdsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
 } from '@/core/UserStore.js';
@@ -955,4 +957,33 @@ export async function handleHonoApiUsersSearchByUsernameAndHost(
 	return params.detail
 		? await packUserDetailedManyForHonoApi(deps, ids, me)
 		: await packUserLiteManyForHonoApi(deps, ids);
+}
+
+const usersRecommendationParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		offset: { type: 'integer', default: 0 },
+	},
+	required: [],
+} as const;
+
+type UsersRecommendationParams = {
+	limit: number;
+	offset: number;
+};
+
+export async function handleHonoApiUsersRecommendation(
+	deps: UserPackingDependencies,
+	me: MiUser,
+	body: Record<string, unknown>,
+): Promise<unknown[]> {
+	const params = parseHonoApiParams(usersRecommendationParamDef, body) as UsersRecommendationParams;
+	const users = await listRecommendedUsersFromDatabase(deps.db, me.id, {
+		limit: params.limit,
+		offset: params.offset,
+		updatedAfter: new Date(Date.now() - ms('7days')),
+	});
+
+	return await packUserDetailedManyForHonoApi(deps, users, me);
 }

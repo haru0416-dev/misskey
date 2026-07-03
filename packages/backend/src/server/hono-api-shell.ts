@@ -109,7 +109,7 @@ import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoA
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiI2faDone, handleHonoApiI2faKeyDone, handleHonoApiI2faPasswordLess, handleHonoApiI2faRegister, handleHonoApiI2faRegisterKey, handleHonoApiI2faRemoveKey, handleHonoApiI2faUnregister, handleHonoApiI2faUpdateKey } from './hono-api-i-2fa.js';
-import { handleHonoApiPinnedUsers, handleHonoApiUsersRelation, handleHonoApiUsersSearch, handleHonoApiUsersSearchByUsernameAndHost, handleHonoApiUsersShow } from './hono-api-user.js';
+import { handleHonoApiPinnedUsers, handleHonoApiUsersRecommendation, handleHonoApiUsersRelation, handleHonoApiUsersSearch, handleHonoApiUsersSearchByUsernameAndHost, handleHonoApiUsersShow } from './hono-api-user.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow, handleHonoApiIReadAnnouncement } from './hono-api-announcements.js';
 import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
 import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta, handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
@@ -5292,6 +5292,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(c, await handleHonoApiUsersFollowing(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/recommendation', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiUsersRecommendation(deps, auth.user, body));
 		});
 	});
 
