@@ -33,6 +33,7 @@ import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmo
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
 import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
@@ -4855,6 +4856,173 @@ describe('Endpoints', () => {
 			assert.strictEqual(forbidden.status, 400);
 			assert.strictEqual(castAsError(forbidden.body as any).error.code, 'NO_SUCH_ROLE');
 			assert.strictEqual(castAsError(forbidden.body as any).error.id, '30aaaee3-4792-48dc-ab0d-cf501a575ac5');
+		});
+	});
+
+	describe('gallery', () => {
+		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hgc${suffix}` });
+			const stranger = await signup({ username: `hgcs${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-gallery-create-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-gallery-${suffix}.png`,
+				type: 'image/png',
+				size: 123,
+				blurhash: null,
+				properties: { width: 100, height: 200 },
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: `${origin}/files/${fileMd5}.thumbnail`,
+				comment: null,
+				folderId: null,
+			});
+
+			const created = await api('gallery/posts/create', {
+				title: `Hono gallery post ${suffix}`,
+				description: 'created via e2e',
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.title, `Hono gallery post ${suffix}`);
+			assert.strictEqual(created.body.userId, owner.id);
+			assert.strictEqual(created.body.user.id, owner.id);
+			assert.strictEqual(created.body.fileIds.length, 1);
+			assert.strictEqual(created.body.files.length, 1);
+			assert.strictEqual(created.body.files[0].id, file.id);
+			assert.strictEqual(created.body.likedCount, 0);
+			assert.strictEqual(created.body.isSensitive, false);
+
+			const shown = await api('gallery/posts/show', { postId: created.body.id }, stranger);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, created.body.id);
+			assert.strictEqual(shown.body.isLiked, false);
+
+			const missing = await api('gallery/posts/show', { postId: genId(config) });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_POST');
+
+			const updated = await api('gallery/posts/update', {
+				postId: created.body.id,
+				title: `${created.body.title} updated`,
+				isSensitive: true,
+			}, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.title, `${created.body.title} updated`);
+			assert.strictEqual(updated.body.isSensitive, true);
+
+			const deleteDenied = await api('gallery/posts/delete', { postId: created.body.id }, stranger);
+			assert.strictEqual(deleteDenied.status, 400);
+			assert.strictEqual(castAsError(deleteDenied.body as any).error.code, 'ACCESS_DENIED');
+
+			const deletedByMod = await api('gallery/posts/delete', { postId: created.body.id }, alice);
+			assert.strictEqual(deletedByMod.status, 204);
+			assert.strictEqual(await fetchGalleryPostByIdFromDatabase(db, created.body.id), null);
+
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const log = logs.find(l => l.type === 'deleteGalleryPost' && (l.info as any).postId === created.body.id);
+			assert.ok(log);
+			assert.strictEqual((log!.info as any).postUserId, owner.id);
+		});
+
+		test('gallery/posts/{like,unlike} はカウント、ランキング、二重操作エラーを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hgl${suffix}` });
+			const liker = await signup({ username: `hgll${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-gallery-like-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-gallery-like-${suffix}.png`,
+				type: 'image/png',
+				size: 123,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `Hono gallery like ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const selfLikeDenied = await api('gallery/posts/like', { postId: post.body.id }, owner);
+			assert.strictEqual(selfLikeDenied.status, 400);
+			assert.strictEqual(castAsError(selfLikeDenied.body as any).error.code, 'YOUR_POST');
+
+			const unlikeNotLiked = await api('gallery/posts/unlike', { postId: post.body.id }, liker);
+			assert.strictEqual(unlikeNotLiked.status, 400);
+			assert.strictEqual(castAsError(unlikeNotLiked.body as any).error.code, 'NOT_LIKED');
+
+			const liked = await api('gallery/posts/like', { postId: post.body.id }, liker);
+			assert.strictEqual(liked.status, 204);
+
+			const alreadyLiked = await api('gallery/posts/like', { postId: post.body.id }, liker);
+			assert.strictEqual(alreadyLiked.status, 400);
+			assert.strictEqual(castAsError(alreadyLiked.body as any).error.code, 'ALREADY_LIKED');
+
+			const afterLike = await fetchGalleryPostByIdFromDatabase(db, post.body.id);
+			assert.strictEqual(afterLike?.likedCount, 1);
+
+			const shownAsLiker = await api('gallery/posts/show', { postId: post.body.id }, liker);
+			assert.strictEqual(shownAsLiker.body.isLiked, true);
+
+			const unliked = await api('gallery/posts/unlike', { postId: post.body.id }, liker);
+			assert.strictEqual(unliked.status, 204);
+
+			const afterUnlike = await fetchGalleryPostByIdFromDatabase(db, post.body.id);
+			assert.strictEqual(afterUnlike?.likedCount, 0);
+		});
+
+		test('gallery/posts と gallery/popular はページングして投稿を返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hgp${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-gallery-list-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-gallery-list-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const post = await api('gallery/posts/create', {
+				title: `Hono gallery list ${suffix}`,
+				fileIds: [file.id],
+			}, owner);
+			assert.strictEqual(post.status, 200);
+
+			const list = await api('gallery/posts', { limit: 100 });
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some((p: any) => p.id === post.body.id));
+
+			const liker = await signup({ username: `hgpl${suffix}` });
+			await api('gallery/posts/like', { postId: post.body.id }, liker);
+
+			const popular = await api('gallery/popular', {});
+			assert.strictEqual(popular.status, 200);
+			assert.ok(popular.body.some((p: any) => p.id === post.body.id));
 		});
 	});
 
