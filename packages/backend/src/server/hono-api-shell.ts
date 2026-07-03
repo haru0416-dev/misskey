@@ -59,15 +59,16 @@ import {
 } from './hono-api-drive.js';
 import { handleHonoApiDriveFilesAttachedChatMessages, handleHonoApiDriveFilesAttachedNotes, handleHonoApiDriveFilesDelete, handleHonoApiDriveFilesFind, handleHonoApiDriveFilesFindByHash, handleHonoApiDriveFilesList, handleHonoApiDriveFilesMoveBulk, handleHonoApiDriveFilesShow, handleHonoApiDriveFilesUpdate } from './hono-api-drive-files.js';
 import { handleHonoApiDriveFilesCreate, handleHonoApiDriveFilesUploadFromUrl, readHonoApiMultipartRequest } from './hono-api-drive-file-upload.js';
-import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoApiGalleryPosts, handleHonoApiGalleryPostsCreate, handleHonoApiGalleryPostsDelete, handleHonoApiGalleryPostsLike, handleHonoApiGalleryPostsShow, handleHonoApiGalleryPostsUnlike, handleHonoApiGalleryPostsUpdate } from './hono-api-gallery.js';
+import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoApiGalleryPosts, handleHonoApiGalleryPostsCreate, handleHonoApiGalleryPostsDelete, handleHonoApiGalleryPostsLike, handleHonoApiGalleryPostsShow, handleHonoApiGalleryPostsUnlike, handleHonoApiGalleryPostsUpdate, handleHonoApiIGalleryLikes, handleHonoApiIGalleryPosts } from './hono-api-gallery.js';
 import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationFollowers, handleHonoApiFederationFollowing, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, handleHonoApiFederationUsers, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiExportCustomEmojis, handleHonoApiIExportAntennas, handleHonoApiIExportBlocking, handleHonoApiIExportClips, handleHonoApiIExportFavorites, handleHonoApiIExportFollowing, handleHonoApiIExportMute, handleHonoApiIExportNotes, handleHonoApiIExportUserLists } from './hono-api-export-jobs.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
-import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
+import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiIFavorites, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
+import { handleHonoApiIChangePassword, handleHonoApiIDeleteAccount, handleHonoApiIRegenerateToken, handleHonoApiIUpdateEmail } from './hono-api-account-security.js';
 import { handleHonoApiClipsAddNote, handleHonoApiClipsCreate, handleHonoApiClipsDelete, handleHonoApiClipsList, handleHonoApiClipsMyFavorites, handleHonoApiClipsNotes, handleHonoApiClipsRemoveNote, handleHonoApiClipsShow, handleHonoApiClipsUpdate } from './hono-api-clips.js';
 import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsShow, handleHonoApiChannelsTimeline, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from './hono-api-channels.js';
-import { handleHonoApiChartsActiveUsers, handleHonoApiChartsApRequest, handleHonoApiChartsDrive, handleHonoApiChartsFederation, handleHonoApiChartsInstance, handleHonoApiChartsNotes, handleHonoApiChartsUserDrive, handleHonoApiChartsUserFollowing, handleHonoApiChartsUserNotes, handleHonoApiChartsUserPv, handleHonoApiChartsUserReactions, handleHonoApiChartsUsers, normalizeHonoApiChartQuery } from './hono-api-charts.js';
+import { handleHonoApiChartsActiveUsers, handleHonoApiChartsApRequest, handleHonoApiChartsDrive, handleHonoApiChartsFederation, handleHonoApiChartsInstance, handleHonoApiChartsNotes, handleHonoApiChartsUserDrive, handleHonoApiChartsUserFollowing, handleHonoApiChartsUserNotes, handleHonoApiChartsUserPv, handleHonoApiChartsUserReactions, handleHonoApiChartsUsers, handleHonoApiStats, normalizeHonoApiChartQuery } from './hono-api-charts.js';
 import {
 	handleHonoApiChatHistory,
 	handleHonoApiChatMessagesCreateToRoom,
@@ -101,7 +102,8 @@ import { handleHonoApiAdminDeleteAllFilesOfAUser, handleHonoApiAdminDriveCleanRe
 import { handleHonoApiIUpdate } from './hono-api-account-update.js';
 import { handleHonoApiIMove } from './hono-api-account-move.js';
 import { handleHonoApiIPin, handleHonoApiIUnpin } from './hono-api-account-pin.js';
-import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
+import { handleHonoApiINotifications, handleHonoApiINotificationsGrouped } from './hono-api-notifications-list.js';
+import { handleHonoApiFlashCreate, handleHonoApiFlashDelete, handleHonoApiFlashFeatured, handleHonoApiFlashMy, handleHonoApiFlashMyLikes, handleHonoApiFlashSearch, handleHonoApiFlashShow, handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll, handleHonoApiUsersFollowers, handleHonoApiUsersFollowing } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
@@ -2693,6 +2695,15 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/stats', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiStats(deps));
+		});
+	});
+
 	app.post('/chat/history', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -3958,6 +3969,28 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/i/gallery/posts', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:gallery');
+
+			return jsonResponse(c, await handleHonoApiIGalleryPosts(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/gallery/likes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:gallery-likes');
+
+			return jsonResponse(c, await handleHonoApiIGalleryLikes(deps, auth.user, body));
+		});
+	});
+
 	app.post('/flash/like', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -3998,6 +4031,83 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiFlashUpdate(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/flash/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:flash');
+			await assertHonoApiRateLimit(deps, 'flash/create', {
+				duration: 60 * 60 * 1000,
+				max: 10,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiFlashCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:flash');
+
+			await handleHonoApiFlashDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/flash/featured', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFlashFeatured(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/my', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:flash');
+
+			return jsonResponse(c, await handleHonoApiFlashMy(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/my-likes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:flash-likes');
+
+			return jsonResponse(c, await handleHonoApiFlashMyLikes(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/search', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFlashSearch(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFlashShow(deps, auth.user, body));
 		});
 	});
 
@@ -4518,6 +4628,98 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'write:account');
 
 			return jsonResponse(c, await handleHonoApiIUnpin(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/notifications', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:notifications');
+			await assertHonoApiRateLimit(deps, 'i/notifications', {
+				duration: 30000,
+				max: 30,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiINotifications(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/notifications-grouped', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:notifications');
+			await assertHonoApiRateLimit(deps, 'i/notifications-grouped', {
+				duration: 30000,
+				max: 30,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiINotificationsGrouped(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/favorites', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:favorites');
+
+			return jsonResponse(c, await handleHonoApiIFavorites(deps, auth.user, body));
+		});
+	});
+
+	app.post('/i/change-password', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			await handleHonoApiIChangePassword(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/regenerate-token', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			await handleHonoApiIRegenerateToken(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/delete-account', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+
+			await handleHonoApiIDeleteAccount(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/update-email', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			await assertHonoApiRateLimit(deps, 'i/update-email', {
+				duration: 60 * 60 * 1000,
+				max: 3,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiIUpdateEmail(deps, auth.user, body));
 		});
 	});
 

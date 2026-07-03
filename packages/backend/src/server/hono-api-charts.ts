@@ -18,6 +18,9 @@ import { name as perUserPvChartName, schema as perUserPvChartSchema } from '@/co
 import { name as perUserReactionsChartName, schema as perUserReactionsChartSchema } from '@/core/chart/charts/entities/per-user-reactions.js';
 import { name as usersChartName, schema as usersChartSchema } from '@/core/chart/charts/entities/users.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
+import { countNoteReactionsFromDatabase } from '@/core/NoteReactionStore.js';
+import { countInstancesFromDatabase } from '@/core/InstanceStore.js';
+import { MemoryKVCache } from '@/misc/cache.js';
 import type Logger from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
@@ -200,4 +203,33 @@ export async function handleHonoApiChartsUserReactions(deps: HonoApiChartDepende
 	const params = parseHonoApiParams(perUserChartParamDef, body) as PerUserChartParams;
 	const chart = createHonoApiChart(deps, perUserReactionsChartName, perUserReactionsChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
+}
+
+const statsReactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1h
+const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1h
+
+export async function handleHonoApiStats(deps: HonoApiChartDependencies): Promise<Record<string, unknown>> {
+	const notesChart = await createHonoApiChart(deps, notesChartName, notesChartSchema).getChart('hour', 1, null);
+	const notesCount = notesChart.local.total[0] + notesChart.remote.total[0];
+	const originalNotesCount = notesChart.local.total[0];
+
+	const usersChart = await createHonoApiChart(deps, usersChartName, usersChartSchema).getChart('hour', 1, null);
+	const usersCount = usersChart.local.total[0] + usersChart.remote.total[0];
+	const originalUsersCount = usersChart.local.total[0];
+
+	const [reactionsCount, instances] = await Promise.all([
+		statsReactionsCountCache.fetch('all', () => countNoteReactionsFromDatabase(deps.db)),
+		statsInstancesCountCache.fetch('all', () => countInstancesFromDatabase(deps.db)),
+	]);
+
+	return {
+		notesCount,
+		originalNotesCount,
+		usersCount,
+		originalUsersCount,
+		reactionsCount,
+		instances,
+		driveUsageLocal: 0,
+		driveUsageRemote: 0,
+	};
 }
