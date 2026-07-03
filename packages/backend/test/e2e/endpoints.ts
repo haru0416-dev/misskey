@@ -6906,6 +6906,87 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users (bare, explorableユーザー一覧)', () => {
+		test('isExplorable/isSuspended、origin、hostname、mute除外を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const explorable = await signup({ username: `hu${suffix}` });
+
+			const notExplorable = await signup({ username: `hune${suffix}` });
+			await updateUserInDatabase(db, notExplorable.id, { isExplorable: false });
+
+			const remoteHost = `hono-users-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hurem${suffix}`,
+					usernameLower: `hurem${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+					isExplorable: true,
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+
+			const muter = await signup({ username: `hum${suffix}` });
+			const muted = await signup({ username: `humt${suffix}` });
+			const muteRes = await api('mute/create', { userId: muted.id }, muter);
+			assert.strictEqual(muteRes.status, 204);
+
+			// フルスイートでは既存のexplorableユーザーが100件を超えるため、新規作成分を確実に上位に出す
+			// sort=+createdAt (id降順) を明示する。
+			const all = await api('users', { limit: 100, sort: '+createdAt' });
+			assert.strictEqual(all.status, 200);
+			assert.ok(all.body.some((u: any) => u.id === explorable.id));
+			assert.strictEqual(all.body.some((u: any) => u.id === notExplorable.id), false);
+			assert.strictEqual(all.body.some((u: any) => u.id === remoteUser.id), false);
+
+			const combined = await api('users', { limit: 100, origin: 'combined', sort: '+createdAt' });
+			assert.strictEqual(combined.status, 200);
+			assert.ok(combined.body.some((u: any) => u.id === remoteUser.id));
+
+			const remoteOnly = await api('users', { limit: 100, origin: 'remote', sort: '+createdAt' });
+			assert.strictEqual(remoteOnly.status, 200);
+			assert.ok(remoteOnly.body.some((u: any) => u.id === remoteUser.id));
+			assert.strictEqual(remoteOnly.body.some((u: any) => u.id === explorable.id), false);
+
+			const byHostname = await api('users', { limit: 100, origin: 'combined', hostname: remoteHost });
+			assert.strictEqual(byHostname.status, 200);
+			assert.ok(byHostname.body.some((u: any) => u.id === remoteUser.id));
+			assert.strictEqual(byHostname.body.some((u: any) => u.id === explorable.id), false);
+
+			const mutedIncludedForAnon = await api('users', { limit: 100, sort: '+createdAt' });
+			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
+
+			const mutedExcludedForMuter = await api('users', { limit: 100, sort: '+createdAt' }, muter);
+			assert.strictEqual(mutedExcludedForMuter.status, 200);
+			assert.strictEqual(mutedExcludedForMuter.body.some((u: any) => u.id === muted.id), false);
+		});
+
+		test('sort=+followerとstate=aliveを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			// フルスイートでは既存ユーザーのfollowersCountが不定のため、飛び抜けた値で先頭固定を保証する。
+			const popular = await signup({ username: `hup${suffix}` });
+			await updateUserInDatabase(db, popular.id, { followersCount: 999999999, updatedAt: new Date() });
+
+			const stale = await signup({ username: `hus${suffix}` });
+			await updateUserInDatabase(db, stale.id, { updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10) });
+
+			const sorted = await api('users', { limit: 1, sort: '+follower' });
+			assert.strictEqual(sorted.status, 200);
+			assert.strictEqual(sorted.body[0]?.id, popular.id);
+
+			const alive = await api('users', { limit: 100, state: 'alive', sort: '+createdAt' });
+			assert.strictEqual(alive.status, 200);
+			assert.ok(alive.body.some((u: any) => u.id === popular.id));
+			assert.strictEqual(alive.body.some((u: any) => u.id === stale.id), false);
+		});
+	});
+
 	describe('users/search-by-username-and-host', () => {
 		test('username/hostによる前方一致検索、ログイン時のフォロー優先、detailスキーマを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);

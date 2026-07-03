@@ -18,6 +18,7 @@ import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
+	listExplorableUsersFromDatabase,
 	listRecommendedUsersFromDatabase,
 	listUsersByIdsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
@@ -1036,4 +1037,46 @@ export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
 		user: userMap.get(userId) ?? await packUserDetailedForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me),
 		weight: repliedUserCounts.get(userId)! / peak,
 	})));
+}
+
+const usersParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		offset: { type: 'integer', default: 0 },
+		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt'] },
+		state: { type: 'string', enum: ['all', 'alive'], default: 'all' },
+		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'local' },
+		hostname: { type: 'string', nullable: true, default: null },
+	},
+	required: [],
+} as const;
+
+type UsersParams = {
+	limit: number;
+	offset: number;
+	sort?: '+follower' | '-follower' | '+createdAt' | '-createdAt' | '+updatedAt' | '-updatedAt';
+	state: 'all' | 'alive';
+	origin: 'combined' | 'local' | 'remote';
+	hostname: string | null;
+};
+
+export async function handleHonoApiUsers(
+	deps: UserPackingDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<unknown[]> {
+	const params = parseHonoApiParams(usersParamDef, body) as UsersParams;
+
+	const users = await listExplorableUsersFromDatabase(deps.db, {
+		limit: params.limit,
+		offset: params.offset,
+		sort: params.sort,
+		state: params.state,
+		origin: params.origin,
+		hostname: params.hostname,
+		meId: me?.id,
+	});
+
+	return await packUserDetailedManyForHonoApi(deps, users, me);
 }
