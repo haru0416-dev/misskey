@@ -2401,6 +2401,117 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('v2/admin/emoji/list はquery、hostType、pagination、count/allCount/allPages、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `hav2${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono v2 emoji manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const localFirst = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 3000),
+				name: `hv2emoji${suffix}a`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/v2-a-original.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const localSecond = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 2000),
+				name: `hv2emoji${suffix}b`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/v2-b-original.webp`,
+				publicUrl: `${origin}/emoji/${suffix}/v2-b-public.webp`,
+				license: null,
+				isSensitive: true,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const remoteHost = `hono-v2-emoji-${suffix}.example`;
+			const remoteEmoji = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `hv2emoji${suffix}c`,
+				host: remoteHost,
+				aliases: [],
+				category: null,
+				originalUrl: `https://${remoteHost}/emoji/v2-c.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const listed = await api('v2/admin/emoji/list', {
+					query: { name: `hv2emoji${suffix}`, hostType: 'local' },
+					limit: 10,
+					sortKeys: ['+id'],
+				}, manager);
+				assert.strictEqual(listed.status, 200);
+				assert.deepStrictEqual(listed.body.emojis.map((e: any) => e.id), [localFirst.id, localSecond.id]);
+				assert.strictEqual(listed.body.count, 2);
+				assert.strictEqual(listed.body.allCount, 2);
+				assert.strictEqual(listed.body.allPages, 1);
+				assert.strictEqual(listed.body.emojis[0].originalUrl, localFirst.originalUrl);
+				assert.strictEqual(listed.body.emojis[1].publicUrl, localSecond.publicUrl);
+				assert.strictEqual(listed.body.emojis[1].isSensitive, true);
+
+				const remoteListed = await api('v2/admin/emoji/list', {
+					query: { name: `hv2emoji${suffix}`, hostType: 'remote' },
+					limit: 10,
+				}, manager);
+				assert.strictEqual(remoteListed.status, 200);
+				assert.deepStrictEqual(remoteListed.body.emojis.map((e: any) => e.id), [remoteEmoji.id]);
+				assert.strictEqual(remoteListed.body.emojis[0].host, remoteHost);
+
+				const paged = await api('v2/admin/emoji/list', {
+					query: { name: `hv2emoji${suffix}` },
+					limit: 1,
+					page: 2,
+					sortKeys: ['+id'],
+				}, manager);
+				assert.strictEqual(paged.status, 200);
+				assert.deepStrictEqual(paged.body.emojis.map((e: any) => e.id), [localSecond.id]);
+				assert.strictEqual(paged.body.count, 1);
+				assert.strictEqual(paged.body.allCount, 3);
+				assert.strictEqual(paged.body.allPages, 3);
+
+				const roleDenied = await api('v2/admin/emoji/list', {}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
+				const scopeDenied = await api('v2/admin/emoji/list', {}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
 		test('admin/emoji/add と update はDB更新、cache、moderation log、scope、role policyを維持する', async () => {
 			const config = loadConfig();
 			const now = Date.now();
@@ -5839,6 +5950,109 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('i/webhooks/test', () => {
+		test('自分のwebhookに各イベント種別をテスト送信でき、他人のwebhookはNO_SUCH_WEBHOOKになる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hwt${suffix}` });
+			const stranger = await signup({ username: `hwts${suffix}` });
+
+			const created = await api('i/webhooks/create', { name: 'test-hook', url: 'https://example.com/test-hook', on: ['note'] }, owner);
+			assert.strictEqual(created.status, 200);
+
+			for (const type of ['note', 'reply', 'renote', 'mention', 'follow', 'followed', 'unfollow', 'reaction']) {
+				const res = await api('i/webhooks/test', { webhookId: created.body.id, type }, owner);
+				assert.strictEqual(res.status, 204, `type=${type} should succeed`);
+			}
+
+			const noSuch = await api('i/webhooks/test', { webhookId: created.body.id, type: 'note' }, stranger);
+			assert.strictEqual(noSuch.status, 400);
+			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_WEBHOOK');
+		});
+	});
+
+	describe('i/import-blocking, i/import-following, i/import-muting, i/import-user-lists', () => {
+		async function grantImportPolicy(userId: string, suffix: string, policyKey: string) {
+			const importRole = await role(alice, {
+				name: `hono import role ${policyKey} ${suffix}`,
+			}, {
+				[policyKey]: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', { roleId: importRole.id, userId }, alice);
+			assert.strictEqual(assign.status, 204);
+		}
+
+		async function makeDriveFile(userId: string, suffix: string, size: number) {
+			const config = loadConfig();
+			const md5 = createHash('md5').update(`hono-import-${suffix}-${size}`).digest('hex');
+			return await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId,
+				userHost: null,
+				md5,
+				name: `hono-import-${suffix}.csv`,
+				type: 'text/csv',
+				size,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+		}
+
+		test('i/import-blocking はrole policy、ファイル検証、キュー投入を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hib${suffix}` });
+
+			const deniedBeforeGrant = await api('i/import-blocking', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(deniedBeforeGrant.status, 403);
+			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			await grantImportPolicy(user.id, suffix, 'canImportBlocking');
+
+			const noSuchFile = await api('i/import-blocking', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
+
+			const emptyFile = await makeDriveFile(user.id, `${suffix}e`, 0);
+			const emptyRes = await api('i/import-blocking', { fileId: emptyFile.id }, user);
+			assert.strictEqual(emptyRes.status, 400);
+			assert.strictEqual(castAsError(emptyRes.body as any).error.code, 'EMPTY_FILE');
+
+			const bigFile = await makeDriveFile(user.id, `${suffix}b`, 65 * 1024);
+			const bigRes = await api('i/import-blocking', { fileId: bigFile.id }, user);
+			assert.strictEqual(bigRes.status, 400);
+			assert.strictEqual(castAsError(bigRes.body as any).error.code, 'TOO_BIG_FILE');
+
+			const okFile = await makeDriveFile(user.id, `${suffix}o`, 1024);
+			const okRes = await api('i/import-blocking', { fileId: okFile.id }, user);
+			assert.strictEqual(okRes.status, 204);
+		});
+
+		test('i/import-following, i/import-muting, i/import-user-lists はrole policyを維持しファイルがあれば成功する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hifm${suffix}` });
+
+			await grantImportPolicy(user.id, `${suffix}f`, 'canImportFollowing');
+			await grantImportPolicy(user.id, `${suffix}m`, 'canImportMuting');
+			await grantImportPolicy(user.id, `${suffix}u`, 'canImportUserLists');
+
+			const followingFile = await makeDriveFile(user.id, `${suffix}f`, 1024);
+			const followingRes = await api('i/import-following', { fileId: followingFile.id, withReplies: true }, user);
+			assert.strictEqual(followingRes.status, 204);
+
+			const mutingFile = await makeDriveFile(user.id, `${suffix}m`, 1024);
+			const mutingRes = await api('i/import-muting', { fileId: mutingFile.id }, user);
+			assert.strictEqual(mutingRes.status, 204);
+
+			const userListsFile = await makeDriveFile(user.id, `${suffix}u`, 1024);
+			const userListsRes = await api('i/import-user-lists', { fileId: userListsFile.id }, user);
+			assert.strictEqual(userListsRes.status, 204);
+		});
+	});
+
 	describe('notifications', () => {
 		async function readNotificationTimeline(config: ReturnType<typeof loadConfig>, userId: string) {
 			const redis = createRedisClient(config);
@@ -6364,6 +6578,50 @@ describe('Endpoints', () => {
 			assert.strictEqual(typeof (res.body as any).instances, 'number');
 			assert.strictEqual((res.body as any).driveUsageLocal, 0);
 			assert.strictEqual((res.body as any).driveUsageRemote, 0);
+		});
+	});
+
+	describe('users/relation', () => {
+		test('単一userIdは1要素配列、配列userIdは対応する配列で各種関係フラグを返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const me = await signup({ username: `hur${suffix}` });
+			const stranger = await signup({ username: `hurs${suffix}` });
+			const followee = await signup({ username: `hurf${suffix}` });
+			const blockee = await signup({ username: `hurb${suffix}` });
+			const mutee = await signup({ username: `hurm${suffix}` });
+			const renoteMutee = await signup({ username: `hurr${suffix}` });
+
+			await api('following/create', { userId: followee.id }, me);
+			await api('blocking/create', { userId: blockee.id }, me);
+			await api('mute/create', { userId: mutee.id }, me);
+			await api('renote-mute/create', { userId: renoteMutee.id }, me);
+
+			const single = await api('users/relation', { userId: stranger.id }, me);
+			assert.strictEqual(single.status, 200);
+			assert.ok(Array.isArray(single.body));
+			assert.strictEqual(single.body.length, 1);
+			assert.strictEqual(single.body[0].id, stranger.id);
+			assert.strictEqual(single.body[0].isFollowing, false);
+			assert.strictEqual(single.body[0].isBlocking, false);
+			assert.strictEqual(single.body[0].isMuted, false);
+			assert.strictEqual(single.body[0].isRenoteMuted, false);
+
+			const batch = await api('users/relation', {
+				userId: [followee.id, blockee.id, mutee.id, renoteMutee.id, stranger.id],
+			}, me);
+			assert.strictEqual(batch.status, 200);
+			assert.ok(Array.isArray(batch.body));
+			assert.strictEqual(batch.body.length, 5);
+			const byId = new Map(batch.body.map((r: any) => [r.id, r]));
+			assert.strictEqual(byId.get(followee.id).isFollowing, true);
+			assert.strictEqual(byId.get(blockee.id).isBlocking, true);
+			assert.strictEqual(byId.get(mutee.id).isMuted, true);
+			assert.strictEqual(byId.get(renoteMutee.id).isRenoteMuted, true);
+			assert.strictEqual(byId.get(stranger.id).isFollowing, false);
+
+			const unauthorized = await api('users/relation', { userId: stranger.id });
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
 		});
 	});
 

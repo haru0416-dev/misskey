@@ -27,6 +27,11 @@ export type HonoApiNoteDependencies = HonoApiDriveFileDependencies & UserPacking
 	redis: Redis.Redis;
 };
 
+export type HonoApiEmojiPopulateDependencies = {
+	config: Config;
+	db: HonoApiNoteDependencies['db'];
+};
+
 const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
 const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
 
@@ -146,7 +151,7 @@ function parseEmojiStr(config: Config, emojiName: string, noteUserHost: string |
 }
 
 async function populateEmoji(
-	deps: HonoApiNoteDependencies,
+	deps: HonoApiEmojiPopulateDependencies,
 	emojiName: string,
 	noteUserHost: string | null,
 ): Promise<string | null> {
@@ -159,8 +164,8 @@ async function populateEmoji(
 	return emoji.publicUrl || emoji.originalUrl;
 }
 
-async function populateEmojis(
-	deps: HonoApiNoteDependencies,
+export async function populateEmojis(
+	deps: HonoApiEmojiPopulateDependencies,
 	emojiNames: string[],
 	noteUserHost: string | null,
 ): Promise<Record<string, string>> {
