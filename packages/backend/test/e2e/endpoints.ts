@@ -6998,6 +6998,55 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/featured-notes', () => {
+		const FEATURED_EPOCH = new Date('2023-01-01T00:00:00Z').getTime();
+		const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
+
+		function currentFeaturedWindow() {
+			return Math.floor((Date.now() - FEATURED_EPOCH) / PER_USER_NOTES_RANKING_WINDOW);
+		}
+
+		// ランキング書き込み側 (ReactionService.create 等の30%確率更新) はHono未移植のため、
+		// ここではRedis ZSETに直接書き込んで読み取りロジックのみを単体検証する。
+		test('per-userランキングに載ったノートをid降順で返し、untilId絞り込み、ブロックによる早期returnを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hufn${suffix}` });
+			const noteOld = await post(owner, { text: 'hono featured old' });
+			const noteNew = await post(owner, { text: 'hono featured new' });
+
+			const redis = createRedisClient(config);
+			try {
+				const key = `featuredPerUserNotesRanking:${owner.id}:${currentFeaturedWindow()}`;
+				await redis.zadd(key, 5, noteOld.id);
+				await redis.zadd(key, 3, noteNew.id);
+
+				const res = await api('users/featured-notes', { userId: owner.id, limit: 100 });
+				assert.strictEqual(res.status, 200);
+				const ids = res.body.map((n: any) => n.id);
+				assert.ok(ids.includes(noteOld.id));
+				assert.ok(ids.includes(noteNew.id));
+				assert.ok(ids.indexOf(noteNew.id) < ids.indexOf(noteOld.id));
+
+				const untilFiltered = await api('users/featured-notes', { userId: owner.id, untilId: noteNew.id, limit: 100 });
+				assert.strictEqual(untilFiltered.status, 200);
+				assert.ok(!untilFiltered.body.some((n: any) => n.id === noteNew.id));
+
+				const blocker = await signup({ username: `hufnb${suffix}` });
+				const blockerNote = await post(blocker, { text: 'hono featured blocker note' });
+				const blockerKey = `featuredPerUserNotesRanking:${blocker.id}:${currentFeaturedWindow()}`;
+				await redis.zadd(blockerKey, 1, blockerNote.id);
+				const blockedViewer = await signup({ username: `hufnbv${suffix}` });
+				await api('blocking/create', { userId: blockedViewer.id }, blocker);
+				const blockedResult = await api('users/featured-notes', { userId: blocker.id }, blockedViewer);
+				assert.strictEqual(blockedResult.status, 200);
+				assert.deepStrictEqual(blockedResult.body, []);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
