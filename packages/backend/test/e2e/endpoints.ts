@@ -5026,6 +5026,116 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('clips', () => {
+		test('clips/{create,list,show,update,delete} は所有権とpublic可視性を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcc${suffix}` });
+			const stranger = await signup({ username: `hccs${suffix}` });
+
+			const created = await api('clips/create', { name: `Hono clip ${suffix}`, isPublic: false, description: 'desc' }, owner);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.name, `Hono clip ${suffix}`);
+			assert.strictEqual(created.body.isPublic, false);
+			assert.strictEqual(created.body.userId, owner.id);
+			assert.strictEqual(created.body.favoritedCount, 0);
+			assert.strictEqual(created.body.notesCount, 0);
+
+			const hiddenFromStranger = await api('clips/show', { clipId: created.body.id }, stranger);
+			assert.strictEqual(hiddenFromStranger.status, 400);
+			assert.strictEqual(castAsError(hiddenFromStranger.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const visibleToOwner = await api('clips/show', { clipId: created.body.id }, owner);
+			assert.strictEqual(visibleToOwner.status, 200);
+			assert.strictEqual(visibleToOwner.body.notesCount, 0);
+
+			const list = await api('clips/list', {}, owner);
+			assert.strictEqual(list.status, 200);
+			assert.ok(list.body.some((c: any) => c.id === created.body.id));
+
+			const updated = await api('clips/update', { clipId: created.body.id, isPublic: true, name: `${created.body.name} updated` }, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.isPublic, true);
+			assert.strictEqual(updated.body.name, `${created.body.name} updated`);
+
+			const nowVisible = await api('clips/show', { clipId: created.body.id }, stranger);
+			assert.strictEqual(nowVisible.status, 200);
+			assert.strictEqual(nowVisible.body.notesCount, undefined);
+
+			const updateDenied = await api('clips/update', { clipId: created.body.id, name: 'nope' }, stranger);
+			assert.strictEqual(updateDenied.status, 400);
+			assert.strictEqual(castAsError(updateDenied.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const deleteDenied = await api('clips/delete', { clipId: created.body.id }, stranger);
+			assert.strictEqual(deleteDenied.status, 400);
+			assert.strictEqual(castAsError(deleteDenied.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const deleted = await api('clips/delete', { clipId: created.body.id }, owner);
+			assert.strictEqual(deleted.status, 204);
+
+			const afterDelete = await api('clips/show', { clipId: created.body.id });
+			assert.strictEqual(afterDelete.status, 400);
+		});
+
+		test('clips/{add-note,remove-note} はNOTEカウント、重複、404を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcn${suffix}` });
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: `hono clip note ${suffix}`,
+				userId: owner.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const clip = await api('clips/create', { name: `Hono clip notes ${suffix}` }, owner);
+			assert.strictEqual(clip.status, 200);
+
+			const missingClip = await api('clips/add-note', { clipId: genId(config), noteId }, owner);
+			assert.strictEqual(missingClip.status, 400);
+			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
+
+			const missingNote = await api('clips/add-note', { clipId: clip.body.id, noteId: genId(config) }, owner);
+			assert.strictEqual(missingNote.status, 400);
+			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const added = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
+			assert.strictEqual(added.status, 204);
+
+			const duplicate = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_CLIPPED');
+
+			const shownAfterAdd = await api('clips/show', { clipId: clip.body.id }, owner);
+			assert.strictEqual(shownAfterAdd.body.notesCount, 1);
+			assert.ok(shownAfterAdd.body.lastClippedAt);
+
+			const removed = await api('clips/remove-note', { clipId: clip.body.id, noteId }, owner);
+			assert.strictEqual(removed.status, 204);
+
+			const shownAfterRemove = await api('clips/show', { clipId: clip.body.id }, owner);
+			assert.strictEqual(shownAfterRemove.body.notesCount, 0);
+		});
+
+		test('clips/my-favorites はfavoriteしたclipを一覧する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hcf${suffix}` });
+			const favoriter = await signup({ username: `hcff${suffix}` });
+			const clip = await api('clips/create', { name: `Hono clip fav ${suffix}`, isPublic: true }, owner);
+			assert.strictEqual(clip.status, 200);
+
+			const favorited = await api('clips/favorite', { clipId: clip.body.id }, favoriter);
+			assert.strictEqual(favorited.status, 204);
+			assert.strictEqual(await clipFavoriteExistsInDatabase(db, favoriter.id, clip.body.id), true);
+
+			const myFavorites = await api('clips/my-favorites', {}, favoriter);
+			assert.strictEqual(myFavorites.status, 200);
+			assert.strictEqual(myFavorites.body.length, 1);
+			assert.strictEqual(myFavorites.body[0].id, clip.body.id);
+			assert.strictEqual(myFavorites.body[0].isFavorited, true);
+		});
+	});
+
 	describe('page-push', () => {
 		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
 			const config = loadConfig();
