@@ -40,9 +40,11 @@ import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteDraftInDatabase } from '@/core/NoteDraftStore.js';
+import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
+import { createPollInDatabase } from '@/core/PollStore.js';
 import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
 import { fetchRenoteMutingFromDatabase } from '@/core/RenoteMutingStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
@@ -5133,6 +5135,162 @@ describe('Endpoints', () => {
 			assert.strictEqual(myFavorites.body.length, 1);
 			assert.strictEqual(myFavorites.body[0].id, clip.body.id);
 			assert.strictEqual(myFavorites.body[0].isFavorited, true);
+		});
+	});
+
+	describe('notes/show', () => {
+		test('基本フィールド、reply/renote、poll、reactionを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hns${suffix}` });
+			const reactor = await signup({ username: `hnsr${suffix}` });
+
+			const replyTargetId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyTargetId,
+				text: 'reply target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const renoteTargetId = genId(config);
+			await createNoteInDatabase(db, {
+				id: renoteTargetId,
+				text: 'renote target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const pollNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pollNoteId,
+				text: 'poll note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				hasPoll: true,
+			});
+			await createPollInDatabase(db, {
+				noteId: pollNoteId,
+				expiresAt: null,
+				multiple: false,
+				choices: ['A', 'B'],
+				votes: [3, 5],
+				noteVisibility: 'public',
+				userId: author.id,
+				userHost: null,
+				channelId: null,
+			});
+
+			const mainNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: mainNoteId,
+				text: 'hono notes/show main note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: replyTargetId,
+				renoteId: renoteTargetId,
+				reactions: { '👍': 2 },
+			});
+			await createNoteReactionInDatabase(db, {
+				id: genId(config),
+				noteId: mainNoteId,
+				userId: reactor.id,
+				reaction: '👍',
+			});
+
+			const shown = await api('notes/show', { noteId: mainNoteId });
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, mainNoteId);
+			assert.strictEqual(shown.body.text, 'hono notes/show main note');
+			assert.strictEqual(shown.body.userId, author.id);
+			assert.strictEqual(shown.body.user.id, author.id);
+			assert.strictEqual(shown.body.replyId, replyTargetId);
+			assert.strictEqual(shown.body.reply?.id, replyTargetId);
+			assert.strictEqual(shown.body.renoteId, renoteTargetId);
+			assert.strictEqual(shown.body.renote?.id, renoteTargetId);
+			assert.strictEqual(shown.body.reactions?.['👍'], 2);
+			assert.strictEqual(shown.body.reactionCount, 2);
+
+			const pollShown = await api('notes/show', { noteId: pollNoteId }, author);
+			assert.strictEqual(pollShown.status, 200);
+			assert.strictEqual(pollShown.body.poll?.multiple, false);
+			assert.strictEqual(pollShown.body.poll?.choices.length, 2);
+			assert.strictEqual(pollShown.body.poll?.choices.find((c: any) => c.text === 'A')?.votes, 3);
+			assert.strictEqual(pollShown.body.poll?.choices.find((c: any) => c.text === 'B')?.votes, 5);
+
+			const reactedAsReactor = await api('notes/show', { noteId: mainNoteId }, reactor);
+			assert.strictEqual(reactedAsReactor.body.myReaction, '👍');
+
+			const missing = await api('notes/show', { noteId: genId(config) });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+			assert.strictEqual(castAsError(missing.body as any).error.id, '24fcbfc6-2e37-42b6-8388-c29b3861a08d');
+		});
+
+		test('可視性(specified/followers)とrequireSigninToViewContentsを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnv${suffix}` });
+			const addressee = await signup({ username: `hnva${suffix}` });
+			const stranger = await signup({ username: `hnvs${suffix}` });
+			const follower = await signup({ username: `hnvf${suffix}` });
+			await api('following/create', { userId: author.id }, follower);
+
+			const specifiedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: specifiedNoteId,
+				text: 'specified note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'specified',
+				visibleUserIds: [addressee.id],
+			});
+
+			const hiddenFromStranger = await api('notes/show', { noteId: specifiedNoteId }, stranger);
+			assert.strictEqual(hiddenFromStranger.status, 200);
+			assert.strictEqual(hiddenFromStranger.body.isHidden, true);
+			assert.strictEqual(hiddenFromStranger.body.text, null);
+
+			const visibleToAddressee = await api('notes/show', { noteId: specifiedNoteId }, addressee);
+			assert.strictEqual(visibleToAddressee.status, 200);
+			assert.strictEqual(visibleToAddressee.body.isHidden, undefined);
+			assert.strictEqual(visibleToAddressee.body.text, 'specified note');
+
+			const followersNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: followersNoteId,
+				text: 'followers only note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'followers',
+			});
+
+			const hiddenFromNonFollower = await api('notes/show', { noteId: followersNoteId }, stranger);
+			assert.strictEqual(hiddenFromNonFollower.body.isHidden, true);
+
+			const visibleToFollower = await api('notes/show', { noteId: followersNoteId }, follower);
+			assert.strictEqual(visibleToFollower.body.isHidden, undefined);
+			assert.strictEqual(visibleToFollower.body.text, 'followers only note');
+
+			await updateUserInDatabase(db, author.id, { requireSigninToViewContents: true });
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'public but restricted',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const restrictedAnonymous = await api('notes/show', { noteId: publicNoteId });
+			assert.strictEqual(restrictedAnonymous.status, 400);
+			assert.strictEqual(castAsError(restrictedAnonymous.body as any).error.code, 'CONTENT_RESTRICTED_BY_USER');
+
+			const allowedSignedIn = await api('notes/show', { noteId: publicNoteId }, stranger);
+			assert.strictEqual(allowedSignedIn.status, 200);
+			assert.strictEqual(allowedSignedIn.body.text, 'public but restricted');
 		});
 	});
 
