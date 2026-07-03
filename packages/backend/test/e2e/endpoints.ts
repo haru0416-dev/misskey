@@ -6892,6 +6892,38 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/get-frequently-replied-users', () => {
+		test('返信頻度に応じたweightでユーザーを返し、返信が無い場合は空配列、存在しないユーザーはNO_SUCH_USERになる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hgfr${suffix}` });
+			const frequentTarget = await signup({ username: `hgfrf${suffix}` });
+			const rareTarget = await signup({ username: `hgfrr${suffix}` });
+			const neverReplied = await signup({ username: `hgfrn${suffix}` });
+
+			const frequentNote1 = await post(frequentTarget, { text: 'freq target 1' });
+			const frequentNote2 = await post(frequentTarget, { text: 'freq target 2' });
+			const rareNote = await post(rareTarget, { text: 'rare target' });
+
+			await post(author, { text: 'reply 1', replyId: frequentNote1.id });
+			await post(author, { text: 'reply 2', replyId: frequentNote2.id });
+			await post(author, { text: 'reply 3', replyId: rareNote.id });
+
+			const res = await api('users/get-frequently-replied-users', { userId: author.id, limit: 100 });
+			assert.strictEqual(res.status, 200);
+			const byUserId = new Map(res.body.map((r: any) => [r.user.id, r.weight]));
+			assert.strictEqual(byUserId.get(frequentTarget.id), 1);
+			assert.strictEqual(byUserId.get(rareTarget.id), 0.5);
+
+			const empty = await api('users/get-frequently-replied-users', { userId: neverReplied.id });
+			assert.strictEqual(empty.status, 200);
+			assert.deepStrictEqual(empty.body, []);
+
+			const noSuchUser = await api('users/get-frequently-replied-users', { userId: genId(loadConfig()) });
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.code, 'NO_SUCH_USER');
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();

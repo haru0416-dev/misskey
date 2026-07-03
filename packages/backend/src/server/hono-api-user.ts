@@ -7,6 +7,8 @@ import ms from 'ms';
 import { sql, type SQL } from 'drizzle-orm';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
+import { maximum } from '@/misc/prelude/array.js';
+import { listFrequentlyRepliedUsersFromDatabase } from '@/core/NoteStore.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
@@ -986,4 +988,52 @@ export async function handleHonoApiUsersRecommendation(
 	});
 
 	return await packUserDetailedManyForHonoApi(deps, users, me);
+}
+
+const usersGetFrequentlyRepliedUsersParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+	},
+	required: ['userId'],
+} as const;
+
+type UsersGetFrequentlyRepliedUsersParams = {
+	userId: string;
+	limit: number;
+};
+
+function usersGetFrequentlyRepliedUsersNoSuchUserError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such user.',
+		code: 'NO_SUCH_USER',
+		id: 'e6965129-7b2a-40a4-bae2-cd84cd434822',
+	});
+}
+
+export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
+	deps: UserPackingDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<{ user: unknown; weight: number }[]> {
+	const params = parseHonoApiParams(usersGetFrequentlyRepliedUsersParamDef, body) as UsersGetFrequentlyRepliedUsersParams;
+
+	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	if (user == null) throw usersGetFrequentlyRepliedUsersNoSuchUserError();
+
+	const repliedUsers = await listFrequentlyRepliedUsersFromDatabase(deps.db, user.id, params.limit);
+	if (repliedUsers.length === 0) return [];
+
+	const peak = maximum(repliedUsers.map(row => row.count));
+	const topRepliedUserIds = repliedUsers.map(row => row.userId);
+	const repliedUserCounts = new Map(repliedUsers.map(row => [row.userId, row.count]));
+
+	const userMap = new Map((await packUserDetailedManyForHonoApi(deps, topRepliedUserIds, me)).map(u => [(u as { id: string }).id, u]));
+
+	return await Promise.all(topRepliedUserIds.map(async userId => ({
+		user: userMap.get(userId) ?? await packUserDetailedForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me),
+		weight: repliedUserCounts.get(userId)! / peak,
+	})));
 }
