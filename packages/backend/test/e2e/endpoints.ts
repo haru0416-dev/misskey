@@ -9928,6 +9928,28 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/lists/create', () => {
+		test('リストが作成できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnlstc${suffix}` });
+
+			const res = await api('users/lists/create', { name: 'my list' }, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.name, 'my list');
+			assert.deepStrictEqual(res.body.userIds, []);
+		});
+
+		test('空文字列の名前で怒られる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnlstc2${suffix}` });
+
+			const res = await api('users/lists/create', { name: '' }, user);
+
+			assert.strictEqual(res.status, 400);
+		});
+	});
+
 	describe('notes/show', () => {
 		test('投稿が取得できる', async () => {
 			const myPost = await post(alice, {

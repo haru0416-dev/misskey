@@ -143,7 +143,7 @@ import type { HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, H
 import { signupPendingWithHonoApi, signupWithHonoApi } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
-import { handleHonoApiUsersListsCreateFromPublic, handleHonoApiUsersListsGetMemberships, handleHonoApiUsersListsPull, handleHonoApiUsersListsPush, handleHonoApiUsersListsUpdateMembership } from './hono-api-users-lists.js';
+import { handleHonoApiUsersListsCreate, handleHonoApiUsersListsCreateFromPublic, handleHonoApiUsersListsGetMemberships, handleHonoApiUsersListsPull, handleHonoApiUsersListsPush, handleHonoApiUsersListsUpdateMembership } from './hono-api-users-lists.js';
 import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
 import { handleHonoApiIWebhooksCreate, handleHonoApiIWebhooksDelete, handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow, handleHonoApiIWebhooksUpdate } from './hono-api-webhooks.js';
 
@@ -5005,6 +5005,18 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiUsersListsUnfavorite(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/users/lists/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			return jsonResponse(c, await handleHonoApiUsersListsCreate(deps, auth.user, body));
 		});
 	});
 
