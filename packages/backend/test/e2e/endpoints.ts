@@ -20,7 +20,7 @@ import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.j
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
-import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
@@ -4429,6 +4429,156 @@ describe('Endpoints', () => {
 			const shown = await api('users/pages', { userId: alice.id });
 			assert.strictEqual(shown.status, 200);
 			assert.strictEqual((shown.body as any[]).some(p => p.id === publicPage.id), true);
+		});
+
+		test('users/lists/push adds a member, rejects duplicates, missing lists/users, and blocked users', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-push-list-${suffix}`,
+			});
+			const blocker = await signup({ username: `pushblocker${suffix}` });
+			await createBlockingInDatabase(db, {
+				id: genId(config),
+				blockerId: blocker.id,
+				blockeeId: alice.id,
+			});
+
+			const noSuchList = await api('users/lists/push', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', userId: bob.id }, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '2214501d-ac96-4049-b717-91e42272a711');
+
+			const noSuchUser = await api('users/lists/push', { listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
+
+			const blocked = await api('users/lists/push', { listId: userList.id, userId: blocker.id }, alice);
+			assert.strictEqual(blocked.status, 400);
+			assert.strictEqual(castAsError(blocked.body as any).error.id, '990232c5-3f9d-4d83-9f3f-ef27b6332a4b');
+
+			const pushed = await api('users/lists/push', { listId: userList.id, userId: bob.id }, alice);
+			assert.strictEqual(pushed.status, 204);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, bob.id, userList.id), true);
+
+			const duplicate = await api('users/lists/push', { listId: userList.id, userId: bob.id }, alice);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.id, '1de7c884-1595-49e9-857e-61f12f4d4fc5');
+		});
+
+		test('users/lists/pull removes a member and rejects missing lists or users', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-pull-list-${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userListId: userList.id,
+				userListUserId: alice.id,
+			});
+
+			const noSuchList = await api('users/lists/pull', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', userId: bob.id }, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
+
+			const noSuchUser = await api('users/lists/pull', { listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '588e7f72-c744-4a61-b180-d354e912bda2');
+
+			const pulled = await api('users/lists/pull', { listId: userList.id, userId: bob.id }, alice);
+			assert.strictEqual(pulled.status, 204);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, bob.id, userList.id), false);
+		});
+
+		test('users/lists/update-membership toggles withReplies for a member', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-membership-list-${suffix}`,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userListId: userList.id,
+				userListUserId: alice.id,
+				withReplies: false,
+			});
+
+			const updated = await api('users/lists/update-membership', { listId: userList.id, userId: bob.id, withReplies: true }, alice);
+			assert.strictEqual(updated.status, 204);
+
+			const memberships = await api('users/lists/get-memberships', { listId: userList.id }, alice);
+			assert.strictEqual(memberships.status, 200);
+			const membership = (memberships.body as any[]).find(m => m.userId === bob.id);
+			assert.ok(membership);
+			assert.strictEqual(membership.withReplies, true);
+			assert.strictEqual(membership.user.id, bob.id);
+		});
+
+		test('users/lists/get-memberships supports forPublic without credentials', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const userList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-public-memberships-list-${suffix}`,
+				isPublic: true,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				userListId: userList.id,
+				userListUserId: alice.id,
+			});
+
+			const publicMemberships = await api('users/lists/get-memberships', { listId: userList.id, forPublic: true });
+			assert.strictEqual(publicMemberships.status, 200);
+			assert.strictEqual((publicMemberships.body as any[]).some(m => m.userId === bob.id), true);
+
+			const missing = await api('users/lists/get-memberships', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', forPublic: true });
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, '7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+		});
+
+		test('users/lists/create-from-public copies members from an existing public list', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const sourceList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-source-list-${suffix}`,
+				isPublic: true,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(config),
+				userId: carol.id,
+				userListId: sourceList.id,
+				userListUserId: bob.id,
+			});
+
+			const privateList = await createUserListInDatabase(db, {
+				id: genId(config),
+				userId: bob.id,
+				name: `hono-private-source-list-${suffix}`,
+				isPublic: false,
+			});
+
+			const noSuchList = await api('users/lists/create-from-public', { name: 'copy', listId: privateList.id }, alice);
+			assert.strictEqual(noSuchList.status, 400);
+			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '9292f798-6175-4f7d-93f4-b6742279667d');
+
+			const copied = await api('users/lists/create-from-public', { name: `hono-copied-list-${suffix}`, listId: sourceList.id }, alice);
+			assert.strictEqual(copied.status, 200);
+			assert.strictEqual(copied.body.name, `hono-copied-list-${suffix}`);
+			assert.deepStrictEqual(copied.body.userIds, [carol.id]);
+			assert.strictEqual(await userListMembershipExistsInDatabase(db, carol.id, copied.body.id), true);
 		});
 
 		test('users/achievements returns profile achievements without credentials', async () => {

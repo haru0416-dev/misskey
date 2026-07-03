@@ -103,10 +103,11 @@ import { handleHonoApiRetention } from './hono-api-retention.js';
 import { handleHonoApiRolesList, handleHonoApiRolesNotes, handleHonoApiRolesShow, handleHonoApiRolesUsers } from './hono-api-roles.js';
 import { handleHonoApiSigninFlow, type HonoApiSigninFlowResult } from './hono-api-signin.js';
 import { handleHonoApiSigninWithPasskey, type HonoApiSigninWithPasskeyResult } from './hono-api-signin-with-passkey.js';
-import type { HonoApiBroadcastStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher } from './hono-api-events.js';
+import type { HonoApiBroadcastStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiUserListStreamPublisher } from './hono-api-events.js';
 import { signupPendingWithHonoApi, signupWithHonoApi } from './hono-api-signup.js';
 import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from './hono-api-sw.js';
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
+import { handleHonoApiUsersListsCreateFromPublic, handleHonoApiUsersListsGetMemberships, handleHonoApiUsersListsPull, handleHonoApiUsersListsPush, handleHonoApiUsersListsUpdateMembership } from './hono-api-users-lists.js';
 import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
 import { handleHonoApiIWebhooksCreate, handleHonoApiIWebhooksDelete, handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow, handleHonoApiIWebhooksUpdate } from './hono-api-webhooks.js';
 
@@ -131,6 +132,7 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
 	publishDriveStream?: HonoApiDriveStreamPublisher;
+	publishUserListStream?: HonoApiUserListStreamPublisher;
 };
 
 const unknownApiEndpoint = {
@@ -4329,6 +4331,71 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertTokenPermission(auth, 'write:account');
 
 			await handleHonoApiUsersListsUnfavorite(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/users/lists/create-from-public', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			return jsonResponse(c, await handleHonoApiUsersListsCreateFromPublic(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/lists/pull', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiUsersListsPull(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/users/lists/push', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+			await assertHonoApiRateLimit(deps, 'users/lists/push', {
+				duration: 60 * 60 * 1000,
+				max: 30,
+			}, auth.user.id);
+
+			await handleHonoApiUsersListsPush(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/users/lists/get-memberships', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiUsersListsGetMemberships(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/lists/update-membership', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:account');
+
+			await handleHonoApiUsersListsUpdateMembership(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});
