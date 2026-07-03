@@ -9,9 +9,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import type * as Redis from 'ioredis';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase, type FollowRequestOrder } from '@/core/FollowRequestStore.js';
+import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
-import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
+import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
@@ -24,8 +24,10 @@ import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/cor
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
+import type { MiFollowing } from '@/models/Following.js';
 import type { MiInstance } from '@/models/Instance.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -35,7 +37,7 @@ import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { HonoApiError } from './hono-api-error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { xaddHonoApiNotification } from './hono-api-notification.js';
-import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from './hono-api-user.js';
+import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiFollowingDependencies = UserPackingDependencies & {
@@ -96,6 +98,18 @@ const followingRequestsListParamDef = {
 	required: [],
 } as const;
 
+const followingListParamDef = {
+	type: 'object',
+	properties: {
+		notification: { type: 'boolean', default: false },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+	},
+} as const;
+
 type FollowingCreateParams = {
 	userId: string;
 	withReplies?: boolean;
@@ -122,6 +136,23 @@ type FollowingRequestsListParams = {
 	sinceDate?: number;
 	untilDate?: number;
 	limit: number;
+};
+
+type FollowingListParams = {
+	notification: boolean;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	limit: number;
+};
+
+type FollowingListItem = {
+	id: string;
+	createdAt: string;
+	followeeId: string;
+	followerId: string;
+	followee: UserDetailedNotMeHonoApiResponse;
 };
 
 type FollowingNotificationType = 'follow' | 'receiveFollowRequest' | 'followRequestAccepted';
@@ -878,13 +909,18 @@ export async function handleHonoApiFollowingRequestsReject(
 	}
 }
 
-function resolveFollowRequestListPagination(
+function resolveHonoApiIdPagination(
 	config: Config,
-	params: FollowingRequestsListParams,
+	params: {
+		sinceId?: string;
+		untilId?: string;
+		sinceDate?: number;
+		untilDate?: number;
+	},
 ): {
 	sinceId: string | null;
 	untilId: string | null;
-	order: FollowRequestOrder;
+	order: 'asc' | 'desc';
 } {
 	if (params.sinceId && params.untilId) {
 		return { sinceId: params.sinceId, untilId: params.untilId, order: 'desc' };
@@ -925,7 +961,7 @@ export async function handleHonoApiFollowingRequestsList(
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
-	const pagination = resolveFollowRequestListPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -942,7 +978,7 @@ export async function handleHonoApiFollowingRequestsSent(
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
-	const pagination = resolveFollowRequestListPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -951,4 +987,37 @@ export async function handleHonoApiFollowingRequestsSent(
 	});
 
 	return await packFollowRequestsForHonoApi(deps, requests, me);
+}
+
+async function packFollowingsForHonoApi(
+	deps: HonoApiFollowingDependencies,
+	followings: MiFollowing[],
+): Promise<FollowingListItem[]> {
+	const packedFollowees = await packUserDetailedNotMeManyForHonoApi(deps, followings.map(f => f.followee ?? f.followeeId));
+
+	return followings.map((following, index) => ({
+		id: following.id,
+		createdAt: parseId(deps.config, following.id).date.toISOString(),
+		followeeId: following.followeeId,
+		followerId: following.followerId,
+		followee: packedFollowees[index],
+	}));
+}
+
+export async function handleHonoApiFollowingList(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<FollowingListItem[]> {
+	const params = parseHonoApiParams(followingListParamDef, body) as FollowingListParams;
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, me.id, {
+		limit: params.limit,
+		order: pagination.order,
+		sinceId: pagination.sinceId,
+		untilId: pagination.untilId,
+		notification: params.notification,
+	});
+
+	return await packFollowingsForHonoApi(deps, followings);
 }

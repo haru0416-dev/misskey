@@ -64,7 +64,7 @@ import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from 
 import { handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats, type HonoApiAdminQueueDependencies } from './hono-api-admin-queue.js';
 import { handleHonoApiAdminDeleteAllFilesOfAUser, handleHonoApiAdminDriveCleanRemoteFiles, handleHonoApiAdminDriveCleanup, handleHonoApiAdminDriveFiles, handleHonoApiAdminDriveShowFile } from './hono-api-admin-drive.js';
 import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
-import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
+import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow } from './hono-api-announcements.js';
@@ -2241,6 +2241,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			}, auth.user.id);
 
 			return jsonResponse(c, await handleHonoApiFollowingCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/following/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:following');
+
+			return jsonResponse(c, await handleHonoApiFollowingList(deps, auth.user, body));
 		});
 	});
 

@@ -4031,6 +4031,33 @@ describe('Endpoints', () => {
 			assert.strictEqual(limited.body.length, 1);
 		});
 
+		test('following/list はフォロー中一覧を followee 情報付きでページングする', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hfl${suffix}` });
+			const followeeA = await signup({ username: `hfla${suffix}` });
+			const followeeB = await signup({ username: `hflb${suffix}` });
+
+			await api('following/create', { userId: followeeA.id }, follower);
+			await api('following/create', { userId: followeeB.id }, follower);
+
+			const list = await api('following/list', {}, follower);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual(list.body.length, 2);
+			const followeeIds = list.body.map((f: any) => f.followeeId).sort();
+			assert.deepStrictEqual(followeeIds, [followeeA.id, followeeB.id].sort());
+			assert.strictEqual(list.body[0].followerId, follower.id);
+			assert.ok(list.body[0].followee.id);
+			assert.strictEqual(list.body[0].follower, undefined);
+
+			const limited = await api('following/list', { limit: 1 }, follower);
+			assert.strictEqual(limited.status, 200);
+			assert.strictEqual(limited.body.length, 1);
+
+			const strangerList = await api('following/list', {}, followeeA);
+			assert.strictEqual(strangerList.status, 200);
+			assert.strictEqual(strangerList.body.length, 0);
+		});
+
 		test('following/update-all updates only the caller followings', async () => {
 			const config = loadConfig();
 			await createFollowingInDatabase(db, {
