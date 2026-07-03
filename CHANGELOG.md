@@ -8,6 +8,7 @@
 - Enhance: バックエンドのデータベースアクセスを TypeORM から Drizzle に移行
 - Fix: Hono サーバーでクライアントのベース HTML を返せるように
 - Fix: Hono サーバーでユーザーの Atom/RSS/JSON feed を返せるように
+- Fix: マイグレーションの統合により欠落していた誕生日検索用のデータベース関数 (`get_birthday_date`) を復元し、`users/following` の `birthday` パラメータや `users/get-following-users-by-birthday` が動作しなくなっていた問題を修正
 
 ## 2026.6.1
 

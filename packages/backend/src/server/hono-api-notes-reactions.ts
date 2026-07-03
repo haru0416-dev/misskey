@@ -398,7 +398,7 @@ export const reactionsDeleteRateLimit = {
 	minInterval: ms('3sec'),
 };
 
-function convertLegacyReactionForHonoApi(reaction: string): string {
+export function convertLegacyReactionForHonoApi(reaction: string): string {
 	const decoded = decodeReactionForHonoApi(reaction).reaction;
 	return Object.hasOwn(legacies, decoded) ? legacies[decoded]! : decoded;
 }

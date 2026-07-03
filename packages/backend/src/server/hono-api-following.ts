@@ -16,7 +16,7 @@ import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountF
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
 import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, listFollowingUsersByBirthdayDateFromDatabase } from '@/core/UserProfileStore.js';
 import { isHonoApiModerator } from './hono-api-role-policy.js';
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
@@ -1269,4 +1269,99 @@ export async function handleHonoApiUsersFollowing(
 	}
 
 	return await packFollowingsForHonoApi(deps, followings);
+}
+
+const usersGetFollowingUsersByBirthdayParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		offset: { type: 'integer', default: 0 },
+		birthday: {
+			oneOf: [{
+				type: 'object',
+				properties: {
+					month: { type: 'integer', minimum: 1, maximum: 12 },
+					day: { type: 'integer', minimum: 1, maximum: 31 },
+				},
+				required: ['month', 'day'],
+			}, {
+				type: 'object',
+				properties: {
+					begin: {
+						type: 'object',
+						properties: {
+							month: { type: 'integer', minimum: 1, maximum: 12 },
+							day: { type: 'integer', minimum: 1, maximum: 31 },
+						},
+						required: ['month', 'day'],
+					},
+					end: {
+						type: 'object',
+						properties: {
+							month: { type: 'integer', minimum: 1, maximum: 12 },
+							day: { type: 'integer', minimum: 1, maximum: 31 },
+						},
+						required: ['month', 'day'],
+					},
+				},
+				required: ['begin', 'end'],
+			}],
+		},
+	},
+	required: ['birthday'],
+} as const;
+
+type UsersGetFollowingUsersByBirthdayParams = {
+	limit: number;
+	offset: number;
+	birthday:
+		| { month: number; day: number }
+		| { begin: { month: number; day: number }; end: { month: number; day: number } };
+};
+
+export async function handleHonoApiUsersGetFollowingUsersByBirthday(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<{ id: string; birthday: string; user: Packed<'UserLite'> }[]> {
+	const params = parseHonoApiParams(usersGetFollowingUsersByBirthdayParamDef, body) as UsersGetFollowingUsersByBirthdayParams;
+
+	let condition: { type: 'single'; value: number } | { type: 'range'; begin: number; end: number };
+	if (Object.hasOwn(params.birthday, 'begin') && Object.hasOwn(params.birthday, 'end')) {
+		const range = params.birthday as { begin: { month: number; day: number }; end: { month: number; day: number } };
+		const begin = range.begin.month * 100 + range.begin.day;
+		const end = range.end.month * 100 + range.end.day;
+		condition = { type: 'range', begin, end };
+	} else {
+		const { month, day } = params.birthday as { month: number; day: number };
+		condition = { type: 'single', value: month * 100 + day };
+	}
+
+	const birthdayUsers = await listFollowingUsersByBirthdayDateFromDatabase(deps.db, me.id, condition, {
+		offset: params.offset,
+		limit: params.limit,
+	});
+
+	const users = new Map<string, Packed<'UserLite'>>((
+		await packUserLiteManyForHonoApi(deps, birthdayUsers.map(u => u.userId))
+	).map(u => [u.id, u]));
+
+	return birthdayUsers
+		.map(item => {
+			const birthday = new Date();
+			birthday.setHours(0, 0, 0, 0);
+			birthday.setMonth(Math.floor(item.birthdayDate / 100) - 1, item.birthdayDate % 100);
+
+			if (birthday.getTime() < new Date().setHours(0, 0, 0, 0)) {
+				birthday.setFullYear(new Date().getFullYear() + 1);
+			}
+
+			const birthdayStr = `${birthday.getFullYear()}-${(birthday.getMonth() + 1).toString().padStart(2, '0')}-${(birthday.getDate()).toString().padStart(2, '0')}`;
+			return {
+				id: item.userId,
+				birthday: birthdayStr,
+				user: users.get(item.userId),
+			};
+		})
+		.filter((item): item is { id: string; birthday: string; user: Packed<'UserLite'> } => item.user != null);
 }
