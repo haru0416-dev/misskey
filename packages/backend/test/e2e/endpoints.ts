@@ -6367,6 +6367,50 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/relation', () => {
+		test('単一userIdは1要素配列、配列userIdは対応する配列で各種関係フラグを返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const me = await signup({ username: `hur${suffix}` });
+			const stranger = await signup({ username: `hurs${suffix}` });
+			const followee = await signup({ username: `hurf${suffix}` });
+			const blockee = await signup({ username: `hurb${suffix}` });
+			const mutee = await signup({ username: `hurm${suffix}` });
+			const renoteMutee = await signup({ username: `hurr${suffix}` });
+
+			await api('following/create', { userId: followee.id }, me);
+			await api('blocking/create', { userId: blockee.id }, me);
+			await api('mute/create', { userId: mutee.id }, me);
+			await api('renote-mute/create', { userId: renoteMutee.id }, me);
+
+			const single = await api('users/relation', { userId: stranger.id }, me);
+			assert.strictEqual(single.status, 200);
+			assert.ok(Array.isArray(single.body));
+			assert.strictEqual(single.body.length, 1);
+			assert.strictEqual(single.body[0].id, stranger.id);
+			assert.strictEqual(single.body[0].isFollowing, false);
+			assert.strictEqual(single.body[0].isBlocking, false);
+			assert.strictEqual(single.body[0].isMuted, false);
+			assert.strictEqual(single.body[0].isRenoteMuted, false);
+
+			const batch = await api('users/relation', {
+				userId: [followee.id, blockee.id, mutee.id, renoteMutee.id, stranger.id],
+			}, me);
+			assert.strictEqual(batch.status, 200);
+			assert.ok(Array.isArray(batch.body));
+			assert.strictEqual(batch.body.length, 5);
+			const byId = new Map(batch.body.map((r: any) => [r.id, r]));
+			assert.strictEqual(byId.get(followee.id).isFollowing, true);
+			assert.strictEqual(byId.get(blockee.id).isBlocking, true);
+			assert.strictEqual(byId.get(mutee.id).isMuted, true);
+			assert.strictEqual(byId.get(renoteMutee.id).isRenoteMuted, true);
+			assert.strictEqual(byId.get(stranger.id).isFollowing, false);
+
+			const unauthorized = await api('users/relation', { userId: stranger.id });
+			assert.strictEqual(unauthorized.status, 401);
+			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
