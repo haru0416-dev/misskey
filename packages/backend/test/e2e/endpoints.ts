@@ -6351,6 +6351,22 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('stats', () => {
+		test('stats は集計値を返す', async () => {
+			const res = await api('stats', {});
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
+			assert.strictEqual(typeof (res.body as any).notesCount, 'number');
+			assert.strictEqual(typeof (res.body as any).originalNotesCount, 'number');
+			assert.strictEqual(typeof (res.body as any).usersCount, 'number');
+			assert.strictEqual(typeof (res.body as any).originalUsersCount, 'number');
+			assert.strictEqual(typeof (res.body as any).reactionsCount, 'number');
+			assert.strictEqual(typeof (res.body as any).instances, 'number');
+			assert.strictEqual((res.body as any).driveUsageLocal, 0);
+			assert.strictEqual((res.body as any).driveUsageRemote, 0);
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();
