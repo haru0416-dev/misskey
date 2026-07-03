@@ -2401,6 +2401,117 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('v2/admin/emoji/list はquery、hostType、pagination、count/allCount/allPages、role policyを維持する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const manager = await signup({ username: `hav2${suffix}` });
+			const emojiRole = await role(alice, {
+				name: `hono v2 emoji manager ${suffix}`,
+			}, {
+				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+			});
+			const assign = await api('admin/roles/assign', {
+				roleId: emojiRole.id,
+				userId: manager.id,
+			}, alice);
+			assert.strictEqual(assign.status, 204);
+
+			const localFirst = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 3000),
+				name: `hv2emoji${suffix}a`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/v2-a-original.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const localSecond = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 2000),
+				name: `hv2emoji${suffix}b`,
+				host: null,
+				aliases: [],
+				category: null,
+				originalUrl: `${origin}/emoji/${suffix}/v2-b-original.webp`,
+				publicUrl: `${origin}/emoji/${suffix}/v2-b-public.webp`,
+				license: null,
+				isSensitive: true,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+			const remoteHost = `hono-v2-emoji-${suffix}.example`;
+			const remoteEmoji = await insertEmojiInDatabase(db, {
+				id: genId(config, now - 1000),
+				name: `hv2emoji${suffix}c`,
+				host: remoteHost,
+				aliases: [],
+				category: null,
+				originalUrl: `https://${remoteHost}/emoji/v2-c.webp`,
+				publicUrl: '',
+				license: null,
+				isSensitive: false,
+				localOnly: false,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+			});
+
+			try {
+				const listed = await api('v2/admin/emoji/list', {
+					query: { name: `hv2emoji${suffix}`, hostType: 'local' },
+					limit: 10,
+					sortKeys: ['+id'],
+				}, manager);
+				assert.strictEqual(listed.status, 200);
+				assert.deepStrictEqual(listed.body.emojis.map((e: any) => e.id), [localFirst.id, localSecond.id]);
+				assert.strictEqual(listed.body.count, 2);
+				assert.strictEqual(listed.body.allCount, 2);
+				assert.strictEqual(listed.body.allPages, 1);
+				assert.strictEqual(listed.body.emojis[0].originalUrl, localFirst.originalUrl);
+				assert.strictEqual(listed.body.emojis[1].publicUrl, localSecond.publicUrl);
+				assert.strictEqual(listed.body.emojis[1].isSensitive, true);
+
+				const remoteListed = await api('v2/admin/emoji/list', {
+					query: { name: `hv2emoji${suffix}`, hostType: 'remote' },
+					limit: 10,
+				}, manager);
+				assert.strictEqual(remoteListed.status, 200);
+				assert.deepStrictEqual(remoteListed.body.emojis.map((e: any) => e.id), [remoteEmoji.id]);
+				assert.strictEqual(remoteListed.body.emojis[0].host, remoteHost);
+
+				const paged = await api('v2/admin/emoji/list', {
+					query: { name: `hv2emoji${suffix}` },
+					limit: 1,
+					page: 2,
+					sortKeys: ['+id'],
+				}, manager);
+				assert.strictEqual(paged.status, 200);
+				assert.deepStrictEqual(paged.body.emojis.map((e: any) => e.id), [localSecond.id]);
+				assert.strictEqual(paged.body.count, 1);
+				assert.strictEqual(paged.body.allCount, 3);
+				assert.strictEqual(paged.body.allPages, 3);
+
+				const roleDenied = await api('v2/admin/emoji/list', {}, bob);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
+				const scopeDenied = await api('v2/admin/emoji/list', {}, { token: wrongScopeToken });
+				assert.strictEqual(scopeDenied.status, 403);
+				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			} finally {
+				await api('admin/roles/unassign', {
+					roleId: emojiRole.id,
+					userId: manager.id,
+				}, alice);
+				await api('admin/roles/delete', {
+					roleId: emojiRole.id,
+				}, alice);
+			}
+		});
+
 		test('admin/emoji/add と update はDB更新、cache、moderation log、scope、role policyを維持する', async () => {
 			const config = loadConfig();
 			const now = Date.now();
