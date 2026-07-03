@@ -6924,6 +6924,80 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/reactions', () => {
+		test('公開範囲、リモートユーザー、ブロック、moderatorバイパスを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hurx${suffix}` });
+			const stranger = await signup({ username: `hurxs${suffix}` });
+			const noteAuthor = await signup({ username: `hurxn${suffix}` });
+			const note = await post(noteAuthor, { text: 'hono users/reactions target' });
+			const reacted = await api('notes/reactions/create', { noteId: note.id, reaction: '🚀' }, owner);
+			assert.strictEqual(reacted.status, 204);
+
+			const strangerSeesPublic = await api('users/reactions', { userId: owner.id }, stranger);
+			assert.strictEqual(strangerSeesPublic.status, 200);
+			assert.strictEqual(strangerSeesPublic.body.length, 1);
+			assert.strictEqual(strangerSeesPublic.body[0].note.id, note.id);
+			assert.strictEqual(strangerSeesPublic.body[0].user.id, owner.id);
+
+			await api('i/update', { publicReactions: false }, owner);
+
+			const strangerDenied = await api('users/reactions', { userId: owner.id }, stranger);
+			assert.strictEqual(strangerDenied.status, 400);
+			assert.strictEqual(castAsError(strangerDenied.body as any).error.code, 'REACTIONS_NOT_PUBLIC');
+
+			const ownerSeesSelf = await api('users/reactions', { userId: owner.id }, owner);
+			assert.strictEqual(ownerSeesSelf.status, 200);
+			assert.strictEqual(ownerSeesSelf.body.length, 1);
+
+			const moderatorRole = await role(alice, { name: `hono users/reactions moderator ${suffix}`, isModerator: true });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(loadConfig()),
+				roleId: moderatorRole.id,
+				userId: stranger.id,
+				expiresAt: null,
+			});
+			const moderatorSees = await api('users/reactions', { userId: owner.id }, stranger);
+			assert.strictEqual(moderatorSees.status, 200);
+			assert.strictEqual(moderatorSees.body.length, 1);
+
+			const remoteHost = `hono-reactions-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hurxr${suffix}`,
+					usernameLower: `hurxr${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+					updatedAt: new Date(),
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+			const nonModeratorRemote = await signup({ username: `hurxnm${suffix}` });
+			const remoteDenied = await api('users/reactions', { userId: remoteId }, nonModeratorRemote);
+			assert.strictEqual(remoteDenied.status, 400);
+			assert.strictEqual(castAsError(remoteDenied.body as any).error.code, 'IS_REMOTE_USER');
+
+			const blocker = await signup({ username: `hurxb${suffix}` });
+			await api('i/update', { publicReactions: true }, blocker);
+			const blockerReacted = await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, blocker);
+			assert.strictEqual(blockerReacted.status, 204);
+			const blockedViewer = await signup({ username: `hurxbv${suffix}` });
+			const nonBlockedView = await api('users/reactions', { userId: blocker.id }, blockedViewer);
+			assert.strictEqual(nonBlockedView.status, 200);
+			assert.strictEqual(nonBlockedView.body.length, 1);
+			await api('blocking/create', { userId: blockedViewer.id }, blocker);
+			const blockedResult = await api('users/reactions', { userId: blocker.id }, blockedViewer);
+			assert.strictEqual(blockedResult.status, 200);
+			assert.deepStrictEqual(blockedResult.body, []);
+		});
+	});
+
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
 			const config = loadConfig();

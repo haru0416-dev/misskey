@@ -121,6 +121,7 @@ import { handleHonoApiNotesChildren, handleHonoApiNotesClips, handleHonoApiNotes
 import { handleHonoApiNotesCreate } from './hono-api-notes-create.js';
 import { handleHonoApiNotesDelete, handleHonoApiNotesUnrenote, notesDeleteRateLimit, notesUnrenoteRateLimit } from './hono-api-notes-delete.js';
 import { handleHonoApiNotesReactions, handleHonoApiNotesReactionsCreate, handleHonoApiNotesReactionsDelete, normalizeHonoApiNotesReactionsQuery, reactionsDeleteRateLimit } from './hono-api-notes-reactions.js';
+import { handleHonoApiUsersReactions } from './hono-api-user-reactions.js';
 import { handleHonoApiNotesPollsVote } from './hono-api-notes-polls-vote.js';
 import { handleHonoApiPagePush } from './hono-api-page-push.js';
 import { handleHonoApiIPageLikes, handleHonoApiIPages, handleHonoApiPagesCreate, handleHonoApiPagesDelete, handleHonoApiPagesFeatured, handleHonoApiPagesShow, handleHonoApiPagesUpdate, handleHonoApiUsersPages } from './hono-api-pages.js';
@@ -5265,6 +5266,15 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			}
 
 			return jsonResponse(c, await handleHonoApiUsersSearch(deps, auth.user, body));
+		});
+	});
+
+	app.post('/users/reactions', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiUsersReactions(deps, auth.user, body));
 		});
 	});
 

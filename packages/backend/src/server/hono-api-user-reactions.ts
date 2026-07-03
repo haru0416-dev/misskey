@@ -1,0 +1,165 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { listVisibleNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { listNoteReactionsByUserIdFromDatabase, resolveNoteReactionPagination } from '@/core/NoteReactionStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
+import { isUserRelated } from '@/misc/is-user-related.js';
+import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
+import type { MiNote } from '@/models/Note.js';
+import type { MiUser } from '@/models/User.js';
+import { convertLegacyReactionForHonoApi } from './hono-api-notes-reactions.js';
+import { packNoteForHonoApi, type HonoApiNoteDependencies } from './hono-api-note.js';
+import { packUserLiteManyForHonoApi } from './hono-api-user.js';
+import { HonoApiError } from './hono-api-error.js';
+import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
+import { parseHonoApiParams } from './hono-api-validation.js';
+
+export type HonoApiUserReactionsDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies;
+
+function usersReactionsIsRemoteUserError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
+		code: 'IS_REMOTE_USER',
+		id: '6b95fa98-8cf9-2350-e284-f0ffdb54a805',
+	});
+}
+
+function usersReactionsNotPublicError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Reactions of the user is not public.',
+		code: 'REACTIONS_NOT_PUBLIC',
+		id: '673a7dd2-6924-1093-e0c0-e68456ceae5c',
+	});
+}
+
+const usersReactionsParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: ['userId'],
+} as const;
+
+type UsersReactionsParams = {
+	userId: string;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+async function packNoteReactionWithNoteForHonoApi(
+	deps: HonoApiUserReactionsDependencies,
+	reaction: NoteReactionRow & { note: MiNote },
+	me: { id: MiUser['id'] } | null | undefined,
+	packedUser: unknown,
+): Promise<Record<string, unknown>> {
+	return {
+		id: reaction.id,
+		createdAt: parseId(deps.config, reaction.id).date.toISOString(),
+		user: packedUser,
+		type: convertLegacyReactionForHonoApi(reaction.reaction),
+		note: await packNoteForHonoApi(deps, reaction.note, me),
+	};
+}
+
+export async function handleHonoApiUsersReactions(
+	deps: HonoApiUserReactionsDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>[]> {
+	const params = parseHonoApiParams(usersReactionsParamDef, body) as UsersReactionsParams;
+
+	const userIdsWhoBlockingMe = me ? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id)) : new Set<string>();
+	const iAmModerator = me ? await isHonoApiModerator(deps, me) : false;
+
+	if (!iAmModerator) {
+		const user = await fetchUserByIdOrFailFromDatabase(deps.db, params.userId);
+		if (user.host != null) {
+			throw usersReactionsIsRemoteUserError();
+		}
+
+		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, params.userId);
+		if ((me == null || me.id !== params.userId) && !profile.publicReactions) {
+			throw usersReactionsNotPublicError();
+		}
+
+		if (userIdsWhoBlockingMe.has(params.userId)) {
+			return [];
+		}
+	}
+
+	const userIdsWhoMeMuting = me ? new Set(await listMuteeIdsByMuterIdFromDatabase(deps.db, me.id)) : new Set<string>();
+
+	const pagination = resolveNoteReactionPagination({ gen: (time?: number) => genId(deps.config, time) }, params);
+	let sinceId = pagination.sinceId;
+	let untilId = pagination.untilId;
+
+	const collected: (NoteReactionRow & { note: MiNote })[] = [];
+
+	const maxPages = 20;
+	for (let page_ = 0; page_ < maxPages; page_++) {
+		const page = await listNoteReactionsByUserIdFromDatabase(deps.db, params.userId, {
+			limit: params.limit,
+			order: pagination.order,
+			sinceId,
+			untilId,
+		});
+
+		if (page.length === 0) break;
+
+		if (pagination.order === 'asc') {
+			sinceId = page[page.length - 1]!.id;
+		} else {
+			untilId = page[page.length - 1]!.id;
+		}
+
+		const noteIds = page.map(reaction => reaction.noteId);
+		const notes = await listVisibleNotesByIdsFromDatabase(deps.db, noteIds, {
+			me: me ?? null,
+			blockedHosts: deps.meta.blockedHosts,
+		});
+		const noteMap = new Map(notes.map(note => [note.id, note]));
+
+		for (const reaction of page) {
+			if (collected.length >= params.limit) break;
+
+			const note = noteMap.get(reaction.noteId);
+			if (note == null) continue;
+
+			if (note.userId !== params.userId) {
+				if (me && isUserRelated(note, userIdsWhoBlockingMe)) continue;
+				if (me && isUserRelated(note, userIdsWhoMeMuting)) continue;
+			}
+
+			collected.push({ ...reaction, note });
+		}
+
+		if (collected.length >= params.limit) break;
+		if (page.length < params.limit) break;
+	}
+
+	const userIds = [...new Set(collected.map(r => r.userId))];
+	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
+	const userMap = new Map(packedUsers.map(u => [u.id, u]));
+
+	return await Promise.all(collected.map(reaction =>
+		packNoteReactionWithNoteForHonoApi(deps, reaction, me, userMap.get(reaction.userId)),
+	));
+}
