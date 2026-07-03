@@ -136,7 +136,7 @@ function parseIdFull(config: Config, id: string): { date: number; additional: bi
 	}
 }
 
-function toXListId(config: Config, id: string): string {
+export function toXListId(config: Config, id: string): string {
 	const { date, additional } = parseIdFull(config, id);
 	return `${date}-${BigInt.asUintN(64, additional).toString()}`;
 }
@@ -364,7 +364,7 @@ async function flushAllHonoApiNotifications(deps: HonoApiNotificationDependencie
 	deps.publishMainStream?.(userId, 'notificationFlushed');
 }
 
-async function markAllHonoApiNotificationsAsRead(deps: HonoApiNotificationDependencies, userId: MiUser['id'], force: boolean): Promise<void> {
+export async function markAllHonoApiNotificationsAsRead(deps: HonoApiNotificationDependencies, userId: MiUser['id'], force: boolean): Promise<void> {
 	const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 
 	const latestNotificationIdsRes = await deps.redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 1);
