@@ -102,7 +102,7 @@ import { handleHonoApiIUpdate } from './hono-api-account-update.js';
 import { handleHonoApiIMove } from './hono-api-account-move.js';
 import { handleHonoApiIPin, handleHonoApiIUnpin } from './hono-api-account-pin.js';
 import { handleHonoApiINotifications, handleHonoApiINotificationsGrouped } from './hono-api-notifications-list.js';
-import { handleHonoApiFlashUpdate } from './hono-api-flash.js';
+import { handleHonoApiFlashCreate, handleHonoApiFlashDelete, handleHonoApiFlashFeatured, handleHonoApiFlashMy, handleHonoApiFlashMyLikes, handleHonoApiFlashSearch, handleHonoApiFlashShow, handleHonoApiFlashUpdate } from './hono-api-flash.js';
 import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll, handleHonoApiUsersFollowers, handleHonoApiUsersFollowing } from './hono-api-following.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
@@ -3999,6 +3999,83 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 			await handleHonoApiFlashUpdate(deps, auth.user, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/flash/create', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertProhibitMoved(auth.user);
+			assertTokenPermission(auth, 'write:flash');
+			await assertHonoApiRateLimit(deps, 'flash/create', {
+				duration: 60 * 60 * 1000,
+				max: 10,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiFlashCreate(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:flash');
+
+			await handleHonoApiFlashDelete(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/flash/featured', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFlashFeatured(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/my', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:flash');
+
+			return jsonResponse(c, await handleHonoApiFlashMy(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/my-likes', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:flash-likes');
+
+			return jsonResponse(c, await handleHonoApiFlashMyLikes(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/search', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFlashSearch(deps, auth.user, body));
+		});
+	});
+
+	app.post('/flash/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateOptionalRequest(deps, c, body);
+
+			return jsonResponse(c, await handleHonoApiFlashShow(deps, auth.user, body));
 		});
 	});
 

@@ -10113,6 +10113,215 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('flash', () => {
+		test('作成できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnflc${suffix}` });
+
+			const res = await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.title, 'test flash');
+			assert.strictEqual(res.body.userId, user.id);
+			assert.strictEqual(res.body.visibility, 'public');
+		});
+
+		test('作成したFlashを取得できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnfls${suffix}` });
+			const created = await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, user);
+
+			const res = await api('flash/show', { flashId: created.body.id }, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.id, created.body.id);
+		});
+
+		test('存在しないFlashの取得は怒られる', async () => {
+			const res = await api('flash/show', { flashId: '000000000000000000000000' });
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_FLASH');
+		});
+
+		test('自分のFlash一覧が取得できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnflm${suffix}` });
+			await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, user);
+
+			const res = await api('flash/my', {}, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+		});
+
+		test('削除できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnfld${suffix}` });
+			const created = await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, user);
+
+			const res = await api('flash/delete', { flashId: created.body.id }, user);
+			assert.strictEqual(res.status, 204);
+
+			const shown = await api('flash/show', { flashId: created.body.id });
+			assert.strictEqual(shown.status, 400);
+		});
+
+		test('他人のFlashは削除できない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hnflo${suffix}` });
+			const other = await signup({ username: `hnfloo${suffix}` });
+			const created = await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, owner);
+
+			const res = await api('flash/delete', { flashId: created.body.id }, other);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body).error.code, 'ACCESS_DENIED');
+		});
+
+		test('タイトルでキーワード検索できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnflse${suffix}` });
+			await api('flash/create', {
+				title: `findme-${suffix}`,
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, user);
+
+			const res = await api('flash/search', { query: `findme-${suffix}` });
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+		});
+
+		test('いいねしたFlash一覧を取得できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hnflla${suffix}` });
+			const liker = await signup({ username: `hnfllb${suffix}` });
+			const created = await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, owner);
+			await api('flash/like', { flashId: created.body.id }, liker);
+
+			const res = await api('flash/my-likes', {}, liker);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].flash.id, created.body.id);
+			assert.strictEqual(res.body[0].flash.isLiked, true);
+		});
+
+		test('モデレータは他人のFlashを削除でき、モデレーションログが記録される', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hnflmd${suffix}` });
+			const created = await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, owner);
+
+			const moderatorRole = await role(alice, { isModerator: true });
+			const moderator = await signup({ username: `hnflmo${suffix}` });
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(config),
+				roleId: moderatorRole.id,
+				userId: moderator.id,
+			});
+
+			const res = await api('flash/delete', { flashId: created.body.id }, moderator);
+			assert.strictEqual(res.status, 204);
+
+			const shown = await api('flash/show', { flashId: created.body.id });
+			assert.strictEqual(shown.status, 400);
+
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const log = logs.find(l => l.userId === moderator.id && l.type === 'deleteFlash' && (l.info as any).flashId === created.body.id);
+			assert.ok(log);
+			assert.strictEqual((log!.info as any).flashUserId, owner.id);
+		});
+
+		test('sinceId/untilIdで自分のFlash一覧を絞り込める', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnflpg${suffix}` });
+			const first = await api('flash/create', {
+				title: 'first', summary: 'summary', script: 'Ui:render([])', permissions: [],
+			}, user);
+			const second = await api('flash/create', {
+				title: 'second', summary: 'summary', script: 'Ui:render([])', permissions: [],
+			}, user);
+
+			const res = await api('flash/my', { sinceId: first.body.id }, user);
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 1);
+			assert.strictEqual(res.body[0].id, second.body.id);
+		});
+
+		test('非公開のFlashは検索結果に出ない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnflpv${suffix}` });
+			await api('flash/create', {
+				title: `private-${suffix}`,
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+				visibility: 'private',
+			}, user);
+
+			const res = await api('flash/search', { query: `private-${suffix}` });
+
+			assert.strictEqual(res.status, 200);
+			assert.strictEqual(res.body.length, 0);
+		});
+
+		test('人気のFlash一覧を取得できる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hnflfa${suffix}` });
+			const liker = await signup({ username: `hnflfb${suffix}` });
+			const created = await api('flash/create', {
+				title: 'test flash',
+				summary: 'summary',
+				script: 'Ui:render([])',
+				permissions: [],
+			}, owner);
+			await api('flash/like', { flashId: created.body.id }, liker);
+
+			const res = await api('flash/featured', {});
+
+			assert.strictEqual(res.status, 200);
+			assert.ok(res.body.some((f: any) => f.id === created.body.id));
+		});
+	});
+
 	describe('notes/show', () => {
 		test('投稿が取得できる', async () => {
 			const myPost = await post(alice, {
