@@ -89,6 +89,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			videoProcessingService: deps.videoProcessingService,
 			webAuthnService: deps.webAuthnService,
 			emailService: deps.emailService,
+			chartWriters: deps.chartWriters,
 			systemQueue: deps.systemQueue,
 			endedPollNotificationQueue: deps.endedPollNotificationQueue,
 			postScheduledNoteQueue: deps.postScheduledNoteQueue,
@@ -139,6 +140,24 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			publishUserListStream: (listId, type, value) => {
 				deps.redisForPub.publish(config.host, JSON.stringify({
 					channel: `userListStream:${listId}`,
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
+			publishChatUserStream: (fromUserId, toUserId, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `chatUserStream:${fromUserId}-${toUserId}`,
+					message: {
+						type,
+						body: value,
+					},
+				}));
+			},
+			publishChatRoomStream: (toRoomId, type, value) => {
+				deps.redisForPub.publish(config.host, JSON.stringify({
+					channel: `chatRoomStream:${toRoomId}`,
 					message: {
 						type,
 						body: value,

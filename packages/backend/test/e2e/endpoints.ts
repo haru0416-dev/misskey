@@ -5,7 +5,7 @@
 
 process.env.NODE_ENV = 'test';
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
@@ -1046,6 +1046,416 @@ describe('Endpoints', () => {
 			});
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
+		});
+
+		test('drive/files, drive/files/show, drive/files/find, and drive/files/find-by-hash scope results to the caller', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-drive-files-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-drive-files-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+
+			const list = await api('drive/files', { limit: 100 }, alice);
+			assert.strictEqual(list.status, 200);
+			assert.strictEqual((list.body as any[]).some(f => f.id === file.id), true);
+
+			const shownById = await api('drive/files/show', { fileId: file.id }, alice);
+			assert.strictEqual(shownById.status, 200);
+			assert.strictEqual(shownById.body.id, file.id);
+
+			const shownByUrl = await api('drive/files/show', { url: file.url }, alice);
+			assert.strictEqual(shownByUrl.status, 200);
+			assert.strictEqual(shownByUrl.body.id, file.id);
+
+			const notFound = await api('drive/files/show', { fileId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(notFound.status, 400);
+			assert.strictEqual(castAsError(notFound.body as any).error.id, '067bc436-2718-4795-b0fb-ecbe43949e31');
+
+			const deniedForBob = await api('drive/files/show', { fileId: file.id }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '25b73c73-68b1-41d0-bad1-381cfdf6579f');
+
+			const found = await api('drive/files/find', { name: file.name }, alice);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(f => f.id === file.id), true);
+
+			const foundByHash = await api('drive/files/find-by-hash', { md5 }, alice);
+			assert.strictEqual(foundByHash.status, 200);
+			assert.strictEqual((foundByHash.body as any[]).some(f => f.id === file.id), true);
+		});
+
+		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-attached-notes-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-attached-notes-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+			const note = await createNoteInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				text: 'attached file note',
+				visibility: 'public',
+				fileIds: [file.id],
+			});
+
+			const found = await api('drive/files/attached-notes', { fileId: file.id }, alice);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(n => n.id === note.id), true);
+
+			const deniedForBob = await api('drive/files/attached-notes', { fileId: file.id }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, 'c118ece3-2e4b-4296-99d1-51756e32d232');
+		});
+
+		test('drive/files/attached-chat-messages finds chat messages referencing a file and rejects non-owners', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const sender = await signup({ username: `achatsend${suffix}` });
+			const recipient = await signup({ username: `achatrecv${suffix}` });
+			const md5 = createHash('md5').update(`hono-attached-chat-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: sender.id,
+				userHost: null,
+				md5,
+				name: `hono-attached-chat-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+			});
+
+			const message = await api('chat/messages/create-to-user', { toUserId: recipient.id, fileId: file.id }, sender);
+			assert.strictEqual(message.status, 200);
+
+			const found = await api('drive/files/attached-chat-messages', { fileId: file.id }, sender);
+			assert.strictEqual(found.status, 200);
+			assert.strictEqual((found.body as any[]).some(m => m.id === message.body.id), true);
+
+			const deniedForCarol = await api('drive/files/attached-chat-messages', { fileId: file.id }, carol);
+			assert.strictEqual(deniedForCarol.status, 400);
+			assert.strictEqual(castAsError(deniedForCarol.body as any).error.id, '485ce26d-f5d2-4313-9783-e689d131eafb');
+		});
+
+		test('drive/files/update renames, moves, and toggles sensitivity, rejecting invalid input and foreign access', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-drive-update-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-drive-update-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+				isSensitive: false,
+			});
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-drive-update-folder-${suffix}`,
+			});
+
+			const deniedForBob = await api('drive/files/update', { fileId: file.id, name: 'hijack.bin' }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '01a53b27-82fc-445b-a0c1-b558465a8ed2');
+
+			const invalidName = await api('drive/files/update', { fileId: file.id, name: 'has/slash' }, alice);
+			assert.strictEqual(invalidName.status, 400);
+			assert.strictEqual(castAsError(invalidName.body as any).error.id, '395e7156-f9f0-475e-af89-53c3c23080c2');
+
+			const noSuchFolder = await api('drive/files/update', { fileId: file.id, folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(noSuchFolder.status, 400);
+			assert.strictEqual(castAsError(noSuchFolder.body as any).error.id, 'ea8fb7a5-af77-4a08-b608-c0218176cd73');
+
+			const updated = await api('drive/files/update', {
+				fileId: file.id,
+				name: `hono-drive-updated-${suffix}.bin`,
+				folderId: folder.id,
+				isSensitive: true,
+				comment: 'updated comment',
+			}, alice);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.name, `hono-drive-updated-${suffix}.bin`);
+			assert.strictEqual(updated.body.folderId, folder.id);
+			assert.strictEqual(updated.body.isSensitive, true);
+			assert.strictEqual(updated.body.comment, 'updated comment');
+
+			const missing = await api('drive/files/update', { fileId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', name: 'x' }, alice);
+			assert.strictEqual(missing.status, 400);
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
+		});
+
+		test('drive/files/delete removes a file, rejecting foreign access and missing files', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5 = createHash('md5').update(`hono-drive-delete-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5,
+				name: `hono-drive-delete-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5}`,
+				accessKey: randomUUID(),
+			});
+
+			const deniedForBob = await api('drive/files/delete', { fileId: file.id }, bob);
+			assert.strictEqual(deniedForBob.status, 400);
+			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '5eb8d909-2540-4970-90b8-dd6f86088121');
+
+			const deleted = await api('drive/files/delete', { fileId: file.id }, alice);
+			assert.strictEqual(deleted.status, 204);
+
+			// 実ファイルの削除はレスポンスを待たない fire-and-forget のため、DB からの削除が反映されるまでポーリングする
+			let missing;
+			for (let i = 0; i < 20; i++) {
+				missing = await api('drive/files/delete', { fileId: file.id }, alice);
+				if (missing.status === 400) break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			assert.strictEqual(missing!.status, 400);
+			assert.strictEqual(castAsError(missing!.body as any).error.id, '908939ec-e52b-4458-b395-1025195cea58');
+		});
+
+		test('drive/files/move-bulk moves multiple files into a folder', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+			const md5A = createHash('md5').update(`hono-drive-move-a-${suffix}`).digest('hex');
+			const fileA = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: md5A,
+				name: `hono-drive-move-a-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5A}`,
+			});
+			const md5B = createHash('md5').update(`hono-drive-move-b-${suffix}`).digest('hex');
+			const fileB = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				userHost: null,
+				md5: md5B,
+				name: `hono-drive-move-b-${suffix}.bin`,
+				type: 'application/octet-stream',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${md5B}`,
+			});
+			const folder = await createDriveFolderInDatabase(db, {
+				id: genId(config),
+				userId: alice.id,
+				name: `hono-drive-move-folder-${suffix}`,
+			});
+
+			const moved = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: folder.id }, alice);
+			assert.strictEqual(moved.status, 204);
+
+			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, folder.id);
+			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileB.id))?.folderId, folder.id);
+
+			const movedBack = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: null }, alice);
+			assert.strictEqual(movedBack.status, 204);
+			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, null);
+		});
+
+		test('chat/messages/create-to-user, show, react, unreact, and delete manage a 1-on-1 message lifecycle', async () => {
+			const suffix = Date.now().toString(36);
+			const sender = await signup({ username: `chatsender${suffix}` });
+			const recipient = await signup({ username: `chatrecipient${suffix}` });
+
+			const selfSend = await api('chat/messages/create-to-user', { text: 'hi', toUserId: sender.id }, sender);
+			assert.strictEqual(selfSend.status, 400);
+			assert.strictEqual(castAsError(selfSend.body as any).error.id, '17e2ba79-e22a-4cbc-bf91-d327643f4a7e');
+
+			const noContent = await api('chat/messages/create-to-user', { toUserId: recipient.id }, sender);
+			assert.strictEqual(noContent.status, 400);
+			assert.strictEqual(castAsError(noContent.body as any).error.id, '25587321-b0e6-449c-9239-f8925092942c');
+
+			const noSuchUser = await api('chat/messages/create-to-user', { text: 'hi', toUserId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, sender);
+			assert.strictEqual(noSuchUser.status, 400);
+			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '11795c64-40ea-4198-b06e-3c873ed9039d');
+
+			const created = await api('chat/messages/create-to-user', { text: 'hello there', toUserId: recipient.id }, sender);
+			assert.strictEqual(created.status, 200);
+			assert.strictEqual(created.body.text, 'hello there');
+			assert.strictEqual(created.body.toUserId, recipient.id);
+
+			const shownBySender = await api('chat/messages/show', { messageId: created.body.id }, sender);
+			assert.strictEqual(shownBySender.status, 200);
+			assert.strictEqual(shownBySender.body.fromUserId, sender.id);
+
+			const shownByOutsider = await api('chat/messages/show', { messageId: created.body.id }, await signup({ username: `chatoutsider${suffix}` }));
+			assert.strictEqual(shownByOutsider.status, 400);
+			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '3710865b-1848-4da9-8d61-cfed15510b93');
+
+			const reacted = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, recipient);
+			assert.strictEqual(reacted.status, 204);
+
+			const shownAfterReact = await api('chat/messages/show', { messageId: created.body.id }, sender);
+			assert.strictEqual(shownAfterReact.status, 200);
+			assert.strictEqual(shownAfterReact.body.reactions.length, 1);
+			assert.strictEqual(shownAfterReact.body.reactions[0].reaction, '👍');
+
+			const unreacted = await api('chat/messages/unreact', { messageId: created.body.id, reaction: '👍' }, recipient);
+			assert.strictEqual(unreacted.status, 204);
+
+			const deleteByOther = await api('chat/messages/delete', { messageId: created.body.id }, recipient);
+			assert.strictEqual(deleteByOther.status, 400);
+			assert.strictEqual(castAsError(deleteByOther.body as any).error.id, '36b67f0e-66a6-414b-83df-992a55294f17');
+
+			const deleted = await api('chat/messages/delete', { messageId: created.body.id }, sender);
+			assert.strictEqual(deleted.status, 204);
+		});
+
+		test('chat/messages/user-timeline and chat/history reflect sent messages and read state', async () => {
+			const suffix = Date.now().toString(36);
+			const sender = await signup({ username: `chattimeline${suffix}` });
+			const recipient = await signup({ username: `chattlrecv${suffix}` });
+
+			const created = await api('chat/messages/create-to-user', { text: 'timeline message', toUserId: recipient.id }, sender);
+			assert.strictEqual(created.status, 200);
+
+			const timeline = await api('chat/messages/user-timeline', { userId: recipient.id }, sender);
+			assert.strictEqual(timeline.status, 200);
+			assert.strictEqual((timeline.body as any[]).some(m => m.id === created.body.id), true);
+
+			const history = await api('chat/history', {}, sender);
+			assert.strictEqual(history.status, 200);
+			const historyEntry = (history.body as any[]).find(m => m.id === created.body.id);
+			assert.ok(historyEntry);
+
+			const readAll = await api('chat/read-all', {}, recipient);
+			assert.strictEqual(readAll.status, 204);
+		});
+
+		test('chat/rooms lifecycle: create, invite, join, message, members, mute, and leave', async () => {
+			const suffix = Date.now().toString(36);
+			const owner = await signup({ username: `chatroomowner${suffix}` });
+			const invitee = await signup({ username: `chatroominvitee${suffix}` });
+
+			const room = await api('chat/rooms/create', { name: `hono-chat-room-${suffix}`, description: 'test room' }, owner);
+			assert.strictEqual(room.status, 200);
+			assert.strictEqual(room.body.name, `hono-chat-room-${suffix}`);
+
+			const shown = await api('chat/rooms/show', { roomId: room.body.id }, owner);
+			assert.strictEqual(shown.status, 200);
+			assert.strictEqual(shown.body.id, room.body.id);
+
+			const shownByOutsider = await api('chat/rooms/show', { roomId: room.body.id }, invitee);
+			assert.strictEqual(shownByOutsider.status, 400);
+			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '857ae02f-8759-4d20-9adb-6e95fffe4fd7');
+
+			const owned = await api('chat/rooms/owned', {}, owner);
+			assert.strictEqual(owned.status, 200);
+			assert.strictEqual((owned.body as any[]).some(r => r.id === room.body.id), true);
+
+			const invitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			assert.strictEqual(invitation.status, 200);
+			assert.strictEqual(invitation.body.userId, invitee.id);
+
+			const outbox = await api('chat/rooms/invitations/outbox', { roomId: room.body.id }, owner);
+			assert.strictEqual(outbox.status, 200);
+			assert.strictEqual((outbox.body as any[]).some(i => i.id === invitation.body.id), true);
+
+			const inbox = await api('chat/rooms/invitations/inbox', {}, invitee);
+			assert.strictEqual(inbox.status, 200);
+			assert.strictEqual((inbox.body as any[]).some(i => i.id === invitation.body.id), true);
+
+			const joined = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
+			assert.strictEqual(joined.status, 204);
+
+			const joining = await api('chat/rooms/joining', {}, invitee);
+			assert.strictEqual(joining.status, 200);
+			assert.strictEqual((joining.body as any[]).some(m => m.roomId === room.body.id), true);
+
+			const roomMessage = await api('chat/messages/create-to-room', { text: 'hello room', toRoomId: room.body.id }, owner);
+			assert.strictEqual(roomMessage.status, 200);
+			assert.strictEqual(roomMessage.body.toRoomId, room.body.id);
+
+			const roomTimeline = await api('chat/messages/room-timeline', { roomId: room.body.id }, invitee);
+			assert.strictEqual(roomTimeline.status, 200);
+			assert.strictEqual((roomTimeline.body as any[]).some(m => m.id === roomMessage.body.id), true);
+
+			const members = await api('chat/rooms/members', { roomId: room.body.id }, owner);
+			assert.strictEqual(members.status, 200);
+			assert.strictEqual((members.body as any[]).some(m => m.user.id === invitee.id), true);
+
+			// chat/rooms/members requires write:chat (not read:chat) per its original meta.kind.
+			const readOnlyToken = await createAppToken(owner, ['read:chat']);
+			const membersWithReadOnlyToken = await api('chat/rooms/members', { roomId: room.body.id }, { token: readOnlyToken });
+			assert.strictEqual(membersWithReadOnlyToken.status, 403);
+
+			const muted = await api('chat/rooms/mute', { roomId: room.body.id, mute: true }, invitee);
+			assert.strictEqual(muted.status, 204);
+
+			const searchResult = await api('chat/messages/search', { query: 'hello room', roomId: room.body.id }, owner);
+			assert.strictEqual(searchResult.status, 200);
+			assert.strictEqual((searchResult.body as any[]).some(m => m.id === roomMessage.body.id), true);
+
+			const updated = await api('chat/rooms/update', { roomId: room.body.id, name: `hono-chat-room-renamed-${suffix}` }, owner);
+			assert.strictEqual(updated.status, 200);
+			assert.strictEqual(updated.body.name, `hono-chat-room-renamed-${suffix}`);
+
+			const left = await api('chat/rooms/leave', { roomId: room.body.id }, invitee);
+			assert.strictEqual(left.status, 204);
+
+			const deniedDelete = await api('chat/rooms/delete', { roomId: room.body.id }, invitee);
+			assert.strictEqual(deniedDelete.status, 400);
+			assert.strictEqual(castAsError(deniedDelete.body as any).error.id, 'd4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
+
+			const deleted = await api('chat/rooms/delete', { roomId: room.body.id }, owner);
+			assert.strictEqual(deleted.status, 204);
+		});
+
+		test('chat/rooms/invitations/ignore lets a user decline without joining', async () => {
+			const suffix = Date.now().toString(36);
+			const owner = await signup({ username: `chatignoreowner${suffix}` });
+			const invitee = await signup({ username: `chatignoreinvitee${suffix}` });
+
+			const room = await api('chat/rooms/create', { name: `hono-ignore-room-${suffix}` }, owner);
+			assert.strictEqual(room.status, 200);
+
+			const invitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			assert.strictEqual(invitation.status, 200);
+
+			const ignored = await api('chat/rooms/invitations/ignore', { roomId: room.body.id }, invitee);
+			assert.strictEqual(ignored.status, 204);
+
+			// Ignoring hides the invitation from the default inbox listing (ignored: false) without revoking it.
+			const inboxAfterIgnore = await api('chat/rooms/invitations/inbox', {}, invitee);
+			assert.strictEqual(inboxAfterIgnore.status, 200);
+			assert.strictEqual((inboxAfterIgnore.body as any[]).some(i => i.id === invitation.body.id), false);
+
+			const joinAfterIgnore = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
+			assert.strictEqual(joinAfterIgnore.status, 204);
 		});
 
 		test('hashtags/users finds users tagged with the given hashtag', async () => {
@@ -10640,6 +11050,28 @@ describe('Endpoints', () => {
 				await cleanupRole(bob.id, allowAllTypesRole.id);
 			}
 		});
+	});
+
+	describe('drive/files/upload-from-url', () => {
+		test('URLからファイルをアップロードできる', async () => {
+			const res = await api('drive/files/upload-from-url', {
+				url: 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
+				force: true,
+			}, alice);
+			assert.strictEqual(res.status, 204);
+
+			// upload-from-url はサーバー側でダウンロードを待たずに応答するため、ファイルの出現をポーリングで待つ
+			let found: misskey.entities.DriveFile | undefined;
+			for (let i = 0; i < 20; i++) {
+				const list = await api('drive/files/find', { name: '192.jpg' }, alice);
+				found = (list.body as misskey.entities.DriveFile[]).find(f => f.name === '192.jpg');
+				if (found) break;
+				await new Promise(resolve => setTimeout(resolve, 500));
+			}
+
+			assert.ok(found);
+			assert.strictEqual(found!.name, '192.jpg');
+		}, 1000 * 15);
 	});
 
 	describe('drive/files/update', () => {
