@@ -46,7 +46,7 @@ import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoAp
 import { handleHonoApiBlockingCreate, handleHonoApiBlockingDelete, handleHonoApiBlockingList } from './hono-api-account-blocking.js';
 import { handleHonoApiMuteCreate, handleHonoApiMuteDelete, handleHonoApiMuteList, handleHonoApiRenoteMuteCreate, handleHonoApiRenoteMuteDelete, handleHonoApiRenoteMuteList } from './hono-api-account-mutes.js';
 import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './hono-api-error.js';
-import { handleHonoApiAdminEmojiAdd, handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiCopy, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiImportZip, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiAdminEmojiUpdate, handleHonoApiEmoji, handleHonoApiEmojis } from './hono-api-emojis.js';
+import { handleHonoApiAdminEmojiAdd, handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiCopy, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiImportZip, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiAdminEmojiUpdate, handleHonoApiEmoji, handleHonoApiEmojis, handleHonoApiV2AdminEmojiList } from './hono-api-emojis.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from './hono-api-endpoints.js';
 import {
 	handleHonoApiDriveFilesCheckExistence,
@@ -63,6 +63,7 @@ import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoAp
 import { handleHonoApiAdminFederationDeleteAllFiles, handleHonoApiAdminFederationRefreshRemoteInstanceMetadata, handleHonoApiAdminFederationRemoveAllFollowing, handleHonoApiAdminFederationUpdateInstance, handleHonoApiFederationFollowers, handleHonoApiFederationFollowing, handleHonoApiFederationInstances, handleHonoApiFederationShowInstance, handleHonoApiFederationStats, handleHonoApiFederationUsers, normalizeHonoApiFederationQuery } from './hono-api-federation.js';
 import { handleHonoApiFetchExternalResources } from './hono-api-fetch-external-resources.js';
 import { handleHonoApiExportCustomEmojis, handleHonoApiIExportAntennas, handleHonoApiIExportBlocking, handleHonoApiIExportClips, handleHonoApiIExportFavorites, handleHonoApiIExportFollowing, handleHonoApiIExportMute, handleHonoApiIExportNotes, handleHonoApiIExportUserLists } from './hono-api-export-jobs.js';
+import { handleHonoApiIImportBlocking, handleHonoApiIImportFollowing, handleHonoApiIImportMuting, handleHonoApiIImportUserLists } from './hono-api-import-jobs.js';
 import { handleHonoApiFetchRss } from './hono-api-fetch-rss.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite, handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite, handleHonoApiFlashLike, handleHonoApiFlashUnlike, handleHonoApiIFavorites, handleHonoApiPagesLike, handleHonoApiPagesUnlike, handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from './hono-api-favorites.js';
 import { handleHonoApiIChangePassword, handleHonoApiIDeleteAccount, handleHonoApiIRegenerateToken, handleHonoApiIUpdateEmail } from './hono-api-account-security.js';
@@ -108,7 +109,7 @@ import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoA
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from './hono-api-hashtags.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiI2faDone, handleHonoApiI2faKeyDone, handleHonoApiI2faPasswordLess, handleHonoApiI2faRegister, handleHonoApiI2faRegisterKey, handleHonoApiI2faRemoveKey, handleHonoApiI2faUnregister, handleHonoApiI2faUpdateKey } from './hono-api-i-2fa.js';
-import { handleHonoApiPinnedUsers, handleHonoApiUsersShow } from './hono-api-user.js';
+import { handleHonoApiPinnedUsers, handleHonoApiUsersRelation, handleHonoApiUsersShow } from './hono-api-user.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow, handleHonoApiIReadAnnouncement } from './hono-api-announcements.js';
 import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
 import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta, handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from './hono-api-meta.js';
@@ -148,7 +149,7 @@ import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApi
 import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from './hono-api-users.js';
 import { handleHonoApiUsersListsCreate, handleHonoApiUsersListsCreateFromPublic, handleHonoApiUsersListsGetMemberships, handleHonoApiUsersListsPull, handleHonoApiUsersListsPush, handleHonoApiUsersListsUpdateMembership } from './hono-api-users-lists.js';
 import { handleHonoApiVerifyEmail } from './hono-api-verify-email.js';
-import { handleHonoApiIWebhooksCreate, handleHonoApiIWebhooksDelete, handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow, handleHonoApiIWebhooksUpdate } from './hono-api-webhooks.js';
+import { handleHonoApiIWebhooksCreate, handleHonoApiIWebhooksDelete, handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow, handleHonoApiIWebhooksTest, handleHonoApiIWebhooksUpdate } from './hono-api-webhooks.js';
 
 export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	config: Config;
@@ -1985,6 +1986,18 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/v2/admin/emoji/list', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:emoji');
+			await assertHonoApiCanManageCustomEmojis(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiV2AdminEmojiList(deps, body));
+		});
+	});
+
 	app.post('/admin/emoji/list-remote', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -3701,6 +3714,86 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/i/import-blocking', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			assertProhibitMoved(auth.user);
+			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportBlocking) {
+				throw rolePermissionDeniedError();
+			}
+			await assertHonoApiRateLimit(deps, 'i/import-blocking', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			await handleHonoApiIImportBlocking(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/import-following', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			assertProhibitMoved(auth.user);
+			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportFollowing) {
+				throw rolePermissionDeniedError();
+			}
+			await assertHonoApiRateLimit(deps, 'i/import-following', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			await handleHonoApiIImportFollowing(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/import-muting', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			assertProhibitMoved(auth.user);
+			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportMuting) {
+				throw rolePermissionDeniedError();
+			}
+			await assertHonoApiRateLimit(deps, 'i/import-muting', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			await handleHonoApiIImportMuting(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/i/import-user-lists', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			assertProhibitMoved(auth.user);
+			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportUserLists) {
+				throw rolePermissionDeniedError();
+			}
+			await assertHonoApiRateLimit(deps, 'i/import-user-lists', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user.id);
+
+			await handleHonoApiIImportUserLists(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
 	app.post('/i/export-antennas', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -5028,6 +5121,23 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		});
 	});
 
+	app.post('/i/webhooks/test', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertSecureCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+			await assertHonoApiRateLimit(deps, 'i/webhooks/test', {
+				duration: 15 * 60 * 1000,
+				max: 60,
+			}, auth.user.id);
+
+			await handleHonoApiIWebhooksTest(deps, auth.user, body);
+			return emptyResponse(c);
+		});
+	});
+
 	app.post('/miauth/gen-token', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -5132,6 +5242,17 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const ip = getRequestIp(c, deps.config);
 
 			return jsonResponse(c, await handleHonoApiUsersShow(deps, auth.user, body, ip));
+		});
+	});
+
+	app.post('/users/relation', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+
+			return jsonResponse(c, await handleHonoApiUsersRelation(deps, auth.user, body));
 		});
 	});
 
