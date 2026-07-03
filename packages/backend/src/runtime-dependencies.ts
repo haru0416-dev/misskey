@@ -48,6 +48,7 @@ import {
 } from '@/core/QueueModule.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
+import { createHonoChartWriters, saveHonoChartWriters, startHonoChartWriterSaveInterval, type HonoChartWriters } from '@/server/hono-chart-runtime.js';
 
 export type RuntimeDependencies = {
 	config: Config;
@@ -84,6 +85,7 @@ export type RuntimeDependencies = {
 	redisForSub: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
+	chartWriters: HonoChartWriters;
 	dispose: () => Promise<void>;
 };
 
@@ -234,6 +236,8 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const emailService = new EmailService(config, meta, db, loggerService, utilityService, httpRequestService);
 	const userAuthService = new UserAuthService(redis, db);
 	const webAuthnService = new WebAuthnService(config, meta, redis, db);
+	const chartWriters = createHonoChartWriters({ db, redis, logger: loggerService.getLogger('chart', 'white') });
+	const chartWriterSaveIntervalId = startHonoChartWriterSaveInterval(chartWriters);
 
 	return {
 		config,
@@ -270,7 +274,12 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		redisForSub,
 		redisForTimelines,
 		redisForReactions,
+		chartWriters,
 		dispose: async () => {
+			clearInterval(chartWriterSaveIntervalId);
+			if (process.env.NODE_ENV !== 'test') {
+				await saveHonoChartWriters(chartWriters);
+			}
 			await disposeRuntimeResources({
 				drizzlePool,
 				redis,
