@@ -8,13 +8,22 @@ import * as Acct from '@/misc/acct.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
-import { fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import {
+	fetchLocalUserByUsernameFromDatabase,
+	fetchUserByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+	listUsersByIdsFromDatabase,
+} from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
+import { HonoApiError } from './hono-api-error.js';
+import type { HonoChartWriters } from './hono-chart-runtime.js';
+import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
@@ -421,4 +430,104 @@ export async function handleHonoApiPinnedUsers(
 		.map(acct => fetchUserByUsernameAndHostFromDatabase(deps.db, acct.username, acct.host)));
 
 	return await packUserDetailedManyForHonoApi(deps, users.filter(user => user != null), me);
+}
+
+export type HonoApiUsersShowDependencies = UserPackingDependencies & HonoApiRolePolicyDependencies & {
+	chartWriters: HonoChartWriters;
+};
+
+function usersShowFailedToResolveRemoteUserError(): HonoApiError {
+	return new HonoApiError({ status: 500, message: 'Failed to resolve remote user.', code: 'FAILED_TO_RESOLVE_REMOTE_USER', id: 'ef7b9be4-9cba-4e6f-ab41-90ed171c7d3c', kind: 'server' });
+}
+
+function usersShowNoSuchUserError(): HonoApiError {
+	return new HonoApiError({ status: 404, message: 'No such user.', code: 'NO_SUCH_USER', id: '4362f8dc-731f-4ad8-a694-be5a88922a24' });
+}
+
+const usersShowParamDef = {
+	allOf: [
+		{
+			anyOf: [
+				{ type: 'object', properties: { userId: { type: 'string', format: 'misskey:id' } }, required: ['userId'] },
+				{ type: 'object', properties: { userIds: { type: 'array', uniqueItems: true, items: { type: 'string', format: 'misskey:id' } } }, required: ['userIds'] },
+				{ type: 'object', properties: { username: { type: 'string' } }, required: ['username'] },
+			],
+		},
+		{
+			type: 'object',
+			properties: {
+				host: { type: 'string', nullable: true },
+			},
+		},
+	],
+} as const;
+
+type UsersShowParams =
+	| { userId: string; host?: string | null }
+	| { userIds: string[]; host?: string | null }
+	| { username: string; host?: string | null };
+
+export async function handleHonoApiUsersShow(
+	deps: HonoApiUsersShowDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+	ip: string | null,
+): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse) | (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
+	const params = parseHonoApiParams(usersShowParamDef, body) as UsersShowParams;
+
+	const isModerator = await isHonoApiModerator(deps, me ?? null);
+
+	if ('username' in params) {
+		params.username = params.username.trim();
+	}
+
+	if ('userIds' in params) {
+		if (params.userIds.length === 0) return [];
+
+		const users = await listUsersByIdsFromDatabase(deps.db, params.userIds, { includeSuspended: isModerator });
+
+		const ordered: MiUser[] = [];
+		for (const id of params.userIds) {
+			const user = users.find(x => x.id === id);
+			if (user != null) ordered.push(user);
+		}
+
+		const packedMap = new Map((await packUserDetailedManyForHonoApi(deps, ordered, me)).map((packed, i) => [ordered[i]!.id, packed]));
+		return ordered.map(u => packedMap.get(u.id)!);
+	}
+
+	let user: MiUser | null;
+
+	if (typeof params.host === 'string' && 'username' in params) {
+		if (deps.meta.ugcVisibilityForVisitor === 'local' && me == null) {
+			throw usersShowNoSuchUserError();
+		}
+
+		user = await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username, params.host).catch(() => {
+			throw usersShowFailedToResolveRemoteUserError();
+		});
+		if (user == null) throw usersShowFailedToResolveRemoteUserError();
+	} else if ('userId' in params) {
+		user = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	} else {
+		user = await fetchLocalUserByUsernameFromDatabase(deps.db, params.username);
+	}
+
+	if (user == null || (!isModerator && user.isSuspended)) {
+		throw usersShowNoSuchUserError();
+	}
+
+	if (deps.meta.ugcVisibilityForVisitor === 'local' && user.host != null && me == null) {
+		throw usersShowNoSuchUserError();
+	}
+
+	if (user.host == null) {
+		if (me == null && ip != null) {
+			void deps.chartWriters.perUserPvChart.commitByVisitor(user, ip);
+		} else if (me && me.id !== user.id) {
+			void deps.chartWriters.perUserPvChart.commitByUser(user, me.id);
+		}
+	}
+
+	return await packUserDetailedForHonoApi(deps, user, me);
 }
