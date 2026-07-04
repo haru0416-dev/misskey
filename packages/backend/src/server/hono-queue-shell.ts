@@ -14,8 +14,9 @@ import {
 	handleHonoQueueRelationshipUnfollow,
 	type HonoQueueRelationshipDependencies,
 } from './hono-queue-relationship.js';
+import { handleHonoQueuePostScheduledNote, type HonoQueuePostScheduledNoteDependencies } from './hono-queue-post-scheduled-note.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -24,6 +25,7 @@ export type HonoQueueWorkers = {
 	userWebhookDeliverQueueWorker: Bull.Worker;
 	systemWebhookDeliverQueueWorker: Bull.Worker;
 	relationshipQueueWorker: Bull.Worker;
+	postScheduledNoteQueueWorker: Bull.Worker;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
 };
@@ -159,15 +161,26 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}
 	//#endregion
 
+	//#region post scheduled note
+	const postScheduledNoteQueueWorker = new Bull.Worker(QUEUE.POST_SCHEDULED_NOTE, (job) => {
+		return handleHonoQueuePostScheduledNote(deps, job);
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.POST_SCHEDULED_NOTE),
+		autorun: false,
+	});
+	//#endregion
+
 	return {
 		userWebhookDeliverQueueWorker,
 		systemWebhookDeliverQueueWorker,
 		relationshipQueueWorker,
+		postScheduledNoteQueueWorker,
 		start: async () => {
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
 				systemWebhookDeliverQueueWorker.run(),
 				relationshipQueueWorker.run(),
+				postScheduledNoteQueueWorker.run(),
 			]);
 		},
 		stop: async () => {
@@ -175,6 +188,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				userWebhookDeliverQueueWorker.close(),
 				systemWebhookDeliverQueueWorker.close(),
 				relationshipQueueWorker.close(),
+				postScheduledNoteQueueWorker.close(),
 			]);
 		},
 	};
