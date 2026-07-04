@@ -60,7 +60,7 @@ import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { userIp } from '@/db/schema/user-ip.js';
-import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
@@ -1938,6 +1938,106 @@ describe('Endpoints', () => {
 			assert.strictEqual(following.body[0].followerId, followee.id);
 			assert.strictEqual(following.body[0].followeeId, follower.id);
 			assert.strictEqual(following.body[0].followee.id, follower.id);
+		});
+	});
+
+	describe('ap/get', () => {
+		test('管理者かつread:federationスコープでのみ呼べ、ローカルNote/UserをActivityPubオブジェクトとして解決できる', async () => {
+			const config = loadConfig();
+
+			const note = await post(alice, { text: 'ap/get resolve target' });
+			const noteUri = `${config.url}/notes/${note.id}`;
+
+			const noteRes = await api('ap/get', { uri: noteUri }, alice);
+			assert.strictEqual(noteRes.status, 200);
+			assert.strictEqual(noteRes.body.type, 'Note');
+			assert.strictEqual(noteRes.body.id, noteUri);
+			assert.ok((noteRes.body.content as string).includes('ap/get resolve target'));
+
+			const userUri = `${config.url}/users/${alice.id}`;
+			const userRes = await api('ap/get', { uri: userUri }, alice);
+			assert.strictEqual(userRes.status, 200);
+			assert.strictEqual(userRes.body.type, 'Person');
+			assert.strictEqual(userRes.body.id, userUri);
+			assert.strictEqual(userRes.body.preferredUsername, alice.username);
+
+			const scopeDeniedToken = await createAppToken(alice, ['read:account']);
+			const scopeDenied = await api('ap/get', { uri: noteUri }, { token: scopeDeniedToken });
+			assert.strictEqual(scopeDenied.status, 403);
+			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+			const normalUser = await signup({ username: `honoapget${Date.now().toString(36)}` });
+			const roleDenied = await api('ap/get', { uri: noteUri }, normalUser);
+			assert.strictEqual(roleDenied.status, 403);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+		});
+
+		test('questions/likes/followsのローカルURIも解決できる', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36);
+
+			const pollNoteId = genId(config, now);
+			await createNoteInDatabase(db, {
+				id: pollNoteId,
+				text: 'ap/get poll question',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'public',
+				hasPoll: true,
+			});
+			await createPollInDatabase(db, {
+				noteId: pollNoteId,
+				expiresAt: null,
+				multiple: false,
+				choices: ['a', 'b'],
+				votes: [1, 2],
+				noteVisibility: 'public',
+				userId: alice.id,
+				userHost: null,
+			});
+			const questionUri = `${config.url}/questions/${pollNoteId}`;
+			const questionRes = await api('ap/get', { uri: questionUri }, alice);
+			assert.strictEqual(questionRes.status, 200);
+			assert.strictEqual(questionRes.body.type, 'Question');
+			assert.strictEqual(questionRes.body.id, questionUri);
+			assert.deepStrictEqual((questionRes.body.oneOf as { name: string }[]).map(o => o.name), ['a', 'b']);
+
+			const likeNote = await post(alice, { text: 'ap/get like target' });
+			const reactionId = genId(config, now + 1);
+			await createNoteReactionInDatabase(db, {
+				id: reactionId,
+				noteId: likeNote.id,
+				userId: alice.id,
+				reaction: '👍',
+			});
+			const likeUri = `${config.url}/likes/${reactionId}`;
+			const likeRes = await api('ap/get', { uri: likeUri }, alice);
+			assert.strictEqual(likeRes.status, 200);
+			assert.strictEqual(likeRes.body.type, 'Like');
+			assert.strictEqual(likeRes.body.id, likeUri);
+			assert.strictEqual(likeRes.body.object, `${config.url}/notes/${likeNote.id}`);
+
+			const remoteHost = `ap-get-remote-${suffix}.example`;
+			const remoteFollowee = await createUserInDatabase(db, {
+				id: genId(config, now + 2),
+				username: `apgetremote${suffix}`,
+				usernameLower: `apgetremote${suffix}`,
+				host: remoteHost,
+				uri: `https://${remoteHost}/users/remote`,
+			});
+			const followRequest = await createFollowRequestInDatabase(db, {
+				id: genId(config, now + 3),
+				followerId: alice.id,
+				followeeId: remoteFollowee.id,
+			});
+			const followUri = `${config.url}/follows/${followRequest.id}`;
+			const followRes = await api('ap/get', { uri: followUri }, alice);
+			assert.strictEqual(followRes.status, 200);
+			assert.strictEqual(followRes.body.type, 'Follow');
+			assert.strictEqual(followRes.body.id, followUri);
+			assert.strictEqual(followRes.body.actor, `${config.url}/users/${alice.id}`);
+			assert.strictEqual(followRes.body.object, remoteFollowee.uri);
 		});
 	});
 

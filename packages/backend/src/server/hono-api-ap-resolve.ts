@@ -1,0 +1,256 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { domainToASCII } from 'node:url';
+import * as htmlParser from 'node-html-parser';
+import type { Config } from '@/config.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
+import { FetchAllowSoftFailMask, assertActivityMatchesUrl } from '@/core/activitypub/misc/check-against-url.js';
+import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
+import type { IObject } from '@/core/activitypub/type.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchRemoteUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
+import { genId } from '@/misc/id/gen-id.js';
+import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
+import { addActivityContext, renderCreateForHonoApi, renderLikeForHonoApi, renderNoteForHonoApi, type HonoApiNoteApDependencies } from './hono-api-notes-ap.js';
+import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from './hono-api-account-update.js';
+
+export type HonoApiApResolveDependencies = HonoApiAccountUpdateDependencies & {
+	httpRequestService: HttpRequestService;
+};
+
+type LocalApUriParseResult = {
+	local: true;
+	id: string;
+	type: string;
+	rest?: string;
+} | {
+	local: false;
+	uri: string;
+};
+
+function toPuny(host: string): string {
+	return domainToASCII(host.toLowerCase());
+}
+
+function extractDbHost(uri: string): string {
+	const url = new URL(uri);
+	return toPuny(url.host);
+}
+
+function punyHost(url: string): string {
+	const urlObj = new URL(url);
+	return `${toPuny(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
+}
+
+function isSelfHost(config: Pick<Config, 'host'>, host: string | null): boolean {
+	if (host == null) return true;
+	return toPuny(config.host) === toPuny(host);
+}
+
+function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
+	if (host == null) return false;
+	return blockedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+}
+
+function isFederationAllowedHost(config: Pick<Config, 'host'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, host: string): boolean {
+	if (isSelfHost(config, host)) return true;
+	if (meta.federation === 'none') return false;
+	if (meta.federation === 'specified' && !meta.federationHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`))) return false;
+	if (isBlockedHost(meta.blockedHosts, host)) return false;
+	return true;
+}
+
+function parseLocalApUri(config: Pick<Config, 'host'>, uri: string): LocalApUriParseResult {
+	const url = new URL(uri);
+	if (toPuny(url.host) !== toPuny(config.host)) {
+		return { local: false, uri: url.href };
+	}
+
+	const [, type, id, ...rest] = url.pathname.split('/');
+	return {
+		local: true,
+		type,
+		id,
+		rest: rest.length === 0 ? undefined : rest.join('/'),
+	};
+}
+
+function renderQuestionForHonoApi(
+	config: Pick<Config, 'url'>,
+	user: { id: MiUser['id'] },
+	note: { id: string; text: string | null },
+	poll: { multiple: boolean; choices: string[]; votes: number[] },
+): Record<string, unknown> {
+	return {
+		type: 'Question',
+		id: `${config.url}/questions/${note.id}`,
+		actor: `${config.url}/users/${user.id}`,
+		content: note.text ?? '',
+		[poll.multiple ? 'anyOf' : 'oneOf']: poll.choices.map((text, i) => ({
+			name: text,
+			_misskey_votes: poll.votes[i],
+			replies: {
+				type: 'Collection',
+				totalItems: poll.votes[i],
+			},
+		})),
+	};
+}
+
+function renderFollowForHonoApi(config: Pick<Config, 'url'>, follower: MiLocalUser | MiRemoteUser, followee: MiLocalUser | MiRemoteUser, requestId?: string | null): Record<string, unknown> {
+	const uri = (user: MiLocalUser | MiRemoteUser) => user.host != null ? user.uri! : `${config.url}/users/${user.id}`;
+	return {
+		id: requestId ?? `${config.url}/follows/${follower.id}/${followee.id}`,
+		type: 'Follow',
+		actor: uri(follower),
+		object: uri(followee),
+	};
+}
+
+async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies, url: string): Promise<IObject> {
+	const parsed = parseLocalApUri(deps.config, url);
+	if (!parsed.local) throw new Error('resolveLocal: not local');
+
+	switch (parsed.type) {
+		case 'notes': {
+			const note = await fetchNoteByIdOrFailFromDatabase(deps.db, parsed.id);
+			if (parsed.rest === 'activity') {
+				const rendered = await renderNoteForHonoApi(deps, note, true);
+				return addActivityContext(deps.config, renderCreateForHonoApi(deps.config, rendered, note)) as unknown as IObject;
+			}
+			return await renderNoteForHonoApi(deps, note, true) as unknown as IObject;
+		}
+		case 'users': {
+			const user = await fetchUserByIdOrFailFromDatabase(deps.db, parsed.id);
+			return await renderPersonForHonoApi(deps, user as MiLocalUser) as unknown as IObject;
+		}
+		case 'questions': {
+			const note = await fetchNoteByIdOrFailFromDatabase(deps.db, parsed.id);
+			const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, parsed.id);
+			return renderQuestionForHonoApi(deps.config, { id: note.userId }, note, poll) as unknown as IObject;
+		}
+		case 'likes': {
+			const reaction = await fetchNoteReactionByIdOrFailFromDatabase(deps.db, parsed.id);
+			return addActivityContext(deps.config, await renderLikeForHonoApi(deps, reaction, { uri: null, id: reaction.noteId })) as unknown as IObject;
+		}
+		case 'follows': {
+			const followRequest = await fetchFollowRequestByIdFromDatabase(deps.db, parsed.id);
+			if (followRequest == null) throw new Error('resolveLocal: invalid follow request ID');
+			const [follower, followee] = await Promise.all([
+				fetchLocalUserByIdFromDatabase(deps.db, followRequest.followerId),
+				fetchRemoteUserByIdFromDatabase(deps.db, followRequest.followeeId),
+			]);
+			if (follower == null || followee == null) {
+				throw new Error('resolveLocal: follower or followee does not exist');
+			}
+			return addActivityContext(deps.config, renderFollowForHonoApi(deps.config, follower, followee, url)) as unknown as IObject;
+		}
+		default:
+			throw new Error(`resolveLocal: type ${parsed.type} unhandled`);
+	}
+}
+
+async function signedGetForHonoApi(
+	deps: HonoApiApResolveDependencies,
+	url: string,
+	user: { id: MiUser['id'] },
+	allowSoftfail: FetchAllowSoftFailMask,
+	followAlternate = true,
+): Promise<IObject> {
+	const keypair = await fetchUserKeypairFromDatabase(deps.db, user.id);
+
+	const req = await ApRequestCreator.createSignedGet({
+		key: {
+			privateKeyPem: keypair.privateKey,
+			keyId: `${deps.config.url}/users/${user.id}#main-key`,
+		},
+		url,
+		additionalHeaders: {},
+	});
+
+	const res = await deps.httpRequestService.send(url, {
+		method: req.request.method,
+		headers: req.request.headers,
+	}, {
+		throwErrorWhenResponseNotOk: true,
+	});
+
+	const contentType = res.headers.get('content-type');
+
+	if (
+		res.ok &&
+		(contentType ?? '').split(';')[0].trimEnd().toLowerCase() === 'text/html' &&
+		followAlternate
+	) {
+		const html = await res.text();
+
+		try {
+			const document = htmlParser.parse(html);
+			const alternate = document.querySelector('head > link[rel="alternate"][type="application/activity+json"]');
+			if (alternate) {
+				const href = alternate.getAttribute('href');
+				if (href && punyHost(url) === punyHost(href)) {
+					return await signedGetForHonoApi(deps, href, user, allowSoftfail, false);
+				}
+			}
+		} catch (_) {
+			// something went wrong parsing the HTML, ignore the whole thing
+		}
+	}
+
+	validateContentTypeSetAsActivityPub(res);
+	const finalUrl = res.url;
+	const activity = await res.json() as IObject;
+	assertActivityMatchesUrl(url, activity, finalUrl, allowSoftfail);
+
+	return activity;
+}
+
+/**
+ * ApResolverService.Resolver#resolve の単発呼び出し相当。
+ * オリジナルはインスタンスごとに history / recursionLimit を保持し複数回の resolve 呼び出しに跨って
+ * 再帰を防ぐが、ap/get は 1 リクエストにつき resolve を 1 回しか呼ばないため history は常に空で
+ * 実質的に無効となる。この簡略化は ap/get 限定であり、再帰的に resolve を呼ぶ ApPersonService/
+ * ApNoteService 相当の移植では別途 history 相当の実装が必要。
+ */
+export async function resolveApObjectForHonoApi(
+	deps: HonoApiApResolveDependencies,
+	value: string,
+	allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict,
+): Promise<IObject> {
+	if (value.includes('#')) {
+		throw new Error(`cannot resolve URL with fragment: ${value}`);
+	}
+
+	const host = extractDbHost(value);
+	if (isSelfHost(deps.config, host)) {
+		return await resolveLocalApObjectForHonoApi(deps, value);
+	}
+
+	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
+		throw new Error('Instance is blocked');
+	}
+
+	const object = deps.meta.signToActivityPubGet
+		? await signedGetForHonoApi(deps, value, await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId: () => genId(deps.config) }, 'actor'), allowSoftfail)
+		: await deps.httpRequestService.getActivityJson(value, undefined, allowSoftfail);
+
+	const contextOk = Array.isArray(object['@context'])
+		? (object['@context'] as unknown[]).includes('https://www.w3.org/ns/activitystreams')
+		: object['@context'] === 'https://www.w3.org/ns/activitystreams';
+	if (!contextOk) {
+		throw new Error('invalid response');
+	}
+
+	return object;
+}

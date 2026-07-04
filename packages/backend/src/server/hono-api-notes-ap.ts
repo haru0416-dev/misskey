@@ -85,7 +85,7 @@ function renderDocument(deps: HonoApiNoteApDependencies, file: MiDriveFile): Rec
 	};
 }
 
-async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note: MiNote, dive: boolean): Promise<Record<string, unknown>> {
+export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note: MiNote, dive: boolean): Promise<Record<string, unknown>> {
 	let inReplyTo: string | null = null;
 	if (note.replyId) {
 		const inReplyToNote = note.reply ?? await fetchNoteByIdFromDatabase(deps.db, note.replyId);
@@ -203,7 +203,7 @@ async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note: MiNot
 	};
 }
 
-function renderCreateForHonoApi(config: Pick<Config, 'url'>, object: Record<string, unknown>, note: MiNote): Record<string, unknown> {
+export function renderCreateForHonoApi(config: Pick<Config, 'url'>, object: Record<string, unknown>, note: MiNote): Record<string, unknown> {
 	const activity: Record<string, unknown> = {
 		id: `${config.url}/notes/${note.id}/activity`,
 		actor: genLocalUserUri(config, note.userId),
