@@ -6,6 +6,7 @@
 process.env.NODE_ENV = 'test';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
@@ -14,24 +15,40 @@ import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/An
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRetentionAggregationInDatabase, listRetentionAggregationsCreatedAfter } from '@/core/RetentionAggregationStore.js';
+import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueAggregateRetention, handleHonoQueueClean, type HonoQueueSystemDependencies } from '@/server/hono-queue-system.js';
+import { createHonoChartWriters, type HonoChartWriters } from '@/server/hono-chart-runtime.js';
+import Logger from '@/logger.js';
+import {
+	handleHonoQueueAggregateRetention,
+	handleHonoQueueClean,
+	handleHonoQueueCleanCharts,
+	handleHonoQueueResyncCharts,
+	handleHonoQueueTickCharts,
+	type HonoQueueSystemDependencies,
+} from '@/server/hono-queue-system.js';
 import type { Config } from '@/config.js';
 
 describe('hono-queue-system', () => {
 	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
+	let redis: Redis.Redis;
 	let config: Config;
+	let chartWriters: HonoChartWriters;
 	let deps: HonoQueueSystemDependencies;
 
 	beforeAll(async () => {
 		config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
-		deps = { config, db };
+		redis = new Redis.Redis(config.redis);
+		const meta = await fetchMetaFromDatabase(db);
+		chartWriters = createHonoChartWriters({ db, redis, config, meta, logger: new Logger('test-chart') });
+		deps = { config, db, chartWriters };
 	});
 
 	afterAll(async () => {
+		redis.disconnect();
 		await pool.end();
 	});
 
@@ -139,6 +156,20 @@ describe('hono-queue-system', () => {
 
 		test('既に本日分が存在する場合は重複エラーを握りつぶす', async () => {
 			await expect(handleHonoQueueAggregateRetention(deps)).resolves.toBeUndefined();
+		});
+	});
+
+	describe('chart processors', () => {
+		test('handleHonoQueueTickCharts: 12種のチャートを直列にtickする', async () => {
+			await expect(handleHonoQueueTickCharts(deps)).resolves.toBeUndefined();
+		});
+
+		test('handleHonoQueueResyncCharts: drive/notes/usersチャートをresyncする', async () => {
+			await expect(handleHonoQueueResyncCharts(deps)).resolves.toBeUndefined();
+		});
+
+		test('handleHonoQueueCleanCharts: 12種のチャートを直列にcleanする', async () => {
+			await expect(handleHonoQueueCleanCharts(deps)).resolves.toBeUndefined();
 		});
 	});
 });

@@ -18,11 +18,52 @@ import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { HonoChartWriters } from './hono-chart-runtime.js';
 
 export type HonoQueueSystemDependencies = {
 	config: Pick<Config, 'id' | 'deactivateAntennaThreshold'>;
 	db: MiDrizzleDatabase;
+	chartWriters: HonoChartWriters;
 };
+
+/** TickChartsProcessorService.process 相当。DBへの同時接続を避けるため直列に実行する。 */
+export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencies): Promise<void> {
+	await deps.chartWriters.federationChart.tick(false);
+	await deps.chartWriters.notesChart.tick(false);
+	await deps.chartWriters.usersChart.tick(false);
+	await deps.chartWriters.activeUsersChart.tick(false);
+	await deps.chartWriters.instanceChart.tick(false);
+	await deps.chartWriters.perUserNotesChart.tick(false);
+	await deps.chartWriters.perUserPvChart.tick(false);
+	await deps.chartWriters.driveChart.tick(false);
+	await deps.chartWriters.perUserReactionsChart.tick(false);
+	await deps.chartWriters.perUserFollowingChart.tick(false);
+	await deps.chartWriters.perUserDriveChart.tick(false);
+	await deps.chartWriters.apRequestChart.tick(false);
+}
+
+/** ResyncChartsProcessorService.process 相当。 */
+export async function handleHonoQueueResyncCharts(deps: HonoQueueSystemDependencies): Promise<void> {
+	await deps.chartWriters.driveChart.resync();
+	await deps.chartWriters.notesChart.resync();
+	await deps.chartWriters.usersChart.resync();
+}
+
+/** CleanChartsProcessorService.process 相当。 */
+export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependencies): Promise<void> {
+	await deps.chartWriters.federationChart.clean();
+	await deps.chartWriters.notesChart.clean();
+	await deps.chartWriters.usersChart.clean();
+	await deps.chartWriters.activeUsersChart.clean();
+	await deps.chartWriters.instanceChart.clean();
+	await deps.chartWriters.perUserNotesChart.clean();
+	await deps.chartWriters.perUserPvChart.clean();
+	await deps.chartWriters.driveChart.clean();
+	await deps.chartWriters.perUserReactionsChart.clean();
+	await deps.chartWriters.perUserFollowingChart.clean();
+	await deps.chartWriters.perUserDriveChart.clean();
+	await deps.chartWriters.apRequestChart.clean();
+}
 
 /** CleanProcessorService.process 相当。 */
 export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): Promise<void> {

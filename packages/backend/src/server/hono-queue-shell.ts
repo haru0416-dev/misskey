@@ -15,7 +15,14 @@ import {
 	type HonoQueueRelationshipDependencies,
 } from './hono-queue-relationship.js';
 import { handleHonoQueuePostScheduledNote, type HonoQueuePostScheduledNoteDependencies } from './hono-queue-post-scheduled-note.js';
-import { handleHonoQueueAggregateRetention, handleHonoQueueClean, type HonoQueueSystemDependencies } from './hono-queue-system.js';
+import {
+	handleHonoQueueAggregateRetention,
+	handleHonoQueueClean,
+	handleHonoQueueCleanCharts,
+	handleHonoQueueResyncCharts,
+	handleHonoQueueTickCharts,
+	type HonoQueueSystemDependencies,
+} from './hono-queue-system.js';
 
 export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & {
 	config: Config;
@@ -173,14 +180,15 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region system
-	// NOTE: 'clean'/'aggregateRetention' 以外はまだ移植未完了。
-	// tickCharts/resyncCharts/cleanCharts は HonoChartWriters に federationChart/usersChart/
-	// perUserFollowingChart/apRequestChart の4種が未実装のため保留、checkExpiredMutings/
-	// bakeBufferedReactions/checkModeratorsActivity/cleanRemoteNotes は個別の依存調査待ち。
+	// NOTE: checkExpiredMutings/bakeBufferedReactions/checkModeratorsActivity/cleanRemoteNotes は
+	// まだ移植未完了 (個別の依存調査待ち)。
 	const systemQueueWorker = new Bull.Worker(QUEUE.SYSTEM, (job) => {
 		switch (job.name) {
 			case 'clean': return handleHonoQueueClean(deps);
 			case 'aggregateRetention': return handleHonoQueueAggregateRetention(deps);
+			case 'tickCharts': return handleHonoQueueTickCharts(deps);
+			case 'resyncCharts': return handleHonoQueueResyncCharts(deps);
+			case 'cleanCharts': return handleHonoQueueCleanCharts(deps);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for system`);
 		}
 	}, {
