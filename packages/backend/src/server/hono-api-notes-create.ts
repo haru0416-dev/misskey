@@ -809,7 +809,7 @@ export async function createNoteForHonoApi(
 	return note;
 }
 
-async function fetchAndCreateNoteForHonoApi(
+export async function fetchAndCreateNoteForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	data: {
