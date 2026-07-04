@@ -19,6 +19,8 @@ import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStor
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchLocalUserByIdFromDatabase, fetchRemoteUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUriFromDatabase } from '@/core/UserStore.js';
 import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
+import { fetchUserPublickeyByKeyIdFromDatabase } from '@/core/UserPublickeyStore.js';
+import type { MiUserPublickey } from '@/models/UserPublickey.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { getApId } from '@/core/activitypub/type.js';
@@ -113,6 +115,22 @@ export async function getUserFromApIdForHonoApi(deps: { config: Pick<Config, 'ho
 	}
 	const user = await fetchUserByUriFromDatabase(deps.db, parsed.uri);
 	return user == null || user.isDeleted ? null : user as MiRemoteUser;
+}
+
+export type HonoApiAuthUser = {
+	user: MiRemoteUser;
+	key: MiUserPublickey | null;
+};
+
+/** ApDbResolverService.getAuthUserFromKeyId 相当。キャッシュ省略は上記と同様の理由。 */
+export async function getAuthUserFromKeyIdForHonoApi(deps: { db: MiDrizzleDatabase }, keyId: string): Promise<HonoApiAuthUser | null> {
+	const key = await fetchUserPublickeyByKeyIdFromDatabase(deps.db, keyId);
+	if (key == null) return null;
+
+	const user = await fetchUserByIdFromDatabase(deps.db, key.userId);
+	if (user == null || user.isDeleted) return null;
+
+	return { user: user as MiRemoteUser, key };
 }
 
 function renderQuestionForHonoApi(

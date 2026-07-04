@@ -121,7 +121,7 @@ function noSuchAnnouncementError(id: string): HonoApiError {
 	});
 }
 
-function packAnnouncementForHonoApi(
+export function packAnnouncementForHonoApi(
 	config: Config,
 	announcement: MiAnnouncement & { isRead?: boolean | null },
 	me?: { id: MiUser['id'] } | null,

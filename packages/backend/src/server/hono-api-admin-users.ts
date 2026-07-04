@@ -7,7 +7,7 @@ import { listRoleAssignmentsByRoleIdsFromDatabase, listRoleAssignmentsByUserIdFr
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { listSigninsByUserIdFromDatabase } from '@/core/SigninStore.js';
 import { fetchUserProfileByUserIdFromDatabase, fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, listAdminUsersFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, listAdminUsersFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
@@ -103,10 +103,13 @@ async function getAdministratorIds(deps: HonoApiAdminUsersDependencies): Promise
 	return [...new Set(assigns.map(assign => assign.userId))].sort((a, b) => a.localeCompare(b));
 }
 
-async function getModeratorIds(
-	deps: HonoApiAdminUsersDependencies,
+/** RoleService.getModeratorIds 相当。 */
+export async function getModeratorIdsForHonoApi(
+	deps: Pick<HonoApiAdminUsersDependencies, 'db' | 'meta'>,
 	options: {
 		includeAdmins: boolean;
+		includeRoot?: boolean;
+		excludeExpire?: boolean;
 	},
 ): Promise<MiUser['id'][]> {
 	const roles = await listRolesFromDatabase(deps.db);
@@ -117,7 +120,31 @@ async function getModeratorIds(
 		? await listRoleAssignmentsByRoleIdsFromDatabase(deps.db, moderatorRoles.map(role => role.id))
 		: [];
 
-	return [...new Set(assigns.map(assign => assign.userId))].sort((a, b) => a.localeCompare(b));
+	const now = Date.now();
+	const resultSet = new Set(
+		assigns
+			.filter(assign => options.excludeExpire ? (assign.expiresAt == null || assign.expiresAt.getTime() > now) : true)
+			.map(assign => assign.userId),
+	);
+
+	if (options.includeRoot && deps.meta.rootUserId) {
+		resultSet.add(deps.meta.rootUserId);
+	}
+
+	return [...resultSet].sort((a, b) => a.localeCompare(b));
+}
+
+/** RoleService.getModerators 相当。 */
+export async function getModeratorsForHonoApi(
+	deps: Pick<HonoApiAdminUsersDependencies, 'db' | 'meta'>,
+	options: {
+		includeAdmins: boolean;
+		includeRoot?: boolean;
+		excludeExpire?: boolean;
+	},
+): Promise<MiUser[]> {
+	const ids = await getModeratorIdsForHonoApi(deps, options);
+	return ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
 }
 
 function packPublicUserRole(role: MiRole): {
@@ -244,12 +271,12 @@ export async function handleHonoApiAdminShowUsers(
 			break;
 		}
 		case 'moderator': {
-			roleUserIds = await getModeratorIds(deps, { includeAdmins: false });
+			roleUserIds = await getModeratorIdsForHonoApi(deps, { includeAdmins: false });
 			if (roleUserIds.length === 0) return [];
 			break;
 		}
 		case 'adminOrModerator': {
-			roleUserIds = await getModeratorIds(deps, { includeAdmins: true });
+			roleUserIds = await getModeratorIdsForHonoApi(deps, { includeAdmins: true });
 			if (roleUserIds.length === 0) return [];
 			break;
 		}
