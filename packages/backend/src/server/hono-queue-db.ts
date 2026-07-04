@@ -6,8 +6,9 @@
 import * as fs from 'node:fs';
 import { domainToASCII } from 'node:url';
 import { format as dateFormat } from 'date-fns';
+import _Ajv from 'ajv';
 import type * as Bull from 'bullmq';
-import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
+import { createAntennaInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { countDriveFilesByUserIdFromDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
 import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { countMutingsByMuterIdFromDatabase, listMuteeIdsByMuterIdFromDatabase, listPermanentMutingsByMuterIdFromDatabase } from '@/core/MutingStore.js';
@@ -16,18 +17,23 @@ import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
 import { listUserListMembershipsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { createTemp } from '@/misc/create-temp.js';
+import { genId } from '@/misc/id/gen-id.js';
 import type { Schema, SchemaType } from '@/misc/json-schema.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiBlocking, MiFollowing, MiMuting } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import type { DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser } from '@/queue/types.js';
+import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser } from '@/queue/types.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
+import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { createExportCompletedNotification, type HonoApiNotificationDependencies } from './hono-api-notification.js';
 import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
 
+const Ajv = _Ajv.default;
+
 export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & {
 	db: MiDrizzleDatabase;
+	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
 function toPuny(host: string): string {
@@ -98,6 +104,8 @@ export const exportedAntennaSchema = {
 } as const satisfies Schema;
 
 export type ExportedAntenna = SchemaType<typeof exportedAntennaSchema>;
+
+const validateExportedAntenna = new Ajv().compile<ExportedAntenna>(exportedAntennaSchema);
 
 /** DeleteDriveFilesProcessorService.process 相当。 */
 export async function handleHonoQueueDeleteDriveFiles(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
@@ -372,5 +380,41 @@ export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependenci
 		createExportCompletedNotification(deps, user.id, 'following', driveFile.id);
 	} finally {
 		cleanup();
+	}
+}
+
+/**
+ * ImportAntennasProcessorService.process 相当。元実装同様、ループ全体をtry/catchし
+ * エラーはログのみで再送しない (1件の失敗で残りのアンテナ作成が中断されうる挙動も含めて再現)。
+ */
+export async function handleHonoQueueImportAntennas(deps: HonoQueueDbDependencies, job: Bull.Job<DBAntennaImportJobData>): Promise<void> {
+	const now = new Date();
+	try {
+		for (const antenna of job.data.antenna) {
+			if (antenna.keywords.length === 0 || antenna.keywords[0].every(x => x === '')) continue;
+			if (!validateExportedAntenna(antenna)) continue;
+
+			const result = await createAntennaInDatabase(deps.db, {
+				id: genId(deps.config, now.getTime()),
+				lastUsedAt: now,
+				userId: job.data.user.id,
+				name: antenna.name,
+				src: antenna.src === 'list' && antenna.userListAccts ? 'users' : antenna.src,
+				userListId: null,
+				keywords: antenna.keywords,
+				excludeKeywords: antenna.excludeKeywords,
+				users: (antenna.src === 'list' && antenna.userListAccts !== null ? antenna.userListAccts : antenna.users).filter(Boolean),
+				caseSensitive: antenna.caseSensitive,
+				localOnly: antenna.localOnly,
+				excludeBots: antenna.excludeBots,
+				withReplies: antenna.withReplies,
+				withFile: antenna.withFile,
+				excludeNotesInSensitiveChannel: antenna.excludeNotesInSensitiveChannel,
+			});
+
+			deps.publishInternalEvent?.('antennaCreated', result);
+		}
+	} catch {
+		// 元実装同様、ここでのエラーは再送しない
 	}
 }

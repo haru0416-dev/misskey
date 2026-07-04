@@ -36,6 +36,7 @@ import {
 	handleHonoQueueExportFollowing,
 	handleHonoQueueExportMuting,
 	handleHonoQueueExportUserLists,
+	handleHonoQueueImportAntennas,
 	type HonoQueueDbDependencies,
 } from './hono-queue-db.js';
 
@@ -300,6 +301,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'exportUserLists': return handleHonoQueueExportUserLists(deps, job);
 			case 'exportAntennas': return handleHonoQueueExportAntennas(deps, job);
 			case 'exportFollowing': return handleHonoQueueExportFollowing(deps, job);
+			case 'importAntennas': return handleHonoQueueImportAntennas(deps, job);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for db`);
 		}
 	}, {
