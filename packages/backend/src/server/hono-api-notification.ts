@@ -21,6 +21,8 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
+import type { MiDriveFile } from '@/models/DriveFile.js';
+import type { userExportableEntities } from '@/types.js';
 import { packHonoApiRole } from './hono-api-roles.js';
 import type { HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
@@ -99,7 +101,15 @@ type PollEndedNotification = {
 	noteId: string;
 };
 
-type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification | ScheduledNotePostedNotification | ScheduledNotePostFailedNotification | PollEndedNotification;
+type ExportCompletedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'exportCompleted';
+	exportedEntity: typeof userExportableEntities[number];
+	fileId: MiDriveFile['id'];
+};
+
+type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification | ScheduledNotePostedNotification | ScheduledNotePostFailedNotification | PollEndedNotification | ExportCompletedNotification;
 
 type HonoPackedRoleAssignedNotification = {
 	id: string;
@@ -314,6 +324,35 @@ export function createPollEndedNotification(deps: HonoApiNotificationDependencie
 			type: 'pollEnded',
 			noteId,
 		} satisfies PollEndedNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+
+		deps.publishMainStream?.(userId, 'notification', notification);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', notification);
+		}).catch(() => {}));
+	})());
+}
+
+export function createExportCompletedNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	exportedEntity: typeof userExportableEntities[number],
+	fileId: MiDriveFile['id'],
+): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.exportCompleted?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'exportCompleted',
+			exportedEntity,
+			fileId,
+		} satisfies ExportCompletedNotification;
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);

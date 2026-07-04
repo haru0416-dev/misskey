@@ -52,7 +52,7 @@ describe('hono-queue-system', () => {
 		redisForReactions = new Redis.Redis(config.redisForReactions);
 		const meta = await fetchMetaFromDatabase(db);
 		chartWriters = createHonoChartWriters({ db, redis, config, meta, logger: new Logger('test-chart') });
-		deps = { config, db, chartWriters, meta, redisForReactions };
+		deps = { config, db, chartWriters, meta, redis, redisForReactions };
 	});
 
 	afterAll(async () => {
@@ -219,6 +219,13 @@ describe('hono-queue-system', () => {
 
 			expect(await mutingExistsInDatabase(db, muterId, muteeId)).toBe(false);
 			expect(await fetchActiveMutedChannelIdsFromDatabase(db, muterId, new Date())).not.toContain(channelId);
+
+			// userMutingsCache/mutingChannelsCacheはどちらもNestJS側と共有されるRedisKVCacheの
+			// ため、削除後にリフレッシュされ、キャッシュ済みの値からも消えていることを確認する。
+			const cachedMutings = JSON.parse((await redis.get(`kvcache:userMutings:${muterId}`)) ?? '[]');
+			expect(cachedMutings).not.toContain(muteeId);
+			const cachedChannelMutings = JSON.parse((await redis.get(`kvcache:channelMutingChannels:${muterId}`)) ?? '[]');
+			expect(cachedChannelMutings).not.toContain(channelId);
 		});
 	});
 

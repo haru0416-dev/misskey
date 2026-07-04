@@ -46,12 +46,15 @@ describe('hono-queue-object-storage', () => {
 		deps = {
 			db,
 			meta: { enableChartsForFederatedInstances: false, objectStorageBucket: 'test-bucket' },
-			s3Service: { getS3Client: (() => ({})) as HonoQueueObjectStorageDependencies['s3Service']['getS3Client'], delete: deleteMock },
+			s3Service: {
+				getS3Client: (() => ({})) as unknown as HonoQueueObjectStorageDependencies['s3Service']['getS3Client'],
+				delete: deleteMock as unknown as HonoQueueObjectStorageDependencies['s3Service']['delete'],
+			},
 			internalStorageService: { del: vi.fn() },
 			chartWriters: {
-				driveChart: { update: async () => {} } as HonoQueueObjectStorageDependencies['chartWriters']['driveChart'],
-				perUserDriveChart: { update: async () => {} } as HonoQueueObjectStorageDependencies['chartWriters']['perUserDriveChart'],
-				instanceChart: { updateDrive: async () => {} } as HonoQueueObjectStorageDependencies['chartWriters']['instanceChart'],
+				driveChart: { update: async () => {} } as unknown as HonoQueueObjectStorageDependencies['chartWriters']['driveChart'],
+				perUserDriveChart: { update: async () => {} } as unknown as HonoQueueObjectStorageDependencies['chartWriters']['perUserDriveChart'],
+				instanceChart: { updateDrive: async () => {} } as unknown as HonoQueueObjectStorageDependencies['chartWriters']['instanceChart'],
 			},
 		};
 	});

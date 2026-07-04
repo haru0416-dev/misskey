@@ -100,7 +100,7 @@ function createFollowJobForHonoApi(
 	return deps.relationshipQueue.addBulk(jobs);
 }
 
-async function addUserListMemberForHonoApi(
+export async function addUserListMemberForHonoApi(
 	deps: HonoApiUsersListsDependencies,
 	target: MiUser,
 	list: MiUserList,

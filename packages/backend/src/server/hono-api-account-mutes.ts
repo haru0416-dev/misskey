@@ -113,7 +113,7 @@ async function getTargetUserOrThrow(
 	return user;
 }
 
-async function refreshUserMutingsCache(deps: HonoApiAccountMuteDependencies, muterId: MiUser['id']): Promise<void> {
+export async function refreshUserMutingsCache(deps: { db: MiDrizzleDatabase; redis: Redis.Redis }, muterId: MiUser['id']): Promise<void> {
 	const muteeIds = await listMuteeIdsByMuterIdFromDatabase(deps.db, muterId);
 	await deps.redis.set(`kvcache:userMutings:${muterId}`, JSON.stringify(muteeIds), 'EX', 60 * 30);
 }
