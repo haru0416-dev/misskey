@@ -12,6 +12,7 @@ import { createMisskeyHonoApp } from '@/server/hono-app.js';
 import { createHonoNodeServer } from '@/server/hono-node-server.js';
 import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
 import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
+import { attachHonoStreamServer, type HonoStreamServerDependencies } from '@/server/hono-stream-server.js';
 
 export type HonoServerRuntime = {
 	server: Server;
@@ -268,6 +269,23 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 	const server = createHonoNodeServer({ app });
 	let disposed = false;
 
+	const streamServer = attachHonoStreamServer(server, {
+		config,
+		db: deps.db,
+		redis: deps.redis,
+		redisForSub: deps.redisForSub,
+		meta: deps.meta,
+		publishMainStream: (userId, type, value) => {
+			deps.redisForPub.publish(config.host, JSON.stringify({
+				channel: `mainStream:${userId}`,
+				message: {
+					type,
+					body: value,
+				},
+			}));
+		},
+	} satisfies HonoStreamServerDependencies);
+
 	await listen(server, config, logger);
 
 	return {
@@ -277,6 +295,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			if (disposed) return;
 			disposed = true;
 			oauthRuntime.dispose();
+			await streamServer.detach();
 			await closeServer(server);
 			await deps.dispose();
 		},

@@ -24,6 +24,8 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
+import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
+import { deepClone } from '@/misc/clone.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './hono-api-drive-file.js';
@@ -259,7 +261,7 @@ function treatVisibility(packedNote: Packed<'Note'>): Packed<'Note'>['visibility
 	return packedNote.visibility;
 }
 
-async function shouldHideNote(
+export async function shouldHideNoteForHonoApi(
 	deps: HonoApiNoteDependencies,
 	packedNote: Packed<'Note'>,
 	meId: MiUser['id'] | null,
@@ -289,7 +291,7 @@ async function shouldHideNote(
 	return false;
 }
 
-function hideNote(packedNote: Packed<'Note'>): void {
+export function hideNoteForHonoApi(packedNote: Packed<'Note'>): void {
 	packedNote.visibleUserIds = undefined;
 	packedNote.fileIds = [];
 	packedNote.files = [];
@@ -297,6 +299,48 @@ function hideNote(packedNote: Packed<'Note'>): void {
 	packedNote.poll = undefined;
 	packedNote.cw = null;
 	packedNote.isHidden = true;
+}
+
+function collectRenoteChainForHonoApi(note: Packed<'Note'>): Packed<'Note'>[] {
+	const renoteChain: Packed<'Note'>[] = [];
+	for (let current: Packed<'Note'> | null | undefined = note; current != null; current = current.renote) {
+		renoteChain.push(current);
+	}
+	return renoteChain;
+}
+
+/**
+ * NoteStreamingHidingService.filter 相当。ストリーミング配信用にノートの内容を隠す
+ * (あるいはそもそも送信しない) 判定及び処理を行う。
+ */
+export async function filterNoteForStreamingHidingForHonoApi(
+	deps: HonoApiNoteDependencies,
+	note: Packed<'Note'>,
+	meId: MiUser['id'] | null,
+): Promise<Packed<'Note'> | null> {
+	const renoteChain = collectRenoteChainForHonoApi(note);
+	const shouldHide = await Promise.all(renoteChain.map(n => shouldHideNoteForHonoApi(deps, n, meId)));
+
+	if (!shouldHide.some(h => h)) {
+		return note;
+	}
+
+	if (renoteChain.some(n => isRenotePacked(n) && !isQuotePacked(n))) {
+		// 純粋リノートの場合は配信をスキップする
+		return null;
+	}
+
+	const clonedNote = deepClone(note);
+	let currentCloned: Packed<'Note'> | undefined = clonedNote;
+
+	for (let i = 0; i < renoteChain.length; i++) {
+		if (shouldHide[i] && currentCloned) {
+			hideNoteForHonoApi(currentCloned);
+		}
+		currentCloned = currentCloned?.renote ?? undefined;
+	}
+
+	return clonedNote;
 }
 
 export async function isVisibleForMeForHonoApi(
@@ -430,8 +474,8 @@ export async function packNoteForHonoApi(
 
 	treatVisibility(packed);
 
-	if (!opts.skipHide && await shouldHideNote(deps, packed, meId)) {
-		hideNote(packed);
+	if (!opts.skipHide && await shouldHideNoteForHonoApi(deps, packed, meId)) {
+		hideNoteForHonoApi(packed);
 	}
 
 	return packed;
