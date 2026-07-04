@@ -229,7 +229,7 @@ async function populatePoll(
 	};
 }
 
-async function populateMyReaction(
+export async function populateMyReactionForHonoApi(
 	deps: HonoApiNoteDependencies,
 	note: { id: MiNote['id']; reactions: MiNote['reactions']; reactionAndUserPairCache: MiNote['reactionAndUserPairCache'] },
 	meId: MiUser['id'],
@@ -420,7 +420,7 @@ export async function packNoteForHonoApi(
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
 		})) : Promise.resolve(undefined),
 		(opts.detail && note.hasPoll) ? populatePoll(deps, note, meId) : Promise.resolve(undefined),
-		(opts.detail && meId && Object.keys(reactions).length > 0) ? populateMyReaction(deps, {
+		(opts.detail && meId && Object.keys(reactions).length > 0) ? populateMyReactionForHonoApi(deps, {
 			id: note.id,
 			reactions,
 			reactionAndUserPairCache,

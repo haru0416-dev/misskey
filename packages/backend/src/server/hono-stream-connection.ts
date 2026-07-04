@@ -21,12 +21,33 @@ import type { HonoStreamChannelContext, HonoStreamChannelDefinition, HonoStreamC
 import { honoStreamChannelAdmin } from './hono-stream-channel-admin.js';
 import { honoStreamChannelDrive } from './hono-stream-channel-drive.js';
 import { honoStreamChannelMain } from './hono-stream-channel-main.js';
+import { honoStreamChannelChatUser } from './hono-stream-channel-chat-user.js';
+import { honoStreamChannelChatRoom } from './hono-stream-channel-chat-room.js';
+import { honoStreamChannelHashtag } from './hono-stream-channel-hashtag.js';
+import { honoStreamChannelAntenna } from './hono-stream-channel-antenna.js';
+import { honoStreamChannelChannel } from './hono-stream-channel-channel.js';
+import { honoStreamChannelUserList } from './hono-stream-channel-user-list.js';
+import { honoStreamChannelRoleTimeline } from './hono-stream-channel-role-timeline.js';
+import { honoStreamChannelLocalTimeline } from './hono-stream-channel-local-timeline.js';
+import { honoStreamChannelGlobalTimeline } from './hono-stream-channel-global-timeline.js';
+import { honoStreamChannelHomeTimeline } from './hono-stream-channel-home-timeline.js';
+import { honoStreamChannelHybridTimeline } from './hono-stream-channel-hybrid-timeline.js';
 
 const MAX_CHANNELS_PER_CONNECTION = 32;
 
 export type HonoStreamConnectionDependencies =
 	& HonoApiNotificationDependencies
 	& Parameters<typeof honoStreamChannelMain.init>[0]
+	& Parameters<typeof honoStreamChannelChatRoom.init>[0]
+	& Parameters<typeof honoStreamChannelHashtag.init>[0]
+	& Parameters<typeof honoStreamChannelAntenna.init>[0]
+	& Parameters<typeof honoStreamChannelChannel.init>[0]
+	& Parameters<typeof honoStreamChannelUserList.init>[0]
+	& Parameters<typeof honoStreamChannelRoleTimeline.init>[0]
+	& Parameters<typeof honoStreamChannelLocalTimeline.init>[0]
+	& Parameters<typeof honoStreamChannelGlobalTimeline.init>[0]
+	& Parameters<typeof honoStreamChannelHomeTimeline.init>[0]
+	& Parameters<typeof honoStreamChannelHybridTimeline.init>[0]
 	& {
 		db: MiDrizzleDatabase;
 	};
@@ -75,6 +96,17 @@ const HONO_STREAM_CHANNELS: Record<string, HonoStreamChannelDefinition<HonoStrea
 	admin: honoStreamChannelAdmin,
 	drive: honoStreamChannelDrive,
 	main: honoStreamChannelMain,
+	chatUser: honoStreamChannelChatUser,
+	chatRoom: honoStreamChannelChatRoom,
+	hashtag: honoStreamChannelHashtag,
+	antenna: honoStreamChannelAntenna,
+	channel: honoStreamChannelChannel,
+	userList: honoStreamChannelUserList,
+	roleTimeline: honoStreamChannelRoleTimeline,
+	localTimeline: honoStreamChannelLocalTimeline,
+	globalTimeline: honoStreamChannelGlobalTimeline,
+	homeTimeline: honoStreamChannelHomeTimeline,
+	hybridTimeline: honoStreamChannelHybridTimeline,
 };
 
 /** Connection.ts 相当。NestJS のリクエストスコープDIを介さない、コネクション単位のプレーンクラス。 */
