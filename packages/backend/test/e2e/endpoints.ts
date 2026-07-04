@@ -13837,5 +13837,15 @@ describe('Endpoints', () => {
 			assert.strictEqual((resAlice.body as unknown as { memo: string }).memo, memoAliceToBob);
 			assert.strictEqual((resCarol.body as unknown as { memo: string }).memo, memoCarolToBob);
 		});
+
+		test('存在しないユーザーに対してはNO_SUCH_USERを維持する', async () => {
+			const res = await api('users/update-memo', {
+				memo: 'test',
+				userId: genId(loadConfig()),
+			}, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(res.body as any).error.id, '6fef56f3-e765-4957-88e5-c6f65329b8a5');
+		});
 	});
 });
