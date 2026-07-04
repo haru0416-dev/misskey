@@ -28,8 +28,9 @@ import {
 import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependencies } from './hono-queue-clean-remote-notes.js';
 import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from './hono-queue-deliver.js';
 import { handleHonoQueueEndedPollNotification, type HonoQueueEndedPollNotificationDependencies } from './hono-queue-ended-poll-notification.js';
+import { handleHonoQueueCleanRemoteFiles, handleHonoQueueDeleteFile, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -42,6 +43,7 @@ export type HonoQueueWorkers = {
 	systemQueueWorker: Bull.Worker;
 	deliverQueueWorker: Bull.Worker;
 	endedPollNotificationQueueWorker: Bull.Worker;
+	objectStorageQueueWorker: Bull.Worker;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
 };
@@ -84,9 +86,9 @@ function renderError(e?: Error): unknown {
  *
  * 元の QueueProcessorService は10個の Worker (system/db/deliver/inbox/userWebhookDeliver/
  * systemWebhookDeliver/relationship/objectStorage/endedPollNotification/postScheduledNote)
- * を組み立てるが、現時点でこの関数が組み立てるのは7個 (userWebhookDeliver/systemWebhookDeliver/
- * relationship/postScheduledNote/system/deliver/endedPollNotification)。**残り3個 (db/inbox/
- * objectStorage) は未移植であり、本番のジョブキュー起動経路 (`boot/common.ts` の
+ * を組み立てるが、現時点でこの関数が組み立てるのは8個 (userWebhookDeliver/systemWebhookDeliver/
+ * relationship/postScheduledNote/system/deliver/endedPollNotification/objectStorage)。
+ * **残り2個 (db/inbox) は未移植であり、本番のジョブキュー起動経路 (`boot/common.ts` の
  * `jobQueue()`) からはまだ呼ばれていない。** 全プロセッサの移植が完了するまでは、この関数を
  * 実際のキュー起動に配線しないこと — 同じキューに対して NestJS側のWorkerと二重に接続すると
  * 同一ジョブが二重処理される。
@@ -254,6 +256,30 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	});
 	//#endregion
 
+	//#region object storage
+	const objectStorageQueueWorker = new Bull.Worker(QUEUE.OBJECT_STORAGE, (job) => {
+		switch (job.name) {
+			case 'deleteFile': return handleHonoQueueDeleteFile(deps, job);
+			case 'cleanRemoteFiles': return handleHonoQueueCleanRemoteFiles(deps, job);
+			default: throw new Error(`unrecognized job type ${job.name} for objectStorage`);
+		}
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.OBJECT_STORAGE),
+		autorun: false,
+		concurrency: 16,
+	});
+
+	{
+		const logger = deps.logger.createSubLogger('objectStorage');
+		objectStorageQueueWorker
+			.on('active', (job) => logger.debug(`active id=${job.id}`))
+			.on('completed', (job, result) => logger.debug(`completed(${result}) id=${job.id}`))
+			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) id=${job?.id ?? '?'}`, { e: renderError(err) }))
+			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
+			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
+	}
+	//#endregion
+
 	return {
 		userWebhookDeliverQueueWorker,
 		systemWebhookDeliverQueueWorker,
@@ -262,6 +288,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		systemQueueWorker,
 		deliverQueueWorker,
 		endedPollNotificationQueueWorker,
+		objectStorageQueueWorker,
 		start: async () => {
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
@@ -271,6 +298,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				systemQueueWorker.run(),
 				deliverQueueWorker.run(),
 				endedPollNotificationQueueWorker.run(),
+				objectStorageQueueWorker.run(),
 			]);
 		},
 		stop: async () => {
@@ -281,6 +309,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				postScheduledNoteQueueWorker.close(),
 				systemQueueWorker.close(),
 				deliverQueueWorker.close(),
+				objectStorageQueueWorker.close(),
 				endedPollNotificationQueueWorker.close(),
 			]);
 		},
