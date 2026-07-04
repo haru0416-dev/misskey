@@ -31,7 +31,9 @@ import { handleHonoQueueEndedPollNotification, type HonoQueueEndedPollNotificati
 import { handleHonoQueueCleanRemoteFiles, handleHonoQueueDeleteFile, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
 import {
 	handleHonoQueueDeleteDriveFiles,
+	handleHonoQueueExportAntennas,
 	handleHonoQueueExportBlocking,
+	handleHonoQueueExportFollowing,
 	handleHonoQueueExportMuting,
 	handleHonoQueueExportUserLists,
 	type HonoQueueDbDependencies,
@@ -296,6 +298,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'exportMuting': return handleHonoQueueExportMuting(deps, job);
 			case 'exportBlocking': return handleHonoQueueExportBlocking(deps, job);
 			case 'exportUserLists': return handleHonoQueueExportUserLists(deps, job);
+			case 'exportAntennas': return handleHonoQueueExportAntennas(deps, job);
+			case 'exportFollowing': return handleHonoQueueExportFollowing(deps, job);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for db`);
 		}
 	}, {
