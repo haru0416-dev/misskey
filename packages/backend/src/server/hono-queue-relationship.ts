@@ -6,23 +6,17 @@
 import * as Bull from 'bullmq';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { blockingExistsInDatabase, createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
-import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import {
-	cancelFollowRequest,
-	deliverBlockActivity,
-	refreshUserBlockedCache,
-	refreshUserBlockingCache,
-	removeFromList,
+	blockForHonoApi,
 	unblockForHonoApi,
 	unfollow,
 	type HonoApiAccountBlockingDependencies,
@@ -65,17 +59,14 @@ async function deliverAcceptFollowActivity(
 	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 }
 
-/** UserFollowingService.follow 相当 (RelationshipProcessorService.processFollow から呼ばれる)。 */
-export async function handleHonoQueueRelationshipFollow(
+/** UserFollowingService.follow 相当。inbox の Follow アクティビティ受信からも呼ばれる。 */
+export async function followWithSideEffectsForHonoApi(
 	deps: HonoQueueRelationshipDependencies,
-	job: Bull.Job<RelationshipJobData>,
+	follower: MiLocalUser | MiRemoteUser,
+	followee: MiLocalUser | MiRemoteUser,
+	options: { requestId?: string; silent?: boolean; withReplies?: boolean } = {},
 ): Promise<string> {
-	const [follower, followee] = await Promise.all([
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
-	]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
-
-	const { requestId, silent = false, withReplies } = job.data;
+	const { requestId, silent = false, withReplies } = options;
 
 	if (isRemoteUser(follower) && isRemoteUser(followee)) {
 		throw new Error('Remote user cannot follow remote user.');
@@ -173,6 +164,23 @@ export async function handleHonoQueueRelationshipFollow(
 	return 'ok';
 }
 
+/** UserFollowingService.follow 相当 (RelationshipProcessorService.processFollow から呼ばれる)。 */
+export async function handleHonoQueueRelationshipFollow(
+	deps: HonoQueueRelationshipDependencies,
+	job: Bull.Job<RelationshipJobData>,
+): Promise<string> {
+	const [follower, followee] = await Promise.all([
+		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
+	]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
+
+	return followWithSideEffectsForHonoApi(deps, follower, followee, {
+		requestId: job.data.requestId,
+		silent: job.data.silent,
+		withReplies: job.data.withReplies,
+	});
+}
+
 /** UserFollowingService.unfollow 相当 (RelationshipProcessorService.processUnfollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipUnfollow(
 	deps: HonoQueueRelationshipDependencies,
@@ -198,28 +206,7 @@ export async function handleHonoQueueRelationshipBlock(
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
 	]);
 
-	await Promise.all([
-		cancelFollowRequest(deps, blocker, blockee, job.data.silent),
-		cancelFollowRequest(deps, blockee, blocker, job.data.silent),
-		unfollow(deps, blocker, blockee, job.data.silent),
-		unfollow(deps, blockee, blocker, job.data.silent),
-		removeFromList(deps, blockee, blocker),
-	]);
-
-	const blocking = await createBlockingInDatabase(deps.db, {
-		id: genId(deps.config),
-		blockerId: blocker.id,
-		blockeeId: blockee.id,
-	}) as MiBlocking & { blocker: MiUser; blockee: MiUser };
-	blocking.blocker = blocker;
-	blocking.blockee = blockee;
-
-	await Promise.all([
-		refreshUserBlockingCache(deps, blocker.id),
-		refreshUserBlockedCache(deps, blockee.id),
-	]);
-	deps.publishInternalEvent?.('blockingCreated', { blockerId: blocker.id, blockeeId: blockee.id });
-	await deliverBlockActivity(deps, blocking);
+	await blockForHonoApi(deps, blocker, blockee, job.data.silent);
 
 	return 'ok';
 }

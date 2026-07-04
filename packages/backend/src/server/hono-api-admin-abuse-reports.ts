@@ -435,7 +435,7 @@ async function notifyAbuseReportMailForHonoApi(
 	}
 }
 
-async function reportAbuseForHonoApi(
+export async function reportAbuseForHonoApi(
 	deps: HonoApiUsersReportAbuseDependencies,
 	params: {
 		targetUserId: MiUser['id'];

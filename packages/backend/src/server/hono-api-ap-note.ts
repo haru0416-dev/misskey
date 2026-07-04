@@ -30,8 +30,10 @@ import {
 } from '@/core/activitypub/type.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
-import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
+import { fetchPollByNoteIdFromDatabase, fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase, updatePollVotesInDatabase } from '@/core/PollStore.js';
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchNoteByUriFromDatabase } from '@/core/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { MfmService } from '@/core/MfmService.js';
 import { ApMfmService } from '@/core/activitypub/ApMfmService.js';
@@ -43,6 +45,7 @@ import {
 	extractDbHost,
 	getNoteFromApIdForHonoApi,
 	isFederationAllowedUri,
+	isSelfHost,
 	parseLocalApUri,
 	resolveApObjectForHonoApi,
 	type HonoApiApResolveDependencies,
@@ -108,7 +111,7 @@ function validateNoteForHonoApi(config: Pick<Config, 'id'>, x: IObject, uri: str
 }
 
 /** ApAudienceService.parseAudience 相当。 */
-async function parseAudienceForHonoApi(
+export async function parseAudienceForHonoApi(
 	deps: HonoApiApNoteDependencies,
 	actor: MiRemoteUser,
 	to: ApObject | undefined,
@@ -178,6 +181,59 @@ async function extractPollFromQuestionForHonoApi(deps: HonoApiApNoteDependencies
 	const votes = question[multiple ? 'anyOf' : 'oneOf']?.map((x: { replies?: { totalItems?: number }; _misskey_votes?: number }) => x.replies?.totalItems ?? x._misskey_votes ?? 0) ?? [];
 
 	return { choices, votes, multiple, expiresAt };
+}
+
+/** ApQuestionService.updateQuestion 相当。投票数が変化していれば true を返す。 */
+export async function updateQuestionFromApForHonoApi(
+	deps: HonoApiApNoteDependencies,
+	value: string | IObject,
+	actor?: MiRemoteUser,
+	history: Set<string> = new Set(),
+): Promise<boolean> {
+	const uri = typeof value === 'string' ? value : value.id;
+	if (uri == null) throw new Error('uri is null');
+
+	if (isSelfHost(deps.config, extractDbHost(uri))) throw new Error('uri points local');
+
+	const note = await fetchNoteByUriFromDatabase(deps.db, uri);
+	if (note == null) throw new Error('Question is not registered');
+
+	const poll = await fetchPollByNoteIdFromDatabase(deps.db, note.id);
+	if (poll == null) throw new Error('Question is not registered');
+
+	const user = await fetchUserByIdFromDatabase(deps.db, poll.userId);
+	if (user == null) throw new Error('Question is not registered');
+
+	const question = await resolveApObjectForHonoApi(deps, value, FetchAllowSoftFailMask.Strict, history);
+	if (!isQuestion(question)) throw new Error('object is not a Question');
+
+	const attribution = question.attributedTo ? getOneApId(question.attributedTo as ApObject) : user.uri;
+	const attributionMatchesExisting = attribution === user.uri;
+	const actorMatchesAttribution = actor ? attribution === actor.uri : true;
+
+	if (!attributionMatchesExisting || !actorMatchesAttribution) {
+		throw new Error('Refusing to ingest update for poll by different user');
+	}
+
+	const apChoices = question.oneOf ?? question.anyOf;
+	if (apChoices == null) throw new Error('invalid apChoices: ' + apChoices);
+
+	let changed = false;
+
+	for (const choice of poll.choices) {
+		const oldCount = poll.votes[poll.choices.indexOf(choice)];
+		const newCount = apChoices.filter(ap => ap.name === choice).at(0)?.replies?.totalItems;
+		if (newCount == null || !(Number.isInteger(newCount) && newCount >= 0)) throw new Error('invalid newCount: ' + newCount);
+
+		if (oldCount !== newCount) {
+			changed = true;
+			poll.votes[poll.choices.indexOf(choice)] = newCount;
+		}
+	}
+
+	await updatePollVotesInDatabase(deps.db, note.id, poll.votes);
+
+	return changed;
 }
 
 /** PollService.vote (AP由来の投票受信) 相当。配送は呼び出し元で deliverQuestionUpdateForHonoApi を使う。 */

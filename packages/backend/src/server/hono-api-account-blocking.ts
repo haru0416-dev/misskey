@@ -258,7 +258,7 @@ async function enqueueUnfollowWebhook(
 	}));
 }
 
-async function publishUnfollowToLocalFollower(
+export async function publishUnfollowToLocalFollower(
 	deps: HonoApiAccountBlockingDependencies,
 	follower: MiUser,
 	followee: MiUser,
@@ -320,7 +320,7 @@ export async function cancelFollowRequest(
 	await deliverFollowCancelActivity(deps, follower, followee, request.requestId);
 }
 
-async function decrementFollowing(
+export async function decrementFollowing(
 	deps: HonoApiAccountBlockingDependencies,
 	follower: MiUser,
 	followee: MiUser,
@@ -385,6 +385,36 @@ export async function unfollow(
 	await deliverFollowCancelActivity(deps, follower, followee);
 }
 
+/**
+ * UserFollowingService.remoteReject 相当。リモートのフォロー対象から Reject を受信したときの後始末で、
+ * unfollow() と異なり (受信した Reject への応答として) 一切配送を行わない。
+ */
+export async function remoteRejectForHonoApi(
+	deps: HonoApiAccountBlockingDependencies,
+	actor: MiUser,
+	follower: MiUser,
+): Promise<void> {
+	const request = await fetchFollowRequestFromDatabase(deps.db, follower.id, actor.id);
+	if (request != null) {
+		await deleteFollowRequestByIdFromDatabase(deps.db, request.id);
+	}
+
+	const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, actor.id);
+	if (following != null) {
+		const [followingFollower, followingFollowee] = await Promise.all([
+			fetchUserByIdFromDatabase(deps.db, following.followerId),
+			fetchUserByIdFromDatabase(deps.db, following.followeeId),
+		]);
+		if (followingFollower != null && followingFollowee != null) {
+			await deleteFollowingByIdInDatabase(deps.db, following.id);
+			await refreshUserFollowingsCache(deps, follower.id);
+			await decrementFollowing(deps, followingFollower, followingFollowee);
+		}
+	}
+
+	await publishUnfollowToLocalFollower(deps, follower, actor);
+}
+
 export async function removeFromList(
 	deps: HonoApiAccountBlockingDependencies,
 	listOwner: MiUser,
@@ -430,6 +460,39 @@ export async function deliverUndoBlockActivity(
 	enqueueDeliverJob(deps.deliverQueue, deps.config, blocking.blocker, content as IActivity, blocking.blockee.inbox, false);
 }
 
+/** UserBlockingService.block 相当。ガード (自分自身・二重ブロック) は呼び出し側の責務。 */
+export async function blockForHonoApi(
+	deps: HonoApiAccountBlockingDependencies,
+	blocker: MiUser,
+	blockee: MiUser,
+	silent?: boolean,
+): Promise<MiBlocking & { blocker: MiUser; blockee: MiUser }> {
+	await Promise.all([
+		cancelFollowRequest(deps, blocker, blockee, silent),
+		cancelFollowRequest(deps, blockee, blocker, silent),
+		unfollow(deps, blocker, blockee, silent),
+		unfollow(deps, blockee, blocker, silent),
+		removeFromList(deps, blockee, blocker),
+	]);
+
+	const blocking = await createBlockingInDatabase(deps.db, {
+		id: genId(deps.config),
+		blockerId: blocker.id,
+		blockeeId: blockee.id,
+	}) as MiBlocking & { blocker: MiUser; blockee: MiUser };
+	blocking.blocker = blocker;
+	blocking.blockee = blockee;
+
+	await Promise.all([
+		refreshUserBlockingCache(deps, blocker.id),
+		refreshUserBlockedCache(deps, blockee.id),
+	]);
+	deps.publishInternalEvent?.('blockingCreated', { blockerId: blocker.id, blockeeId: blockee.id });
+	await deliverBlockActivity(deps, blocking);
+
+	return blocking;
+}
+
 export async function handleHonoApiBlockingCreate(
 	deps: HonoApiAccountBlockingDependencies,
 	me: MiLocalUser,
@@ -447,30 +510,9 @@ export async function handleHonoApiBlockingCreate(
 		throw clientError('You are already blocking that user.', 'ALREADY_BLOCKING', '787fed64-acb9-464a-82eb-afbd745b9614');
 	}
 
-	await Promise.all([
-		cancelFollowRequest(deps, blocker, blockee),
-		cancelFollowRequest(deps, blockee, blocker),
-		unfollow(deps, blocker, blockee),
-		unfollow(deps, blockee, blocker),
-		removeFromList(deps, blockee, blocker),
-	]);
+	const blocking = await blockForHonoApi(deps, blocker, blockee);
 
-	const blocking = await createBlockingInDatabase(deps.db, {
-		id: genId(deps.config),
-		blockerId: blocker.id,
-		blockeeId: blockee.id,
-	});
-	blocking.blocker = blocker;
-	blocking.blockee = blockee;
-
-	await Promise.all([
-		refreshUserBlockingCache(deps, blocker.id),
-		refreshUserBlockedCache(deps, blockee.id),
-	]);
-	deps.publishInternalEvent?.('blockingCreated', { blockerId: blocker.id, blockeeId: blockee.id });
-	await deliverBlockActivity(deps, blocking as MiBlocking & { blocker: MiUser; blockee: MiUser });
-
-	return await packUserDetailedNotMeForHonoApi(deps, blockee, blocker);
+	return await packUserDetailedNotMeForHonoApi(deps, blocking.blockee, blocking.blocker);
 }
 
 /** UserBlockingService.unblock 相当。ブロック行が存在しない場合は何もしない。 */

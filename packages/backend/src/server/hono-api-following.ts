@@ -858,15 +858,12 @@ export async function handleHonoApiFollowingInvalidate(
 	return await packUserLiteForHonoApi(deps, follower);
 }
 
-export async function handleHonoApiFollowingRequestsAccept(
+/** UserFollowingService.acceptFollowRequest 相当。フォローリクエストが存在しない場合は例外を投げる。 */
+export async function acceptFollowRequestForHonoApi(
 	deps: HonoApiFollowingDependencies,
-	me: MiLocalUser,
-	body: Record<string, unknown>,
+	followee: MiUser,
+	follower: MiUser,
 ): Promise<void> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
-	const followee = me;
-	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
-
 	const request = await fetchFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 	if (request == null) {
 		throw followingRequestsAcceptNoFollowRequestError();
@@ -882,6 +879,17 @@ export async function handleHonoApiFollowingRequestsAccept(
 		const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, request.requestId ?? undefined), followee));
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 	}
+}
+
+export async function handleHonoApiFollowingRequestsAccept(
+	deps: HonoApiFollowingDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
+
+	await acceptFollowRequestForHonoApi(deps, me, follower);
 }
 
 export async function acceptAllFollowRequestsForHonoApi(

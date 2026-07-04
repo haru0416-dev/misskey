@@ -38,7 +38,7 @@ import {
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
-import { updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
+import { fetchUserPublickeyByUserIdFromDatabase, updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
 import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { listEmojisByHostAndNamesFromDatabase, updateEmojiByHostAndNameInDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
@@ -57,6 +57,7 @@ import {
 	resolveApObjectForHonoApi,
 	resolveCollectionForHonoApi,
 	type HonoApiApResolveDependencies,
+	type HonoApiAuthUser,
 } from './hono-api-ap-resolve.js';
 import { uploadDriveFileFromUrlForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
 import { updateUsertagsForHonoApi } from './hono-api-account-update.js';
@@ -594,6 +595,15 @@ export async function resolvePersonForHonoApi(deps: HonoApiApPersonDependencies,
 	if (exist) return exist;
 
 	return await createPersonForHonoApi(deps, uri, history);
+}
+
+/** ApDbResolverService.getAuthUserFromApId 相当。キャッシュ省略は getUserFromApIdForHonoApi と同様の理由。 */
+export async function getAuthUserFromApIdForHonoApi(deps: HonoApiApPersonDependencies, uri: string): Promise<HonoApiAuthUser | null> {
+	const user = await resolvePersonForHonoApi(deps, uri) as MiRemoteUser;
+	if (user.isDeleted) return null;
+
+	const key = await fetchUserPublickeyByUserIdFromDatabase(deps.db, user.id);
+	return { user, key };
 }
 
 function getUserUriForApPerson(config: Pick<Config, 'url'>, user: MiLocalUser | MiRemoteUser): string {
