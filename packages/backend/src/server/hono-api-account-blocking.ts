@@ -166,12 +166,12 @@ async function getTargetUserOrThrow(
 	return user;
 }
 
-async function refreshUserBlockingCache(deps: HonoApiAccountBlockingDependencies, blockerId: MiUser['id']): Promise<void> {
+export async function refreshUserBlockingCache(deps: HonoApiAccountBlockingDependencies, blockerId: MiUser['id']): Promise<void> {
 	const blockeeIds = await listBlockeeIdsByBlockerIdFromDatabase(deps.db, blockerId);
 	await deps.redis.set(`kvcache:userBlocking:${blockerId}`, JSON.stringify(blockeeIds), 'EX', 60 * 30);
 }
 
-async function refreshUserBlockedCache(deps: HonoApiAccountBlockingDependencies, blockeeId: MiUser['id']): Promise<void> {
+export async function refreshUserBlockedCache(deps: HonoApiAccountBlockingDependencies, blockeeId: MiUser['id']): Promise<void> {
 	const blockerIds = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, blockeeId);
 	await deps.redis.set(`kvcache:userBlocked:${blockeeId}`, JSON.stringify(blockerIds), 'EX', 60 * 30);
 }
@@ -296,7 +296,7 @@ async function deliverFollowCancelActivity(
 	}
 }
 
-async function cancelFollowRequest(
+export async function cancelFollowRequest(
 	deps: HonoApiAccountBlockingDependencies,
 	follower: MiUser,
 	followee: MiUser,
@@ -359,7 +359,7 @@ async function decrementFollowing(
 	}
 }
 
-async function unfollow(
+export async function unfollow(
 	deps: HonoApiAccountBlockingDependencies,
 	follower: MiUser,
 	followee: MiUser,
@@ -385,7 +385,7 @@ async function unfollow(
 	await deliverFollowCancelActivity(deps, follower, followee);
 }
 
-async function removeFromList(
+export async function removeFromList(
 	deps: HonoApiAccountBlockingDependencies,
 	listOwner: MiUser,
 	user: MiUser,
@@ -409,7 +409,7 @@ async function packHonoApiBlocking(
 	};
 }
 
-async function deliverBlockActivity(
+export async function deliverBlockActivity(
 	deps: HonoApiAccountBlockingDependencies,
 	blocking: MiBlocking & { blocker: MiUser; blockee: MiUser },
 ): Promise<void> {
@@ -419,7 +419,7 @@ async function deliverBlockActivity(
 	enqueueDeliverJob(deps.deliverQueue, deps.config, blocking.blocker, content as IActivity, blocking.blockee.inbox, false);
 }
 
-async function deliverUndoBlockActivity(
+export async function deliverUndoBlockActivity(
 	deps: HonoApiAccountBlockingDependencies,
 	blocking: MiBlocking & { blocker: MiUser; blockee: MiUser },
 ): Promise<void> {

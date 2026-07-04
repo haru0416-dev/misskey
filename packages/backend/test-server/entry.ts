@@ -3,7 +3,7 @@ import { portToPid } from 'pid-port';
 import { Hono } from 'hono';
 import { loadConfig } from '@/config.js';
 import { createHonoNodeServer } from '@/server/hono-node-server.js';
-import { server as startServer } from '@/boot/common.js';
+import { initExtraThreadPool, server as startServer } from '@/boot/common.js';
 import type { HonoServerRuntime } from '@/boot/hono-server.js';
 
 const config = loadConfig();
@@ -70,6 +70,7 @@ async function waitForPortToClose(port: number, timeout: number): Promise<boolea
 async function startApplication() {
 	console.log('starting application...');
 
+	initExtraThreadPool(config);
 	runtime = await startServer();
 
 	console.log('application initialized.');
