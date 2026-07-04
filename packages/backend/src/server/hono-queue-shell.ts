@@ -10,6 +10,7 @@ import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
 import { handleHonoQueueSystemWebhookDeliver, handleHonoQueueUserWebhookDeliver, type HonoQueueWebhookDeliverDependencies } from './hono-queue-webhook-deliver.js';
 import {
 	handleHonoQueueRelationshipBlock,
+	handleHonoQueueRelationshipFollow,
 	handleHonoQueueRelationshipUnblock,
 	handleHonoQueueRelationshipUnfollow,
 	type HonoQueueRelationshipDependencies,
@@ -171,11 +172,9 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region relationship
-	// NOTE: 'follow' はまだ移植未完了 (UserFollowingService.follow() の完全な移植には
-	// リモートフォロワー対応のブロック側副作用・deliverAccept・AccountMoveService依存の
-	// 移行済みアカウント自動承認ロジックが必要で、別途調査中)。
 	const relationshipQueueWorker = new Bull.Worker(QUEUE.RELATIONSHIP, (job) => {
 		switch (job.name) {
+			case 'follow': return handleHonoQueueRelationshipFollow(deps, job);
 			case 'unfollow': return handleHonoQueueRelationshipUnfollow(deps, job);
 			case 'block': return handleHonoQueueRelationshipBlock(deps, job);
 			case 'unblock': return handleHonoQueueRelationshipUnblock(deps, job);

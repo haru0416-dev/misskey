@@ -473,6 +473,27 @@ export async function handleHonoApiBlockingCreate(
 	return await packUserDetailedNotMeForHonoApi(deps, blockee, blocker);
 }
 
+/** UserBlockingService.unblock 相当。ブロック行が存在しない場合は何もしない。 */
+export async function unblockForHonoApi(
+	deps: HonoApiAccountBlockingDependencies,
+	blocker: MiUser,
+	blockee: MiUser,
+): Promise<void> {
+	const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id);
+	if (blocking == null) return;
+
+	blocking.blocker = blocker;
+	blocking.blockee = blockee;
+
+	await deleteBlockingByIdFromDatabase(deps.db, blocking.id);
+	await Promise.all([
+		refreshUserBlockingCache(deps, blocker.id),
+		refreshUserBlockedCache(deps, blockee.id),
+	]);
+	deps.publishInternalEvent?.('blockingDeleted', { blockerId: blocker.id, blockeeId: blockee.id });
+	await deliverUndoBlockActivity(deps, blocking as MiBlocking & { blocker: MiUser; blockee: MiUser });
+}
+
 export async function handleHonoApiBlockingDelete(
 	deps: HonoApiAccountBlockingDependencies,
 	me: MiLocalUser,
@@ -486,20 +507,12 @@ export async function handleHonoApiBlockingDelete(
 	}
 
 	const blockee = await getTargetUserOrThrow(deps, params.userId, blockingDeleteNoSuchUserError);
-	const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id);
-	if (blocking == null) {
+	const existing = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id);
+	if (existing == null) {
 		throw clientError('You are not blocking that user.', 'NOT_BLOCKING', '291b2efa-60c6-45c0-9f6a-045c8f9b02cd');
 	}
-	blocking.blocker = blocker;
-	blocking.blockee = blockee;
 
-	await deleteBlockingByIdFromDatabase(deps.db, blocking.id);
-	await Promise.all([
-		refreshUserBlockingCache(deps, blocker.id),
-		refreshUserBlockedCache(deps, blockee.id),
-	]);
-	deps.publishInternalEvent?.('blockingDeleted', { blockerId: blocker.id, blockeeId: blockee.id });
-	await deliverUndoBlockActivity(deps, blocking as MiBlocking & { blocker: MiUser; blockee: MiUser });
+	await unblockForHonoApi(deps, blocker, blockee);
 
 	return await packUserDetailedNotMeForHonoApi(deps, blockee, blocker);
 }

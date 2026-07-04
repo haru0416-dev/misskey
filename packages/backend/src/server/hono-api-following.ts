@@ -236,11 +236,11 @@ function followingRequestsRejectNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', 'abc2ffa6-25b2-4380-ba99-321ff3a94555');
 }
 
-function isLocalUser(user: MiUser): user is MiUser & { host: null } {
+export function isLocalUser(user: MiUser): user is MiUser & { host: null } {
 	return user.host === null;
 }
 
-function isRemoteUser(user: MiUser): user is MiUser & { host: string; uri: string; inbox: string } {
+export function isRemoteUser(user: MiUser): user is MiUser & { host: string; uri: string; inbox: string } {
 	return user.host !== null;
 }
 
@@ -248,11 +248,11 @@ function genLocalUserUri(config: Config, userId: MiUser['id']): string {
 	return `${config.url}/users/${userId}`;
 }
 
-function getUserUri(config: Config, user: MiUser): string {
+export function getUserUri(config: Config, user: MiUser): string {
 	return isRemoteUser(user) ? user.uri : genLocalUserUri(config, user.id);
 }
 
-function renderFollow(config: Config, follower: MiUser, followee: MiUser, requestId?: string | null): IFollow {
+export function renderFollow(config: Config, follower: MiUser, followee: MiUser, requestId?: string | null): IFollow {
 	return {
 		id: requestId ?? `${config.url}/follows/${follower.id}/${followee.id}`,
 		type: 'Follow',
@@ -273,7 +273,7 @@ function renderUndo(config: Config, object: string | IObject, user: { id: MiUser
 	};
 }
 
-function renderReject(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IReject {
+export function renderReject(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IReject {
 	return {
 		type: 'Reject',
 		actor: genLocalUserUri(config, user.id),
@@ -281,7 +281,7 @@ function renderReject(config: Config, object: string | IObject, user: { id: MiUs
 	};
 }
 
-function renderAccept(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IAccept {
+export function renderAccept(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IAccept {
 	return {
 		type: 'Accept',
 		actor: genLocalUserUri(config, user.id),
@@ -289,7 +289,7 @@ function renderAccept(config: Config, object: string | IObject, user: { id: MiUs
 	};
 }
 
-function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
+export function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
 		activity.id = `${config.url}/${randomUUID()}`;
 	}
@@ -308,7 +308,7 @@ async function getTargetUserOrThrow(
 	return user;
 }
 
-async function refreshUserFollowingsCache(deps: HonoApiFollowingDependencies, followerId: MiUser['id']): Promise<void> {
+export async function refreshUserFollowingsCache(deps: HonoApiFollowingDependencies, followerId: MiUser['id']): Promise<void> {
 	const followees = await listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, followerId);
 	const value: Record<string, { withReplies: boolean }> = {};
 
@@ -507,7 +507,7 @@ async function publishUnfollowToLocalFollower(
 	await enqueueUserWebhook(deps, follower.id, 'unfollow', packedFollowee);
 }
 
-async function deliverFollowActivity(
+export async function deliverFollowActivity(
 	deps: HonoApiFollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
@@ -519,11 +519,12 @@ async function deliverFollowActivity(
 	enqueueDeliverJob(deps.deliverQueue, deps.config, follower, content as IActivity, followee.inbox, false);
 }
 
-async function createFollowRequestWithSideEffects(
+export async function createFollowRequestWithSideEffects(
 	deps: HonoApiFollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	withReplies?: boolean,
+	requestId?: string,
 ): Promise<void> {
 	await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 
@@ -532,6 +533,7 @@ async function createFollowRequestWithSideEffects(
 		followerId: follower.id,
 		followeeId: followee.id,
 		withReplies,
+		requestId,
 		followerHost: follower.host,
 		followerInbox: isRemoteUser(follower) ? follower.inbox : undefined,
 		followerSharedInbox: isRemoteUser(follower) ? follower.sharedInbox : undefined,
@@ -550,7 +552,7 @@ async function createFollowRequestWithSideEffects(
 	}
 
 	if (isLocalUser(follower) && isRemoteUser(followee)) {
-		await deliverFollowActivity(deps, follower, followee, `${deps.config.url}/follows/${followRequest.id}`);
+		await deliverFollowActivity(deps, follower, followee, requestId ?? `${deps.config.url}/follows/${followRequest.id}`);
 	}
 }
 
@@ -649,13 +651,14 @@ async function deleteFollowingWithSideEffects(
 	}
 }
 
-async function insertFollowingWithSideEffects(
+export async function insertFollowingWithSideEffects(
 	deps: HonoApiFollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	options: {
 		withReplies?: boolean;
 		followeeProfile: MiUserProfile;
+		silent?: boolean;
 	},
 ): Promise<void> {
 	await createFollowingInDatabase(deps.db, {
@@ -685,7 +688,7 @@ async function insertFollowingWithSideEffects(
 
 	await incrementFollowing(deps, follower, followee);
 	await Promise.all([
-		publishFollowToLocalFollower(deps, follower, followee),
+		options.silent ? Promise.resolve() : publishFollowToLocalFollower(deps, follower, followee),
 		publishFollowedToLocalFollowee(deps, followee, follower),
 	]);
 }

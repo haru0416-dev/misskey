@@ -596,6 +596,60 @@ export async function resolvePersonForHonoApi(deps: HonoApiApPersonDependencies,
 	return await createPersonForHonoApi(deps, uri, history);
 }
 
+function getUserUriForApPerson(config: Pick<Config, 'url'>, user: MiLocalUser | MiRemoteUser): string {
+	return user.host == null ? `${config.url}/users/${user.id}` : user.uri;
+}
+
+/**
+ * AccountMoveService.validateAlsoKnownAs 相当。
+ * dst の alsoKnownAs を辿り、movedToUri が dst を指す旧アカウントが実在するかを調べる。
+ */
+export async function validateAlsoKnownAsForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	dstInput: MiLocalUser | MiRemoteUser,
+	check: (oldUser: MiLocalUser | MiRemoteUser | null, newUser: MiLocalUser | MiRemoteUser) => boolean | Promise<boolean> = () => true,
+	instant = false,
+): Promise<MiLocalUser | MiRemoteUser | null> {
+	let dst = dstInput;
+	let resultUser: MiLocalUser | MiRemoteUser | null = null;
+
+	if (dst.host != null) {
+		if (Date.now() - (dst.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
+			await updatePersonForHonoApi(deps, dst.uri, dst);
+		}
+		dst = (await fetchPersonForHonoApi(deps, dst.uri)) ?? dst;
+	}
+
+	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) return null;
+
+	const dstUri = getUserUriForApPerson(deps.config, dst);
+
+	for (const srcUri of dst.alsoKnownAs) {
+		try {
+			let src = await fetchPersonForHonoApi(deps, srcUri);
+			if (!src) continue; // oldAccountを探してもこのサーバーに存在しない場合はフォロー関係もないということなのでスルー
+
+			if (dst.host != null && src.host != null) {
+				if (Date.now() - (src.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
+					await updatePersonForHonoApi(deps, srcUri, src);
+				}
+				src = (await fetchPersonForHonoApi(deps, srcUri)) ?? src;
+			}
+
+			if (src.movedToUri === dstUri) {
+				if (await check(resultUser, src)) {
+					resultUser = src;
+				}
+				if (instant && resultUser) return resultUser;
+			}
+		} catch {
+			/* skip if any error happens */
+		}
+	}
+
+	return resultUser;
+}
+
 const federationUpdateRemoteUserParamDef = {
 	type: 'object',
 	properties: {

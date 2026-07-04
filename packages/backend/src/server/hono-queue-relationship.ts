@@ -5,23 +5,173 @@
 
 import * as Bull from 'bullmq';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { blockingExistsInDatabase, createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { followingExistsInDatabase } from '@/core/FollowingStore.js';
+import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
+import { IdentifiableError } from '@/misc/identifiable-error.js';
+import type { IActivity } from '@/core/activitypub/type.js';
+import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { MiBlocking } from '@/models/Blocking.js';
-import type { MiUser } from '@/models/User.js';
+import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import {
 	cancelFollowRequest,
 	deliverBlockActivity,
-	deliverUndoBlockActivity,
 	refreshUserBlockedCache,
 	refreshUserBlockingCache,
 	removeFromList,
+	unblockForHonoApi,
 	unfollow,
 	type HonoApiAccountBlockingDependencies,
 } from './hono-api-account-blocking.js';
+import {
+	addActivityContext,
+	createFollowRequestWithSideEffects,
+	insertFollowingWithSideEffects,
+	isLocalUser,
+	isRemoteUser,
+	refreshUserFollowingsCache,
+	renderAccept,
+	renderFollow,
+	renderReject,
+	type HonoApiFollowingDependencies,
+} from './hono-api-following.js';
+import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from './hono-api-ap-person.js';
 
-export type HonoQueueRelationshipDependencies = HonoApiAccountBlockingDependencies;
+export type HonoQueueRelationshipDependencies =
+	& HonoApiAccountBlockingDependencies
+	& HonoApiFollowingDependencies
+	& HonoApiApPersonDependencies;
+
+/** UtilityService.isSilencedHost 相当。 */
+function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
+	if (!silencedHosts || host == null) return false;
+	return silencedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+}
+
+/** UserFollowingService.deliverAccept 相当。 */
+async function deliverAcceptFollowActivity(
+	deps: HonoQueueRelationshipDependencies,
+	follower: MiUser,
+	followee: MiUser,
+	requestId?: string,
+): Promise<void> {
+	if (!isRemoteUser(follower) || !isLocalUser(followee)) return;
+
+	const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, requestId), followee));
+	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
+}
+
+/** UserFollowingService.follow 相当 (RelationshipProcessorService.processFollow から呼ばれる)。 */
+export async function handleHonoQueueRelationshipFollow(
+	deps: HonoQueueRelationshipDependencies,
+	job: Bull.Job<RelationshipJobData>,
+): Promise<string> {
+	const [follower, followee] = await Promise.all([
+		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
+	]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
+
+	const { requestId, silent = false, withReplies } = job.data;
+
+	if (isRemoteUser(follower) && isRemoteUser(followee)) {
+		throw new Error('Remote user cannot follow remote user.');
+	}
+
+	const [blocking, blocked] = await Promise.all([
+		blockingExistsInDatabase(deps.db, follower.id, followee.id),
+		blockingExistsInDatabase(deps.db, followee.id, follower.id),
+	]);
+
+	if (isRemoteUser(follower) && isLocalUser(followee) && blocked) {
+		// リモートフォローを受けてブロックしていた場合は、エラーにするのではなくRejectを送り返しておしまい。
+		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee, requestId), followee));
+		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
+		return 'rejected: blocked';
+	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
+		// リモートフォローを受けてブロックされているはずの場合だったら、ブロック解除しておく。
+		await unblockForHonoApi(deps, followee, follower);
+	} else {
+		if (blocking) throw new IdentifiableError('710e8fb0-b8c3-4922-be49-d5d93d8e6a6e', 'blocking');
+		if (blocked) throw new IdentifiableError('3338392a-f764-498d-8855-db939dcf8c48', 'blocked');
+	}
+
+	if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
+		// すでにフォロー関係が存在している場合
+		if (isRemoteUser(follower) && isLocalUser(followee)) {
+			// リモート → ローカル: acceptを送り返しておしまい
+			await deliverAcceptFollowActivity(deps, follower, followee, requestId);
+			return 'ok: already following';
+		}
+		if (isLocalUser(follower)) {
+			// ローカル → リモート/ローカル: 例外
+			throw new IdentifiableError('ec3f65c0-a9d1-47d9-8791-b2e7b9dcdced', 'already following');
+		}
+	}
+
+	const followeeProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, followee.id);
+
+	// フォロー対象が鍵アカウントである or
+	// フォロワーがBotであり、フォロー対象がBotからのフォローに慎重である or
+	// フォロワーがローカルユーザーであり、フォロー対象がリモートユーザーである or
+	// フォロワーがローカルユーザーであり、フォロー対象がサイレンスされているサーバーである
+	// 上記のいずれかに当てはまる場合はすぐフォローせずにフォローリクエストを発行しておく
+	if (
+		followee.isLocked ||
+		(followeeProfile.carefulBot && follower.isBot) ||
+		(isLocalUser(follower) && isRemoteUser(followee) && process.env.FORCE_FOLLOW_REMOTE_USER_FOR_TESTING !== 'true') ||
+		(isLocalUser(followee) && isRemoteUser(follower) && isSilencedHost(deps.meta.silencedHosts, follower.host))
+	) {
+		let autoAccept = false;
+
+		// 鍵アカウントであっても、既にフォローされていた場合はスルー (この時点で到達不能だが元実装通り残す)
+		if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
+			autoAccept = true;
+		}
+
+		// フォローしているユーザーは自動承認オプション
+		if (!autoAccept && isLocalUser(followee) && followeeProfile.autoAcceptFollowed) {
+			autoAccept = await followingExistsInDatabase(deps.db, followee.id, follower.id);
+		}
+
+		// Automatically accept if the follower is an account who has moved and the locked followee had accepted the old account.
+		if (!autoAccept && followee.isLocked) {
+			autoAccept = !!(await validateAlsoKnownAsForHonoApi(
+				deps,
+				follower,
+				(_oldSrc, newSrc) => followingExistsInDatabase(deps.db, newSrc.id, followee.id),
+				true,
+			));
+		}
+
+		if (!autoAccept) {
+			await createFollowRequestWithSideEffects(deps, follower, followee, withReplies, requestId);
+			return 'ok: follow request created';
+		}
+	}
+
+	try {
+		await insertFollowingWithSideEffects(deps, follower, followee, { withReplies, followeeProfile, silent });
+	} catch (err) {
+		if (isDuplicateKeyValueError(err) && isRemoteUser(follower) && isLocalUser(followee)) {
+			await refreshUserFollowingsCache(deps, follower.id);
+			if (await followRequestExistsInDatabase(deps.db, follower.id, followee.id)) {
+				await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
+			}
+		} else {
+			throw err;
+		}
+	}
+
+	if (isRemoteUser(follower) && isLocalUser(followee)) {
+		await deliverAcceptFollowActivity(deps, follower, followee, requestId);
+	}
+
+	return 'ok';
+}
 
 /** UserFollowingService.unfollow 相当 (RelationshipProcessorService.processUnfollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipUnfollow(
@@ -89,17 +239,8 @@ export async function handleHonoQueueRelationshipUnblock(
 		// ブロック解除がリクエストされましたがブロックしていませんでした
 		return 'skip: not blocking';
 	}
-	const blockingWithUsers = blocking as MiBlocking & { blocker: MiUser; blockee: MiUser };
-	blockingWithUsers.blocker = blocker;
-	blockingWithUsers.blockee = blockee;
 
-	await deleteBlockingByIdFromDatabase(deps.db, blocking.id);
-	await Promise.all([
-		refreshUserBlockingCache(deps, blocker.id),
-		refreshUserBlockedCache(deps, blockee.id),
-	]);
-	deps.publishInternalEvent?.('blockingDeleted', { blockerId: blocker.id, blockeeId: blockee.id });
-	await deliverUndoBlockActivity(deps, blockingWithUsers);
+	await unblockForHonoApi(deps, blocker, blockee);
 
 	return 'ok';
 }
