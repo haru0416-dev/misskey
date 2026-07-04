@@ -49,8 +49,9 @@ import {
 	type HonoQueueDbDependencies,
 } from './hono-queue-db.js';
 import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, type HonoQueueEmojisDependencies } from './hono-queue-emojis.js';
+import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './hono-queue-delete-account.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -302,7 +303,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region db
-	// NOTE: deleteAccountのみまだ移植未完了。
+	// dbキューの全18ジョブ型を移植済み。
 	const dbQueueWorker = new Bull.Worker(QUEUE.DB, (job) => {
 		switch (job.name) {
 			case 'deleteDriveFiles': return handleHonoQueueDeleteDriveFiles(deps, job);
@@ -323,6 +324,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'exportClips': return handleHonoQueueExportClips(deps, job);
 			case 'exportCustomEmojis': return handleHonoQueueExportCustomEmojis(deps, job);
 			case 'importCustomEmojis': return handleHonoQueueImportCustomEmojis(deps, job);
+			case 'deleteAccount': return handleHonoQueueDeleteAccount(deps, job);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for db`);
 		}
 	}, {
