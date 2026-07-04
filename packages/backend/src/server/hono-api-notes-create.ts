@@ -338,8 +338,8 @@ async function enqueueUserWebhookForHonoApi(
 	}));
 }
 
-type CreateNoteData = {
-	createdAt: Date;
+export type CreateNoteData = {
+	createdAt: Date | null;
 	name?: string | null;
 	text: string | null;
 	reply: MiNote | null;
@@ -353,8 +353,11 @@ type CreateNoteData = {
 	visibleUsers: MiUser[] | null;
 	channel: MiChannel | null;
 	apMentions?: MiUser[] | null;
+	apMentionRawCount?: number;
 	apHashtags?: string[] | null;
 	apEmojis?: string[] | null;
+	uri?: string | null;
+	url?: string | null;
 };
 
 function isRenoteData(data: CreateNoteData): data is CreateNoteData & { renote: MiNote } {
@@ -365,7 +368,7 @@ function isQuoteData(data: CreateNoteData & { renote: MiNote }): boolean {
 	return data.text != null || data.reply != null || data.cw != null || data.poll != null || (data.files != null && data.files.length > 0);
 }
 
-async function insertNoteForHonoApi(
+export async function insertNoteForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	user: { id: MiUser['id']; host: MiUser['host'] },
 	data: CreateNoteData,
@@ -374,7 +377,9 @@ async function insertNoteForHonoApi(
 	mentionedUsers: MiUser[],
 ): Promise<MiNote> {
 	const insert: Record<string, unknown> = {
-		id: genId(deps.config, data.createdAt.getTime()),
+		id: genId(deps.config, data.createdAt?.getTime()),
+		uri: data.uri ?? null,
+		url: data.url ?? null,
 		fileIds: data.files.map(f => f.id),
 		replyId: data.reply ? data.reply.id : null,
 		renoteId: data.renote ? data.renote.id : null,
@@ -445,13 +450,14 @@ async function insertNoteForHonoApi(
 	}
 }
 
-async function postNoteCreatedForHonoApi(
+export async function postNoteCreatedForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	note: MiNote,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	data: CreateNoteData,
 	tags: string[],
 	mentionedUsers: MiUser[],
+	silent = false,
 ): Promise<void> {
 	void deps.chartWriters.notesChart.update(note, true);
 	if (note.visibility !== 'specified' && (deps.meta.enableChartsForRemoteUser || user.host == null)) {
@@ -519,76 +525,78 @@ async function postNoteCreatedForHonoApi(
 		});
 	}
 
-	if (user.host == null) {
-		void deps.chartWriters.activeUsersChart.write(user as { id: string; host: null });
-	}
+	if (!silent) {
+		if (user.host == null) {
+			void deps.chartWriters.activeUsersChart.write(user as { id: string; host: null });
+		}
 
-	const noteObj = await packNoteForHonoApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
+		const noteObj = await packNoteForHonoApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
 
-	deps.publishNotesStream?.(noteObj);
+		deps.publishNotesStream?.(noteObj);
 
-	void enqueueUserWebhookForHonoApi(deps, user.id, 'note', noteObj);
+		void enqueueUserWebhookForHonoApi(deps, user.id, 'note', noteObj);
 
-	const nm = new HonoNotificationManager(user, note);
+		const nm = new HonoNotificationManager(user, note);
 
-	for (const u of mentionedUsers.filter(u => u.host == null)) {
-		const isThreadMuted = await noteThreadMutingExistsInDatabase(deps.db, u.id, note.threadId ?? note.id);
-		if (isThreadMuted) continue;
+		for (const u of mentionedUsers.filter(u => u.host == null)) {
+			const isThreadMuted = await noteThreadMutingExistsInDatabase(deps.db, u.id, note.threadId ?? note.id);
+			if (isThreadMuted) continue;
 
-		const detailPackedNote = await packNoteForHonoApi(deps, note, u, { detail: true });
-		deps.publishMainStream?.(u.id, 'mention', detailPackedNote);
-		void enqueueUserWebhookForHonoApi(deps, u.id, 'mention', detailPackedNote);
-		nm.push(u.id, 'mention');
-	}
+			const detailPackedNote = await packNoteForHonoApi(deps, note, u, { detail: true });
+			deps.publishMainStream?.(u.id, 'mention', detailPackedNote);
+			void enqueueUserWebhookForHonoApi(deps, u.id, 'mention', detailPackedNote);
+			nm.push(u.id, 'mention');
+		}
 
-	if (data.reply) {
-		if (data.reply.userHost === null) {
-			const isThreadMuted = await noteThreadMutingExistsInDatabase(deps.db, data.reply.userId, data.reply.threadId ?? data.reply.id);
-			if (!isThreadMuted) {
-				nm.push(data.reply.userId, 'reply');
-				deps.publishMainStream?.(data.reply.userId, 'reply', noteObj);
-				void enqueueUserWebhookForHonoApi(deps, data.reply.userId, 'reply', noteObj);
+		if (data.reply) {
+			if (data.reply.userHost === null) {
+				const isThreadMuted = await noteThreadMutingExistsInDatabase(deps.db, data.reply.userId, data.reply.threadId ?? data.reply.id);
+				if (!isThreadMuted) {
+					nm.push(data.reply.userId, 'reply');
+					deps.publishMainStream?.(data.reply.userId, 'reply', noteObj);
+					void enqueueUserWebhookForHonoApi(deps, data.reply.userId, 'reply', noteObj);
+				}
 			}
 		}
-	}
 
-	if (isRenoteData(data)) {
-		const type = isQuoteData(data) ? 'quote' : 'renote';
-		if (data.renote.userHost === null) {
-			nm.push(data.renote.userId, type);
-		}
-		if (user.id !== data.renote.userId && data.renote.userHost === null) {
-			deps.publishMainStream?.(data.renote.userId, 'renote', noteObj);
-			void enqueueUserWebhookForHonoApi(deps, data.renote.userId, 'renote', noteObj);
-		}
-	}
-
-	await nm.notify(deps);
-
-	if (!data.localOnly && user.host == null) {
-		(async () => {
-			const activity = await renderNoteOrRenoteActivityForHonoApi(deps, {
-				localOnly: data.localOnly,
-				renote: data.renote,
-				isQuote: isRenoteData(data) && isQuoteData(data),
-			}, note);
-
-			const directRecipients = (await Promise.all(mentionedUsers.filter(u => u.host != null).map(u => resolveRemoteRecipientForHonoApi(deps, u.id)))).filter((u): u is NonNullable<typeof u> => u != null);
-
-			if (data.reply && data.reply.userHost !== null) {
-				const u = await resolveRemoteRecipientForHonoApi(deps, data.reply.userId);
-				if (u) directRecipients.push(u);
+		if (isRenoteData(data)) {
+			const type = isQuoteData(data) ? 'quote' : 'renote';
+			if (data.renote.userHost === null) {
+				nm.push(data.renote.userId, type);
 			}
-			if (data.renote && data.renote.userHost !== null) {
-				const u = await resolveRemoteRecipientForHonoApi(deps, data.renote.userId);
-				if (u) directRecipients.push(u);
+			if (user.id !== data.renote.userId && data.renote.userHost === null) {
+				deps.publishMainStream?.(data.renote.userId, 'renote', noteObj);
+				void enqueueUserWebhookForHonoApi(deps, data.renote.userId, 'renote', noteObj);
 			}
+		}
 
-			await deliverNoteActivityForHonoApi(deps, user, activity, {
-				directRecipients,
-				deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
-			});
-		})().catch(() => {});
+		await nm.notify(deps);
+
+		if (!data.localOnly && user.host == null) {
+			(async () => {
+				const activity = await renderNoteOrRenoteActivityForHonoApi(deps, {
+					localOnly: data.localOnly,
+					renote: data.renote,
+					isQuote: isRenoteData(data) && isQuoteData(data),
+				}, note);
+
+				const directRecipients = (await Promise.all(mentionedUsers.filter(u => u.host != null).map(u => resolveRemoteRecipientForHonoApi(deps, u.id)))).filter((u): u is NonNullable<typeof u> => u != null);
+
+				if (data.reply && data.reply.userHost !== null) {
+					const u = await resolveRemoteRecipientForHonoApi(deps, data.reply.userId);
+					if (u) directRecipients.push(u);
+				}
+				if (data.renote && data.renote.userHost !== null) {
+					const u = await resolveRemoteRecipientForHonoApi(deps, data.renote.userId);
+					if (u) directRecipients.push(u);
+				}
+
+				await deliverNoteActivityForHonoApi(deps, user, activity, {
+					directRecipients,
+					deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
+				});
+			})().catch(() => {});
+		}
 	}
 
 	if (data.channel) {
@@ -677,10 +685,11 @@ async function pushNoteToFanoutTimelinesForHonoApi(deps: HonoApiNotesCreateDepen
 	await r.exec();
 }
 
-async function createNoteForHonoApi(
+export async function createNoteForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	data: CreateNoteData,
+	silent = false,
 ): Promise<MiNote> {
 	if (data.reply && data.channel && data.reply.channelId !== data.channel.id) {
 		data.channel = data.reply.channelId ? await fetchChannelByIdFromDatabase(deps.db, data.reply.channelId) : null;
@@ -786,14 +795,15 @@ async function createNoteForHonoApi(
 	}
 
 	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
-	if (finalMentionedUsers.length > 0 && finalMentionedUsers.length > policies.mentionLimit) {
+	const effectiveMentionCount = Math.max(finalMentionedUsers.length, data.apMentionRawCount ?? 0);
+	if (effectiveMentionCount > 0 && effectiveMentionCount > policies.mentionLimit) {
 		throw new IdentifiableError('9f466dab-c856-48cd-9e65-ff90ff750580', 'Note contains too many mentions');
 	}
 
 	const note = await insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers);
 
 	setImmediate(() => {
-		postNoteCreatedForHonoApi(deps, note, user, data, tags!, finalMentionedUsers).catch(() => {});
+		postNoteCreatedForHonoApi(deps, note, user, data, tags!, finalMentionedUsers, silent).catch(() => {});
 	});
 
 	return note;

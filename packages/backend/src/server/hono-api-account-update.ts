@@ -393,7 +393,7 @@ function getUserUriForHonoApi(config: Pick<Config, 'url'>, user: MiUser): string
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
-async function updateUsertagsForHonoApi(deps: HonoApiAccountUpdateDependencies, user: MiUser, tags: string[]): Promise<void> {
+export async function updateUsertagsForHonoApi(deps: HonoApiAccountUpdateDependencies, user: MiUser, tags: string[]): Promise<void> {
 	for (const tag of tags) {
 		await recordHashtagUsageInDatabase(deps.db, {
 			id: genId(deps.config),
