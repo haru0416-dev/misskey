@@ -15,8 +15,9 @@ import {
 	type HonoQueueRelationshipDependencies,
 } from './hono-queue-relationship.js';
 import { handleHonoQueuePostScheduledNote, type HonoQueuePostScheduledNoteDependencies } from './hono-queue-post-scheduled-note.js';
+import { handleHonoQueueAggregateRetention, handleHonoQueueClean, type HonoQueueSystemDependencies } from './hono-queue-system.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -26,6 +27,7 @@ export type HonoQueueWorkers = {
 	systemWebhookDeliverQueueWorker: Bull.Worker;
 	relationshipQueueWorker: Bull.Worker;
 	postScheduledNoteQueueWorker: Bull.Worker;
+	systemQueueWorker: Bull.Worker;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
 };
@@ -170,17 +172,46 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	});
 	//#endregion
 
+	//#region system
+	// NOTE: 'clean'/'aggregateRetention' 以外はまだ移植未完了。
+	// tickCharts/resyncCharts/cleanCharts は HonoChartWriters に federationChart/usersChart/
+	// perUserFollowingChart/apRequestChart の4種が未実装のため保留、checkExpiredMutings/
+	// bakeBufferedReactions/checkModeratorsActivity/cleanRemoteNotes は個別の依存調査待ち。
+	const systemQueueWorker = new Bull.Worker(QUEUE.SYSTEM, (job) => {
+		switch (job.name) {
+			case 'clean': return handleHonoQueueClean(deps);
+			case 'aggregateRetention': return handleHonoQueueAggregateRetention(deps);
+			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for system`);
+		}
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.SYSTEM),
+		autorun: false,
+	});
+
+	{
+		const logger = deps.logger.createSubLogger('system');
+		systemQueueWorker
+			.on('active', (job) => logger.debug(`active id=${job.id}`))
+			.on('completed', (job, result) => logger.debug(`completed(${result}) id=${job.id}`))
+			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) id=${job?.id ?? '?'}`, { e: renderError(err) }))
+			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
+			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
+	}
+	//#endregion
+
 	return {
 		userWebhookDeliverQueueWorker,
 		systemWebhookDeliverQueueWorker,
 		relationshipQueueWorker,
 		postScheduledNoteQueueWorker,
+		systemQueueWorker,
 		start: async () => {
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
 				systemWebhookDeliverQueueWorker.run(),
 				relationshipQueueWorker.run(),
 				postScheduledNoteQueueWorker.run(),
+				systemQueueWorker.run(),
 			]);
 		},
 		stop: async () => {
@@ -189,6 +220,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				systemWebhookDeliverQueueWorker.close(),
 				relationshipQueueWorker.close(),
 				postScheduledNoteQueueWorker.close(),
+				systemQueueWorker.close(),
 			]);
 		},
 	};
