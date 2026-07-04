@@ -42,7 +42,7 @@ import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/NoteDraftStore.js';
 import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
-import { createNoteInDatabase } from '@/core/NoteStore.js';
+import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
 import { createPollInDatabase } from '@/core/PollStore.js';
@@ -2151,6 +2151,114 @@ describe('Endpoints', () => {
 		test('存在しないuserIdは失敗する', async () => {
 			const res = await api('federation/update-remote-user', { userId: '000000000000000000000000' });
 			assert.notStrictEqual(res.status, 204);
+		});
+	});
+
+	describe('ap/show', () => {
+		test('ローカルのユーザー/ノートをtype付きで返す', async () => {
+			const config = loadConfig();
+
+			const userRes = await api('ap/show', { uri: `${config.url}/users/${alice.id}` }, alice);
+			assert.strictEqual(userRes.status, 200);
+			assert.strictEqual(userRes.body.type, 'User');
+			assert.strictEqual(userRes.body.object.id, alice.id);
+
+			const note = await post(alice, { text: 'ap/show local note target' });
+			const noteRes = await api('ap/show', { uri: `${config.url}/notes/${note.id}` }, alice);
+			assert.strictEqual(noteRes.status, 200);
+			assert.strictEqual(noteRes.body.type, 'Note');
+			assert.strictEqual(noteRes.body.object.id, note.id);
+		});
+
+		test('連合が許可されていないホストはFEDERATION_NOT_ALLOWEDを維持する', async () => {
+			const config = loadConfig();
+			const blockedHost = `ap-show-blocked-${Date.now().toString(36)}.example`;
+
+			const before = await api('admin/meta', {}, alice);
+			await api('admin/update-meta', { blockedHosts: [...before.body.blockedHosts, blockedHost] }, alice);
+			try {
+				const res = await api('ap/show', { uri: `https://${blockedHost}/users/someone` }, alice);
+				assert.strictEqual(res.status, 400);
+				assert.strictEqual(castAsError(res.body as any).error.code, 'FEDERATION_NOT_ALLOWED');
+				assert.strictEqual(castAsError(res.body as any).error.id, '974b799e-1a29-4889-b706-18d4dd93e266');
+			} finally {
+				await api('admin/update-meta', { blockedHosts: before.body.blockedHosts }, alice);
+			}
+		});
+
+		test('フラグメント付きURIはURI_INVALIDを維持する', async () => {
+			const res = await api('ap/show', { uri: 'https://ap-show-fragment-test.example/users/someone#fragment' }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.code, 'URI_INVALID');
+			assert.strictEqual(castAsError(res.body as any).error.id, '1a5eab56-e47b-48c2-8d5e-217b897d70db');
+		});
+
+		test('未知のリモートUser/Noteを新規作成して返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36);
+
+			const originalMeta = await fetchMetaFromDatabase(db);
+			const disableSigning = await api('admin/update-meta', { signToActivityPubGet: false }, alice);
+			assert.strictEqual(disableSigning.status, 204);
+
+			let server: Server | undefined;
+			let actorUri = '';
+			let noteUri = '';
+			try {
+				server = createServer((req, res) => {
+					if (req.url === `/notes/note${suffix}`) {
+						res.writeHead(200, { 'Content-Type': 'application/activity+json' });
+						res.end(JSON.stringify({
+							'@context': 'https://www.w3.org/ns/activitystreams',
+							id: noteUri,
+							type: 'Note',
+							attributedTo: actorUri,
+							content: '<p>ap/show remote note</p>',
+							to: ['https://www.w3.org/ns/activitystreams#Public'],
+						}));
+						return;
+					}
+					res.writeHead(200, { 'Content-Type': 'application/activity+json' });
+					res.end(JSON.stringify({
+						'@context': 'https://www.w3.org/ns/activitystreams',
+						id: actorUri,
+						type: 'Person',
+						preferredUsername: `apshowremote${suffix}`,
+						inbox: `${actorUri}/inbox`,
+						name: 'ap/show Remote Actor',
+					}));
+				});
+				await new Promise<void>((resolve, reject) => {
+					server!.once('error', reject);
+					server!.listen(0, '127.0.0.1', () => {
+						server!.off('error', reject);
+						resolve();
+					});
+				});
+				const address = server.address() as AddressInfo;
+				const host = `127.0.0.1:${address.port}`;
+				actorUri = `http://${host}/users/apshowremote${suffix}`;
+				noteUri = `http://${host}/notes/note${suffix}`;
+
+				const userRes = await api('ap/show', { uri: actorUri }, alice);
+				assert.strictEqual(userRes.status, 200);
+				assert.strictEqual(userRes.body.type, 'User');
+				assert.strictEqual(userRes.body.object.username, `apshowremote${suffix}`);
+				assert.strictEqual(userRes.body.object.host, host);
+
+				const noteRes = await api('ap/show', { uri: noteUri }, alice);
+				assert.strictEqual(noteRes.status, 200);
+				assert.strictEqual(noteRes.body.type, 'Note');
+				assert.ok((noteRes.body.object.text as string)?.includes('ap/show remote note'));
+				assert.strictEqual(noteRes.body.object.user.username, `apshowremote${suffix}`);
+
+				const createdNote = await fetchNoteByIdFromDatabase(db, noteRes.body.object.id);
+				assert.strictEqual(createdNote?.uri, noteUri);
+				assert.strictEqual(createdNote?.visibility, 'public');
+			} finally {
+				server?.close();
+				await api('admin/update-meta', { signToActivityPubGet: originalMeta.signToActivityPubGet }, alice);
+			}
 		});
 	});
 

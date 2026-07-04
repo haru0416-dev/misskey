@@ -111,7 +111,7 @@ import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHa
 import { handleHonoApiI, handleHonoApiISigninHistory } from './hono-api-i.js';
 import { handleHonoApiI2faDone, handleHonoApiI2faKeyDone, handleHonoApiI2faPasswordLess, handleHonoApiI2faRegister, handleHonoApiI2faRegisterKey, handleHonoApiI2faRemoveKey, handleHonoApiI2faUnregister, handleHonoApiI2faUpdateKey } from './hono-api-i-2fa.js';
 import { handleHonoApiPinnedUsers, handleHonoApiUsers, handleHonoApiUsersGetFrequentlyRepliedUsers, handleHonoApiUsersRecommendation, handleHonoApiUsersRelation, handleHonoApiUsersSearch, handleHonoApiUsersSearchByUsernameAndHost, handleHonoApiUsersShow, handleHonoApiUsersUpdateMemo } from './hono-api-user.js';
-import { handleHonoApiApGet } from './hono-api-ap.js';
+import { handleHonoApiApGet, handleHonoApiApShow } from './hono-api-ap.js';
 import { handleHonoApiFederationUpdateRemoteUser } from './hono-api-ap-person.js';
 import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow, handleHonoApiIReadAnnouncement } from './hono-api-announcements.js';
 import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList, handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from './hono-api-invite.js';
@@ -3675,6 +3675,21 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const body = await jsonBody(c);
 			await handleHonoApiFederationUpdateRemoteUser(deps, body);
 			return emptyResponse(c);
+		});
+	});
+
+	app.post('/ap/show', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:account');
+			await assertHonoApiRateLimit(deps, 'ap/show', {
+				duration: 60 * 60 * 1000,
+				max: 30,
+			}, auth.user.id);
+
+			return jsonResponse(c, await handleHonoApiApShow(deps, auth.user, body));
 		});
 	});
 

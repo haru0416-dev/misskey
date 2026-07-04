@@ -14,12 +14,15 @@ import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/val
 import { isCollectionOrOrderedCollection, type ICollection, type IObject, type IOrderedCollection } from '@/core/activitypub/type.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
-import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, fetchNoteByUriFromDatabase } from '@/core/NoteStore.js';
 import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
-import { fetchLocalUserByIdFromDatabase, fetchRemoteUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchRemoteUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUriFromDatabase } from '@/core/UserStore.js';
 import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { getApId } from '@/core/activitypub/type.js';
+import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { addActivityContext, renderCreateForHonoApi, renderLikeForHonoApi, renderNoteForHonoApi, type HonoApiNoteApDependencies } from './hono-api-notes-ap.js';
 import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from './hono-api-account-update.js';
@@ -42,7 +45,7 @@ function toPuny(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-function extractDbHost(uri: string): string {
+export function extractDbHost(uri: string): string {
 	const url = new URL(uri);
 	return toPuny(url.host);
 }
@@ -52,7 +55,7 @@ function punyHost(url: string): string {
 	return `${toPuny(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-function isSelfHost(config: Pick<Config, 'host'>, host: string | null): boolean {
+export function isSelfHost(config: Pick<Config, 'host'>, host: string | null): boolean {
 	if (host == null) return true;
 	return toPuny(config.host) === toPuny(host);
 }
@@ -62,7 +65,7 @@ function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 	return blockedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
-function isFederationAllowedHost(config: Pick<Config, 'host'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, host: string): boolean {
+export function isFederationAllowedHost(config: Pick<Config, 'host'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, host: string): boolean {
 	if (isSelfHost(config, host)) return true;
 	if (meta.federation === 'none') return false;
 	if (meta.federation === 'specified' && !meta.federationHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`))) return false;
@@ -70,7 +73,11 @@ function isFederationAllowedHost(config: Pick<Config, 'host'>, meta: Pick<import
 	return true;
 }
 
-function parseLocalApUri(config: Pick<Config, 'host'>, uri: string): LocalApUriParseResult {
+export function isFederationAllowedUri(config: Pick<Config, 'host'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, uri: string): boolean {
+	return isFederationAllowedHost(config, meta, extractDbHost(uri));
+}
+
+export function parseLocalApUri(config: Pick<Config, 'host'>, uri: string): LocalApUriParseResult {
 	const url = new URL(uri);
 	if (toPuny(url.host) !== toPuny(config.host)) {
 		return { local: false, uri: url.href };
@@ -83,6 +90,29 @@ function parseLocalApUri(config: Pick<Config, 'host'>, uri: string): LocalApUriP
 		id,
 		rest: rest.length === 0 ? undefined : rest.join('/'),
 	};
+}
+
+/** ApDbResolverService.getNoteFromApId 相当。ローカルの MemoryKVCache は認証済み・レート制限付き
+ * エンドポイント (ap/show) 限定の利用のため省略し、直接DBを読む。 */
+export async function getNoteFromApIdForHonoApi(deps: { config: Pick<Config, 'host'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiNote | null> {
+	const parsed = parseLocalApUri(deps.config, getApId(value));
+	if (parsed.local) {
+		if (parsed.type !== 'notes') return null;
+		return await fetchNoteByIdFromDatabase(deps.db, parsed.id);
+	}
+	return await fetchNoteByUriFromDatabase(deps.db, parsed.uri);
+}
+
+/** ApDbResolverService.getUserFromApId 相当。キャッシュ省略は上記と同様の理由。 */
+export async function getUserFromApIdForHonoApi(deps: { config: Pick<Config, 'host'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiLocalUser | MiRemoteUser | null> {
+	const parsed = parseLocalApUri(deps.config, getApId(value));
+	if (parsed.local) {
+		if (parsed.type !== 'users') return null;
+		const user = await fetchUserByIdFromDatabase(deps.db, parsed.id);
+		return user == null || user.isDeleted ? null : user as MiLocalUser;
+	}
+	const user = await fetchUserByUriFromDatabase(deps.db, parsed.uri);
+	return user == null || user.isDeleted ? null : user as MiRemoteUser;
 }
 
 function renderQuestionForHonoApi(
@@ -119,7 +149,7 @@ function renderFollowForHonoApi(config: Pick<Config, 'url'>, follower: MiLocalUs
 
 async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies, url: string): Promise<IObject> {
 	const parsed = parseLocalApUri(deps.config, url);
-	if (!parsed.local) throw new Error('resolveLocal: not local');
+	if (!parsed.local) throw new IdentifiableError('02b40cd0-fa92-4b0c-acc9-fb2ada952ab8', 'resolveLocal: not local');
 
 	switch (parsed.type) {
 		case 'notes': {
@@ -145,18 +175,18 @@ async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies
 		}
 		case 'follows': {
 			const followRequest = await fetchFollowRequestByIdFromDatabase(deps.db, parsed.id);
-			if (followRequest == null) throw new Error('resolveLocal: invalid follow request ID');
+			if (followRequest == null) throw new IdentifiableError('a9d946e5-d276-47f8-95fb-f04230289bb0', 'resolveLocal: invalid follow request ID');
 			const [follower, followee] = await Promise.all([
 				fetchLocalUserByIdFromDatabase(deps.db, followRequest.followerId),
 				fetchRemoteUserByIdFromDatabase(deps.db, followRequest.followeeId),
 			]);
 			if (follower == null || followee == null) {
-				throw new Error('resolveLocal: follower or followee does not exist');
+				throw new IdentifiableError('06ae3170-1796-4d93-a697-2611ea6d83b6', 'resolveLocal: follower or followee does not exist');
 			}
 			return addActivityContext(deps.config, renderFollowForHonoApi(deps.config, follower, followee, url)) as unknown as IObject;
 		}
 		default:
-			throw new Error(`resolveLocal: type ${parsed.type} unhandled`);
+			throw new IdentifiableError('7a5d2fc0-94bc-4db6-b8b8-1bf24a2e23d0', `resolveLocal: type ${parsed.type} unhandled`);
 	}
 }
 
@@ -235,14 +265,14 @@ export async function resolveApObjectForHonoApi(
 	}
 
 	if (value.includes('#')) {
-		throw new Error(`cannot resolve URL with fragment: ${value}`);
+		throw new IdentifiableError('b94fd5b1-0e3b-4678-9df2-dad4cd515ab2', `cannot resolve URL with fragment: ${value}`);
 	}
 
 	if (history.has(value)) {
-		throw new Error('cannot resolve already resolved one');
+		throw new IdentifiableError('0dc86cf6-7cd6-4e56-b1e6-5903d62d7ea5', 'cannot resolve already resolved one');
 	}
 	if (history.size > 256) {
-		throw new Error(`hit recursion limit: ${extractDbHost(value)}`);
+		throw new IdentifiableError('d592da9f-822f-4d91-83d7-4ceefabcf3d2', `hit recursion limit: ${extractDbHost(value)}`);
 	}
 	history.add(value);
 
@@ -252,7 +282,7 @@ export async function resolveApObjectForHonoApi(
 	}
 
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
-		throw new Error('Instance is blocked');
+		throw new IdentifiableError('09d79f9e-64f1-4316-9cfa-e75c4d091574', 'Instance is blocked');
 	}
 
 	const object = deps.meta.signToActivityPubGet
@@ -263,7 +293,7 @@ export async function resolveApObjectForHonoApi(
 		? (object['@context'] as unknown[]).includes('https://www.w3.org/ns/activitystreams')
 		: object['@context'] === 'https://www.w3.org/ns/activitystreams';
 	if (!contextOk) {
-		throw new Error('invalid response');
+		throw new IdentifiableError('72180409-793c-4973-868e-5a118eb5519b', 'invalid response');
 	}
 
 	return object;
@@ -282,5 +312,5 @@ export async function resolveCollectionForHonoApi(
 	if (isCollectionOrOrderedCollection(collection)) {
 		return collection;
 	}
-	throw new Error(`unrecognized collection type: ${collection.type}`);
+	throw new IdentifiableError('f100eccf-f347-43fb-9b45-96a0831fb635', `unrecognized collection type: ${collection.type}`);
 }

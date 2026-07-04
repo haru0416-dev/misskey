@@ -24,24 +24,27 @@ import {
 	type IObject,
 } from '@/core/activitypub/type.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
-import { fetchUserByIdFromDatabase, updateUserIfNotDeletedInDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByUriFromDatabase, updateUserIfNotDeletedInDatabase, updateUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
 import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { listEmojisByHostAndNamesFromDatabase, updateEmojiByHostAndNameInDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { adjustInstanceUsersCountFromDatabase } from '@/core/InstanceStore.js';
 import { StatusError } from '@/misc/status-error.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import type { Config } from '@/config.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiEmoji } from '@/models/Emoji.js';
-import type { MiRemoteUser, MiUser } from '@/models/User.js';
+import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { resolveApObjectForHonoApi, resolveCollectionForHonoApi, type HonoApiApResolveDependencies } from './hono-api-ap-resolve.js';
 import { uploadDriveFileFromUrlForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
 import { updateUsertagsForHonoApi } from './hono-api-account-update.js';
 import { getHonoApiRolePolicies } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
+import { fetchOrRegisterInstanceForHonoApi } from './hono-api-notes-create.js';
 
 export type HonoApiApPersonDependencies = HonoApiApResolveDependencies & HonoApiDriveFileUploadDependencies;
 
@@ -52,7 +55,7 @@ function serializeAlsoKnownAs(value: string[] | null | undefined): string | null
 	return value == null ? value : value.join(',');
 }
 
-function validateActorForHonoApi(config: Pick<Config, 'url'>, x: IObject, uri: string): IActor {
+export function validateActorForHonoApi(config: Pick<Config, 'url'>, x: IObject, uri: string): IActor {
 	const expectHost = punyHostForHonoApi(uri);
 
 	if (!isActor(x)) {
@@ -134,16 +137,16 @@ function validateActorForHonoApi(config: Pick<Config, 'url'>, x: IObject, uri: s
 	return x;
 }
 
-function toPunyForHonoApi(host: string): string {
+export function toPunyForHonoApi(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-function punyHostForHonoApi(url: string): string {
+export function punyHostForHonoApi(url: string): string {
 	const urlObj = new URL(url);
 	return `${toPunyForHonoApi(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-function analyzeAttachmentsForHonoApi(config: Pick<Config, 'url'>, attachments: IObject | IObject[] | undefined): { name: string; value: string }[] {
+export function analyzeAttachmentsForHonoApi(config: Pick<Config, 'url'>, attachments: IObject | IObject[] | undefined): { name: string; value: string }[] {
 	const fields: { name: string; value: string }[] = [];
 
 	if (Array.isArray(attachments)) {
@@ -158,7 +161,7 @@ function analyzeAttachmentsForHonoApi(config: Pick<Config, 'url'>, attachments: 
 	return fields;
 }
 
-async function extractEmojisForHonoApi(deps: HonoApiApPersonDependencies, tags: IObject | IObject[], host: string): Promise<MiEmoji[]> {
+export async function extractEmojisForHonoApi(deps: HonoApiApPersonDependencies, tags: IObject | IObject[], host: string): Promise<MiEmoji[]> {
 	const punyHost = toPunyForHonoApi(host);
 	const emojiTags = toArray(tags).filter(isEmoji);
 
@@ -205,7 +208,7 @@ async function extractEmojisForHonoApi(deps: HonoApiApPersonDependencies, tags: 
 	}));
 }
 
-async function resolveImageForHonoApi(deps: HonoApiApPersonDependencies, actor: MiRemoteUser, value: string | IObject): Promise<MiDriveFile | null> {
+export async function resolveImageForHonoApi(deps: HonoApiApPersonDependencies, actor: MiRemoteUser, value: string | IObject): Promise<MiDriveFile | null> {
 	if (actor.isSuspended) {
 		throw new Error('actor has been suspended');
 	}
@@ -238,7 +241,7 @@ async function resolveImageForHonoApi(deps: HonoApiApPersonDependencies, actor: 
 	}
 }
 
-async function resolveAvatarAndBannerForHonoApi(
+export async function resolveAvatarAndBannerForHonoApi(
 	deps: HonoApiApPersonDependencies,
 	user: MiRemoteUser,
 	icon: unknown,
@@ -275,7 +278,7 @@ async function resolveAvatarAndBannerForHonoApi(
 	} as Partial<Pick<MiRemoteUser, 'avatarId' | 'bannerId' | 'avatarUrl' | 'bannerUrl' | 'avatarBlurhash' | 'bannerBlurhash'>>;
 }
 
-async function isPublicCollectionForHonoApi(
+export async function isPublicCollectionForHonoApi(
 	deps: HonoApiApPersonDependencies,
 	collection: string | IObject | undefined,
 	history: Set<string>,
@@ -415,6 +418,164 @@ export async function updatePersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	await updateFollowingsByFollowerIdInDatabase(deps.db, exist.id, {
 		followerSharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
 	});
+}
+
+/**
+ * ApPersonService.createPerson 相当。
+ *
+ * 意図的な簡略化:
+ * - updateFeatured (ピン留めノート再取得): updatePersonForHonoApi と同様、ApNoteService.createNote 相当が
+ *   未移植のため呼び出しを省略する。
+ * - fetchInstanceMetadataService.fetchInstanceMetadata (新規インスタンスのfavicon/nodeinfo取得) と
+ *   chart類 (usersChart/instanceChart) の更新: 分析目的の副作用であり、ap/show の主目的である
+ *   「リモートユーザーを作成してレスポンスとして返す」ことには影響しないため省略する。
+ *   インスタンス行自体の作成/ユーザー数カウントは `fetchOrRegisterInstanceForHonoApi` +
+ *   `adjustInstanceUsersCountFromDatabase` で再現する。
+ */
+export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string, history: Set<string> = new Set()): Promise<MiRemoteUser> {
+	const host = punyHostForHonoApi(uri);
+	if (host === toPunyForHonoApi(deps.config.host)) {
+		throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
+	}
+
+	const object = await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
+	if (object.id == null) throw new Error('invalid object.id: ' + object.id);
+
+	const person = validateActorForHonoApi(deps.config, object, uri);
+
+	if (person.id == null) {
+		throw new Error('Refusing to create person without id');
+	}
+	if (person.preferredUsername == null) {
+		throw new Error('Refusing to create person without preferredUsername');
+	}
+
+	const fields = analyzeAttachmentsForHonoApi(deps.config, person.attachment ?? []);
+	const tags = extractApHashtags(person.tag).map(normalizeForSearch).splice(0, 32);
+	const isBot = getApType(object) === 'Service' || getApType(object) === 'Application';
+
+	const [followingVisibility, followersVisibility] = await Promise.all([
+		isPublicCollectionForHonoApi(deps, person.following, history),
+		isPublicCollectionForHonoApi(deps, person.followers, history),
+	].map((p): Promise<'public' | 'private'> => p
+		.then(isPublic => (isPublic ? 'public' : 'private') as 'public' | 'private')
+		.catch(() => 'private' as const)));
+
+	const bday = (person as { 'vcard:bday'?: string })['vcard:bday']?.match(/^\d{4}-\d{2}-\d{2}/);
+	const url = getOneApHrefNullable(person.url);
+
+	if (url != null && !checkHttps(url)) {
+		throw new Error('unexpected schema of person url: ' + url);
+	}
+
+	const emojis = await extractEmojisForHonoApi(deps, person.tag ?? [], host)
+		.then(_emojis => _emojis.map(emoji => emoji.name))
+		.catch(() => [] as string[]);
+
+	let description: string | null = null;
+	if (person._misskey_summary) {
+		description = truncate(person._misskey_summary, summaryLength);
+	} else if (person.summary) {
+		description = new ApMfmService(new MfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
+	}
+
+	let user: MiRemoteUser;
+	const userId = genId(deps.config);
+	try {
+		user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+			user: {
+				id: userId,
+				avatarId: null,
+				bannerId: null,
+				lastFetchedAt: new Date(),
+				name: truncate(person.name, nameLength),
+				isLocked: person.manuallyApprovesFollowers,
+				movedToUri: person.movedTo ?? null,
+				movedAt: person.movedTo ? new Date() : null,
+				alsoKnownAs: serializeAlsoKnownAs(person.alsoKnownAs ? toArray(person.alsoKnownAs) : null),
+				isExplorable: person.discoverable,
+				username: person.preferredUsername,
+				usernameLower: person.preferredUsername.toLowerCase(),
+				host,
+				inbox: person.inbox,
+				sharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
+				followersUri: person.followers ? getApId(person.followers) : undefined,
+				featured: person.featured ? getApId(person.featured) : undefined,
+				uri: person.id,
+				tags,
+				isBot,
+				isCat: (person as { isCat?: unknown }).isCat === true,
+				requireSigninToViewContents: (person as { requireSigninToViewContents?: unknown }).requireSigninToViewContents === true,
+				makeNotesFollowersOnlyBefore: (person as { makeNotesFollowersOnlyBefore?: number | null }).makeNotesFollowersOnlyBefore ?? null,
+				makeNotesHiddenBefore: (person as { makeNotesHiddenBefore?: number | null }).makeNotesHiddenBefore ?? null,
+				emojis,
+			},
+			profile: {
+				userId,
+				description,
+				followedMessage: person._misskey_followedMessage != null ? truncate(person._misskey_followedMessage, 256) : null,
+				url,
+				fields,
+				followingVisibility,
+				followersVisibility,
+				birthday: bday?.[0] ?? null,
+				location: (person as { 'vcard:Address'?: string })['vcard:Address'] ?? null,
+				userHost: host,
+			},
+			publickey: person.publicKey ? {
+				userId,
+				keyId: person.publicKey.id,
+				keyPem: person.publicKey.publicKeyPem,
+			} : undefined,
+		}) as MiRemoteUser;
+	} catch (e) {
+		if (isDuplicateKeyValueError(e)) {
+			// /users/@a => /users/:id のように入力がaliasなときにエラーになることがあるのを対応
+			const u = await fetchUserByUriFromDatabase(deps.db, person.id);
+			if (u == null) throw new Error('already registered');
+			user = u as MiRemoteUser;
+		} else {
+			throw e;
+		}
+	}
+
+	if (deps.meta.enableStatsForFederatedInstances) {
+		fetchOrRegisterInstanceForHonoApi(deps, host).then(async i => {
+			await adjustInstanceUsersCountFromDatabase(deps.db, i.id, 1);
+		}).catch(() => {});
+	}
+
+	await updateUsertagsForHonoApi(deps, user, tags);
+
+	try {
+		const updates = await resolveAvatarAndBannerForHonoApi(deps, user, person.icon, person.image);
+		await updateUserInDatabase(deps.db, user.id, updates);
+		user = { ...user, ...updates };
+	} catch {
+		// アバター/バナー取得の失敗はユーザー作成自体を失敗させない
+	}
+
+	return user;
+}
+
+/** ApPersonService.fetchPerson 相当。プロセス内キャッシュ (uriPersonCache) は既存の移行方針に沿って省略。 */
+export async function fetchPersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string): Promise<MiLocalUser | MiRemoteUser | null> {
+	if (uri.startsWith(`${deps.config.url}/`)) {
+		const id = uri.split('/').pop();
+		if (id == null) return null;
+		const u = await fetchUserByIdFromDatabase(deps.db, id);
+		return u as MiLocalUser | null;
+	}
+
+	return await fetchUserByUriFromDatabase(deps.db, uri) as MiLocalUser | MiRemoteUser | null;
+}
+
+/** ApPersonService.resolvePerson 相当。 */
+export async function resolvePersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string, history: Set<string> = new Set()): Promise<MiLocalUser | MiRemoteUser> {
+	const exist = await fetchPersonForHonoApi(deps, uri);
+	if (exist) return exist;
+
+	return await createPersonForHonoApi(deps, uri, history);
 }
 
 const federationUpdateRemoteUserParamDef = {
