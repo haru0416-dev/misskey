@@ -10,6 +10,7 @@ import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
 import { handleHonoQueueSystemWebhookDeliver, handleHonoQueueUserWebhookDeliver, type HonoQueueWebhookDeliverDependencies } from './hono-queue-webhook-deliver.js';
 import {
 	handleHonoQueueRelationshipBlock,
+	handleHonoQueueRelationshipFollow,
 	handleHonoQueueRelationshipUnblock,
 	handleHonoQueueRelationshipUnfollow,
 	type HonoQueueRelationshipDependencies,
@@ -26,7 +27,9 @@ import {
 	type HonoQueueSystemDependencies,
 } from './hono-queue-system.js';
 import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependencies } from './hono-queue-clean-remote-notes.js';
+import { handleHonoQueueCheckModeratorsActivity, type HonoQueueCheckModeratorsActivityDependencies } from './hono-queue-check-moderators-activity.js';
 import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from './hono-queue-deliver.js';
+import { handleHonoQueueInbox, type HonoQueueInboxDependencies } from './hono-queue-inbox.js';
 import { handleHonoQueueEndedPollNotification, type HonoQueueEndedPollNotificationDependencies } from './hono-queue-ended-poll-notification.js';
 import { handleHonoQueueCleanRemoteFiles, handleHonoQueueDeleteFile, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
 import {
@@ -51,7 +54,7 @@ import {
 import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, type HonoQueueEmojisDependencies } from './hono-queue-emojis.js';
 import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './hono-queue-delete-account.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueInboxDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & HonoQueueCheckModeratorsActivityDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -63,6 +66,7 @@ export type HonoQueueWorkers = {
 	postScheduledNoteQueueWorker: Bull.Worker;
 	systemQueueWorker: Bull.Worker;
 	deliverQueueWorker: Bull.Worker;
+	inboxQueueWorker: Bull.Worker;
 	endedPollNotificationQueueWorker: Bull.Worker;
 	objectStorageQueueWorker: Bull.Worker;
 	dbQueueWorker: Bull.Worker;
@@ -106,14 +110,14 @@ function renderError(e?: Error): unknown {
  * QueueProcessorService 相当。NestJS の Nest DI コンテナを介さず、BullMQ の `Bull.Worker` を
  * 直接 `deps` (プレーンオブジェクト) 付きのハンドラ関数にバインドする。
  *
- * 元の QueueProcessorService は10個の Worker (system/db/deliver/inbox/userWebhookDeliver/
- * systemWebhookDeliver/relationship/objectStorage/endedPollNotification/postScheduledNote)
- * を組み立てるが、現時点でこの関数が組み立てるのは9個 (userWebhookDeliver/systemWebhookDeliver/
- * relationship/postScheduledNote/system/deliver/endedPollNotification/objectStorage/db)。
- * **inboxのみ未移植であり、本番のジョブキュー起動経路 (`boot/common.ts` の
- * `jobQueue()`) からはまだ呼ばれていない。** 全プロセッサの移植が完了するまでは、この関数を
- * 実際のキュー起動に配線しないこと — 同じキューに対して NestJS側のWorkerと二重に接続すると
- * 同一ジョブが二重処理される。
+ * 元の QueueProcessorService が組み立てる10個の Worker (system/db/deliver/inbox/
+ * userWebhookDeliver/systemWebhookDeliver/relationship/objectStorage/endedPollNotification/
+ * postScheduledNote) 全てのコードがこの関数に揃った (inbox = ApInboxService の全アクティビティ種別
+ * 移植を含む)。ただし **inbox はテストカバレッジ・レビューが未了** であり、AP連合の署名検証・
+ * アクティビティ処理という性質上、本番投入前に十分な検証が必要。
+ * **本番のジョブキュー起動経路 (`boot/common.ts` の `jobQueue()`) からはまだ呼ばれていない。**
+ * inbox の検証が完了するまでは、この関数を実際のキュー起動に配線しないこと — 同じキューに対して
+ * NestJS側のWorkerと二重に接続すると同一ジョブが二重処理される。
  */
 export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
 	//#region user-webhook deliver
@@ -171,11 +175,9 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region relationship
-	// NOTE: 'follow' はまだ移植未完了 (UserFollowingService.follow() の完全な移植には
-	// リモートフォロワー対応のブロック側副作用・deliverAccept・AccountMoveService依存の
-	// 移行済みアカウント自動承認ロジックが必要で、別途調査中)。
 	const relationshipQueueWorker = new Bull.Worker(QUEUE.RELATIONSHIP, (job) => {
 		switch (job.name) {
+			case 'follow': return handleHonoQueueRelationshipFollow(deps, job);
 			case 'unfollow': return handleHonoQueueRelationshipUnfollow(deps, job);
 			case 'block': return handleHonoQueueRelationshipBlock(deps, job);
 			case 'unblock': return handleHonoQueueRelationshipUnblock(deps, job);
@@ -212,8 +214,6 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region system
-	// NOTE: checkModeratorsActivity はまだ移植未完了 (MetaService/RoleService/AnnouncementService
-	// 依存の調査待ち)。
 	const systemQueueWorker = new Bull.Worker(QUEUE.SYSTEM, (job) => {
 		switch (job.name) {
 			case 'clean': return handleHonoQueueClean(deps);
@@ -224,6 +224,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'checkExpiredMutings': return handleHonoQueueCheckExpiredMutings(deps);
 			case 'bakeBufferedReactions': return handleHonoQueueBakeBufferedReactions(deps);
 			case 'cleanRemoteNotes': return handleHonoQueueCleanRemoteNotes(deps, job);
+			case 'checkModeratorsActivity': return handleHonoQueueCheckModeratorsActivity(deps);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for system`);
 		}
 	}, {
@@ -264,6 +265,33 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`))
 			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`))
 			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`))
+			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
+			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
+	}
+	//#endregion
+
+	//#region inbox
+	const inboxQueueWorker = new Bull.Worker(QUEUE.INBOX, (job) => {
+		return handleHonoQueueInbox(deps, job);
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.INBOX),
+		autorun: false,
+		concurrency: deps.config.inboxJobConcurrency ?? 16,
+		limiter: {
+			max: deps.config.inboxJobPerSec ?? 32,
+			duration: 1000,
+		},
+		settings: {
+			backoffStrategy: httpRelatedBackoff,
+		},
+	});
+
+	{
+		const logger = deps.logger.createSubLogger('inbox');
+		inboxQueueWorker
+			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)}`))
+			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)}`))
+			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} activity=${job ? (job.data.activity ? job.data.activity.id : 'none') : '-'}`, { e: renderError(err) }))
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
@@ -350,6 +378,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		postScheduledNoteQueueWorker,
 		systemQueueWorker,
 		deliverQueueWorker,
+		inboxQueueWorker,
 		endedPollNotificationQueueWorker,
 		objectStorageQueueWorker,
 		dbQueueWorker,
@@ -361,6 +390,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				postScheduledNoteQueueWorker.run(),
 				systemQueueWorker.run(),
 				deliverQueueWorker.run(),
+				inboxQueueWorker.run(),
 				endedPollNotificationQueueWorker.run(),
 				objectStorageQueueWorker.run(),
 				dbQueueWorker.run(),
@@ -374,6 +404,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				postScheduledNoteQueueWorker.close(),
 				systemQueueWorker.close(),
 				deliverQueueWorker.close(),
+				inboxQueueWorker.close(),
 				objectStorageQueueWorker.close(),
 				endedPollNotificationQueueWorker.close(),
 				dbQueueWorker.close(),

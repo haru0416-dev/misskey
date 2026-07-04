@@ -38,7 +38,7 @@ import {
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
-import { updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
+import { fetchUserPublickeyByUserIdFromDatabase, updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
 import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { listEmojisByHostAndNamesFromDatabase, updateEmojiByHostAndNameInDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
@@ -57,6 +57,7 @@ import {
 	resolveApObjectForHonoApi,
 	resolveCollectionForHonoApi,
 	type HonoApiApResolveDependencies,
+	type HonoApiAuthUser,
 } from './hono-api-ap-resolve.js';
 import { uploadDriveFileFromUrlForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
 import { updateUsertagsForHonoApi } from './hono-api-account-update.js';
@@ -594,6 +595,69 @@ export async function resolvePersonForHonoApi(deps: HonoApiApPersonDependencies,
 	if (exist) return exist;
 
 	return await createPersonForHonoApi(deps, uri, history);
+}
+
+/** ApDbResolverService.getAuthUserFromApId 相当。キャッシュ省略は getUserFromApIdForHonoApi と同様の理由。 */
+export async function getAuthUserFromApIdForHonoApi(deps: HonoApiApPersonDependencies, uri: string): Promise<HonoApiAuthUser | null> {
+	const user = await resolvePersonForHonoApi(deps, uri) as MiRemoteUser;
+	if (user.isDeleted) return null;
+
+	const key = await fetchUserPublickeyByUserIdFromDatabase(deps.db, user.id);
+	return { user, key };
+}
+
+function getUserUriForApPerson(config: Pick<Config, 'url'>, user: MiLocalUser | MiRemoteUser): string {
+	return user.host == null ? `${config.url}/users/${user.id}` : user.uri;
+}
+
+/**
+ * AccountMoveService.validateAlsoKnownAs 相当。
+ * dst の alsoKnownAs を辿り、movedToUri が dst を指す旧アカウントが実在するかを調べる。
+ */
+export async function validateAlsoKnownAsForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	dstInput: MiLocalUser | MiRemoteUser,
+	check: (oldUser: MiLocalUser | MiRemoteUser | null, newUser: MiLocalUser | MiRemoteUser) => boolean | Promise<boolean> = () => true,
+	instant = false,
+): Promise<MiLocalUser | MiRemoteUser | null> {
+	let dst = dstInput;
+	let resultUser: MiLocalUser | MiRemoteUser | null = null;
+
+	if (dst.host != null) {
+		if (Date.now() - (dst.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
+			await updatePersonForHonoApi(deps, dst.uri, dst);
+		}
+		dst = (await fetchPersonForHonoApi(deps, dst.uri)) ?? dst;
+	}
+
+	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) return null;
+
+	const dstUri = getUserUriForApPerson(deps.config, dst);
+
+	for (const srcUri of dst.alsoKnownAs) {
+		try {
+			let src = await fetchPersonForHonoApi(deps, srcUri);
+			if (!src) continue; // oldAccountを探してもこのサーバーに存在しない場合はフォロー関係もないということなのでスルー
+
+			if (dst.host != null && src.host != null) {
+				if (Date.now() - (src.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
+					await updatePersonForHonoApi(deps, srcUri, src);
+				}
+				src = (await fetchPersonForHonoApi(deps, srcUri)) ?? src;
+			}
+
+			if (src.movedToUri === dstUri) {
+				if (await check(resultUser, src)) {
+					resultUser = src;
+				}
+				if (instant && resultUser) return resultUser;
+			}
+		} catch {
+			/* skip if any error happens */
+		}
+	}
+
+	return resultUser;
 }
 
 const federationUpdateRemoteUserParamDef = {

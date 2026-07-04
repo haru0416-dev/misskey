@@ -70,6 +70,49 @@ async function deliverPinnedChangeForHonoApi(
 	await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
 }
 
+/** NotePiningService.addPinned 相当。 */
+export async function addPinnedForHonoApi(
+	deps: HonoApiAccountPinDependencies,
+	user: { id: MiUser['id']; host: MiUser['host'] },
+	noteId: string,
+): Promise<void> {
+	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
+	if (note == null) throw iPinNoSuchNoteError();
+
+	const pinings = await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id);
+
+	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
+	if (pinings.length >= policies.pinLimit) throw iPinLimitExceededError();
+
+	if (pinings.some(pining => pining.noteId === note.id)) throw iPinAlreadyPinnedError();
+
+	await createUserNotePiningInDatabase(deps.db, {
+		id: genId(deps.config),
+		userId: user.id,
+		noteId: note.id,
+	});
+
+	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
+		void deliverPinnedChangeForHonoApi(deps, user as MiLocalUser, note.id, true).catch(() => {});
+	}
+}
+
+/** NotePiningService.removePinned 相当。 */
+export async function removePinnedForHonoApi(
+	deps: HonoApiAccountPinDependencies,
+	user: { id: MiUser['id']; host: MiUser['host'] },
+	noteId: string,
+): Promise<void> {
+	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
+	if (note == null) throw iUnpinNoSuchNoteError();
+
+	await deleteUserNotePiningFromDatabase(deps.db, { userId: user.id, noteId: note.id });
+
+	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
+		void deliverPinnedChangeForHonoApi(deps, user as MiLocalUser, note.id, false).catch(() => {});
+	}
+}
+
 export async function handleHonoApiIPin(
 	deps: HonoApiAccountPinDependencies,
 	me: MiLocalUser,
@@ -77,25 +120,7 @@ export async function handleHonoApiIPin(
 ): Promise<MeDetailedHonoApiResponse> {
 	const params = parseHonoApiParams(iPinOrUnpinParamDef, body) as IPinOrUnpinParams;
 
-	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, params.noteId, me.id);
-	if (note == null) throw iPinNoSuchNoteError();
-
-	const pinings = await listUserNotePiningsByUserIdFromDatabase(deps.db, me.id);
-
-	const policies = await getHonoApiRolePolicies(deps, me);
-	if (pinings.length >= policies.pinLimit) throw iPinLimitExceededError();
-
-	if (pinings.some(pining => pining.noteId === note.id)) throw iPinAlreadyPinnedError();
-
-	await createUserNotePiningInDatabase(deps.db, {
-		id: genId(deps.config),
-		userId: me.id,
-		noteId: note.id,
-	});
-
-	if (!note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
-		void deliverPinnedChangeForHonoApi(deps, me, note.id, true).catch(() => {});
-	}
+	await addPinnedForHonoApi(deps, me, params.noteId);
 
 	return await packMeDetailedForHonoApi(deps, me, { includeSecrets: false });
 }
@@ -107,14 +132,7 @@ export async function handleHonoApiIUnpin(
 ): Promise<MeDetailedHonoApiResponse> {
 	const params = parseHonoApiParams(iPinOrUnpinParamDef, body) as IPinOrUnpinParams;
 
-	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, params.noteId, me.id);
-	if (note == null) throw iUnpinNoSuchNoteError();
-
-	await deleteUserNotePiningFromDatabase(deps.db, { userId: me.id, noteId: note.id });
-
-	if (!note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
-		void deliverPinnedChangeForHonoApi(deps, me, note.id, false).catch(() => {});
-	}
+	await removePinnedForHonoApi(deps, me, params.noteId);
 
 	return await packMeDetailedForHonoApi(deps, me, { includeSecrets: false });
 }
