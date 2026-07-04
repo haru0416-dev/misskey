@@ -477,7 +477,7 @@ async function publishFollowToLocalFollower(
 ): Promise<void> {
 	if (!isLocalUser(follower)) return;
 
-	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee) as Packed<'UserDetailedNotMe'>;
+	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee, follower) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'follow', packedFollowee);
 	await enqueueUserWebhook(deps, follower.id, 'follow', packedFollowee);
 }
@@ -502,7 +502,7 @@ async function publishUnfollowToLocalFollower(
 ): Promise<void> {
 	if (!isLocalUser(follower)) return;
 
-	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee) as Packed<'UserDetailedNotMe'>;
+	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee, follower) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'unfollow', packedFollowee);
 	await enqueueUserWebhook(deps, follower.id, 'unfollow', packedFollowee);
 }

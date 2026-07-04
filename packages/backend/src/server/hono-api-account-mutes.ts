@@ -159,10 +159,12 @@ function resolveRenoteMutePagination(
 async function packHonoApiMuting(
 	deps: HonoApiAccountMuteDependencies,
 	muting: MiMuting,
+	me: { id: MiUser['id'] },
 ): Promise<HonoApiMutingResponse> {
 	const mutee = await packUserDetailedNotMeForHonoApi(
 		deps,
 		muting.mutee ?? await getTargetUserOrThrow(deps, muting.muteeId, muteCreateNoSuchUserError),
+		me,
 	);
 
 	return {
@@ -177,10 +179,12 @@ async function packHonoApiMuting(
 async function packHonoApiRenoteMuting(
 	deps: HonoApiAccountMuteDependencies,
 	muting: RenoteMutingRow,
+	me: { id: MiUser['id'] },
 ): Promise<HonoApiRenoteMutingResponse> {
 	const mutee = await packUserDetailedNotMeForHonoApi(
 		deps,
 		await getTargetUserOrThrow(deps, muting.muteeId, renoteMuteCreateNoSuchUserError),
+		me,
 	);
 
 	return {
@@ -255,7 +259,7 @@ export async function handleHonoApiMuteList(
 		limit: params.limit,
 	});
 
-	return await Promise.all(mutings.map(muting => packHonoApiMuting(deps, muting) as Promise<Packed<'Muting'>>));
+	return await Promise.all(mutings.map(muting => packHonoApiMuting(deps, muting, me) as Promise<Packed<'Muting'>>));
 }
 
 export async function handleHonoApiRenoteMuteCreate(
@@ -315,5 +319,5 @@ export async function handleHonoApiRenoteMuteList(
 		...resolveRenoteMutePagination(deps.config, params),
 	});
 
-	return await Promise.all(mutings.map(muting => packHonoApiRenoteMuting(deps, muting) as Promise<Packed<'RenoteMuting'>>));
+	return await Promise.all(mutings.map(muting => packHonoApiRenoteMuting(deps, muting, me) as Promise<Packed<'RenoteMuting'>>));
 }

@@ -31,7 +31,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
-import type { MiLocalUser } from '@/models/User.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
 import { createRoleAssignedNotification } from './hono-api-notification.js';
@@ -418,6 +418,7 @@ export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
 
 export async function handleHonoApiAdminRolesUsers(
 	deps: HonoApiAdminRoleDependencies,
+	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<AdminRoleUser[]> {
 	const params = parseHonoApiParams(adminRolesUsersParamDef, body) as AdminRolesUsersParams;
@@ -431,7 +432,7 @@ export async function handleHonoApiAdminRolesUsers(
 		}, params),
 	});
 
-	const packedUsers = await packUserDetailedNotMeManyForHonoApi(deps, assigns.map(assign => assign.userId));
+	const packedUsers = await packUserDetailedNotMeManyForHonoApi(deps, assigns.map(assign => assign.userId), me);
 	const userById = new Map(packedUsers.map(user => [user.id, user]));
 
 	return assigns.map(assign => ({

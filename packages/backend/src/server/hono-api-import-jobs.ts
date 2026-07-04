@@ -5,11 +5,15 @@
 
 import type { Config } from '@/config.js';
 import type { DbQueue } from '@/core/QueueModule.js';
+import type { DownloadService } from '@/core/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './hono-api-error.js';
+import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { resolveAlsoKnownAsForHonoApi, type UserPackingDependencies } from './hono-api-user.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
@@ -17,6 +21,10 @@ export type HonoApiImportJobDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	dbQueue: DbQueue;
+};
+
+export type HonoApiIImportAntennasDependencies = HonoApiImportJobDependencies & HonoApiRolePolicyDependencies & {
+	downloadService: Pick<DownloadService, 'downloadTextFile'>;
 };
 
 const IMPORT_JOB_OPTIONS = {
@@ -182,5 +190,59 @@ export async function handleHonoApiIImportUserLists(
 	deps.dbQueue.add('importUserLists', {
 		user: { id: me.id },
 		fileId: file.id,
+	}, IMPORT_JOB_OPTIONS);
+}
+
+const importAntennasParamDef = {
+	type: 'object',
+	properties: {
+		fileId: { type: 'string', format: 'misskey:id' },
+	},
+	required: ['fileId'],
+} as const;
+
+type ImportAntennasParams = { fileId: string };
+
+function importAntennasNoSuchFileError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such file.', code: 'NO_SUCH_FILE', id: '3b71d086-c3fa-431c-b01d-ded65a777172' });
+}
+
+function importAntennasNoSuchUserError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id: 'e842c379-8ac7-4cf7-b07a-4d4de7e4671c' });
+}
+
+function importAntennasEmptyFileError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'That file is empty.', code: 'EMPTY_FILE', id: '7f60115d-8d93-4b0f-bd0e-3815dcbb389f' });
+}
+
+function importAntennasTooManyAntennasError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'You cannot create antenna any more.', code: 'TOO_MANY_ANTENNAS', id: '600917d4-a4cb-4cc5-8ba8-7ac8ea3c7779' });
+}
+
+export async function handleHonoApiIImportAntennas(
+	deps: HonoApiIImportAntennasDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(importAntennasParamDef, body) as ImportAntennasParams;
+
+	const user = await fetchUserByIdFromDatabase(deps.db, me.id);
+	if (user == null) throw importAntennasNoSuchUserError();
+
+	const file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.fileId, me.id);
+	if (file == null) throw importAntennasNoSuchFileError();
+	if (file.size === 0) throw importAntennasEmptyFileError();
+
+	const antennas: (MiAntenna & { userListAccts: string[] | null })[] = JSON.parse(await deps.downloadService.downloadTextFile(file.url));
+
+	const currentAntennasCount = await countAntennasByUserIdFromDatabase(deps.db, me.id);
+	const policies = await getHonoApiRolePolicies(deps, me);
+	if (currentAntennasCount + antennas.length >= policies.antennaLimit) {
+		throw importAntennasTooManyAntennasError();
+	}
+
+	deps.dbQueue.add('importAntennas', {
+		user: { id: me.id },
+		antenna: antennas,
 	}, IMPORT_JOB_OPTIONS);
 }
