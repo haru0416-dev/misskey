@@ -17,13 +17,20 @@ import { createUserListInDatabase, fetchUserListByNameAndUserIdFromDatabase, lis
 import { listUserListMembershipsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import { countNoteFavoritesByUserIdFromDatabase, listNoteFavoritesByUserIdFromDatabase } from '@/core/NoteFavoriteStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
+import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import * as Acct from '@/misc/acct.js';
 import type { Schema, SchemaType } from '@/misc/json-schema.js';
+import type { NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiBlocking, MiFollowing, MiMuting } from '@/models/_.js';
+import type { MiBlocking, MiFollowing, MiMuting, MiNote, MiUser } from '@/models/_.js';
+import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
 import type { DbQueue, RelationshipQueue } from '@/core/QueueModule.js';
@@ -664,5 +671,109 @@ export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDepend
 		]);
 	} catch {
 		// 元実装同様、行単位のエラーはログのみで処理を継続する
+	}
+}
+
+function serializeFavoriteForHonoApi(
+	deps: Pick<HonoQueueDbDependencies, 'config'>,
+	favorite: NoteFavoriteRow & { note: MiNote & { user: MiUser } },
+	poll: MiPoll | null = null,
+): Record<string, unknown> {
+	return {
+		id: favorite.id,
+		createdAt: parseId(deps.config, favorite.id).date.toISOString(),
+		note: {
+			id: favorite.note.id,
+			text: favorite.note.text,
+			createdAt: parseId(deps.config, favorite.note.id).date.toISOString(),
+			fileIds: favorite.note.fileIds,
+			replyId: favorite.note.replyId,
+			renoteId: favorite.note.renoteId,
+			poll,
+			cw: favorite.note.cw,
+			visibility: favorite.note.visibility,
+			visibleUserIds: favorite.note.visibleUserIds,
+			localOnly: favorite.note.localOnly,
+			reactionAcceptance: favorite.note.reactionAcceptance,
+			uri: favorite.note.uri,
+			url: favorite.note.url,
+			user: {
+				id: favorite.note.user.id,
+				name: favorite.note.user.name,
+				username: favorite.note.user.username,
+				host: favorite.note.user.host,
+				uri: favorite.note.user.uri,
+			},
+		},
+	};
+}
+
+/** ExportFavoritesProcessorService.process 相当。 */
+export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (user == null) return;
+
+	const [path, cleanup] = await createTemp();
+
+	try {
+		const stream = fs.createWriteStream(path, { flags: 'a' });
+
+		await writeToStream(stream, '[');
+
+		let exportedFavoritesCount = 0;
+		let cursor: NoteFavoriteRow['id'] | null = null;
+
+		const total = await countNoteFavoritesByUserIdFromDatabase(deps.db, user.id);
+
+		for (;;) {
+			const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, user.id, {
+				limit: 100,
+				order: 'asc',
+				sinceId: cursor,
+			});
+
+			if (favorites.length === 0) {
+				job.updateProgress(100);
+				break;
+			}
+
+			cursor = favorites.at(-1)?.id ?? null;
+			const noteIds = favorites.map(favorite => favorite.noteId);
+			const notes = await listVisibleNotesWithUsersByIdsFromDatabase(deps.db, noteIds, { id: user.id });
+			const noteMap = new Map(notes.map(note => [note.id, note]));
+
+			for (const favorite of favorites) {
+				const note = noteMap.get(favorite.noteId);
+				if (note == null) {
+					continue;
+				}
+
+				const noteCreatedAt = parseId(deps.config, note.id).date;
+				if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) {
+					continue;
+				}
+
+				let poll: MiPoll | undefined;
+				if (note.hasPoll) {
+					poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
+				}
+				const content = JSON.stringify(serializeFavoriteForHonoApi(deps, { ...favorite, note }, poll ?? null));
+				const isFirst = exportedFavoritesCount === 0;
+				await writeToStream(stream, isFirst ? content : ',\n' + content);
+				exportedFavoritesCount++;
+			}
+
+			job.updateProgress(exportedFavoritesCount / total * 100);
+		}
+
+		await writeToStream(stream, ']');
+		stream.end();
+
+		const fileName = 'favorites-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.json';
+		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
+
+		createExportCompletedNotification(deps, user.id, 'favorite', driveFile.id);
+	} finally {
+		cleanup();
 	}
 }
