@@ -16,11 +16,17 @@ import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { createRetentionAggregationInDatabase, listRetentionAggregationsCreatedAfter } from '@/core/RetentionAggregationStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
+import { createChannelInDatabase } from '@/core/ChannelStore.js';
+import { createChannelMutingInDatabase, fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createHonoChartWriters, type HonoChartWriters } from '@/server/hono-chart-runtime.js';
 import Logger from '@/logger.js';
 import {
 	handleHonoQueueAggregateRetention,
+	handleHonoQueueBakeBufferedReactions,
+	handleHonoQueueCheckExpiredMutings,
 	handleHonoQueueClean,
 	handleHonoQueueCleanCharts,
 	handleHonoQueueResyncCharts,
@@ -33,6 +39,7 @@ describe('hono-queue-system', () => {
 	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	let redis: Redis.Redis;
+	let redisForReactions: Redis.Redis;
 	let config: Config;
 	let chartWriters: HonoChartWriters;
 	let deps: HonoQueueSystemDependencies;
@@ -42,13 +49,15 @@ describe('hono-queue-system', () => {
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
 		redis = new Redis.Redis(config.redis);
+		redisForReactions = new Redis.Redis(config.redisForReactions);
 		const meta = await fetchMetaFromDatabase(db);
 		chartWriters = createHonoChartWriters({ db, redis, config, meta, logger: new Logger('test-chart') });
-		deps = { config, db, chartWriters };
+		deps = { config, db, chartWriters, meta, redisForReactions };
 	});
 
 	afterAll(async () => {
 		redis.disconnect();
+		redisForReactions.disconnect();
 		await pool.end();
 	});
 
@@ -170,6 +179,88 @@ describe('hono-queue-system', () => {
 
 		test('handleHonoQueueCleanCharts: 12種のチャートを直列にcleanする', async () => {
 			await expect(handleHonoQueueCleanCharts(deps)).resolves.toBeUndefined();
+		});
+	});
+
+	describe('handleHonoQueueCheckExpiredMutings', () => {
+		test('期限切れのユーザーミュート/チャンネルミュートを削除する', async () => {
+			const muterId = genId(config);
+			await createUserInDatabase(db, {
+				id: muterId,
+				username: `honoqueuesys${muterId}`,
+				usernameLower: `honoqueuesys${muterId}`.toLowerCase(),
+			});
+			const muteeId = genId(config);
+			await createUserInDatabase(db, {
+				id: muteeId,
+				username: `honoqueuesys${muteeId}`,
+				usernameLower: `honoqueuesys${muteeId}`.toLowerCase(),
+			});
+			await createMutingInDatabase(db, {
+				id: genId(config),
+				muterId,
+				muteeId,
+				expiresAt: new Date(Date.now() - 1000),
+			});
+
+			const channelId = genId(config);
+			await createChannelInDatabase(db, {
+				id: channelId,
+				name: `honoqueuesyschannel${channelId}`,
+			});
+			await createChannelMutingInDatabase(db, {
+				id: genId(config),
+				userId: muterId,
+				channelId,
+				expiresAt: new Date(Date.now() - 1000),
+			});
+
+			await handleHonoQueueCheckExpiredMutings(deps);
+
+			expect(await mutingExistsInDatabase(db, muterId, muteeId)).toBe(false);
+			expect(await fetchActiveMutedChannelIdsFromDatabase(db, muterId, new Date())).not.toContain(channelId);
+		});
+	});
+
+	describe('handleHonoQueueBakeBufferedReactions', () => {
+		test('enableReactionsBufferingがfalseの場合は何もしない', async () => {
+			await expect(handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } })).resolves.toBeUndefined();
+		});
+
+		test('バッファされたリアクションをnoteに反映する', async () => {
+			const userId = genId(config);
+			await createUserInDatabase(db, {
+				id: userId,
+				username: `honoqueuesys${userId}`,
+				usernameLower: `honoqueuesys${userId}`.toLowerCase(),
+			});
+
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'hono-queue-system bake test',
+				userId,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			// ioredisのkeyPrefixが自動で前置されるため、ここではbareキーを使う
+			// (SCANのMATCHパターンだけは自動前置の対象外なので、本体実装側で手動prefixが必要になる)
+			await redisForReactions.hincrby(`reactionsBufferDeltas:${noteId}`, '👍', 3);
+			await redisForReactions.zadd(`reactionsBufferPairs:${noteId}`, 0, `${userId}/👍`);
+
+			await handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: true } });
+
+			// applyBufferedNoteReactionsInDatabase は元実装同様 fire-and-forget (void) で
+			// 呼ばれるため、DB反映完了をポーリングで待つ。
+			let noteAfter = await fetchNoteByIdOrFailFromDatabase(db, noteId);
+			for (let i = 0; i < 20 && noteAfter.reactions['👍'] == null; i++) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+				noteAfter = await fetchNoteByIdOrFailFromDatabase(db, noteId);
+			}
+
+			expect(noteAfter.reactions['👍']).toBe(3);
+			expect(noteAfter.reactionAndUserPairCache).toContain(`${userId}/👍`);
 		});
 	});
 });

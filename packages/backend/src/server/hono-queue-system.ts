@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type * as Redis from 'ioredis';
 import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
 import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/AntennaStore.js';
 import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/RoleAssignmentStore.js';
@@ -13,17 +14,26 @@ import {
 	listRetentionAggregationsCreatedAfter,
 	updateRetentionAggregationDataInDatabase,
 } from '@/core/RetentionAggregationStore.js';
+import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
+import { deleteChannelMutingsByIdsFromDatabase, fetchExpiredChannelMutingsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { applyBufferedNoteReactionsInDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiMeta } from '@/models/_.js';
 import type { HonoChartWriters } from './hono-chart-runtime.js';
 
+const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
+const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
+
 export type HonoQueueSystemDependencies = {
-	config: Pick<Config, 'id' | 'deactivateAntennaThreshold'>;
+	config: Pick<Config, 'id' | 'deactivateAntennaThreshold' | 'redis' | 'redisForReactions'>;
 	db: MiDrizzleDatabase;
 	chartWriters: HonoChartWriters;
+	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
+	redisForReactions: Redis.Redis;
 };
 
 /** TickChartsProcessorService.process 相当。DBへの同時接続を避けるため直列に実行する。 */
@@ -111,5 +121,72 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 		data[dateKey] = retention;
 
 		await updateRetentionAggregationDataInDatabase(deps.db, record.id, data, now);
+	}
+}
+
+/**
+ * CheckExpiredMutingsProcessorService.process 相当。
+ * UserMutingService.unmute()/ChannelMutingService.eraseExpiredMutings() の
+ * インプロセスキャッシュ (userMutingsCache/mutingChannelsCache) のリフレッシュは、
+ * Hono側にそもそも同等のキャッシュが存在しないため対象外 (常時DB直読み)。
+ */
+export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDependencies): Promise<void> {
+	const expiredMutings = await listExpiredMutingsFromDatabase(deps.db, new Date());
+	if (expiredMutings.length > 0) {
+		await deleteMutingsByIdsFromDatabase(deps.db, expiredMutings.map(m => m.id));
+	}
+
+	const expiredChannelMutings = await fetchExpiredChannelMutingsFromDatabase(deps.db, new Date());
+	if (expiredChannelMutings.length > 0) {
+		await deleteChannelMutingsByIdsFromDatabase(deps.db, expiredChannelMutings.map(m => m.id));
+	}
+}
+
+/** BakeBufferedReactionsProcessorService.process 相当 (ReactionsBufferingService.bake()込み)。 */
+export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystemDependencies): Promise<void> {
+	if (!deps.meta.enableReactionsBuffering) return;
+
+	const bufferedNoteIds: string[] = [];
+	let cursor = '0';
+	do {
+		const result = await deps.redisForReactions.scan(
+			cursor,
+			'MATCH',
+			`${deps.config.redis.prefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:*`,
+			'COUNT',
+			'1000');
+
+		cursor = result[0];
+		bufferedNoteIds.push(...result[1].map(x => x.replace(`${deps.config.redis.prefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:`, '')));
+	} while (cursor !== '0');
+
+	if (bufferedNoteIds.length === 0) return;
+
+	const pipeline = deps.redisForReactions.pipeline();
+	for (const noteId of bufferedNoteIds) {
+		pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
+		pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, -1);
+	}
+	const results = await pipeline.exec();
+
+	const clearPipeline = deps.redisForReactions.pipeline();
+	for (const noteId of bufferedNoteIds) {
+		clearPipeline.del(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
+		clearPipeline.del(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`);
+	}
+	await clearPipeline.exec();
+
+	const opsForEachNote = 2;
+	for (let i = 0; i < bufferedNoteIds.length; i++) {
+		const noteId = bufferedNoteIds[i];
+		const resultDeltas = results?.[i * opsForEachNote]?.[1] as Record<string, string> | undefined;
+		const resultPairs = results?.[(i * opsForEachNote) + 1]?.[1] as string[] | undefined;
+
+		const deltas: Record<string, number> = {};
+		for (const [name, count] of Object.entries(resultDeltas ?? {})) {
+			deltas[name] = parseInt(count, 10);
+		}
+
+		void applyBufferedNoteReactionsInDatabase(deps.db, noteId, deltas, resultPairs ?? []);
 	}
 }

@@ -17,6 +17,8 @@ import {
 import { handleHonoQueuePostScheduledNote, type HonoQueuePostScheduledNoteDependencies } from './hono-queue-post-scheduled-note.js';
 import {
 	handleHonoQueueAggregateRetention,
+	handleHonoQueueBakeBufferedReactions,
+	handleHonoQueueCheckExpiredMutings,
 	handleHonoQueueClean,
 	handleHonoQueueCleanCharts,
 	handleHonoQueueResyncCharts,
@@ -180,8 +182,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region system
-	// NOTE: checkExpiredMutings/bakeBufferedReactions/checkModeratorsActivity/cleanRemoteNotes は
-	// まだ移植未完了 (個別の依存調査待ち)。
+	// NOTE: checkModeratorsActivity/cleanRemoteNotes はまだ移植未完了 (個別の依存調査待ち)。
 	const systemQueueWorker = new Bull.Worker(QUEUE.SYSTEM, (job) => {
 		switch (job.name) {
 			case 'clean': return handleHonoQueueClean(deps);
@@ -189,6 +190,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'tickCharts': return handleHonoQueueTickCharts(deps);
 			case 'resyncCharts': return handleHonoQueueResyncCharts(deps);
 			case 'cleanCharts': return handleHonoQueueCleanCharts(deps);
+			case 'checkExpiredMutings': return handleHonoQueueCheckExpiredMutings(deps);
+			case 'bakeBufferedReactions': return handleHonoQueueBakeBufferedReactions(deps);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for system`);
 		}
 	}, {
