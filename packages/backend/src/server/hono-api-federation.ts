@@ -552,7 +552,7 @@ export async function handleHonoApiFederationUsers(
 		untilId,
 	});
 
-	return await packUserDetailedNotMeManyForHonoApi(deps, users);
+	return await packUserDetailedNotMeManyForHonoApi(deps, users, me);
 }
 
 const federationHostFollowingParamDef = {

@@ -397,6 +397,7 @@ async function removeFromList(
 async function packHonoApiBlocking(
 	deps: HonoApiAccountBlockingDependencies,
 	blocking: MiBlocking,
+	me: { id: MiUser['id'] },
 ): Promise<HonoApiBlockingResponse> {
 	const blockee = blocking.blockee ?? await fetchUserByIdOrFailFromDatabase(deps.db, blocking.blockeeId);
 
@@ -404,7 +405,7 @@ async function packHonoApiBlocking(
 		id: blocking.id,
 		createdAt: parseId(deps.config, blocking.id).date.toISOString(),
 		blockeeId: blocking.blockeeId,
-		blockee: await packUserDetailedNotMeForHonoApi(deps, blockee),
+		blockee: await packUserDetailedNotMeForHonoApi(deps, blockee, me),
 	};
 }
 
@@ -469,7 +470,7 @@ export async function handleHonoApiBlockingCreate(
 	deps.publishInternalEvent?.('blockingCreated', { blockerId: blocker.id, blockeeId: blockee.id });
 	await deliverBlockActivity(deps, blocking as MiBlocking & { blocker: MiUser; blockee: MiUser });
 
-	return await packUserDetailedNotMeForHonoApi(deps, blockee);
+	return await packUserDetailedNotMeForHonoApi(deps, blockee, blocker);
 }
 
 export async function handleHonoApiBlockingDelete(
@@ -500,7 +501,7 @@ export async function handleHonoApiBlockingDelete(
 	deps.publishInternalEvent?.('blockingDeleted', { blockerId: blocker.id, blockeeId: blockee.id });
 	await deliverUndoBlockActivity(deps, blocking as MiBlocking & { blocker: MiUser; blockee: MiUser });
 
-	return await packUserDetailedNotMeForHonoApi(deps, blockee);
+	return await packUserDetailedNotMeForHonoApi(deps, blockee, blocker);
 }
 
 export async function handleHonoApiBlockingList(
@@ -516,5 +517,5 @@ export async function handleHonoApiBlockingList(
 		limit: params.limit,
 	});
 
-	return await Promise.all(blockings.map(blocking => packHonoApiBlocking(deps, blocking) as Promise<Packed<'Blocking'>>));
+	return await Promise.all(blockings.map(blocking => packHonoApiBlocking(deps, blocking, me) as Promise<Packed<'Blocking'>>));
 }
