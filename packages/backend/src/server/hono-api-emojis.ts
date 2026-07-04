@@ -393,7 +393,7 @@ function adminSameNameEmojiExistsError(): HonoApiError {
 	return adminEmojiClientError('Emoji that have same name already exists.', 'SAME_NAME_EMOJI_EXISTS', '7180fe9d-1ee3-bff9-647d-fe9896d2ffb8');
 }
 
-async function refreshHonoApiLocalEmojisCache(deps: HonoApiEmojiDependencies): Promise<void> {
+export async function refreshHonoApiLocalEmojisCache(deps: HonoApiEmojiDependencies): Promise<void> {
 	const emojis = await listLocalEmojisFromDatabase(deps.db);
 	await deps.redis.set(
 		'singlecache:localEmojis',
@@ -434,7 +434,7 @@ async function publishHonoApiEmojiDeleted(
 	});
 }
 
-async function publishHonoApiEmojiAdded(
+export async function publishHonoApiEmojiAdded(
 	deps: HonoApiEmojiDependencies,
 	emoji: MiEmoji,
 ): Promise<void> {
@@ -443,6 +443,55 @@ async function publishHonoApiEmojiAdded(
 	deps.publishBroadcastStream('emojiAdded', {
 		emoji: packHonoEmojiDetailed(emoji),
 	});
+}
+
+/** CustomEmojiService.add 相当。 */
+export async function addCustomEmojiForHonoApi(
+	deps: HonoApiEmojiDependencies,
+	data: {
+		originalUrl: string;
+		publicUrl: string;
+		fileType: string;
+		name: string;
+		category: string | null;
+		aliases: string[];
+		host: string | null;
+		license: string | null;
+		isSensitive: boolean;
+		localOnly: boolean;
+		roleIdsThatCanBeUsedThisEmojiAsReaction: string[];
+	},
+	moderator?: MiLocalUser,
+): Promise<MiEmoji> {
+	const emoji = await insertEmojiInDatabase(deps.db, {
+		id: genId(deps.config),
+		updatedAt: new Date(),
+		name: data.name,
+		category: data.category,
+		host: data.host,
+		aliases: data.aliases,
+		originalUrl: data.originalUrl,
+		publicUrl: data.publicUrl,
+		type: data.fileType,
+		license: data.license,
+		isSensitive: data.isSensitive,
+		localOnly: data.localOnly,
+		roleIdsThatCanBeUsedThisEmojiAsReaction: data.roleIdsThatCanBeUsedThisEmojiAsReaction,
+	});
+
+	if (data.host == null) {
+		await refreshHonoApiLocalEmojisCache(deps);
+		await publishHonoApiEmojiAdded(deps, emoji);
+
+		if (moderator) {
+			await logModerationEventInDatabase(deps, moderator, 'addCustomEmoji', {
+				emojiId: emoji.id,
+				emoji,
+			});
+		}
+	}
+
+	return emoji;
 }
 
 export async function handleHonoApiEmojis(deps: HonoApiEmojiDependencies): Promise<{

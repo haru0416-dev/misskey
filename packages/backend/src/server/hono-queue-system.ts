@@ -15,7 +15,7 @@ import {
 	updateRetentionAggregationDataInDatabase,
 } from '@/core/RetentionAggregationStore.js';
 import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
-import { deleteChannelMutingsByIdsFromDatabase, fetchExpiredChannelMutingsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { deleteChannelMutingsByIdsFromDatabase, fetchExpiredChannelMutingsFromDatabase, fetchMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { applyBufferedNoteReactionsInDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
@@ -23,6 +23,7 @@ import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
+import { refreshUserMutingsCache } from './hono-api-account-mutes.js';
 import type { HonoChartWriters } from './hono-chart-runtime.js';
 
 const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
@@ -33,8 +34,14 @@ export type HonoQueueSystemDependencies = {
 	db: MiDrizzleDatabase;
 	chartWriters: HonoChartWriters;
 	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
+	redis: Redis.Redis;
 	redisForReactions: Redis.Redis;
 };
+
+async function refreshMutingChannelsCache(deps: Pick<HonoQueueSystemDependencies, 'db' | 'redis'>, userId: string): Promise<void> {
+	const channelIds = await fetchMutedChannelIdsFromDatabase(deps.db, userId);
+	await deps.redis.set(`kvcache:channelMutingChannels:${userId}`, JSON.stringify(channelIds), 'EX', 60 * 30);
+}
 
 /** TickChartsProcessorService.process 相当。DBへの同時接続を避けるため直列に実行する。 */
 export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencies): Promise<void> {
@@ -126,19 +133,30 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 
 /**
  * CheckExpiredMutingsProcessorService.process 相当。
- * UserMutingService.unmute()/ChannelMutingService.eraseExpiredMutings() の
- * インプロセスキャッシュ (userMutingsCache/mutingChannelsCache) のリフレッシュは、
- * Hono側にそもそも同等のキャッシュが存在しないため対象外 (常時DB直読み)。
+ * UserMutingService.unmute()/ChannelMutingService.eraseExpiredMutings() が更新する
+ * userMutingsCache/mutingChannelsCache はどちらもRedisKVCache (kvcache:userMutings:<id>/
+ * kvcache:channelMutingChannels:<id>) で、NestJS側プロセスとも共有される実体を持つため、
+ * DB削除後に必ずリフレッシュする (単なるインプロセスキャッシュではない)。
  */
 export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDependencies): Promise<void> {
 	const expiredMutings = await listExpiredMutingsFromDatabase(deps.db, new Date());
 	if (expiredMutings.length > 0) {
 		await deleteMutingsByIdsFromDatabase(deps.db, expiredMutings.map(m => m.id));
+
+		const muterIds = [...new Set(expiredMutings.map(m => m.muterId))];
+		for (const muterId of muterIds) {
+			await refreshUserMutingsCache(deps, muterId);
+		}
 	}
 
 	const expiredChannelMutings = await fetchExpiredChannelMutingsFromDatabase(deps.db, new Date());
 	if (expiredChannelMutings.length > 0) {
 		await deleteChannelMutingsByIdsFromDatabase(deps.db, expiredChannelMutings.map(m => m.id));
+
+		const userIds = [...new Set(expiredChannelMutings.map(m => m.userId))];
+		for (const userId of userIds) {
+			await refreshMutingChannelsCache(deps, userId);
+		}
 	}
 }
 
