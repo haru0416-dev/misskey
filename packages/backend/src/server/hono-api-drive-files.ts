@@ -100,6 +100,54 @@ export async function handleHonoApiDriveFilesList(
 	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
 }
 
+const driveStreamParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		type: { type: 'string', pattern: '^[a-zA-Z/\\-*]+$' },
+	},
+	required: [],
+} as const;
+
+type DriveStreamParams = {
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	type?: string;
+};
+
+export async function handleHonoApiDriveStream(
+	deps: HonoApiDriveFilesDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<Packed<'DriveFile'>[]> {
+	const params = parseHonoApiParams(driveStreamParamDef, body) as DriveStreamParams;
+
+	let sinceId = params.sinceId ?? null;
+	let untilId = params.untilId ?? null;
+
+	if (sinceId == null && untilId == null) {
+		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
+		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+	}
+
+	const files = await listDriveFilesForUserFromDatabase(deps.db, {
+		userId: me.id,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		type: params.type,
+	});
+
+	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
+}
+
 const driveFilesShowParamDef = {
 	anyOf: [
 		{

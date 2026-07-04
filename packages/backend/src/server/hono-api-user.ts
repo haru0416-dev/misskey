@@ -18,6 +18,7 @@ import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
+	listExplorableUsersFromDatabase,
 	listRecommendedUsersFromDatabase,
 	listUsersByIdsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
@@ -27,6 +28,8 @@ import { followRequestExistsInDatabase, listFollowRequestFolloweeIdsByFollowerId
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listAllFollowingsByFollowerIdFromDatabase, listFollowerIdsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import { deleteUserMemoFromDatabase, fetchUserMemoTextFromDatabase, listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { UserRow } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -159,15 +162,18 @@ export async function packUserLiteManyForHonoApi(
 export async function packUserDetailedNotMeForHonoApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
+	me?: { id: MiUser['id'] } | null,
 ): Promise<UserDetailedNotMeHonoApiResponse> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+	const memo = me ? await fetchUserMemoTextFromDatabase(deps.db, me.id, user.id) : null;
 
-	return packUserDetailedNotMeCoreForHonoApi(deps, user, profile);
+	return packUserDetailedNotMeCoreForHonoApi(deps, user, profile, memo);
 }
 
 export async function packUserDetailedNotMeManyForHonoApi(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
+	me?: { id: MiUser['id'] } | null,
 ): Promise<UserDetailedNotMeHonoApiResponse[]> {
 	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
 	const ids = srcs.filter((src): src is string => typeof src === 'string');
@@ -181,11 +187,13 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	const users = srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
 	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, [...new Set(users.map(user => user.id))]);
 	const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
+	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id) : null;
 
 	return await Promise.all(users.map(async user => packUserDetailedNotMeCoreForHonoApi(
 		deps,
 		user,
 		profileByUserId.get(user.id) ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id),
+		memoByTargetUserId ? (memoByTargetUserId.get(user.id) ?? null) : null,
 	)));
 }
 
@@ -206,6 +214,7 @@ async function packUserDetailedNotMeCoreForHonoApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	profile: MiUserProfile,
+	memo: string | null = null,
 ): Promise<UserDetailedNotMeHonoApiResponse> {
 	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
 	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
@@ -258,7 +267,7 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		chatScope: user.chatScope,
 		canChat: policies.chatAvailability === 'available',
 		roles: [],
-		memo: null,
+		memo,
 	};
 }
 
@@ -298,6 +307,7 @@ export async function packMeDetailedForHonoApi(
 	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
 	const isRoot = deps.meta.rootUserId === user.id;
 	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
+	const memo = await fetchUserMemoTextFromDatabase(deps.db, user.id, user.id);
 
 	return {
 		id: user.id,
@@ -347,7 +357,7 @@ export async function packMeDetailedForHonoApi(
 		chatScope: user.chatScope,
 		canChat: policies.chatAvailability === 'available',
 		roles: [],
-		memo: null,
+		memo,
 		twoFactorEnabled: profile.twoFactorEnabled,
 		usePasswordLessLogin: profile.usePasswordLessLogin,
 		securityKeys: false,
@@ -404,7 +414,7 @@ export async function packUserDetailedForHonoApi(
 		return await packMeDetailedForHonoApi(deps, user, { includeSecrets: false });
 	}
 
-	return await packUserDetailedNotMeForHonoApi(deps, user);
+	return await packUserDetailedNotMeForHonoApi(deps, user, me);
 }
 
 export async function packUserDetailedManyForHonoApi(
@@ -428,7 +438,7 @@ export async function packUserDetailedManyForHonoApi(
 	const users = srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
 	const meIndex = users.findIndex(user => user.id === me.id);
 	const others = meIndex === -1 ? users : users.filter((_, index) => index !== meIndex);
-	const packedOthers = await packUserDetailedNotMeManyForHonoApi(deps, others);
+	const packedOthers = await packUserDetailedNotMeManyForHonoApi(deps, others, me);
 
 	if (meIndex === -1) return packedOthers;
 
@@ -1036,4 +1046,92 @@ export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
 		user: userMap.get(userId) ?? await packUserDetailedForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me),
 		weight: repliedUserCounts.get(userId)! / peak,
 	})));
+}
+
+const usersParamDef = {
+	type: 'object',
+	properties: {
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		offset: { type: 'integer', default: 0 },
+		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt'] },
+		state: { type: 'string', enum: ['all', 'alive'], default: 'all' },
+		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'local' },
+		hostname: { type: 'string', nullable: true, default: null },
+	},
+	required: [],
+} as const;
+
+type UsersParams = {
+	limit: number;
+	offset: number;
+	sort?: '+follower' | '-follower' | '+createdAt' | '-createdAt' | '+updatedAt' | '-updatedAt';
+	state: 'all' | 'alive';
+	origin: 'combined' | 'local' | 'remote';
+	hostname: string | null;
+};
+
+export async function handleHonoApiUsers(
+	deps: UserPackingDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<unknown[]> {
+	const params = parseHonoApiParams(usersParamDef, body) as UsersParams;
+
+	const users = await listExplorableUsersFromDatabase(deps.db, {
+		limit: params.limit,
+		offset: params.offset,
+		sort: params.sort,
+		state: params.state,
+		origin: params.origin,
+		hostname: params.hostname,
+		meId: me?.id,
+	});
+
+	return await packUserDetailedManyForHonoApi(deps, users, me);
+}
+
+const usersUpdateMemoParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		memo: { type: 'string', nullable: true },
+	},
+	required: ['userId', 'memo'],
+} as const;
+
+type UsersUpdateMemoParams = {
+	userId: string;
+	memo: string | null;
+};
+
+function usersUpdateMemoNoSuchUserError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such user.',
+		code: 'NO_SUCH_USER',
+		id: '6fef56f3-e765-4957-88e5-c6f65329b8a5',
+	});
+}
+
+export async function handleHonoApiUsersUpdateMemo(
+	deps: UserPackingDependencies,
+	me: MiUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(usersUpdateMemoParamDef, body) as UsersUpdateMemoParams;
+
+	const target = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	if (target == null) throw usersUpdateMemoNoSuchUserError();
+
+	if (params.memo === '' || params.memo == null) {
+		await deleteUserMemoFromDatabase(deps.db, me.id, target.id);
+		return;
+	}
+
+	await upsertUserMemoInDatabase(deps.db, {
+		id: genId(deps.config),
+		userId: me.id,
+		targetUserId: target.id,
+		memo: params.memo,
+	});
 }

@@ -23,6 +23,7 @@ import {
 	listMentionNotesFromDatabase,
 	listNotesByIdsFromDatabase,
 	listNotesByTagSearchFromDatabase,
+	listPublicNotesFromDatabase,
 	listRenoteNotesFromDatabase,
 	listReplyNotesFromDatabase,
 	listUserListTimelineNotesFromDatabase,
@@ -501,6 +502,58 @@ export async function handleHonoApiNotesGlobalTimeline(
 	});
 
 	return await packNoteManyForHonoApi(deps, timeline, me);
+}
+
+const notesParamDef = {
+	type: 'object',
+	properties: {
+		local: { type: 'boolean', default: false },
+		reply: { type: 'boolean' },
+		renote: { type: 'boolean' },
+		withFiles: { type: 'boolean' },
+		poll: { type: 'boolean' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+	},
+	required: [],
+} as const;
+
+type NotesParams = {
+	local: boolean;
+	reply?: boolean;
+	renote?: boolean;
+	withFiles?: boolean;
+	poll?: boolean;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+};
+
+export async function handleHonoApiNotes(
+	deps: HonoApiNotesDependencies,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(notesParamDef, body) as NotesParams;
+	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+
+	const notes = await listPublicNotesFromDatabase(deps.db, {
+		limit: params.limit,
+		sinceId,
+		untilId,
+		local: params.local,
+		reply: params.reply,
+		renote: params.renote,
+		withFiles: params.withFiles,
+		poll: params.poll,
+	});
+
+	// 元実装 (notes.ts) は noteEntityService.packMany(notes) を me なしで呼んでおり、常に匿名扱いでパックする。
+	return await packNoteManyForHonoApi(deps, notes, null);
 }
 
 function notesLocalTimelineDisabledError(): HonoApiError {

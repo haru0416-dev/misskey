@@ -16,6 +16,7 @@ import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 // https://github.com/node-fetch/node-fetch/pull/1664
 import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
+import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
@@ -68,6 +69,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase
 import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
 import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
+import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -1092,6 +1094,60 @@ describe('Endpoints', () => {
 			const foundByHash = await api('drive/files/find-by-hash', { md5 }, alice);
 			assert.strictEqual(foundByHash.status, 200);
 			assert.strictEqual((foundByHash.body as any[]).some(f => f.id === file.id), true);
+		});
+
+		test('drive/stream は自分のファイルのみtype絞り込み・ページングして返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hdsm${suffix}` });
+			const otherUser = await signup({ username: `hdso${suffix}` });
+
+			const imageMd5 = createHash('md5').update(`hono-drive-stream-image-${suffix}`).digest('hex');
+			const imageFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: user.id,
+				userHost: null,
+				md5: imageMd5,
+				name: `hono-drive-stream-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${imageMd5}`,
+			});
+			const textMd5 = createHash('md5').update(`hono-drive-stream-text-${suffix}`).digest('hex');
+			await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: user.id,
+				userHost: null,
+				md5: textMd5,
+				name: `hono-drive-stream-${suffix}.txt`,
+				type: 'text/plain',
+				size: 5,
+				storedInternal: true,
+				url: `${origin}/files/${textMd5}`,
+			});
+			const otherMd5 = createHash('md5').update(`hono-drive-stream-other-${suffix}`).digest('hex');
+			const otherFile = await createDriveFileInDatabase(db, {
+				id: genId(config),
+				userId: otherUser.id,
+				userHost: null,
+				md5: otherMd5,
+				name: `hono-drive-stream-other-${suffix}.png`,
+				type: 'image/png',
+				size: 10,
+				storedInternal: true,
+				url: `${origin}/files/${otherMd5}`,
+			});
+
+			const all = await api('drive/stream', { limit: 100 }, user);
+			assert.strictEqual(all.status, 200);
+			assert.strictEqual(all.body.length, 2);
+			assert.ok(!all.body.some((f: any) => f.id === otherFile.id));
+			assert.strictEqual(all.body[0].user, null);
+
+			const imagesOnly = await api('drive/stream', { limit: 100, type: 'image/png' }, user);
+			assert.strictEqual(imagesOnly.status, 200);
+			assert.deepStrictEqual(imagesOnly.body.map((f: any) => f.id), [imageFile.id]);
 		});
 
 		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
@@ -6051,6 +6107,98 @@ describe('Endpoints', () => {
 			const userListsRes = await api('i/import-user-lists', { fileId: userListsFile.id }, user);
 			assert.strictEqual(userListsRes.status, 204);
 		});
+
+		// i/import-antennas はファイル内容を自分自身のURL(config.url)からHTTPダウンロードする。
+		test('i/import-antennas はrole policy、ファイル検証、ダウンロードしたJSON件数によるantennaLimitを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hia${suffix}` });
+
+			const deniedBeforeGrant = await api('i/import-antennas', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(deniedBeforeGrant.status, 403);
+			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+
+			await grantImportPolicy(user.id, suffix, 'canImportAntennas');
+
+			const noSuchFile = await api('i/import-antennas', { fileId: genId(loadConfig()) }, user);
+			assert.strictEqual(noSuchFile.status, 400);
+			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
+
+			const emptyFile = await makeDriveFile(user.id, `${suffix}e`, 0);
+			const emptyRes = await api('i/import-antennas', { fileId: emptyFile.id }, user);
+			assert.strictEqual(emptyRes.status, 400);
+			assert.strictEqual(castAsError(emptyRes.body as any).error.code, 'EMPTY_FILE');
+
+			// i/import-antennas はファイル内容(DriveFile.url)を実際にHTTPダウンロードするため、
+			// admin/emoji/copy のテストと同様にループバックの一時HTTPサーバーでJSONを配信して検証する。
+			const antennas = [{ name: `hono-antenna-${suffix}`, keywords: [['hono']], excludeKeywords: [], src: 'all', userListId: null, userListAccts: null }];
+			const antennasJson = Buffer.from(JSON.stringify(antennas));
+			let antennaServer: Server | undefined;
+			await new Promise<void>((resolve) => {
+				antennaServer = createServer((_req, res) => {
+					res.writeHead(200, { 'Content-Type': 'application/json' });
+					res.end(antennasJson);
+				});
+				antennaServer.listen(0, '127.0.0.1', () => resolve());
+			});
+			const address = antennaServer!.address() as AddressInfo;
+			const antennasUrl = `http://127.0.0.1:${address.port}/${suffix}.json`;
+
+			try {
+				const antennaFile = await createDriveFileInDatabase(db, {
+					id: genId(config),
+					userId: user.id,
+					userHost: null,
+					md5: createHash('md5').update(`hono-import-antennas-${suffix}`).digest('hex'),
+					name: `hono-import-antennas-${suffix}.json`,
+					type: 'application/json',
+					size: antennasJson.length,
+					blurhash: null,
+					properties: {},
+					storedInternal: false,
+					url: antennasUrl,
+					thumbnailUrl: null,
+					comment: null,
+					folderId: null,
+				});
+
+				const beforeCount = await countAntennasByUserIdFromDatabase(db, user.id);
+				const okRes = await api('i/import-antennas', { fileId: antennaFile.id }, user);
+				assert.strictEqual(okRes.status, 204);
+
+				const zeroLimitRole = await role(alice, {
+					name: `hono import antennas zero limit ${suffix}`,
+				}, {
+					antennaLimit: { priority: 1, useDefault: false, value: beforeCount },
+				});
+				const assignZeroLimit = await api('admin/roles/assign', { roleId: zeroLimitRole.id, userId: user.id }, alice);
+				assert.strictEqual(assignZeroLimit.status, 204);
+
+				const antennaFile2 = await createDriveFileInDatabase(db, {
+					id: genId(config),
+					userId: user.id,
+					userHost: null,
+					md5: createHash('md5').update(`hono-import-antennas-2-${suffix}`).digest('hex'),
+					name: `hono-import-antennas-2-${suffix}.json`,
+					type: 'application/json',
+					size: antennasJson.length,
+					blurhash: null,
+					properties: {},
+					storedInternal: false,
+					url: antennasUrl,
+					thumbnailUrl: null,
+					comment: null,
+					folderId: null,
+				});
+				const tooManyRes = await api('i/import-antennas', { fileId: antennaFile2.id }, user);
+				assert.strictEqual(tooManyRes.status, 400);
+				assert.strictEqual(castAsError(tooManyRes.body as any).error.code, 'TOO_MANY_ANTENNAS');
+			} finally {
+				await new Promise<void>((resolve, reject) => {
+					antennaServer?.close(err => err ? reject(err) : resolve());
+				});
+			}
+		});
 	});
 
 	describe('notifications', () => {
@@ -6758,6 +6906,87 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users (bare, explorableユーザー一覧)', () => {
+		test('isExplorable/isSuspended、origin、hostname、mute除外を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const explorable = await signup({ username: `hu${suffix}` });
+
+			const notExplorable = await signup({ username: `hune${suffix}` });
+			await updateUserInDatabase(db, notExplorable.id, { isExplorable: false });
+
+			const remoteHost = `hono-users-${suffix}.example`;
+			const remoteId = genId(loadConfig());
+			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteId,
+					username: `hurem${suffix}`,
+					usernameLower: `hurem${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: `https://${remoteHost}/users/${remoteId}`,
+					isExplorable: true,
+				},
+				profile: {
+					userId: remoteId,
+					userHost: remoteHost,
+				},
+			});
+
+			const muter = await signup({ username: `hum${suffix}` });
+			const muted = await signup({ username: `humt${suffix}` });
+			const muteRes = await api('mute/create', { userId: muted.id }, muter);
+			assert.strictEqual(muteRes.status, 204);
+
+			// フルスイートでは既存のexplorableユーザーが100件を超えるため、新規作成分を確実に上位に出す
+			// sort=+createdAt (id降順) を明示する。
+			const all = await api('users', { limit: 100, sort: '+createdAt' });
+			assert.strictEqual(all.status, 200);
+			assert.ok(all.body.some((u: any) => u.id === explorable.id));
+			assert.strictEqual(all.body.some((u: any) => u.id === notExplorable.id), false);
+			assert.strictEqual(all.body.some((u: any) => u.id === remoteUser.id), false);
+
+			const combined = await api('users', { limit: 100, origin: 'combined', sort: '+createdAt' });
+			assert.strictEqual(combined.status, 200);
+			assert.ok(combined.body.some((u: any) => u.id === remoteUser.id));
+
+			const remoteOnly = await api('users', { limit: 100, origin: 'remote', sort: '+createdAt' });
+			assert.strictEqual(remoteOnly.status, 200);
+			assert.ok(remoteOnly.body.some((u: any) => u.id === remoteUser.id));
+			assert.strictEqual(remoteOnly.body.some((u: any) => u.id === explorable.id), false);
+
+			const byHostname = await api('users', { limit: 100, origin: 'combined', hostname: remoteHost });
+			assert.strictEqual(byHostname.status, 200);
+			assert.ok(byHostname.body.some((u: any) => u.id === remoteUser.id));
+			assert.strictEqual(byHostname.body.some((u: any) => u.id === explorable.id), false);
+
+			const mutedIncludedForAnon = await api('users', { limit: 100, sort: '+createdAt' });
+			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
+
+			const mutedExcludedForMuter = await api('users', { limit: 100, sort: '+createdAt' }, muter);
+			assert.strictEqual(mutedExcludedForMuter.status, 200);
+			assert.strictEqual(mutedExcludedForMuter.body.some((u: any) => u.id === muted.id), false);
+		});
+
+		test('sort=+followerとstate=aliveを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			// フルスイートでは既存ユーザーのfollowersCountが不定のため、飛び抜けた値で先頭固定を保証する。
+			const popular = await signup({ username: `hup${suffix}` });
+			await updateUserInDatabase(db, popular.id, { followersCount: 999999999, updatedAt: new Date() });
+
+			const stale = await signup({ username: `hus${suffix}` });
+			await updateUserInDatabase(db, stale.id, { updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10) });
+
+			const sorted = await api('users', { limit: 1, sort: '+follower' });
+			assert.strictEqual(sorted.status, 200);
+			assert.strictEqual(sorted.body[0]?.id, popular.id);
+
+			const alive = await api('users', { limit: 100, state: 'alive', sort: '+createdAt' });
+			assert.strictEqual(alive.status, 200);
+			assert.ok(alive.body.some((u: any) => u.id === popular.id));
+			assert.strictEqual(alive.body.some((u: any) => u.id === stale.id), false);
+		});
+	});
+
 	describe('users/search-by-username-and-host', () => {
 		test('username/hostによる前方一致検索、ログイン時のフォロー優先、detailスキーマを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -7044,6 +7273,53 @@ describe('Endpoints', () => {
 			} finally {
 				await closeRedisConnection(redis);
 			}
+		});
+	});
+
+	describe('notes/translate', () => {
+		test('role policy、可視性、DeepL未設定によるUNAVAILABLEを維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnt${suffix}` });
+			const viewer = await signup({ username: `hntv${suffix}` });
+			const publicNote = await post(author, { text: 'hono translate target', visibility: 'public' });
+			const specifiedNote = await post(author, { text: 'hono translate specified', visibility: 'specified', visibleUserIds: [author.id] });
+
+			// deeplAuthKeyがテスト環境では未設定のため、可視な公開ノートに対してもUNAVAILABLEになる
+			const unavailableNoKey = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
+			assert.strictEqual(unavailableNoKey.status, 400);
+			assert.strictEqual(castAsError(unavailableNoKey.body as any).error.code, 'UNAVAILABLE');
+
+			const noSuchNote = await api('notes/translate', { noteId: genId(loadConfig()), targetLang: 'en' }, viewer);
+			assert.strictEqual(noSuchNote.status, 400);
+			assert.strictEqual(castAsError(noSuchNote.body as any).error.code, 'NO_SUCH_NOTE');
+
+			const invisible = await api('notes/translate', { noteId: specifiedNote.id, targetLang: 'en' }, viewer);
+			assert.strictEqual(invisible.status, 400);
+			assert.strictEqual(castAsError(invisible.body as any).error.code, 'CANNOT_TRANSLATE_INVISIBLE_NOTE');
+
+			const noTranslatorRole = await role(alice, {
+				name: `hono notes translate denied ${suffix}`,
+			}, {
+				canUseTranslator: { priority: 1, useDefault: false, value: false },
+			});
+			const assignDenied = await api('admin/roles/assign', { roleId: noTranslatorRole.id, userId: viewer.id }, alice);
+			assert.strictEqual(assignDenied.status, 204);
+
+			const roleDenied = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
+			assert.strictEqual(roleDenied.status, 400);
+			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'UNAVAILABLE');
+		});
+
+		test('本文が無いノートは204(本文無し)を返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hntn${suffix}` });
+			const file = await uploadFile(author);
+			const textlessNote = await post(author, { fileIds: [file.body!.id], visibility: 'public' });
+			assert.strictEqual(textlessNote.text, null);
+
+			const res = await api('notes/translate', { noteId: textlessNote.id, targetLang: 'en' }, author);
+			assert.strictEqual(res.status, 204);
+			assert.strictEqual(res.body, null);
 		});
 	});
 
@@ -7974,6 +8250,381 @@ describe('Endpoints', () => {
 				await redis.del(windowKey);
 				await closeRedisConnection(redis);
 			}
+		});
+	});
+
+	describe('notes (bare, インスタンス全体のpublicノート一覧)', () => {
+		test('publicかつlocalOnly=falseなノートのみ返す', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hn${suffix}` });
+
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'bare notes public',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const homeNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: homeNoteId,
+				text: 'bare notes home (excluded)',
+				userId: author.id,
+				userHost: null,
+				visibility: 'home',
+			});
+			const localOnlyNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: localOnlyNoteId,
+				text: 'bare notes localOnly (excluded)',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				localOnly: true,
+			});
+
+			const res = await api('notes', { limit: 100 });
+			assert.strictEqual(res.status, 200);
+			assert.ok(res.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(res.body.some((n: any) => n.id === homeNoteId), false);
+			assert.strictEqual(res.body.some((n: any) => n.id === localOnlyNoteId), false);
+		});
+
+		test('local/reply/renote/withFiles/pollフィルタを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnf${suffix}` });
+			const file = await uploadFile(author);
+
+			const localNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: localNoteId,
+				text: 'bare notes local',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const remoteNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: remoteNoteId,
+				text: 'bare notes remote (excluded by local)',
+				userId: author.id,
+				userHost: 'remote.example.com',
+				visibility: 'public',
+			});
+
+			const rootNote = await post(author, { text: 'bare notes root', visibility: 'public' });
+			const replyNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyNoteId,
+				text: 'bare notes reply',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: rootNote.id,
+			});
+
+			const fileNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: fileNoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				fileIds: [file.body!.id],
+			});
+
+			const renoteNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: renoteNoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				renoteId: rootNote.id,
+			});
+
+			const local = await api('notes', { local: true, limit: 100 });
+			assert.strictEqual(local.status, 200);
+			assert.ok(local.body.some((n: any) => n.id === localNoteId));
+			assert.strictEqual(local.body.some((n: any) => n.id === remoteNoteId), false);
+
+			const replies = await api('notes', { reply: true, limit: 100 });
+			assert.strictEqual(replies.status, 200);
+			assert.ok(replies.body.some((n: any) => n.id === replyNoteId));
+			assert.strictEqual(replies.body.some((n: any) => n.id === localNoteId), false);
+
+			const renotes = await api('notes', { renote: true, limit: 100 });
+			assert.strictEqual(renotes.status, 200);
+			assert.ok(renotes.body.some((n: any) => n.id === renoteNoteId));
+			assert.strictEqual(renotes.body.some((n: any) => n.id === localNoteId), false);
+
+			const withFiles = await api('notes', { withFiles: true, limit: 100 });
+			assert.strictEqual(withFiles.status, 200);
+			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
+			assert.strictEqual(withFiles.body.some((n: any) => n.id === localNoteId), false);
+
+			const pollNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pollNoteId,
+				text: 'bare notes poll',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				hasPoll: true,
+			});
+			await createPollInDatabase(db, {
+				noteId: pollNoteId,
+				expiresAt: null,
+				multiple: false,
+				choices: ['a', 'b'],
+				votes: [0, 0],
+				noteVisibility: 'public',
+				userId: author.id,
+				userHost: null,
+			});
+
+			const polls = await api('notes', { poll: true, limit: 100 });
+			assert.strictEqual(polls.status, 200);
+			assert.ok(polls.body.some((n: any) => n.id === pollNoteId));
+			assert.strictEqual(polls.body.some((n: any) => n.id === localNoteId), false);
+		});
+
+		test('認証済みで呼んでもmeを渡さず常に匿名としてパックする(元実装がpackMany(notes)をme無しで呼ぶため)', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnm${suffix}` });
+			const reactor = await signup({ username: `hnmr${suffix}` });
+
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
+				text: 'bare notes anonymous packing',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const reacted = await api('notes/reactions/create', { noteId, reaction: '👍' }, reactor);
+			assert.strictEqual(reacted.status, 204);
+
+			const asReactor = await api('notes', { limit: 100 }, reactor);
+			assert.strictEqual(asReactor.status, 200);
+			const packed = asReactor.body.find((n: any) => n.id === noteId);
+			assert.ok(packed);
+			assert.strictEqual(packed.myReaction, undefined);
+		});
+
+		test('sinceId/untilIdによるページネーションを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnp${suffix}` });
+
+			const oldNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: oldNoteId,
+				text: 'bare notes pagination old',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const newNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: newNoteId,
+				text: 'bare notes pagination new',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const afterOld = await api('notes', { sinceId: oldNoteId, limit: 100 });
+			assert.strictEqual(afterOld.status, 200);
+			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
+			assert.strictEqual(afterOld.body.some((n: any) => n.id === oldNoteId), false);
+
+			const beforeNew = await api('notes', { untilId: newNoteId, limit: 100 });
+			assert.strictEqual(beforeNew.status, 200);
+			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
+			assert.strictEqual(beforeNew.body.some((n: any) => n.id === newNoteId), false);
+		});
+	});
+
+	describe('users/notes', () => {
+		test('可視性フィルタとwithFiles/withRenotesフィルタを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hun${suffix}` });
+			const stranger = await signup({ username: `huns${suffix}` });
+			const file = await uploadFile(author);
+
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'users/notes public',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const specifiedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: specifiedNoteId,
+				text: 'users/notes specified',
+				userId: author.id,
+				userHost: null,
+				visibility: 'specified',
+				visibleUserIds: [stranger.id],
+			});
+
+			const asAnon = await api('users/notes', { userId: author.id, limit: 100 });
+			assert.strictEqual(asAnon.status, 200);
+			assert.ok(asAnon.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(asAnon.body.some((n: any) => n.id === specifiedNoteId), false);
+
+			const asVisibleUser = await api('users/notes', { userId: author.id, limit: 100 }, stranger);
+			assert.strictEqual(asVisibleUser.status, 200);
+			assert.ok(asVisibleUser.body.some((n: any) => n.id === specifiedNoteId));
+
+			const fileNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: fileNoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				fileIds: [file.body!.id],
+			});
+			const withFiles = await api('users/notes', { userId: author.id, withFiles: true, limit: 100 });
+			assert.strictEqual(withFiles.status, 200);
+			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
+			assert.strictEqual(withFiles.body.some((n: any) => n.id === publicNoteId), false);
+
+			const pureRenoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pureRenoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				renoteId: publicNoteId,
+			});
+			const withoutRenotes = await api('users/notes', { userId: author.id, withRenotes: false, limit: 100 });
+			assert.strictEqual(withoutRenotes.status, 200);
+			assert.strictEqual(withoutRenotes.body.some((n: any) => n.id === pureRenoteId), false);
+			assert.ok(withoutRenotes.body.some((n: any) => n.id === publicNoteId));
+		});
+
+		test('withChannelNotesとミュート済みチャンネルの除外を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunc${suffix}` });
+			const viewer = await signup({ username: `huncv${suffix}` });
+
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: author.id,
+				name: `${suffix}-channel`,
+			});
+			const channelNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: channelNoteId,
+				text: 'users/notes channel note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				channelId: channel.id,
+			});
+
+			const withoutChannelNotes = await api('users/notes', { userId: author.id, limit: 100 });
+			assert.strictEqual(withoutChannelNotes.status, 200);
+			assert.strictEqual(withoutChannelNotes.body.some((n: any) => n.id === channelNoteId), false);
+
+			const withChannelNotes = await api('users/notes', { userId: author.id, withChannelNotes: true, limit: 100 });
+			assert.strictEqual(withChannelNotes.status, 200);
+			assert.ok(withChannelNotes.body.some((n: any) => n.id === channelNoteId));
+
+			await createChannelMutingInDatabase(db, {
+				id: genId(config),
+				userId: viewer.id,
+				channelId: channel.id,
+				expiresAt: null,
+			});
+			const asMutingViewer = await api('users/notes', { userId: author.id, withChannelNotes: true, limit: 100 }, viewer);
+			assert.strictEqual(asMutingViewer.status, 200);
+			assert.strictEqual(asMutingViewer.body.some((n: any) => n.id === channelNoteId), false);
+		});
+
+		test('BOTH_WITH_REPLIES_AND_WITH_FILESと、対象からブロックされている場合は空配列を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunb${suffix}` });
+			const blockedViewer = await signup({ username: `hunbv${suffix}` });
+
+			const bothError = await api('users/notes', { userId: author.id, withReplies: true, withFiles: true });
+			assert.strictEqual(bothError.status, 400);
+			assert.strictEqual(castAsError(bothError.body as any).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES');
+			assert.strictEqual(castAsError(bothError.body as any).error.id, '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222');
+
+			await api('blocking/create', { userId: blockedViewer.id }, author);
+			const asBlockedViewer = await api('users/notes', { userId: author.id, limit: 100 }, blockedViewer);
+			assert.strictEqual(asBlockedViewer.status, 200);
+			assert.deepStrictEqual(asBlockedViewer.body, []);
+		});
+
+		test('sinceId/untilIdによるページネーションを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunp${suffix}` });
+
+			const oldNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: oldNoteId,
+				text: 'users/notes pagination old',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const newNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: newNoteId,
+				text: 'users/notes pagination new',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const afterOld = await api('users/notes', { userId: author.id, sinceId: oldNoteId, limit: 100 });
+			assert.strictEqual(afterOld.status, 200);
+			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
+			assert.strictEqual(afterOld.body.some((n: any) => n.id === oldNoteId), false);
+
+			const beforeNew = await api('users/notes', { userId: author.id, untilId: newNoteId, limit: 100 });
+			assert.strictEqual(beforeNew.status, 200);
+			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
+			assert.strictEqual(beforeNew.body.some((n: any) => n.id === newNoteId), false);
+		});
+
+		test('withRepliesはDBフォールバック経路では効かず、指定に関わらずリプライを含む(元実装の既存挙動)', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunr${suffix}` });
+			const rootNote = await post(author, { text: 'users/notes withReplies root', visibility: 'public' });
+			const replyNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyNoteId,
+				text: 'users/notes withReplies reply',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: rootNote.id,
+			});
+
+			const withRepliesFalse = await api('users/notes', { userId: author.id, withReplies: false, limit: 100 });
+			assert.strictEqual(withRepliesFalse.status, 200);
+			assert.ok(withRepliesFalse.body.some((n: any) => n.id === replyNoteId));
+
+			const withRepliesTrue = await api('users/notes', { userId: author.id, withReplies: true, limit: 100 });
+			assert.strictEqual(withRepliesTrue.status, 200);
+			assert.ok(withRepliesTrue.body.some((n: any) => n.id === replyNoteId));
 		});
 	});
 
@@ -12564,7 +13215,26 @@ describe('Endpoints', () => {
 			const res = await api('drive', {}, alice);
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			expect(res.body).toHaveProperty('usage', 0);
+			// alice は他のテストでも共有されアップロードが行われるため、0固定ではなく非負の数値であることのみ検証する
+			assert.strictEqual(typeof res.body.usage, 'number');
+			assert.ok(res.body.usage >= 0);
+		});
+
+		test('アップロード後にusageが増加し、capacityはrole policyのdriveCapacityMbと一致する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hdrv${suffix}` });
+
+			const before = await api('drive', {}, user);
+			assert.strictEqual(before.status, 200);
+			assert.strictEqual(before.body.usage, 0);
+			assert.strictEqual(before.body.capacity, 1024 * 1024 * DEFAULT_POLICIES.driveCapacityMb);
+
+			const uploaded = await uploadFile(user);
+			assert.strictEqual(uploaded.status, 200);
+
+			const after = await api('drive', {}, user);
+			assert.strictEqual(after.status, 200);
+			assert.strictEqual(after.body.usage, uploaded.body!.size);
 		});
 	});
 
@@ -13344,6 +14014,16 @@ describe('Endpoints', () => {
 
 			assert.strictEqual((resAlice.body as unknown as { memo: string }).memo, memoAliceToBob);
 			assert.strictEqual((resCarol.body as unknown as { memo: string }).memo, memoCarolToBob);
+		});
+
+		test('存在しないユーザーに対してはNO_SUCH_USERを維持する', async () => {
+			const res = await api('users/update-memo', {
+				memo: 'test',
+				userId: genId(loadConfig()),
+			}, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(res.body as any).error.id, '6fef56f3-e765-4957-88e5-c6f65329b8a5');
 		});
 	});
 });

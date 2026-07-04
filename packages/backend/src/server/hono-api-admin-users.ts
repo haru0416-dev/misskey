@@ -265,7 +265,7 @@ export async function handleHonoApiAdminShowUsers(
 		hostname: params.hostname,
 		roleUserIds,
 	});
-	const baseUsers = await packUserDetailedNotMeManyForHonoApi(deps, users);
+	const baseUsers = await packUserDetailedNotMeManyForHonoApi(deps, users, me);
 
 	return await Promise.all(users.map((user, i) => packAdminUserDetailedForHonoApi(deps, user, baseUsers[i]!)));
 }

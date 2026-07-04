@@ -4,7 +4,7 @@
  */
 
 import type { Config } from '@/config.js';
-import { countDriveFilesByFolderIdFromDatabase, driveFileExistsByMd5AndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import { countDriveFilesByFolderIdFromDatabase, driveFileExistsByMd5AndUserIdFromDatabase, sumDriveFileSizeByUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import {
 	countDriveFoldersByParentIdFromDatabase,
 	createDriveFolderInDatabase,
@@ -24,6 +24,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiDriveStreamPublisher } from './hono-api-events.js';
 import { HonoApiError } from './hono-api-error.js';
+import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiDriveDependencies = {
@@ -416,4 +417,17 @@ export async function handleHonoApiDriveFoldersDelete(
 
 	await deleteDriveFolderByIdFromDatabase(deps.db, folder.id);
 	deps.publishDriveStream?.(me.id, 'folderDeleted', folder.id);
+}
+
+export async function handleHonoApiDrive(
+	deps: HonoApiDriveDependencies & HonoApiRolePolicyDependencies,
+	me: MiLocalUser,
+): Promise<{ capacity: number; usage: number }> {
+	const usage = await sumDriveFileSizeByUserIdFromDatabase(deps.db, me.id);
+	const policies = await getHonoApiRolePolicies(deps, me);
+
+	return {
+		capacity: 1024 * 1024 * policies.driveCapacityMb,
+		usage,
+	};
 }
