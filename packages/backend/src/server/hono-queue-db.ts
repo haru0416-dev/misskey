@@ -11,28 +11,35 @@ import type * as Bull from 'bullmq';
 import { createAntennaInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { countDriveFilesByUserIdFromDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
 import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
-import { countMutingsByMuterIdFromDatabase, listMuteeIdsByMuterIdFromDatabase, listPermanentMutingsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { countMutingsByMuterIdFromDatabase, createMutingInDatabase, listMuteeIdsByMuterIdFromDatabase, listPermanentMutingsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/BlockingStore.js';
 import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
 import { listUserListMembershipsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
-import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import type { DownloadService } from '@/core/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
+import * as Acct from '@/misc/acct.js';
 import type { Schema, SchemaType } from '@/misc/json-schema.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiBlocking, MiFollowing, MiMuting } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser } from '@/queue/types.js';
+import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
+import { isSelfHost } from './hono-api-ap-resolve.js';
+import { resolveUserForHonoApi, toPunyForHonoApi, type HonoApiApPersonDependencies } from './hono-api-ap-person.js';
+import { refreshUserMutingsCache } from './hono-api-account-mutes.js';
 import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { createExportCompletedNotification, type HonoApiNotificationDependencies } from './hono-api-notification.js';
 import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
 
 const Ajv = _Ajv.default;
 
-export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & {
+export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & HonoApiApPersonDependencies & {
 	db: MiDrizzleDatabase;
+	downloadService: Pick<DownloadService, 'downloadTextFile'>;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
@@ -416,5 +423,65 @@ export async function handleHonoQueueImportAntennas(deps: HonoQueueDbDependencie
 		}
 	} catch {
 		// 元実装同様、ここでのエラーは再送しない
+	}
+}
+
+/**
+ * ImportMuting/ImportBlocking/ImportFollowingProcessorService 共通の
+ * 「CSV1行(acct)からミュート/ブロック/フォロー対象ユーザーを解決する」ロジック相当。
+ * ローカルユーザーの解決に失敗した場合はnullを返す (呼び出し元でスキップする)。
+ */
+async function resolveImportTargetUserForHonoApi(
+	deps: HonoQueueDbDependencies,
+	acct: string,
+): Promise<import('@/models/User.js').MiUser | null> {
+	const { username, host } = Acct.parse(acct);
+	if (!host) return null;
+
+	let target = await fetchUserByUsernameAndHostFromDatabase(
+		deps.db,
+		username,
+		isSelfHost(deps.config, host) ? null : toPunyForHonoApi(host),
+	);
+
+	if (target == null) {
+		target = await resolveUserForHonoApi(deps, username, host);
+	}
+
+	return target;
+}
+
+/** ImportMutingProcessorService.process 相当。 */
+export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (user == null) return;
+
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	if (file == null) return;
+
+	const csv = await deps.downloadService.downloadTextFile(file.url);
+
+	for (const line of csv.trim().split('\n')) {
+		try {
+			const acct = line.split(',')[0].trim();
+			const target = await resolveImportTargetUserForHonoApi(deps, acct);
+
+			if (target == null) {
+				throw new Error(`cannot resolve user: ${acct}`);
+			}
+
+			// skip myself
+			if (target.id === job.data.user.id) continue;
+
+			await createMutingInDatabase(deps.db, {
+				id: genId(deps.config),
+				expiresAt: null,
+				muterId: user.id,
+				muteeId: target.id,
+			});
+			await refreshUserMutingsCache(deps, user.id);
+		} catch {
+			// 元実装同様、行単位のエラーはログのみで処理を継続する
+		}
 	}
 }
