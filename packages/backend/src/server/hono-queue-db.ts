@@ -19,7 +19,7 @@ import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase, list
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { countNoteFavoritesByUserIdFromDatabase, listNoteFavoritesByUserIdFromDatabase } from '@/core/NoteFavoriteStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
-import { listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
+import { countNotesByUserIdFromDatabase, listNotesByUserIdWithPaginationFromDatabase, listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -36,6 +36,7 @@ import type { Config } from '@/config.js';
 import type { DbQueue, RelationshipQueue } from '@/core/QueueModule.js';
 import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
+import { packDriveFileManyByIdsForHonoApi } from './hono-api-drive-file.js';
 import { isSelfHost } from './hono-api-ap-resolve.js';
 import { resolveUserForHonoApi, toPunyForHonoApi, type HonoApiApPersonDependencies } from './hono-api-ap-person.js';
 import { refreshUserMutingsCache } from './hono-api-account-mutes.js';
@@ -773,6 +774,89 @@ export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependenci
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'favorite', driveFile.id);
+	} finally {
+		cleanup();
+	}
+}
+
+function serializeNoteForHonoApi(
+	deps: Pick<HonoQueueDbDependencies, 'config'>,
+	note: MiNote,
+	poll: MiPoll | null,
+	files: Awaited<ReturnType<typeof packDriveFileManyByIdsForHonoApi>>,
+): Record<string, unknown> {
+	return {
+		id: note.id,
+		text: note.text,
+		createdAt: parseId(deps.config, note.id).date.toISOString(),
+		fileIds: note.fileIds,
+		files,
+		replyId: note.replyId,
+		renoteId: note.renoteId,
+		poll,
+		cw: note.cw,
+		visibility: note.visibility,
+		visibleUserIds: note.visibleUserIds,
+		localOnly: note.localOnly,
+		reactionAcceptance: note.reactionAcceptance,
+	};
+}
+
+/**
+ * ExportNotesProcessorService.process 相当。
+ * 元実装はWeb Streams API (NoteStream/JsonArrayStream/FileWriterStream) でメモリを
+ * 抑えているが、他のexport系ポートと同じ「fs.createWriteStreamへの逐次write」方式でも
+ * 同じくノート単位でストリーム書き込みされるため、メモリ特性を維持したまま簡潔に移植した。
+ */
+export async function handleHonoQueueExportNotes(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (user == null) return;
+
+	const [path, cleanup] = await createTemp();
+
+	try {
+		const stream = fs.createWriteStream(path, { flags: 'a' });
+
+		await writeToStream(stream, '[');
+
+		let exportedNotesCount = 0;
+		let cursor: MiNote['id'] | null = null;
+
+		const total = await countNotesByUserIdFromDatabase(deps.db, user.id);
+
+		for (;;) {
+			const notes = await listNotesByUserIdWithPaginationFromDatabase(deps.db, user.id, {
+				limit: 100,
+				sinceId: cursor,
+			});
+
+			if (notes.length === 0) {
+				job.updateProgress(100);
+				break;
+			}
+
+			cursor = notes.at(-1)?.id ?? null;
+
+			for (const note of notes) {
+				const poll = note.hasPoll ? await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id) : null;
+				const files = await packDriveFileManyByIdsForHonoApi(deps, note.fileIds);
+				const content = JSON.stringify(serializeNoteForHonoApi(deps, note, poll, files));
+
+				const isFirst = exportedNotesCount === 0;
+				await writeToStream(stream, isFirst ? content : ',\n' + content);
+				exportedNotesCount++;
+			}
+
+			job.updateProgress(exportedNotesCount / total * 100);
+		}
+
+		await writeToStream(stream, ']');
+		stream.end();
+
+		const fileName = 'notes-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.json';
+		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
+
+		createExportCompletedNotification(deps, user.id, 'note', driveFile.id);
 	} finally {
 		cleanup();
 	}
