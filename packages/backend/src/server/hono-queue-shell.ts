@@ -27,8 +27,9 @@ import {
 } from './hono-queue-system.js';
 import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependencies } from './hono-queue-clean-remote-notes.js';
 import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from './hono-queue-deliver.js';
+import { handleHonoQueueEndedPollNotification, type HonoQueueEndedPollNotificationDependencies } from './hono-queue-ended-poll-notification.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -40,6 +41,7 @@ export type HonoQueueWorkers = {
 	postScheduledNoteQueueWorker: Bull.Worker;
 	systemQueueWorker: Bull.Worker;
 	deliverQueueWorker: Bull.Worker;
+	endedPollNotificationQueueWorker: Bull.Worker;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
 };
@@ -82,9 +84,9 @@ function renderError(e?: Error): unknown {
  *
  * 元の QueueProcessorService は10個の Worker (system/db/deliver/inbox/userWebhookDeliver/
  * systemWebhookDeliver/relationship/objectStorage/endedPollNotification/postScheduledNote)
- * を組み立てるが、現時点でこの関数が組み立てるのは6個 (userWebhookDeliver/systemWebhookDeliver/
- * relationship/postScheduledNote/system/deliver)。**残り4個 (db/inbox/objectStorage/
- * endedPollNotification) は未移植であり、本番のジョブキュー起動経路 (`boot/common.ts` の
+ * を組み立てるが、現時点でこの関数が組み立てるのは7個 (userWebhookDeliver/systemWebhookDeliver/
+ * relationship/postScheduledNote/system/deliver/endedPollNotification)。**残り3個 (db/inbox/
+ * objectStorage) は未移植であり、本番のジョブキュー起動経路 (`boot/common.ts` の
  * `jobQueue()`) からはまだ呼ばれていない。** 全プロセッサの移植が完了するまでは、この関数を
  * 実際のキュー起動に配線しないこと — 同じキューに対して NestJS側のWorkerと二重に接続すると
  * 同一ジョブが二重処理される。
@@ -243,6 +245,15 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}
 	//#endregion
 
+	//#region ended poll notification
+	const endedPollNotificationQueueWorker = new Bull.Worker(QUEUE.ENDED_POLL_NOTIFICATION, (job) => {
+		return handleHonoQueueEndedPollNotification(deps, job);
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.ENDED_POLL_NOTIFICATION),
+		autorun: false,
+	});
+	//#endregion
+
 	return {
 		userWebhookDeliverQueueWorker,
 		systemWebhookDeliverQueueWorker,
@@ -250,6 +261,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		postScheduledNoteQueueWorker,
 		systemQueueWorker,
 		deliverQueueWorker,
+		endedPollNotificationQueueWorker,
 		start: async () => {
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
@@ -258,6 +270,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				postScheduledNoteQueueWorker.run(),
 				systemQueueWorker.run(),
 				deliverQueueWorker.run(),
+				endedPollNotificationQueueWorker.run(),
 			]);
 		},
 		stop: async () => {
@@ -268,6 +281,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				postScheduledNoteQueueWorker.close(),
 				systemQueueWorker.close(),
 				deliverQueueWorker.close(),
+				endedPollNotificationQueueWorker.close(),
 			]);
 		},
 	};

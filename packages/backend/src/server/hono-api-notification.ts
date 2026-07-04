@@ -92,7 +92,14 @@ type ScheduledNotePostFailedNotification = {
 	noteDraftId: string;
 };
 
-type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification | ScheduledNotePostedNotification | ScheduledNotePostFailedNotification;
+type PollEndedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'pollEnded';
+	noteId: string;
+};
+
+type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification | ScheduledNotePostedNotification | ScheduledNotePostFailedNotification | PollEndedNotification;
 
 type HonoPackedRoleAssignedNotification = {
 	id: string;
@@ -284,6 +291,29 @@ export function createScheduledNotePostFailedNotification(deps: HonoApiNotificat
 			type: 'scheduledNotePostFailed',
 			noteDraftId,
 		} satisfies ScheduledNotePostFailedNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+
+		deps.publishMainStream?.(userId, 'notification', notification);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', notification);
+		}).catch(() => {}));
+	})());
+}
+
+export function createPollEndedNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id'], noteId: string): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.pollEnded?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'pollEnded',
+			noteId,
+		} satisfies PollEndedNotification;
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
