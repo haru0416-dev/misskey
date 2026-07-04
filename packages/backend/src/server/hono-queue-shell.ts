@@ -27,6 +27,7 @@ import {
 	type HonoQueueSystemDependencies,
 } from './hono-queue-system.js';
 import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependencies } from './hono-queue-clean-remote-notes.js';
+import { handleHonoQueueCheckModeratorsActivity, type HonoQueueCheckModeratorsActivityDependencies } from './hono-queue-check-moderators-activity.js';
 import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from './hono-queue-deliver.js';
 import { handleHonoQueueEndedPollNotification, type HonoQueueEndedPollNotificationDependencies } from './hono-queue-ended-poll-notification.js';
 import { handleHonoQueueCleanRemoteFiles, handleHonoQueueDeleteFile, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
@@ -52,7 +53,7 @@ import {
 import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, type HonoQueueEmojisDependencies } from './hono-queue-emojis.js';
 import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './hono-queue-delete-account.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & HonoQueueCheckModeratorsActivityDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -111,6 +112,7 @@ function renderError(e?: Error): unknown {
  * systemWebhookDeliver/relationship/objectStorage/endedPollNotification/postScheduledNote)
  * を組み立てるが、現時点でこの関数が組み立てるのは9個 (userWebhookDeliver/systemWebhookDeliver/
  * relationship/postScheduledNote/system/deliver/endedPollNotification/objectStorage/db)。
+ * system/relationship/db を含む9キューは全ジョブ種別が移植済み。
  * **inboxのみ未移植であり、本番のジョブキュー起動経路 (`boot/common.ts` の
  * `jobQueue()`) からはまだ呼ばれていない。** 全プロセッサの移植が完了するまでは、この関数を
  * 実際のキュー起動に配線しないこと — 同じキューに対して NestJS側のWorkerと二重に接続すると
@@ -211,8 +213,6 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region system
-	// NOTE: checkModeratorsActivity はまだ移植未完了 (MetaService/RoleService/AnnouncementService
-	// 依存の調査待ち)。
 	const systemQueueWorker = new Bull.Worker(QUEUE.SYSTEM, (job) => {
 		switch (job.name) {
 			case 'clean': return handleHonoQueueClean(deps);
@@ -223,6 +223,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'checkExpiredMutings': return handleHonoQueueCheckExpiredMutings(deps);
 			case 'bakeBufferedReactions': return handleHonoQueueBakeBufferedReactions(deps);
 			case 'cleanRemoteNotes': return handleHonoQueueCleanRemoteNotes(deps, job);
+			case 'checkModeratorsActivity': return handleHonoQueueCheckModeratorsActivity(deps);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for system`);
 		}
 	}, {
