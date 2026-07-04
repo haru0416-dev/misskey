@@ -6,9 +6,10 @@
 import { domainToASCII, URLSearchParams } from 'node:url';
 import type * as Redis from 'ioredis';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
@@ -18,6 +19,7 @@ import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
@@ -679,4 +681,82 @@ export async function handleHonoApiNotesTranslate(
 		sourceLang: json.translations[0]!.detected_source_language,
 		text: json.translations[0]!.text,
 	};
+}
+
+const usersNotesParamDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		withReplies: { type: 'boolean', default: false },
+		withRenotes: { type: 'boolean', default: true },
+		withChannelNotes: { type: 'boolean', default: false },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		sinceDate: { type: 'integer' },
+		untilDate: { type: 'integer' },
+		allowPartial: { type: 'boolean', default: false },
+		withFiles: { type: 'boolean', default: false },
+	},
+	required: ['userId'],
+} as const;
+
+type UsersNotesParams = {
+	userId: string;
+	withReplies: boolean;
+	withRenotes: boolean;
+	withChannelNotes: boolean;
+	limit: number;
+	sinceId?: string;
+	untilId?: string;
+	sinceDate?: number;
+	untilDate?: number;
+	allowPartial: boolean;
+	withFiles: boolean;
+};
+
+function usersNotesBothWithRepliesAndWithFilesError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Specifying both withReplies and withFiles is not supported',
+		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
+		id: '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222',
+	});
+}
+
+export async function handleHonoApiUsersNotes(
+	deps: HonoApiNoteDependencies,
+	me: MiUser | null | undefined,
+	body: Record<string, unknown>,
+): Promise<Packed<'Note'>[]> {
+	const params = parseHonoApiParams(usersNotesParamDef, body) as UsersNotesParams;
+
+	if (params.withReplies && params.withFiles) throw usersNotesBothWithRepliesAndWithFilesError();
+
+	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
+
+	if (me != null) {
+		const userIdsWhoBlockingMe = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id);
+		if (userIdsWhoBlockingMe.includes(params.userId)) return [];
+	}
+
+	const mutingChannelIds = me != null
+		? await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date())
+		: [];
+
+	const notes = await listUserTimelineNotesFromDatabase(deps.db, {
+		userId: params.userId,
+		limit: params.limit,
+		sinceId,
+		untilId,
+		withChannelNotes: params.withChannelNotes,
+		withFiles: params.withFiles,
+		withRenotes: params.withRenotes,
+		me: me ?? null,
+		blockedHosts: deps.meta.blockedHosts,
+		mutingChannelIds,
+	});
+
+	return await packNoteManyForHonoApi(deps, notes, me);
 }

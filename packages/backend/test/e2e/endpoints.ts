@@ -8450,6 +8450,184 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('users/notes', () => {
+		test('可視性フィルタとwithFiles/withRenotesフィルタを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hun${suffix}` });
+			const stranger = await signup({ username: `huns${suffix}` });
+			const file = await uploadFile(author);
+
+			const publicNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: publicNoteId,
+				text: 'users/notes public',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const specifiedNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: specifiedNoteId,
+				text: 'users/notes specified',
+				userId: author.id,
+				userHost: null,
+				visibility: 'specified',
+				visibleUserIds: [stranger.id],
+			});
+
+			const asAnon = await api('users/notes', { userId: author.id, limit: 100 });
+			assert.strictEqual(asAnon.status, 200);
+			assert.ok(asAnon.body.some((n: any) => n.id === publicNoteId));
+			assert.strictEqual(asAnon.body.some((n: any) => n.id === specifiedNoteId), false);
+
+			const asVisibleUser = await api('users/notes', { userId: author.id, limit: 100 }, stranger);
+			assert.strictEqual(asVisibleUser.status, 200);
+			assert.ok(asVisibleUser.body.some((n: any) => n.id === specifiedNoteId));
+
+			const fileNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: fileNoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				fileIds: [file.body!.id],
+			});
+			const withFiles = await api('users/notes', { userId: author.id, withFiles: true, limit: 100 });
+			assert.strictEqual(withFiles.status, 200);
+			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
+			assert.strictEqual(withFiles.body.some((n: any) => n.id === publicNoteId), false);
+
+			const pureRenoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: pureRenoteId,
+				text: null,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				renoteId: publicNoteId,
+			});
+			const withoutRenotes = await api('users/notes', { userId: author.id, withRenotes: false, limit: 100 });
+			assert.strictEqual(withoutRenotes.status, 200);
+			assert.strictEqual(withoutRenotes.body.some((n: any) => n.id === pureRenoteId), false);
+			assert.ok(withoutRenotes.body.some((n: any) => n.id === publicNoteId));
+		});
+
+		test('withChannelNotesとミュート済みチャンネルの除外を維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunc${suffix}` });
+			const viewer = await signup({ username: `huncv${suffix}` });
+
+			const channel = await createChannelInDatabase(db, {
+				id: genId(config),
+				userId: author.id,
+				name: `${suffix}-channel`,
+			});
+			const channelNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: channelNoteId,
+				text: 'users/notes channel note',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				channelId: channel.id,
+			});
+
+			const withoutChannelNotes = await api('users/notes', { userId: author.id, limit: 100 });
+			assert.strictEqual(withoutChannelNotes.status, 200);
+			assert.strictEqual(withoutChannelNotes.body.some((n: any) => n.id === channelNoteId), false);
+
+			const withChannelNotes = await api('users/notes', { userId: author.id, withChannelNotes: true, limit: 100 });
+			assert.strictEqual(withChannelNotes.status, 200);
+			assert.ok(withChannelNotes.body.some((n: any) => n.id === channelNoteId));
+
+			await createChannelMutingInDatabase(db, {
+				id: genId(config),
+				userId: viewer.id,
+				channelId: channel.id,
+				expiresAt: null,
+			});
+			const asMutingViewer = await api('users/notes', { userId: author.id, withChannelNotes: true, limit: 100 }, viewer);
+			assert.strictEqual(asMutingViewer.status, 200);
+			assert.strictEqual(asMutingViewer.body.some((n: any) => n.id === channelNoteId), false);
+		});
+
+		test('BOTH_WITH_REPLIES_AND_WITH_FILESと、対象からブロックされている場合は空配列を維持する', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunb${suffix}` });
+			const blockedViewer = await signup({ username: `hunbv${suffix}` });
+
+			const bothError = await api('users/notes', { userId: author.id, withReplies: true, withFiles: true });
+			assert.strictEqual(bothError.status, 400);
+			assert.strictEqual(castAsError(bothError.body as any).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES');
+			assert.strictEqual(castAsError(bothError.body as any).error.id, '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222');
+
+			await api('blocking/create', { userId: blockedViewer.id }, author);
+			const asBlockedViewer = await api('users/notes', { userId: author.id, limit: 100 }, blockedViewer);
+			assert.strictEqual(asBlockedViewer.status, 200);
+			assert.deepStrictEqual(asBlockedViewer.body, []);
+		});
+
+		test('sinceId/untilIdによるページネーションを維持する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunp${suffix}` });
+
+			const oldNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: oldNoteId,
+				text: 'users/notes pagination old',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+			const newNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: newNoteId,
+				text: 'users/notes pagination new',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+
+			const afterOld = await api('users/notes', { userId: author.id, sinceId: oldNoteId, limit: 100 });
+			assert.strictEqual(afterOld.status, 200);
+			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
+			assert.strictEqual(afterOld.body.some((n: any) => n.id === oldNoteId), false);
+
+			const beforeNew = await api('users/notes', { userId: author.id, untilId: newNoteId, limit: 100 });
+			assert.strictEqual(beforeNew.status, 200);
+			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
+			assert.strictEqual(beforeNew.body.some((n: any) => n.id === newNoteId), false);
+		});
+
+		test('withRepliesはDBフォールバック経路では効かず、指定に関わらずリプライを含む(元実装の既存挙動)', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hunr${suffix}` });
+			const rootNote = await post(author, { text: 'users/notes withReplies root', visibility: 'public' });
+			const replyNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: replyNoteId,
+				text: 'users/notes withReplies reply',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				replyId: rootNote.id,
+			});
+
+			const withRepliesFalse = await api('users/notes', { userId: author.id, withReplies: false, limit: 100 });
+			assert.strictEqual(withRepliesFalse.status, 200);
+			assert.ok(withRepliesFalse.body.some((n: any) => n.id === replyNoteId));
+
+			const withRepliesTrue = await api('users/notes', { userId: author.id, withReplies: true, limit: 100 });
+			assert.strictEqual(withRepliesTrue.status, 200);
+			assert.ok(withRepliesTrue.body.some((n: any) => n.id === replyNoteId));
+		});
+	});
+
 	describe('notes/clips, search-by-tag, show-partial-bulk, timeline, user-list-timeline, polls/recommendation', () => {
 		test('notes/clips はpublicなclipのみ返しNO_SUCH_NOTEを維持する', async () => {
 			const config = loadConfig();
