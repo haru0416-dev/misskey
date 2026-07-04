@@ -25,8 +25,9 @@ import {
 	handleHonoQueueTickCharts,
 	type HonoQueueSystemDependencies,
 } from './hono-queue-system.js';
+import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependencies } from './hono-queue-clean-remote-notes.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -182,7 +183,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region system
-	// NOTE: checkModeratorsActivity/cleanRemoteNotes はまだ移植未完了 (個別の依存調査待ち)。
+	// NOTE: checkModeratorsActivity はまだ移植未完了 (MetaService/RoleService/AnnouncementService
+	// 依存の調査待ち)。
 	const systemQueueWorker = new Bull.Worker(QUEUE.SYSTEM, (job) => {
 		switch (job.name) {
 			case 'clean': return handleHonoQueueClean(deps);
@@ -192,6 +194,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'cleanCharts': return handleHonoQueueCleanCharts(deps);
 			case 'checkExpiredMutings': return handleHonoQueueCheckExpiredMutings(deps);
 			case 'bakeBufferedReactions': return handleHonoQueueBakeBufferedReactions(deps);
+			case 'cleanRemoteNotes': return handleHonoQueueCleanRemoteNotes(deps, job);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for system`);
 		}
 	}, {

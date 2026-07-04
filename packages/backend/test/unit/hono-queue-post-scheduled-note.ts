@@ -55,7 +55,14 @@ describe('hono-queue-post-scheduled-note', () => {
 
 		await handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId }));
 
-		const draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
+		// deleteNoteDraftByIdFromDatabase は元実装同様 fire-and-forget (void) で
+		// 呼ばれるため、DB反映完了をポーリングで待つ。
+		let draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
+		for (let i = 0; i < 20 && draftAfter != null; i++) {
+			await new Promise(resolve => setTimeout(resolve, 100));
+			draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
+		}
+
 		expect(draftAfter).toBeNull();
 	});
 
