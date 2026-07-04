@@ -384,7 +384,7 @@ async function expireOldDriveFileForHonoApi(
 }
 
 export type AddDriveFileArgs = {
-	user: MiLocalUser | null;
+	user: MiUser | null;
 	path: string;
 	name?: string | null;
 	comment?: string | null;
@@ -698,7 +698,7 @@ type DriveFilesUploadFromUrlParams = {
 	force: boolean;
 };
 
-async function uploadDriveFileFromUrlForHonoApi(
+export async function uploadDriveFileFromUrlForHonoApi(
 	deps: HonoApiDriveFileUploadDependencies,
 	{
 		url,
@@ -713,7 +713,7 @@ async function uploadDriveFileFromUrlForHonoApi(
 		requestHeaders = null,
 	}: {
 		url: string;
-		user: MiLocalUser | null;
+		user: MiUser | null;
 		folderId?: string | null;
 		uri?: string | null;
 		sensitive?: boolean;
