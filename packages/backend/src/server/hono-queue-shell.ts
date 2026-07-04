@@ -8,8 +8,14 @@ import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
 import { handleHonoQueueSystemWebhookDeliver, handleHonoQueueUserWebhookDeliver, type HonoQueueWebhookDeliverDependencies } from './hono-queue-webhook-deliver.js';
+import {
+	handleHonoQueueRelationshipBlock,
+	handleHonoQueueRelationshipUnblock,
+	handleHonoQueueRelationshipUnfollow,
+	type HonoQueueRelationshipDependencies,
+} from './hono-queue-relationship.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -17,6 +23,7 @@ export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & {
 export type HonoQueueWorkers = {
 	userWebhookDeliverQueueWorker: Bull.Worker;
 	systemWebhookDeliverQueueWorker: Bull.Worker;
+	relationshipQueueWorker: Bull.Worker;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
 };
@@ -120,19 +127,54 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}
 	//#endregion
 
+	//#region relationship
+	// NOTE: 'follow' はまだ移植未完了 (UserFollowingService.follow() の完全な移植には
+	// リモートフォロワー対応のブロック側副作用・deliverAccept・AccountMoveService依存の
+	// 移行済みアカウント自動承認ロジックが必要で、別途調査中)。
+	const relationshipQueueWorker = new Bull.Worker(QUEUE.RELATIONSHIP, (job) => {
+		switch (job.name) {
+			case 'unfollow': return handleHonoQueueRelationshipUnfollow(deps, job);
+			case 'block': return handleHonoQueueRelationshipBlock(deps, job);
+			case 'unblock': return handleHonoQueueRelationshipUnblock(deps, job);
+			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for relationship`);
+		}
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.RELATIONSHIP),
+		autorun: false,
+		concurrency: deps.config.relationshipJobConcurrency ?? 16,
+		limiter: {
+			max: deps.config.relationshipJobPerSec ?? 64,
+			duration: 1000,
+		},
+	});
+
+	{
+		const logger = deps.logger.createSubLogger('relationship');
+		relationshipQueueWorker
+			.on('active', (job) => logger.debug(`active id=${job.id}`))
+			.on('completed', (job, result) => logger.debug(`completed(${result}) id=${job.id}`))
+			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) id=${job?.id ?? '?'}`, { e: renderError(err) }))
+			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
+			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
+	}
+	//#endregion
+
 	return {
 		userWebhookDeliverQueueWorker,
 		systemWebhookDeliverQueueWorker,
+		relationshipQueueWorker,
 		start: async () => {
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
 				systemWebhookDeliverQueueWorker.run(),
+				relationshipQueueWorker.run(),
 			]);
 		},
 		stop: async () => {
 			await Promise.all([
 				userWebhookDeliverQueueWorker.close(),
 				systemWebhookDeliverQueueWorker.close(),
+				relationshipQueueWorker.close(),
 			]);
 		},
 	};
