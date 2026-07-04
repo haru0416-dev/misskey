@@ -606,3 +606,63 @@ export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDepende
 		// 元実装同様、行単位のエラーはログのみで処理を継続する
 	}
 }
+
+/** ImportFollowingProcessorService.process 相当。CSVの行ごとにimportFollowingToDbジョブを積む。 */
+export async function handleHonoQueueImportFollowing(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (user == null) return;
+
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	if (file == null) return;
+
+	const csv = await deps.downloadService.downloadTextFile(file.url);
+	const targets = csv.trim().split('\n');
+
+	const jobs = targets.map(target => ({
+		name: 'importFollowingToDb',
+		data: { user: { id: user.id }, target, withReplies: job.data.withReplies } satisfies DbUserImportToDbJobData,
+		opts: dbQueueJobOptions,
+	}));
+	await deps.dbQueue.addBulk(jobs);
+}
+
+/** ImportFollowingProcessorService.processDb 相当。 */
+export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportToDbJobData>): Promise<void> {
+	const line = job.data.target;
+	const user = job.data.user;
+
+	try {
+		const parts = line.split(',');
+		const acct = parts[0].trim();
+		let withReplies: boolean | null = null;
+
+		for (const keyValue of parts.slice(2)) {
+			const [key, value] = keyValue.split('=');
+			switch (key) {
+				case 'withReplies':
+					withReplies = value === 'true';
+					break;
+			}
+		}
+
+		const target = await resolveImportTargetUserForHonoApi(deps, acct);
+
+		if (target == null) {
+			throw new Error(`Unable to resolve user: ${acct}`);
+		}
+
+		// skip myself
+		if (target.id === job.data.user.id) return;
+
+		await deps.relationshipQueue.addBulk([
+			toRelationshipJobForHonoApi('follow', {
+				from: user,
+				to: { id: target.id },
+				silent: true,
+				withReplies: withReplies ?? job.data.withReplies,
+			}),
+		]);
+	} catch {
+		// 元実装同様、行単位のエラーはログのみで処理を継続する
+	}
+}
