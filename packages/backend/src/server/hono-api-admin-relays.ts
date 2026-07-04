@@ -6,7 +6,7 @@
 import type { Config } from '@/config.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/RelayLogic.js';
-import { listRelaysFromDatabase } from '@/core/RelayStore.js';
+import { listRelaysByStatusFromDatabase, listRelaysFromDatabase, updateRelayStatusInDatabase } from '@/core/RelayStore.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -61,6 +61,30 @@ function assertHttpsUrl(url: string): void {
 		if (err instanceof HonoApiError) throw err;
 		throw invalidUrlError();
 	}
+}
+
+/** RelayService.relayAccepted 相当。 */
+export async function relayAcceptedForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
+	const result = await updateRelayStatusInDatabase(deps.db, id, 'accepted');
+	return JSON.stringify(result);
+}
+
+/** RelayService.relayRejected 相当。 */
+export async function relayRejectedForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
+	const result = await updateRelayStatusInDatabase(deps.db, id, 'rejected');
+	return JSON.stringify(result);
+}
+
+/**
+ * RelayService.isRelayActor 相当。RelayService内の10分キャッシュ (MemorySingleCache) は
+ * Honoプロセスでは同等のキャッシュ層を持たないため省略し、直接DBを読む。
+ */
+export async function isRelayActorForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, actor: { inbox: string | null; sharedInbox: string | null }): Promise<boolean> {
+	const relays = await listRelaysByStatusFromDatabase(deps.db, 'accepted');
+	return relays.some(relay =>
+		(actor.inbox != null && relay.inbox === actor.inbox)
+		|| (actor.sharedInbox != null && relay.inbox === actor.sharedInbox),
+	);
 }
 
 export async function handleHonoApiAdminRelaysList(

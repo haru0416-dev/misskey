@@ -149,7 +149,7 @@ function unreactionNotReactedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'You are not reacting to that note.', code: 'NOT_REACTED', id: '92f4426d-4196-4125-aa5b-02943e2ec8fc' });
 }
 
-async function createNoteReactionForHonoApi(
+export async function createNoteReactionForHonoApi(
 	deps: HonoApiNotesReactionsDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	note: MiNote,
@@ -285,7 +285,7 @@ async function createNoteReactionForHonoApi(
 	}
 }
 
-async function deleteNoteReactionForHonoApi(
+export async function deleteNoteReactionForHonoApi(
 	deps: HonoApiNotesReactionsDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	note: MiNote,
