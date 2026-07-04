@@ -4,6 +4,7 @@
  */
 
 import * as fs from 'node:fs';
+import { Writable } from 'node:stream';
 import { domainToASCII } from 'node:url';
 import { format as dateFormat } from 'date-fns';
 import _Ajv from 'ajv';
@@ -20,6 +21,8 @@ import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { countNoteFavoritesByUserIdFromDatabase, listNoteFavoritesByUserIdFromDatabase } from '@/core/NoteFavoriteStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { countNotesByUserIdFromDatabase, listNotesByUserIdWithPaginationFromDatabase, listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
+import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/ClipStore.js';
+import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -29,7 +32,8 @@ import * as Acct from '@/misc/acct.js';
 import type { Schema, SchemaType } from '@/misc/json-schema.js';
 import type { NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiBlocking, MiFollowing, MiMuting, MiNote, MiUser } from '@/models/_.js';
+import type { MiBlocking, MiClip, MiFollowing, MiMuting, MiNote, MiUser } from '@/models/_.js';
+import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
@@ -857,6 +861,160 @@ export async function handleHonoQueueExportNotes(deps: HonoQueueDbDependencies, 
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'note', driveFile.id);
+	} finally {
+		cleanup();
+	}
+}
+
+function serializeClipForHonoApi(clip: MiClip): Record<string, unknown> {
+	return {
+		id: clip.id,
+		name: clip.name,
+		description: clip.description,
+		lastClippedAt: clip.lastClippedAt?.toISOString(),
+		clipNotes: [],
+	};
+}
+
+function serializeClipNoteForHonoApi(
+	deps: Pick<HonoQueueDbDependencies, 'config'>,
+	clip: MiClipNote & { note: MiNote & { user: MiUser } },
+	poll: MiPoll | undefined,
+): Record<string, unknown> {
+	return {
+		id: clip.id,
+		createdAt: parseId(deps.config, clip.id).date.toISOString(),
+		note: {
+			id: clip.note.id,
+			text: clip.note.text,
+			createdAt: parseId(deps.config, clip.note.id).date.toISOString(),
+			fileIds: clip.note.fileIds,
+			replyId: clip.note.replyId,
+			renoteId: clip.note.renoteId,
+			poll,
+			cw: clip.note.cw,
+			visibility: clip.note.visibility,
+			visibleUserIds: clip.note.visibleUserIds,
+			localOnly: clip.note.localOnly,
+			reactionAcceptance: clip.note.reactionAcceptance,
+			uri: clip.note.uri,
+			url: clip.note.url,
+			user: {
+				id: clip.note.user.id,
+				name: clip.note.user.name,
+				username: clip.note.user.username,
+				host: clip.note.user.host,
+				uri: clip.note.user.uri,
+			},
+		},
+	};
+}
+
+async function processClipNotesForHonoApi(
+	deps: HonoQueueDbDependencies,
+	writer: WritableStreamDefaultWriter,
+	clipId: MiClip['id'],
+	userId: MiUser['id'],
+): Promise<void> {
+	let exportedClipNotesCount = 0;
+	let cursor: MiClipNote['id'] | null = null;
+
+	for (;;) {
+		const clipNotes = await listClipNotesByClipIdFromDatabase(deps.db, clipId, {
+			afterId: cursor,
+			limit: 100,
+		});
+
+		if (clipNotes.length === 0) break;
+
+		cursor = clipNotes.at(-1)?.id ?? null;
+		const noteIds = clipNotes.map(clipNote => clipNote.noteId);
+		const notes = await listVisibleNotesWithUsersByIdsFromDatabase(deps.db, noteIds, { id: userId });
+		const noteMap = new Map(notes.map(note => [note.id, note]));
+
+		for (const clipNote of clipNotes) {
+			const note = noteMap.get(clipNote.noteId);
+			if (note == null) continue;
+
+			const noteCreatedAt = parseId(deps.config, note.id).date;
+			if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) continue;
+
+			let poll: MiPoll | undefined;
+			if (note.hasPoll) {
+				poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
+			}
+			const content = JSON.stringify(serializeClipNoteForHonoApi(deps, { ...clipNote, note }, poll));
+			const isFirst = exportedClipNotesCount === 0;
+			await writer.write(isFirst ? content : ',\n' + content);
+
+			exportedClipNotesCount++;
+		}
+	}
+}
+
+async function processClipsForHonoApi(
+	deps: HonoQueueDbDependencies,
+	writer: WritableStreamDefaultWriter,
+	user: MiUser,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
+	let exportedClipsCount = 0;
+	let cursor: MiClip['id'] | null = null;
+
+	const total = await countClipsByUserIdFromDatabase(deps.db, user.id);
+
+	for (;;) {
+		const clips = await listClipsByUserIdFromDatabase(deps.db, user.id, {
+			afterId: cursor,
+			limit: 100,
+		});
+
+		if (clips.length === 0) {
+			job.updateProgress(100);
+			break;
+		}
+
+		cursor = clips.at(-1)?.id ?? null;
+
+		for (const clip of clips) {
+			// Stringify but remove the last `]}`
+			const content = JSON.stringify(serializeClipForHonoApi(clip)).slice(0, -2);
+			const isFirst = exportedClipsCount === 0;
+			await writer.write(isFirst ? content : ',\n' + content);
+
+			await processClipNotesForHonoApi(deps, writer, clip.id, user.id);
+
+			await writer.write(']}');
+			exportedClipsCount++;
+		}
+
+		job.updateProgress(exportedClipsCount / total * 100);
+	}
+}
+
+/** ExportClipsProcessorService.process 相当。 */
+export async function handleHonoQueueExportClips(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (user == null) return;
+
+	const [path, cleanup] = await createTemp();
+
+	try {
+		const webStream = Writable.toWeb(fs.createWriteStream(path, { flags: 'a' }));
+		const writer = webStream.getWriter();
+		writer.closed.catch(() => {});
+
+		await writer.write('[');
+
+		await processClipsForHonoApi(deps, writer, user, job);
+
+		await writer.write(']');
+		await writer.close();
+
+		const fileName = 'clips-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.json';
+		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
+
+		createExportCompletedNotification(deps, user.id, 'clip', driveFile.id);
 	} finally {
 		cleanup();
 	}

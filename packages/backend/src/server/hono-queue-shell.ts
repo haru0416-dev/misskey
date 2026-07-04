@@ -45,6 +45,7 @@ import {
 	handleHonoQueueImportFollowingToDb,
 	handleHonoQueueExportFavorites,
 	handleHonoQueueExportNotes,
+	handleHonoQueueExportClips,
 	type HonoQueueDbDependencies,
 } from './hono-queue-db.js';
 
@@ -318,6 +319,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'importFollowingToDb': return handleHonoQueueImportFollowingToDb(deps, job);
 			case 'exportFavorites': return handleHonoQueueExportFavorites(deps, job);
 			case 'exportNotes': return handleHonoQueueExportNotes(deps, job);
+			case 'exportClips': return handleHonoQueueExportClips(deps, job);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for db`);
 		}
 	}, {
