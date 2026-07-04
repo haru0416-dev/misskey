@@ -11,7 +11,7 @@ import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
 import { FetchAllowSoftFailMask, assertActivityMatchesUrl } from '@/core/activitypub/misc/check-against-url.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import type { IObject } from '@/core/activitypub/type.js';
+import { isCollectionOrOrderedCollection, type ICollection, type IObject, type IOrderedCollection } from '@/core/activitypub/type.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
 import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
@@ -217,20 +217,34 @@ async function signedGetForHonoApi(
 }
 
 /**
- * ApResolverService.Resolver#resolve の単発呼び出し相当。
- * オリジナルはインスタンスごとに history / recursionLimit を保持し複数回の resolve 呼び出しに跨って
- * 再帰を防ぐが、ap/get は 1 リクエストにつき resolve を 1 回しか呼ばないため history は常に空で
- * 実質的に無効となる。この簡略化は ap/get 限定であり、再帰的に resolve を呼ぶ ApPersonService/
- * ApNoteService 相当の移植では別途 history 相当の実装が必要。
+ * ApResolverService.Resolver#resolve 相当。
+ * オリジナルは Resolver インスタンスごとに history / recursionLimit を保持し、同一インスタンス上の
+ * 複数回の resolve 呼び出しに跨って再帰を防ぐ。ここでは呼び出し元が同じ `history` Set を明示的に
+ * 使い回すことで同じ挙動を再現する(省略すると呼び出しごとに新規 Set が使われ、単発呼び出しでは
+ * 常に空集合になるため実質無効化される — 1 リクエストにつき resolve を 1 回しか呼ばない ap/get は
+ * この省略形で問題ない)。
  */
 export async function resolveApObjectForHonoApi(
 	deps: HonoApiApResolveDependencies,
-	value: string,
+	value: string | IObject,
 	allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict,
+	history: Set<string> = new Set(),
 ): Promise<IObject> {
+	if (typeof value !== 'string') {
+		return value;
+	}
+
 	if (value.includes('#')) {
 		throw new Error(`cannot resolve URL with fragment: ${value}`);
 	}
+
+	if (history.has(value)) {
+		throw new Error('cannot resolve already resolved one');
+	}
+	if (history.size > 256) {
+		throw new Error(`hit recursion limit: ${extractDbHost(value)}`);
+	}
+	history.add(value);
 
 	const host = extractDbHost(value);
 	if (isSelfHost(deps.config, host)) {
@@ -253,4 +267,20 @@ export async function resolveApObjectForHonoApi(
 	}
 
 	return object;
+}
+
+/** ApResolverService.Resolver#resolveCollection 相当。 */
+export async function resolveCollectionForHonoApi(
+	deps: HonoApiApResolveDependencies,
+	value: string | IObject,
+	history: Set<string> = new Set(),
+): Promise<ICollection | IOrderedCollection> {
+	const collection = typeof value === 'string'
+		? await resolveApObjectForHonoApi(deps, value, FetchAllowSoftFailMask.Strict, history)
+		: value;
+
+	if (isCollectionOrOrderedCollection(collection)) {
+		return collection;
+	}
+	throw new Error(`unrecognized collection type: ${collection.type}`);
 }

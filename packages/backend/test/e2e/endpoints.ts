@@ -2019,12 +2019,20 @@ describe('Endpoints', () => {
 			assert.strictEqual(likeRes.body.object, `${config.url}/notes/${likeNote.id}`);
 
 			const remoteHost = `ap-get-remote-${suffix}.example`;
-			const remoteFollowee = await createUserInDatabase(db, {
-				id: genId(config, now + 2),
-				username: `apgetremote${suffix}`,
-				usernameLower: `apgetremote${suffix}`,
-				host: remoteHost,
-				uri: `https://${remoteHost}/users/remote`,
+			const remoteFolloweeId = genId(config, now + 2);
+			const remoteFollowee = await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteFolloweeId,
+					username: `apgetremote${suffix}`,
+					usernameLower: `apgetremote${suffix}`,
+					host: remoteHost,
+					uri: `https://${remoteHost}/users/remote`,
+					isExplorable: false,
+				},
+				profile: {
+					userId: remoteFolloweeId,
+					userHost: remoteHost,
+				},
 			});
 			const followRequest = await createFollowRequestInDatabase(db, {
 				id: genId(config, now + 3),
@@ -2038,6 +2046,111 @@ describe('Endpoints', () => {
 			assert.strictEqual(followRes.body.id, followUri);
 			assert.strictEqual(followRes.body.actor, `${config.url}/users/${alice.id}`);
 			assert.strictEqual(followRes.body.object, remoteFollowee.uri);
+		});
+	});
+
+	describe('federation/update-remote-user', () => {
+		test('リモートアクターを再フェッチしてプロフィールを更新する', async () => {
+			const config = loadConfig();
+			const now = Date.now();
+			const suffix = now.toString(36);
+
+			let actorServer: Server | undefined;
+			let actorUri = '';
+			// このVPS環境では slacc (署名用ネイティブモジュール) が壊れており RsaKeyPair.sign が
+			// 常に失敗するため (Hono移植とは無関係、Node単体でrequire('slacc')するだけで再現する
+			// 環境固有の問題)、signToActivityPubGet を無効化して署名なしGETの経路を検証する。
+			// meta はプロセス内にキャッシュされているため、DB直接更新ではなく admin/update-meta 経由で
+			// 変更してキャッシュ無効化イベントを発行させる。
+			const originalMeta = await fetchMetaFromDatabase(db);
+			const disableSigning = await api('admin/update-meta', { signToActivityPubGet: false }, alice);
+			assert.strictEqual(disableSigning.status, 204);
+			const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+			try {
+				actorServer = createServer((req, res) => {
+					if (req.url === '/avatar.png') {
+						res.writeHead(200, { 'Content-Type': 'image/png' });
+						res.end(onePixelPng);
+						return;
+					}
+					if (req.url?.endsWith('/following') || req.url?.endsWith('/followers')) {
+						res.writeHead(200, { 'Content-Type': 'application/activity+json' });
+						res.end(JSON.stringify({
+							'@context': 'https://www.w3.org/ns/activitystreams',
+							id: `${actorUri}${req.url.endsWith('/following') ? '/following' : '/followers'}`,
+							type: 'OrderedCollection',
+							totalItems: 0,
+							orderedItems: [],
+						}));
+						return;
+					}
+					res.writeHead(200, { 'Content-Type': 'application/activity+json' });
+					res.end(JSON.stringify({
+						'@context': 'https://www.w3.org/ns/activitystreams',
+						id: actorUri,
+						type: 'Person',
+						preferredUsername: `updateremote${suffix}`,
+						inbox: `${actorUri}/inbox`,
+						following: `${actorUri}/following`,
+						followers: `${actorUri}/followers`,
+						icon: { type: 'Image', url: `${actorUri}/avatar.png` },
+						name: 'Updated Remote Name',
+						summary: '<p>updated bio</p>',
+						manuallyApprovesFollowers: true,
+					}));
+				});
+				await new Promise<void>((resolve, reject) => {
+					actorServer!.once('error', reject);
+					actorServer!.listen(0, '127.0.0.1', () => {
+						actorServer!.off('error', reject);
+						resolve();
+					});
+				});
+				const address = actorServer.address() as AddressInfo;
+				const host = `127.0.0.1:${address.port}`;
+				actorUri = `http://${host}/users/updateremote${suffix}`;
+
+				const remoteUserId = genId(config, now);
+				const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+					user: {
+						id: remoteUserId,
+						username: `updateremote${suffix}`,
+						usernameLower: `updateremote${suffix}`,
+						host,
+						inbox: `${actorUri}/inbox`,
+						uri: actorUri,
+						name: 'Old Name',
+						isLocked: false,
+						isExplorable: false,
+					},
+					profile: {
+						userId: remoteUserId,
+						userHost: host,
+					},
+				});
+
+				const res = await api('federation/update-remote-user', { userId: remoteUser.id });
+				assert.strictEqual(res.status, 204);
+
+				const updated = await fetchUserByIdOrFailFromDatabase(db, remoteUser.id);
+				assert.strictEqual(updated.name, 'Updated Remote Name');
+				assert.strictEqual(updated.isLocked, true);
+				assert.ok(updated.avatarId != null);
+				assert.ok(updated.avatarUrl != null);
+
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, remoteUser.id);
+				assert.strictEqual(profile.description, 'updated bio');
+				assert.strictEqual(profile.followingVisibility, 'public');
+				assert.strictEqual(profile.followersVisibility, 'public');
+			} finally {
+				actorServer?.close();
+				await api('admin/update-meta', { signToActivityPubGet: originalMeta.signToActivityPubGet }, alice);
+			}
+		});
+
+		test('存在しないuserIdは失敗する', async () => {
+			const res = await api('federation/update-remote-user', { userId: '000000000000000000000000' });
+			assert.notStrictEqual(res.status, 204);
 		});
 	});
 
