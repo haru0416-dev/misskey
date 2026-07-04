@@ -40,7 +40,7 @@ import { parseHonoApiParams } from './hono-api-validation.js';
 
 export type HonoApiPageDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies;
 
-function collectReferencedNotesForHonoApi(content: MiPage['content']): string[] {
+export function collectReferencedNotesForHonoApi(content: MiPage['content']): string[] {
 	const referencingNotes = new Set<string>();
 	const recursiveCollect = (items: unknown[]): void => {
 		for (const item of items) {
@@ -342,22 +342,18 @@ type PagesDeleteParams = {
 	pageId: string;
 };
 
-export async function handleHonoApiPagesDelete(
+/** PageService.delete 相当。not-found/forbiddenはHTTPエラーに変換せず、そのままステータスとして返す。 */
+export async function deletePageForHonoApi(
 	deps: HonoApiPageDependencies,
-	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<void> {
-	const params = parseHonoApiParams(pagesDeleteParamDef, body) as PagesDeleteParams;
-
+	me: MiUser,
+	pageId: MiPage['id'],
+): Promise<{ status: 'not-found' | 'forbidden' } | { status: 'ok'; page: MiPage }> {
 	const isModerator = await isHonoApiModerator(deps, me);
 
-	const result = await deletePageInDatabase(deps.db, params.pageId, { userId: me.id, isModerator });
+	const result = await deletePageInDatabase(deps.db, pageId, { userId: me.id, isModerator });
 
-	if (result.status === 'not-found') {
-		throw new HonoApiError({ status: 400, message: 'No such page.', code: 'NO_SUCH_PAGE', id: 'eb0c6e1d-d519-4764-9486-52a7e1c6392a' });
-	}
-	if (result.status === 'forbidden') {
-		throw new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: '8b741b3e-2c22-44b3-a15f-29949aa1601e' });
+	if (result.status !== 'ok') {
+		return result;
 	}
 
 	const { page: deletedPage } = result;
@@ -375,6 +371,25 @@ export async function handleHonoApiPagesDelete(
 	const referencedNotes = collectReferencedNotesForHonoApi(deletedPage.content);
 	if (referencedNotes.length > 0) {
 		await adjustNotesPageCountInDatabase(deps.db, referencedNotes, -1);
+	}
+
+	return { status: 'ok', page: deletedPage };
+}
+
+export async function handleHonoApiPagesDelete(
+	deps: HonoApiPageDependencies,
+	me: MiLocalUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(pagesDeleteParamDef, body) as PagesDeleteParams;
+
+	const result = await deletePageForHonoApi(deps, me, params.pageId);
+
+	if (result.status === 'not-found') {
+		throw new HonoApiError({ status: 400, message: 'No such page.', code: 'NO_SUCH_PAGE', id: 'eb0c6e1d-d519-4764-9486-52a7e1c6392a' });
+	}
+	if (result.status === 'forbidden') {
+		throw new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: '8b741b3e-2c22-44b3-a15f-29949aa1601e' });
 	}
 }
 

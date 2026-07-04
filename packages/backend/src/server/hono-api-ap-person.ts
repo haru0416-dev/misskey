@@ -24,7 +24,18 @@ import {
 	type IObject,
 } from '@/core/activitypub/type.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
-import { fetchUserByIdFromDatabase, fetchUserByUriFromDatabase, updateUserIfNotDeletedInDatabase, updateUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import {
+	fetchLocalUserByUsernameFromDatabase,
+	fetchUserByIdFromDatabase,
+	fetchUserByUriFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+	updateUserIfNotDeletedInDatabase,
+	updateUserInDatabase,
+	updateUserLastFetchedAtInDatabase,
+	updateUserUriByUsernameAndHostInDatabase,
+	createUserWithProfileAndPublickeyInDatabase,
+} from '@/core/UserStore.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
@@ -35,11 +46,18 @@ import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from 
 import { adjustInstanceUsersCountFromDatabase } from '@/core/InstanceStore.js';
 import { StatusError } from '@/misc/status-error.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
+import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import { resolveApObjectForHonoApi, resolveCollectionForHonoApi, type HonoApiApResolveDependencies } from './hono-api-ap-resolve.js';
+import {
+	getUserFromApIdForHonoApi,
+	parseLocalApUri,
+	resolveApObjectForHonoApi,
+	resolveCollectionForHonoApi,
+	type HonoApiApResolveDependencies,
+} from './hono-api-ap-resolve.js';
 import { uploadDriveFileFromUrlForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
 import { updateUsertagsForHonoApi } from './hono-api-account-update.js';
 import { getHonoApiRolePolicies } from './hono-api-role-policy.js';
@@ -602,4 +620,116 @@ export async function handleHonoApiFederationUpdateRemoteUser(deps: HonoApiApPer
 	}
 
 	await updatePersonForHonoApi(deps, user.uri!, user as MiRemoteUser);
+}
+
+type WebfingerLink = {
+	href: string;
+	rel?: string;
+};
+
+type WebfingerResult = {
+	links: WebfingerLink[];
+	subject: string;
+};
+
+const webfingerUrlRegex = /^https?:\/\//;
+const webfingerAcctRegex = /^([^@]+)@(.*)/;
+
+/** WebfingerService.webfinger 相当。 */
+async function webfingerForHonoApi(deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> }, query: string): Promise<WebfingerResult> {
+	let url: string;
+	if (webfingerUrlRegex.test(query)) {
+		const u = new URL(query);
+		url = `${u.protocol}//${u.hostname}/.well-known/webfinger?${urlQuery({ resource: query })}`;
+	} else {
+		const m = query.match(webfingerAcctRegex);
+		if (!m) throw new Error(`Invalid query (${query})`);
+		const hostname = m[2];
+		const useHttp = process.env.MISSKEY_WEBFINGER_USE_HTTP && process.env.MISSKEY_WEBFINGER_USE_HTTP.toLowerCase() === 'true';
+		url = `http${useHttp ? '' : 's'}://${hostname}/.well-known/webfinger?${urlQuery({ resource: `acct:${query}` })}`;
+	}
+
+	return await deps.httpRequestService.getJson<WebfingerResult>(url, 'application/jrd+json, application/json');
+}
+
+async function resolveSelfForHonoApi(deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> }, acctLower: string): Promise<WebfingerLink> {
+	const finger = await webfingerForHonoApi(deps, acctLower).catch(err => {
+		throw new Error(`Failed to WebFinger for ${acctLower}: ${err.statusCode ?? err.message}`);
+	});
+	const self = finger.links.find(link => link.rel != null && link.rel.toLowerCase() === 'self');
+	if (!self) {
+		throw new Error('self link not found');
+	}
+	return self;
+}
+
+/**
+ * RemoteUserResolveService.resolveUser 相当。username@host からローカル/リモートユーザーを解決する。
+ * リモートの場合、未登録ならWebFinger→createPersonForHonoApiで新規作成し、登録済みかつ
+ * 24時間以上再取得していなければWebFinger→updatePersonForHonoApiで再同期する。
+ */
+export async function resolveUserForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	username: string,
+	host: string | null,
+): Promise<MiLocalUser | MiRemoteUser> {
+	const usernameLower = username.toLowerCase();
+
+	if (host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.host)) {
+		const localUser = await fetchLocalUserByUsernameFromDatabase(deps.db, usernameLower);
+		if (localUser == null) {
+			throw new Error('user not found');
+		}
+		return localUser;
+	}
+
+	const punyHost = toPunyForHonoApi(host);
+	const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, usernameLower, punyHost) as MiRemoteUser | null;
+
+	const acctLower = `${usernameLower}@${punyHost}`;
+
+	if (user == null) {
+		const self = await resolveSelfForHonoApi(deps, acctLower);
+
+		if (punyHostForHonoApi(self.href) === toPunyForHonoApi(deps.config.host)) {
+			const local = parseLocalApUri(deps.config, self.href);
+			if (local.local && local.type === 'users') {
+				const u = await getUserFromApIdForHonoApi(deps, self.href);
+				if (u == null) {
+					throw new Error('local user not found');
+				}
+				return u as MiLocalUser;
+			}
+		}
+
+		return await createPersonForHonoApi(deps, self.href);
+	}
+
+	// ユーザー情報が古い場合は、WebFingerからやりなおして返す
+	if (user.lastFetchedAt == null || Date.now() - user.lastFetchedAt.getTime() > (1000 * 60 * 60 * 24)) {
+		// 繋がらないインスタンスに何回も試行するのを防ぐ, 後続の同様処理の連続試行を防ぐ ため 試行前にも更新する
+		await updateUserLastFetchedAtInDatabase(deps.db, user.id, new Date());
+
+		const self = await resolveSelfForHonoApi(deps, acctLower);
+
+		if (user.uri !== self.href) {
+			// if uri mismatch, Fix (user@host <=> AP's Person id(RemoteUser.uri)) mapping.
+			const uri = new URL(self.href);
+			if (uri.hostname !== punyHost) {
+				throw new Error('Invalid uri');
+			}
+
+			await updateUserUriByUsernameAndHostInDatabase(deps.db, usernameLower, punyHost, self.href);
+		}
+
+		await updatePersonForHonoApi(deps, self.href, user);
+
+		const resynced = await fetchUserByUriFromDatabase(deps.db, self.href);
+		if (resynced == null) {
+			throw new Error('user not found');
+		}
+		return resynced as MiLocalUser | MiRemoteUser;
+	}
+
+	return user;
 }
