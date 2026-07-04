@@ -1,0 +1,139 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import * as Bull from 'bullmq';
+import type { Config } from '@/config.js';
+import type Logger from '@/logger.js';
+import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
+import { handleHonoQueueSystemWebhookDeliver, handleHonoQueueUserWebhookDeliver, type HonoQueueWebhookDeliverDependencies } from './hono-queue-webhook-deliver.js';
+
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & {
+	config: Config;
+	logger: Logger;
+};
+
+export type HonoQueueWorkers = {
+	userWebhookDeliverQueueWorker: Bull.Worker;
+	systemWebhookDeliverQueueWorker: Bull.Worker;
+	start: () => Promise<void>;
+	stop: () => Promise<void>;
+};
+
+// ref. https://github.com/misskey-dev/misskey/pull/7635#issue-971097019
+function httpRelatedBackoff(attemptsMade: number): number {
+	const baseDelay = 60 * 1000;
+	const maxBackoff = 8 * 60 * 60 * 1000;
+	let backoff = (Math.pow(2, attemptsMade) - 1) * baseDelay;
+	backoff = Math.min(backoff, maxBackoff);
+	backoff += Math.round(backoff * Math.random() * 0.2);
+	return backoff;
+}
+
+function getJobInfo(job: Bull.Job | undefined, increment = false): string {
+	if (job == null) return '-';
+
+	const age = Date.now() - job.timestamp;
+	const formated = age > 60000 ? `${Math.floor(age / 1000 / 60)}m`
+		: age > 10000 ? `${Math.floor(age / 1000)}s`
+			: `${age}ms`;
+
+	const currentAttempts = job.attemptsMade + (increment ? 1 : 0);
+	const maxAttempts = job.opts.attempts ?? 0;
+
+	return `id=${job.id} attempts=${currentAttempts}/${maxAttempts} age=${formated}`;
+}
+
+function renderError(e?: Error): unknown {
+	if (!e) return '?';
+	if (e instanceof Bull.UnrecoverableError || e.name === 'AbortError') {
+		return `${e.name}: ${e.message}`;
+	}
+	return { stack: e.stack, message: e.message, name: e.name };
+}
+
+/**
+ * QueueProcessorService 相当。NestJS の Nest DI コンテナを介さず、BullMQ の `Bull.Worker` を
+ * 直接 `deps` (プレーンオブジェクト) 付きのハンドラ関数にバインドする。
+ *
+ * 元の QueueProcessorService は10個の Worker (system/db/deliver/inbox/userWebhookDeliver/
+ * systemWebhookDeliver/relationship/objectStorage/endedPollNotification/postScheduledNote)
+ * を組み立てるが、現時点でこの関数が組み立てるのは移植済みの2個 (userWebhookDeliver/
+ * systemWebhookDeliver) のみ。**残り8個は未移植であり、本番のジョブキュー起動経路
+ * (`boot/common.ts` の `jobQueue()`) からはまだ呼ばれていない。** 全プロセッサの移植が
+ * 完了するまでは、この関数を実際のキュー起動に配線しないこと — 同じキューに対して
+ * NestJS側のWorkerと二重に接続すると同一ジョブが二重処理される。
+ */
+export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
+	//#region user-webhook deliver
+	const userWebhookDeliverQueueWorker = new Bull.Worker(QUEUE.USER_WEBHOOK_DELIVER, (job) => {
+		return handleHonoQueueUserWebhookDeliver(deps, job);
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.USER_WEBHOOK_DELIVER),
+		autorun: false,
+		concurrency: 64,
+		limiter: {
+			max: 64,
+			duration: 1000,
+		},
+		settings: {
+			backoffStrategy: httpRelatedBackoff,
+		},
+	});
+
+	{
+		const logger = deps.logger.createSubLogger('user-webhook');
+		userWebhookDeliverQueueWorker
+			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`))
+			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
+			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
+	}
+	//#endregion
+
+	//#region system-webhook deliver
+	const systemWebhookDeliverQueueWorker = new Bull.Worker(QUEUE.SYSTEM_WEBHOOK_DELIVER, (job) => {
+		return handleHonoQueueSystemWebhookDeliver(deps, job);
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.SYSTEM_WEBHOOK_DELIVER),
+		autorun: false,
+		concurrency: 16,
+		limiter: {
+			max: 16,
+			duration: 1000,
+		},
+		settings: {
+			backoffStrategy: httpRelatedBackoff,
+		},
+	});
+
+	{
+		const logger = deps.logger.createSubLogger('system-webhook');
+		systemWebhookDeliverQueueWorker
+			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`))
+			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
+			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
+	}
+	//#endregion
+
+	return {
+		userWebhookDeliverQueueWorker,
+		systemWebhookDeliverQueueWorker,
+		start: async () => {
+			await Promise.all([
+				userWebhookDeliverQueueWorker.run(),
+				systemWebhookDeliverQueueWorker.run(),
+			]);
+		},
+		stop: async () => {
+			await Promise.all([
+				userWebhookDeliverQueueWorker.close(),
+				systemWebhookDeliverQueueWorker.close(),
+			]);
+		},
+	};
+}
