@@ -26,7 +26,8 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiBlocking, MiFollowing, MiMuting } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
+import type { DbQueue, RelationshipQueue } from '@/core/QueueModule.js';
+import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
 import { isSelfHost } from './hono-api-ap-resolve.js';
 import { resolveUserForHonoApi, toPunyForHonoApi, type HonoApiApPersonDependencies } from './hono-api-ap-person.js';
@@ -41,8 +42,29 @@ const Ajv = _Ajv.default;
 export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & HonoApiApPersonDependencies & HonoApiUsersListsDependencies & {
 	db: MiDrizzleDatabase;
 	downloadService: Pick<DownloadService, 'downloadTextFile'>;
+	dbQueue: DbQueue;
+	relationshipQueue: RelationshipQueue;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
+
+const dbQueueJobOptions = {
+	removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
+	removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+};
+
+function toRelationshipJobForHonoApi(name: 'follow' | 'unfollow' | 'block' | 'unblock', data: RelationshipJobData) {
+	return {
+		name,
+		data: {
+			from: { id: data.from.id },
+			to: { id: data.to.id },
+			silent: data.silent,
+			requestId: data.requestId,
+			withReplies: data.withReplies,
+		},
+		opts: dbQueueJobOptions,
+	};
+}
 
 function toPuny(host: string): string {
 	return domainToASCII(host.toLowerCase());
@@ -539,5 +561,48 @@ export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependenci
 		} catch {
 			// 元実装同様、行単位のエラーはログのみで処理を継続する
 		}
+	}
+}
+
+/** ImportBlockingProcessorService.process 相当。CSVの行ごとにimportBlockingToDbジョブを積む。 */
+export async function handleHonoQueueImportBlocking(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (user == null) return;
+
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	if (file == null) return;
+
+	const csv = await deps.downloadService.downloadTextFile(file.url);
+	const targets = csv.trim().split('\n');
+
+	const jobs = targets.map(target => ({
+		name: 'importBlockingToDb',
+		data: { user: { id: user.id }, target } satisfies DbUserImportToDbJobData,
+		opts: dbQueueJobOptions,
+	}));
+	await deps.dbQueue.addBulk(jobs);
+}
+
+/** ImportBlockingProcessorService.processDb 相当。 */
+export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportToDbJobData>): Promise<void> {
+	const line = job.data.target;
+	const user = job.data.user;
+
+	try {
+		const acct = line.split(',')[0].trim();
+		const target = await resolveImportTargetUserForHonoApi(deps, acct);
+
+		if (target == null) {
+			throw new Error(`Unable to resolve user: ${acct}`);
+		}
+
+		// skip myself
+		if (target.id === job.data.user.id) return;
+
+		await deps.relationshipQueue.addBulk([
+			toRelationshipJobForHonoApi('block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
+		]);
+	} catch {
+		// 元実装同様、行単位のエラーはログのみで処理を継続する
 	}
 }
