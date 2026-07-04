@@ -26,8 +26,9 @@ import {
 	type HonoQueueSystemDependencies,
 } from './hono-queue-system.js';
 import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependencies } from './hono-queue-clean-remote-notes.js';
+import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from './hono-queue-deliver.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -38,6 +39,7 @@ export type HonoQueueWorkers = {
 	relationshipQueueWorker: Bull.Worker;
 	postScheduledNoteQueueWorker: Bull.Worker;
 	systemQueueWorker: Bull.Worker;
+	deliverQueueWorker: Bull.Worker;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
 };
@@ -80,11 +82,12 @@ function renderError(e?: Error): unknown {
  *
  * 元の QueueProcessorService は10個の Worker (system/db/deliver/inbox/userWebhookDeliver/
  * systemWebhookDeliver/relationship/objectStorage/endedPollNotification/postScheduledNote)
- * を組み立てるが、現時点でこの関数が組み立てるのは移植済みの2個 (userWebhookDeliver/
- * systemWebhookDeliver) のみ。**残り8個は未移植であり、本番のジョブキュー起動経路
- * (`boot/common.ts` の `jobQueue()`) からはまだ呼ばれていない。** 全プロセッサの移植が
- * 完了するまでは、この関数を実際のキュー起動に配線しないこと — 同じキューに対して
- * NestJS側のWorkerと二重に接続すると同一ジョブが二重処理される。
+ * を組み立てるが、現時点でこの関数が組み立てるのは6個 (userWebhookDeliver/systemWebhookDeliver/
+ * relationship/postScheduledNote/system/deliver)。**残り4個 (db/inbox/objectStorage/
+ * endedPollNotification) は未移植であり、本番のジョブキュー起動経路 (`boot/common.ts` の
+ * `jobQueue()`) からはまだ呼ばれていない。** 全プロセッサの移植が完了するまでは、この関数を
+ * 実際のキュー起動に配線しないこと — 同じキューに対して NestJS側のWorkerと二重に接続すると
+ * 同一ジョブが二重処理される。
  */
 export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
 	//#region user-webhook deliver
@@ -213,12 +216,40 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}
 	//#endregion
 
+	//#region deliver
+	const deliverQueueWorker = new Bull.Worker(QUEUE.DELIVER, (job) => {
+		return handleHonoQueueDeliver(deps, job);
+	}, {
+		...baseWorkerOptions(deps.config, QUEUE.DELIVER),
+		autorun: false,
+		concurrency: deps.config.deliverJobConcurrency ?? 128,
+		limiter: {
+			max: deps.config.deliverJobPerSec ?? 128,
+			duration: 1000,
+		},
+		settings: {
+			backoffStrategy: httpRelatedBackoff,
+		},
+	});
+
+	{
+		const logger = deps.logger.createSubLogger('deliver');
+		deliverQueueWorker
+			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`))
+			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
+			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
+	}
+	//#endregion
+
 	return {
 		userWebhookDeliverQueueWorker,
 		systemWebhookDeliverQueueWorker,
 		relationshipQueueWorker,
 		postScheduledNoteQueueWorker,
 		systemQueueWorker,
+		deliverQueueWorker,
 		start: async () => {
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
@@ -226,6 +257,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				relationshipQueueWorker.run(),
 				postScheduledNoteQueueWorker.run(),
 				systemQueueWorker.run(),
+				deliverQueueWorker.run(),
 			]);
 		},
 		stop: async () => {
@@ -235,6 +267,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 				relationshipQueueWorker.close(),
 				postScheduledNoteQueueWorker.close(),
 				systemQueueWorker.close(),
+				deliverQueueWorker.close(),
 			]);
 		},
 	};

@@ -115,6 +115,26 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 		}, file.userHost);
 	}
 
+	public async requestReceived(host: string): Promise<void> {
+		await this.commit({
+			'requests.received': 1,
+		}, domainToASCII(host.toLowerCase()));
+	}
+
+	public async requestSent(host: string, isSucceeded: boolean): Promise<void> {
+		await this.commit({
+			'requests.succeeded': isSucceeded ? 1 : 0,
+			'requests.failed': isSucceeded ? 0 : 1,
+		}, domainToASCII(host.toLowerCase()));
+	}
+
+	public async newUser(host: string): Promise<void> {
+		await this.commit({
+			'users.total': 1,
+			'users.inc': 1,
+		}, domainToASCII(host.toLowerCase()));
+	}
+
 	public async updateNote(host: string, note: Pick<MiNote, 'replyId' | 'renoteId' | 'fileIds'>, isAdditional: boolean): Promise<void> {
 		await this.commit({
 			'notes.total': isAdditional ? 1 : -1,

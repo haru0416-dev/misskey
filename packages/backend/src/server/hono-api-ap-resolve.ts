@@ -246,6 +246,42 @@ async function signedGetForHonoApi(
 	return activity;
 }
 
+export type HonoApiSignedPostDependencies = {
+	config: Pick<Config, 'url'>;
+	db: MiDrizzleDatabase;
+	httpRequestService: Pick<HttpRequestService, 'send'>;
+};
+
+/** ApRequestService.signedPost 相当。 */
+export async function signedPostForHonoApi(
+	deps: HonoApiSignedPostDependencies,
+	user: { id: MiUser['id'] },
+	url: string,
+	object: unknown,
+	digest?: string,
+): Promise<void> {
+	const body = typeof object === 'string' ? object : JSON.stringify(object);
+
+	const keypair = await fetchUserKeypairFromDatabase(deps.db, user.id);
+
+	const req = await ApRequestCreator.createSignedPost({
+		key: {
+			privateKeyPem: keypair.privateKey,
+			keyId: `${deps.config.url}/users/${user.id}#main-key`,
+		},
+		url,
+		body,
+		digest,
+		additionalHeaders: {},
+	});
+
+	await deps.httpRequestService.send(url, {
+		method: req.request.method,
+		headers: req.request.headers,
+		body,
+	});
+}
+
 /**
  * ApResolverService.Resolver#resolve 相当。
  * オリジナルは Resolver インスタンスごとに history / recursionLimit を保持し、同一インスタンス上の

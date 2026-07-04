@@ -189,12 +189,19 @@ export function normalizeHonoApiFederationQuery(query: Record<string, string>): 
 	return body;
 }
 
-function toPuny(host: string): string {
+type FederatedInstanceCacheDependencies = {
+	db: MiDrizzleDatabase;
+	config: Pick<Config, 'id'>;
+	redis: Pick<Redis.Redis, 'set' | 'del'>;
+};
+
+export function toPuny(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-async function updateFederatedInstanceCache(
-	deps: HonoApiAdminFederationDependencies,
+/** FederatedInstanceService の federatedInstanceCache (RedisKVCache) と同じキー形式で書き込む。 */
+export async function updateFederatedInstanceCache(
+	deps: FederatedInstanceCacheDependencies,
 	instance: MiInstance,
 ): Promise<void> {
 	await deps.redis.set(
@@ -205,8 +212,9 @@ async function updateFederatedInstanceCache(
 	);
 }
 
-async function fetchOrRegisterFederatedInstance(
-	deps: HonoApiAdminFederationDependencies,
+/** FederatedInstanceService.fetchOrRegister() 相当。 */
+export async function fetchOrRegisterFederatedInstance(
+	deps: FederatedInstanceCacheDependencies,
 	host: string,
 ): Promise<MiInstance> {
 	host = toPuny(host);
@@ -227,7 +235,32 @@ async function fetchOrRegisterFederatedInstance(
 	return created;
 }
 
-async function tryLockFetchInstanceMetadata(deps: HonoApiAdminFederationDependencies, host: string): Promise<string | null> {
+/** FederatedInstanceService.fetch() 相当 (登録はしない)。 */
+export async function fetchFederatedInstance(
+	deps: FederatedInstanceCacheDependencies,
+	host: string,
+): Promise<MiInstance | null> {
+	host = toPuny(host);
+
+	const index = await fetchInstanceByHostFromDatabase(deps.db, host);
+	if (index != null) {
+		await updateFederatedInstanceCache(deps, index);
+	}
+	return index;
+}
+
+/** FederatedInstanceService.update() 相当。DB更新後にキャッシュも更新する。 */
+export async function updateFederatedInstanceAndCache(
+	deps: FederatedInstanceCacheDependencies,
+	id: MiInstance['id'],
+	data: Partial<MiInstance>,
+): Promise<MiInstance> {
+	const updated = await updateInstanceInDatabase(deps.db, id, data);
+	await updateFederatedInstanceCache(deps, updated);
+	return updated;
+}
+
+export async function tryLockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redis, 'set' | 'del'> }, host: string): Promise<string | null> {
 	// TODO: マイグレーションなのであとで消す (2024.3.1)
 	await deps.redis.del(`fetchInstanceMetadata:mutex:${host}`);
 
@@ -238,7 +271,7 @@ async function tryLockFetchInstanceMetadata(deps: HonoApiAdminFederationDependen
 	);
 }
 
-async function unlockFetchInstanceMetadata(deps: HonoApiAdminFederationDependencies, host: string): Promise<number> {
+export async function unlockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redis, 'del'> }, host: string): Promise<number> {
 	return await deps.redis.del(`fetchInstanceMetadata:mutex:v2:${host}`);
 }
 
@@ -282,7 +315,7 @@ function isMediaSilencedHost(meta: MiMeta, host: string): boolean {
 	return isHostMatched(meta.mediaSilencedHosts, host);
 }
 
-function isDeliverSuspendedSoftware(meta: MiMeta, software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>): boolean {
+export function isDeliverSuspendedSoftware(meta: Pick<MiMeta, 'deliverSuspendedSoftware'>, software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>): boolean {
 	if (software.softwareName == null) return false;
 	if (software.softwareVersion == null) {
 		return meta.deliverSuspendedSoftware.some(x =>
