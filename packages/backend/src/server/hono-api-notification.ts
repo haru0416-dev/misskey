@@ -78,7 +78,28 @@ type AchievementEarnedNotification = {
 	achievement: typeof ACHIEVEMENT_TYPES[number];
 };
 
-type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification;
+type ScheduledNotePostedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'scheduledNotePosted';
+	noteId: string;
+};
+
+type ScheduledNotePostFailedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'scheduledNotePostFailed';
+	noteDraftId: string;
+};
+
+type PollEndedNotification = {
+	id: string;
+	createdAt: string;
+	type: 'pollEnded';
+	noteId: string;
+};
+
+type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification | ScheduledNotePostedNotification | ScheduledNotePostFailedNotification | PollEndedNotification;
 
 type HonoPackedRoleAssignedNotification = {
 	id: string;
@@ -232,6 +253,75 @@ export function createRoleAssignedNotification(
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
 			deps.publishMainStream?.(userId, 'unreadNotification', packed);
+		}).catch(() => {}));
+	})());
+}
+
+export function createScheduledNotePostedNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id'], noteId: string): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.scheduledNotePosted?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'scheduledNotePosted',
+			noteId,
+		} satisfies ScheduledNotePostedNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+
+		deps.publishMainStream?.(userId, 'notification', notification);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', notification);
+		}).catch(() => {}));
+	})());
+}
+
+export function createScheduledNotePostFailedNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id'], noteDraftId: string): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.scheduledNotePostFailed?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'scheduledNotePostFailed',
+			noteDraftId,
+		} satisfies ScheduledNotePostFailedNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+
+		deps.publishMainStream?.(userId, 'notification', notification);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', notification);
+		}).catch(() => {}));
+	})());
+}
+
+export function createPollEndedNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id'], noteId: string): void {
+	trackPromise((async () => {
+		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+		if (profile?.notificationRecieveConfig.pollEnded?.type === 'never') return;
+
+		const notification = {
+			id: genId(deps.config),
+			createdAt: new Date().toISOString(),
+			type: 'pollEnded',
+			noteId,
+		} satisfies PollEndedNotification;
+		const redisId = await xaddNotification(deps, userId, notification);
+
+		deps.publishMainStream?.(userId, 'notification', notification);
+
+		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', notification);
 		}).catch(() => {}));
 	})());
 }
