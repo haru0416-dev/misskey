@@ -29,7 +29,13 @@ import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependen
 import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from './hono-queue-deliver.js';
 import { handleHonoQueueEndedPollNotification, type HonoQueueEndedPollNotificationDependencies } from './hono-queue-ended-poll-notification.js';
 import { handleHonoQueueCleanRemoteFiles, handleHonoQueueDeleteFile, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
-import { handleHonoQueueDeleteDriveFiles, type HonoQueueDbDependencies } from './hono-queue-db.js';
+import {
+	handleHonoQueueDeleteDriveFiles,
+	handleHonoQueueExportBlocking,
+	handleHonoQueueExportMuting,
+	handleHonoQueueExportUserLists,
+	type HonoQueueDbDependencies,
+} from './hono-queue-db.js';
 
 export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & {
 	config: Config;
@@ -283,10 +289,13 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region db
-	// NOTE: deleteDriveFiles以外のジョブ型はまだ移植未完了 (export/import系18ジョブ型中1個)。
+	// NOTE: 残りのexport/import系ジョブ型はまだ移植未完了。
 	const dbQueueWorker = new Bull.Worker(QUEUE.DB, (job) => {
 		switch (job.name) {
 			case 'deleteDriveFiles': return handleHonoQueueDeleteDriveFiles(deps, job);
+			case 'exportMuting': return handleHonoQueueExportMuting(deps, job);
+			case 'exportBlocking': return handleHonoQueueExportBlocking(deps, job);
+			case 'exportUserLists': return handleHonoQueueExportUserLists(deps, job);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for db`);
 		}
 	}, {
