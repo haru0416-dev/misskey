@@ -13,8 +13,8 @@ import { countDriveFilesByUserIdFromDatabase, listDriveFilesByUserIdWithPaginati
 import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { countMutingsByMuterIdFromDatabase, createMutingInDatabase, listMuteeIdsByMuterIdFromDatabase, listPermanentMutingsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/BlockingStore.js';
-import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
-import { listUserListMembershipsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import { createUserListInDatabase, fetchUserListByNameAndUserIdFromDatabase, listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
+import { listUserListMembershipsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import type { DownloadService } from '@/core/DownloadService.js';
@@ -33,11 +33,12 @@ import { resolveUserForHonoApi, toPunyForHonoApi, type HonoApiApPersonDependenci
 import { refreshUserMutingsCache } from './hono-api-account-mutes.js';
 import type { HonoApiInternalEventPublisher } from './hono-api-events.js';
 import { createExportCompletedNotification, type HonoApiNotificationDependencies } from './hono-api-notification.js';
+import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from './hono-api-users-lists.js';
 import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './hono-queue-object-storage.js';
 
 const Ajv = _Ajv.default;
 
-export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & HonoApiApPersonDependencies & {
+export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & HonoApiApPersonDependencies & HonoApiUsersListsDependencies & {
 	db: MiDrizzleDatabase;
 	downloadService: Pick<DownloadService, 'downloadTextFile'>;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
@@ -480,6 +481,61 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 				muteeId: target.id,
 			});
 			await refreshUserMutingsCache(deps, user.id);
+		} catch {
+			// 元実装同様、行単位のエラーはログのみで処理を継続する
+		}
+	}
+}
+
+/** ImportUserListsProcessorService.process 相当。 */
+export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (user == null) return;
+
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	if (file == null) return;
+
+	const csv = await deps.downloadService.downloadTextFile(file.url);
+
+	for (const line of csv.trim().split('\n')) {
+		try {
+			const parts = line.split(',');
+			const listName = parts[0].trim();
+			const { username, host } = Acct.parse(parts[1].trim());
+			let withReplies = false;
+
+			for (const keyValue of parts.slice(2)) {
+				const [key, value] = keyValue.split('=');
+				switch (key) {
+					case 'withReplies':
+						withReplies = value === 'true';
+						break;
+				}
+			}
+
+			let list = await fetchUserListByNameAndUserIdFromDatabase(deps.db, listName, user.id);
+
+			if (list == null) {
+				list = await createUserListInDatabase(deps.db, {
+					id: genId(deps.config),
+					userId: user.id,
+					name: listName,
+				});
+			}
+
+			let target = await fetchUserByUsernameAndHostFromDatabase(
+				deps.db,
+				username,
+				isSelfHost(deps.config, host) ? null : toPunyForHonoApi(host!),
+			);
+
+			if (target == null) {
+				target = await resolveUserForHonoApi(deps, username, host);
+			}
+
+			if (await userListMembershipExistsInDatabase(deps.db, target.id, list.id)) continue;
+
+			await addUserListMemberForHonoApi(deps, target, list, user, { withReplies });
 		} catch {
 			// 元実装同様、行単位のエラーはログのみで処理を継続する
 		}
