@@ -48,8 +48,9 @@ import {
 	handleHonoQueueExportClips,
 	type HonoQueueDbDependencies,
 } from './hono-queue-db.js';
+import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, type HonoQueueEmojisDependencies } from './hono-queue-emojis.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & {
+export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & {
 	config: Config;
 	logger: Logger;
 };
@@ -301,7 +302,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region db
-	// NOTE: 残りのexport/import系ジョブ型はまだ移植未完了。
+	// NOTE: deleteAccountのみまだ移植未完了。
 	const dbQueueWorker = new Bull.Worker(QUEUE.DB, (job) => {
 		switch (job.name) {
 			case 'deleteDriveFiles': return handleHonoQueueDeleteDriveFiles(deps, job);
@@ -320,6 +321,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			case 'exportFavorites': return handleHonoQueueExportFavorites(deps, job);
 			case 'exportNotes': return handleHonoQueueExportNotes(deps, job);
 			case 'exportClips': return handleHonoQueueExportClips(deps, job);
+			case 'exportCustomEmojis': return handleHonoQueueExportCustomEmojis(deps, job);
+			case 'importCustomEmojis': return handleHonoQueueImportCustomEmojis(deps, job);
 			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for db`);
 		}
 	}, {
