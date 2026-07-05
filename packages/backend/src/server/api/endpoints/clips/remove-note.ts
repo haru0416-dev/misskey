@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ClipService } from '@/core/ClipService.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['account', 'notes', 'clips'],
 
@@ -40,23 +35,3 @@ export const paramDef = {
 	},
 	required: ['clipId', 'noteId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private clipService: ClipService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			try {
-				await this.clipService.removeNote(me, ps.clipId, ps.noteId);
-			} catch (e) {
-				if (e instanceof ClipService.NoSuchClipError) {
-					throw new ApiError(meta.errors.noSuchClip);
-				} else if (e instanceof ClipService.NoSuchNoteError) {
-					throw new ApiError(meta.errors.noSuchNote);
-				}
-				throw e;
-			}
-		});
-	}
-}

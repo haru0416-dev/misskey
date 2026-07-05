@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { GetterService } from '@/server/api/GetterService.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['notes'],
 
@@ -53,14 +47,3 @@ export const paramDef = {
 	},
 	required: ['noteIds'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private noteEntityService: NoteEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			return await this.noteEntityService.fetchDiffs(ps.noteIds);
-		});
-	}
-}

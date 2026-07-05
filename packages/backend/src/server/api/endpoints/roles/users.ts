@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { IdService } from '@/core/IdService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { listActiveRoleAssignmentsByRoleIdFromDatabase, resolveRoleAssignmentPagination } from '@/core/RoleAssignmentStore.js';
-import { fetchPublicExplorableRoleByIdFromDatabase } from '@/core/RoleStore.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['role', 'users'],
 
@@ -58,35 +48,3 @@ export const paramDef = {
 	},
 	required: ['roleId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private userEntityService: UserEntityService,
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const role = await fetchPublicExplorableRoleByIdFromDatabase(this.db, ps.roleId);
-
-			if (role == null) {
-				throw new ApiError(meta.errors.noSuchRole);
-			}
-
-			const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(this.db, role.id, {
-				limit: ps.limit,
-				...resolveRoleAssignmentPagination(this.idService, ps),
-			});
-
-			const _users = assigns.map(({ userId }) => userId);
-			const _userMap = await this.userEntityService.packMany(_users, me, { schema: 'UserDetailed' })
-				.then(users => new Map(users.map(u => [u.id, u])));
-			return await Promise.all(assigns.map(async assign => ({
-				id: assign.id,
-				user: _userMap.get(assign.userId) ?? await this.userEntityService.pack(assign.userId, me, { schema: 'UserDetailed' }),
-			})));
-		});
-	}
-}

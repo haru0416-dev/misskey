@@ -3,18 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as crypto from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
-import { secureRndstr } from '@/misc/secure-rndstr.js';
-import { DI } from '@/di-symbols.js';
-import { fetchAuthSessionByTokenFromDatabase, updateAuthSessionUserIdInDatabase } from '@/core/AuthSessionStore.js';
-import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
-import { createAccessTokenInDatabase, existsAccessTokenByAppIdAndUserIdFromDatabase } from '@/core/AccessTokenStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['auth'],
 
@@ -38,50 +26,3 @@ export const paramDef = {
 	},
 	required: ['token'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Fetch token
-			const session = await fetchAuthSessionByTokenFromDatabase(this.drizzle, ps.token);
-
-			if (session == null) {
-				throw new ApiError(meta.errors.noSuchSession);
-			}
-
-			const accessToken = secureRndstr(32);
-
-			// Fetch exist access token
-			const exist = await existsAccessTokenByAppIdAndUserIdFromDatabase(this.drizzle, session.appId, me.id);
-
-			if (!exist) {
-				const app = await fetchAppByIdOrFailFromDatabase(this.drizzle, session.appId);
-
-				// Generate Hash
-				const sha256 = crypto.createHash('sha256');
-				sha256.update(accessToken + app.secret);
-				const hash = sha256.digest('hex');
-
-				const now = new Date();
-
-				await createAccessTokenInDatabase(this.drizzle, {
-					id: this.idService.gen(now.getTime()),
-					lastUsedAt: now,
-					appId: session.appId,
-					userId: me.id,
-					token: accessToken,
-					hash: hash,
-				});
-			}
-
-			// Update session
-			await updateAuthSessionUserIdInDatabase(this.drizzle, session.id, me.id);
-		});
-	}
-}

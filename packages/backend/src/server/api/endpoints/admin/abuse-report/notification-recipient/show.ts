@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import {
-	AbuseReportNotificationRecipientEntityService,
-} from '@/core/entities/AbuseReportNotificationRecipientEntityService.js';
-import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
-import { ApiError } from '@/server/api/error.js';
-
 export const meta = {
 	tags: ['admin', 'abuse-report', 'notification-recipient'],
 
@@ -45,20 +37,3 @@ export const paramDef = {
 	},
 	required: ['id'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private abuseReportNotificationService: AbuseReportNotificationService,
-		private abuseReportNotificationRecipientEntityService: AbuseReportNotificationRecipientEntityService,
-	) {
-		super(meta, paramDef, async (ps) => {
-			const recipients = await this.abuseReportNotificationService.fetchRecipients({ ids: [ps.id] });
-			if (recipients.length === 0) {
-				throw new ApiError(meta.errors.noSuchRecipient);
-			}
-
-			return this.abuseReportNotificationRecipientEntityService.pack(recipients[0]);
-		});
-	}
-}

@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { IdService } from '@/core/IdService.js';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { createPageLikeInDatabase, pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
-import { fetchPageByIdFromDatabase, incrementPageLikedCountInDatabase } from '@/core/PageStore.js';
-import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['pages'],
 
@@ -50,47 +40,3 @@ export const paramDef = {
 	},
 	required: ['pageId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const page = await fetchPageByIdFromDatabase(this.drizzle, ps.pageId);
-			if (page == null) {
-				throw new ApiError(meta.errors.noSuchPage);
-			}
-
-			if (page.userId === me.id) {
-				throw new ApiError(meta.errors.yourPage);
-			}
-
-			// if already liked
-			const exist = await pageLikeExistsInDatabase(this.drizzle, me.id, page.id);
-
-			if (exist) {
-				throw new ApiError(meta.errors.alreadyLiked);
-			}
-
-			// Create like
-			try {
-				await createPageLikeInDatabase(this.drizzle, {
-					id: this.idService.gen(),
-					pageId: page.id,
-					userId: me.id,
-				});
-			} catch (error) {
-				if (isDuplicateKeyValueDatabaseError(error)) {
-					throw new ApiError(meta.errors.alreadyLiked);
-				}
-				throw error;
-			}
-
-			incrementPageLikedCountInDatabase(this.drizzle, page.id);
-		});
-	}
-}

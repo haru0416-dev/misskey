@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { FeaturedService, GALLERY_POSTS_RANKING_WINDOW } from '@/core/FeaturedService.js';
-import { IdService } from '@/core/IdService.js';
-import { DI } from '@/di-symbols.js';
-import { createGalleryLikeInDatabase, galleryLikeExistsInDatabase } from '@/core/GalleryLikeStore.js';
-import { fetchGalleryPostByIdFromDatabase, incrementGalleryPostLikedCountInDatabase } from '@/core/GalleryPostStore.js';
-import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['gallery'],
 
@@ -51,53 +40,3 @@ export const paramDef = {
 	},
 	required: ['postId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private featuredService: FeaturedService,
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const post = await fetchGalleryPostByIdFromDatabase(this.drizzle, ps.postId);
-			if (post == null) {
-				throw new ApiError(meta.errors.noSuchPost);
-			}
-
-			if (post.userId === me.id) {
-				throw new ApiError(meta.errors.yourPost);
-			}
-
-			// if already liked
-			const exist = await galleryLikeExistsInDatabase(this.drizzle, me.id, post.id);
-
-			if (exist) {
-				throw new ApiError(meta.errors.alreadyLiked);
-			}
-
-			// Create like
-			try {
-				await createGalleryLikeInDatabase(this.drizzle, {
-					id: this.idService.gen(),
-					postId: post.id,
-					userId: me.id,
-				});
-			} catch (error) {
-				if (isDuplicateKeyValueDatabaseError(error)) {
-					throw new ApiError(meta.errors.alreadyLiked);
-				}
-				throw error;
-			}
-
-			// ランキング更新
-			if (Date.now() - this.idService.parse(post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {
-				await this.featuredService.updateGalleryPostsRanking(post.id, 1);
-			}
-
-			incrementGalleryPostLikedCountInDatabase(this.drizzle, post.id);
-		});
-	}
-}

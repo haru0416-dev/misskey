@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { URL } from 'node:url';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { DeliverQueue } from '@/core/QueueModule.js';
-
 export const meta = {
 	tags: ['admin'],
 
@@ -43,25 +38,3 @@ export const paramDef = {
 	properties: {},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject('queue:deliver') public deliverQueue: DeliverQueue,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const jobs = await this.deliverQueue.getJobs(['delayed']);
-
-			const counts = new Map<string, number>();
-
-			for (const job of jobs) {
-				const host = new URL(job.data.to).host;
-				counts.set(host, (counts.get(host) ?? 0) + 1);
-			}
-
-			const res = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-
-			return res;
-		});
-	}
-}

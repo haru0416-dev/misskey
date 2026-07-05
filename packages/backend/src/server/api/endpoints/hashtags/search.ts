@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { searchHashtagNamesFromDatabase } from '@/core/HashtagStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['hashtags'],
 
@@ -33,19 +27,3 @@ export const paramDef = {
 	},
 	required: ['query'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			return await searchHashtagNamesFromDatabase(this.drizzle, {
-				query: ps.query,
-				limit: ps.limit,
-				offset: ps.offset,
-			});
-		});
-	}
-}

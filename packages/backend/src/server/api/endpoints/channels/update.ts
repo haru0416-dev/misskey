@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { RoleService } from '@/core/RoleService.js';
-import { fetchChannelByIdFromDatabase, updateChannelInDatabase } from '@/core/ChannelStore.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['channels'],
 
@@ -67,53 +57,3 @@ export const paramDef = {
 	},
 	required: ['channelId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private channelEntityService: ChannelEntityService,
-
-		private roleService: RoleService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const channel = await fetchChannelByIdFromDatabase(this.drizzle, ps.channelId);
-
-			if (channel == null) {
-				throw new ApiError(meta.errors.noSuchChannel);
-			}
-
-			const iAmModerator = await this.roleService.isModerator(me);
-			if (channel.userId !== me.id && !iAmModerator) {
-				throw new ApiError(meta.errors.accessDenied);
-			}
-
-			// eslint:disable-next-line:no-unnecessary-initializer
-			let banner = undefined;
-			if (ps.bannerId != null) {
-				banner = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.bannerId, me.id);
-
-				if (banner == null) {
-					throw new ApiError(meta.errors.noSuchFile);
-				}
-			} else if (ps.bannerId === null) {
-				banner = null;
-			}
-
-			await updateChannelInDatabase(this.drizzle, channel.id, {
-				...(ps.name !== undefined ? { name: ps.name } : {}),
-				...(ps.description !== undefined ? { description: ps.description } : {}),
-				...(ps.pinnedNoteIds !== undefined ? { pinnedNoteIds: ps.pinnedNoteIds } : {}),
-				...(ps.color !== undefined ? { color: ps.color } : {}),
-				...(typeof ps.isArchived === 'boolean' ? { isArchived: ps.isArchived } : {}),
-				...(banner ? { bannerId: banner.id } : {}),
-				...(typeof ps.isSensitive === 'boolean' ? { isSensitive: ps.isSensitive } : {}),
-				...(typeof ps.allowRenoteToExternal === 'boolean' ? { allowRenoteToExternal: ps.allowRenoteToExternal } : {}),
-			});
-
-			return await this.channelEntityService.pack(channel.id, me);
-		});
-	}
-}

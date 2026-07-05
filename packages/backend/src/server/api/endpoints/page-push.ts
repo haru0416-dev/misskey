@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
-import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../error.js';
-
 export const meta = {
 	requireCredential: true,
 	secure: true,
@@ -34,31 +25,3 @@ export const paramDef = {
 	},
 	required: ['pageId', 'event'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private userEntityService: UserEntityService,
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const page = await fetchPageByIdFromDatabase(this.drizzle, ps.pageId);
-			if (page == null) {
-				throw new ApiError(meta.errors.noSuchPage);
-			}
-
-			this.globalEventService.publishMainStream(page.userId, 'pageEvent', {
-				pageId: ps.pageId,
-				event: ps.event,
-				var: ps.var,
-				userId: me.id,
-				user: await this.userEntityService.pack(me.id, { id: page.userId }, {
-					schema: 'UserDetailed',
-				}),
-			});
-		});
-	}
-}

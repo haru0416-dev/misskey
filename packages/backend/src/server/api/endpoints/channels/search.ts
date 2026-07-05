@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { listChannelsBySearchFromDatabase } from '@/core/ChannelStore.js';
-import { IdService } from '@/core/IdService.js';
-
 export const meta = {
 	tags: ['channels'],
 
@@ -41,29 +32,3 @@ export const paramDef = {
 	},
 	required: ['query'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private idService: IdService,
-		private channelEntityService: ChannelEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate) : null);
-			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate) : null);
-			const channels = await listChannelsBySearchFromDatabase(this.db, {
-				query: sqlLikeEscape(ps.query),
-				type: ps.type,
-				limit: ps.limit,
-				sinceId,
-				untilId,
-				order: sinceId != null && untilId == null ? 'asc' : 'desc',
-			});
-
-			return await Promise.all(channels.map(x => this.channelEntityService.pack(x, me)));
-		});
-	}
-}

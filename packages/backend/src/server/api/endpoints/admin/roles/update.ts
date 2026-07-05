@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { ApiError } from '@/server/api/error.js';
-import { RoleService } from '@/core/RoleService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchRoleByIdFromDatabase } from '@/core/RoleStore.js';
-
 export const meta = {
 	tags: ['admin', 'role'],
 
@@ -53,38 +45,3 @@ export const paramDef = {
 		'roleId',
 	],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private roleService: RoleService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const role = await fetchRoleByIdFromDatabase(this.db, ps.roleId);
-			if (role == null) {
-				throw new ApiError(meta.errors.noSuchRole);
-			}
-
-			await this.roleService.update(role, {
-				name: ps.name,
-				description: ps.description,
-				color: ps.color,
-				iconUrl: ps.iconUrl,
-				target: ps.target,
-				condFormula: ps.condFormula,
-				isPublic: ps.isPublic,
-				isModerator: ps.isModerator,
-				isAdministrator: ps.isAdministrator,
-				isExplorable: ps.isExplorable,
-				asBadge: ps.asBadge,
-				preserveAssignmentOnMoveAccount: ps.preserveAssignmentOnMoveAccount,
-				canEditMembersByModerator: ps.canEditMembersByModerator,
-				displayOrder: ps.displayOrder,
-				policies: ps.policies,
-			}, me);
-		});
-	}
-}

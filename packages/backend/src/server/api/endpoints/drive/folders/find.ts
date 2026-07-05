@@ -3,13 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { listDriveFoldersByNameFromDatabase } from '@/core/DriveFolderStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['drive'],
 
@@ -36,23 +29,3 @@ export const paramDef = {
 	},
 	required: ['name'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private driveFolderEntityService: DriveFolderEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const folders = await listDriveFoldersByNameFromDatabase(this.db, {
-				name: ps.name,
-				userId: me.id,
-				parentId: ps.parentId ?? null,
-			});
-
-			return await Promise.all(folders.map(folder => this.driveFolderEntityService.pack(folder)));
-		});
-	}
-}

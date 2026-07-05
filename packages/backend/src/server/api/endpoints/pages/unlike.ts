@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { deletePageLikeByIdFromDatabase, fetchPageLikeFromDatabase } from '@/core/PageLikeStore.js';
-import { decrementPageLikedCountInDatabase, fetchPageByIdFromDatabase } from '@/core/PageStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['pages'],
 
@@ -42,29 +34,3 @@ export const paramDef = {
 	},
 	required: ['pageId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const page = await fetchPageByIdFromDatabase(this.drizzle, ps.pageId);
-			if (page == null) {
-				throw new ApiError(meta.errors.noSuchPage);
-			}
-
-			const exist = await fetchPageLikeFromDatabase(this.drizzle, me.id, page.id);
-
-			if (exist == null) {
-				throw new ApiError(meta.errors.notLiked);
-			}
-
-			// Delete like
-			await deletePageLikeByIdFromDatabase(this.drizzle, exist.id);
-
-			decrementPageLikedCountInDatabase(this.drizzle, page.id);
-		});
-	}
-}

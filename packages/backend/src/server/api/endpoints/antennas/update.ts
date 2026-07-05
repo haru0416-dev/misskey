@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { fetchAntennaByIdAndUserIdFromDatabase, fetchAntennaByIdOrFailFromDatabase, updateAntennaInDatabase } from '@/core/AntennaStore.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { AntennaEntityService } from '@/core/entities/AntennaEntityService.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['antennas'],
 
@@ -78,59 +68,3 @@ export const paramDef = {
 	},
 	required: ['antennaId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private antennaEntityService: AntennaEntityService,
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			if (ps.keywords && ps.excludeKeywords) {
-				if (ps.keywords.flat().every(x => x === '') && ps.excludeKeywords.flat().every(x => x === '')) {
-					throw new ApiError(meta.errors.emptyKeyword);
-				}
-			}
-			// Fetch the antenna
-			const antenna = await fetchAntennaByIdAndUserIdFromDatabase(this.db, ps.antennaId, me.id);
-
-			if (antenna == null) {
-				throw new ApiError(meta.errors.noSuchAntenna);
-			}
-
-			let userList;
-
-			if ((ps.src === 'list' || antenna.src === 'list') && ps.userListId) {
-				userList = await fetchUserListByIdAndUserIdFromDatabase(this.db, ps.userListId, me.id);
-
-				if (userList == null) {
-					throw new ApiError(meta.errors.noSuchUserList);
-				}
-			}
-
-			await updateAntennaInDatabase(this.db, antenna.id, {
-				name: ps.name,
-				src: ps.src,
-				userListId: ps.userListId !== undefined ? userList ? userList.id : null : undefined,
-				keywords: ps.keywords,
-				excludeKeywords: ps.excludeKeywords,
-				users: ps.users,
-				caseSensitive: ps.caseSensitive,
-				localOnly: ps.localOnly,
-				excludeBots: ps.excludeBots,
-				withReplies: ps.withReplies,
-				withFile: ps.withFile,
-				excludeNotesInSensitiveChannel: ps.excludeNotesInSensitiveChannel,
-				isActive: true,
-				lastUsedAt: new Date(),
-			});
-
-			this.globalEventService.publishInternalEvent('antennaUpdated', await fetchAntennaByIdOrFailFromDatabase(this.db, antenna.id));
-
-			return await this.antennaEntityService.pack(antenna.id);
-		});
-	}
-}

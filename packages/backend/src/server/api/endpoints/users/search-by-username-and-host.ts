@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserSearchService } from '@/core/UserSearchService.js';
-
 export const meta = {
 	tags: ['users'],
 
@@ -54,20 +50,3 @@ export const paramDef = {
 		},
 	],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private userSearchService: UserSearchService,
-	) {
-		super(meta, paramDef, (ps, me) => {
-			return this.userSearchService.searchByUsernameAndHost({
-				username: 'username' in ps ? ps.username : undefined,
-				host: 'host' in ps ? ps.host : undefined,
-			}, {
-				limit: ps.limit,
-				detail: ps.detail,
-			}, me);
-		});
-	}
-}

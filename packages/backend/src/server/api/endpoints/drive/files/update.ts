@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { RoleService } from '@/core/RoleService.js';
-import { DriveService } from '@/core/DriveService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['drive'],
 
@@ -70,48 +61,3 @@ export const paramDef = {
 	},
 	required: ['fileId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private driveService: DriveService,
-		private roleService: RoleService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const file = await fetchDriveFileByIdFromDatabase(this.db, ps.fileId);
-			if (file == null) {
-				throw new ApiError(meta.errors.noSuchFile);
-			}
-
-			if (!await this.roleService.isModerator(me) && (file.userId !== me.id)) {
-				throw new ApiError(meta.errors.accessDenied);
-			}
-
-			let packedFile;
-
-			try {
-				packedFile = await this.driveService.updateFile(file, {
-					folderId: ps.folderId,
-					name: ps.name,
-					isSensitive: ps.isSensitive,
-					comment: ps.comment,
-				}, me);
-			} catch (e) {
-				if (e instanceof DriveService.InvalidFileNameError) {
-					throw new ApiError(meta.errors.invalidFileName);
-				} else if (e instanceof DriveService.NoSuchFolderError) {
-					throw new ApiError(meta.errors.noSuchFolder);
-				} else if (e instanceof DriveService.CannotUnmarkSensitiveError) {
-					throw new ApiError(meta.errors.restrictedByRole);
-				} else {
-					throw e;
-				}
-			}
-
-			return packedFile;
-		});
-	}
-}

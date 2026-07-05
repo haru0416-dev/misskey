@@ -3,19 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
-import {
-	fetchDriveFolderByIdAndUserIdFromDatabase,
-	fetchDriveFolderByIdOrFailFromDatabase,
-	updateDriveFolderInDatabase,
-} from '@/core/DriveFolderStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['drive'],
 
@@ -59,74 +46,3 @@ export const paramDef = {
 	},
 	required: ['folderId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private driveFolderEntityService: DriveFolderEntityService,
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Fetch folder
-			const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, ps.folderId, me.id);
-
-			if (folder == null) {
-				throw new ApiError(meta.errors.noSuchFolder);
-			}
-
-			if (ps.name) folder.name = ps.name;
-
-			if (ps.parentId !== undefined) {
-				if (ps.parentId === folder.id) {
-					throw new ApiError(meta.errors.recursiveNesting);
-				} else if (ps.parentId === null) {
-					folder.parentId = null;
-				} else {
-					// Get parent folder
-					const parent = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, ps.parentId, me.id);
-
-					if (parent == null) {
-						throw new ApiError(meta.errors.noSuchParentFolder);
-					}
-
-					// Check if the circular reference will occur
-					const checkCircle = async (folderId: string): Promise<boolean> => {
-						const folder2 = await fetchDriveFolderByIdOrFailFromDatabase(this.db, folderId);
-
-						if (folder2.id === folder.id) {
-							return true;
-						} else if (folder2.parentId) {
-							return await checkCircle(folder2.parentId);
-						} else {
-							return false;
-						}
-					};
-
-					if (parent.parentId !== null) {
-						if (await checkCircle(parent.parentId)) {
-							throw new ApiError(meta.errors.recursiveNesting);
-						}
-					}
-
-					folder.parentId = parent.id;
-				}
-			}
-
-			// Update
-			await updateDriveFolderInDatabase(this.db, folder.id, {
-				name: folder.name,
-				parentId: folder.parentId,
-			});
-
-			const folderObj = await this.driveFolderEntityService.pack(folder);
-
-			// Publish folderUpdated event
-			this.globalEventService.publishDriveStream(me.id, 'folderUpdated', folderObj);
-
-			return folderObj;
-		});
-	}
-}

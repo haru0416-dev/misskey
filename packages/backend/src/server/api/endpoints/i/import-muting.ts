@@ -3,15 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueueService } from '@/core/QueueService.js';
-import { AccountMoveService } from '@/core/AccountMoveService.js';
-import { DI } from '@/di-symbols.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
 
 export const meta = {
 	secure: true,
@@ -58,31 +50,3 @@ export const paramDef = {
 	},
 	required: ['fileId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private queueService: QueueService,
-		private accountMoveService: AccountMoveService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const file = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.fileId, me.id);
-
-			if (file == null) throw new ApiError(meta.errors.noSuchFile);
-			//if (!file.type.endsWith('/csv')) throw new ApiError(meta.errors.unexpectedFileType);
-			if (file.size === 0) throw new ApiError(meta.errors.emptyFile);
-
-			const checkMoving = await this.accountMoveService.validateAlsoKnownAs(
-				me,
-				(old, src) => !!src.movedAt && src.movedAt.getTime() + 1000 * 60 * 60 * 2 > Date.now(),
-				true,
-			);
-			if (checkMoving ? file.size > 32 * 1024 * 1024 : file.size > 64 * 1024) throw new ApiError(meta.errors.tooBigFile);
-
-			this.queueService.createImportMutingJob(me, file.id);
-		});
-	}
-}

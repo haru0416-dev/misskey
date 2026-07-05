@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { IdService } from '@/core/IdService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { listAnnouncementsForUserFromDatabase, resolveAnnouncementPagination } from '@/core/AnnouncementStore.js';
-
 export const meta = {
 	tags: ['meta'],
 
@@ -39,25 +31,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private idService: IdService,
-		private announcementEntityService: AnnouncementEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const announcements = await listAnnouncementsForUserFromDatabase(this.db, {
-				limit: ps.limit,
-				...resolveAnnouncementPagination(this.idService, ps),
-				isActive: ps.isActive,
-				requestUserId: me?.id,
-			});
-
-			return this.announcementEntityService.packMany(announcements, me);
-		});
-	}
-}

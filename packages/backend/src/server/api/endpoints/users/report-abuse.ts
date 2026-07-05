@@ -3,13 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { GetterService } from '@/server/api/GetterService.js';
-import { RoleService } from '@/core/RoleService.js';
-import { AbuseReportService } from '@/core/AbuseReportService.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['users'],
 
@@ -47,36 +40,3 @@ export const paramDef = {
 	},
 	required: ['userId', 'comment'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private getterService: GetterService,
-		private roleService: RoleService,
-		private abuseReportService: AbuseReportService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Lookup user
-			const targetUser = await this.getterService.getUser(ps.userId).catch(err => {
-				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
-				throw err;
-			});
-
-			if (targetUser.id === me.id) {
-				throw new ApiError(meta.errors.cannotReportYourself);
-			}
-
-			if (await this.roleService.isAdministrator(targetUser)) {
-				throw new ApiError(meta.errors.cannotReportAdmin);
-			}
-
-			await this.abuseReportService.report([{
-				targetUserId: targetUser.id,
-				targetUserHost: targetUser.host,
-				reporterId: me.id,
-				reporterHost: null,
-				comment: ps.comment,
-			}]);
-		});
-	}
-}

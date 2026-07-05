@@ -4,16 +4,7 @@
  */
 
 import ms from 'ms';
-import { Inject, Injectable } from '@nestjs/common';
-import type { MiDriveFile } from '@/models/_.js';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { ApiError } from '../../error.js';
 import { pageNameSchema } from '@/models/Page.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
-import { PageService } from '@/core/PageService.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['pages'],
@@ -74,38 +65,3 @@ export const paramDef = {
 	},
 	required: ['pageId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private pageService: PageService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			try {
-				let eyeCatchingImage: MiDriveFile | null | undefined | string = ps.eyeCatchingImageId;
-				if (eyeCatchingImage != null) {
-					eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, eyeCatchingImage, me.id);
-
-					if (eyeCatchingImage == null) {
-						throw new ApiError(meta.errors.noSuchFile);
-					}
-				}
-
-				await this.pageService.update(me, ps.pageId, {
-					...ps,
-					eyeCatchingImage,
-				});
-			} catch (err) {
-				if (err instanceof IdentifiableError) {
-					if (err.id === '66aefd3c-fdb2-4a71-85ae-cc18bea85d3f') throw new ApiError(meta.errors.noSuchPage);
-					if (err.id === 'd0017699-8256-46f1-aed4-bc03bed73616') throw new ApiError(meta.errors.accessDenied);
-					if (err.id === 'd05bfe24-24b6-4ea2-a3ec-87cc9bf4daa4') throw new ApiError(meta.errors.nameAlreadyExists);
-				}
-				throw err;
-			}
-		});
-	}
-}

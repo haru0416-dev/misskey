@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { RoleService } from '@/core/RoleService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['drive'],
 
@@ -60,34 +51,3 @@ export const paramDef = {
 		},
 	],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private driveFileEntityService: DriveFileEntityService,
-		private roleService: RoleService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const file = 'fileId' in ps
-				? await fetchDriveFileByIdFromDatabase(this.db, ps.fileId)
-				: await fetchDriveFileByUrlFromDatabase(this.db, ps.url);
-
-			if (file == null) {
-				throw new ApiError(meta.errors.noSuchFile);
-			}
-
-			if (!await this.roleService.isModerator(me) && (file.userId !== me.id)) {
-				throw new ApiError(meta.errors.accessDenied);
-			}
-
-			return await this.driveFileEntityService.pack(file, {
-				detail: true,
-				withUser: true,
-				self: true,
-			});
-		});
-	}
-}

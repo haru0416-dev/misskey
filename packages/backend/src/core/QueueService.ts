@@ -13,7 +13,7 @@ import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWeb
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
-import type { Antenna } from '@/server/api/endpoints/i/import-antennas.js';
+import type { Antenna } from '@/queue/types.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { type SystemWebhookPayload } from '@/core/SystemWebhookService.js';

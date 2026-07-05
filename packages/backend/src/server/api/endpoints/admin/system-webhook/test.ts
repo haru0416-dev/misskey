@@ -3,11 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { WebhookTestService } from '@/core/WebhookTestService.js';
-import { ApiError } from '@/server/api/error.js';
 import { systemWebhookEventTypes } from '@/models/SystemWebhook.js';
 
 export const meta = {
@@ -53,25 +49,3 @@ export const paramDef = {
 	},
 	required: ['webhookId', 'type'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private webhookTestService: WebhookTestService,
-	) {
-		super(meta, paramDef, async (ps) => {
-			try {
-				await this.webhookTestService.testSystemWebhook({
-					webhookId: ps.webhookId,
-					type: ps.type,
-					override: ps.override,
-				});
-			} catch (e) {
-				if (e instanceof WebhookTestService.NoSuchWebhookError) {
-					throw new ApiError(meta.errors.noSuchWebhook);
-				}
-				throw e;
-			}
-		});
-	}
-}

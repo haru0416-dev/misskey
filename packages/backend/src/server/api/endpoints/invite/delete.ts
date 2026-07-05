@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { deleteRegistrationTicketInDatabase, fetchRegistrationTicketByIdFromDatabase } from '@/core/RegistrationTicketStore.js';
-import { RoleService } from '@/core/RoleService.js';
-import { DI } from '@/di-symbols.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['meta'],
 
@@ -46,32 +38,3 @@ export const paramDef = {
 	},
 	required: ['inviteId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private roleService: RoleService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const ticket = await fetchRegistrationTicketByIdFromDatabase(this.db, ps.inviteId);
-			const isModerator = await this.roleService.isModerator(me);
-
-			if (ticket == null) {
-				throw new ApiError(meta.errors.noSuchCode);
-			}
-
-			if (ticket.createdById !== me.id && !isModerator) {
-				throw new ApiError(meta.errors.accessDenied);
-			}
-
-			if (ticket.usedAt && !isModerator) {
-				throw new ApiError(meta.errors.cantDelete);
-			}
-
-			await deleteRegistrationTicketInDatabase(this.db, ticket.id);
-		});
-	}
-}

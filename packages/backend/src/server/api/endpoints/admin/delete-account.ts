@@ -3,13 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DeleteAccountService } from '@/core/DeleteAccountService.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-
 export const meta = {
 	tags: ['admin'],
 
@@ -25,22 +18,3 @@ export const paramDef = {
 	},
 	required: ['userId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private deleteAccountService: DeleteAccountService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const user = await fetchUserByIdOrFailFromDatabase(this.db, ps.userId);
-			if (user.isDeleted) {
-				return;
-			}
-
-			await this.deleteAccountService.deleteAccount(user, me);
-		});
-	}
-}

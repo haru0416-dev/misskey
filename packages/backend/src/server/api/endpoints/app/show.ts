@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { AppEntityService } from '@/core/entities/AppEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { fetchAppByIdFromDatabase } from '@/core/AppStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['app'],
 
@@ -36,29 +28,3 @@ export const paramDef = {
 	},
 	required: ['appId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private appEntityService: AppEntityService,
-	) {
-		super(meta, paramDef, async (ps, user, token) => {
-			const isSecure = user != null && token == null;
-
-			// Lookup app
-			const ap = await fetchAppByIdFromDatabase(this.db, ps.appId);
-
-			if (ap == null) {
-				throw new ApiError(meta.errors.noSuchApp);
-			}
-
-			return await this.appEntityService.pack(ap, user, {
-				detail: true,
-				includeSecret: isSecure && (ap.userId === user!.id),
-			});
-		});
-	}
-}

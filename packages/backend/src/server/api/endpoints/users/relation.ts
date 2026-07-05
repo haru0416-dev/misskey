@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-
 export const meta = {
 	tags: ['users'],
 
@@ -125,16 +121,3 @@ export const paramDef = {
 	},
 	required: ['userId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private userEntityService: UserEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			return Array.isArray(ps.userId)
-				? await this.userEntityService.getRelations(me.id, ps.userId).then(it => [...it.values()])
-				: await this.userEntityService.getRelation(me.id, ps.userId).then(it => [it]);
-		});
-	}
-}

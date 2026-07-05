@@ -3,15 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { GetterService } from '@/server/api/GetterService.js';
-import { ApiError } from '../../error.js';
-import { UserRenoteMutingService } from '@/core/UserRenoteMutingService.js';
-import { renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['account'],
@@ -54,39 +46,3 @@ export const paramDef = {
 	},
 	required: ['userId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private getterService: GetterService,
-		private userRenoteMutingService: UserRenoteMutingService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const muter = me;
-
-			// 自分自身
-			if (me.id === ps.userId) {
-				throw new ApiError(meta.errors.muteeIsYourself);
-			}
-
-			// Get mutee
-			const mutee = await this.getterService.getUser(ps.userId).catch(err => {
-				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
-				throw err;
-			});
-
-			// Check if already muting
-			const exist = await renoteMutingExistsInDatabase(this.drizzle, muter.id, mutee.id);
-
-			if (exist === true) {
-				throw new ApiError(meta.errors.alreadyMuting);
-			}
-
-			// Create mute
-			await this.userRenoteMutingService.mute(muter, mutee);
-		});
-	}
-}

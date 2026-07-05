@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import type { MiNote } from '@/models/Note.js';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { GetterService } from '@/server/api/GetterService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['notes'],
 
@@ -46,48 +36,3 @@ export const paramDef = {
 	},
 	required: ['noteId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private noteEntityService: NoteEntityService,
-		private getterService: GetterService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const note = await this.getterService.getNote(ps.noteId).catch(err => {
-				if (err.id === '9725d0ce-ba28-4dde-95a7-2cbb2c15de24') throw new ApiError(meta.errors.noSuchNote);
-				throw err;
-			});
-
-			const conversation: MiNote[] = [];
-			let i = 0;
-
-			const get = async (id: any) => {
-				i++;
-				const p = await fetchNoteByIdFromDatabase(this.db, id);
-				if (p == null) return;
-
-				if (i > ps.offset!) {
-					conversation.push(p);
-				}
-
-				if (conversation.length === ps.limit) {
-					return;
-				}
-
-				if (p.replyId) {
-					await get(p.replyId);
-				}
-			};
-
-			if (note.replyId) {
-				await get(note.replyId);
-			}
-
-			return await this.noteEntityService.packMany(conversation, me);
-		});
-	}
-}

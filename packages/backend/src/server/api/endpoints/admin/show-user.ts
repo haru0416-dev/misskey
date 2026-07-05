@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { RoleService } from '@/core/RoleService.js';
-import { RoleEntityService } from '@/core/entities/RoleEntityService.js';
-import { IdService } from '@/core/IdService.js';
-import { listSigninsByUserIdFromDatabase } from '@/core/SigninStore.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
 
 export const meta = {
@@ -193,70 +183,3 @@ export const paramDef = {
 	},
 	required: ['userId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private roleService: RoleService,
-		private roleEntityService: RoleEntityService,
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const [user, profile] = await Promise.all([
-				fetchUserByIdFromDatabase(this.drizzle, ps.userId),
-				fetchUserProfileByUserIdFromDatabase(this.drizzle, ps.userId),
-			]);
-
-			if (user == null || profile == null) {
-				throw new Error('user not found');
-			}
-
-			const isModerator = await this.roleService.isModerator(user);
-			const isSilenced = !(await this.roleService.getUserPolicies(user.id)).canPublicNote;
-
-			const _me = await fetchUserByIdOrFailFromDatabase(this.drizzle, me.id);
-			if (!await this.roleService.isAdministrator(_me) && await this.roleService.isAdministrator(user)) {
-				throw new Error('cannot show info of admin');
-			}
-
-			const signins = await listSigninsByUserIdFromDatabase(this.drizzle, user.id);
-
-			const roleAssigns = await this.roleService.getUserAssigns(user.id);
-			const roles = await this.roleService.getUserRoles(user.id);
-
-			return {
-				email: profile.email,
-				emailVerified: profile.emailVerified,
-				followedMessage: profile.followedMessage,
-				autoAcceptFollowed: profile.autoAcceptFollowed,
-				noCrawle: profile.noCrawle,
-				preventAiLearning: profile.preventAiLearning,
-				alwaysMarkNsfw: profile.alwaysMarkNsfw,
-				autoSensitive: profile.autoSensitive,
-				carefulBot: profile.carefulBot,
-				injectFeaturedNote: profile.injectFeaturedNote,
-				receiveAnnouncementEmail: profile.receiveAnnouncementEmail,
-				mutedWords: profile.mutedWords,
-				mutedInstances: profile.mutedInstances,
-				notificationRecieveConfig: profile.notificationRecieveConfig,
-				isModerator: isModerator,
-				isSilenced: isSilenced,
-				isSuspended: user.isSuspended,
-				isHibernated: user.isHibernated,
-				lastActiveDate: user.lastActiveDate ? user.lastActiveDate.toISOString() : null,
-				moderationNote: profile.moderationNote ?? '',
-				signins,
-				policies: await this.roleService.getUserPolicies(user.id),
-				roles: await this.roleEntityService.packMany(roles, me),
-				roleAssigns: roleAssigns.map(a => ({
-					createdAt: this.idService.parse(a.id).date.toISOString(),
-					expiresAt: a.expiresAt ? a.expiresAt.toISOString() : null,
-					roleId: a.roleId,
-				})),
-			};
-		});
-	}
-}

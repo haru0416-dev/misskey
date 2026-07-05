@@ -3,16 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { GetterService } from '@/server/api/GetterService.js';
-import { DI } from '@/di-symbols.js';
-import { ApiError } from '@/server/api/error.js';
-import { ChatService } from '@/core/ChatService.js';
-import type { MiUser } from '@/models/_.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export const meta = {
 	tags: ['chat'],
@@ -76,47 +67,3 @@ export const paramDef = {
 	},
 	required: ['toUserId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private getterService: GetterService,
-		private chatService: ChatService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			await this.chatService.checkChatAvailability(me.id, 'write');
-
-			let file = null;
-			if (ps.fileId != null) {
-				file = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.fileId, me.id);
-
-				if (file == null) {
-					throw new ApiError(meta.errors.noSuchFile);
-				}
-			}
-
-			// テキストが無いかつ添付ファイルも無かったらエラー
-			if (ps.text == null && file == null) {
-				throw new ApiError(meta.errors.contentRequired);
-			}
-
-			// Myself
-			if (ps.toUserId === me.id) {
-				throw new ApiError(meta.errors.recipientIsYourself);
-			}
-
-			const toUser = await this.getterService.getUser(ps.toUserId).catch(err => {
-				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
-				throw err;
-			});
-
-			return await this.chatService.createMessageToUser(me, toUser, {
-				text: ps.text,
-				file: file,
-			});
-		});
-	}
-}
