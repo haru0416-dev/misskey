@@ -205,7 +205,7 @@ function clipsRemoveNoteNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'aff017de-190e-434b-893e-33a9ff5049d8' });
 }
 
-async function packClipForHonoApi(
+export async function packClipForHonoApi(
 	deps: HonoApiClipDependencies,
 	clip: MiClip,
 	me: { id: MiUser['id'] } | null | undefined,

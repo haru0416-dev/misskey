@@ -21,6 +21,8 @@ import { createWebUtilityApp, type WebUtilityDependencies } from './web-utility.
 import { createWebMetadataApp, type WebMetadataDependencies } from './web/web-metadata.js';
 import { createWellKnownApp, type WellKnownDependencies } from './well-known.js';
 import { createInboxApp, type InboxEndpointDependencies } from './activitypub/inbox-endpoint.js';
+import { createApObjectRoutesApp, type ApObjectRoutesDependencies } from './activitypub/object-routes.js';
+import { createClientPagesApp, type ClientPagesDependencies } from './web/client-pages.js';
 
 export type HttpMiddlewareDependencies = {
 	config: Config;
@@ -44,6 +46,8 @@ export type MisskeyHonoAppDependencies = {
 	webMetadata: WebMetadataDependencies;
 	wellKnown: WellKnownDependencies;
 	inbox: InboxEndpointDependencies;
+	apObject: ApObjectRoutesDependencies;
+	clientPages: ClientPagesDependencies;
 };
 
 const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
@@ -110,6 +114,8 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	app.route('/', createUrlPreviewApp(deps.urlPreview));
 	app.route('/', createRootRoutes(deps.root));
 	app.route('/', createInboxApp(deps.inbox));
+	app.route('/', createApObjectRoutesApp(deps.apObject));
+	app.route('/', createClientPagesApp(deps.clientPages));
 	app.route('/', createClientBaseApp(deps.clientBase));
 
 	return app;

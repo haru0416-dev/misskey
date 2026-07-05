@@ -24,6 +24,8 @@
 - Fix: Hono サーバーでユーザー詳細レスポンス (`users/show` 等) からロール・バッヂロール・リレーション (`isFollowing` / `isBlocking` 等)・ピン止めノート・サイレンス状態・モデレーションノート・2要素認証関連のフィールドが欠落していた問題を修正
 - Fix: Hono サーバーで `i` のレスポンスの `securityKeysList` が常に空になり、登録済みセキュリティキーの一覧・名前変更・削除が行えなかった問題を修正
 - Fix: Hono サーバーでタイムライン取得 (`notes/timeline`, `notes/local-timeline`, `notes/hybrid-timeline`, `users/notes`) が fanout タイムライン (Redis) を読まず常にデータベースから取得しており、自分への返信やフォロー中ユーザーの返信 (withReplies) がタイムラインに含まれない・ユーザータイムラインの返信フィルタが効かない問題を修正
+- Fix: Hono サーバーで ActivityPub オブジェクトの GET 配信 (`/users/:id`, `/@:username`, `/notes/:id` の AP 表現、outbox、followers/following、featured、publickey) が一切存在せず、リモートサーバーからこのサーバーのユーザーやノートを照会できなかった問題を修正
+- Fix: Hono サーバーでユーザー・ノート・Pages・Play・クリップ・ギャラリーの各ページが専用の OGP/meta タグ付き HTML を返さず汎用ページのみ返していた問題、および `/users/:id` が `/@:username` にリダイレクトしなかった問題を修正
 
 ## 2026.6.1
 
