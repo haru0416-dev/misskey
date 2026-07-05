@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { AnnouncementService } from '@/core/AnnouncementService.js';
-import { isEntityNotFoundError } from '@/misc/db-errors.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['meta'],
 
@@ -36,19 +30,3 @@ export const paramDef = {
 	},
 	required: ['announcementId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private announcementService: AnnouncementService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			try {
-				return await this.announcementService.getAnnouncement(ps.announcementId, me);
-			} catch (err) {
-				if (isEntityNotFoundError(err)) throw new ApiError(meta.errors.noSuchAnnouncement);
-				throw err;
-			}
-		});
-	}
-}

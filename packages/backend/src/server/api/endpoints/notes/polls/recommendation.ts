@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['notes'],
 
@@ -37,31 +29,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private noteEntityService: NoteEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const noteIds = await listUnvotedPublicPollNoteIdsFromDatabase(this.db, {
-				meId: me.id,
-				excludeChannels: ps.excludeChannels,
-				limit: ps.limit,
-				offset: ps.offset,
-			});
-
-			if (noteIds.length === 0) return [];
-
-			const notes = await listNotesByIdsFromDatabase(this.db, noteIds);
-			notes.sort((a, b) => b.id.localeCompare(a.id));
-
-			return await this.noteEntityService.packMany(notes, me, {
-				detail: true,
-			});
-		});
-	}
-}

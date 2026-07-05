@@ -3,13 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { HashtagEntityService } from '@/core/entities/HashtagEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { listHashtagsFromDatabase } from '@/core/HashtagStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['hashtags'],
 
@@ -37,25 +30,3 @@ export const paramDef = {
 	},
 	required: ['sort'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private hashtagEntityService: HashtagEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const tags = await listHashtagsFromDatabase(this.drizzle, {
-				limit: ps.limit,
-				attachedToUserOnly: ps.attachedToUserOnly,
-				attachedToLocalUserOnly: ps.attachedToLocalUserOnly,
-				attachedToRemoteUserOnly: ps.attachedToRemoteUserOnly,
-				sort: ps.sort,
-			});
-
-			return this.hashtagEntityService.packMany(tags);
-		});
-	}
-}

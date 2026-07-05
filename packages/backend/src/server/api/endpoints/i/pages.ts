@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { PageEntityService } from '@/core/entities/PageEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { IdService } from '@/core/IdService.js';
-import { listPagesByUserIdWithPaginationFromDatabase, resolvePagePagination } from '@/core/PageStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['account', 'pages'],
 
@@ -40,27 +32,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private pageEntityService: PageEntityService,
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const { sinceId, untilId, order } = resolvePagePagination(this.idService, ps);
-
-			const pages = await listPagesByUserIdWithPaginationFromDatabase(this.drizzle, me.id, {
-				limit: ps.limit,
-				order,
-				sinceId,
-				untilId,
-			});
-
-			return await this.pageEntityService.packMany(pages);
-		});
-	}
-}

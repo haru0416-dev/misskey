@@ -4,15 +4,6 @@
  */
 
 import ms from 'ms';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { UserFollowingService } from '@/core/UserFollowingService.js';
-import { DI } from '@/di-symbols.js';
-import { GetterService } from '@/server/api/GetterService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
-import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['following', 'users'],
@@ -60,41 +51,3 @@ export const paramDef = {
 	},
 	required: ['userId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private userEntityService: UserEntityService,
-		private getterService: GetterService,
-		private userFollowingService: UserFollowingService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const followee = me;
-
-			// Check if the follower is yourself
-			if (me.id === ps.userId) {
-				throw new ApiError(meta.errors.followerIsYourself);
-			}
-
-			// Get follower
-			const follower = await this.getterService.getUser(ps.userId).catch(err => {
-				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
-				throw err;
-			});
-
-			// Check not following
-			const exist = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(this.db, follower.id, followee.id);
-
-			if (exist == null) {
-				throw new ApiError(meta.errors.notFollowing);
-			}
-
-			await this.userFollowingService.unfollow(follower, followee);
-
-			return await this.userEntityService.pack(follower.id, me);
-		});
-	}
-}

@@ -15,7 +15,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { adminUpdateMetaParamDef, buildAdminUpdateMetaPatch, type AdminUpdateMetaParams } from '@/server/api/AdminUpdateMetaLogic.js';
+import { adminUpdateMetaParamDef, buildAdminUpdateMetaPatch, type AdminUpdateMetaParams } from '@/server/rest/AdminUpdateMetaLogic.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
 import { parseHonoApiParams } from './validation.js';
 

@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { RoleService } from '@/core/RoleService.js';
-import { IdService } from '@/core/IdService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['admin'],
 
@@ -197,60 +187,3 @@ export const paramDef = {
 		},
 	],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private roleService: RoleService,
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const file = 'fileId' in ps
-				? await fetchDriveFileByIdFromDatabase(this.db, ps.fileId)
-				: await fetchDriveFileByUrlFromDatabase(this.db, ps.url);
-
-			if (file == null) {
-				throw new ApiError(meta.errors.noSuchFile);
-			}
-
-			const owner = file.userId ? await fetchUserByIdOrFailFromDatabase(this.db, file.userId) : null;
-
-			const iAmModerator = await this.roleService.isModerator(me);
-			const ownerIsModerator = owner ? await this.roleService.isModerator(owner) : false;
-
-			return {
-				id: file.id,
-				userId: file.userId,
-				userHost: file.userHost,
-				isLink: file.isLink,
-				maybePorn: file.maybePorn,
-				maybeSensitive: file.maybeSensitive,
-				isSensitive: file.isSensitive,
-				folderId: file.folderId,
-				src: file.src,
-				uri: file.uri,
-				webpublicAccessKey: file.webpublicAccessKey,
-				thumbnailAccessKey: file.thumbnailAccessKey,
-				accessKey: file.accessKey,
-				webpublicType: file.webpublicType,
-				webpublicUrl: file.webpublicUrl,
-				thumbnailUrl: file.thumbnailUrl,
-				url: file.url,
-				storedInternal: file.storedInternal,
-				properties: file.properties,
-				blurhash: file.blurhash,
-				comment: file.comment,
-				size: file.size,
-				type: file.type,
-				name: file.name,
-				md5: file.md5,
-				createdAt: this.idService.parse(file.id).date.toISOString(),
-				requestIp: iAmModerator ? file.requestIp : null,
-				requestHeaders: iAmModerator && !ownerIsModerator ? file.requestHeaders : null,
-			};
-		});
-	}
-}

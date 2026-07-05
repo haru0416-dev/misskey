@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { fetchEmojiByIdFromDatabase } from '@/core/EmojiStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiDriveFile } from '@/models/DriveFile.js';
-import { DI } from '@/di-symbols.js';
-import { DriveService } from '@/core/DriveService.js';
-import { CustomEmojiService } from '@/core/CustomEmojiService.js';
-import { EmojiEntityService } from '@/core/entities/EmojiEntityService.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['admin'],
 
@@ -56,51 +45,3 @@ export const paramDef = {
 } as const;
 
 // TODO: ロジックをサービスに切り出す
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-		private emojiEntityService: EmojiEntityService,
-		private customEmojiService: CustomEmojiService,
-		private driveService: DriveService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const emoji = await fetchEmojiByIdFromDatabase(this.db, ps.emojiId);
-			if (emoji == null) {
-				throw new ApiError(meta.errors.noSuchEmoji);
-			}
-
-			let driveFile: MiDriveFile;
-
-			try {
-				// Create file
-				driveFile = await this.driveService.uploadFromUrl({ url: emoji.originalUrl, user: null, force: true });
-			} catch (_) {
-				// TODO: need to return Drive Error
-				throw new ApiError();
-			}
-
-			// Duplication Check
-			const isDuplicate = await this.customEmojiService.checkDuplicate(emoji.name);
-			if (isDuplicate) throw new ApiError(meta.errors.duplicateName);
-
-			const addedEmoji = await this.customEmojiService.add({
-				originalUrl: driveFile.url,
-				publicUrl: driveFile.webpublicUrl ?? driveFile.url,
-				fileType: driveFile.webpublicType ?? driveFile.type,
-				name: emoji.name,
-				category: emoji.category,
-				aliases: emoji.aliases,
-				host: null,
-				license: emoji.license,
-				isSensitive: emoji.isSensitive,
-				localOnly: emoji.localOnly,
-				roleIdsThatCanBeUsedThisEmojiAsReaction: emoji.roleIdsThatCanBeUsedThisEmojiAsReaction,
-			}, me);
-
-			return this.emojiEntityService.packDetailed(addedEmoji);
-		});
-	}
-}

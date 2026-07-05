@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { PushNotificationService } from '@/core/PushNotificationService.js';
-import {
-	fetchSwSubscriptionFromDatabase,
-	updateSwSubscriptionInDatabase,
-} from '@/core/SwSubscriptionStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['account'],
 
@@ -57,37 +46,3 @@ export const paramDef = {
 	},
 	required: ['endpoint'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private pushNotificationService: PushNotificationService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const swSubscription = await fetchSwSubscriptionFromDatabase(this.drizzle, me.id, ps.endpoint);
-
-			if (swSubscription === null) {
-				throw new ApiError(meta.errors.noSuchRegistration);
-			}
-
-			if (ps.sendReadMessage !== undefined) {
-				swSubscription.sendReadMessage = ps.sendReadMessage;
-			}
-
-			await updateSwSubscriptionInDatabase(this.drizzle, swSubscription.id, {
-				sendReadMessage: swSubscription.sendReadMessage,
-			});
-
-			this.pushNotificationService.refreshCache(me.id);
-
-			return {
-				userId: swSubscription.userId,
-				endpoint: swSubscription.endpoint,
-				sendReadMessage: swSubscription.sendReadMessage,
-			};
-		});
-	}
-}

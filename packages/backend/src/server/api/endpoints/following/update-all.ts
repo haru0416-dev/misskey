@@ -4,11 +4,6 @@
  */
 
 import ms from 'ms';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 
 export const meta = {
 	tags: ['following', 'users'],
@@ -30,20 +25,3 @@ export const paramDef = {
 		withReplies: { type: 'boolean' },
 	},
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			await updateFollowingsByFollowerIdInDatabase(this.db, me.id, {
-				notify: ps.notify != null ? (ps.notify === 'none' ? null : ps.notify) : undefined,
-				withReplies: ps.withReplies != null ? ps.withReplies : undefined,
-			});
-
-			return;
-		});
-	}
-}

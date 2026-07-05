@@ -3,19 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import bcrypt from 'bcryptjs';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
-import { ApiError } from '../../../error.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import {
-	fetchUserSecurityKeyByIdFromDatabase,
-	updateUserSecurityKeyNameByIdInDatabase,
-} from '@/core/UserSecurityKeyStore.js';
-
 export const meta = {
 	requireCredential: true,
 
@@ -44,36 +31,3 @@ export const paramDef = {
 	},
 	required: ['name', 'credentialId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private userEntityService: UserEntityService,
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const key = await fetchUserSecurityKeyByIdFromDatabase(this.db, ps.credentialId);
-
-			if (key == null) {
-				throw new ApiError(meta.errors.noSuchKey);
-			}
-
-			if (key.userId !== me.id) {
-				throw new ApiError(meta.errors.accessDenied);
-			}
-
-			await updateUserSecurityKeyNameByIdInDatabase(this.db, key.id, ps.name);
-
-			// Publish meUpdated event
-			this.globalEventService.publishMainStream(me.id, 'meUpdated', await this.userEntityService.pack(me.id, me, {
-				schema: 'MeDetailed',
-				includeSecrets: true,
-			}));
-
-			return {};
-		});
-	}
-}

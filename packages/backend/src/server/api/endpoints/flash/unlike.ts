@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { deleteFlashLikeByIdFromDatabase, fetchFlashLikeFromDatabase } from '@/core/FlashLikeStore.js';
-import { decrementFlashLikedCountInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['flash'],
 
@@ -42,29 +34,3 @@ export const paramDef = {
 	},
 	required: ['flashId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const flash = await fetchFlashByIdFromDatabase(this.drizzle, ps.flashId);
-			if (flash == null) {
-				throw new ApiError(meta.errors.noSuchFlash);
-			}
-
-			const exist = await fetchFlashLikeFromDatabase(this.drizzle, me.id, flash.id);
-
-			if (exist == null) {
-				throw new ApiError(meta.errors.notLiked);
-			}
-
-			// Delete like
-			await deleteFlashLikeByIdFromDatabase(this.drizzle, exist.id);
-
-			decrementFlashLikedCountInDatabase(this.drizzle, flash.id);
-		});
-	}
-}

@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { countRegistrationTicketsCreatedSinceFromDatabase, createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
-import { InviteCodeEntityService } from '@/core/entities/InviteCodeEntityService.js';
-import { IdService } from '@/core/IdService.js';
-import { RoleService } from '@/core/RoleService.js';
-import { DI } from '@/di-symbols.js';
-import { generateInviteCode } from '@/misc/generate-invite-code.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['meta'],
 
@@ -41,39 +30,3 @@ export const paramDef = {
 	properties: {},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private inviteCodeEntityService: InviteCodeEntityService,
-		private idService: IdService,
-		private roleService: RoleService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const policies = await this.roleService.getUserPolicies(me.id);
-
-			if (policies.inviteLimit) {
-				const count = await countRegistrationTicketsCreatedSinceFromDatabase(this.db, {
-					createdById: me.id,
-					sinceId: this.idService.gen(Date.now() - (policies.inviteLimitCycle * 1000 * 60)),
-				});
-
-				if (count >= policies.inviteLimit) {
-					throw new ApiError(meta.errors.exceededCreateLimit);
-				}
-			}
-
-			const ticket = await createRegistrationTicketInDatabase(this.db, {
-				id: this.idService.gen(),
-				createdById: me.id,
-				expiresAt: policies.inviteExpirationTime ? new Date(Date.now() + (policies.inviteExpirationTime * 1000 * 60)) : null,
-				code: generateInviteCode(),
-			});
-
-			return await this.inviteCodeEntityService.pack(ticket, me);
-		});
-	}
-}

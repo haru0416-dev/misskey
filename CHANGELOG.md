@@ -15,6 +15,7 @@
 - Fix: Hono サーバーでリモートアクターの引っ越し (`movedTo`) を検知した際、フォロワーの自動移行やブロック/ミュート/ロール/リストの引き継ぎが行われていなかった問題を修正
 - Enhance: ジョブキュー処理 (配送、受信箱、Webhook、エクスポート/インポート等) を NestJS から Hono ベースの実装に移行
 - Enhance: WebSocket ストリーミング・ジョブキュー処理の NestJS 実装のうち Hono 移行により不要になったものを削除
+- Enhance: REST API エンドポイントの NestJS 実装から NestJS 依存コードを完全に除去 (OpenAPI 仕様生成・misskey-js コード生成用のデータのみ保持)
 
 ## 2026.6.1
 
