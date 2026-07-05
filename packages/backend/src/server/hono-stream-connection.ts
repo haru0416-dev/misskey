@@ -32,6 +32,8 @@ import { honoStreamChannelLocalTimeline } from './hono-stream-channel-local-time
 import { honoStreamChannelGlobalTimeline } from './hono-stream-channel-global-timeline.js';
 import { honoStreamChannelHomeTimeline } from './hono-stream-channel-home-timeline.js';
 import { honoStreamChannelHybridTimeline } from './hono-stream-channel-hybrid-timeline.js';
+import { honoStreamChannelQueueStats } from './hono-stream-channel-queue-stats.js';
+import { honoStreamChannelServerStats } from './hono-stream-channel-server-stats.js';
 
 const MAX_CHANNELS_PER_CONNECTION = 32;
 
@@ -107,6 +109,8 @@ const HONO_STREAM_CHANNELS: Record<string, HonoStreamChannelDefinition<HonoStrea
 	globalTimeline: honoStreamChannelGlobalTimeline,
 	homeTimeline: honoStreamChannelHomeTimeline,
 	hybridTimeline: honoStreamChannelHybridTimeline,
+	queueStats: honoStreamChannelQueueStats,
+	serverStats: honoStreamChannelServerStats,
 };
 
 /** Connection.ts 相当。NestJS のリクエストスコープDIを介さない、コネクション単位のプレーンクラス。 */
