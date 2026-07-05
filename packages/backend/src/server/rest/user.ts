@@ -5,11 +5,14 @@
 
 import ms from 'ms';
 import { sql, type SQL } from 'drizzle-orm';
+import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
 import { maximum } from '@/misc/prelude/array.js';
-import { listFrequentlyRepliedUsersFromDatabase } from '@/core/NoteStore.js';
+import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listAvatarDecorationsFromDatabaseCached } from '@/core/AvatarDecorationStore.js';
+import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import { countUserSecurityKeysByUserIdFromDatabase, listUserSecurityKeySummariesByUserIdFromDatabase } from '@/core/UserSecurityKeyStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
 import {
@@ -39,8 +42,9 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from './error.js';
+import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
-import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import { getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiAdministrator, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
@@ -50,6 +54,8 @@ export type UserPackingDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
+	/** pinnedNotes を detail:true で pack するのに必要。省略時 pinnedNotes は空配列になる (pinnedNoteIds は常に入る)。 */
+	redis?: Redis.Redis;
 };
 
 type HonoApiAvatarDecorationLite = {
@@ -164,6 +170,95 @@ export async function packUserLiteManyForHonoApi(
 	return users.map(user => packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? []));
 }
 
+type UserRelationForPack = Awaited<ReturnType<typeof getUserRelationForHonoApi>>;
+
+type UserDetailedExtras = {
+	roles: { id: string; name: string; color: string | null; iconUrl: string | null; description: string; isModerator: boolean; isAdministrator: boolean; displayOrder: number }[];
+	badgeRoles: { name: string; iconUrl: string | null; displayOrder: number }[] | undefined;
+	isSilenced: boolean;
+	canChat: boolean;
+	pinnedNoteIds: string[];
+	pinnedNotes: unknown[];
+	iAmModerator: boolean;
+	relation: UserRelationForPack | null;
+	twoFactor: { twoFactorEnabled: boolean; usePasswordLessLogin: boolean; securityKeys: boolean } | null;
+	moderationNote: string | undefined;
+};
+
+/**
+ * UserEntityService.pack (detail:true) が計算していたロール/ポリシー/ピン/リレーション/2FA系フィールド群。
+ * relation は me が別ユーザーのときのみ、twoFactor は本人閲覧または moderator 閲覧のときのみ非null。
+ */
+async function buildUserDetailedExtrasForHonoApi(
+	deps: UserPackingDependencies,
+	user: MiUser,
+	profile: MiUserProfile,
+	me: { id: MiUser['id'] } | null | undefined,
+	hint?: { iAmModerator?: boolean; relation?: UserRelationForPack | null },
+): Promise<UserDetailedExtras> {
+	const isMe = me != null && me.id === user.id;
+	let iAmModerator = hint?.iAmModerator ?? false;
+	if (hint?.iAmModerator === undefined && me != null) {
+		const meUser = isMe ? user : await fetchUserByIdFromDatabase(deps.db, me.id);
+		iAmModerator = meUser != null && await isHonoApiModerator(deps, meUser);
+	}
+
+	const userRoles = await getHonoApiUserRoles(deps, user);
+	const policies = await getHonoApiRolePolicies(deps, user, userRoles);
+
+	const pins = await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' });
+	const pinnedNoteIds = pins.map(pin => pin.noteId);
+	let pinnedNotes: unknown[] = [];
+	if (pinnedNoteIds.length > 0 && deps.redis != null) {
+		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, pinnedNoteIds);
+		const noteById = new Map(notes.map(note => [note.id, note]));
+		const orderedNotes = pinnedNoteIds.map(id => noteById.get(id)).filter(note => note != null);
+		pinnedNotes = await packNoteManyForHonoApi(deps as UserPackingDependencies & HonoApiNoteDependencies, orderedNotes, me, { detail: true });
+	}
+
+	const relation = hint?.relation !== undefined
+		? hint.relation
+		: (me != null && !isMe ? await getUserRelationForHonoApi(deps, me.id, user.id) : null);
+
+	const twoFactor = (isMe || iAmModerator) ? {
+		twoFactorEnabled: profile.twoFactorEnabled,
+		usePasswordLessLogin: profile.usePasswordLessLogin,
+		securityKeys: profile.twoFactorEnabled
+			? (await countUserSecurityKeysByUserIdFromDatabase(deps.db, user.id)) >= 1
+			: false,
+	} : null;
+
+	return {
+		roles: userRoles
+			.filter(role => role.isPublic)
+			.sort((a, b) => b.displayOrder - a.displayOrder)
+			.map(role => ({
+				id: role.id,
+				name: role.name,
+				color: role.color,
+				iconUrl: role.iconUrl,
+				description: role.description,
+				isModerator: role.isModerator,
+				isAdministrator: role.isAdministrator,
+				displayOrder: role.displayOrder,
+			})),
+		badgeRoles: (deps.meta.showRoleBadgesOfRemoteUsers || user.host == null)
+			? userRoles
+				.filter(role => role.asBadge && (role.isPublic || iAmModerator))
+				.sort((a, b) => b.displayOrder - a.displayOrder)
+				.map(role => ({ name: role.name, iconUrl: role.iconUrl, displayOrder: role.displayOrder }))
+			: undefined,
+		isSilenced: !policies.canPublicNote,
+		canChat: policies.chatAvailability === 'available',
+		pinnedNoteIds,
+		pinnedNotes,
+		iAmModerator,
+		relation,
+		twoFactor,
+		moderationNote: iAmModerator ? (profile.moderationNote ?? '') : undefined,
+	};
+}
+
 export async function packUserDetailedNotMeForHonoApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
@@ -171,8 +266,9 @@ export async function packUserDetailedNotMeForHonoApi(
 ): Promise<UserDetailedNotMeHonoApiResponse> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	const memo = me ? await fetchUserMemoTextFromDatabase(deps.db, me.id, user.id) : null;
+	const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, me);
 
-	return packUserDetailedNotMeCoreForHonoApi(deps, user, profile, memo);
+	return packUserDetailedNotMeCoreForHonoApi(deps, user, profile, memo, extras);
 }
 
 export async function packUserDetailedNotMeManyForHonoApi(
@@ -185,12 +281,26 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
 	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id) : null;
 
-	return await Promise.all(users.map(async user => packUserDetailedNotMeCoreForHonoApi(
-		deps,
-		user,
-		profileByUserId.get(user.id) ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id),
-		memoByTargetUserId ? (memoByTargetUserId.get(user.id) ?? null) : null,
-	)));
+	const meUser = me != null ? await fetchUserByIdFromDatabase(deps.db, me.id) : null;
+	const iAmModerator = meUser != null && await isHonoApiModerator(deps, meUser);
+	const relationByUserId = me != null
+		? await getUserRelationsForHonoApi(deps, me.id, users.filter(user => user.id !== me.id).map(user => user.id))
+		: null;
+
+	return await Promise.all(users.map(async user => {
+		const profile = profileByUserId.get(user.id) ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+		const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, me, {
+			iAmModerator,
+			relation: relationByUserId?.get(user.id) ?? null,
+		});
+		return packUserDetailedNotMeCoreForHonoApi(
+			deps,
+			user,
+			profile,
+			memoByTargetUserId ? (memoByTargetUserId.get(user.id) ?? null) : null,
+			extras,
+		);
+	}));
 }
 
 export async function resolveAlsoKnownAsForHonoApi(deps: UserPackingDependencies, alsoKnownAs: string[] | null): Promise<string[] | null> {
@@ -210,9 +320,9 @@ async function packUserDetailedNotMeCoreForHonoApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	profile: MiUserProfile,
-	memo: string | null = null,
+	memo: string | null,
+	extras: UserDetailedExtras,
 ): Promise<UserDetailedNotMeHonoApiResponse> {
-	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
 	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
 
 	return {
@@ -231,7 +341,7 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		instance: undefined,
 		emojis: {},
 		onlineStatus: getOnlineStatus(user),
-		badgeRoles: [],
+		badgeRoles: extras.badgeRoles,
 		url: profile.url,
 		uri: user.uri,
 		movedTo: null,
@@ -242,7 +352,7 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		bannerUrl: user.bannerId == null ? null : user.bannerUrl,
 		bannerBlurhash: user.bannerId == null ? null : user.bannerBlurhash,
 		isLocked: user.isLocked,
-		isSilenced: !policies.canPublicNote,
+		isSilenced: extras.isSilenced,
 		isSuspended: user.isSuspended,
 		description: profile.description,
 		location: profile.location,
@@ -253,17 +363,32 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		followersCount: user.followersCount,
 		followingCount: user.followingCount,
 		notesCount: user.notesCount,
-		pinnedNoteIds: [],
-		pinnedNotes: [],
+		pinnedNoteIds: extras.pinnedNoteIds,
+		pinnedNotes: extras.pinnedNotes,
 		pinnedPageId: profile.pinnedPageId,
 		pinnedPage: null,
 		publicReactions: user.host == null ? profile.publicReactions : false,
 		followingVisibility: profile.followingVisibility,
 		followersVisibility: profile.followersVisibility,
 		chatScope: user.chatScope,
-		canChat: policies.chatAvailability === 'available',
-		roles: [],
+		canChat: extras.canChat,
+		roles: extras.roles,
 		memo,
+		moderationNote: extras.moderationNote,
+		...(extras.twoFactor ?? {}),
+		...(extras.relation ? {
+			isFollowing: extras.relation.isFollowing,
+			isFollowed: extras.relation.isFollowed,
+			hasPendingFollowRequestFromYou: extras.relation.hasPendingFollowRequestFromYou,
+			hasPendingFollowRequestToYou: extras.relation.hasPendingFollowRequestToYou,
+			isBlocking: extras.relation.isBlocking,
+			isBlocked: extras.relation.isBlocked,
+			isMuted: extras.relation.isMuted,
+			isRenoteMuted: extras.relation.isRenoteMuted,
+			notify: extras.relation.following?.notify ?? 'none',
+			withReplies: extras.relation.following?.withReplies ?? false,
+			followedMessage: extras.relation.isFollowing ? profile.followedMessage : undefined,
+		} : {}),
 	};
 }
 
@@ -300,10 +425,15 @@ export async function packMeDetailedForHonoApi(
 	options: PackMeDetailedOptions,
 ): Promise<MeDetailedHonoApiResponse> {
 	const profile = options.profile ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-	const policies = getHonoApiUserPolicies(deps.config, deps.meta);
-	const isRoot = deps.meta.rootUserId === user.id;
+	const userRoles = await getHonoApiUserRoles(deps, user);
+	const policies = await getHonoApiRolePolicies(deps, user, userRoles);
+	const [isModerator, isAdmin] = await Promise.all([
+		isHonoApiModerator(deps, user),
+		isHonoApiAdministrator(deps, user),
+	]);
 	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
 	const memo = await fetchUserMemoTextFromDatabase(deps.db, user.id, user.id);
+	const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, { id: user.id }, { iAmModerator: isModerator, relation: null });
 
 	return {
 		id: user.id,
@@ -321,7 +451,7 @@ export async function packMeDetailedForHonoApi(
 		instance: undefined,
 		emojis: {},
 		onlineStatus: getOnlineStatus(user),
-		badgeRoles: [],
+		badgeRoles: extras.badgeRoles,
 		url: profile.url,
 		uri: user.uri,
 		movedTo: null,
@@ -332,7 +462,7 @@ export async function packMeDetailedForHonoApi(
 		bannerUrl: user.bannerId == null ? null : user.bannerUrl,
 		bannerBlurhash: user.bannerId == null ? null : user.bannerBlurhash,
 		isLocked: user.isLocked,
-		isSilenced: !policies.canPublicNote,
+		isSilenced: extras.isSilenced,
 		isSuspended: user.isSuspended,
 		description: profile.description,
 		location: profile.location,
@@ -343,25 +473,27 @@ export async function packMeDetailedForHonoApi(
 		followersCount: user.followersCount,
 		followingCount: user.followingCount,
 		notesCount: user.notesCount,
-		pinnedNoteIds: [],
-		pinnedNotes: [],
+		pinnedNoteIds: extras.pinnedNoteIds,
+		pinnedNotes: extras.pinnedNotes,
 		pinnedPageId: profile.pinnedPageId,
 		pinnedPage: null,
 		publicReactions: user.host == null ? profile.publicReactions : false,
 		followingVisibility: profile.followingVisibility,
 		followersVisibility: profile.followersVisibility,
 		chatScope: user.chatScope,
-		canChat: policies.chatAvailability === 'available',
-		roles: [],
+		canChat: extras.canChat,
+		roles: extras.roles,
 		memo,
 		twoFactorEnabled: profile.twoFactorEnabled,
 		usePasswordLessLogin: profile.usePasswordLessLogin,
-		securityKeys: false,
+		securityKeys: profile.twoFactorEnabled
+			? (await countUserSecurityKeysByUserIdFromDatabase(deps.db, user.id)) >= 1
+			: false,
 		avatarId: user.avatarId,
 		bannerId: user.bannerId,
 		followedMessage: profile.followedMessage,
-		isModerator: isRoot,
-		isAdmin: isRoot,
+		isModerator,
+		isAdmin,
 		injectFeaturedNote: profile.injectFeaturedNote,
 		receiveAnnouncementEmail: profile.receiveAnnouncementEmail,
 		alwaysMarkNsfw: profile.alwaysMarkNsfw,
@@ -396,7 +528,9 @@ export async function packMeDetailedForHonoApi(
 		...(options.includeSecrets ? {
 			email: profile.email,
 			emailVerified: profile.emailVerified,
-			securityKeysList: [],
+			securityKeysList: profile.twoFactorEnabled
+				? await listUserSecurityKeySummariesByUserIdFromDatabase(deps.db, user.id)
+				: [],
 		} : {}),
 	};
 }

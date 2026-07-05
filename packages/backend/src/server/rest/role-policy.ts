@@ -106,9 +106,10 @@ function aggregateChatAvailability(values: RolePolicies['chatAvailability'][]): 
 export async function getHonoApiRolePolicies(
 	deps: HonoApiRolePolicyDependencies,
 	user: MiUser | null,
+	precomputedRoles?: MiRole[],
 ): Promise<RolePolicies> {
 	const basePolicies = { ...DEFAULT_POLICIES, ...deps.meta.policies };
-	const roles = await getHonoApiUserRoles(deps, user);
+	const roles = precomputedRoles ?? await getHonoApiUserRoles(deps, user);
 
 	function calc<T extends keyof RolePolicies>(name: T, aggregate: (values: RolePolicies[T][]) => RolePolicies[T]): RolePolicies[T] {
 		if (roles.length === 0) return aggregate([basePolicies[name]]);
