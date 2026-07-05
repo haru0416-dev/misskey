@@ -20,6 +20,7 @@ import { createUrlPreviewApp, type UrlPreviewDependencies } from './hono-url-pre
 import { createWebUtilityApp, type WebUtilityDependencies } from './hono-web-utility.js';
 import { createWebMetadataApp, type WebMetadataDependencies } from './hono-web-metadata.js';
 import { createWellKnownApp, type WellKnownDependencies } from './hono-well-known.js';
+import { createInboxApp, type InboxEndpointDependencies } from './hono-inbox-endpoint.js';
 
 export type HttpMiddlewareDependencies = {
 	config: Config;
@@ -42,6 +43,7 @@ export type MisskeyHonoAppDependencies = {
 	webUtility: WebUtilityDependencies;
 	webMetadata: WebMetadataDependencies;
 	wellKnown: WellKnownDependencies;
+	inbox: InboxEndpointDependencies;
 };
 
 const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
@@ -107,6 +109,7 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	app.route('/', createFeedApp(deps.feed));
 	app.route('/', createUrlPreviewApp(deps.urlPreview));
 	app.route('/', createRootRoutes(deps.root));
+	app.route('/', createInboxApp(deps.inbox));
 	app.route('/', createClientBaseApp(deps.clientBase));
 
 	return app;

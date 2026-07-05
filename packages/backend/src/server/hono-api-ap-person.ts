@@ -52,20 +52,26 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import {
+	extractDbHost,
 	getUserFromApIdForHonoApi,
+	isSelfHost,
 	parseLocalApUri,
 	resolveApObjectForHonoApi,
 	resolveCollectionForHonoApi,
 	type HonoApiApResolveDependencies,
 	type HonoApiAuthUser,
 } from './hono-api-ap-resolve.js';
+import { postMoveProcessForHonoApi, type HonoApiAccountMoveDependencies } from './hono-api-account-move.js';
 import { uploadDriveFileFromUrlForHonoApi, type HonoApiDriveFileUploadDependencies } from './hono-api-drive-file-upload.js';
 import { updateUsertagsForHonoApi } from './hono-api-account-update.js';
 import { getHonoApiRolePolicies } from './hono-api-role-policy.js';
 import { parseHonoApiParams } from './hono-api-validation.js';
 import { fetchOrRegisterInstanceForHonoApi } from './hono-api-notes-create.js';
+import type { RelationshipQueue } from '@/core/QueueModule.js';
 
-export type HonoApiApPersonDependencies = HonoApiApResolveDependencies & HonoApiDriveFileUploadDependencies;
+export type HonoApiApPersonDependencies = HonoApiApResolveDependencies & HonoApiDriveFileUploadDependencies & {
+	relationshipQueue: RelationshipQueue;
+};
 
 const nameLength = 128;
 const summaryLength = 2048;
@@ -313,6 +319,49 @@ export async function isPublicCollectionForHonoApi(
 	return false;
 }
 
+export type HonoApiUpdatePersonDependencies = HonoApiApPersonDependencies & HonoApiAccountMoveDependencies;
+
+/**
+ * ApPersonService#processRemoteMove 相当。updatePersonForHonoApi が movedToUri の新規出現/変更を
+ * 検知した際に呼ばれる。dst (移行先アカウント) が本当に src (移行元) を alsoKnownAs で承認しているかを
+ * 確認した上で、hono-api-account-move.ts の postMoveProcessForHonoApi (フォロワーのフォロー先切り替え・
+ * ブロック/ミュート/ロール/リストの引き継ぎ) を実行する。
+ */
+async function processRemoteMoveForHonoApi(deps: HonoApiUpdatePersonDependencies, src: MiRemoteUser, movePreventUris: string[] = []): Promise<string> {
+	if (!src.movedToUri) return 'skip: no movedToUri';
+	if (src.uri === src.movedToUri) return 'skip: movedTo itself (src)';
+	if (movePreventUris.length > 10) return 'skip: too many moves';
+
+	let dst: MiLocalUser | MiRemoteUser | null = await fetchPersonForHonoApi(deps, src.movedToUri);
+
+	if (dst && dst.host == null) {
+		// ローカルユーザーだった場合はDBから読み直す
+		dst = await fetchUserByUriFromDatabase(deps.db, src.movedToUri) as MiLocalUser | null;
+		if (dst == null) throw new Error('user not found');
+	} else if (dst) {
+		if (movePreventUris.includes(src.movedToUri)) return 'skip: circular move';
+
+		// dst自体も移行済みの可能性があるので再取得しておく (連鎖的な引っ越しの追跡)
+		await updatePersonForHonoApi(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
+		dst = await fetchPersonForHonoApi(deps, src.movedToUri) ?? dst;
+	} else {
+		if (isSelfHost(deps.config, extractDbHost(src.movedToUri))) {
+			return 'failed: movedTo is local but not found';
+		}
+		dst = await resolvePersonForHonoApi(deps, src.movedToUri);
+	}
+
+	if (dst.movedToUri === dst.uri) return 'skip: movedTo itself (dst)';
+	if (src.movedToUri !== dst.uri) return 'skip: missmatch uri';
+	if (dst.movedToUri === src.uri) return 'skip: dst.movedToUri === src.uri';
+	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) return 'skip: dst.alsoKnownAs is empty';
+	if (!dst.alsoKnownAs.includes(src.uri)) return 'skip: alsoKnownAs does not include from.uri';
+
+	await postMoveProcessForHonoApi(deps, src, dst);
+
+	return 'ok';
+}
+
 /**
  * ApPersonService.updatePerson 相当。
  *
@@ -320,12 +369,9 @@ export async function isPublicCollectionForHonoApi(
  * - updateFeatured (ピン留めノートの再取得): ApNoteService.createNote/resolveNote 相当 (数百行、ap/show 移植と同じ
  *   インフラが必要) が未移植のため今回は呼び出しを省略する。ピン留めノートの一覧はリモートユーザーの再フェッチだけでは
  *   更新されなくなるが、プロフィール本体の更新という本エンドポイントの主目的には影響しない。
- * - processRemoteMove (引っ越し処理): AccountMoveService 相当 (フォロワーの移行、ブロック/ミュート/リストの引き継ぎ等)
- *   が未移植のため呼び出しを省略する。movedToUri/movedAt 自体は通常どおり DB に反映されるため
- *   「引っ越し済みであること」自体は表示されるが、フォロワーの自動移行は行われない。
  * - cacheService.uriPersonCache の更新: プロセス内メモリキャッシュのため省略 (既存の移行方針と同様)。
  */
-export async function updatePersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string, exist: MiRemoteUser): Promise<void> {
+export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependencies, uri: string, exist: MiRemoteUser, movePreventUris: string[] = []): Promise<void> {
 	const history = new Set<string>();
 	const object = await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
 
@@ -437,6 +483,17 @@ export async function updatePersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	await updateFollowingsByFollowerIdInDatabase(deps.db, exist.id, {
 		followerSharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
 	});
+
+	const mergedUpdated = { ...exist, ...updates } as MiRemoteUser;
+
+	// 移行処理を行う: 初めての移行 (exist.movedAt == null) か、前回の移行から14日以上経過した場合のみ許可
+	// (Mastodonのクールダウン期間は30日だが若干緩めに設定)
+	if (mergedUpdated.movedAt && (
+		exist.movedAt == null ||
+		exist.movedAt.getTime() + 1000 * 60 * 60 * 24 * 14 < mergedUpdated.movedAt.getTime()
+	)) {
+		await processRemoteMoveForHonoApi(deps, mergedUpdated, movePreventUris).catch(() => 'failed');
+	}
 }
 
 /**

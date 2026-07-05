@@ -280,7 +280,9 @@ async function moveFromLocalForHonoApi(deps: HonoApiAccountMoveDependencies, src
 	return iObj;
 }
 
-async function postMoveProcessForHonoApi(deps: HonoApiAccountMoveDependencies, src: MiUser, dst: MiUser): Promise<void> {
+/** AccountMoveService#postMoveProcess 相当。ローカルからの引っ越し (i/move) と、リモートアクターの
+ * movedToUri 検知 (updatePersonForHonoApi 経由) の両方から呼ばれる共通の移行カスケード。 */
+export async function postMoveProcessForHonoApi(deps: HonoApiAccountMoveDependencies, src: MiUser, dst: MiUser): Promise<void> {
 	try {
 		await Promise.all([
 			copyBlockingForHonoApi(deps, src, dst),
