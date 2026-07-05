@@ -134,73 +134,73 @@ type InstanceChartParams = ChartParams & {
 };
 
 export async function handleHonoApiChartsActiveUsers(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body) as ChartParams;
+	const params = parseHonoApiParams(chartParamDef, body);
 	const chart = createHonoApiChart(deps, activeUsersChartName, activeUsersChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
 export async function handleHonoApiChartsApRequest(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body) as ChartParams;
+	const params = parseHonoApiParams(chartParamDef, body);
 	const chart = createHonoApiChart(deps, apRequestChartName, apRequestChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
 export async function handleHonoApiChartsDrive(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body) as ChartParams;
+	const params = parseHonoApiParams(chartParamDef, body);
 	const chart = createHonoApiChart(deps, driveChartName, driveChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
 export async function handleHonoApiChartsFederation(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body) as ChartParams;
+	const params = parseHonoApiParams(chartParamDef, body);
 	const chart = createHonoApiChart(deps, federationChartName, federationChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
 export async function handleHonoApiChartsInstance(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(instanceChartParamDef, body) as InstanceChartParams;
+	const params = parseHonoApiParams(instanceChartParamDef, body);
 	const chart = createHonoApiChart(deps, instanceChartName, instanceChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.host);
 }
 
 export async function handleHonoApiChartsNotes(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body) as ChartParams;
+	const params = parseHonoApiParams(chartParamDef, body);
 	const chart = createHonoApiChart(deps, notesChartName, notesChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
 export async function handleHonoApiChartsUsers(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body) as ChartParams;
+	const params = parseHonoApiParams(chartParamDef, body);
 	const chart = createHonoApiChart(deps, usersChartName, usersChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
 export async function handleHonoApiChartsUserDrive(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body) as PerUserChartParams;
+	const params = parseHonoApiParams(perUserChartParamDef, body);
 	const chart = createHonoApiChart(deps, perUserDriveChartName, perUserDriveChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
 export async function handleHonoApiChartsUserFollowing(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body) as PerUserChartParams;
+	const params = parseHonoApiParams(perUserChartParamDef, body);
 	const chart = createHonoApiChart(deps, perUserFollowingChartName, perUserFollowingChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
 export async function handleHonoApiChartsUserNotes(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body) as PerUserChartParams;
+	const params = parseHonoApiParams(perUserChartParamDef, body);
 	const chart = createHonoApiChart(deps, perUserNotesChartName, perUserNotesChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
 export async function handleHonoApiChartsUserPv(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body) as PerUserChartParams;
+	const params = parseHonoApiParams(perUserChartParamDef, body);
 	const chart = createHonoApiChart(deps, perUserPvChartName, perUserPvChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
 export async function handleHonoApiChartsUserReactions(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body) as PerUserChartParams;
+	const params = parseHonoApiParams(perUserChartParamDef, body);
 	const chart = createHonoApiChart(deps, perUserReactionsChartName, perUserReactionsChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }

@@ -20,7 +20,6 @@ const adminGetUserIpsParamDef = {
 	required: ['userId'],
 } as const;
 
-type AdminGetUserIpsParams = SchemaType<typeof adminGetUserIpsParamDef>;
 
 type AdminGetUserIpsResponse = {
 	ip: string;
@@ -31,7 +30,7 @@ export async function handleHonoApiAdminGetUserIps(
 	deps: HonoApiAdminUserIpsDependencies,
 	body: Record<string, unknown>,
 ): Promise<AdminGetUserIpsResponse> {
-	const params = parseHonoApiParams(adminGetUserIpsParamDef, body) as AdminGetUserIpsParams;
+	const params = parseHonoApiParams(adminGetUserIpsParamDef, body);
 	const ips = await listUserIpsFromDatabase(deps.db, params.userId, 30);
 
 	return ips.map(row => ({

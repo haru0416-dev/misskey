@@ -1066,7 +1066,7 @@ const chatHistoryParamDef = {
 type ChatHistoryParams = { limit: number; room: boolean };
 
 export async function handleHonoApiChatHistory(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseHonoApiParams(chatHistoryParamDef, body) as ChatHistoryParams;
+	const params = parseHonoApiParams(chatHistoryParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
 
 	const history = params.room ? await chatRoomHistoryForHonoApi(deps, me.id, params.limit) : await chatUserHistoryForHonoApi(deps, me.id, params.limit);
@@ -1111,7 +1111,7 @@ const chatMessagesCreateToUserParamDef = {
 type ChatMessagesCreateToUserParams = { text?: string | null; fileId?: string; toUserId: string };
 
 export async function handleHonoApiChatMessagesCreateToUser(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatMessageLiteFor1on1'>> {
-	const params = parseHonoApiParams(chatMessagesCreateToUserParamDef, body) as ChatMessagesCreateToUserParams;
+	const params = parseHonoApiParams(chatMessagesCreateToUserParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 
 	let file = null;
@@ -1146,7 +1146,7 @@ const chatMessagesCreateToRoomParamDef = {
 type ChatMessagesCreateToRoomParams = { text?: string | null; fileId?: string; toRoomId: string };
 
 export async function handleHonoApiChatMessagesCreateToRoom(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatMessageLiteForRoom'>> {
-	const params = parseHonoApiParams(chatMessagesCreateToRoomParamDef, body) as ChatMessagesCreateToRoomParams;
+	const params = parseHonoApiParams(chatMessagesCreateToRoomParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 
 	const room = await findChatRoomByIdForHonoApi(deps, params.toRoomId);
@@ -1174,7 +1174,7 @@ const chatMessagesDeleteParamDef = {
 type ChatMessagesDeleteParams = { messageId: string };
 
 export async function handleHonoApiChatMessagesDelete(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatMessagesDeleteParamDef, body) as ChatMessagesDeleteParams;
+	const params = parseHonoApiParams(chatMessagesDeleteParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 
 	const message = await fetchChatMessageByIdAndFromUserIdFromDatabase(deps.db, params.messageId, me.id);
@@ -1195,7 +1195,7 @@ const chatMessagesReactParamDef = {
 type ChatMessagesReactParams = { messageId: string; reaction: string };
 
 export async function handleHonoApiChatMessagesReact(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatMessagesReactParamDef, body) as ChatMessagesReactParams;
+	const params = parseHonoApiParams(chatMessagesReactParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 	await reactToChatMessageForHonoApi(deps, params.messageId, me.id, params.reaction);
 }
@@ -1212,7 +1212,7 @@ const chatMessagesUnreactParamDef = {
 type ChatMessagesUnreactParams = { messageId: string; reaction: string };
 
 export async function handleHonoApiChatMessagesUnreact(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatMessagesUnreactParamDef, body) as ChatMessagesUnreactParams;
+	const params = parseHonoApiParams(chatMessagesUnreactParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 	await unreactToChatMessageForHonoApi(deps, params.messageId, me.id, params.reaction);
 }
@@ -1233,7 +1233,7 @@ const chatMessagesRoomTimelineParamDef = {
 type ChatMessagesRoomTimelineParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number; roomId: string };
 
 export async function handleHonoApiChatMessagesRoomTimeline(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
-	const params = parseHonoApiParams(chatMessagesRoomTimelineParamDef, body) as ChatMessagesRoomTimelineParams;
+	const params = parseHonoApiParams(chatMessagesRoomTimelineParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
@@ -1267,7 +1267,7 @@ const chatMessagesSearchParamDef = {
 type ChatMessagesSearchParams = { query: string; limit: number; userId?: string | null; roomId?: string | null };
 
 export async function handleHonoApiChatMessagesSearch(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseHonoApiParams(chatMessagesSearchParamDef, body) as ChatMessagesSearchParams;
+	const params = parseHonoApiParams(chatMessagesSearchParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
 
 	if (params.roomId != null) {
@@ -1290,7 +1290,7 @@ const chatMessagesShowParamDef = {
 type ChatMessagesShowParams = { messageId: string };
 
 export async function handleHonoApiChatMessagesShow(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatMessage'>> {
-	const params = parseHonoApiParams(chatMessagesShowParamDef, body) as ChatMessagesShowParams;
+	const params = parseHonoApiParams(chatMessagesShowParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, params.messageId);
@@ -1318,7 +1318,7 @@ const chatMessagesUserTimelineParamDef = {
 type ChatMessagesUserTimelineParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number; userId: string };
 
 export async function handleHonoApiChatMessagesUserTimeline(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
-	const params = parseHonoApiParams(chatMessagesUserTimelineParamDef, body) as ChatMessagesUserTimelineParams;
+	const params = parseHonoApiParams(chatMessagesUserTimelineParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
@@ -1345,7 +1345,7 @@ const chatRoomsCreateParamDef = {
 type ChatRoomsCreateParams = { name: string; description?: string };
 
 export async function handleHonoApiChatRoomsCreate(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoom'>> {
-	const params = parseHonoApiParams(chatRoomsCreateParamDef, body) as ChatRoomsCreateParams;
+	const params = parseHonoApiParams(chatRoomsCreateParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 
 	const room = await createChatRoomForHonoApi(deps, me, { name: params.name, description: params.description ?? '' });
@@ -1361,7 +1361,7 @@ const chatRoomsDeleteParamDef = {
 type ChatRoomsDeleteParams = { roomId: string };
 
 export async function handleHonoApiChatRoomsDelete(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsDeleteParamDef, body) as ChatRoomsDeleteParams;
+	const params = parseHonoApiParams(chatRoomsDeleteParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 
 	const room = await findChatRoomByIdForHonoApi(deps, params.roomId);
@@ -1385,7 +1385,7 @@ const chatRoomsUpdateParamDef = {
 type ChatRoomsUpdateParams = { roomId: string; name?: string; description?: string };
 
 export async function handleHonoApiChatRoomsUpdate(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoom'>> {
-	const params = parseHonoApiParams(chatRoomsUpdateParamDef, body) as ChatRoomsUpdateParams;
+	const params = parseHonoApiParams(chatRoomsUpdateParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 
 	const room = await findMyChatRoomByIdForHonoApi(deps, me.id, params.roomId);
@@ -1404,7 +1404,7 @@ const chatRoomsShowParamDef = {
 type ChatRoomsShowParams = { roomId: string };
 
 export async function handleHonoApiChatRoomsShow(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoom'>> {
-	const params = parseHonoApiParams(chatRoomsShowParamDef, body) as ChatRoomsShowParams;
+	const params = parseHonoApiParams(chatRoomsShowParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
 
 	const room = await findChatRoomByIdForHonoApi(deps, params.roomId);
@@ -1430,7 +1430,7 @@ const chatRoomsOwnedParamDef = {
 type ChatRoomsOwnedParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
 export async function handleHonoApiChatRoomsOwned(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoom'>[]> {
-	const params = parseHonoApiParams(chatRoomsOwnedParamDef, body) as ChatRoomsOwnedParams;
+	const params = parseHonoApiParams(chatRoomsOwnedParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
@@ -1449,7 +1449,7 @@ const chatRoomsJoinParamDef = {
 type ChatRoomsJoinParams = { roomId: string };
 
 export async function handleHonoApiChatRoomsJoin(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsJoinParamDef, body) as ChatRoomsJoinParams;
+	const params = parseHonoApiParams(chatRoomsJoinParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 	await joinToChatRoomForHonoApi(deps, me.id, params.roomId);
 }
@@ -1469,7 +1469,7 @@ const chatRoomsJoiningParamDef = {
 type ChatRoomsJoiningParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
 export async function handleHonoApiChatRoomsJoining(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoomMembership'>[]> {
-	const params = parseHonoApiParams(chatRoomsJoiningParamDef, body) as ChatRoomsJoiningParams;
+	const params = parseHonoApiParams(chatRoomsJoiningParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
@@ -1488,7 +1488,7 @@ const chatRoomsLeaveParamDef = {
 type ChatRoomsLeaveParams = { roomId: string };
 
 export async function handleHonoApiChatRoomsLeave(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsLeaveParamDef, body) as ChatRoomsLeaveParams;
+	const params = parseHonoApiParams(chatRoomsLeaveParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 	await leaveChatRoomForHonoApi(deps, me.id, params.roomId);
 }
@@ -1509,7 +1509,7 @@ const chatRoomsMembersParamDef = {
 type ChatRoomsMembersParams = { roomId: string; limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
 export async function handleHonoApiChatRoomsMembers(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoomMembership'>[]> {
-	const params = parseHonoApiParams(chatRoomsMembersParamDef, body) as ChatRoomsMembersParams;
+	const params = parseHonoApiParams(chatRoomsMembersParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
@@ -1536,7 +1536,7 @@ const chatRoomsMuteParamDef = {
 type ChatRoomsMuteParams = { roomId: string; mute: boolean };
 
 export async function handleHonoApiChatRoomsMute(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsMuteParamDef, body) as ChatRoomsMuteParams;
+	const params = parseHonoApiParams(chatRoomsMuteParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 	await muteChatRoomForHonoApi(deps, me.id, params.roomId, params.mute);
 }
@@ -1553,7 +1553,7 @@ const chatRoomsInvitationsCreateParamDef = {
 type ChatRoomsInvitationsCreateParams = { roomId: string; userId: string };
 
 export async function handleHonoApiChatRoomsInvitationsCreate(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoomInvitation'>> {
-	const params = parseHonoApiParams(chatRoomsInvitationsCreateParamDef, body) as ChatRoomsInvitationsCreateParams;
+	const params = parseHonoApiParams(chatRoomsInvitationsCreateParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 
 	const room = await findMyChatRoomByIdForHonoApi(deps, me.id, params.roomId);
@@ -1572,7 +1572,7 @@ const chatRoomsInvitationsIgnoreParamDef = {
 type ChatRoomsInvitationsIgnoreParams = { roomId: string };
 
 export async function handleHonoApiChatRoomsInvitationsIgnore(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsInvitationsIgnoreParamDef, body) as ChatRoomsInvitationsIgnoreParams;
+	const params = parseHonoApiParams(chatRoomsInvitationsIgnoreParamDef, body);
 	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
 	await ignoreChatRoomInvitationForHonoApi(deps, me.id, params.roomId);
 }
@@ -1592,7 +1592,7 @@ const chatRoomsInvitationsInboxParamDef = {
 type ChatRoomsInvitationsInboxParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
 export async function handleHonoApiChatRoomsInvitationsInbox(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoomInvitation'>[]> {
-	const params = parseHonoApiParams(chatRoomsInvitationsInboxParamDef, body) as ChatRoomsInvitationsInboxParams;
+	const params = parseHonoApiParams(chatRoomsInvitationsInboxParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
@@ -1618,7 +1618,7 @@ const chatRoomsInvitationsOutboxParamDef = {
 type ChatRoomsInvitationsOutboxParams = { roomId: string; limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
 export async function handleHonoApiChatRoomsInvitationsOutbox(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<Packed<'ChatRoomInvitation'>[]> {
-	const params = parseHonoApiParams(chatRoomsInvitationsOutboxParamDef, body) as ChatRoomsInvitationsOutboxParams;
+	const params = parseHonoApiParams(chatRoomsInvitationsOutboxParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 

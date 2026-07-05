@@ -42,7 +42,6 @@ const adminShowModerationLogsParamDef = {
 	required: [],
 } as const;
 
-type AdminShowModerationLogsParams = SchemaType<typeof adminShowModerationLogsParamDef>;
 
 async function packModerationLogsForHonoApi(
 	deps: HonoApiModerationLogDependencies,
@@ -64,7 +63,7 @@ export async function handleHonoApiAdminShowModerationLogs(
 	deps: HonoApiModerationLogDependencies,
 	body: Record<string, unknown>,
 ): Promise<HonoApiModerationLogResponse[]> {
-	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body) as AdminShowModerationLogsParams;
+	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const logs = await listModerationLogsFromDatabase(deps.db, {
 		limit: params.limit,

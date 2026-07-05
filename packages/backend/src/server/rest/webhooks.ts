@@ -145,7 +145,7 @@ export async function handleHonoApiIWebhooksShow(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiUserWebhook> {
-	const params = parseHonoApiParams(webhooksShowParamDef, body) as WebhooksShowParams;
+	const params = parseHonoApiParams(webhooksShowParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
@@ -165,7 +165,7 @@ export async function handleHonoApiIWebhooksDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(webhooksDeleteParamDef, body) as WebhooksDeleteParams;
+	const params = parseHonoApiParams(webhooksDeleteParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
@@ -186,7 +186,7 @@ export async function handleHonoApiIWebhooksUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(webhooksUpdateParamDef, body) as WebhooksUpdateParams;
+	const params = parseHonoApiParams(webhooksUpdateParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
@@ -219,7 +219,7 @@ export async function handleHonoApiIWebhooksCreate(
 	webhookLimit: number,
 	body: Record<string, unknown>,
 ): Promise<HonoApiUserWebhook> {
-	const params = parseHonoApiParams(webhooksCreateParamDef, body) as WebhooksCreateParams;
+	const params = parseHonoApiParams(webhooksCreateParamDef, body);
 
 	const currentWebhooksCount = await countWebhooksByUserIdFromDatabase(deps.db, me.id);
 	if (currentWebhooksCount >= webhookLimit) {
@@ -527,7 +527,7 @@ export async function handleHonoApiIWebhooksTest(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(webhooksTestParamDef, body) as WebhooksTestParams;
+	const params = parseHonoApiParams(webhooksTestParamDef, body);
 
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 	if (webhook == null) {

@@ -310,7 +310,7 @@ export async function handleHonoApiIMove(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const ps = parseHonoApiParams(iMoveParamDef, body) as IMoveParams;
+	const ps = parseHonoApiParams(iMoveParamDef, body);
 
 	if (!ps.moveToAccount) throw iMoveNoSuchUserError();
 	if (deps.meta.rootUserId === me.id) throw iMoveRootForbiddenError();

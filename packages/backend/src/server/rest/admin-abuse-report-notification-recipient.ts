@@ -90,14 +90,12 @@ const adminAbuseReportNotificationRecipientDeleteParamDef = {
 type AdminAbuseReportNotificationRecipientListParams = Omit<SchemaType<typeof adminAbuseReportNotificationRecipientListParamDef>, 'method'> & {
 	method?: RecipientMethod[];
 };
-type AdminAbuseReportNotificationRecipientShowParams = SchemaType<typeof adminAbuseReportNotificationRecipientShowParamDef>;
 type AdminAbuseReportNotificationRecipientCreateParams = Omit<SchemaType<typeof adminAbuseReportNotificationRecipientCreateParamDef>, 'method'> & {
 	method: RecipientMethod;
 };
 type AdminAbuseReportNotificationRecipientUpdateParams = Omit<SchemaType<typeof adminAbuseReportNotificationRecipientUpdateParamDef>, 'method'> & {
 	method: RecipientMethod;
 };
-type AdminAbuseReportNotificationRecipientDeleteParams = SchemaType<typeof adminAbuseReportNotificationRecipientDeleteParamDef>;
 
 function noSuchRecipientError(): HonoApiError {
 	return new HonoApiError({
@@ -274,7 +272,7 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientList(
 	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientListParamDef, body) as AdminAbuseReportNotificationRecipientListParams;
+	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientListParamDef, body);
 	const recipients = await fetchRecipients(deps, { method: params.method });
 
 	return await packHonoApiAbuseReportNotificationRecipients(deps, recipients);
@@ -284,7 +282,7 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientShow(
 	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientShowParamDef, body) as AdminAbuseReportNotificationRecipientShowParams;
+	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientShowParamDef, body);
 	const recipients = await fetchRecipients(deps, { ids: [params.id] });
 	if (recipients.length === 0) throw noSuchRecipientError();
 
@@ -296,7 +294,7 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientCreateParamDef, body) as AdminAbuseReportNotificationRecipientCreateParams;
+	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientCreateParamDef, body);
 	await assertRecipientCorrelation(deps, params);
 
 	const recipient = await createAbuseReportNotificationRecipientInDatabase(deps.db, {
@@ -321,7 +319,7 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientUpdateParamDef, body) as AdminAbuseReportNotificationRecipientUpdateParams;
+	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientUpdateParamDef, body);
 	await assertRecipientCorrelation(deps, params);
 
 	const before = await fetchAbuseReportNotificationRecipientByIdOrFailFromDatabase(deps.db, params.id);
@@ -351,7 +349,7 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientDeleteParamDef, body) as AdminAbuseReportNotificationRecipientDeleteParams;
+	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientDeleteParamDef, body);
 	const recipient = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, { ids: [params.id] });
 
 	await deleteAbuseReportNotificationRecipientsFromDatabase(deps.db, params.id);

@@ -63,7 +63,7 @@ export async function handleHonoApiFetchExternalResources(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<ExternalResourceResponse> {
-	const params = parseHonoApiParams(fetchExternalResourcesParamDef, body) as FetchExternalResourcesParams;
+	const params = parseHonoApiParams(fetchExternalResourcesParamDef, body);
 
 	if (await isHonoApiRateLimited(deps, {
 		key: 'fetch-external-resources',

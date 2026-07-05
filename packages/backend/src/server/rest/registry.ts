@@ -72,8 +72,6 @@ const registryScopesWithDomainParamDef = {
 	required: [],
 } as const;
 
-type RegistryGetParams = SchemaType<typeof registryGetParamDef>;
-type RegistryScopeParams = SchemaType<typeof registryScopeParamDef>;
 type RegistrySetParams = {
 	key: string;
 	value: unknown;
@@ -109,7 +107,7 @@ export async function handleHonoApiRegistryGet(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<unknown> {
-	const params = parseHonoApiParams(registryGetParamDef, body) as RegistryGetParams;
+	const params = parseHonoApiParams(registryGetParamDef, body);
 	const item = await fetchRegistryItemFromDatabase(deps.db, user.id, registryDomain(token, params.domain), params.scope, params.key);
 	if (item == null) throw noSuchGetKeyError();
 
@@ -122,7 +120,7 @@ export async function handleHonoApiRegistryGetAll(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-	const params = parseHonoApiParams(registryScopeParamDef, body) as RegistryScopeParams;
+	const params = parseHonoApiParams(registryScopeParamDef, body);
 	const items = await listRegistryItemsOfScopeFromDatabase(deps.db, user.id, registryDomain(token, params.domain), params.scope);
 	const result: Record<string, unknown> = {};
 
@@ -142,7 +140,7 @@ export async function handleHonoApiRegistryGetDetail(
 	updatedAt: string;
 	value: unknown;
 }> {
-	const params = parseHonoApiParams(registryGetParamDef, body) as RegistryGetParams;
+	const params = parseHonoApiParams(registryGetParamDef, body);
 	const item = await fetchRegistryItemFromDatabase(deps.db, user.id, registryDomain(token, params.domain), params.scope, params.key);
 	if (item == null) throw noSuchGetDetailKeyError();
 
@@ -158,7 +156,7 @@ export async function handleHonoApiRegistryKeys(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<string[]> {
-	const params = parseHonoApiParams(registryScopeParamDef, body) as RegistryScopeParams;
+	const params = parseHonoApiParams(registryScopeParamDef, body);
 	return await listRegistryKeysOfScopeFromDatabase(deps.db, user.id, registryDomain(token, params.domain), params.scope);
 }
 
@@ -168,7 +166,7 @@ export async function handleHonoApiRegistryKeysWithType(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, string>> {
-	const params = parseHonoApiParams(registryScopeParamDef, body) as RegistryScopeParams;
+	const params = parseHonoApiParams(registryScopeParamDef, body);
 	const items = await listRegistryItemsOfScopeFromDatabase(deps.db, user.id, registryDomain(token, params.domain), params.scope);
 	const result: Record<string, string> = {};
 
@@ -193,7 +191,7 @@ export async function handleHonoApiRegistryRemove(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(registryGetParamDef, body) as RegistryGetParams;
+	const params = parseHonoApiParams(registryGetParamDef, body);
 	await deleteRegistryItemFromDatabase(deps.db, user.id, registryDomain(token, params.domain) || null, params.scope, params.key);
 }
 
@@ -228,7 +226,7 @@ export async function handleHonoApiRegistrySet(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(registrySetParamDef, body) as RegistrySetParams;
+	const params = parseHonoApiParams(registrySetParamDef, body);
 	const domain = registryDomain(token, params.domain);
 	const itemDomain = domain || null;
 

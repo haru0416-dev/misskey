@@ -29,7 +29,7 @@ export async function handleHonoApiFetchRss(
 	deps: HonoApiFetchRssDependencies,
 	body: Record<string, unknown>,
 ): Promise<unknown> {
-	const params = parseHonoApiParams(fetchRssParamDef, body) as FetchRssParams;
+	const params = parseHonoApiParams(fetchRssParamDef, body);
 	const res = await deps.httpRequestService.send(params.url, {
 		method: 'GET',
 		headers: {

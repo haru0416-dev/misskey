@@ -84,7 +84,7 @@ export async function handleHonoApiUsersListsFavorite(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userListParamDef, body) as UserListParams;
+	const params = parseHonoApiParams(userListParamDef, body);
 	const exists = await userListExistsByIdAndPublicFromDatabase(deps.db, params.listId);
 	if (!exists) {
 		throw clientErrorWithStatus(400, 'No such user list.', 'NO_SUCH_USER_LIST', '7dbaf3cf-7b42-4b8f-b431-b3919e580dbe');
@@ -106,7 +106,7 @@ export async function handleHonoApiUsersListsUnfavorite(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userListParamDef, body) as UserListParams;
+	const params = parseHonoApiParams(userListParamDef, body);
 	const exists = await userListExistsByIdAndPublicFromDatabase(deps.db, params.listId);
 	if (!exists) {
 		throw clientErrorWithStatus(400, 'No such user list.', 'NO_SUCH_USER_LIST', 'baedb33e-76b8-4b0c-86a8-9375c0a7b94b');
@@ -125,7 +125,7 @@ export async function handleHonoApiClipsFavorite(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipParamDef, body) as ClipParams;
+	const params = parseHonoApiParams(clipParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null || (clip.userId !== me.id && !clip.isPublic)) {
 		throw clientErrorWithStatus(400, 'No such clip.', 'NO_SUCH_CLIP', '4c2aaeae-80d8-4250-9606-26cb1fdb77a5');
@@ -147,7 +147,7 @@ export async function handleHonoApiClipsUnfavorite(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipParamDef, body) as ClipParams;
+	const params = parseHonoApiParams(clipParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) {
 		throw clientErrorWithStatus(400, 'No such clip.', 'NO_SUCH_CLIP', '2603966e-b865-426c-94a7-af4a01241dc1');
@@ -166,7 +166,7 @@ export async function handleHonoApiChannelsFavorite(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelParamDef, body) as ChannelParams;
+	const params = parseHonoApiParams(channelParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw clientErrorWithStatus(400, 'No such channel.', 'NO_SUCH_CHANNEL', '4938f5f3-6167-4c04-9149-6607b7542861');
@@ -184,7 +184,7 @@ export async function handleHonoApiChannelsUnfavorite(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelParamDef, body) as ChannelParams;
+	const params = parseHonoApiParams(channelParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw clientErrorWithStatus(400, 'No such channel.', 'NO_SUCH_CHANNEL', '353c68dd-131a-476c-aa99-88a345e83668');
@@ -198,7 +198,7 @@ export async function handleHonoApiPagesLike(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pageParamDef, body) as PageParams;
+	const params = parseHonoApiParams(pageParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw clientErrorWithStatus(400, 'No such page.', 'NO_SUCH_PAGE', 'cc98a8a2-0dc3-4123-b198-62c71df18ed3');
@@ -232,7 +232,7 @@ export async function handleHonoApiPagesUnlike(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pageParamDef, body) as PageParams;
+	const params = parseHonoApiParams(pageParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw clientErrorWithStatus(400, 'No such page.', 'NO_SUCH_PAGE', 'a0d41e20-1993-40bd-890e-f6e560ae648e');
@@ -252,7 +252,7 @@ export async function handleHonoApiFlashLike(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashParamDef, body) as FlashParams;
+	const params = parseHonoApiParams(flashParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'c07c1491-9161-4c5c-9d75-01906f911f73');
@@ -286,7 +286,7 @@ export async function handleHonoApiFlashUnlike(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashParamDef, body) as FlashParams;
+	const params = parseHonoApiParams(flashParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'afe8424a-a69e-432d-a5f2-2f0740c62410');
@@ -326,7 +326,7 @@ export async function handleHonoApiIFavorites(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(iFavoritesParamDef, body) as IFavoritesParams;
+	const params = parseHonoApiParams(iFavoritesParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 
 	const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, me.id, {

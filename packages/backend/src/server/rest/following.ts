@@ -680,7 +680,7 @@ export async function handleHonoApiFollowingCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingCreateParamDef, body) as FollowingCreateParams;
+	const params = parseHonoApiParams(followingCreateParamDef, body);
 	const follower = await getTargetUserOrThrow(deps, me.id);
 
 	if (follower.id === params.userId) {
@@ -735,7 +735,7 @@ export async function handleHonoApiFollowingUpdateAll(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(followingUpdateAllParamDef, body) as FollowingUpdateAllParams;
+	const params = parseHonoApiParams(followingUpdateAllParamDef, body);
 	await updateFollowingsByFollowerIdInDatabase(deps.db, me.id, {
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
@@ -747,7 +747,7 @@ export async function handleHonoApiFollowingDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const follower = me;
 
 	if (me.id === params.userId) {
@@ -771,7 +771,7 @@ export async function handleHonoApiFollowingUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUpdateParamDef, body) as FollowingUpdateParams;
+	const params = parseHonoApiParams(followingUpdateParamDef, body);
 	const follower = me;
 
 	if (me.id === params.userId) {
@@ -798,7 +798,7 @@ export async function handleHonoApiFollowingInvalidate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const followee = me;
 
 	if (me.id === params.userId) {
@@ -845,7 +845,7 @@ export async function handleHonoApiFollowingRequestsAccept(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
 
 	await acceptFollowRequestForHonoApi(deps, me, follower);
@@ -882,7 +882,7 @@ export async function handleHonoApiFollowingRequestsCancel(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const follower = me;
 	const followee = await getTargetUserOrThrow(deps, params.userId, followingRequestsCancelNoSuchUserError);
 
@@ -914,7 +914,7 @@ export async function handleHonoApiFollowingRequestsReject(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const followee = me;
 	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsRejectNoSuchUserError);
 
@@ -985,7 +985,7 @@ export async function handleHonoApiFollowingRequestsList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
+	const params = parseHonoApiParams(followingRequestsListParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1002,7 +1002,7 @@ export async function handleHonoApiFollowingRequestsSent(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
+	const params = parseHonoApiParams(followingRequestsListParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1034,7 +1034,7 @@ export async function handleHonoApiFollowingList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
-	const params = parseHonoApiParams(followingListParamDef, body) as FollowingListParams;
+	const params = parseHonoApiParams(followingListParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1294,7 +1294,7 @@ export async function handleHonoApiUsersGetFollowingUsersByBirthday(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; birthday: string; user: Packed<'UserLite'> }[]> {
-	const params = parseHonoApiParams(usersGetFollowingUsersByBirthdayParamDef, body) as UsersGetFollowingUsersByBirthdayParams;
+	const params = parseHonoApiParams(usersGetFollowingUsersByBirthdayParamDef, body);
 
 	let condition: { type: 'single'; value: number } | { type: 'range'; begin: number; end: number };
 	if (Object.hasOwn(params.birthday, 'begin') && Object.hasOwn(params.birthday, 'end')) {

@@ -252,7 +252,7 @@ export async function handleHonoApiClipsList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseHonoApiParams(clipsListParamDef, body) as ClipsListParams;
+	const params = parseHonoApiParams(clipsListParamDef, body);
 	const pagination = resolveClipPagination({ gen: (time) => genId(deps.config, time) }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -270,7 +270,7 @@ export async function handleHonoApiClipsShow(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseHonoApiParams(clipIdParamDef, body) as ClipIdParams;
+	const params = parseHonoApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) throw clipsShowNoSuchClipError();
 	if (!clip.isPublic && (me == null || clip.userId !== me.id)) throw clipsShowNoSuchClipError();
@@ -298,7 +298,7 @@ export async function handleHonoApiClipsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseHonoApiParams(clipsCreateParamDef, body) as ClipsCreateParams;
+	const params = parseHonoApiParams(clipsCreateParamDef, body);
 
 	const currentCount = await countClipsByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount >= (await getHonoApiRolePolicies(deps, me)).clipLimit) {
@@ -321,7 +321,7 @@ export async function handleHonoApiClipsUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseHonoApiParams(clipsUpdateParamDef, body) as ClipsUpdateParams;
+	const params = parseHonoApiParams(clipsUpdateParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsUpdateNoSuchClipError();
 
@@ -339,7 +339,7 @@ export async function handleHonoApiClipsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipIdParamDef, body) as ClipIdParams;
+	const params = parseHonoApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsDeleteNoSuchClipError();
 
@@ -351,7 +351,7 @@ export async function handleHonoApiClipsAddNote(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipsNoteParamDef, body) as ClipsNoteParams;
+	const params = parseHonoApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsAddNoteNoSuchClipError();
 
@@ -384,7 +384,7 @@ export async function handleHonoApiClipsRemoveNote(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipsNoteParamDef, body) as ClipsNoteParams;
+	const params = parseHonoApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsRemoveNoteNoSuchClipError();
 
@@ -404,7 +404,7 @@ export async function handleHonoApiClipsNotes(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(clipNotesParamDef, body) as ClipNotesParams;
+	const params = parseHonoApiParams(clipNotesParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) throw clipsNotesNoSuchClipError();
 	if (!clip.isPublic && (me == null || clip.userId !== me.id)) throw clipsNotesNoSuchClipError();
@@ -456,7 +456,7 @@ export async function handleHonoApiUsersClips(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseHonoApiParams(usersClipsParamDef, body) as UsersClipsParams;
+	const params = parseHonoApiParams(usersClipsParamDef, body);
 	const pagination = resolveClipPagination({ gen: (time) => genId(deps.config, time) }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,

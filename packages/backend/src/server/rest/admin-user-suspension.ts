@@ -37,7 +37,6 @@ const adminUserSuspensionParamDef = {
 	required: ['userId'],
 } as const;
 
-type AdminUserSuspensionParams = SchemaType<typeof adminUserSuspensionParamDef>;
 
 function renderDelete(config: Config, object: IObject | string, user: { id: MiUser['id']; host: null }): IDelete {
 	return {
@@ -143,7 +142,7 @@ async function findSuspensionTarget(
 	deps: HonoApiAdminUserSuspensionDependencies,
 	body: Record<string, unknown>,
 ): Promise<MiUser> {
-	const params = parseHonoApiParams(adminUserSuspensionParamDef, body) as AdminUserSuspensionParams;
+	const params = parseHonoApiParams(adminUserSuspensionParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw new Error('user not found');

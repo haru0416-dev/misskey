@@ -59,9 +59,6 @@ const muteListParamDef = {
 	required: [],
 } as const;
 
-type MuteCreateParams = SchemaType<typeof muteCreateParamDef>;
-type UserIdParams = SchemaType<typeof userIdParamDef>;
-type MuteListParams = SchemaType<typeof muteListParamDef>;
 
 type HonoApiMutingResponse = {
 	id: string;
@@ -159,7 +156,7 @@ export async function handleHonoApiMuteCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(muteCreateParamDef, body) as MuteCreateParams;
+	const params = parseHonoApiParams(muteCreateParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', 'a4619cb2-5f23-484b-9301-94c903074e10');
@@ -188,7 +185,7 @@ export async function handleHonoApiMuteDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', 'f428b029-6b39-4d48-a1d2-cc1ae6dd5cf9');
@@ -210,7 +207,7 @@ export async function handleHonoApiMuteList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Muting'>[]> {
-	const params = parseHonoApiParams(muteListParamDef, body) as MuteListParams;
+	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listMutingsByMuterIdWithPaginationFromDatabase(deps.db, me.id, {
 		...resolveMutingPagination({
 			gen: time => genId(deps.config, time),
@@ -226,7 +223,7 @@ export async function handleHonoApiRenoteMuteCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', '37285718-52f7-4aef-b7de-c38b8e8a8420');
@@ -250,7 +247,7 @@ export async function handleHonoApiRenoteMuteDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', '619b1314-0850-4597-a242-e245f3da42af');
@@ -272,7 +269,7 @@ export async function handleHonoApiRenoteMuteList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'RenoteMuting'>[]> {
-	const params = parseHonoApiParams(muteListParamDef, body) as MuteListParams;
+	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listRenoteMutingsByMuterIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		...resolveHonoApiIdPagination(deps.config, params),

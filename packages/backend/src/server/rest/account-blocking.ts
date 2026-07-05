@@ -61,8 +61,6 @@ const blockingListParamDef = {
 	required: [],
 } as const;
 
-type UserIdParams = SchemaType<typeof userIdParamDef>;
-type BlockingListParams = SchemaType<typeof blockingListParamDef>;
 
 type HonoApiBlockingResponse = {
 	id: string;
@@ -392,7 +390,7 @@ export async function handleHonoApiBlockingCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<UserDetailedNotMeHonoApiResponse> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 	const blocker = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
 	if (blocker.id === params.userId) {
@@ -435,7 +433,7 @@ export async function handleHonoApiBlockingDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<UserDetailedNotMeHonoApiResponse> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 	const blocker = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
 	if (blocker.id === params.userId) {
@@ -458,7 +456,7 @@ export async function handleHonoApiBlockingList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Blocking'>[]> {
-	const params = parseHonoApiParams(blockingListParamDef, body) as BlockingListParams;
+	const params = parseHonoApiParams(blockingListParamDef, body);
 	const blockings = await listBlockingsByBlockerIdWithPaginationFromDatabase(deps.db, me.id, {
 		...resolveBlockingPagination({
 			gen: time => genId(deps.config, time),

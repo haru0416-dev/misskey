@@ -88,9 +88,6 @@ const adminAbuseUserReportsParamDef = {
 	required: [],
 } as const;
 
-type AdminResolveAbuseUserReportParams = SchemaType<typeof adminResolveAbuseUserReportParamDef>;
-type AdminUpdateAbuseUserReportParams = SchemaType<typeof adminUpdateAbuseUserReportParamDef>;
-type AdminForwardAbuseUserReportParams = SchemaType<typeof adminForwardAbuseUserReportParamDef>;
 type AdminAbuseUserReportsParams = SchemaType<typeof adminAbuseUserReportsParamDef> & {
 	state: string | null;
 	reporterOrigin: 'combined' | 'local' | 'remote';
@@ -237,7 +234,7 @@ export async function handleHonoApiAdminAbuseUserReports(
 	deps: HonoApiAdminAbuseReportsDependencies,
 	body: Record<string, unknown>,
 ): Promise<HonoApiAbuseUserReport[]> {
-	const params = parseHonoApiParams(adminAbuseUserReportsParamDef, body) as AdminAbuseUserReportsParams;
+	const params = parseHonoApiParams(adminAbuseUserReportsParamDef, body);
 	const reports = await listAbuseUserReportsFromDatabase(deps.db, {
 		limit: params.limit,
 		...resolveAbuseUserReportPagination({
@@ -256,7 +253,7 @@ export async function handleHonoApiAdminForwardAbuseUserReport(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminForwardAbuseUserReportParamDef, body) as AdminForwardAbuseUserReportParams;
+	const params = parseHonoApiParams(adminForwardAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) throw noSuchAbuseReportForForwardError();
 
@@ -287,7 +284,7 @@ export async function handleHonoApiAdminResolveAbuseUserReport(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminResolveAbuseUserReportParamDef, body) as AdminResolveAbuseUserReportParams;
+	const params = parseHonoApiParams(adminResolveAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) throw noSuchAbuseReportForResolveError();
 
@@ -314,7 +311,7 @@ export async function handleHonoApiAdminUpdateAbuseUserReport(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUpdateAbuseUserReportParamDef, body) as AdminUpdateAbuseUserReportParams;
+	const params = parseHonoApiParams(adminUpdateAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) throw noSuchAbuseReportForUpdateError();
 
@@ -498,7 +495,7 @@ export async function handleHonoApiUsersReportAbuse(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(usersReportAbuseParamDef, body) as UsersReportAbuseParams;
+	const params = parseHonoApiParams(usersReportAbuseParamDef, body);
 
 	const targetUser = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (targetUser == null) throw usersReportAbuseNoSuchUserError();

@@ -82,10 +82,6 @@ const adminAdUpdateParamDef = {
 	required: ['id'],
 } as const;
 
-type AdminAdCreateParams = SchemaType<typeof adminAdCreateParamDef>;
-type AdminAdDeleteParams = SchemaType<typeof adminAdDeleteParamDef>;
-type AdminAdListParams = SchemaType<typeof adminAdListParamDef>;
-type AdminAdUpdateParams = SchemaType<typeof adminAdUpdateParamDef>;
 
 function noSuchAdError(id: string): HonoApiError {
 	return new HonoApiError({
@@ -117,7 +113,7 @@ export async function handleHonoApiAdminAdCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>> {
-	const params = parseHonoApiParams(adminAdCreateParamDef, body) as AdminAdCreateParams;
+	const params = parseHonoApiParams(adminAdCreateParamDef, body);
 	const ad = await createAdInDatabase(deps.db, {
 		id: genId(deps.config),
 		expiresAt: new Date(params.expiresAt),
@@ -145,7 +141,7 @@ export async function handleHonoApiAdminAdDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAdDeleteParamDef, body) as AdminAdDeleteParams;
+	const params = parseHonoApiParams(adminAdDeleteParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
 	if (ad == null) throw noSuchAdError('ccac9863-3a03-416e-b899-8a64041118b1');
@@ -162,7 +158,7 @@ export async function handleHonoApiAdminAdList(
 	deps: HonoApiAdminAdDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>[]> {
-	const params = parseHonoApiParams(adminAdListParamDef, body) as AdminAdListParams;
+	const params = parseHonoApiParams(adminAdListParamDef, body);
 	const { sinceId, untilId } = resolveHonoApiIdPagination(deps.config, params);
 	const ads = await listAdsFromDatabase(deps.db, {
 		limit: params.limit,
@@ -179,7 +175,7 @@ export async function handleHonoApiAdminAdUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAdUpdateParamDef, body) as AdminAdUpdateParams;
+	const params = parseHonoApiParams(adminAdUpdateParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
 	if (ad == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');

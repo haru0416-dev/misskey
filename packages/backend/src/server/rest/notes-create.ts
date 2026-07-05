@@ -977,7 +977,7 @@ export async function handleHonoApiNotesCreate(
 	me: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	body: Record<string, unknown>,
 ): Promise<{ createdNote: unknown }> {
-	const ps = parseHonoApiParams(notesCreateParamDef, body) as NotesCreateParams;
+	const ps = parseHonoApiParams(notesCreateParamDef, body);
 
 	try {
 		const note = await fetchAndCreateNoteForHonoApi(deps, me, {

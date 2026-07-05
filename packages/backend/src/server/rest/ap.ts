@@ -37,7 +37,7 @@ type ApGetParams = {
 };
 
 export async function handleHonoApiApGet(deps: HonoApiApResolveDependencies, body: Record<string, unknown>): Promise<IObject> {
-	const params = parseHonoApiParams(apGetParamDef, body) as ApGetParams;
+	const params = parseHonoApiParams(apGetParamDef, body);
 	return await resolveApObjectForHonoApi(deps, params.uri);
 }
 
@@ -173,7 +173,7 @@ export async function handleHonoApiApShow(
 	me: MiLocalUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<ApShowResult> {
-	const params = parseHonoApiParams(apShowParamDef, body) as ApShowParams;
+	const params = parseHonoApiParams(apShowParamDef, body);
 
 	const object = await fetchAnyForHonoApi(deps, params.uri, me);
 	if (object) {

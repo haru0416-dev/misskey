@@ -115,7 +115,7 @@ export async function handleHonoApiIPin(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(iPinOrUnpinParamDef, body) as IPinOrUnpinParams;
+	const params = parseHonoApiParams(iPinOrUnpinParamDef, body);
 
 	await addPinnedForHonoApi(deps, me, params.noteId);
 
@@ -127,7 +127,7 @@ export async function handleHonoApiIUnpin(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(iPinOrUnpinParamDef, body) as IPinOrUnpinParams;
+	const params = parseHonoApiParams(iPinOrUnpinParamDef, body);
 
 	await removePinnedForHonoApi(deps, me, params.noteId);
 

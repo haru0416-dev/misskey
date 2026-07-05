@@ -57,7 +57,7 @@ export async function handleHonoApiFlashUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashUpdateParamDef, body) as FlashUpdateParams;
+	const params = parseHonoApiParams(flashUpdateParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', '611e13d2-309e-419a-a5e4-e0422da39b02');
@@ -150,7 +150,7 @@ export async function handleHonoApiFlashCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-	const params = parseHonoApiParams(flashCreateParamDef, body) as FlashCreateParams;
+	const params = parseHonoApiParams(flashCreateParamDef, body);
 	const flash = await createFlashInDatabase(deps.db, {
 		id: genId(deps.config),
 		userId: me.id,
@@ -182,7 +182,7 @@ export async function handleHonoApiFlashDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashDeleteParamDef, body) as FlashDeleteParams;
+	const params = parseHonoApiParams(flashDeleteParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'de1623ef-bbb3-4289-a71e-14cfa83d9740');
@@ -224,7 +224,7 @@ export async function handleHonoApiFlashFeatured(
 	me: MiUser | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashFeaturedParamDef, body) as FlashFeaturedParams;
+	const params = parseHonoApiParams(flashFeaturedParamDef, body);
 	const result = await listFeaturedFlashsFromDatabase(deps.db, {
 		offset: params.offset,
 		limit: params.limit,
@@ -258,7 +258,7 @@ export async function handleHonoApiFlashMy(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashMyParamDef, body) as FlashMyParams;
+	const params = parseHonoApiParams(flashMyParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(deps.config, time) }, params);
 	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -298,7 +298,7 @@ export async function handleHonoApiFlashMyLikes(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashMyLikesParamDef, body) as FlashMyLikesParams;
+	const params = parseHonoApiParams(flashMyLikesParamDef, body);
 
 	let sinceId: string | null = null;
 	let untilId: string | null = null;
@@ -363,7 +363,7 @@ export async function handleHonoApiFlashSearch(
 	me: MiUser | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashSearchParamDef, body) as FlashSearchParams;
+	const params = parseHonoApiParams(flashSearchParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(deps.config, time) }, params);
 	const result = await listFlashsWithPaginationFromDatabase(deps.db, {
 		visibility: 'public',
@@ -394,7 +394,7 @@ export async function handleHonoApiFlashShow(
 	me: MiUser | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-	const params = parseHonoApiParams(flashShowParamDef, body) as FlashShowParams;
+	const params = parseHonoApiParams(flashShowParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'f0d34a1a-d29a-401d-90ba-1982122b5630');
@@ -429,7 +429,7 @@ export async function handleHonoApiUsersFlashs(
 	deps: HonoApiFlashDependencies,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(usersFlashsParamDef, body) as UsersFlashsParams;
+	const params = parseHonoApiParams(usersFlashsParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(deps.config, time) }, params);
 	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,

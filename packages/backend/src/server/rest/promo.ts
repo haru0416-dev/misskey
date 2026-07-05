@@ -76,7 +76,7 @@ export async function handleHonoApiPromoRead(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(promoReadParamDef, body) as PromoReadParams;
+	const params = parseHonoApiParams(promoReadParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 
 	if (note == null) {
@@ -98,7 +98,7 @@ export async function handleHonoApiAdminPromoCreate(
 	deps: HonoApiPromoDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminPromoCreateParamDef, body) as AdminPromoCreateParams;
+	const params = parseHonoApiParams(adminPromoCreateParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 
 	if (note == null) {

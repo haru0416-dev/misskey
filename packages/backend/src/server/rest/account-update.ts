@@ -443,7 +443,7 @@ export async function handleHonoApiIUpdate(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const ps = parseHonoApiParams(iUpdateParamDef, body) as IUpdateParams;
+	const ps = parseHonoApiParams(iUpdateParamDef, body);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id) as MiLocalUser;
 	const isSecure = token == null;
 

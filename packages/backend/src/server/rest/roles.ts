@@ -55,8 +55,6 @@ const rolesUsersParamDef = {
 	required: ['roleId'],
 } as const;
 
-type RolesShowParams = SchemaType<typeof rolesShowParamDef>;
-type RolesUsersParams = SchemaType<typeof rolesUsersParamDef>;
 
 function noSuchRoleError(): HonoApiError {
 	return new HonoApiError({
@@ -98,7 +96,6 @@ const rolesNotesParamDef = {
 	required: ['roleId'],
 } as const;
 
-type RolesNotesParams = SchemaType<typeof rolesNotesParamDef>;
 
 export async function packHonoApiRole(
 	deps: HonoApiRoleDependencies,
@@ -153,7 +150,7 @@ export async function handleHonoApiRolesShow(
 	deps: HonoApiRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>> {
-	const params = parseHonoApiParams(rolesShowParamDef, body) as RolesShowParams;
+	const params = parseHonoApiParams(rolesShowParamDef, body);
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError();
 
@@ -165,7 +162,7 @@ export async function handleHonoApiRolesUsers(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; user: MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse }[]> {
-	const params = parseHonoApiParams(rolesUsersParamDef, body) as RolesUsersParams;
+	const params = parseHonoApiParams(rolesUsersParamDef, body);
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
@@ -189,7 +186,7 @@ export async function handleHonoApiRolesNotes(
 	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(rolesNotesParamDef, body) as RolesNotesParams;
+	const params = parseHonoApiParams(rolesNotesParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
