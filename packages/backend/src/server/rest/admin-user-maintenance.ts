@@ -39,8 +39,6 @@ const adminUpdateUserNoteParamDef = {
 	required: ['userId', 'text'],
 } as const;
 
-type AdminUserMaintenanceParams = SchemaType<typeof adminUserMaintenanceParamDef>;
-type AdminUpdateUserNoteParams = SchemaType<typeof adminUpdateUserNoteParamDef>;
 
 type ResetPasswordResponse = {
 	password: string;
@@ -69,7 +67,7 @@ export async function handleHonoApiAdminResetPassword(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<ResetPasswordResponse> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body) as AdminUserMaintenanceParams;
+	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
 	if (deps.meta.rootUserId === user.id) throw cannotResetPasswordOfRootUserError();
@@ -93,7 +91,7 @@ export async function handleHonoApiAdminUnsetMfa(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body) as AdminUserMaintenanceParams;
+	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
 
@@ -110,7 +108,7 @@ export async function handleHonoApiAdminUnsetUserAvatar(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body) as AdminUserMaintenanceParams;
+	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw new Error('user not found');
 	if (user.avatarId == null) return;
@@ -134,7 +132,7 @@ export async function handleHonoApiAdminUnsetUserBanner(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body) as AdminUserMaintenanceParams;
+	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw new Error('user not found');
 	if (user.bannerId == null) return;
@@ -158,7 +156,7 @@ export async function handleHonoApiAdminUpdateUserNote(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUpdateUserNoteParamDef, body) as AdminUpdateUserNoteParams;
+	const params = parseHonoApiParams(adminUpdateUserNoteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw new Error('user not found');
 

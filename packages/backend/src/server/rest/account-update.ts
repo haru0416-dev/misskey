@@ -34,7 +34,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import { acceptAllFollowRequestsForHonoApi, type HonoApiFollowingDependencies } from './following.js';
+import { acceptAllFollowRequestsForHonoApi, genLocalUserUri, type HonoApiFollowingDependencies } from './following.js';
 import { HonoApiError } from './error.js';
 import { addActivityContext, deliverNoteActivityForHonoApi, renderEmoji, renderUpdateForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
 import { isKeyWordIncludedForHonoApi } from './notes-create.js';
@@ -263,10 +263,6 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 	}
 }
 
-function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
-}
-
 function tryRewriteUrl(maybeUrl: string): string {
 	const urlSafeRegex = /^(?:http[s]?:\/\/.)?(?:www\.)?[-a-zA-Z0-9@%._+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_+.~#?&/=]*)/;
 	try {
@@ -447,7 +443,7 @@ export async function handleHonoApiIUpdate(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const ps = parseHonoApiParams(iUpdateParamDef, body) as IUpdateParams;
+	const ps = parseHonoApiParams(iUpdateParamDef, body);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id) as MiLocalUser;
 	const isSecure = token == null;
 

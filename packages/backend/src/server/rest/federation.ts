@@ -126,11 +126,6 @@ const federationStatsParamDef = {
 	required: [],
 } as const;
 
-type FederationInstancesParams = SchemaType<typeof federationInstancesParamDef>;
-type FederationShowInstanceParams = SchemaType<typeof federationShowInstanceParamDef>;
-type AdminFederationUpdateInstanceParams = SchemaType<typeof adminFederationUpdateInstanceParamDef>;
-type AdminFederationHostParams = SchemaType<typeof adminFederationHostParamDef>;
-type FederationStatsParams = SchemaType<typeof federationStatsParamDef>;
 type FederationInstancesSort =
 	| '+pubSub'
 	| '-pubSub'
@@ -388,7 +383,7 @@ export async function handleHonoApiFederationInstances(
 	user: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'FederationInstance'>[]> {
-	const params = parseHonoApiParams(federationInstancesParamDef, body) as FederationInstancesParams;
+	const params = parseHonoApiParams(federationInstancesParamDef, body);
 	const meta = typeof params.blocked === 'boolean' || typeof params.silenced === 'boolean'
 		? await fetchMetaFromDatabase(deps.db)
 		: deps.meta;
@@ -416,7 +411,7 @@ export async function handleHonoApiFederationShowInstance(
 	user: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'FederationInstance'> | null> {
-	const params = parseHonoApiParams(federationShowInstanceParamDef, body) as FederationShowInstanceParams;
+	const params = parseHonoApiParams(federationShowInstanceParamDef, body);
 	const found = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 	if (found == null) return null;
 
@@ -429,7 +424,7 @@ export async function handleHonoApiAdminFederationUpdateInstance(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminFederationUpdateInstanceParamDef, body) as AdminFederationUpdateInstanceParams;
+	const params = parseHonoApiParams(adminFederationUpdateInstanceParamDef, body);
 	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 
 	if (instance == null) {
@@ -470,7 +465,7 @@ export async function handleHonoApiAdminFederationRefreshRemoteInstanceMetadata(
 	deps: HonoApiAdminFederationDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminFederationHostParamDef, body) as AdminFederationHostParams;
+	const params = parseHonoApiParams(adminFederationHostParamDef, body);
 	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 
 	if (instance == null) {
@@ -494,7 +489,7 @@ export async function handleHonoApiAdminFederationDeleteAllFiles(
 	deps: HonoApiAdminFederationDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminFederationHostParamDef, body) as AdminFederationHostParams;
+	const params = parseHonoApiParams(adminFederationHostParamDef, body);
 	const files = await listAllDriveFilesByUserHostFromDatabase(deps.db, params.host);
 
 	for (const file of files) {
@@ -506,7 +501,7 @@ export async function handleHonoApiAdminFederationRemoveAllFollowing(
 	deps: HonoApiAdminFederationDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminFederationHostParamDef, body) as AdminFederationHostParams;
+	const params = parseHonoApiParams(adminFederationHostParamDef, body);
 	const followings = await listFollowingsByFollowerHostFromDatabase(deps.db, params.host);
 	const jobs = followings.map(following => toRelationshipJob('unfollow', {
 		from: { id: following.followerId },
@@ -529,7 +524,7 @@ export async function handleHonoApiFederationStats(
 	topPubInstances: Packed<'FederationInstance'>[];
 	otherFollowingCount: number;
 }> {
-	const params = parseHonoApiParams(federationStatsParamDef, body) as FederationStatsParams;
+	const params = parseHonoApiParams(federationStatsParamDef, body);
 	const [topSubInstances, topPubInstances, allSubCount, allPubCount] = await Promise.all([
 		listInstancesOrderByFollowersCountDescFromDatabase(deps.db, params.limit),
 		listInstancesOrderByFollowingCountDescFromDatabase(deps.db, params.limit),
@@ -562,14 +557,13 @@ const federationUsersParamDef = {
 	required: ['host'],
 } as const;
 
-type FederationUsersParams = SchemaType<typeof federationUsersParamDef>;
 
 export async function handleHonoApiFederationUsers(
 	deps: HonoApiFederationDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<UserDetailedNotMeHonoApiResponse[]> {
-	const params = parseHonoApiParams(federationUsersParamDef, body) as FederationUsersParams;
+	const params = parseHonoApiParams(federationUsersParamDef, body);
 
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
@@ -601,13 +595,12 @@ const federationHostFollowingParamDef = {
 	required: ['host'],
 } as const;
 
-type FederationHostFollowingParams = SchemaType<typeof federationHostFollowingParamDef>;
 
 export async function handleHonoApiFederationFollowers(
 	deps: HonoApiFederationDependencies,
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
-	const params = parseHonoApiParams(federationHostFollowingParamDef, body) as FederationHostFollowingParams;
+	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'followee', params.host, {
 		limit: params.limit,
@@ -623,7 +616,7 @@ export async function handleHonoApiFederationFollowing(
 	deps: HonoApiFederationDependencies,
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
-	const params = parseHonoApiParams(federationHostFollowingParamDef, body) as FederationHostFollowingParams;
+	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'follower', params.host, {
 		limit: params.limit,

@@ -730,7 +730,7 @@ type FederationUpdateRemoteUserParams = {
 };
 
 export async function handleHonoApiFederationUpdateRemoteUser(deps: HonoApiApPersonDependencies, body: Record<string, unknown>): Promise<void> {
-	const params = parseHonoApiParams(federationUpdateRemoteUserParamDef, body) as FederationUpdateRemoteUserParams;
+	const params = parseHonoApiParams(federationUpdateRemoteUserParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {

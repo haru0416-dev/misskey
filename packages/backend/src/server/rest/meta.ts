@@ -50,7 +50,6 @@ const testParamDef = {
 	required: ['required'],
 } as const;
 
-type MetaParams = SchemaType<typeof metaParamDef>;
 type TestParams = SchemaType<typeof testParamDef>;
 
 function currentFeaturedWindow(windowRange: number): number {
@@ -96,7 +95,7 @@ export async function handleHonoApiMeta(
 	deps: HonoApiMetaDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'MetaLite'> | Packed<'MetaDetailed'>> {
-	const params = parseHonoApiParams(metaParamDef, body) as MetaParams;
+	const params = parseHonoApiParams(metaParamDef, body);
 	return params.detail ? await packMetaDetailed(deps) : await packMetaLite(deps);
 }
 
@@ -249,7 +248,7 @@ export async function handleHonoApiAdminUpdateMeta(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUpdateMetaParamDef, body) as AdminUpdateMetaParams;
+	const params = parseHonoApiParams(adminUpdateMetaParamDef, body);
 	const before = await fetchMetaFromDatabase(deps.db);
 	const set = buildAdminUpdateMetaPatch(deps.meta, params);
 	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, set);
@@ -272,7 +271,7 @@ export function handleHonoApiPing(): { pong: number } {
 }
 
 export function handleHonoApiTest(body: Record<string, unknown>): TestParams {
-	return parseHonoApiParams(testParamDef, body) as TestParams;
+	return parseHonoApiParams(testParamDef, body);
 }
 
 export async function handleHonoApiServerInfo(meta: MiMeta): Promise<{

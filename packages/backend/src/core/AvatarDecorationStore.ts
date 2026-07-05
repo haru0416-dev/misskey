@@ -14,6 +14,14 @@ function removeUndefined<T extends Record<string, unknown>>(value: T): Partial<T
 	return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
+let cachedRows: AvatarDecorationRow[] | null = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 1000 * 60;
+
+function invalidateAvatarDecorationCache(): void {
+	cachedRows = null;
+}
+
 export async function createAvatarDecorationInDatabase(db: MiDrizzleDatabase, data: AvatarDecorationInsert): Promise<AvatarDecorationRow> {
 	const [row] = await db
 		.insert(avatarDecoration)
@@ -24,6 +32,7 @@ export async function createAvatarDecorationInDatabase(db: MiDrizzleDatabase, da
 		throw new Error('Avatar decoration row was not created');
 	}
 
+	invalidateAvatarDecorationCache();
 	return row;
 }
 
@@ -48,6 +57,7 @@ export async function updateAvatarDecorationInDatabase(
 		.where(eq(avatarDecoration.id, id))
 		.returning();
 
+	invalidateAvatarDecorationCache();
 	return row ?? null;
 }
 
@@ -55,10 +65,28 @@ export async function deleteAvatarDecorationFromDatabase(db: MiDrizzleDatabase, 
 	await db
 		.delete(avatarDecoration)
 		.where(eq(avatarDecoration.id, id));
+
+	invalidateAvatarDecorationCache();
 }
 
 export async function listAvatarDecorationsFromDatabase(db: MiDrizzleDatabase): Promise<AvatarDecorationRow[]> {
 	return db
 		.select()
 		.from(avatarDecoration);
+}
+
+/**
+ * listAvatarDecorationsFromDatabase のプロセスローカル短命キャッシュ版。
+ * ノートpack時のアバターデコレーション解決 (ユーザー毎・ノート毎に呼ばれるホットパス) 専用。
+ * 管理系のCRUD/一覧エンドポイントは即時性が必要なため常に listAvatarDecorationsFromDatabase を使うこと。
+ */
+export async function listAvatarDecorationsFromDatabaseCached(db: MiDrizzleDatabase): Promise<AvatarDecorationRow[]> {
+	if (cachedRows != null && Date.now() - cachedAt < CACHE_TTL_MS) {
+		return cachedRows;
+	}
+
+	const rows = await listAvatarDecorationsFromDatabase(db);
+	cachedRows = rows;
+	cachedAt = Date.now();
+	return rows;
 }

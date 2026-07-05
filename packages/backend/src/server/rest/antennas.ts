@@ -111,7 +111,7 @@ export async function handleHonoApiAntennasCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseHonoApiParams(antennasCreateParamDef, body) as AntennasCreateParams;
+	const params = parseHonoApiParams(antennasCreateParamDef, body);
 
 	if (params.keywords.flat().every(x => x === '') && params.excludeKeywords.flat().every(x => x === '')) {
 		throw emptyKeywordError('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
@@ -194,7 +194,7 @@ export async function handleHonoApiAntennasUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseHonoApiParams(antennasUpdateParamDef, body) as AntennasUpdateParams;
+	const params = parseHonoApiParams(antennasUpdateParamDef, body);
 
 	if (params.keywords && params.excludeKeywords) {
 		if (params.keywords.flat().every(x => x === '') && params.excludeKeywords.flat().every(x => x === '')) {
@@ -250,7 +250,7 @@ export async function handleHonoApiAntennasDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(antennasDeleteParamDef, body) as AntennasDeleteParams;
+	const params = parseHonoApiParams(antennasDeleteParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
@@ -295,7 +295,7 @@ export async function handleHonoApiAntennasShow(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseHonoApiParams(antennasShowParamDef, body) as AntennasShowParams;
+	const params = parseHonoApiParams(antennasShowParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('c06569fb-b025-4f23-b22d-1fcd20d2816b');
@@ -322,7 +322,7 @@ export async function handleHonoApiAntennasRemoveNote(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(antennasRemoveNoteParamDef, body) as AntennasRemoveNoteParams;
+	const params = parseHonoApiParams(antennasRemoveNoteParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
@@ -357,7 +357,7 @@ export async function handleHonoApiAntennasNotes(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(antennasNotesParamDef, body) as AntennasNotesParams;
+	const params = parseHonoApiParams(antennasNotesParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 

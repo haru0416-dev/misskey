@@ -41,7 +41,7 @@ export async function handleHonoApiVerifyEmail(
 	deps: HonoApiVerifyEmailDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(verifyEmailParamDef, body) as VerifyEmailParams;
+	const params = parseHonoApiParams(verifyEmailParamDef, body);
 	const profile = await fetchUserProfileByEmailVerifyCodeFromDatabase(deps.db, params.code);
 
 	if (profile == null) {

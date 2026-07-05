@@ -77,7 +77,7 @@ export async function handleHonoApiI2faRegister(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ qr: string; url: string; secret: string; label: string; issuer: string }> {
-	const params = parseHonoApiParams(i2faRegisterParamDef, body) as I2faRegisterParams;
+	const params = parseHonoApiParams(i2faRegisterParamDef, body);
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForHonoApi(deps, profile, params.token);
@@ -124,7 +124,7 @@ export async function handleHonoApiI2faDone(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ backupCodes: string[] }> {
-	const params = parseHonoApiParams(i2faDoneParamDef, body) as I2faDoneParams;
+	const params = parseHonoApiParams(i2faDoneParamDef, body);
 	const token = params.token.replace(/\s/g, '');
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
@@ -177,7 +177,7 @@ export async function handleHonoApiI2faRegisterKey(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<unknown> {
-	const params = parseHonoApiParams(i2faRegisterKeyParamDef, body) as I2faRegisterKeyParams;
+	const params = parseHonoApiParams(i2faRegisterKeyParamDef, body);
 
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, me.id);
 	if (profile == null) throw userNotFoundError();
@@ -217,7 +217,7 @@ export async function handleHonoApiI2faKeyDone(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; name: string }> {
-	const params = parseHonoApiParams(i2faKeyDoneParamDef, body) as I2faKeyDoneParams;
+	const params = parseHonoApiParams(i2faKeyDoneParamDef, body);
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForHonoApi(deps, profile, params.token);
@@ -266,7 +266,7 @@ export async function handleHonoApiI2faUpdateKey(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, never>> {
-	const params = parseHonoApiParams(i2faUpdateKeyParamDef, body) as I2faUpdateKeyParams;
+	const params = parseHonoApiParams(i2faUpdateKeyParamDef, body);
 
 	const key = await fetchUserSecurityKeyByIdFromDatabase(deps.db, params.credentialId);
 	if (key == null) {
@@ -304,7 +304,7 @@ export async function handleHonoApiI2faRemoveKey(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, never>> {
-	const params = parseHonoApiParams(i2faRemoveKeyParamDef, body) as I2faRemoveKeyParams;
+	const params = parseHonoApiParams(i2faRemoveKeyParamDef, body);
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForHonoApi(deps, profile, params.token);
@@ -343,7 +343,7 @@ export async function handleHonoApiI2faUnregister(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(i2faUnregisterParamDef, body) as I2faUnregisterParams;
+	const params = parseHonoApiParams(i2faUnregisterParamDef, body);
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForHonoApi(deps, profile, params.token);
@@ -376,7 +376,7 @@ export async function handleHonoApiI2faPasswordLess(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(i2faPasswordLessParamDef, body) as I2faPasswordLessParams;
+	const params = parseHonoApiParams(i2faPasswordLessParamDef, body);
 
 	if (params.value === true) {
 		const keyCount = await countUserSecurityKeysByUserIdFromDatabase(deps.db, me.id);

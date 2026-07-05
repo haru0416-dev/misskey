@@ -33,7 +33,6 @@ const iSigninHistoryParamDef = {
 	required: [],
 } as const;
 
-type ISigninHistoryParams = SchemaType<typeof iSigninHistoryParamDef>;
 
 export function packHonoApiSignin(
 	deps: HonoApiIDependencies,
@@ -89,7 +88,7 @@ export async function handleHonoApiISigninHistory(
 	user: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<ReturnType<typeof packHonoApiSignin>[]> {
-	const params = parseHonoApiParams(iSigninHistoryParamDef, body) as ISigninHistoryParams;
+	const params = parseHonoApiParams(iSigninHistoryParamDef, body);
 	let sinceId: string | null = null;
 	let untilId: string | null = null;
 	let order: SigninHistoryOrder = 'desc';

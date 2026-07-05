@@ -387,7 +387,7 @@ export async function handleHonoApiNotesDraftsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ createdDraft: Packed<'NoteDraft'> }> {
-	const params = parseHonoApiParams(notesDraftsCreateParamDef, body) as NotesDraftsCreateParams;
+	const params = parseHonoApiParams(notesDraftsCreateParamDef, body);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
 	const currentCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
@@ -467,7 +467,7 @@ export async function handleHonoApiNotesDraftsUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ updatedDraft: Packed<'NoteDraft'> }> {
-	const params = parseHonoApiParams(notesDraftsUpdateParamDef, body) as NotesDraftsUpdateParams;
+	const params = parseHonoApiParams(notesDraftsUpdateParamDef, body);
 
 	const existing = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
 	if (existing == null) throw draftNoSuchNoteDraftError();
@@ -543,7 +543,7 @@ export async function handleHonoApiNotesDraftsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notesDraftsDeleteParamDef, body) as NotesDraftsDeleteParams;
+	const params = parseHonoApiParams(notesDraftsDeleteParamDef, body);
 	const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
 	if (draft == null) throw draftNoSuchNoteDraftError();
 	if (draft.userId !== me.id) throw draftAccessDeniedError();
@@ -557,7 +557,7 @@ export async function handleHonoApiNotesDraftsList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'NoteDraft'>[]> {
-	const params = parseHonoApiParams(notesDraftsListParamDef, body) as NotesDraftsListParams;
+	const params = parseHonoApiParams(notesDraftsListParamDef, body);
 	const pagination = resolveNoteDraftPagination({ gen: (time) => genId(deps.config, time) }, params);
 
 	const drafts = await listNoteDraftsByUserIdFromDatabase(deps.db, me.id, {

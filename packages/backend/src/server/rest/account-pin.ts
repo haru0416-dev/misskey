@@ -9,6 +9,7 @@ import type { Config } from '@/config.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { HonoApiError } from './error.js';
+import { genLocalUserUri } from './following.js';
 import { addActivityContext, deliverNoteActivityForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
@@ -43,10 +44,6 @@ const iPinOrUnpinParamDef = {
 type IPinOrUnpinParams = {
 	noteId: string;
 };
-
-function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
-}
 
 function renderAddForHonoApi(config: Pick<Config, 'url'>, user: { id: MiUser['id'] }, target: string, object: string): Record<string, unknown> {
 	return { type: 'Add', actor: genLocalUserUri(config, user.id), target, object };
@@ -118,7 +115,7 @@ export async function handleHonoApiIPin(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(iPinOrUnpinParamDef, body) as IPinOrUnpinParams;
+	const params = parseHonoApiParams(iPinOrUnpinParamDef, body);
 
 	await addPinnedForHonoApi(deps, me, params.noteId);
 
@@ -130,7 +127,7 @@ export async function handleHonoApiIUnpin(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(iPinOrUnpinParamDef, body) as IPinOrUnpinParams;
+	const params = parseHonoApiParams(iPinOrUnpinParamDef, body);
 
 	await removePinnedForHonoApi(deps, me, params.noteId);
 

@@ -186,7 +186,7 @@ export async function handleHonoApiUsersListsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const params = parseHonoApiParams(createParamDef, body) as CreateParams;
+	const params = parseHonoApiParams(createParamDef, body);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
 	const currentCount = await countUserListsByUserIdFromDatabase(deps.db, me.id);
@@ -222,7 +222,7 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const params = parseHonoApiParams(createFromPublicParamDef, body) as CreateFromPublicParams;
+	const params = parseHonoApiParams(createFromPublicParamDef, body);
 
 	const listExists = await userListExistsByIdAndPublicFromDatabase(deps.db, params.listId);
 	if (!listExists) throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
@@ -288,7 +288,7 @@ export async function handleHonoApiUsersListsPull(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pullParamDef, body) as PullParams;
+	const params = parseHonoApiParams(pullParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
@@ -317,7 +317,7 @@ export async function handleHonoApiUsersListsPush(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pushParamDef, body) as PushParams;
+	const params = parseHonoApiParams(pushParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) throw noSuchListError('2214501d-ac96-4049-b717-91e42272a711');
@@ -375,7 +375,7 @@ export async function handleHonoApiUsersListsGetMemberships(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
-	const params = parseHonoApiParams(getMembershipsParamDef, body) as GetMembershipsParams;
+	const params = parseHonoApiParams(getMembershipsParamDef, body);
 
 	const userList = !params.forPublic && me != null
 		? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
@@ -415,7 +415,7 @@ export async function handleHonoApiUsersListsUpdateMembership(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(updateMembershipParamDef, body) as UpdateMembershipParams;
+	const params = parseHonoApiParams(updateMembershipParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');

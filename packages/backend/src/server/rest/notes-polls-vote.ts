@@ -65,7 +65,7 @@ export async function handleHonoApiNotesPollsVote(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notesPollsVoteParamDef, body) as NotesPollsVoteParams;
+	const params = parseHonoApiParams(notesPollsVoteParamDef, body);
 	const createdAt = new Date();
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);

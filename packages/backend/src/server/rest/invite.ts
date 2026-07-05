@@ -80,10 +80,6 @@ const adminInviteListParamDef = {
 	required: [],
 } as const;
 
-type InviteDeleteParams = SchemaType<typeof inviteDeleteParamDef>;
-type InviteListParams = SchemaType<typeof inviteListParamDef>;
-type AdminInviteCreateParams = SchemaType<typeof adminInviteCreateParamDef>;
-type AdminInviteListParams = SchemaType<typeof adminInviteListParamDef>;
 
 function adminInviteCreateInvalidDateTimeError(): HonoApiError {
 	return new HonoApiError({
@@ -162,7 +158,7 @@ export async function handleHonoApiAdminInviteCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseHonoApiParams(adminInviteCreateParamDef, body) as AdminInviteCreateParams;
+	const params = parseHonoApiParams(adminInviteCreateParamDef, body);
 	if (params.expiresAt && isNaN(Date.parse(params.expiresAt))) {
 		throw adminInviteCreateInvalidDateTimeError();
 	}
@@ -190,7 +186,7 @@ export async function handleHonoApiAdminInviteList(
 	deps: HonoApiInviteDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseHonoApiParams(adminInviteListParamDef, body) as AdminInviteListParams;
+	const params = parseHonoApiParams(adminInviteListParamDef, body);
 	const tickets = await listRegistrationTicketsForAdminFromDatabase(deps.db, {
 		limit: params.limit,
 		offset: params.offset,
@@ -235,7 +231,7 @@ export async function handleHonoApiInviteDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(inviteDeleteParamDef, body) as InviteDeleteParams;
+	const params = parseHonoApiParams(inviteDeleteParamDef, body);
 	const ticket = await fetchRegistrationTicketByIdFromDatabase(deps.db, params.inviteId);
 	const isModerator = await isHonoApiModerator(deps, me);
 
@@ -277,7 +273,7 @@ export async function handleHonoApiInviteList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseHonoApiParams(inviteListParamDef, body) as InviteListParams;
+	const params = parseHonoApiParams(inviteListParamDef, body);
 	const { sinceId, untilId, order } = resolveRegistrationTicketPagination({
 		gen: (time?: number) => genId(deps.config, time),
 	}, params);

@@ -409,12 +409,12 @@ export async function packNoteForHonoApi(
 		populateEmojis(deps, reactionEmojiNames, host),
 		host != null ? populateEmojis(deps, note.emojis, host) : Promise.resolve(undefined),
 		note.channelId ? fetchChannelByIdFromDatabase(deps.db, note.channelId) : Promise.resolve(null),
-		(opts.detail && note.replyId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.replyId, me, {
+		(opts.detail && note.replyId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.reply ?? note.replyId, me, {
 			detail: false,
 			skipHide: opts.skipHide,
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
 		})) : Promise.resolve(undefined),
-		(opts.detail && note.renoteId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.renoteId, me, {
+		(opts.detail && note.renoteId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.renote ?? note.renoteId, me, {
 			detail: true,
 			skipHide: opts.skipHide,
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
@@ -589,7 +589,7 @@ export async function handleHonoApiUsersFeaturedNotes(
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(usersFeaturedNotesParamDef, body) as UsersFeaturedNotesParams;
+	const params = parseHonoApiParams(usersFeaturedNotesParamDef, body);
 
 	const userIdsWhoBlockingMe = me ? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id)) : new Set<string>();
 
@@ -673,7 +673,7 @@ export async function handleHonoApiNotesTranslate(
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<{ sourceLang: string; text: string } | undefined> {
-	const params = parseHonoApiParams(notesTranslateParamDef, body) as NotesTranslateParams;
+	const params = parseHonoApiParams(notesTranslateParamDef, body);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
 	if (!policies.canUseTranslator) {
@@ -773,7 +773,7 @@ export async function handleHonoApiUsersNotes(
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(usersNotesParamDef, body) as UsersNotesParams;
+	const params = parseHonoApiParams(usersNotesParamDef, body);
 
 	if (params.withReplies && params.withFiles) throw usersNotesBothWithRepliesAndWithFilesError();
 

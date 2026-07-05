@@ -90,7 +90,7 @@ export async function handleHonoApiAdminQueueQueueStats(
 	deps: HonoApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ) {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body) as AdminQueueSelectParams;
+	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
 
 	return await getQueueStats(deps, ps.queue);
 }
@@ -126,7 +126,7 @@ export async function handleHonoApiAdminQueueJobs(
 	deps: HonoApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ) {
-	const ps = parseHonoApiParams(adminQueueJobsParamDef, body) as AdminQueueJobsParams;
+	const ps = parseHonoApiParams(adminQueueJobsParamDef, body);
 
 	return await getQueueJobs(deps, ps.queue, ps.state, ps.search);
 }
@@ -135,7 +135,7 @@ export async function handleHonoApiAdminQueueShowJob(
 	deps: HonoApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ) {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body) as AdminQueueJobParams;
+	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
 
 	return await getQueueJob(deps, ps.queue, ps.jobId);
 }
@@ -144,7 +144,7 @@ export async function handleHonoApiAdminQueueShowJobLogs(
 	deps: HonoApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ) {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body) as AdminQueueJobParams;
+	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
 
 	return await getQueueJobLogs(deps, ps.queue, ps.jobId);
 }
@@ -154,7 +154,7 @@ export async function handleHonoApiAdminQueueClear(
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueClearParamDef, body) as AdminQueueClearParams;
+	const ps = parseHonoApiParams(adminQueueClearParamDef, body);
 
 	await clearQueue(deps, ps.queue, ps.state);
 	await logModerationEventInDatabase(deps, moderator, 'clearQueue');
@@ -165,7 +165,7 @@ export async function handleHonoApiAdminQueuePause(
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body) as AdminQueueSelectParams;
+	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
 
 	await pauseQueue(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'pauseQueue');
@@ -176,7 +176,7 @@ export async function handleHonoApiAdminQueueResume(
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body) as AdminQueueSelectParams;
+	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
 
 	await resumeQueue(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'resumeQueue');
@@ -187,7 +187,7 @@ export async function handleHonoApiAdminQueuePromoteJobs(
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body) as AdminQueueSelectParams;
+	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
 
 	await promoteQueueJobs(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'promoteQueue');
@@ -197,7 +197,7 @@ export async function handleHonoApiAdminQueueRetryJob(
 	deps: HonoApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body) as AdminQueueJobParams;
+	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
 
 	await retryQueueJob(deps, ps.queue, ps.jobId);
 }
@@ -206,7 +206,7 @@ export async function handleHonoApiAdminQueueRemoveJob(
 	deps: HonoApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body) as AdminQueueJobParams;
+	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
 
 	await removeQueueJob(deps, ps.queue, ps.jobId);
 }

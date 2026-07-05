@@ -343,7 +343,7 @@ export async function handleHonoApiNotesReactionsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(reactionsCreateParamDef, body) as ReactionsCreateParams;
+	const params = parseHonoApiParams(reactionsCreateParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw reactionNoSuchNoteError();
@@ -377,7 +377,7 @@ export async function handleHonoApiNotesReactionsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(reactionsDeleteParamDef, body) as ReactionsDeleteParams;
+	const params = parseHonoApiParams(reactionsDeleteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw unreactionNoSuchNoteError();
@@ -447,7 +447,7 @@ export async function handleHonoApiNotesReactions(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Array<{ id: string; createdAt: string; user: unknown; type: string }>> {
-	const params = parseHonoApiParams(notesReactionsParamDef, body) as NotesReactionsParams;
+	const params = parseHonoApiParams(notesReactionsParamDef, body);
 
 	let type: string | null = null;
 	if (params.type) {

@@ -108,11 +108,9 @@ const adminSystemWebhookUpdateParamDef = {
 type AdminSystemWebhookCreateParams = Omit<SchemaType<typeof adminSystemWebhookCreateParamDef>, 'on'> & {
 	on: SystemWebhookEventType[];
 };
-type AdminSystemWebhookDeleteParams = SchemaType<typeof adminSystemWebhookDeleteParamDef>;
 type AdminSystemWebhookListParams = Omit<SchemaType<typeof adminSystemWebhookListParamDef>, 'on'> & {
 	on?: SystemWebhookEventType[];
 };
-type AdminSystemWebhookShowParams = SchemaType<typeof adminSystemWebhookShowParamDef>;
 type AdminSystemWebhookTestParams = Omit<SchemaType<typeof adminSystemWebhookTestParamDef>, 'type'> & {
 	type: SystemWebhookEventType;
 };
@@ -164,7 +162,7 @@ export async function handleHonoApiAdminSystemWebhookCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseHonoApiParams(adminSystemWebhookCreateParamDef, body) as AdminSystemWebhookCreateParams;
+	const params = parseHonoApiParams(adminSystemWebhookCreateParamDef, body);
 	const webhook = await createSystemWebhookWithSideEffects({
 		db: deps.db,
 		genId: () => genId(deps.config),
@@ -180,7 +178,7 @@ export async function handleHonoApiAdminSystemWebhookDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminSystemWebhookDeleteParamDef, body) as AdminSystemWebhookDeleteParams;
+	const params = parseHonoApiParams(adminSystemWebhookDeleteParamDef, body);
 	await deleteSystemWebhookWithSideEffects({
 		db: deps.db,
 		publishInternalEvent: deps.publishInternalEvent,
@@ -192,7 +190,7 @@ export async function handleHonoApiAdminSystemWebhookList(
 	deps: HonoApiAdminSystemWebhookDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>[]> {
-	const params = parseHonoApiParams(adminSystemWebhookListParamDef, body) as AdminSystemWebhookListParams;
+	const params = parseHonoApiParams(adminSystemWebhookListParamDef, body);
 	const webhooks = await listSystemWebhooksFromDatabase(deps.db, {
 		isActive: params.isActive,
 		on: params.on,
@@ -205,7 +203,7 @@ export async function handleHonoApiAdminSystemWebhookShow(
 	deps: HonoApiAdminSystemWebhookDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseHonoApiParams(adminSystemWebhookShowParamDef, body) as AdminSystemWebhookShowParams;
+	const params = parseHonoApiParams(adminSystemWebhookShowParamDef, body);
 	const webhook = await fetchSystemWebhookByIdFromDatabase(deps.db, params.id);
 	if (webhook == null) throw noSuchSystemWebhookError();
 
@@ -216,7 +214,7 @@ export async function handleHonoApiAdminSystemWebhookTest(
 	deps: HonoApiAdminSystemWebhookDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminSystemWebhookTestParamDef, body) as AdminSystemWebhookTestParams;
+	const params = parseHonoApiParams(adminSystemWebhookTestParamDef, body);
 	try {
 		await testSystemWebhookWithQueue({
 			fetchSystemWebhooksByIds: ids => listSystemWebhooksFromDatabase(deps.db, { ids }),
@@ -236,7 +234,7 @@ export async function handleHonoApiAdminSystemWebhookUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseHonoApiParams(adminSystemWebhookUpdateParamDef, body) as AdminSystemWebhookUpdateParams;
+	const params = parseHonoApiParams(adminSystemWebhookUpdateParamDef, body);
 	const webhook = await updateSystemWebhookWithSideEffects({
 		db: deps.db,
 		publishInternalEvent: deps.publishInternalEvent,

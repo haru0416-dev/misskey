@@ -61,10 +61,6 @@ const adminUpdateProxyAccountParamDef = {
 	},
 } as const;
 
-type AdminAccountCreateParams = SchemaType<typeof adminAccountCreateParamDef>;
-type AdminAccountsFindByEmailParams = SchemaType<typeof adminAccountsFindByEmailParamDef>;
-type AdminAccountDeleteParams = SchemaType<typeof adminAccountDeleteParamDef>;
-type AdminUpdateProxyAccountParams = SchemaType<typeof adminUpdateProxyAccountParamDef>;
 
 function userNotFoundError(): HonoApiError {
 	return new HonoApiError({
@@ -98,7 +94,7 @@ export async function handleHonoApiAdminAccountsCreate(
 	auth: HonoApiAuthenticated,
 	body: Record<string, unknown>,
 ): Promise<SignupResponse> {
-	const params = parseHonoApiParams(adminAccountCreateParamDef, body) as AdminAccountCreateParams;
+	const params = parseHonoApiParams(adminAccountCreateParamDef, body);
 
 	if (deps.meta.rootUserId == null && auth.user == null && auth.token == null) {
 		if (deps.config.setupPassword != null) {
@@ -127,7 +123,7 @@ export async function handleHonoApiAdminAccountsFindByEmail(
 	deps: HonoApiAdminAccountsDependencies,
 	body: Record<string, unknown>,
 ): Promise<UserDetailedNotMeHonoApiResponse> {
-	const params = parseHonoApiParams(adminAccountsFindByEmailParamDef, body) as AdminAccountsFindByEmailParams;
+	const params = parseHonoApiParams(adminAccountsFindByEmailParamDef, body);
 	const profile = await fetchUserProfileByEmailFromDatabase(deps.db, params.email);
 
 	if (profile == null) {
@@ -142,7 +138,7 @@ export async function handleHonoApiAdminAccountsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAccountDeleteParamDef, body) as AdminAccountDeleteParams;
+	const params = parseHonoApiParams(adminAccountDeleteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 
 	if (user == null) {
@@ -157,7 +153,7 @@ export async function handleHonoApiAdminDeleteAccount(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAccountDeleteParamDef, body) as AdminAccountDeleteParams;
+	const params = parseHonoApiParams(adminAccountDeleteParamDef, body);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, params.userId);
 	if (user.isDeleted) {
 		return;
@@ -171,7 +167,7 @@ export async function handleHonoApiAdminUpdateProxyAccount(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(adminUpdateProxyAccountParamDef, body) as AdminUpdateProxyAccountParams;
+	const params = parseHonoApiParams(adminUpdateProxyAccountParamDef, body);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy');
 	const updated = await updateSystemAccountUserInDatabase(deps.db, {
 		userId: proxy.id,

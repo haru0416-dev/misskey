@@ -60,7 +60,7 @@ export async function handleHonoApiRequestResetPassword(
 	body: Record<string, unknown>,
 	ip: string,
 ): Promise<void> {
-	const params = parseHonoApiParams(requestResetPasswordParamDef, body) as RequestResetPasswordParams;
+	const params = parseHonoApiParams(requestResetPasswordParamDef, body);
 
 	if (await isHonoApiRateLimited(deps, {
 		key: 'request-reset-password',
@@ -96,7 +96,7 @@ export async function handleHonoApiResetPassword(
 	deps: HonoApiPasswordResetDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(resetPasswordParamDef, body) as ResetPasswordParams;
+	const params = parseHonoApiParams(resetPasswordParamDef, body);
 	const req = await fetchPasswordResetRequestByTokenFromDatabase(deps.db, params.token);
 
 	if (Date.now() - parseId(deps.config, req.id).date.getTime() > 1000 * 60 * 30) {

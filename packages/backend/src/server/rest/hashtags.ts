@@ -63,9 +63,6 @@ const hashtagsShowParamDef = {
 	required: ['tag'],
 } as const;
 
-type HashtagsListParams = SchemaType<typeof hashtagsListParamDef>;
-type HashtagsSearchParams = SchemaType<typeof hashtagsSearchParamDef>;
-type HashtagsShowParams = SchemaType<typeof hashtagsShowParamDef>;
 
 function getCurrentFeaturedWindow(windowRange: number): number {
 	const passed = new Date().getTime() - featuredEpoc;
@@ -189,7 +186,7 @@ export async function handleHonoApiHashtagsList(
 	deps: HonoApiHashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Hashtag'>[]> {
-	const params = parseHonoApiParams(hashtagsListParamDef, body) as HashtagsListParams;
+	const params = parseHonoApiParams(hashtagsListParamDef, body);
 	const tags = await listHashtagsFromDatabase(deps.db, {
 		limit: params.limit,
 		attachedToUserOnly: params.attachedToUserOnly,
@@ -205,7 +202,7 @@ export async function handleHonoApiHashtagsSearch(
 	deps: HonoApiHashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<string[]> {
-	const params = parseHonoApiParams(hashtagsSearchParamDef, body) as HashtagsSearchParams;
+	const params = parseHonoApiParams(hashtagsSearchParamDef, body);
 	return await searchHashtagNamesFromDatabase(deps.db, {
 		query: params.query,
 		limit: params.limit,
@@ -217,7 +214,7 @@ export async function handleHonoApiHashtagsShow(
 	deps: HonoApiHashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Hashtag'>> {
-	const params = parseHonoApiParams(hashtagsShowParamDef, body) as HashtagsShowParams;
+	const params = parseHonoApiParams(hashtagsShowParamDef, body);
 	const hashtag = await fetchHashtagByNameFromDatabase(deps.db, normalizeForSearch(params.tag));
 	if (hashtag == null) throw noSuchHashtagError();
 
@@ -251,7 +248,7 @@ export async function handleHonoApiHashtagsUsers(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
-	const params = parseHonoApiParams(hashtagsUsersParamDef, body) as HashtagsUsersParams;
+	const params = parseHonoApiParams(hashtagsUsersParamDef, body);
 
 	const tag = normalizeForSearch(params.tag);
 	if (!safeForSql(tag)) throw new Error('Injection');

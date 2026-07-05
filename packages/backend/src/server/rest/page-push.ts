@@ -44,7 +44,7 @@ export async function handleHonoApiPagePush(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pagePushParamDef, body) as PagePushParams;
+	const params = parseHonoApiParams(pagePushParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw noSuchPageError();

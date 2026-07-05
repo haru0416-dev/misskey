@@ -86,8 +86,6 @@ const adminShowUsersParamDef = {
 	required: [],
 } as const;
 
-type AdminShowUserParams = SchemaType<typeof adminShowUserParamDef>;
-type AdminShowUsersParams = SchemaType<typeof adminShowUsersParamDef>;
 
 function isActiveRoleAssignment(assign: MiRoleAssignment): boolean {
 	return assign.expiresAt == null || assign.expiresAt.getTime() > Date.now();
@@ -201,7 +199,7 @@ export async function handleHonoApiAdminShowUser(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<AdminShowUserResponse> {
-	const params = parseHonoApiParams(adminShowUserParamDef, body) as AdminShowUserParams;
+	const params = parseHonoApiParams(adminShowUserParamDef, body);
 	const [user, profile] = await Promise.all([
 		fetchUserByIdFromDatabase(deps.db, params.userId),
 		fetchUserProfileByUserIdFromDatabase(deps.db, params.userId),
@@ -261,7 +259,7 @@ export async function handleHonoApiAdminShowUsers(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<UserDetailedNotMeHonoApiResponse[]> {
-	const params = parseHonoApiParams(adminShowUsersParamDef, body) as AdminShowUsersParams;
+	const params = parseHonoApiParams(adminShowUsersParamDef, body);
 	let roleUserIds: MiUser['id'][] | null = null;
 
 	switch (params.state) {
