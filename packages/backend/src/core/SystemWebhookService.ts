@@ -17,7 +17,6 @@ import { LoggerService } from '@/core/LoggerService.js';
 import Logger from '@/logger.js';
 import { Packed } from '@/misc/json-schema.js';
 import { AbuseReportResolveType } from '@/models/AbuseUserReport.js';
-import { ModeratorInactivityRemainingTime } from '@/queue/processors/CheckModeratorsActivityProcessorService.js';
 import {
 	listSystemWebhooksFromDatabase,
 } from '@/core/SystemWebhookStore.js';
@@ -40,6 +39,12 @@ export type AbuseReportPayload = {
 	comment: string;
 	moderationNote: string;
 	resolvedAs: AbuseReportResolveType | null;
+};
+
+export type ModeratorInactivityRemainingTime = {
+	time: number;
+	asHours: number;
+	asDays: number;
 };
 
 export type InactiveModeratorsWarningPayload = {
