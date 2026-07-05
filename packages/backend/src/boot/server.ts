@@ -13,12 +13,13 @@ import { createHonoNodeServer } from '@/server/node-server.js';
 import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
 import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
 import { attachHonoStreamServer, type HonoStreamServerDependencies } from '@/server/streaming/server.js';
+import { createBunNativeStreamRuntime } from '@/server/streaming/bun-native.js';
 import { startHonoQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
 import { startHonoServerStatsDaemon } from '@/server/daemons/server-stats.js';
 import { createHonoEventPublishers } from '@/server/rest/events.js';
 
 export type HonoServerRuntime = {
-	server: Server;
+	server: Server | Bun.Server;
 	deps: RuntimeDependencies;
 	dispose: () => Promise<void>;
 };
@@ -183,17 +184,14 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			inboxQueue: deps.inboxQueue,
 		},
 	});
-	const server = createHonoNodeServer({ app });
-	let disposed = false;
-
-	const streamServer = attachHonoStreamServer(server, {
+	const streamDeps = {
 		config,
 		db: deps.db,
 		redis: deps.redis,
 		redisForSub: deps.redisForSub,
 		meta: deps.meta,
 		publishMainStream: eventPublishers.publishMainStream,
-	} satisfies HonoStreamServerDependencies);
+	} satisfies HonoStreamServerDependencies;
 
 	const queueStatsDaemon = startHonoQueueStatsDaemon({
 		config,
@@ -201,6 +199,57 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		inboxQueue: deps.inboxQueue,
 	});
 	const serverStatsDaemon = startHonoServerStatsDaemon({ meta: deps.meta });
+
+	let disposed = false;
+
+	// bun ランタイムの node:http compat 層は 'upgrade' イベントで生ソケットに書き込むパターンだと
+	// 同一プロセス内に他のソケット接続 (DB pool / ioredis 等) があるとレスポンスがクライアントに
+	// 届かず永久にハングするバグがある (bun 1.3.14 で確認済み)。Bun.serve() のネイティブ websocket
+	// API はこの経路を通らないため、bun 実行時のみこちらを使う。詳細は streaming/bun-native.ts 参照。
+	if (typeof Bun !== 'undefined') {
+		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
+		const bunServer = Bun.serve({
+			...(config.socket ? { unix: config.socket } : { port: config.port, hostname: '0.0.0.0' }),
+			fetch: async (request, bunServerInstance) => {
+				const url = new URL(request.url);
+				if (url.pathname === streamRuntime.streamingPath && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+					const response = await streamRuntime.tryUpgrade(request, url, bunServerInstance);
+					if (response) return response;
+					return undefined as unknown as Response;
+				}
+
+				const remoteAddress = bunServerInstance.requestIP(request)?.address;
+				if (remoteAddress != null && !request.headers.has('x-misskey-remote-address')) {
+					request.headers.set('x-misskey-remote-address', remoteAddress);
+				}
+				return app.fetch(request);
+			},
+			websocket: streamRuntime.websocket,
+		});
+
+		if (config.socket && config.chmodSocket) {
+			fs.chmodSync(config.socket, config.chmodSocket);
+		}
+		logger.info(config.socket ? `Listening on ${config.socket}` : `Listening on port ${config.port}`);
+
+		return {
+			server: bunServer,
+			deps,
+			dispose: async () => {
+				if (disposed) return;
+				disposed = true;
+				oauthRuntime.dispose();
+				serverStatsDaemon.dispose();
+				queueStatsDaemon.dispose();
+				await streamRuntime.dispose();
+				await bunServer.stop(true);
+				await deps.dispose();
+			},
+		};
+	}
+
+	const server = createHonoNodeServer({ app });
+	const streamServer = attachHonoStreamServer(server, streamDeps);
 
 	await listen(server, config, logger);
 
