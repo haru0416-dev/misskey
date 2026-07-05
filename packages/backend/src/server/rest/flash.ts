@@ -78,7 +78,7 @@ export async function handleHonoApiFlashUpdate(
 	await updateFlashInDatabase(deps.db, flash.id, values);
 }
 
-async function packFlashForHonoApi(
+export async function packFlashForHonoApi(
 	deps: HonoApiFlashDependencies,
 	src: MiFlash['id'] | MiFlash,
 	me?: { id: MiUser['id'] } | null,

@@ -61,12 +61,13 @@ import type { EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { addNoteToAntennasForHonoApi } from './antennas.js';
 import { HonoApiError } from './error.js';
 import { deliverNoteActivityForHonoApi, renderNoteOrRenoteActivityForHonoApi, resolveRemoteRecipientForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
 import { packNoteForHonoApi, isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { xaddHonoApiNotification, type HonoApiNotificationDependencies } from './notification.js';
-import type { HonoApiMainStreamPublisher, HonoApiNotesStreamPublisher } from './events.js';
+import type { HonoApiAntennaStreamPublisher, HonoApiMainStreamPublisher, HonoApiNotesStreamPublisher } from './events.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -85,6 +86,7 @@ export type HonoApiNotesCreateDependencies =
 		endedPollNotificationQueue: EndedPollNotificationQueue;
 		publishNotesStream?: HonoApiNotesStreamPublisher;
 		publishMainStream?: HonoApiMainStreamPublisher;
+		publishAntennaStream?: HonoApiAntennaStreamPublisher;
 	};
 
 function isSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: string | null): boolean {
@@ -453,7 +455,7 @@ export async function insertNoteForHonoApi(
 export async function postNoteCreatedForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	note: MiNote,
-	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
+	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	data: CreateNoteData,
 	tags: string[],
 	mentionedUsers: MiUser[],
@@ -492,6 +494,9 @@ export async function postNoteCreatedForHonoApi(
 	if (deps.meta.enableFanoutTimeline) {
 		void pushNoteToFanoutTimelinesForHonoApi(deps, note, user);
 	}
+
+	// アンテナへのマッチング。原典 (NoteCreateService) と同じく enableFanoutTimeline に関わらず常時実行し、awaitしない。
+	void addNoteToAntennasForHonoApi(deps, { ...note, channel: data.channel ?? null }, user).catch(() => {});
 
 	if (data.reply) {
 		await incrementNoteRepliesCountInDatabase(deps.db, data.reply.id, 1);
@@ -687,7 +692,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(deps: HonoApiNotesCreateDepen
 
 export async function createNoteForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
-	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
+	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	data: CreateNoteData,
 	silent = false,
 ): Promise<MiNote> {
@@ -811,7 +816,7 @@ export async function createNoteForHonoApi(
 
 export async function fetchAndCreateNoteForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
-	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
+	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	data: {
 		createdAt: Date;
 		replyId: string | null;
@@ -974,7 +979,7 @@ type NotesCreateParams = {
 
 export async function handleHonoApiNotesCreate(
 	deps: HonoApiNotesCreateDependencies,
-	me: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
+	me: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	body: Record<string, unknown>,
 ): Promise<{ createdNote: unknown }> {
 	const ps = parseHonoApiParams(notesCreateParamDef, body);

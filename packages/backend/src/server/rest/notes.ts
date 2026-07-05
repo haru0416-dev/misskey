@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type * as Redis from 'ioredis';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
@@ -46,10 +47,13 @@ import { HonoApiError } from './error.js';
 import { fetchNoteDiffsForHonoApi, packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { grantAchievementForHonoApi, type HonoApiNotificationDependencies } from './notification.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiNotesDependencies = HonoApiNoteDependencies & HonoApiNotificationDependencies & {
 	meta: MiMeta;
+	/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
+	redisForTimelines?: Redis.Redis;
 };
 
 const notesShowParamDef = {
@@ -605,21 +609,46 @@ export async function handleHonoApiNotesLocalTimeline(
 
 	if (params.withReplies && params.withFiles) throw notesLocalTimelineBothWithRepliesAndWithFilesError();
 
-	let mutedChannelIds: string[] = [];
-	if (me) {
-		mutedChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const getFromDb = async (dbUntilId: string | null, dbSinceId: string | null, limit: number) => {
+		let mutedChannelIds: string[] = [];
+		if (me) {
+			mutedChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+		}
+
+		return await listLocalTimelineNotesFromDatabase(deps.db, {
+			limit,
+			sinceId: dbSinceId,
+			untilId: dbUntilId,
+			withFiles: params.withFiles,
+			withReplies: params.withReplies,
+			me,
+			blockedHosts: deps.meta.blockedHosts,
+			mutedChannelIds,
+		});
+	};
+
+	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
+		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
+			untilId,
+			sinceId,
+			limit: params.limit,
+			allowPartial: params.allowPartial,
+			me,
+			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
+			redisTimelines:
+				params.withFiles ? ['localTimelineWithFiles']
+				: params.withReplies ? ['localTimeline', 'localTimelineWithReplies']
+				: me ? ['localTimeline', `localTimelineWithReplyTo:${me.id}`]
+				: ['localTimeline'],
+			alwaysIncludeMyNotes: true,
+			excludePureRenotes: !params.withRenotes,
+			dbFallback: getFromDb,
+		});
+
+		return await packNoteManyForHonoApi(deps, notes, me);
 	}
 
-	const timeline = await listLocalTimelineNotesFromDatabase(deps.db, {
-		limit: params.limit,
-		sinceId,
-		untilId,
-		withFiles: params.withFiles,
-		withReplies: params.withReplies,
-		me,
-		blockedHosts: deps.meta.blockedHosts,
-		mutedChannelIds,
-	});
+	const timeline = await getFromDb(untilId, sinceId, params.limit);
 
 	return await packNoteManyForHonoApi(deps, timeline, me);
 }
@@ -684,14 +713,14 @@ export async function handleHonoApiNotesHybridTimeline(
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
 		.filter(id => !mutingChannelIds.includes(id));
 
-	const notes = await listHybridTimelineNotesFromDatabase(deps.db, {
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHybridTimelineNotesFromDatabase(deps.db, {
 		me,
 		followeeIds: followees.map(f => f.followeeId),
 		followingChannelIds,
 		mutingChannelIds,
-		limit: params.limit,
-		sinceId,
-		untilId,
+		limit,
+		sinceId: dbSinceId,
+		untilId: dbUntilId,
 		includeMyRenotes: params.includeMyRenotes,
 		includeRenotedMyNotes: params.includeRenotedMyNotes,
 		includeLocalRenotes: params.includeLocalRenotes,
@@ -699,6 +728,42 @@ export async function handleHonoApiNotesHybridTimeline(
 		withReplies: params.withReplies,
 		blockedHosts: deps.meta.blockedHosts,
 	});
+
+	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
+		let timelineConfig: string[];
+		if (params.withFiles) {
+			timelineConfig = [`homeTimelineWithFiles:${me.id}`, 'localTimelineWithFiles'];
+		} else if (params.withReplies) {
+			timelineConfig = [`homeTimeline:${me.id}`, 'localTimeline', 'localTimelineWithReplies'];
+		} else {
+			timelineConfig = [`homeTimeline:${me.id}`, 'localTimeline', `localTimelineWithReplyTo:${me.id}`];
+		}
+
+		const followeeIdSet = new Set(followees.map(f => f.followeeId));
+		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
+			untilId,
+			sinceId,
+			limit: params.limit,
+			allowPartial: params.allowPartial,
+			me,
+			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
+			redisTimelines: timelineConfig,
+			alwaysIncludeMyNotes: true,
+			excludePureRenotes: !params.withRenotes,
+			noteFilter: note => {
+				if (note.reply && note.reply.visibility === 'followers') {
+					if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
+				}
+
+				return true;
+			},
+			dbFallback: getFromDb,
+		});
+
+		return await packNoteManyForHonoApi(deps, notes, me);
+	}
+
+	const notes = await getFromDb(untilId, sinceId, params.limit);
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
@@ -1087,14 +1152,14 @@ export async function handleHonoApiNotesTimeline(
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
 		.filter(id => !mutingChannelIds.includes(id));
 
-	const notes = await listHomeTimelineNotesFromDatabase(deps.db, {
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHomeTimelineNotesFromDatabase(deps.db, {
 		me,
 		followeeIds: followees.map(f => f.followeeId),
 		followingChannelIds,
 		mutingChannelIds,
-		limit: params.limit,
-		sinceId,
-		untilId,
+		limit,
+		sinceId: dbSinceId,
+		untilId: dbUntilId,
 		includeMyRenotes: params.includeMyRenotes,
 		includeRenotedMyNotes: params.includeRenotedMyNotes,
 		includeLocalRenotes: params.includeLocalRenotes,
@@ -1102,6 +1167,33 @@ export async function handleHonoApiNotesTimeline(
 		withRenotes: params.withRenotes,
 		blockedHosts: deps.meta.blockedHosts,
 	});
+
+	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
+		const followeeIdSet = new Set(followees.map(f => f.followeeId));
+		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
+			untilId,
+			sinceId,
+			limit: params.limit,
+			allowPartial: params.allowPartial,
+			me,
+			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
+			redisTimelines: params.withFiles ? [`homeTimelineWithFiles:${me.id}`] : [`homeTimeline:${me.id}`],
+			alwaysIncludeMyNotes: true,
+			excludePureRenotes: !params.withRenotes,
+			noteFilter: note => {
+				if (note.reply && note.reply.visibility === 'followers') {
+					if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
+				}
+
+				return true;
+			},
+			dbFallback: getFromDb,
+		});
+
+		return await packNoteManyForHonoApi(deps, notes, me);
+	}
+
+	const notes = await getFromDb(untilId, sinceId, params.limit);
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }

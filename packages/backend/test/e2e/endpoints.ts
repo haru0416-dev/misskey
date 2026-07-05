@@ -1165,8 +1165,9 @@ describe('Endpoints', () => {
 				storedInternal: true,
 				url: `${origin}/files/${md5}`,
 			});
-			const note = await createNoteInDatabase(db, {
-				id: genId(config),
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
 				userId: alice.id,
 				text: 'attached file note',
 				visibility: 'public',
@@ -1175,7 +1176,7 @@ describe('Endpoints', () => {
 
 			const found = await api('drive/files/attached-notes', { fileId: file.id }, alice);
 			assert.strictEqual(found.status, 200);
-			assert.strictEqual((found.body as any[]).some(n => n.id === note.id), true);
+			assert.strictEqual((found.body as any[]).some(n => n.id === noteId), true);
 
 			const deniedForBob = await api('drive/files/attached-notes', { fileId: file.id }, bob);
 			assert.strictEqual(deniedForBob.status, 400);
@@ -1187,6 +1188,8 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const sender = await signup({ username: `achatsend${suffix}` });
 			const recipient = await signup({ username: `achatrecv${suffix}` });
+			await api('following/create', { userId: recipient.id }, sender);
+			await api('following/create', { userId: sender.id }, recipient);
 			const md5 = createHash('md5').update(`hono-attached-chat-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
 				id: genId(config),
@@ -1346,7 +1349,10 @@ describe('Endpoints', () => {
 		test('chat/messages/create-to-user, show, react, unreact, and delete manage a 1-on-1 message lifecycle', async () => {
 			const suffix = Date.now().toString(36);
 			const sender = await signup({ username: `chatsender${suffix}` });
-			const recipient = await signup({ username: `chatrecipient${suffix}` });
+			const recipient = await signup({ username: `chatrcpt${suffix}` });
+			// chatScope はデフォルト 'mutual' のため、相互フォローを確立してからチャットする
+			await api('following/create', { userId: recipient.id }, sender);
+			await api('following/create', { userId: sender.id }, recipient);
 
 			const selfSend = await api('chat/messages/create-to-user', { text: 'hi', toUserId: sender.id }, sender);
 			assert.strictEqual(selfSend.status, 400);
@@ -1369,7 +1375,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(shownBySender.status, 200);
 			assert.strictEqual(shownBySender.body.fromUserId, sender.id);
 
-			const shownByOutsider = await api('chat/messages/show', { messageId: created.body.id }, await signup({ username: `chatoutsider${suffix}` }));
+			const shownByOutsider = await api('chat/messages/show', { messageId: created.body.id }, await signup({ username: `chatoutsdr${suffix}` }));
 			assert.strictEqual(shownByOutsider.status, 400);
 			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '3710865b-1848-4da9-8d61-cfed15510b93');
 
@@ -1396,6 +1402,8 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const sender = await signup({ username: `chattimeline${suffix}` });
 			const recipient = await signup({ username: `chattlrecv${suffix}` });
+			await api('following/create', { userId: recipient.id }, sender);
+			await api('following/create', { userId: sender.id }, recipient);
 
 			const created = await api('chat/messages/create-to-user', { text: 'timeline message', toUserId: recipient.id }, sender);
 			assert.strictEqual(created.status, 200);
@@ -1415,8 +1423,8 @@ describe('Endpoints', () => {
 
 		test('chat/rooms lifecycle: create, invite, join, message, members, mute, and leave', async () => {
 			const suffix = Date.now().toString(36);
-			const owner = await signup({ username: `chatroomowner${suffix}` });
-			const invitee = await signup({ username: `chatroominvitee${suffix}` });
+			const owner = await signup({ username: `chatrmown${suffix}` });
+			const invitee = await signup({ username: `chatrminv${suffix}` });
 
 			const room = await api('chat/rooms/create', { name: `hono-chat-room-${suffix}`, description: 'test room' }, owner);
 			assert.strictEqual(room.status, 200);
@@ -1494,8 +1502,8 @@ describe('Endpoints', () => {
 
 		test('chat/rooms/invitations/ignore lets a user decline without joining', async () => {
 			const suffix = Date.now().toString(36);
-			const owner = await signup({ username: `chatignoreowner${suffix}` });
-			const invitee = await signup({ username: `chatignoreinvitee${suffix}` });
+			const owner = await signup({ username: `chatigown${suffix}` });
+			const invitee = await signup({ username: `chatiginv${suffix}` });
 
 			const room = await api('chat/rooms/create', { name: `hono-ignore-room-${suffix}` }, owner);
 			assert.strictEqual(room.status, 200);
@@ -4544,6 +4552,10 @@ describe('Endpoints', () => {
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
 			assert.strictEqual(jobs.some(job => job.data.noteDraftId === createdDraft.id), true);
+
+			// scheduledNoteLimit (デフォルト1) を後続テストで消費しないよう後片付け
+			const cleanup = await api('notes/drafts/delete', { draftId: createdDraft.id }, alice);
+			assert.strictEqual(cleanup.status, 204);
 		});
 
 		test('notes/drafts/create validates scheduling and referenced entities', async () => {
@@ -4955,8 +4967,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(created.status, 200);
 			const antennaId = created.body.id;
 
-			const note = await createNoteInDatabase(db, {
-				id: genId(config),
+			const noteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: noteId,
 				userId: alice.id,
 				text: 'antenna timeline note',
 				visibility: 'public',
@@ -4964,19 +4977,19 @@ describe('Endpoints', () => {
 
 			const redis = createRedisClient(config);
 			try {
-				await redis.lpush(`list:antennaTimeline:${antennaId}`, note.id);
+				await redis.lpush(`list:antennaTimeline:${antennaId}`, noteId);
 
 				const notes = await api('antennas/notes', { antennaId, limit: 10 }, alice);
 				assert.strictEqual(notes.status, 200);
-				assert.strictEqual((notes.body as any[]).some(n => n.id === note.id), true);
+				assert.strictEqual((notes.body as any[]).some(n => n.id === noteId), true);
 
-				const removed = await api('antennas/remove-note', { antennaId, noteId: note.id }, alice);
+				const removed = await api('antennas/remove-note', { antennaId, noteId }, alice);
 				assert.strictEqual(removed.status, 204);
 
 				const remaining = await redis.lrange(`list:antennaTimeline:${antennaId}`, 0, -1);
-				assert.strictEqual(remaining.includes(note.id), false);
+				assert.strictEqual(remaining.includes(noteId), false);
 
-				const missingAntenna = await api('antennas/remove-note', { antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', noteId: note.id }, alice);
+				const missingAntenna = await api('antennas/remove-note', { antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', noteId }, alice);
 				assert.strictEqual(missingAntenna.status, 400);
 				assert.strictEqual(castAsError(missingAntenna.body as any).error.id, '850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
 			} finally {
@@ -6084,24 +6097,30 @@ describe('Endpoints', () => {
 
 		test('following/update-all updates only the caller followings', async () => {
 			const config = loadConfig();
+			// 共有fixture (alice/bob) に直接DBのfollowing行を残すと、後続のblocking系テストの
+			// unfollow副作用がカウンタを負値に汚染するため、使い捨てユーザーで完結させる
+			const suffix = Date.now().toString(36).slice(-8);
+			const updater = await signup({ username: `hfua${suffix}` });
+			const targetA = await signup({ username: `hfub${suffix}` });
+			const targetB = await signup({ username: `hfuc${suffix}` });
 			await createFollowingInDatabase(db, {
 				id: genId(config),
-				followerId: alice.id,
-				followeeId: bob.id,
+				followerId: updater.id,
+				followeeId: targetA.id,
 				notify: 'normal',
 				withReplies: false,
 			});
 			await createFollowingInDatabase(db, {
 				id: genId(config),
-				followerId: alice.id,
-				followeeId: carol.id,
+				followerId: updater.id,
+				followeeId: targetB.id,
 				notify: 'normal',
 				withReplies: false,
 			});
 			await createFollowingInDatabase(db, {
 				id: genId(config),
-				followerId: bob.id,
-				followeeId: alice.id,
+				followerId: targetA.id,
+				followeeId: updater.id,
 				notify: 'normal',
 				withReplies: false,
 			});
@@ -6109,18 +6128,18 @@ describe('Endpoints', () => {
 			const res = await api('following/update-all', {
 				notify: 'none',
 				withReplies: true,
-			}, alice);
+			}, updater);
 			assert.strictEqual(res.status, 204);
 
-			const aliceToBob = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, alice.id, bob.id);
-			const aliceToCarol = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, alice.id, carol.id);
-			const bobToAlice = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, bob.id, alice.id);
-			assert.strictEqual(aliceToBob?.notify, null);
-			assert.strictEqual(aliceToBob?.withReplies, true);
-			assert.strictEqual(aliceToCarol?.notify, null);
-			assert.strictEqual(aliceToCarol?.withReplies, true);
-			assert.strictEqual(bobToAlice?.notify, 'normal');
-			assert.strictEqual(bobToAlice?.withReplies, false);
+			const updaterToA = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, updater.id, targetA.id);
+			const updaterToB = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, updater.id, targetB.id);
+			const aToUpdater = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, targetA.id, updater.id);
+			assert.strictEqual(updaterToA?.notify, null);
+			assert.strictEqual(updaterToA?.withReplies, true);
+			assert.strictEqual(updaterToB?.notify, null);
+			assert.strictEqual(updaterToB?.withReplies, true);
+			assert.strictEqual(aToUpdater?.notify, 'normal');
+			assert.strictEqual(aToUpdater?.withReplies, false);
 		});
 
 		test('flash/update updates own flash and preserves ownership errors', async () => {
@@ -6553,9 +6572,11 @@ describe('Endpoints', () => {
 			const notifications = await readNotificationTimeline(config, user.id);
 			const appNotification = notifications.find(n => n.type === 'app');
 			assert.ok(appNotification);
-			assert.strictEqual(appNotification.body, 'hello world');
-			assert.strictEqual(appNotification.header, 'my header');
-			assert.strictEqual(appNotification.icon, 'https://example.com/icon.png');
+			// Redis stream 上の生の通知は customBody/customHeader/customIcon で保持され、
+			// body/header/icon への改名は i/notifications の pack 時に行われる (原典と同じ)
+			assert.strictEqual(appNotification.customBody, 'hello world');
+			assert.strictEqual(appNotification.customHeader, 'my header');
+			assert.strictEqual(appNotification.customIcon, 'https://example.com/icon.png');
 		});
 
 		test('notifications/create は通知設定が never の場合は作成しない', async () => {
@@ -8192,6 +8213,10 @@ describe('Endpoints', () => {
 				replyId: replyTargetId,
 				renoteId: renoteTargetId,
 				reactions: { '👍': 2 },
+				// 直近2秒以内のノートはDBを引かず pair cache から myReaction を解決する (原典と同じ最適化)。
+				// reactions の合計数 (2) 以上の pair が無いと cache 不完全とみなされ 2秒ガードで
+				// undefined になるため、reactions と整合する 2 件の pair を用意する
+				reactionAndUserPairCache: [`${reactor.id}/👍`, `${author.id}/👍`],
 			});
 			await createNoteReactionInDatabase(db, {
 				id: genId(config),
@@ -8350,7 +8375,8 @@ describe('Endpoints', () => {
 			const children = await api('notes/children', { noteId: rootId });
 			assert.strictEqual(children.status, 200);
 			const childIds = children.body.map((n: any) => n.id).sort();
-			assert.deepStrictEqual(childIds, [replyId, renoteId].sort());
+			// 純リノート (text/ファイル/投票なし) は原典どおり children に含まれない (引用のみ含まれる)
+			assert.deepStrictEqual(childIds, [replyId]);
 
 			const replies = await api('notes/replies', { noteId: rootId });
 			assert.strictEqual(replies.status, 200);
@@ -8464,26 +8490,12 @@ describe('Endpoints', () => {
 
 	describe('notes timelines (global/local/hybrid/featured)', () => {
 		test('global-timeline と local-timeline は可視性・ホスト条件を維持する', async () => {
-			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `htl${suffix}` });
 
-			const publicNoteId = genId(config);
-			await createNoteInDatabase(db, {
-				id: publicNoteId,
-				text: 'global/local timeline public note',
-				userId: author.id,
-				userHost: null,
-				visibility: 'public',
-			});
-			const homeNoteId = genId(config);
-			await createNoteInDatabase(db, {
-				id: homeNoteId,
-				text: 'home-only note (excluded from global/local)',
-				userId: author.id,
-				userHost: null,
-				visibility: 'home',
-			});
+			// fanout タイムライン (Redis) 経由の読み取りを検証するため、直接DB挿入ではなく実APIで投稿する
+			const publicNoteId = (await post(author, { text: 'global/local timeline public note', visibility: 'public' })).id;
+			const homeNoteId = (await post(author, { text: 'home-only note (excluded from global/local)', visibility: 'home' })).id;
 
 			const global = await api('notes/global-timeline', { limit: 100 });
 			assert.strictEqual(global.status, 200);
@@ -8497,29 +8509,14 @@ describe('Endpoints', () => {
 		});
 
 		test('hybrid-timeline はfolloweeの投稿のみ含む', async () => {
-			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const viewer = await signup({ username: `hht${suffix}` });
 			const followee = await signup({ username: `hhtf${suffix}` });
 			const stranger = await signup({ username: `hhts${suffix}` });
 			await api('following/create', { userId: followee.id }, viewer);
 
-			const followeeNoteId = genId(config);
-			await createNoteInDatabase(db, {
-				id: followeeNoteId,
-				text: 'from followee',
-				userId: followee.id,
-				userHost: null,
-				visibility: 'public',
-			});
-			const strangerNoteId = genId(config);
-			await createNoteInDatabase(db, {
-				id: strangerNoteId,
-				text: 'from stranger, not followed, not local timeline eligible',
-				userId: stranger.id,
-				userHost: null,
-				visibility: 'home',
-			});
+			const followeeNoteId = (await post(followee, { text: 'from followee', visibility: 'public' })).id;
+			const strangerNoteId = (await post(stranger, { text: 'from stranger, not followed, not local timeline eligible', visibility: 'home' })).id;
 
 			const hybrid = await api('notes/hybrid-timeline', { limit: 100 }, viewer);
 			assert.strictEqual(hybrid.status, 200);
@@ -8924,24 +8921,20 @@ describe('Endpoints', () => {
 			assert.strictEqual(beforeNew.body.some((n: any) => n.id === newNoteId), false);
 		});
 
-		test('withRepliesはDBフォールバック経路では効かず、指定に関わらずリプライを含む(元実装の既存挙動)', async () => {
-			const config = loadConfig();
+		test('withReplies指定に応じて他人へのリプライの包含が切り替わる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hunr${suffix}` });
-			const rootNote = await post(author, { text: 'users/notes withReplies root', visibility: 'public' });
-			const replyNoteId = genId(config);
-			await createNoteInDatabase(db, {
-				id: replyNoteId,
-				text: 'users/notes withReplies reply',
-				userId: author.id,
-				userHost: null,
-				visibility: 'public',
-				replyId: rootNote.id,
-			});
+			const other = await signup({ username: `hunro${suffix}` });
+			const rootNote = await post(other, { text: 'users/notes withReplies root', visibility: 'public' });
+			// author の userTimeline (Redis) を空にしないための通常投稿。空だとDBフォールバックになり、
+			// DBフォールバック経路は原典同様リプライを除外しない。
+			const normalNoteId = (await post(author, { text: 'users/notes withReplies normal', visibility: 'public' })).id;
+			const replyNoteId = (await post(author, { text: 'users/notes withReplies reply', visibility: 'public', replyId: rootNote.id })).id;
 
 			const withRepliesFalse = await api('users/notes', { userId: author.id, withReplies: false, limit: 100 });
 			assert.strictEqual(withRepliesFalse.status, 200);
-			assert.ok(withRepliesFalse.body.some((n: any) => n.id === replyNoteId));
+			assert.ok(withRepliesFalse.body.some((n: any) => n.id === normalNoteId));
+			assert.strictEqual(withRepliesFalse.body.some((n: any) => n.id === replyNoteId), false);
 
 			const withRepliesTrue = await api('users/notes', { userId: author.id, withReplies: true, limit: 100 });
 			assert.strictEqual(withRepliesTrue.status, 200);
@@ -9071,9 +9064,9 @@ describe('Endpoints', () => {
 			});
 			await createUserListMembershipInDatabase(db, {
 				id: genId(config),
-				userId: owner.id,
+				userId: member.id,
 				userListId: list.id,
-				userListUserId: member.id,
+				userListUserId: owner.id,
 			});
 
 			const memberNoteId = genId(config);
@@ -9148,6 +9141,10 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
+
+			// canSearchNotes はデフォルト false (原典同様) のため、ロールで許可してから検索する
+			const searchRole = await role(alice, {}, { canSearchNotes: { priority: 1, useDefault: false, value: true } });
+			await api('admin/roles/assign', { userId: author.id, roleId: searchRole.id }, alice);
 
 			const searched = await api('notes/search', { query: uniqueText }, author);
 			assert.strictEqual(searched.status, 200);
@@ -10548,11 +10545,14 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const target = await signup({ username: `hsus${suffix}` });
+			// 共有fixtureのbobをfolloweeにすると、suspend時のunfollowジョブがカウンタを負値に
+			// 汚染して後続のfollowing系テストを壊すため、使い捨てユーザーを用いる
+			const throwawayFollowee = await signup({ username: `hsusf${suffix}` });
 			const config = loadConfig();
 			const following = await createFollowingInDatabase(db, {
 				id: genId(config),
 				followerId: target.id,
-				followeeId: bob.id,
+				followeeId: throwawayFollowee.id,
 			});
 
 			const suspended = await api('admin/suspend-user', { userId: target.id }, alice);

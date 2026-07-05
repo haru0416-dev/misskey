@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { AdminEventTypes, BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, NoteEventTypes, UserListEventTypes } from '@/core/GlobalEventService.js';
+import type { AdminEventTypes, AntennaEventTypes, BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, NoteEventTypes, UserListEventTypes } from '@/core/GlobalEventService.js';
 import type { Packed } from '@/misc/json-schema.js';
+import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -42,6 +43,12 @@ export type HonoApiUserListStreamPublisher = <K extends keyof UserListEventTypes
 	listId: MiUserList['id'],
 	type: K,
 	value?: UserListEventTypes[K],
+) => void;
+
+export type HonoApiAntennaStreamPublisher = <K extends keyof AntennaEventTypes>(
+	antennaId: MiAntenna['id'],
+	type: K,
+	value?: AntennaEventTypes[K],
 ) => void;
 
 export type HonoApiChatUserStreamPublisher = <K extends keyof ChatEventTypes>(
@@ -87,6 +94,7 @@ export type HonoEventPublishers = {
 	publishAdminStream: HonoApiAdminStreamPublisher;
 	publishDriveStream: HonoApiDriveStreamPublisher;
 	publishUserListStream: HonoApiUserListStreamPublisher;
+	publishAntennaStream: HonoApiAntennaStreamPublisher;
 	publishChatUserStream: HonoApiChatUserStreamPublisher;
 	publishChatRoomStream: HonoApiChatRoomStreamPublisher;
 	publishNotesStream: HonoApiNotesStreamPublisher;
@@ -101,6 +109,7 @@ export function createHonoEventPublishers(deps: HonoRedisEventPublisherDependenc
 		publishAdminStream: (userId, type, value) => publishToChannel(deps, `adminStream:${userId}`, type, value),
 		publishDriveStream: (userId, type, value) => publishToChannel(deps, `driveStream:${userId}`, type, value),
 		publishUserListStream: (listId, type, value) => publishToChannel(deps, `userListStream:${listId}`, type, value),
+		publishAntennaStream: (antennaId, type, value) => publishToChannel(deps, `antennaStream:${antennaId}`, type, value),
 		publishChatUserStream: (fromUserId, toUserId, type, value) => publishToChannel(deps, `chatUserStream:${fromUserId}-${toUserId}`, type, value),
 		publishChatRoomStream: (toRoomId, type, value) => publishToChannel(deps, `chatRoomStream:${toRoomId}`, type, value),
 		publishNotesStream: note => publishToChannel(deps, 'notesStream', null, note),

@@ -279,7 +279,7 @@ function tryRewriteUrl(maybeUrl: string): string {
 	}
 }
 
-function renderKeyForHonoApi(config: Pick<Config, 'url'>, user: MiLocalUser, key: MiUserKeypair, postfix?: string): Record<string, unknown> {
+export function renderKeyForHonoApi(config: Pick<Config, 'url'>, user: MiLocalUser, key: MiUserKeypair, postfix?: string): Record<string, unknown> {
 	return {
 		id: `${config.url}/users/${user.id}${postfix ?? '/publickey'}`,
 		type: 'Key',
