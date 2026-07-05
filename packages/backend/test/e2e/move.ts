@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { INestApplicationContext } from '@nestjs/common';
-
 process.env.NODE_ENV = 'test';
+// jobQueue() が呼ぶ createRuntimeDependencies() は UrlPreviewService を構築する。同サービスは
+// rolldown の `define` で注入される _SUMMALY_VERSION_ を参照するが、このファイルは jobQueue() を
+// (test-server 経由でなく) vitest プロセス内で直接呼ぶため、ビルド時injectionが効かない。
+(globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { setTimeout } from 'node:timers/promises';
 import * as assert from 'assert';
@@ -14,12 +16,12 @@ import { loadConfig } from '@/config.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
-import { jobQueue } from '@/boot/common.js';
+import { jobQueue, type JobQueueRuntime } from '@/boot/common.js';
 import { api, castAsError, initTestDb, signup, successfulApiCall, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Account Move', () => {
-	let jq: INestApplicationContext;
+	let jq: JobQueueRuntime;
 	let url: URL;
 
 	let root: misskey.entities.SignupResponse;
