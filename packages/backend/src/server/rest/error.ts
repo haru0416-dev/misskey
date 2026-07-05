@@ -54,6 +54,15 @@ export class HonoApiError extends Error {
 	}
 }
 
+/** 400 Bad Request のクライアントエラーを組み立てる汎用ヘルパー。status を変えたい場合は clientErrorWithStatus を使う。 */
+export function clientError(message: string, code: string, id: string): HonoApiError {
+	return new HonoApiError({ status: 400, message, code, id });
+}
+
+export function clientErrorWithStatus(status: number, message: string, code: string, id: string): HonoApiError {
+	return new HonoApiError({ status, message, code, id });
+}
+
 export function invalidJsonBody(): HonoApiError {
 	return new HonoApiError({
 		status: 400,

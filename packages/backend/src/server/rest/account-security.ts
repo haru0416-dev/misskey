@@ -73,7 +73,7 @@ export async function handleHonoApiIChangePassword(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(changePasswordParamDef, body) as ChangePasswordParams;
+	const params = parseHonoApiParams(changePasswordParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
 	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);
@@ -108,7 +108,7 @@ export async function handleHonoApiIRegenerateToken(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(regenerateTokenParamDef, body) as RegenerateTokenParams;
+	const params = parseHonoApiParams(regenerateTokenParamDef, body);
 	const freshUser = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 	const oldToken = freshUser.token!;
 
@@ -148,7 +148,7 @@ export async function handleHonoApiIDeleteAccount(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(deleteAccountParamDef, body) as DeleteAccountParams;
+	const params = parseHonoApiParams(deleteAccountParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
 	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);
@@ -195,7 +195,7 @@ export async function handleHonoApiIUpdateEmail(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(updateEmailParamDef, body) as UpdateEmailParams;
+	const params = parseHonoApiParams(updateEmailParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
 	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);

@@ -15,7 +15,8 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMuting } from '@/models/Muting.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, clientError } from './error.js';
+import { resolveHonoApiIdPagination } from './following.js';
 import { packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -58,9 +59,6 @@ const muteListParamDef = {
 	required: [],
 } as const;
 
-type MuteCreateParams = SchemaType<typeof muteCreateParamDef>;
-type UserIdParams = SchemaType<typeof userIdParamDef>;
-type MuteListParams = SchemaType<typeof muteListParamDef>;
 
 type HonoApiMutingResponse = {
 	id: string;
@@ -76,15 +74,6 @@ type HonoApiRenoteMutingResponse = {
 	muteeId: MiUser['id'];
 	mutee: UserDetailedNotMeHonoApiResponse;
 };
-
-function clientError(message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({
-		status: 400,
-		message,
-		code,
-		id,
-	});
-}
 
 function muteCreateNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', '6fef56f3-e765-4957-88e5-c6f65329b8a5');
@@ -121,39 +110,6 @@ export async function refreshUserMutingsCache(deps: { db: MiDrizzleDatabase; red
 async function refreshRenoteMutingsCache(deps: HonoApiAccountMuteDependencies, muterId: MiUser['id']): Promise<void> {
 	const muteeIds = await listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, muterId);
 	await deps.redis.set(`kvcache:renoteMutings:${muterId}`, JSON.stringify(muteeIds), 'EX', 60 * 30);
-}
-
-function resolveRenoteMutePagination(
-	config: Config,
-	params: Pick<MuteListParams, 'sinceDate' | 'sinceId' | 'untilDate' | 'untilId'>,
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: 'asc' | 'desc';
-} {
-	let sinceId: string | null = null;
-	let untilId: string | null = null;
-	let order: 'asc' | 'desc' = 'desc';
-
-	if (params.sinceId && params.untilId) {
-		sinceId = params.sinceId;
-		untilId = params.untilId;
-	} else if (params.sinceId) {
-		sinceId = params.sinceId;
-		order = 'asc';
-	} else if (params.untilId) {
-		untilId = params.untilId;
-	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(config, params.sinceDate);
-		untilId = genId(config, params.untilDate);
-	} else if (params.sinceDate) {
-		sinceId = genId(config, params.sinceDate);
-		order = 'asc';
-	} else if (params.untilDate) {
-		untilId = genId(config, params.untilDate);
-	}
-
-	return { sinceId, untilId, order };
 }
 
 async function packHonoApiMuting(
@@ -200,7 +156,7 @@ export async function handleHonoApiMuteCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(muteCreateParamDef, body) as MuteCreateParams;
+	const params = parseHonoApiParams(muteCreateParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', 'a4619cb2-5f23-484b-9301-94c903074e10');
@@ -229,7 +185,7 @@ export async function handleHonoApiMuteDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', 'f428b029-6b39-4d48-a1d2-cc1ae6dd5cf9');
@@ -251,7 +207,7 @@ export async function handleHonoApiMuteList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Muting'>[]> {
-	const params = parseHonoApiParams(muteListParamDef, body) as MuteListParams;
+	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listMutingsByMuterIdWithPaginationFromDatabase(deps.db, me.id, {
 		...resolveMutingPagination({
 			gen: time => genId(deps.config, time),
@@ -267,7 +223,7 @@ export async function handleHonoApiRenoteMuteCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', '37285718-52f7-4aef-b7de-c38b8e8a8420');
@@ -291,7 +247,7 @@ export async function handleHonoApiRenoteMuteDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userIdParamDef, body) as UserIdParams;
+	const params = parseHonoApiParams(userIdParamDef, body);
 
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', '619b1314-0850-4597-a242-e245f3da42af');
@@ -313,10 +269,10 @@ export async function handleHonoApiRenoteMuteList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'RenoteMuting'>[]> {
-	const params = parseHonoApiParams(muteListParamDef, body) as MuteListParams;
+	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listRenoteMutingsByMuterIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
-		...resolveRenoteMutePagination(deps.config, params),
+		...resolveHonoApiIdPagination(deps.config, params),
 	});
 
 	return await Promise.all(mutings.map(muting => packHonoApiRenoteMuting(deps, muting, me) as Promise<Packed<'RenoteMuting'>>));

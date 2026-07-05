@@ -22,7 +22,6 @@ const endpointParamDef = {
 	required: ['endpoint'],
 } as const;
 
-type EndpointParams = SchemaType<typeof endpointParamDef>;
 
 function apiParamTypeLabel(value: unknown): string {
 	if (value != null && typeof value === 'object' && 'type' in value) {
@@ -44,7 +43,7 @@ export async function handleHonoApiEndpoint(body: Record<string, unknown>): Prom
 		type: string;
 	}[];
 } | null> {
-	const params = parseHonoApiParams(endpointParamDef, body) as EndpointParams;
+	const params = parseHonoApiParams(endpointParamDef, body);
 	const endpoints = await getEndpoints();
 	const endpoint = endpoints.find(item => item.name === params.endpoint);
 	if (endpoint == null) return null;

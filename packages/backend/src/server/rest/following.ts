@@ -12,12 +12,13 @@ import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listAllFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
 import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
-import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
+import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
 import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listFollowingUsersByBirthdayDateFromDatabase } from '@/core/UserProfileStore.js';
 import { isHonoApiModerator } from './role-policy.js';
+import { fetchOrRegisterFederatedInstance } from './federation.js';
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
@@ -29,14 +30,13 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
-import type { MiInstance } from '@/models/Instance.js';
 import type { MiMeta } from '@/models/_.js';
 import { birthdaySchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { xaddHonoApiNotification } from './notification.js';
 import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, resolveAlsoKnownAsForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
@@ -167,15 +167,6 @@ type FollowingNotification = {
 	message?: string | null;
 };
 
-function clientError(message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({
-		status: 400,
-		message,
-		code,
-		id,
-	});
-}
-
 function followingCreateNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
 }
@@ -244,7 +235,7 @@ export function isRemoteUser(user: MiUser): user is MiUser & { host: string; uri
 	return user.host !== null;
 }
 
-function genLocalUserUri(config: Config, userId: MiUser['id']): string {
+export function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
 	return `${config.url}/users/${userId}`;
 }
 
@@ -261,7 +252,7 @@ export function renderFollow(config: Config, follower: MiUser, followee: MiUser,
 	};
 }
 
-function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
+export function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
 	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
 
 	return {
@@ -317,38 +308,6 @@ export async function refreshUserFollowingsCache(deps: HonoApiFollowingDependenc
 	}
 
 	await deps.redis.set(`kvcache:userFollowings:${followerId}`, JSON.stringify(value), 'EX', 60 * 30);
-}
-
-async function updateFederatedInstanceCache(
-	deps: HonoApiFollowingDependencies,
-	instance: MiInstance,
-): Promise<void> {
-	await deps.redis.set(
-		`kvcache:federatedInstance:${instance.host}`,
-		JSON.stringify(instance),
-		'EX',
-		60 * 30,
-	);
-}
-
-async function fetchOrRegisterFederatedInstance(
-	deps: HonoApiFollowingDependencies,
-	host: string,
-): Promise<MiInstance> {
-	const punyHost = domainToASCII(host.toLowerCase());
-	const existing = await fetchInstanceByHostFromDatabase(deps.db, punyHost);
-	if (existing != null) {
-		await updateFederatedInstanceCache(deps, existing);
-		return existing;
-	}
-
-	const created = await createInstanceInDatabase(deps.db, {
-		id: genId(deps.config),
-		host: punyHost,
-		firstRetrievedAt: new Date(),
-	});
-	await updateFederatedInstanceCache(deps, created);
-	return created;
 }
 
 async function isNotificationAllowed(
@@ -721,7 +680,7 @@ export async function handleHonoApiFollowingCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingCreateParamDef, body) as FollowingCreateParams;
+	const params = parseHonoApiParams(followingCreateParamDef, body);
 	const follower = await getTargetUserOrThrow(deps, me.id);
 
 	if (follower.id === params.userId) {
@@ -776,7 +735,7 @@ export async function handleHonoApiFollowingUpdateAll(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(followingUpdateAllParamDef, body) as FollowingUpdateAllParams;
+	const params = parseHonoApiParams(followingUpdateAllParamDef, body);
 	await updateFollowingsByFollowerIdInDatabase(deps.db, me.id, {
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
@@ -788,7 +747,7 @@ export async function handleHonoApiFollowingDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const follower = me;
 
 	if (me.id === params.userId) {
@@ -812,7 +771,7 @@ export async function handleHonoApiFollowingUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUpdateParamDef, body) as FollowingUpdateParams;
+	const params = parseHonoApiParams(followingUpdateParamDef, body);
 	const follower = me;
 
 	if (me.id === params.userId) {
@@ -839,7 +798,7 @@ export async function handleHonoApiFollowingInvalidate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const followee = me;
 
 	if (me.id === params.userId) {
@@ -886,7 +845,7 @@ export async function handleHonoApiFollowingRequestsAccept(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
 
 	await acceptFollowRequestForHonoApi(deps, me, follower);
@@ -923,7 +882,7 @@ export async function handleHonoApiFollowingRequestsCancel(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const follower = me;
 	const followee = await getTargetUserOrThrow(deps, params.userId, followingRequestsCancelNoSuchUserError);
 
@@ -955,7 +914,7 @@ export async function handleHonoApiFollowingRequestsReject(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(followingUserIdParamDef, body) as FollowingUserIdParams;
+	const params = parseHonoApiParams(followingUserIdParamDef, body);
 	const followee = me;
 	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsRejectNoSuchUserError);
 
@@ -1026,7 +985,7 @@ export async function handleHonoApiFollowingRequestsList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
+	const params = parseHonoApiParams(followingRequestsListParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1043,7 +1002,7 @@ export async function handleHonoApiFollowingRequestsSent(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const params = parseHonoApiParams(followingRequestsListParamDef, body) as FollowingRequestsListParams;
+	const params = parseHonoApiParams(followingRequestsListParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1075,7 +1034,7 @@ export async function handleHonoApiFollowingList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
-	const params = parseHonoApiParams(followingListParamDef, body) as FollowingListParams;
+	const params = parseHonoApiParams(followingListParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1335,7 +1294,7 @@ export async function handleHonoApiUsersGetFollowingUsersByBirthday(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; birthday: string; user: Packed<'UserLite'> }[]> {
-	const params = parseHonoApiParams(usersGetFollowingUsersByBirthdayParamDef, body) as UsersGetFollowingUsersByBirthdayParams;
+	const params = parseHonoApiParams(usersGetFollowingUsersByBirthdayParamDef, body);
 
 	let condition: { type: 'single'; value: number } | { type: 'range'; begin: number; end: number };
 	if (Object.hasOwn(params.birthday, 'begin') && Object.hasOwn(params.birthday, 'end')) {

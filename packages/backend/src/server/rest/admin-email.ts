@@ -21,12 +21,11 @@ const adminSendEmailParamDef = {
 	required: ['to', 'subject', 'text'],
 } as const;
 
-type AdminSendEmailParams = SchemaType<typeof adminSendEmailParamDef>;
 
 export async function handleHonoApiAdminSendEmail(
 	deps: HonoApiAdminEmailDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminSendEmailParamDef, body) as AdminSendEmailParams;
+	const params = parseHonoApiParams(adminSendEmailParamDef, body);
 	await deps.emailService.sendEmail(params.to, params.subject, params.text, params.text);
 }

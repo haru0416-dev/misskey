@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { listModerationLogsFromDatabase, type ModerationLogOrder } from '@/core/ModerationLogStore.js';
+import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import type { Config } from '@/config.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
+import { resolveHonoApiIdPagination } from './following.js';
 import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -42,32 +42,6 @@ const adminShowModerationLogsParamDef = {
 	required: [],
 } as const;
 
-type AdminShowModerationLogsParams = SchemaType<typeof adminShowModerationLogsParamDef>;
-
-function resolveModerationLogPagination(
-	config: Config,
-	params: AdminShowModerationLogsParams,
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: ModerationLogOrder;
-} {
-	if (params.sinceId && params.untilId) {
-		return { sinceId: params.sinceId, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceId) {
-		return { sinceId: params.sinceId, untilId: null, order: 'asc' };
-	} else if (params.untilId) {
-		return { sinceId: null, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceDate && params.untilDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: genId(config, params.untilDate), order: 'desc' };
-	} else if (params.sinceDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: null, order: 'asc' };
-	} else if (params.untilDate) {
-		return { sinceId: null, untilId: genId(config, params.untilDate), order: 'desc' };
-	}
-
-	return { sinceId: null, untilId: null, order: 'desc' };
-}
 
 async function packModerationLogsForHonoApi(
 	deps: HonoApiModerationLogDependencies,
@@ -89,8 +63,8 @@ export async function handleHonoApiAdminShowModerationLogs(
 	deps: HonoApiModerationLogDependencies,
 	body: Record<string, unknown>,
 ): Promise<HonoApiModerationLogResponse[]> {
-	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body) as AdminShowModerationLogsParams;
-	const pagination = resolveModerationLogPagination(deps.config, params);
+	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body);
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const logs = await listModerationLogsFromDatabase(deps.db, {
 		limit: params.limit,
 		order: pagination.order,

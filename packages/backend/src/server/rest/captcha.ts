@@ -49,7 +49,6 @@ const captchaSaveParamDef = {
 	required: ['provider'],
 } as const;
 
-type CaptchaSaveParams = SchemaType<typeof captchaSaveParamDef>;
 
 function captchaErrorToHonoApiError(error: CaptchaError): HonoApiError {
 	switch (error.code) {
@@ -110,7 +109,7 @@ export async function handleHonoApiAdminCaptchaSave(
 	deps: HonoApiCaptchaDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(captchaSaveParamDef, body) as CaptchaSaveParams;
+	const params = parseHonoApiParams(captchaSaveParamDef, body);
 	const result = await saveCaptchaSetting({
 		httpRequestService: deps.httpRequestService,
 		updateMeta: async data => {

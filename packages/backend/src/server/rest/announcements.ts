@@ -50,9 +50,6 @@ const readAnnouncementParamDef = {
 	required: ['announcementId'],
 } as const;
 
-type AnnouncementsParams = SchemaType<typeof announcementsParamDef>;
-type AnnouncementShowParams = SchemaType<typeof announcementShowParamDef>;
-type ReadAnnouncementParams = SchemaType<typeof readAnnouncementParamDef>;
 
 function noSuchAnnouncementError(): HonoApiError {
 	return new HonoApiError({
@@ -94,7 +91,7 @@ export async function handleHonoApiAnnouncements(
 	user: { id: MiUser['id'] } | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>[]> {
-	const params = parseHonoApiParams(announcementsParamDef, body) as AnnouncementsParams;
+	const params = parseHonoApiParams(announcementsParamDef, body);
 	const announcements = await listAnnouncementsForUserFromDatabase(deps.db, {
 		limit: params.limit,
 		...resolveAnnouncementPagination({
@@ -112,7 +109,7 @@ export async function handleHonoApiAnnouncementShow(
 	user: { id: MiUser['id'] } | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>> {
-	const params = parseHonoApiParams(announcementShowParamDef, body) as AnnouncementShowParams;
+	const params = parseHonoApiParams(announcementShowParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.announcementId);
 	if (announcement == null) throw noSuchAnnouncementError();
 	if (announcement.userId != null && announcement.userId !== user?.id) throw noSuchAnnouncementError();
@@ -125,7 +122,7 @@ export async function handleHonoApiIReadAnnouncement(
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(readAnnouncementParamDef, body) as ReadAnnouncementParams;
+	const params = parseHonoApiParams(readAnnouncementParamDef, body);
 
 	const created = await createAnnouncementReadInDatabase(deps.db, {
 		id: genId(deps.config),

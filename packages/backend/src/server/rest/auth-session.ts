@@ -139,7 +139,7 @@ export async function handleHonoApiAuthSessionGenerate(
 	deps: HonoApiAuthSessionDependencies,
 	body: Record<string, unknown>,
 ): Promise<{ token: string; url: string }> {
-	const params = parseHonoApiParams(authSessionGenerateParamDef, body) as AuthSessionGenerateParams;
+	const params = parseHonoApiParams(authSessionGenerateParamDef, body);
 	const app = await fetchAppBySecretFromDatabase(deps.db, params.appSecret);
 	if (app == null) throw noSuchGenerateAppError();
 
@@ -161,7 +161,7 @@ export async function handleHonoApiAuthSessionShow(
 	user: { id: MiUser['id'] } | null,
 	body: Record<string, unknown>,
 ): Promise<Awaited<ReturnType<typeof packHonoApiAuthSession>>> {
-	const params = parseHonoApiParams(authSessionShowParamDef, body) as AuthSessionShowParams;
+	const params = parseHonoApiParams(authSessionShowParamDef, body);
 	const session = await fetchAuthSessionByTokenFromDatabase(deps.db, params.token);
 	if (session == null) throw noSuchSessionShowError();
 
@@ -173,7 +173,7 @@ export async function handleHonoApiAuthAccept(
 	user: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(authSessionShowParamDef, body) as AuthSessionShowParams;
+	const params = parseHonoApiParams(authSessionShowParamDef, body);
 	const session = await fetchAuthSessionByTokenFromDatabase(deps.db, params.token);
 	if (session == null) throw noSuchSessionAcceptError();
 
@@ -208,7 +208,7 @@ export async function handleHonoApiAuthSessionUserkey(
 	accessToken: string;
 	user: Record<string, unknown>;
 }> {
-	const params = parseHonoApiParams(authSessionUserkeyParamDef, body) as AuthSessionUserkeyParams;
+	const params = parseHonoApiParams(authSessionUserkeyParamDef, body);
 	const app = await fetchAppBySecretFromDatabase(deps.db, params.appSecret);
 	if (app == null) throw noSuchUserkeyAppError();
 

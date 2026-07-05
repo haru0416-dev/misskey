@@ -131,7 +131,7 @@ export async function handleHonoApiNotesChildren(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(noteIdPaginationParamDef, body) as NoteIdPaginationParams;
+	const params = parseHonoApiParams(noteIdPaginationParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const notes = await listChildNotesFromDatabase(deps.db, {
@@ -171,7 +171,7 @@ export async function handleHonoApiNotesConversation(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesConversationParamDef, body) as NotesConversationParams;
+	const params = parseHonoApiParams(notesConversationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesConversationNoSuchNoteError();
 
@@ -232,7 +232,7 @@ export async function handleHonoApiNotesMentions(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesMentionsParamDef, body) as NotesMentionsParams;
+	const params = parseHonoApiParams(notesMentionsParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const mentions = await listMentionNotesFromDatabase(deps.db, {
@@ -253,7 +253,7 @@ export async function handleHonoApiNotesReplies(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(noteIdPaginationParamDef, body) as NoteIdPaginationParams;
+	const params = parseHonoApiParams(noteIdPaginationParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const timeline = await listReplyNotesFromDatabase(deps.db, {
@@ -277,7 +277,7 @@ export async function handleHonoApiNotesRenotes(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(noteIdPaginationParamDef, body) as NoteIdPaginationParams;
+	const params = parseHonoApiParams(noteIdPaginationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesRenotesNoSuchNoteError();
 
@@ -312,7 +312,7 @@ export async function handleHonoApiNotesState(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ isFavorited: boolean; isMutedThread: boolean }> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body) as NoteIdOnlyParams;
+	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdOrFailFromDatabase(deps.db, params.noteId);
 
 	const [favorite, threadMuting] = await Promise.all([
@@ -339,7 +339,7 @@ export async function handleHonoApiNotesFavoritesCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body) as NoteIdOnlyParams;
+	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesFavoritesCreateNoSuchNoteError();
 
@@ -377,7 +377,7 @@ export async function handleHonoApiNotesFavoritesDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body) as NoteIdOnlyParams;
+	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesFavoritesDeleteNoSuchNoteError();
 
@@ -396,7 +396,7 @@ export async function handleHonoApiNotesThreadMutingCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body) as NoteIdOnlyParams;
+	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesThreadMutingCreateNoSuchNoteError();
 
@@ -416,7 +416,7 @@ export async function handleHonoApiNotesThreadMutingDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body) as NoteIdOnlyParams;
+	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesThreadMutingDeleteNoSuchNoteError();
 
@@ -428,7 +428,7 @@ export async function handleHonoApiNotesShow(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>> {
-	const params = parseHonoApiParams(notesShowParamDef, body) as NotesShowParams;
+	const params = parseHonoApiParams(notesShowParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesShowNoSuchNoteError();
 
@@ -484,7 +484,7 @@ export async function handleHonoApiNotesGlobalTimeline(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesGlobalTimelineParamDef, body) as NotesGlobalTimelineParams;
+	const params = parseHonoApiParams(notesGlobalTimelineParamDef, body);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
 	if (!policies.gtlAvailable) throw notesGlobalTimelineDisabledError();
@@ -538,7 +538,7 @@ export async function handleHonoApiNotes(
 	deps: HonoApiNotesDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesParamDef, body) as NotesParams;
+	const params = parseHonoApiParams(notesParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const notes = await listPublicNotesFromDatabase(deps.db, {
@@ -597,7 +597,7 @@ export async function handleHonoApiNotesLocalTimeline(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesLocalTimelineParamDef, body) as NotesLocalTimelineParams;
+	const params = parseHonoApiParams(notesLocalTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
@@ -671,7 +671,7 @@ export async function handleHonoApiNotesHybridTimeline(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesHybridTimelineParamDef, body) as NotesHybridTimelineParams;
+	const params = parseHonoApiParams(notesHybridTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
@@ -777,7 +777,7 @@ export async function handleHonoApiNotesFeatured(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesFeaturedParamDef, body) as NotesFeaturedParams;
+	const params = parseHonoApiParams(notesFeaturedParamDef, body);
 
 	let noteIds: string[];
 	if (params.channelId) {
@@ -829,7 +829,7 @@ export async function handleHonoApiNotesClips(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body) as NoteIdOnlyParams;
+	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesClipsNoSuchNoteError();
 
@@ -884,7 +884,7 @@ export async function handleHonoApiNotesSearch(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesSearchParamDef, body) as NotesSearchParams;
+	const params = parseHonoApiParams(notesSearchParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
 
@@ -1037,7 +1037,7 @@ export async function handleHonoApiNotesShowPartialBulk(
 	deps: HonoApiNotesDependencies,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string> }[]> {
-	const params = parseHonoApiParams(notesShowPartialBulkParamDef, body) as NotesShowPartialBulkParams;
+	const params = parseHonoApiParams(notesShowPartialBulkParamDef, body);
 	const notes = await listNotesByIdsFromDatabase(deps.db, params.noteIds);
 	return await fetchNoteDiffsForHonoApi(deps, notes);
 }
@@ -1079,7 +1079,7 @@ export async function handleHonoApiNotesTimeline(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesTimelineParamDef, body) as NotesTimelineParams;
+	const params = parseHonoApiParams(notesTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const followees = await listAllFollowingsByFollowerIdFromDatabase(deps.db, me.id);
@@ -1149,7 +1149,7 @@ export async function handleHonoApiNotesUserListTimeline(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesUserListTimelineParamDef, body) as NotesUserListTimelineParams;
+	const params = parseHonoApiParams(notesUserListTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const list = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
@@ -1196,7 +1196,7 @@ export async function handleHonoApiNotesPollsRecommendation(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesPollsRecommendationParamDef, body) as NotesPollsRecommendationParams;
+	const params = parseHonoApiParams(notesPollsRecommendationParamDef, body);
 	const noteIds = await listUnvotedPublicPollNoteIdsFromDatabase(deps.db, {
 		meId: me.id,
 		excludeChannels: params.excludeChannels,

@@ -3,21 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { randomUUID } from 'node:crypto';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { deleteFollowRequestsByFolloweeIdFromDatabase, deleteFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import { listFollowingsForUnfollowByFollowerIdFromDatabase, listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DeliverQueue, RelationshipQueue } from '@/core/QueueModule.js';
 import { updateUserSuspendedStateInDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
-import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import type { IActivity, IDelete, IObject, IUndo } from '@/core/activitypub/type.js';
+import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
+import { addActivityContext, genLocalUserUri, renderUndo } from './following.js';
 import { isHonoApiModerator } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -38,11 +37,6 @@ const adminUserSuspensionParamDef = {
 	required: ['userId'],
 } as const;
 
-type AdminUserSuspensionParams = SchemaType<typeof adminUserSuspensionParamDef>;
-
-function genLocalUserUri(config: Config, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
-}
 
 function renderDelete(config: Config, object: IObject | string, user: { id: MiUser['id']; host: null }): IDelete {
 	return {
@@ -51,26 +45,6 @@ function renderDelete(config: Config, object: IObject | string, user: { id: MiUs
 		object,
 		published: new Date().toISOString(),
 	};
-}
-
-function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
-	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
-
-	return {
-		type: 'Undo',
-		...(id ? { id } : {}),
-		actor: genLocalUserUri(config, user.id),
-		object,
-		published: new Date().toISOString(),
-	};
-}
-
-function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
-	if (activity.id == null) {
-		activity.id = `${config.url}/${randomUUID()}`;
-	}
-
-	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
 }
 
 async function enqueueSharedInboxDelete(
@@ -168,7 +142,7 @@ async function findSuspensionTarget(
 	deps: HonoApiAdminUserSuspensionDependencies,
 	body: Record<string, unknown>,
 ): Promise<MiUser> {
-	const params = parseHonoApiParams(adminUserSuspensionParamDef, body) as AdminUserSuspensionParams;
+	const params = parseHonoApiParams(adminUserSuspensionParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw new Error('user not found');

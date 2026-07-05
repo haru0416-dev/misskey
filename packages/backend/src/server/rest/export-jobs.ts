@@ -80,7 +80,7 @@ export function handleHonoApiIExportFollowing(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): void {
-	const params = parseHonoApiParams(exportFollowingParamDef, body) as ExportFollowingParams;
+	const params = parseHonoApiParams(exportFollowingParamDef, body);
 	deps.dbQueue.add('exportFollowing', {
 		user: { id: me.id },
 		excludeMuting: params.excludeMuting,

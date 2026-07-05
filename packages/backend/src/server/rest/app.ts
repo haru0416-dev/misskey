@@ -174,7 +174,7 @@ export async function handleHonoApiAppCreate(
 	user: { id: MiUser['id'] } | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'App'>> {
-	const params = parseHonoApiParams(appCreateParamDef, body) as AppCreateParams;
+	const params = parseHonoApiParams(appCreateParamDef, body);
 	const secret = secureRndstr(32);
 	const permission = unique(params.permission.map(v => v.replace(/^(.+)(\/|-)(read|write)$/, '$3:$1')));
 	const app = await createAppInDatabase(deps.db, {
@@ -198,7 +198,7 @@ export async function handleHonoApiAppShow(
 	isSecureCredential: boolean,
 	body: Record<string, unknown>,
 ): Promise<Packed<'App'>> {
-	const params = parseHonoApiParams(appShowParamDef, body) as AppShowParams;
+	const params = parseHonoApiParams(appShowParamDef, body);
 	const app = await fetchAppByIdFromDatabase(deps.db, params.appId);
 	if (app == null) throw noSuchAppError();
 
@@ -212,7 +212,7 @@ export async function handleHonoApiMyApps(
 	user: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<Packed<'App'>[]> {
-	const params = parseHonoApiParams(myAppsParamDef, body) as MyAppsParams;
+	const params = parseHonoApiParams(myAppsParamDef, body);
 	const apps = await listAppsByUserIdFromDatabase(deps.db, user.id, {
 		limit: params.limit,
 		offset: params.offset,
@@ -234,7 +234,7 @@ export async function handleHonoApiIApps(
 	iconUrl?: string | null;
 	description?: string | null;
 }[]> {
-	const params = parseHonoApiParams(iAppsParamDef, body) as IAppsParams;
+	const params = parseHonoApiParams(iAppsParamDef, body);
 	const field: AccessTokenOrderField = params.sort === '+lastUsedAt' || params.sort === '-lastUsedAt' ? 'lastUsedAt' : 'id';
 	const direction = params.sort === '+createdAt' || params.sort === '+lastUsedAt' ? 'desc' : 'asc';
 	const tokens = await listAccessTokensByUserIdFromDatabase(deps.db, user.id, { field, direction });
@@ -262,7 +262,7 @@ export async function handleHonoApiIAuthorizedApps(
 	user: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<Packed<'App'>[]> {
-	const params = parseHonoApiParams(iAuthorizedAppsParamDef, body) as IAuthorizedAppsParams;
+	const params = parseHonoApiParams(iAuthorizedAppsParamDef, body);
 	const tokens = await listAccessTokensWithAppByUserIdFromDatabase(deps.db, user.id, {
 		limit: params.limit,
 		offset: params.offset,
@@ -291,7 +291,7 @@ export async function handleHonoApiIRevokeToken(
 	user: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(iRevokeTokenParamDef, body) as IRevokeTokenParams;
+	const params = parseHonoApiParams(iRevokeTokenParamDef, body);
 
 	if ('tokenId' in params) {
 		const tokenExists = await existsAccessTokenByIdFromDatabase(deps.db, params.tokenId);

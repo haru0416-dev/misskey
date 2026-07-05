@@ -77,7 +77,7 @@ export async function handleHonoApiDriveFilesList(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveFilesParamDef, body) as DriveFilesParams;
+	const params = parseHonoApiParams(driveFilesParamDef, body);
 
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
@@ -127,7 +127,7 @@ export async function handleHonoApiDriveStream(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveStreamParamDef, body) as DriveStreamParams;
+	const params = parseHonoApiParams(driveStreamParamDef, body);
 
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
@@ -174,7 +174,7 @@ export async function handleHonoApiDriveFilesShow(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>> {
-	const params = parseHonoApiParams(driveFilesShowParamDef, body) as DriveFilesShowParams;
+	const params = parseHonoApiParams(driveFilesShowParamDef, body);
 
 	const file = 'fileId' in params
 		? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
@@ -208,7 +208,7 @@ export async function handleHonoApiDriveFilesFind(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveFilesFindParamDef, body) as DriveFilesFindParams;
+	const params = parseHonoApiParams(driveFilesFindParamDef, body);
 
 	const files = await listDriveFilesByNameUserIdAndFolderIdFromDatabase(deps.db, {
 		name: params.name,
@@ -236,7 +236,7 @@ export async function handleHonoApiDriveFilesFindByHash(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveFilesFindByHashParamDef, body) as DriveFilesFindByHashParams;
+	const params = parseHonoApiParams(driveFilesFindByHashParamDef, body);
 
 	const files = await listDriveFilesByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 
@@ -270,7 +270,7 @@ export async function handleHonoApiDriveFilesAttachedNotes(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(driveFilesAttachedNotesParamDef, body) as DriveFilesAttachedNotesParams;
+	const params = parseHonoApiParams(driveFilesAttachedNotesParamDef, body);
 
 	const isModerator = await isHonoApiModerator(deps, me);
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
@@ -331,7 +331,7 @@ export async function handleHonoApiDriveFilesDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(driveFilesDeleteParamDef, body) as DriveFilesDeleteParams;
+	const params = parseHonoApiParams(driveFilesDeleteParamDef, body);
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) throw noSuchFileError('908939ec-e52b-4458-b395-1025195cea58');
@@ -378,7 +378,7 @@ export async function handleHonoApiDriveFilesUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>> {
-	const params = parseHonoApiParams(driveFilesUpdateParamDef, body) as DriveFilesUpdateParams;
+	const params = parseHonoApiParams(driveFilesUpdateParamDef, body);
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) throw noSuchFileError('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
@@ -452,7 +452,7 @@ export async function handleHonoApiDriveFilesMoveBulk(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(driveFilesMoveBulkParamDef, body) as DriveFilesMoveBulkParams;
+	const params = parseHonoApiParams(driveFilesMoveBulkParamDef, body);
 
 	const folder = params.folderId ? await fetchDriveFolderByIdAndUserIdOrFailFromDatabase(deps.db, params.folderId, me.id) : null;
 
@@ -486,7 +486,7 @@ export async function handleHonoApiDriveFilesAttachedChatMessages(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseHonoApiParams(driveFilesAttachedChatMessagesParamDef, body) as DriveFilesAttachedChatMessagesParams;
+	const params = parseHonoApiParams(driveFilesAttachedChatMessagesParamDef, body);
 
 	const isModerator = await isHonoApiModerator(deps, me);
 

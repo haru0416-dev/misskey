@@ -114,7 +114,7 @@ export async function handleHonoApiNotesDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notesDeleteParamDef, body) as NotesDeleteParams;
+	const params = parseHonoApiParams(notesDeleteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesDeleteNoSuchNoteError();
@@ -155,7 +155,7 @@ export async function handleHonoApiNotesUnrenote(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notesUnrenoteParamDef, body) as NotesUnrenoteParams;
+	const params = parseHonoApiParams(notesUnrenoteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesUnrenoteNoSuchNoteError();

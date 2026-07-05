@@ -202,7 +202,7 @@ export async function handleHonoApiPagesCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>> {
-	const params = parseHonoApiParams(pagesCreateParamDef, body) as PagesCreateParams;
+	const params = parseHonoApiParams(pagesCreateParamDef, body);
 
 	let eyeCatchingImage = null;
 	if (params.eyeCatchingImageId != null) {
@@ -278,7 +278,7 @@ export async function handleHonoApiPagesUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pagesUpdateParamDef, body) as PagesUpdateParams;
+	const params = parseHonoApiParams(pagesUpdateParamDef, body);
 
 	let eyeCatchingImageId = params.eyeCatchingImageId;
 	if (params.eyeCatchingImageId !== undefined && params.eyeCatchingImageId != null) {
@@ -381,7 +381,7 @@ export async function handleHonoApiPagesDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pagesDeleteParamDef, body) as PagesDeleteParams;
+	const params = parseHonoApiParams(pagesDeleteParamDef, body);
 
 	const result = await deletePageForHonoApi(deps, me, params.pageId);
 
@@ -420,7 +420,7 @@ export async function handleHonoApiPagesShow(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>> {
-	const params = parseHonoApiParams(pagesShowParamDef, body) as PagesShowParams;
+	const params = parseHonoApiParams(pagesShowParamDef, body);
 
 	let pageEntity: MiPage | null = null;
 	if ('pageId' in params) {
@@ -482,7 +482,7 @@ export async function handleHonoApiIPages(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
-	const params = parseHonoApiParams(iPagesParamDef, body) as IPagesParams;
+	const params = parseHonoApiParams(iPagesParamDef, body);
 	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(deps.config, time) }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, me.id, {
@@ -520,7 +520,7 @@ export async function handleHonoApiIPageLikes(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; page: Packed<'Page'> }[]> {
-	const params = parseHonoApiParams(iPageLikesParamDef, body) as IPageLikesParams;
+	const params = parseHonoApiParams(iPageLikesParamDef, body);
 
 	let sinceId: string | null = null;
 	let untilId: string | null = null;
@@ -590,7 +590,7 @@ export async function handleHonoApiUsersPages(
 	deps: HonoApiPageDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
-	const params = parseHonoApiParams(usersPagesParamDef, body) as UsersPagesParams;
+	const params = parseHonoApiParams(usersPagesParamDef, body);
 	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(deps.config, time) }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, params.userId, {

@@ -94,7 +94,7 @@ export async function handleHonoApiIImportBlocking(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importBlockingParamDef, body) as ImportBlockingParams;
+	const params = parseHonoApiParams(importBlockingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ebb53e5f-6574-9c0c-0b92-7ca6def56d7e' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'b7fbf0b1-aeef-3b21-29ef-fadd4cb72ccf' },
@@ -123,7 +123,7 @@ export async function handleHonoApiIImportFollowing(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importFollowingParamDef, body) as ImportFollowingParams;
+	const params = parseHonoApiParams(importFollowingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'b98644cf-a5ac-4277-a502-0b8054a709a3' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'dee9d4ed-ad07-43ed-8b34-b2856398bc60' },
@@ -152,7 +152,7 @@ export async function handleHonoApiIImportMuting(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importMutingParamDef, body) as ImportMutingParams;
+	const params = parseHonoApiParams(importMutingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'e674141e-bd2a-ba85-e616-aefb187c9c2a' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: '9b4ada6d-d7f7-0472-0713-4f558bd1ec9c' },
@@ -180,7 +180,7 @@ export async function handleHonoApiIImportUserLists(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importUserListsParamDef, body) as ImportUserListsParams;
+	const params = parseHonoApiParams(importUserListsParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ea9cc34f-c415-4bc6-a6fe-28ac40357049' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'ae6e7a22-971b-4b52-b2be-fc0b9b121fe9' },
@@ -224,7 +224,7 @@ export async function handleHonoApiIImportAntennas(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importAntennasParamDef, body) as ImportAntennasParams;
+	const params = parseHonoApiParams(importAntennasParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, me.id);
 	if (user == null) throw importAntennasNoSuchUserError();

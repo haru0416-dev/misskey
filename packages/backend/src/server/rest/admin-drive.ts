@@ -91,7 +91,6 @@ type AdminDriveFilesParams = SchemaType<typeof adminDriveFilesParamDef> & {
 	origin: 'combined' | 'local' | 'remote';
 	hostname: string | null;
 };
-type AdminDriveUserParams = SchemaType<typeof adminDriveUserParamDef>;
 
 type AdminDriveFileResponse = {
 	id: string;
@@ -267,7 +266,7 @@ export async function handleHonoApiAdminDeleteAllFilesOfAUser(
 	deps: HonoApiAdminDriveDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminDriveUserParamDef, body) as AdminDriveUserParams;
+	const params = parseHonoApiParams(adminDriveUserParamDef, body);
 	const files = await listAllDriveFilesByUserIdFromDatabase(deps.db, params.userId);
 
 	for (const file of files) {
@@ -279,7 +278,7 @@ export async function handleHonoApiAdminDriveFiles(
 	deps: HonoApiAdminDriveDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(adminDriveFilesParamDef, body) as AdminDriveFilesParams;
+	const params = parseHonoApiParams(adminDriveFilesParamDef, body);
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 
@@ -306,7 +305,7 @@ export async function handleHonoApiAdminDriveShowFile(
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<AdminDriveFileResponse> {
-	const params = parseHonoApiParams(adminDriveShowFileParamDef, body) as AdminDriveShowFileParams;
+	const params = parseHonoApiParams(adminDriveShowFileParamDef, body);
 	const file = 'fileId' in params
 		? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
 		: await fetchDriveFileByUrlFromDatabase(deps.db, params.url);

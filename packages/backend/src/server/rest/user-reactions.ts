@@ -84,7 +84,7 @@ export async function handleHonoApiUsersReactions(
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(usersReactionsParamDef, body) as UsersReactionsParams;
+	const params = parseHonoApiParams(usersReactionsParamDef, body);
 
 	const userIdsWhoBlockingMe = me ? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id)) : new Set<string>();
 	const iAmModerator = me ? await isHonoApiModerator(deps, me) : false;

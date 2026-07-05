@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase, type RoleAssignmentOrder } from '@/core/RoleAssignmentStore.js';
+import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchPublicExplorableRoleByIdFromDatabase, fetchPublicRoleByIdFromDatabase, listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
@@ -16,6 +16,7 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
+import { resolveHonoApiIdPagination } from './following.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -54,33 +55,6 @@ const rolesUsersParamDef = {
 	required: ['roleId'],
 } as const;
 
-type RolesShowParams = SchemaType<typeof rolesShowParamDef>;
-type RolesUsersParams = SchemaType<typeof rolesUsersParamDef>;
-
-function resolveRoleUsersPagination(
-	config: Config,
-	params: RolesUsersParams,
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: RoleAssignmentOrder;
-} {
-	if (params.sinceId && params.untilId) {
-		return { sinceId: params.sinceId, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceId) {
-		return { sinceId: params.sinceId, untilId: null, order: 'asc' };
-	} else if (params.untilId) {
-		return { sinceId: null, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceDate && params.untilDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: genId(config, params.untilDate), order: 'desc' };
-	} else if (params.sinceDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: null, order: 'asc' };
-	} else if (params.untilDate) {
-		return { sinceId: null, untilId: genId(config, params.untilDate), order: 'desc' };
-	}
-
-	return { sinceId: null, untilId: null, order: 'desc' };
-}
 
 function noSuchRoleError(): HonoApiError {
 	return new HonoApiError({
@@ -122,7 +96,6 @@ const rolesNotesParamDef = {
 	required: ['roleId'],
 } as const;
 
-type RolesNotesParams = SchemaType<typeof rolesNotesParamDef>;
 
 export async function packHonoApiRole(
 	deps: HonoApiRoleDependencies,
@@ -177,7 +150,7 @@ export async function handleHonoApiRolesShow(
 	deps: HonoApiRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>> {
-	const params = parseHonoApiParams(rolesShowParamDef, body) as RolesShowParams;
+	const params = parseHonoApiParams(rolesShowParamDef, body);
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError();
 
@@ -189,11 +162,11 @@ export async function handleHonoApiRolesUsers(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; user: MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse }[]> {
-	const params = parseHonoApiParams(rolesUsersParamDef, body) as RolesUsersParams;
+	const params = parseHonoApiParams(rolesUsersParamDef, body);
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
-	const pagination = resolveRoleUsersPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -213,7 +186,7 @@ export async function handleHonoApiRolesNotes(
 	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(rolesNotesParamDef, body) as RolesNotesParams;
+	const params = parseHonoApiParams(rolesNotesParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
