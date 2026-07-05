@@ -267,6 +267,11 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			db: deps.db,
 			meta: deps.meta,
 		},
+		inbox: {
+			config,
+			meta: deps.meta,
+			inboxQueue: deps.inboxQueue,
+		},
 	});
 	const server = createHonoNodeServer({ app });
 	let disposed = false;
