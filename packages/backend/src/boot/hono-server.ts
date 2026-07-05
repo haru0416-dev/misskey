@@ -15,6 +15,7 @@ import { createClientCommonDataLoader } from '@/server/web/client-common-data.js
 import { attachHonoStreamServer, type HonoStreamServerDependencies } from '@/server/hono-stream-server.js';
 import { startHonoQueueStatsDaemon } from '@/server/hono-daemon-queue-stats.js';
 import { startHonoServerStatsDaemon } from '@/server/hono-daemon-server-stats.js';
+import { createHonoEventPublishers } from '@/server/hono-api-events.js';
 
 export type HonoServerRuntime = {
 	server: Server;
@@ -60,6 +61,10 @@ async function closeServer(server: Server): Promise<void> {
 
 export async function launchHonoServer(config: Config, logger = new Logger('hono', 'cyan')): Promise<HonoServerRuntime> {
 	const deps = await createRuntimeDependencies(config);
+	const eventPublishers = createHonoEventPublishers({
+		config,
+		publish: (host, message) => deps.redisForPub.publish(host, message),
+	});
 	const oauthRuntime = createOAuthProviderRuntime({
 		config,
 		db: deps.db,
@@ -106,102 +111,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			userWebhookDeliverQueue: deps.userWebhookDeliverQueue,
 			systemWebhookDeliverQueue: deps.systemWebhookDeliverQueue,
 			logger: deps.loggerService.getLogger('Signin'),
-			publishInternalEvent: (type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: 'internal',
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishBroadcastStream: (type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: 'broadcast',
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishMainStream: (userId, type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: `mainStream:${userId}`,
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishAdminStream: (userId, type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: `adminStream:${userId}`,
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishDriveStream: (userId, type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: `driveStream:${userId}`,
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishUserListStream: (listId, type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: `userListStream:${listId}`,
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishChatUserStream: (fromUserId, toUserId, type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: `chatUserStream:${fromUserId}-${toUserId}`,
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishChatRoomStream: (toRoomId, type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: `chatRoomStream:${toRoomId}`,
-					message: {
-						type,
-						body: value,
-					},
-				}));
-			},
-			publishNotesStream: (note) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: 'notesStream',
-					message: {
-						type: null,
-						body: note,
-					},
-				}));
-			},
-			publishNoteStream: (note, type, value) => {
-				deps.redisForPub.publish(config.host, JSON.stringify({
-					channel: `noteStream:${note.id}`,
-					message: {
-						type,
-						body: {
-							id: note.id,
-							userId: note.userId,
-							visibility: note.visibility,
-							visibleUserIds: note.visibleUserIds,
-							body: value,
-						},
-					},
-				}));
-			},
+			...eventPublishers,
 		},
 		clientBase: {
 			config,
@@ -282,15 +192,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		redis: deps.redis,
 		redisForSub: deps.redisForSub,
 		meta: deps.meta,
-		publishMainStream: (userId, type, value) => {
-			deps.redisForPub.publish(config.host, JSON.stringify({
-				channel: `mainStream:${userId}`,
-				message: {
-					type,
-					body: value,
-				},
-			}));
-		},
+		publishMainStream: eventPublishers.publishMainStream,
 	} satisfies HonoStreamServerDependencies);
 
 	const queueStatsDaemon = startHonoQueueStatsDaemon({

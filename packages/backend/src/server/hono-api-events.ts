@@ -64,3 +64,52 @@ export type HonoApiNoteStreamPublisher = <K extends keyof NoteEventTypes>(
 	type: K,
 	value?: NoteEventTypes[K],
 ) => void;
+
+export type HonoRedisEventPublisherDependencies = {
+	config: { host: string };
+	publish: (host: string, message: string) => void;
+};
+
+/**
+ * GlobalEventService#publish 相当。`type == null` のときは body でラップせず
+ * value をそのまま message にする (publishNotesStream が唯一 type=null で呼ばれる)。
+ */
+function publishToChannel(deps: HonoRedisEventPublisherDependencies, channel: string, type: string | null, value?: unknown): void {
+	const message = type == null ? value : (value === undefined ? { type, body: null } : { type, body: value });
+
+	deps.publish(deps.config.host, JSON.stringify({ channel, message }));
+}
+
+export type HonoEventPublishers = {
+	publishInternalEvent: HonoApiInternalEventPublisher;
+	publishBroadcastStream: HonoApiBroadcastStreamPublisher;
+	publishMainStream: HonoApiMainStreamPublisher;
+	publishAdminStream: HonoApiAdminStreamPublisher;
+	publishDriveStream: HonoApiDriveStreamPublisher;
+	publishUserListStream: HonoApiUserListStreamPublisher;
+	publishChatUserStream: HonoApiChatUserStreamPublisher;
+	publishChatRoomStream: HonoApiChatRoomStreamPublisher;
+	publishNotesStream: HonoApiNotesStreamPublisher;
+	publishNoteStream: HonoApiNoteStreamPublisher;
+};
+
+export function createHonoEventPublishers(deps: HonoRedisEventPublisherDependencies): HonoEventPublishers {
+	return {
+		publishInternalEvent: (type, value) => publishToChannel(deps, 'internal', type, value),
+		publishBroadcastStream: (type, value) => publishToChannel(deps, 'broadcast', type, value),
+		publishMainStream: (userId, type, value) => publishToChannel(deps, `mainStream:${userId}`, type, value),
+		publishAdminStream: (userId, type, value) => publishToChannel(deps, `adminStream:${userId}`, type, value),
+		publishDriveStream: (userId, type, value) => publishToChannel(deps, `driveStream:${userId}`, type, value),
+		publishUserListStream: (listId, type, value) => publishToChannel(deps, `userListStream:${listId}`, type, value),
+		publishChatUserStream: (fromUserId, toUserId, type, value) => publishToChannel(deps, `chatUserStream:${fromUserId}-${toUserId}`, type, value),
+		publishChatRoomStream: (toRoomId, type, value) => publishToChannel(deps, `chatRoomStream:${toRoomId}`, type, value),
+		publishNotesStream: note => publishToChannel(deps, 'notesStream', null, note),
+		publishNoteStream: (note, type, value) => publishToChannel(deps, `noteStream:${note.id}`, type, {
+			id: note.id,
+			userId: note.userId,
+			visibility: note.visibility,
+			visibleUserIds: note.visibleUserIds,
+			body: value,
+		}),
+	};
+}
