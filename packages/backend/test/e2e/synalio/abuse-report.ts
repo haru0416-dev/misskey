@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+// jobQueue() が呼ぶ createRuntimeDependencies() は UrlPreviewService を構築する。同サービスは
+// rolldown の `define` で注入される _SUMMALY_VERSION_ を参照するが、このファイルは jobQueue() を
+// (test-server 経由でなく) vitest プロセス内で直接呼ぶため、ビルド時injectionが効かない。
+(globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
+
 import { entities } from 'misskey-js';
 import {
 	beforeEach,
@@ -22,10 +27,10 @@ import {
 	UserToken,
 	WEBHOOK_HOST,
 } from '../../utils.js';
-import type { INestApplicationContext } from '@nestjs/common';
+import type { JobQueueRuntime } from '@/boot/common.js';
 
 describe('[シナリオ] ユーザ通報', () => {
-	let queue: INestApplicationContext;
+	let queue: JobQueueRuntime;
 	let admin: entities.SignupResponse;
 	let alice: entities.SignupResponse;
 	let bob: entities.SignupResponse;

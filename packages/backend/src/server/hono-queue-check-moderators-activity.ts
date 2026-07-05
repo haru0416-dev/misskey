@@ -13,7 +13,7 @@ import { updateMetaInDatabase } from '@/core/MetaStore.js';
 import { listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
-import type { SystemWebhookPayload } from '@/core/SystemWebhookService.js';
+import type { ModeratorInactivityRemainingTime, SystemWebhookPayload } from '@/core/SystemWebhookService.js';
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import { createAnnouncementWithSideEffects, type AnnouncementCreateValues } from '@/core/AnnouncementLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -39,12 +39,6 @@ const MODERATOR_INACTIVITY_WARNING_REMAINING_DAYS = 2;
 const MODERATOR_INACTIVITY_WARNING_NOTIFY_INTERVAL_HOURS = 6;
 const ONE_HOUR_MILLI_SEC = 1000 * 60 * 60;
 const ONE_DAY_MILLI_SEC = ONE_HOUR_MILLI_SEC * 24;
-
-type ModeratorInactivityRemainingTime = {
-	time: number;
-	asHours: number;
-	asDays: number;
-};
 
 type ModeratorInactivityEvaluationResult = {
 	isModeratorsInactive: boolean;

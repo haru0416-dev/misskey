@@ -4,15 +4,19 @@
  */
 
 process.env.NODE_ENV = 'test';
+// jobQueue() が呼ぶ createRuntimeDependencies() は UrlPreviewService を構築する。同サービスは
+// rolldown の `define` で注入される _SUMMALY_VERSION_ を参照するが、このファイルは jobQueue() を
+// (test-server 経由でなく) vitest プロセス内で直接呼ぶため、ビルド時injectionが効かない。
+(globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import * as assert from 'assert';
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
 import { api, port, post, signup, startJobQueue } from '../utils.js';
-import type { INestApplicationContext } from '@nestjs/common';
+import type { JobQueueRuntime } from '@/boot/common.js';
 import type * as misskey from 'misskey-js';
 
 describe('export-clips', () => {
-	let queue: INestApplicationContext;
+	let queue: JobQueueRuntime;
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 

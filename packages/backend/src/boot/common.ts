@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { NestFactory } from '@nestjs/core';
 import { init } from 'slacc';
-import { NestLogger } from '@/NestLogger.js';
-import { envOption } from '@/env.js';
 import { loadConfig, type Config } from '@/config.js';
 
 let slaccInitialized = false;
@@ -26,19 +23,36 @@ export async function server() {
 	return await launchHonoServer(loadConfig());
 }
 
-export async function jobQueue() {
-	const { QueueProcessorModule } = await import('../queue/QueueProcessorModule.js');
-	const { QueueProcessorService } = await import('../queue/QueueProcessorService.js');
-	const { ChartManagementService } = await import('../core/chart/ChartManagementService.js');
+export type JobQueueRuntime = {
+	close: () => Promise<void>;
+};
 
-	const jobQueue = await NestFactory.createApplicationContext(QueueProcessorModule, {
-		logger: new NestLogger(),
+/**
+ * QueueProcessorService 相当。hono-queue-shell.ts の createHonoQueueWorkers が
+ * 10個全てのBullMQ Workerを構築する。ChartManagementService相当の定期chart保存
+ * (20分間隔) は createRuntimeDependencies 内で常に起動される (startHonoChartWriterSaveInterval)
+ * ため、ここで個別に呼び出す必要はない。
+ */
+export async function jobQueue(): Promise<JobQueueRuntime> {
+	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
+	const { createHonoQueueWorkers } = await import('../server/hono-queue-shell.js');
+
+	const config = loadConfig();
+	const deps = await createRuntimeDependencies(config);
+	const logger = deps.loggerService.getLogger('queue', 'orange');
+	const workers = createHonoQueueWorkers({
+		...deps,
+		logger,
 	});
 
-	jobQueue.get(QueueProcessorService).start();
-	if (!envOption.noDaemons) {
-		jobQueue.get(ChartManagementService).start();
-	}
+	// Bull.Worker#run() は内部のメインループが解決するまで (= close() されるまで) 待ち続けるため、
+	// 元の QueueProcessorService#start() 同様ここでは await しない。
+	void workers.start().catch(err => logger.error('Failed to start queue workers', { e: err }));
 
-	return jobQueue;
+	return {
+		close: async () => {
+			await workers.stop();
+			await deps.dispose();
+		},
+	};
 }
