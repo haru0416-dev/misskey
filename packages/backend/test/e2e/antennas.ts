@@ -6,7 +6,7 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeAll, beforeEach, test } from 'vitest';
+import { afterAll, describe, beforeAll, beforeEach, test } from 'vitest';
 import {
 	api,
 	failedApiCall,
@@ -19,7 +19,10 @@ import {
 	userList,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
+import { loadConfig } from '@/config.js';
+import { updateAntennaInDatabase } from '@/core/AntennaStore.js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 
 const compareBy = <T extends { id: string }>(selector: (s: T) => string = (s: T): string => s.id) => (a: T, b: T): number => {
 	return selector(a).localeCompare(selector(b));
@@ -73,7 +76,13 @@ describe('アンテナ', () => {
 	let testChannel: misskey.entities.Channel;
 	let testMutedChannel: misskey.entities.Channel;
 
+	let pool: MiDrizzlePool | undefined;
+	let db: MiDrizzleDatabase;
+
 	beforeAll(async () => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		root = await signup({ username: 'root' });
 		alice = await signup({ username: 'alice' });
 		alicePost = await post(alice, { text: 'test' });
@@ -129,6 +138,10 @@ describe('アンテナ', () => {
 		testMutedChannel = (await api('channels/create', { name: 'test-muted' }, root)).body;
 		await api('channels/mute/create', { channelId: testMutedChannel.id }, alice);
 	}, 1000 * 60 * 10);
+
+	afterAll(async () => {
+		await pool?.end();
+	});
 
 	beforeEach(async () => {
 		// テスト間で影響し合わないように毎回全部消す。
@@ -263,7 +276,18 @@ describe('アンテナ', () => {
 		const expected = { ...response, ...parameters() };
 		assert.deepStrictEqual(response, expected);
 	});
-	test.todo('は他人のものは変更できない');
+	test('は他人のものは変更できない', async () => {
+		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
+		await failedApiCall({
+			endpoint: 'antennas/update',
+			parameters: { antennaId: antenna.id, ...defaultParam },
+			user: bob,
+		}, {
+			status: 400,
+			code: 'NO_SUCH_ANTENNA',
+			id: '10c673ac-8852-48eb-aa1f-f5b67f069290',
+		});
+	});
 
 	test('を変更するとき他人のリストを指定したらエラーになる', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -303,7 +327,18 @@ describe('アンテナ', () => {
 		const expected = { ...antenna };
 		assert.deepStrictEqual(response, expected);
 	});
-	test.todo('は他人のものをID指定で表示できない');
+	test('は他人のものをID指定で表示できない', async () => {
+		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
+		await failedApiCall({
+			endpoint: 'antennas/show',
+			parameters: { antennaId: antenna.id },
+			user: bob,
+		}, {
+			status: 400,
+			code: 'NO_SUCH_ANTENNA',
+			id: 'c06569fb-b025-4f23-b22d-1fcd20d2816b',
+		});
+	});
 
 	//#endregion
 	//#region 一覧(antennas/list)
@@ -334,7 +369,21 @@ describe('アンテナ', () => {
 		const list = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
 		assert.deepStrictEqual(list, []);
 	});
-	test.todo('は他人のものを削除できない');
+	test('は他人のものを削除できない', async () => {
+		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
+		await failedApiCall({
+			endpoint: 'antennas/delete',
+			parameters: { antennaId: antenna.id },
+			user: bob,
+		}, {
+			status: 400,
+			code: 'NO_SUCH_ANTENNA',
+			id: 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df',
+		});
+		// 本人にはまだ見える
+		const list = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
+		assert.deepStrictEqual(list.map(a => a.id).includes(antenna.id), true);
+	});
 
 	//#endregion
 
@@ -778,12 +827,12 @@ describe('アンテナ', () => {
 			assert.deepStrictEqual(response, expected);
 		});
 
-		test.skip('が取得でき、日付指定のPaginationに一貫性があること', async () => { });
+		// 日付指定のPaginationは検証しない:
+		// BUG sinceDate/untilDate は genId(date) を境界IDに変換する実装 (原典と同じ) のため、
+		// その時刻ちょうどに作成されたレコードの包含が下位ビットの乱数次第で非決定的になる。
+		// https://github.com/misskey-dev/misskey/issues/10476 系の既知の上流仕様。
 		test.each([
 			{ label: 'ID指定', offsetBy: 'id' },
-
-			// BUG sinceDate, untilDateはsinceIdや他のエンドポイントとは異なり、その時刻に一致するレコードを含んでしまう。
-			// { label: '日付指定', offsetBy: 'createdAt' },
 		] as const)('が取得でき、$labelのPaginationに一貫性があること', async ({ offsetBy }) => {
 			const antenna = await successfulApiCall({
 				endpoint: 'antennas/create',
@@ -809,7 +858,22 @@ describe('アンテナ', () => {
 		});
 
 		// BUG 7日過ぎると作り直すしかない。 https://github.com/misskey-dev/misskey/issues/10476
-		test.todo('を取得したときActiveに戻る');
+		// (7日未使用で isActive: false になったアンテナからはノートが取得できなくなるが、
+		//  notes を取得しに来た時点で isActive: true に戻る挙動自体はここで検証する)
+		test('を取得したときActiveに戻る', async () => {
+			const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: { ...defaultParam, keywords: [[keyword]] }, user: alice });
+			await updateAntennaInDatabase(db, antenna.id, { isActive: false, lastUsedAt: new Date(0) });
+
+			await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId: antenna.id }, user: alice });
+
+			// isActive の書き戻しは await されないため有界ポーリングで確認する
+			let shown = await successfulApiCall({ endpoint: 'antennas/show', parameters: { antennaId: antenna.id }, user: alice });
+			for (let i = 0; i < 30 && !shown.isActive; i++) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+				shown = await successfulApiCall({ endpoint: 'antennas/show', parameters: { antennaId: antenna.id }, user: alice });
+			}
+			assert.strictEqual(shown.isActive, true);
+		});
 
 		//#endregion
 	});

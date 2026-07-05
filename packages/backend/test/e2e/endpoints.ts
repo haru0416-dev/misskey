@@ -12269,12 +12269,17 @@ describe('Endpoints', () => {
 				script: 'Ui:render([])',
 				permissions: [],
 			}, owner);
-			await api('flash/like', { flashId: created.body.id }, liker);
+			assert.strictEqual(created.status, 200);
+			const liked = await api('flash/like', { flashId: created.body.id }, liker);
+			assert.strictEqual(liked.status, 204);
 
 			const res = await api('flash/featured', {});
 
 			assert.strictEqual(res.status, 200);
-			assert.ok(res.body.some((f: any) => f.id === created.body.id));
+			assert.ok(
+				res.body.some((f: any) => f.id === created.body.id),
+				`flash ${created.body.id} not in featured: ${JSON.stringify(res.body.map((f: any) => ({ id: f.id, likedCount: f.likedCount, updatedAt: f.updatedAt })))}`,
+			);
 		});
 	});
 
