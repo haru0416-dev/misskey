@@ -1936,16 +1936,16 @@ describe('Endpoints', () => {
 			const followers = await api('federation/followers', { host: remoteFolloweeHost });
 			assert.strictEqual(followers.status, 200);
 			assert.strictEqual(followers.body.length, 1);
-			assert.strictEqual(followers.body[0].followerId, follower.id);
-			assert.strictEqual(followers.body[0].followeeId, followee.id);
-			assert.strictEqual(followers.body[0].followee.id, followee.id);
+			assert.strictEqual(followers.body[0]!.followerId, follower.id);
+			assert.strictEqual(followers.body[0]!.followeeId, followee.id);
+			assert.strictEqual(followers.body[0]!.followee!.id, followee.id);
 
 			const following = await api('federation/following', { host: remoteFollowerHost });
 			assert.strictEqual(following.status, 200);
 			assert.strictEqual(following.body.length, 1);
-			assert.strictEqual(following.body[0].followerId, followee.id);
-			assert.strictEqual(following.body[0].followeeId, follower.id);
-			assert.strictEqual(following.body[0].followee.id, follower.id);
+			assert.strictEqual(following.body[0]!.followerId, followee.id);
+			assert.strictEqual(following.body[0]!.followeeId, follower.id);
+			assert.strictEqual(following.body[0]!.followee!.id, follower.id);
 		});
 	});
 
@@ -5040,11 +5040,11 @@ describe('Endpoints', () => {
 		test('i/2fa/key-done requires a matching password and two-factor authentication to already be enabled', async () => {
 			const user = await signup({ username: `twofakeydone${Date.now().toString(36)}` });
 
-			const wrongPassword = await api('i/2fa/key-done', { password: 'wrong', name: 'my key', credential: {} }, user);
+			const wrongPassword = await api('i/2fa/key-done', { password: 'wrong', name: 'my key', credential: {} as never }, user);
 			assert.strictEqual(wrongPassword.status, 400);
 			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
 
-			const notEnabled = await api('i/2fa/key-done', { password: 'test', name: 'my key', credential: {} }, user);
+			const notEnabled = await api('i/2fa/key-done', { password: 'test', name: 'my key', credential: {} as never }, user);
 			assert.strictEqual(notEnabled.status, 400);
 			assert.strictEqual(castAsError(notEnabled.body as any).error.id, '798d6847-b1ed-4f9c-b1f9-163c42655995');
 		});
@@ -5128,7 +5128,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(created.body.name, `hono-page-${suffix}`);
 			assert.strictEqual(created.body.userId, alice.id);
 			assert.strictEqual(created.body.eyeCatchingImageId, file.body!.id);
-			assert.strictEqual(created.body.eyeCatchingImage.id, file.body!.id);
+			assert.strictEqual(created.body.eyeCatchingImage!.id, file.body!.id);
 
 			const noSuchFile = await api('pages/create', {
 				title: 'no file',
@@ -5255,7 +5255,7 @@ describe('Endpoints', () => {
 			const deleted = await api('pages/delete', { pageId: page.id }, moderator);
 			assert.strictEqual(deleted.status, 204);
 
-			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
 			const log = logs.find(l => l.userId === moderator.id && l.type === 'deletePage' && (l.info as any).pageId === page.id);
 			assert.ok(log);
 			assert.strictEqual((log!.info as any).pageUserId, alice.id);
@@ -6082,9 +6082,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(list.body.length, 2);
 			const followeeIds = list.body.map((f: any) => f.followeeId).sort();
 			assert.deepStrictEqual(followeeIds, [followeeA.id, followeeB.id].sort());
-			assert.strictEqual(list.body[0].followerId, follower.id);
-			assert.ok(list.body[0].followee.id);
-			assert.strictEqual(list.body[0].follower, undefined);
+			assert.strictEqual(list.body[0]!.followerId, follower.id);
+			assert.ok(list.body[0]!.followee!.id);
+			assert.strictEqual(list.body[0]!.follower, undefined);
 
 			const limited = await api('following/list', { limit: 1 }, follower);
 			assert.strictEqual(limited.status, 200);
@@ -6355,7 +6355,7 @@ describe('Endpoints', () => {
 			const created = await api('i/webhooks/create', { name: 'test-hook', url: 'https://example.com/test-hook', on: ['note'] }, owner);
 			assert.strictEqual(created.status, 200);
 
-			for (const type of ['note', 'reply', 'renote', 'mention', 'follow', 'followed', 'unfollow', 'reaction']) {
+			for (const type of ['note', 'reply', 'renote', 'mention', 'follow', 'followed', 'unfollow', 'reaction'] as const) {
 				const res = await api('i/webhooks/test', { webhookId: created.body.id, type }, owner);
 				assert.strictEqual(res.status, 204, `type=${type} should succeed`);
 			}
@@ -6548,7 +6548,7 @@ describe('Endpoints', () => {
 				const entries = await redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 10);
 				return entries.map(([, values]) => {
 					const dataIndex = values.findIndex(value => value === 'data');
-					return JSON.parse(values[dataIndex + 1]!) as { type?: string; body?: string; header?: string | null; icon?: string | null };
+					return JSON.parse(values[dataIndex + 1]!) as { type?: string; customBody?: string; customHeader?: string | null; customIcon?: string | null };
 				});
 			} finally {
 				await closeRedisConnection(redis);
@@ -7156,7 +7156,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(listed.status, 200);
 			assert.ok(listed.body.some((f: any) => f.id === pub.body.id));
 			assert.ok(!listed.body.some((f: any) => f.id === priv.body.id));
-			assert.strictEqual(listed.body.find((f: any) => f.id === pub.body.id).isLiked, undefined);
+			assert.strictEqual(listed.body.find((f: any) => f.id === pub.body.id)!.isLiked, undefined);
 		});
 
 		test('users/gallery/posts はページングして投稿を返す', async () => {
@@ -7772,9 +7772,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(created.body.title, `Hono gallery post ${suffix}`);
 			assert.strictEqual(created.body.userId, owner.id);
 			assert.strictEqual(created.body.user.id, owner.id);
-			assert.strictEqual(created.body.fileIds.length, 1);
-			assert.strictEqual(created.body.files.length, 1);
-			assert.strictEqual(created.body.files[0].id, file.id);
+			assert.strictEqual(created.body.fileIds!.length, 1);
+			assert.strictEqual(created.body.files!.length, 1);
+			assert.strictEqual(created.body.files![0]!.id, file.id);
 			assert.strictEqual(created.body.likedCount, 0);
 			assert.strictEqual(created.body.isSensitive, false);
 
@@ -7804,7 +7804,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(deletedByMod.status, 204);
 			assert.strictEqual(await fetchGalleryPostByIdFromDatabase(db, created.body.id), null);
 
-			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
 			const log = logs.find(l => l.type === 'deleteGalleryPost' && (l.info as any).postId === created.body.id);
 			assert.ok(log);
 			assert.strictEqual((log!.info as any).postUserId, owner.id);
@@ -11743,7 +11743,7 @@ describe('Endpoints', () => {
 		test('ユーザーが存在しなかったら怒る', async () => {
 			const res = await api('users/followers', { userId: '000000000000000000000000' });
 			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'NO_SUCH_USER');
 		});
 	});
 
@@ -11791,7 +11791,7 @@ describe('Endpoints', () => {
 		test('ユーザーが存在しなかったら怒る', async () => {
 			const res = await api('users/following', { userId: '000000000000000000000000' });
 			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_USER');
+			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'NO_SUCH_USER');
 		});
 	});
 
@@ -11923,7 +11923,7 @@ describe('Endpoints', () => {
 			const res = await api('i/notifications-grouped', {}, author);
 
 			assert.strictEqual(res.status, 200);
-			const grouped = res.body.filter((n: any) => n.type === 'reaction:grouped');
+			const grouped = res.body.filter((n: any) => n.type === 'reaction:grouped') as any[];
 			assert.strictEqual(grouped.length, 1);
 			assert.strictEqual(grouped[0].reactions.length, 2);
 			const userIds = grouped[0].reactions.map((r: any) => r.user.id);
@@ -11944,7 +11944,7 @@ describe('Endpoints', () => {
 			const res = await api('i/notifications-grouped', {}, author);
 
 			assert.strictEqual(res.status, 200);
-			const grouped = res.body.filter((n: any) => n.type === 'renote:grouped');
+			const grouped = res.body.filter((n: any) => n.type === 'renote:grouped') as any[];
 			assert.strictEqual(grouped.length, 1);
 			assert.strictEqual(grouped[0].users.length, 2);
 			const userIds = grouped[0].users.map((u: any) => u.id);
@@ -12155,7 +12155,7 @@ describe('Endpoints', () => {
 
 			const res = await api('flash/delete', { flashId: created.body.id }, other);
 			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'ACCESS_DENIED');
+			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'ACCESS_DENIED');
 		});
 
 		test('タイトルでキーワード検索できる', async () => {
@@ -12219,7 +12219,7 @@ describe('Endpoints', () => {
 			const shown = await api('flash/show', { flashId: created.body.id });
 			assert.strictEqual(shown.status, 400);
 
-			const logs = await listModerationLogsFromDatabase(db, { limit: 100 });
+			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
 			const log = logs.find(l => l.userId === moderator.id && l.type === 'deleteFlash' && (l.info as any).flashId === created.body.id);
 			assert.ok(log);
 			assert.strictEqual((log!.info as any).flashUserId, owner.id);
@@ -12269,12 +12269,17 @@ describe('Endpoints', () => {
 				script: 'Ui:render([])',
 				permissions: [],
 			}, owner);
-			await api('flash/like', { flashId: created.body.id }, liker);
+			assert.strictEqual(created.status, 200);
+			const liked = await api('flash/like', { flashId: created.body.id }, liker);
+			assert.strictEqual(liked.status, 204);
 
 			const res = await api('flash/featured', {});
 
 			assert.strictEqual(res.status, 200);
-			assert.ok(res.body.some((f: any) => f.id === created.body.id));
+			assert.ok(
+				res.body.some((f: any) => f.id === created.body.id),
+				`flash ${created.body.id} not in featured: ${JSON.stringify(res.body.map((f: any) => ({ id: f.id, likedCount: f.likedCount, updatedAt: f.updatedAt })))}`,
+			);
 		});
 	});
 
@@ -12319,7 +12324,6 @@ describe('Endpoints', () => {
 		});
 
 		test('テキストもファイルもRenoteもPollも無いと怒られる', async () => {
-			// @ts-expect-error params must not be empty
 			const res = await api('notes/create', {}, alice);
 			assert.strictEqual(res.status, 400);
 		});
@@ -12356,7 +12360,7 @@ describe('Endpoints', () => {
 				poll: { choices: ['a', 'b'], multiple: false },
 			}, alice);
 			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.createdNote.poll.choices.length, 2);
+			assert.strictEqual(res.body.createdNote.poll!.choices.length, 2);
 
 			const expired = await api('notes/create', {
 				text: 'expired poll',
@@ -12643,8 +12647,8 @@ describe('Endpoints', () => {
 
 			const shown = await api('notes/show', { noteId: created.body.createdNote.id }, alice);
 			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.poll.choices[0].votes, 1);
-			assert.strictEqual(shown.body.poll.choices[0].isVoted, true);
+			assert.strictEqual(shown.body.poll!.choices[0]!.votes, 1);
+			assert.strictEqual(shown.body.poll!.choices[0]!.isVoted, true);
 		});
 
 		test('複数投票可能な場合は複数選べる', async () => {
