@@ -6,8 +6,13 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeAll, beforeEach, afterEach, test } from 'vitest';
+import { afterAll, describe, beforeAll, beforeEach, afterEach, test } from 'vitest';
+import { loadConfig } from '@/config.js';
+import { createNoteInDatabase } from '@/core/NoteStore.js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { api, ApiRequest, failedApiCall, hiddenNote, post, signup, successfulApiCall } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 
@@ -117,7 +122,13 @@ describe('クリップ', () => {
 		});
 	};
 
+	let pool: MiDrizzlePool | undefined;
+	let db: MiDrizzleDatabase;
+
 	beforeAll(async () => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
 
@@ -139,6 +150,10 @@ describe('クリップ', () => {
 				await api('clips/delete', { clipId: clip.id }, user);
 			}
 		}
+	});
+
+	afterAll(async () => {
+		await pool?.end();
 	});
 
 	test('の作成ができる', async () => {
@@ -902,7 +917,40 @@ describe('クリップ', () => {
 				expects.sort(compareBy(s => s.id)).map(x => x.id));
 		});
 
-		test.todo('Remoteのノートもクリップできる。どうテストしよう？');
+		test('Remoteのノートもクリップできる。', async () => {
+			// 連合の実サーバーは立てず、リモートユーザーとそのノートをDBに直接用意してクリップできることを検証する
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const host = `clip-remote-${suffix}.example`;
+			const remoteUserId = genId(config);
+			await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteUserId,
+					username: `clipremote${suffix}`,
+					usernameLower: `clipremote${suffix}`,
+					host,
+					inbox: `https://${host}/inbox`,
+					uri: `https://${host}/users/${remoteUserId}`,
+				},
+				profile: {
+					userId: remoteUserId,
+					userHost: host,
+				},
+			});
+			const remoteNoteId = genId(config);
+			await createNoteInDatabase(db, {
+				id: remoteNoteId,
+				userId: remoteUserId,
+				userHost: host,
+				uri: `https://${host}/notes/${remoteNoteId}`,
+				text: 'remote note',
+				visibility: 'public',
+			});
+
+			await addNote({ clipId: aliceClip.id, noteId: remoteNoteId });
+			const res = await notes({ clipId: aliceClip.id });
+			assert.deepStrictEqual(res.map(x => x.id), [remoteNoteId]);
+		});
 
 		test('は他人のPublicなクリップからも取得できる。', async () => {
 			const bobClip = await create({ isPublic: true }, { user: bob } );
@@ -927,7 +975,29 @@ describe('クリップ', () => {
 				expects.sort(compareBy(s => s.id)).map(x => x.id));
 		});
 
-		test.todo('ブロック、ミュートされたユーザーからの設定＆取得etc.');
+		test('ミュートしているユーザーのノートはクリップから取得されない。', async () => {
+			const viewer = await signup();
+			await addNote({ clipId: aliceClip.id, noteId: aliceNote.id });
+			await addNote({ clipId: aliceClip.id, noteId: bobNote.id });
+			await api('clips/update', { clipId: aliceClip.id, isPublic: true }, alice);
+
+			// viewerがbobをミュートするとbobのノートだけ見えなくなる
+			await api('mute/create', { userId: bob.id }, viewer);
+			const res = await notes({ clipId: aliceClip.id }, { user: viewer });
+			assert.deepStrictEqual(res.map(x => x.id), [aliceNote.id]);
+		});
+
+		test('ブロックされているユーザーからはブロック元のノートがクリップから取得されない。', async () => {
+			const viewer = await signup();
+			await addNote({ clipId: aliceClip.id, noteId: aliceNote.id });
+			await addNote({ clipId: aliceClip.id, noteId: bobNote.id });
+			await api('clips/update', { clipId: aliceClip.id, isPublic: true }, alice);
+
+			// bobがviewerをブロックするとbobのノートだけ見えなくなる
+			await api('blocking/create', { userId: viewer.id }, bob);
+			const res = await notes({ clipId: aliceClip.id }, { user: viewer });
+			assert.deepStrictEqual(res.map(x => x.id), [aliceNote.id]);
+		});
 
 		test.each([
 			{ label: 'clipId未指定', parameters: { clipId: undefined } },

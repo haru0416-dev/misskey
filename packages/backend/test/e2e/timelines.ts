@@ -23,7 +23,10 @@ function genHost() {
 
 let redisForTimelines: Redis;
 let root: SignupResponse;
-const TIMELINE_PROPAGATION_DELAY_MS = 50;
+// fanout への push は note 作成時に await されない副作用のため、伝播を固定時間待つ。
+// 上流の元実装と同じ 250ms (50ms まで縮めるとフルスイート負荷時に DB 読み込みを伴う
+// fanout が間に合わず flake する)。
+const TIMELINE_PROPAGATION_DELAY_MS = 250;
 
 async function renote(noteId: string, user: UserToken): Promise<entities.Note> {
 	return await api('notes/create', { renoteId: noteId }, user).then((it) => it.body.createdNote);
