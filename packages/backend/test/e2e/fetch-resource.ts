@@ -6,7 +6,11 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { beforeAll, beforeEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
+import { loadConfig } from '@/config.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzlePool } from '@/drizzle.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { api, channel, clip, galleryPost, page, play, post, signup, simpleGet, uploadFile } from '../utils.js';
 import type { SimpleGetResponse } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -33,6 +37,11 @@ describe('Webリソース', () => {
 	let aliceChannel: misskey.entities.Channel;
 
 	let bob: misskey.entities.SignupResponse;
+
+	let pool: MiDrizzlePool | undefined;
+	// DBに直接用意したリモートユーザー (連合の実サーバーは立てない)
+	let remoteUserAcct: string;
+	let remoteUserUri: string;
 
 	type Request = {
 		path: string,
@@ -93,7 +102,35 @@ describe('Webリソース', () => {
 		aliceChannel = await channel(alice, {});
 
 		bob = await signup({ username: 'bob' });
+
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		const db = createDrizzleDatabase(pool, config);
+		const suffix = Date.now().toString(36).slice(-8);
+		const remoteHost = `fetch-remote-${suffix}.example`;
+		const remoteUserId = genId(config);
+		remoteUserAcct = `fetchremote${suffix}@${remoteHost}`;
+		remoteUserUri = `https://${remoteHost}/users/${remoteUserId}`;
+		await createUserWithProfileAndPublickeyInDatabase(db, {
+			user: {
+				id: remoteUserId,
+				username: `fetchremote${suffix}`,
+				usernameLower: `fetchremote${suffix}`,
+				host: remoteHost,
+				inbox: `https://${remoteHost}/inbox`,
+				uri: remoteUserUri,
+				isExplorable: false,
+			},
+			profile: {
+				userId: remoteUserId,
+				userHost: remoteHost,
+			},
+		});
 	}, 1000 * 60 * 2);
+
+	afterAll(async () => {
+		await pool?.end();
+	});
 
 	describe.each([
 		{ path: '/', type: HTML },
@@ -214,7 +251,14 @@ describe('Webリソース', () => {
 				path: path('xxxxxxxxxx'),
 				type: HTML,
 			}));
-			test.todo('HTMLとしてGETできる。(リモートユーザーでもリダイレクトせず)');
+			test('はHTMLとしてGETできる。(リモートユーザーでもリダイレクトせず)', async () => {
+				const res = await ok({
+					path: path(remoteUserAcct),
+					accept,
+					type: HTML,
+				});
+				assert.strictEqual(res.location, null);
+			});
 		});
 
 		describe.each([
@@ -234,7 +278,11 @@ describe('Webリソース', () => {
 				path: path('xxxxxxxxxx'),
 				accept,
 			}));
-			test.todo('はオリジナルにリダイレクトされる。(リモートユーザー)');
+			test('はオリジナルにリダイレクトされる。(リモートユーザー)', async () => {
+				const res = await simpleGet(path(remoteUserAcct), accept);
+				assert.strictEqual(res.status, 301);
+				assert.strictEqual(res.location, remoteUserUri);
+			});
 		});
 	});
 
