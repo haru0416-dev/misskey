@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase, type RoleAssignmentOrder } from '@/core/RoleAssignmentStore.js';
+import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchPublicExplorableRoleByIdFromDatabase, fetchPublicRoleByIdFromDatabase, listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
@@ -16,6 +16,7 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
+import { resolveHonoApiIdPagination } from './following.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -56,31 +57,6 @@ const rolesUsersParamDef = {
 
 type RolesShowParams = SchemaType<typeof rolesShowParamDef>;
 type RolesUsersParams = SchemaType<typeof rolesUsersParamDef>;
-
-function resolveRoleUsersPagination(
-	config: Config,
-	params: RolesUsersParams,
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: RoleAssignmentOrder;
-} {
-	if (params.sinceId && params.untilId) {
-		return { sinceId: params.sinceId, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceId) {
-		return { sinceId: params.sinceId, untilId: null, order: 'asc' };
-	} else if (params.untilId) {
-		return { sinceId: null, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceDate && params.untilDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: genId(config, params.untilDate), order: 'desc' };
-	} else if (params.sinceDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: null, order: 'asc' };
-	} else if (params.untilDate) {
-		return { sinceId: null, untilId: genId(config, params.untilDate), order: 'desc' };
-	}
-
-	return { sinceId: null, untilId: null, order: 'desc' };
-}
 
 function noSuchRoleError(): HonoApiError {
 	return new HonoApiError({
@@ -193,7 +169,7 @@ export async function handleHonoApiRolesUsers(
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
-	const pagination = resolveRoleUsersPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(deps.config, params);
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
 		order: pagination.order,

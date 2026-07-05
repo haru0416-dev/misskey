@@ -4,13 +4,12 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase, listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase, listBlockingsByBlockerIdWithPaginationFromDatabase, resolveBlockingPagination } from '@/core/BlockingStore.js';
 import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
 import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
-import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
+import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
 import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { deleteUserListMembershipInDatabase } from '@/core/UserListMembershipStore.js';
@@ -24,11 +23,12 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiBlocking } from '@/models/Blocking.js';
-import type { MiInstance } from '@/models/Instance.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { HonoApiError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
+import { fetchOrRegisterFederatedInstance } from './federation.js';
+import { refreshUserFollowingsCache } from './following.js';
 import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -174,49 +174,6 @@ export async function refreshUserBlockingCache(deps: HonoApiAccountBlockingDepen
 export async function refreshUserBlockedCache(deps: HonoApiAccountBlockingDependencies, blockeeId: MiUser['id']): Promise<void> {
 	const blockerIds = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, blockeeId);
 	await deps.redis.set(`kvcache:userBlocked:${blockeeId}`, JSON.stringify(blockerIds), 'EX', 60 * 30);
-}
-
-async function refreshUserFollowingsCache(deps: HonoApiAccountBlockingDependencies, followerId: MiUser['id']): Promise<void> {
-	const followees = await listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, followerId);
-	const value: Record<string, { withReplies: boolean }> = {};
-
-	for (const followee of followees) {
-		value[followee.followeeId] = { withReplies: followee.withReplies };
-	}
-
-	await deps.redis.set(`kvcache:userFollowings:${followerId}`, JSON.stringify(value), 'EX', 60 * 30);
-}
-
-async function updateFederatedInstanceCache(
-	deps: HonoApiAccountBlockingDependencies,
-	instance: MiInstance,
-): Promise<void> {
-	await deps.redis.set(
-		`kvcache:federatedInstance:${instance.host}`,
-		JSON.stringify(instance),
-		'EX',
-		60 * 30,
-	);
-}
-
-async function fetchOrRegisterFederatedInstance(
-	deps: HonoApiAccountBlockingDependencies,
-	host: string,
-): Promise<MiInstance> {
-	const punyHost = domainToASCII(host.toLowerCase());
-	const existing = await fetchInstanceByHostFromDatabase(deps.db, punyHost);
-	if (existing != null) {
-		await updateFederatedInstanceCache(deps, existing);
-		return existing;
-	}
-
-	const created = await createInstanceInDatabase(deps.db, {
-		id: genId(deps.config),
-		host: punyHost,
-		firstRetrievedAt: new Date(),
-	});
-	await updateFederatedInstanceCache(deps, created);
-	return created;
 }
 
 async function enqueueUnfollowWebhook(

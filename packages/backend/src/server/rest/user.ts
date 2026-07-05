@@ -140,10 +140,8 @@ export async function packUserLiteForHonoApi(
 	return packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? []);
 }
 
-export async function packUserLiteManyForHonoApi(
-	deps: UserPackingDependencies,
-	srcs: (MiUser['id'] | MiUser)[],
-): Promise<Packed<'UserLite'>[]> {
+/** srcs (MiUser本体 or ID) を MiUser[] に解決する。バッチ取得で見つからなかったIDは1件ずつ fetchUserByIdOrFailFromDatabase にフォールバックする (見つからなければ throw)。 */
+async function resolveUsersFromSrcsForHonoApi(deps: UserPackingDependencies, srcs: (MiUser['id'] | MiUser)[]): Promise<MiUser[]> {
 	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
 	const ids = srcs.filter((src): src is string => typeof src === 'string');
 	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
@@ -153,7 +151,14 @@ export async function packUserLiteManyForHonoApi(
 		userById.set(user.id, user);
 	}
 
-	const users = srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
+	return srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
+}
+
+export async function packUserLiteManyForHonoApi(
+	deps: UserPackingDependencies,
+	srcs: (MiUser['id'] | MiUser)[],
+): Promise<Packed<'UserLite'>[]> {
+	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
 	const avatarDecorations = await buildHonoApiAvatarDecorations(deps, users);
 
 	return users.map(user => packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? []));
@@ -175,16 +180,7 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	srcs: (MiUser['id'] | MiUser)[],
 	me?: { id: MiUser['id'] } | null,
 ): Promise<UserDetailedNotMeHonoApiResponse[]> {
-	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
-	const ids = srcs.filter((src): src is string => typeof src === 'string');
-	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
-	const userById = new Map([...explicitUsers, ...fetchedUsers].map(user => [user.id, user]));
-	for (const missingId of ids.filter(id => !userById.has(id))) {
-		const user = await fetchUserByIdOrFailFromDatabase(deps.db, missingId);
-		userById.set(user.id, user);
-	}
-
-	const users = srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
+	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
 	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, [...new Set(users.map(user => user.id))]);
 	const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
 	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id) : null;
@@ -426,16 +422,7 @@ export async function packUserDetailedManyForHonoApi(
 		return await packUserDetailedNotMeManyForHonoApi(deps, srcs);
 	}
 
-	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
-	const ids = srcs.filter((src): src is string => typeof src === 'string');
-	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
-	const userById = new Map([...explicitUsers, ...fetchedUsers].map(user => [user.id, user]));
-	for (const missingId of ids.filter(id => !userById.has(id))) {
-		const user = await fetchUserByIdOrFailFromDatabase(deps.db, missingId);
-		userById.set(user.id, user);
-	}
-
-	const users = srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
+	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
 	const meIndex = users.findIndex(user => user.id === me.id);
 	const others = meIndex === -1 ? users : users.filter((_, index) => index !== meIndex);
 	const packedOthers = await packUserDetailedNotMeManyForHonoApi(deps, others, me);

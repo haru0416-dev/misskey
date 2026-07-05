@@ -16,6 +16,7 @@ import type { MiMuting } from '@/models/Muting.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import { HonoApiError } from './error.js';
+import { resolveHonoApiIdPagination } from './following.js';
 import { packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -121,39 +122,6 @@ export async function refreshUserMutingsCache(deps: { db: MiDrizzleDatabase; red
 async function refreshRenoteMutingsCache(deps: HonoApiAccountMuteDependencies, muterId: MiUser['id']): Promise<void> {
 	const muteeIds = await listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, muterId);
 	await deps.redis.set(`kvcache:renoteMutings:${muterId}`, JSON.stringify(muteeIds), 'EX', 60 * 30);
-}
-
-function resolveRenoteMutePagination(
-	config: Config,
-	params: Pick<MuteListParams, 'sinceDate' | 'sinceId' | 'untilDate' | 'untilId'>,
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: 'asc' | 'desc';
-} {
-	let sinceId: string | null = null;
-	let untilId: string | null = null;
-	let order: 'asc' | 'desc' = 'desc';
-
-	if (params.sinceId && params.untilId) {
-		sinceId = params.sinceId;
-		untilId = params.untilId;
-	} else if (params.sinceId) {
-		sinceId = params.sinceId;
-		order = 'asc';
-	} else if (params.untilId) {
-		untilId = params.untilId;
-	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(config, params.sinceDate);
-		untilId = genId(config, params.untilDate);
-	} else if (params.sinceDate) {
-		sinceId = genId(config, params.sinceDate);
-		order = 'asc';
-	} else if (params.untilDate) {
-		untilId = genId(config, params.untilDate);
-	}
-
-	return { sinceId, untilId, order };
 }
 
 async function packHonoApiMuting(
@@ -316,7 +284,7 @@ export async function handleHonoApiRenoteMuteList(
 	const params = parseHonoApiParams(muteListParamDef, body) as MuteListParams;
 	const mutings = await listRenoteMutingsByMuterIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
-		...resolveRenoteMutePagination(deps.config, params),
+		...resolveHonoApiIdPagination(deps.config, params),
 	});
 
 	return await Promise.all(mutings.map(muting => packHonoApiRenoteMuting(deps, muting, me) as Promise<Packed<'RenoteMuting'>>));

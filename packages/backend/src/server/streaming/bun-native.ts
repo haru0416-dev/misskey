@@ -16,6 +16,7 @@ const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
 type WsData = {
 	connection: HonoStreamConnection;
+	cleanup?: () => void;
 };
 
 function resolveStreamingToken(authHeader: string | null, url: URL): string | null {
@@ -49,7 +50,6 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 	deps.redisForSub.on('message', onRedisMessage);
 
 	const connections = new Map<Bun.ServerWebSocket<WsData>, number>();
-	const cleanups = new WeakMap<Bun.ServerWebSocket<WsData>, () => void>();
 
 	const reaperIntervalId = setInterval(() => {
 		const now = Date.now();
@@ -116,19 +116,18 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 				}, LAST_ACTIVE_UPDATE_INTERVAL_MS);
 			}
 
-			cleanups.set(ws, () => {
+			ws.data.cleanup = () => {
 				globalEv.off('message', onMessage);
 				connection.dispose();
 				connections.delete(ws);
 				if (lastActiveIntervalId) clearInterval(lastActiveIntervalId);
-			});
+			};
 		},
 		message(ws, message) {
 			ws.data.connection.handleClientMessage(message.toString());
 		},
 		close(ws) {
-			cleanups.get(ws)?.();
-			cleanups.delete(ws);
+			ws.data.cleanup?.();
 		},
 		pong(ws) {
 			connections.set(ws, Date.now());

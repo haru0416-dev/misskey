@@ -213,9 +213,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			fetch: async (request, bunServerInstance) => {
 				const url = new URL(request.url);
 				if (url.pathname === streamRuntime.streamingPath && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
-					const response = await streamRuntime.tryUpgrade(request, url, bunServerInstance);
-					if (response) return response;
-					return undefined as unknown as Response;
+					return streamRuntime.tryUpgrade(request, url, bunServerInstance);
 				}
 
 				const remoteAddress = bunServerInstance.requestIP(request)?.address;

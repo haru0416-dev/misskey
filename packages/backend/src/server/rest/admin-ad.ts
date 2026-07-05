@@ -18,6 +18,7 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiAd } from '@/models/Ad.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
+import { resolveHonoApiIdPagination } from './following.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminAdDependencies = {
@@ -111,30 +112,6 @@ function packAdForHonoApi(ad: MiAd): Packed<'Ad'> {
 	};
 }
 
-function resolveAdPagination(
-	config: Config,
-	params: AdminAdListParams,
-): {
-	sinceId: string | null;
-	untilId: string | null;
-} {
-	if (params.sinceId && params.untilId) {
-		return { sinceId: params.sinceId, untilId: params.untilId };
-	} else if (params.sinceId) {
-		return { sinceId: params.sinceId, untilId: null };
-	} else if (params.untilId) {
-		return { sinceId: null, untilId: params.untilId };
-	} else if (params.sinceDate && params.untilDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: genId(config, params.untilDate) };
-	} else if (params.sinceDate) {
-		return { sinceId: genId(config, params.sinceDate), untilId: null };
-	} else if (params.untilDate) {
-		return { sinceId: null, untilId: genId(config, params.untilDate) };
-	}
-
-	return { sinceId: null, untilId: null };
-}
-
 export async function handleHonoApiAdminAdCreate(
 	deps: HonoApiAdminAdDependencies,
 	me: MiLocalUser,
@@ -186,7 +163,7 @@ export async function handleHonoApiAdminAdList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>[]> {
 	const params = parseHonoApiParams(adminAdListParamDef, body) as AdminAdListParams;
-	const { sinceId, untilId } = resolveAdPagination(deps.config, params);
+	const { sinceId, untilId } = resolveHonoApiIdPagination(deps.config, params);
 	const ads = await listAdsFromDatabase(deps.db, {
 		limit: params.limit,
 		sinceId,

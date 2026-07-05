@@ -12,12 +12,13 @@ import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listAllFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
 import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
-import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
+import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
 import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listFollowingUsersByBirthdayDateFromDatabase } from '@/core/UserProfileStore.js';
 import { isHonoApiModerator } from './role-policy.js';
+import { fetchOrRegisterFederatedInstance } from './federation.js';
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
@@ -29,7 +30,6 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
-import type { MiInstance } from '@/models/Instance.js';
 import type { MiMeta } from '@/models/_.js';
 import { birthdaySchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -317,38 +317,6 @@ export async function refreshUserFollowingsCache(deps: HonoApiFollowingDependenc
 	}
 
 	await deps.redis.set(`kvcache:userFollowings:${followerId}`, JSON.stringify(value), 'EX', 60 * 30);
-}
-
-async function updateFederatedInstanceCache(
-	deps: HonoApiFollowingDependencies,
-	instance: MiInstance,
-): Promise<void> {
-	await deps.redis.set(
-		`kvcache:federatedInstance:${instance.host}`,
-		JSON.stringify(instance),
-		'EX',
-		60 * 30,
-	);
-}
-
-async function fetchOrRegisterFederatedInstance(
-	deps: HonoApiFollowingDependencies,
-	host: string,
-): Promise<MiInstance> {
-	const punyHost = domainToASCII(host.toLowerCase());
-	const existing = await fetchInstanceByHostFromDatabase(deps.db, punyHost);
-	if (existing != null) {
-		await updateFederatedInstanceCache(deps, existing);
-		return existing;
-	}
-
-	const created = await createInstanceInDatabase(deps.db, {
-		id: genId(deps.config),
-		host: punyHost,
-		firstRetrievedAt: new Date(),
-	});
-	await updateFederatedInstanceCache(deps, created);
-	return created;
 }
 
 async function isNotificationAllowed(
