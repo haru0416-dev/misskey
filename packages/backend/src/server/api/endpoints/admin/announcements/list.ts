@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { IdService } from '@/core/IdService.js';
-import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/AnnouncementReadStore.js';
-import { listAnnouncementsForAdminFromDatabase, resolveAnnouncementPagination } from '@/core/AnnouncementStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['admin'],
 
@@ -105,40 +97,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const announcements = await listAnnouncementsForAdminFromDatabase(this.drizzle, {
-				limit: ps.limit,
-				...resolveAnnouncementPagination(this.idService, ps),
-				status: ps.status,
-				userId: ps.userId,
-			});
-			const reads = await countAnnouncementReadsByAnnouncementIdsFromDatabase(this.drizzle, announcements.map(announcement => announcement.id));
-
-			return announcements.map(announcement => ({
-				id: announcement.id,
-				createdAt: this.idService.parse(announcement.id).date.toISOString(),
-				updatedAt: announcement.updatedAt?.toISOString() ?? null,
-				title: announcement.title,
-				text: announcement.text,
-				imageUrl: announcement.imageUrl,
-				icon: announcement.icon,
-				display: announcement.display,
-				isActive: announcement.isActive,
-				forExistingUsers: announcement.forExistingUsers,
-				silence: announcement.silence,
-				needConfirmationToRead: announcement.needConfirmationToRead,
-				userId: announcement.userId,
-				reads: reads.get(announcement.id) ?? 0,
-			}));
-		});
-	}
-}

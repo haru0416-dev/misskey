@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
-import { DI } from '@/di-symbols.js';
-import { ModerationLogService } from '@/core/ModerationLogService.js';
-import { createAdInDatabase } from '@/core/AdStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['admin'],
 
@@ -41,49 +33,3 @@ export const paramDef = {
 	},
 	required: ['url', 'memo', 'place', 'priority', 'ratio', 'expiresAt', 'startsAt', 'imageUrl', 'dayOfWeek'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
-		private moderationLogService: ModerationLogService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const ad = await createAdInDatabase(this.drizzle, {
-				id: this.idService.gen(),
-				expiresAt: new Date(ps.expiresAt),
-				startsAt: new Date(ps.startsAt),
-				dayOfWeek: ps.dayOfWeek,
-				isSensitive: ps.isSensitive ?? false,
-				url: ps.url,
-				imageUrl: ps.imageUrl,
-				priority: ps.priority,
-				ratio: ps.ratio,
-				place: ps.place,
-				memo: ps.memo,
-			});
-
-			this.moderationLogService.log(me, 'createAd', {
-				adId: ad.id,
-				ad: ad,
-			});
-
-			return {
-				id: ad.id,
-				expiresAt: ad.expiresAt.toISOString(),
-				startsAt: ad.startsAt.toISOString(),
-				dayOfWeek: ad.dayOfWeek,
-				isSensitive: ad.isSensitive,
-				url: ad.url,
-				imageUrl: ad.imageUrl,
-				priority: ad.priority,
-				ratio: ad.ratio,
-				place: ad.place,
-				memo: ad.memo,
-			};
-		});
-	}
-}

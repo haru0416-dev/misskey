@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
-import type { Config } from '@/config.js';
-import { DI } from '@/di-symbols.js';
-import { createAuthSessionInDatabase } from '@/core/AuthSessionStore.js';
-import { fetchAppBySecretFromDatabase } from '@/core/AppStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['auth'],
 
@@ -51,40 +40,3 @@ export const paramDef = {
 	},
 	required: ['appSecret'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Lookup app
-			const app = await fetchAppBySecretFromDatabase(this.drizzle, ps.appSecret);
-
-			if (app == null) {
-				throw new ApiError(meta.errors.noSuchApp);
-			}
-
-			// Generate token
-			const token = randomUUID();
-
-			// Create session token document
-			const doc = await createAuthSessionInDatabase(this.drizzle, {
-				id: this.idService.gen(),
-				appId: app.id,
-				token: token,
-			});
-
-			return {
-				token: doc.token,
-				url: `${this.config.authUrl}/${doc.token}`,
-			};
-		});
-	}
-}

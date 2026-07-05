@@ -3,19 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import bcrypt from 'bcryptjs';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { WebAuthnService } from '@/core/WebAuthnService.js';
-import { ApiError } from '@/server/api/error.js';
-import { UserAuthService } from '@/core/UserAuthService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-
 export const meta = {
 	requireCredential: true,
 
@@ -58,66 +45,3 @@ export const paramDef = {
 } as const;
 
 // eslint-disable-next-line import/no-default-export
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private webAuthnService: WebAuthnService,
-		private userAuthService: UserAuthService,
-		private userEntityService: UserEntityService,
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const token = ps.token;
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.db, me.id);
-
-			if (profile.twoFactorEnabled) {
-				if (token == null) {
-					throw new Error('authentication failed');
-				}
-
-				try {
-					await this.userAuthService.twoFactorAuthenticate(profile, token);
-				} catch (_) {
-					throw new Error('authentication failed');
-				}
-			}
-
-			const passwordMatched = await bcrypt.compare(ps.password, profile.password ?? '');
-			if (!passwordMatched) {
-				throw new ApiError(meta.errors.incorrectPassword);
-			}
-
-			if (!profile.twoFactorEnabled) {
-				throw new ApiError(meta.errors.twoFactorNotEnabled);
-			}
-
-			const keyInfo = await this.webAuthnService.verifyRegistration(me.id, ps.credential);
-			const keyId = keyInfo.credentialID;
-
-			await createUserSecurityKeyInDatabase(this.db, {
-				id: keyId,
-				userId: me.id,
-				name: ps.name,
-				publicKey: Buffer.from(keyInfo.credentialPublicKey).toString('base64url'),
-				counter: keyInfo.counter,
-				credentialDeviceType: keyInfo.credentialDeviceType,
-				credentialBackedUp: keyInfo.credentialBackedUp,
-				transports: keyInfo.transports,
-			});
-
-			// Publish meUpdated event
-			this.globalEventService.publishMainStream(me.id, 'meUpdated', await this.userEntityService.pack(me.id, me, {
-				schema: 'MeDetailed',
-				includeSecrets: true,
-			}));
-
-			return {
-				id: keyId,
-				name: ps.name,
-			};
-		});
-	}
-}

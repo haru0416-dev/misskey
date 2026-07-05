@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { AuthSessionEntityService } from '@/core/entities/AuthSessionEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { fetchAuthSessionByTokenFromDatabase } from '@/core/AuthSessionStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['auth'],
 
@@ -53,24 +45,3 @@ export const paramDef = {
 	},
 	required: ['token'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private authSessionEntityService: AuthSessionEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Lookup session
-			const session = await fetchAuthSessionByTokenFromDatabase(this.drizzle, ps.token);
-
-			if (session == null) {
-				throw new ApiError(meta.errors.noSuchSession);
-			}
-
-			return await this.authSessionEntityService.pack(session, me);
-		});
-	}
-}

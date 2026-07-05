@@ -3,16 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
-import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { createChannelInDatabase } from '@/core/ChannelStore.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['channels'],
@@ -57,38 +48,3 @@ export const paramDef = {
 	},
 	required: ['name'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
-		private channelEntityService: ChannelEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			let banner = null;
-			if (ps.bannerId != null) {
-				banner = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.bannerId, me.id);
-
-				if (banner == null) {
-					throw new ApiError(meta.errors.noSuchFile);
-				}
-			}
-
-			const channel = await createChannelInDatabase(this.drizzle, {
-				id: this.idService.gen(),
-				userId: me.id,
-				name: ps.name,
-				description: ps.description ?? null,
-				bannerId: banner ? banner.id : null,
-				isSensitive: ps.isSensitive ?? false,
-				...(ps.color !== undefined ? { color: ps.color } : {}),
-				allowRenoteToExternal: ps.allowRenoteToExternal ?? true,
-			});
-
-			return await this.channelEntityService.pack(channel, me);
-		});
-	}
-}

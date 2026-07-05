@@ -3,19 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
-import { QueueService } from '@/core/QueueService.js';
-import type { MiAntenna as _Antenna } from '@/models/_.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { RoleService } from '@/core/RoleService.js';
-import { DownloadService } from '@/core/DownloadService.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
-import { ApiError } from '../../error.js';
 
 export const meta = {
 	secure: true,
@@ -58,31 +46,3 @@ export const paramDef = {
 	},
 	required: ['fileId'],
 } as const;
-
-@Injectable() // eslint-disable-next-line import/no-default-export
-export default class extends Endpoint<typeof meta, typeof paramDef> {
-	constructor (
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private roleService: RoleService,
-		private queueService: QueueService,
-		private downloadService: DownloadService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const user = await fetchUserByIdFromDatabase(this.db, me.id);
-			if (user == null) throw new ApiError(meta.errors.noSuchUser);
-			const file = await fetchDriveFileByIdAndUserIdFromDatabase(this.db, ps.fileId, me.id);
-			if (file === null) throw new ApiError(meta.errors.noSuchFile);
-			if (file.size === 0) throw new ApiError(meta.errors.emptyFile);
-			const antennas: (_Antenna & { userListAccts: string[] | null })[] = JSON.parse(await this.downloadService.downloadTextFile(file.url));
-			const currentAntennasCount = await countAntennasByUserIdFromDatabase(this.db, me.id);
-			if (currentAntennasCount + antennas.length >= (await this.roleService.getUserPolicies(me.id)).antennaLimit) {
-				throw new ApiError(meta.errors.tooManyAntennas);
-			}
-			this.queueService.createImportAntennasJob(me, antennas);
-		});
-	}
-}
-
-export type Antenna = (_Antenna & { userListAccts: string[] | null })[];

@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { deleteAntennaFromDatabase, fetchAntennaByIdAndUserIdFromDatabase } from '@/core/AntennaStore.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['antennas'],
 
@@ -34,25 +26,3 @@ export const paramDef = {
 	},
 	required: ['antennaId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const antenna = await fetchAntennaByIdAndUserIdFromDatabase(this.db, ps.antennaId, me.id);
-
-			if (antenna == null) {
-				throw new ApiError(meta.errors.noSuchAntenna);
-			}
-
-			await deleteAntennaFromDatabase(this.db, antenna.id);
-
-			this.globalEventService.publishInternalEvent('antennaDeleted', antenna);
-		});
-	}
-}

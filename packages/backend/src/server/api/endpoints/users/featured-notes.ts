@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import type { MiMeta } from '@/models/_.js';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { FeaturedService } from '@/core/FeaturedService.js';
-import { CacheService } from '@/core/CacheService.js';
-import { isUserRelated } from '@/misc/is-user-related.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { listFeaturedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-
 export const meta = {
 	tags: ['notes'],
 
@@ -41,56 +30,3 @@ export const paramDef = {
 	},
 	required: ['userId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		@Inject(DI.meta)
-		private instanceMeta: MiMeta,
-
-		private noteEntityService: NoteEntityService,
-		private featuredService: FeaturedService,
-		private cacheService: CacheService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const userIdsWhoBlockingMe = me ? await this.cacheService.userBlockedCache.fetch(me.id) : new Set<string>();
-
-			// early return if me is blocked by requesting user
-			if (userIdsWhoBlockingMe.has(ps.userId)) {
-				return [];
-			}
-
-			let noteIds = await this.featuredService.getPerUserNotesRanking(ps.userId, 50);
-
-			noteIds.sort((a, b) => a > b ? -1 : 1);
-			if (ps.untilId) {
-				noteIds = noteIds.filter(id => id < ps.untilId!);
-			}
-			noteIds = noteIds.slice(0, ps.limit);
-
-			if (noteIds.length === 0) {
-				return [];
-			}
-
-			const [
-				userIdsWhoMeMuting,
-			] = me ? await Promise.all([
-				this.cacheService.userMutingsCache.fetch(me.id),
-			]) : [new Set<string>()];
-
-			const notes = (await listFeaturedNotesByIdsFromDatabase(this.db, noteIds, this.instanceMeta.blockedHosts)).filter(note => {
-				if (me && isUserRelated(note, userIdsWhoBlockingMe, false)) return false;
-				if (me && isUserRelated(note, userIdsWhoMeMuting, true)) return false;
-
-				return true;
-			});
-
-			notes.sort((a, b) => a.id > b.id ? -1 : 1);
-
-			return await this.noteEntityService.packMany(notes, me);
-		});
-	}
-}

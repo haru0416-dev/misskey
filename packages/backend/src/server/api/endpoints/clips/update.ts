@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
-import { ClipService } from '@/core/ClipService.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['clips'],
 
@@ -43,27 +37,3 @@ export const paramDef = {
 	},
 	required: ['clipId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private clipService: ClipService,
-
-		private clipEntityService: ClipEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			try {
-				// 空文字列をnullにしたいので??は使わない
-				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-				await this.clipService.update(me, ps.clipId, ps.name, ps.isPublic, ps.description || null);
-			} catch (e) {
-				if (e instanceof ClipService.NoSuchClipError) {
-					throw new ApiError(meta.errors.noSuchClip);
-				}
-				throw e;
-			}
-
-			return await this.clipEntityService.pack(ps.clipId, me);
-		});
-	}
-}

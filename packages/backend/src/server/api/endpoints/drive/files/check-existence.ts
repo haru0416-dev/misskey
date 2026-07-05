@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { driveFileExistsByMd5AndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-
 export const meta = {
 	tags: ['drive'],
 
@@ -31,15 +25,3 @@ export const paramDef = {
 	},
 	required: ['md5'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			return await driveFileExistsByMd5AndUserIdFromDatabase(this.db, ps.md5, me.id);
-		});
-	}
-}

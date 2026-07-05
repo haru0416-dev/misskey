@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ApiError } from '@/server/api/error.js';
-import {
-	AbuseReportNotificationRecipientEntityService,
-} from '@/core/entities/AbuseReportNotificationRecipientEntityService.js';
-import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
-import { DI } from '@/di-symbols.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['admin', 'abuse-report', 'notification-recipient'],
 
@@ -84,47 +73,3 @@ export const paramDef = {
 		'method',
 	],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private abuseReportNotificationService: AbuseReportNotificationService,
-		private abuseReportNotificationRecipientEntityService: AbuseReportNotificationRecipientEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			if (ps.method === 'email') {
-				const userProfile = ps.userId == null ? null : await fetchUserProfileByUserIdFromDatabase(this.drizzle, ps.userId);
-				if (!ps.userId || !userProfile) {
-					throw new ApiError(meta.errors.correlationCheckEmail);
-				}
-
-				if (!userProfile.email || !userProfile.emailVerified) {
-					throw new ApiError(meta.errors.emailAddressNotSet);
-				}
-			}
-
-			if (ps.method === 'webhook' && !ps.systemWebhookId) {
-				throw new ApiError(meta.errors.correlationCheckWebhook);
-			}
-
-			const userId = ps.method === 'email' ? ps.userId : null;
-			const systemWebhookId = ps.method === 'webhook' ? ps.systemWebhookId : null;
-			const result = await this.abuseReportNotificationService.updateRecipient(
-				{
-					id: ps.id,
-					isActive: ps.isActive,
-					name: ps.name,
-					method: ps.method,
-					userId: userId ?? null,
-					systemWebhookId: systemWebhookId ?? null,
-				},
-				me,
-			);
-
-			return this.abuseReportNotificationRecipientEntityService.pack(result);
-		});
-	}
-}
