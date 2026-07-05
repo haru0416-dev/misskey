@@ -341,6 +341,21 @@ describe('アンテナ', () => {
 	describe('のノート', () => {
 		//#region アンテナのノート取得(antennas/notes)
 
+		// アンテナへの振り分けは note 作成時に await されない副作用のため、期待件数に達するまで
+		// 有界ポーリングで待つ (期待0件の場合は短い猶予後に読む)。
+		const waitForAntennaNotes = async (user: (typeof alice), antennaId: string, expectedCount: number) => {
+			if (expectedCount === 0) {
+				await new Promise(resolve => setTimeout(resolve, 300));
+			} else {
+				for (let i = 0; i < 30; i++) {
+					const response = await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId }, user });
+					if (response.length >= expectedCount) return response;
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+			}
+			return await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId }, user });
+		};
+
 		test('を取得できること。', async () => {
 			const keyword = 'キーワード';
 			await post(bob, { text: `test ${keyword} beforehand` });
@@ -350,11 +365,7 @@ describe('アンテナ', () => {
 				user: alice,
 			});
 			const note = await post(bob, { text: `test ${keyword}` });
-			const response = await successfulApiCall({
-				endpoint: 'antennas/notes',
-				parameters: { antennaId: antenna.id },
-				user: alice,
-			});
+			const response = await waitForAntennaNotes(alice, antenna.id, 1);
 			const expected = [note];
 			assert.deepStrictEqual(response, expected);
 		});
@@ -373,6 +384,11 @@ describe('アンテナ', () => {
 			});
 			const remainingNote = await post(bob, { text: `test ${keyword} remaining` });
 			const removedNote = await post(bob, { text: `test ${keyword} removed` });
+
+			// 振り分け完了前に remove-note すると lrem が空振りした後から追加され直すため、
+			// 両ノートがアンテナに到達してから削除する
+			await waitForAntennaNotes(alice, antenna.id, 2);
+			await waitForAntennaNotes(bob, otherAntenna.id, 2);
 
 			await successfulApiCall({
 				endpoint: 'antennas/remove-note',
@@ -724,11 +740,7 @@ describe('アンテナ', () => {
 				user: alice,
 			})));
 
-			const response = await successfulApiCall({
-				endpoint: 'antennas/notes',
-				parameters: { antennaId: antenna.id },
-				user: alice,
-			});
+			const response = await waitForAntennaNotes(alice, antenna.id, expected.length);
 			assert.deepStrictEqual(
 				response.map(({ userId, id, text }) => ({ userId, id, text })),
 				expected.map(({ userId, id, text }) => ({ userId, id, text })));
@@ -757,11 +769,7 @@ describe('アンテナ', () => {
 			const noteInNonSensitiveChannel = await post(bob, { text: `test ${keyword}`, channelId: nonSensitiveChannel.id });
 			await post(bob, { text: `test ${keyword}`, channelId: sensitiveChannel.id });
 
-			const response = await successfulApiCall({
-				endpoint: 'antennas/notes',
-				parameters: { antennaId: antenna.id },
-				user: alice,
-			});
+			const response = await waitForAntennaNotes(alice, antenna.id, 2);
 			// 最後に投稿したものが先頭に来る。
 			const expected = [
 				noteInNonSensitiveChannel,
@@ -787,6 +795,8 @@ describe('アンテナ', () => {
 				const n = await post(alice, { text: `${keyword} (${index})` });
 				return [n].concat(p);
 			}, Promise.resolve([] as Note[]));
+
+			await waitForAntennaNotes(alice, antenna.id, 30);
 
 			// antennas/notesは降順のみで、昇順をサポートしない。
 			await testPaginationConsistency(notes, async (paginationParam) => {
