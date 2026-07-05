@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import bcrypt from 'bcryptjs';
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
-import { ApiError } from '@/server/api/error.js';
-import { UserAuthService } from '@/core/UserAuthService.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	requireCredential: true,
 
@@ -36,50 +25,3 @@ export const paramDef = {
 	},
 	required: ['password'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private userEntityService: UserEntityService,
-		private userAuthService: UserAuthService,
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const token = ps.token;
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(this.drizzle, me.id);
-
-			if (profile.twoFactorEnabled) {
-				if (token == null) {
-					throw new Error('authentication failed');
-				}
-
-				try {
-					await this.userAuthService.twoFactorAuthenticate(profile, token);
-				} catch (_) {
-					throw new Error('authentication failed');
-				}
-			}
-
-			const passwordMatched = await bcrypt.compare(ps.password, profile.password ?? '');
-			if (!passwordMatched) {
-				throw new ApiError(meta.errors.incorrectPassword);
-			}
-
-			await updateUserProfileInDatabase(this.drizzle, me.id, {
-				twoFactorSecret: null,
-				twoFactorBackupSecret: null,
-				twoFactorEnabled: false,
-				usePasswordLessLogin: false,
-			});
-
-			// Publish meUpdated event
-			this.globalEventService.publishMainStream(me.id, 'meUpdated', await this.userEntityService.pack(me.id, me, {
-				schema: 'MeDetailed',
-				includeSecrets: true,
-			}));
-		});
-	}
-}

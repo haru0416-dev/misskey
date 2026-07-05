@@ -2,9 +2,9 @@ import type { Server } from 'node:http';
 import { portToPid } from 'pid-port';
 import { Hono } from 'hono';
 import { loadConfig } from '@/config.js';
-import { createHonoNodeServer } from '@/server/hono-node-server.js';
+import { createHonoNodeServer } from '@/server/node-server.js';
 import { initExtraThreadPool, server as startServer } from '@/boot/common.js';
-import type { HonoServerRuntime } from '@/boot/hono-server.js';
+import type { HonoServerRuntime } from '@/boot/server.js';
 
 const config = loadConfig();
 const originEnv = JSON.stringify(process.env);

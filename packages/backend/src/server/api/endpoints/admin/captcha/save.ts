@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
 import { captchaErrorCodes, CaptchaService, supportedCaptchaProviders } from '@/core/CaptchaService.js';
-import { ApiError } from '@/server/api/error.js';
 
 export const meta = {
 	tags: ['admin', 'captcha'],
@@ -79,51 +76,3 @@ export const paramDef = {
 	},
 	required: ['provider'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private captchaService: CaptchaService,
-	) {
-		super(meta, paramDef, async (ps) => {
-			const result = await this.captchaService.save(ps.provider, {
-				sitekey: ps.sitekey,
-				secret: ps.secret,
-				instanceUrl: ps.instanceUrl,
-				captchaResult: ps.captchaResult,
-			});
-
-			if (!result.success) {
-				switch (result.error.code) {
-					case captchaErrorCodes.invalidProvider:
-						throw new ApiError({
-							...meta.errors.invalidProvider,
-							message: result.error.message,
-						});
-					case captchaErrorCodes.invalidParameters:
-						throw new ApiError({
-							...meta.errors.invalidParameters,
-							message: result.error.message,
-						});
-					case captchaErrorCodes.noResponseProvided:
-						throw new ApiError({
-							...meta.errors.noResponseProvided,
-							message: result.error.message,
-						});
-					case captchaErrorCodes.requestFailed:
-						throw new ApiError({
-							...meta.errors.requestFailed,
-							message: result.error.message,
-						});
-					case captchaErrorCodes.verificationFailed:
-						throw new ApiError({
-							...meta.errors.verificationFailed,
-							message: result.error.message,
-						});
-					default:
-						throw new ApiError(meta.errors.unknown);
-				}
-			}
-		});
-	}
-}

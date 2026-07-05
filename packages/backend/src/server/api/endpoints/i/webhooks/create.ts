@@ -3,16 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
 import { webhookEventTypes } from '@/models/Webhook.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
-import { RoleService } from '@/core/RoleService.js';
-import { ApiError } from '@/server/api/error.js';
-import { countWebhooksByUserIdFromDatabase, createWebhookInDatabase } from '@/core/WebhookStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 // TODO: UserWebhook schemaの適用
 export const meta = {
@@ -72,45 +63,3 @@ export const paramDef = {
 } as const;
 
 // TODO: ロジックをサービスに切り出す
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private idService: IdService,
-		private globalEventService: GlobalEventService,
-		private roleService: RoleService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const currentWebhooksCount = await countWebhooksByUserIdFromDatabase(this.db, me.id);
-			if (currentWebhooksCount >= (await this.roleService.getUserPolicies(me.id)).webhookLimit) {
-				throw new ApiError(meta.errors.tooManyWebhooks);
-			}
-
-			const webhook = await createWebhookInDatabase(this.db, {
-				id: this.idService.gen(),
-				userId: me.id,
-				name: ps.name,
-				url: ps.url,
-				secret: ps.secret,
-				on: ps.on,
-			});
-
-			this.globalEventService.publishInternalEvent('webhookCreated', webhook);
-
-			return {
-				id: webhook.id,
-				userId: webhook.userId,
-				name: webhook.name,
-				on: webhook.on,
-				url: webhook.url,
-				secret: webhook.secret,
-				active: webhook.active,
-				latestSentAt: webhook.latestSentAt ? webhook.latestSentAt.toISOString() : null,
-				latestStatus: webhook.latestStatus,
-			};
-		});
-	}
-}

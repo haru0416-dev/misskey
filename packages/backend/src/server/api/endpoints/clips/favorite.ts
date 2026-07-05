@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { IdService } from '@/core/IdService.js';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { clipFavoriteExistsInDatabase, createClipFavoriteInDatabase } from '@/core/ClipFavoriteStore.js';
-import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['clip'],
 
@@ -43,35 +34,3 @@ export const paramDef = {
 	},
 	required: ['clipId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const clip = await fetchClipByIdFromDatabase(this.drizzle, ps.clipId);
-			if (clip == null) {
-				throw new ApiError(meta.errors.noSuchClip);
-			}
-			if ((clip.userId !== me.id) && !clip.isPublic) {
-				throw new ApiError(meta.errors.noSuchClip);
-			}
-
-			const exist = await clipFavoriteExistsInDatabase(this.drizzle, me.id, clip.id);
-
-			if (exist) {
-				throw new ApiError(meta.errors.alreadyFavorited);
-			}
-
-			await createClipFavoriteInDatabase(this.drizzle, {
-				id: this.idService.gen(),
-				clipId: clip.id,
-				userId: me.id,
-			});
-		});
-	}
-}

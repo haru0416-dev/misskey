@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { FlashLikeEntityService } from '@/core/entities/FlashLikeEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { FlashService } from '@/core/FlashService.js';
-
 export const meta = {
 	tags: ['account', 'flash'],
 
@@ -49,24 +43,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private flashLikeEntityService: FlashLikeEntityService,
-		private flashService: FlashService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const likes = await this.flashService.myLikes(me.id, {
-				sinceId: ps.sinceId,
-				untilId: ps.untilId,
-				sinceDate: ps.sinceDate,
-				untilDate: ps.untilDate,
-				limit: ps.limit,
-				search: ps.search,
-			});
-
-			return this.flashLikeEntityService.packMany(likes, me);
-		});
-	}
-}

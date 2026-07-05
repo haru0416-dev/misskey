@@ -3,19 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
-import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
-import {
-	createDriveFolderInDatabase,
-	fetchDriveFolderByIdAndUserIdFromDatabase,
-} from '@/core/DriveFolderStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
 
 export const meta = {
 	tags: ['drive'],
@@ -52,43 +40,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private driveFolderEntityService: DriveFolderEntityService,
-		private idService: IdService,
-		private globalEventService: GlobalEventService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// If the parent folder is specified
-			let parent = null;
-			if (ps.parentId) {
-				// Fetch parent folder
-				parent = await fetchDriveFolderByIdAndUserIdFromDatabase(this.db, ps.parentId, me.id);
-
-				if (parent == null) {
-					throw new ApiError(meta.errors.noSuchFolder);
-				}
-			}
-
-			// Create folder
-			const folder = await createDriveFolderInDatabase(this.db, {
-				id: this.idService.gen(),
-				name: ps.name,
-				parentId: parent !== null ? parent.id : null,
-				userId: me.id,
-			});
-
-			const folderObj = await this.driveFolderEntityService.pack(folder);
-
-			// Publish folderCreated event
-			this.globalEventService.publishDriveStream(me.id, 'folderCreated', folderObj);
-
-			return folderObj;
-		});
-	}
-}

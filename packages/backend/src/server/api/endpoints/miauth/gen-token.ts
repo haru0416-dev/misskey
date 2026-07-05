@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
-import { NotificationService } from '@/core/NotificationService.js';
-import { secureRndstr } from '@/misc/secure-rndstr.js';
-import { DI } from '@/di-symbols.js';
-import { createAccessTokenInDatabase } from '@/core/AccessTokenStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['auth'],
 
@@ -44,42 +35,3 @@ export const paramDef = {
 	},
 	required: ['session', 'permission'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private idService: IdService,
-		private notificationService: NotificationService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Generate access token
-			const accessToken = secureRndstr(32);
-
-			const now = new Date();
-
-			// Insert access token doc
-			await createAccessTokenInDatabase(this.db, {
-				id: this.idService.gen(now.getTime()),
-				lastUsedAt: now,
-				session: ps.session,
-				userId: me.id,
-				token: accessToken,
-				hash: accessToken,
-				name: ps.name,
-				description: ps.description,
-				iconUrl: ps.iconUrl,
-				permission: ps.permission,
-			});
-
-			// アクセストークンが生成されたことを通知
-			this.notificationService.createNotification(me.id, 'createToken', {});
-
-			return {
-				token: accessToken,
-			};
-		});
-	}
-}

@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { ApiError } from '@/server/api/error.js';
-import { ChannelMutingService } from '@/core/ChannelMutingService.js';
-import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['channels', 'mute'],
 
@@ -52,41 +44,3 @@ export const paramDef = {
 	},
 	required: ['channelId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private channelMutingService: ChannelMutingService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Check if exists the channel
-			const targetChannel = await fetchChannelByIdFromDatabase(this.drizzle, ps.channelId);
-			if (!targetChannel) {
-				throw new ApiError(meta.errors.noSuchChannel);
-			}
-
-			// Check if already muting
-			const exist = await this.channelMutingService.isMuted({
-				requestUserId: me.id,
-				targetChannelId: targetChannel.id,
-			});
-			if (exist) {
-				throw new ApiError(meta.errors.alreadyMuting);
-			}
-
-			// Check if expiresAt is past
-			if (ps.expiresAt && ps.expiresAt <= Date.now()) {
-				throw new ApiError(meta.errors.expiresAtIsPast);
-			}
-
-			await this.channelMutingService.mute({
-				requestUserId: me.id,
-				targetChannelId: targetChannel.id,
-				expiresAt: ps.expiresAt ? new Date(ps.expiresAt) : null,
-			});
-		});
-	}
-}

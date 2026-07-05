@@ -3,12 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createHash } from 'crypto';
 import ms from 'ms';
-import { Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
-import { ApiError } from '../error.js';
 
 export const meta = {
 	tags: ['meta'],
@@ -55,31 +50,3 @@ export const paramDef = {
 	},
 	required: ['url', 'hash'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private httpRequestService: HttpRequestService,
-	) {
-		super(meta, paramDef, async (ps) => {
-			const res = await this.httpRequestService.getJson<{
-				type: string;
-				data: string;
-			}>(ps.url);
-
-			if (!res.data || !res.type) {
-				throw new ApiError(meta.errors.invalidSchema);
-			}
-
-			const resHash = createHash('sha512').update(res.data.replace(/\r\n/g, '\n')).digest('hex');
-			if (resHash !== ps.hash) {
-				throw new ApiError(meta.errors.hashUnmached);
-			}
-
-			return {
-				type: res.type,
-				data: res.data,
-			};
-		});
-	}
-}

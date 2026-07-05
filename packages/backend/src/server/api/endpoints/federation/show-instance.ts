@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { InstanceEntityService } from '@/core/entities/InstanceEntityService.js';
-import { UtilityService } from '@/core/UtilityService.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
-
 export const meta = {
 	tags: ['federation'],
 
@@ -30,20 +22,3 @@ export const paramDef = {
 	},
 	required: ['host'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private utilityService: UtilityService,
-		private instanceEntityService: InstanceEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const instance = await fetchInstanceByHostFromDatabase(this.db, this.utilityService.toPuny(ps.host));
-
-			return instance ? await this.instanceEntityService.pack(instance, me) : null;
-		});
-	}
-}

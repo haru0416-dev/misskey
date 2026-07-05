@@ -19,7 +19,7 @@ export function initExtraThreadPool(config: Config) {
 }
 
 export async function server() {
-	const { launchHonoServer } = await import('./hono-server.js');
+	const { launchHonoServer } = await import('./server.js');
 	return await launchHonoServer(loadConfig());
 }
 
@@ -35,7 +35,7 @@ export type JobQueueRuntime = {
  */
 export async function jobQueue(): Promise<JobQueueRuntime> {
 	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
-	const { createHonoQueueWorkers } = await import('../server/hono-queue-shell.js');
+	const { createHonoQueueWorkers } = await import('../queue/worker.js');
 
 	const config = loadConfig();
 	const deps = await createRuntimeDependencies(config);

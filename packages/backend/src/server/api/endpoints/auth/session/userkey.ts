@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { deleteAuthSessionByIdFromDatabase, fetchAuthSessionByTokenAndAppIdFromDatabase } from '@/core/AuthSessionStore.js';
-import { fetchAppBySecretFromDatabase } from '@/core/AppStore.js';
-import { fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase } from '@/core/AccessTokenStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['auth'],
 
@@ -64,46 +54,3 @@ export const paramDef = {
 	},
 	required: ['appSecret', 'token'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private userEntityService: UserEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Lookup app
-			const app = await fetchAppBySecretFromDatabase(this.drizzle, ps.appSecret);
-
-			if (app == null) {
-				throw new ApiError(meta.errors.noSuchApp);
-			}
-
-			// Fetch token
-			const session = await fetchAuthSessionByTokenAndAppIdFromDatabase(this.drizzle, ps.token, app.id);
-
-			if (session == null) {
-				throw new ApiError(meta.errors.noSuchSession);
-			}
-
-			if (session.userId == null) {
-				throw new ApiError(meta.errors.pendingSession);
-			}
-
-			// Lookup access token
-			const accessToken = await fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase(this.drizzle, app.id, session.userId);
-
-			// Delete session
-			await deleteAuthSessionByIdFromDatabase(this.drizzle, session.id);
-
-			return {
-				accessToken: accessToken.token,
-				user: await this.userEntityService.pack(session.userId, null, {
-					schema: 'UserDetailedNotMe',
-				}),
-			};
-		});
-	}
-}

@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { IdService } from '@/core/IdService.js';
-import { listGalleryPostsWithPaginationFromDatabase, resolveGalleryPostPagination } from '@/core/GalleryPostStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['gallery'],
 
@@ -36,24 +28,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private galleryPostEntityService: GalleryPostEntityService,
-		private idService: IdService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const pagination = resolveGalleryPostPagination(this.idService, ps);
-			const posts = await listGalleryPostsWithPaginationFromDatabase(this.drizzle, {
-				limit: ps.limit,
-				...pagination,
-			});
-
-			return await this.galleryPostEntityService.packMany(posts, me);
-		});
-	}
-}

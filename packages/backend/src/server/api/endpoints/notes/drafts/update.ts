@@ -3,14 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { NoteDraftService } from '@/core/NoteDraftService.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
-import { NoteDraftEntityService } from '@/core/entities/NoteDraftEntityService.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
-import { ApiError } from '../../../error.js';
 
 export const meta = {
 	tags: ['notes', 'drafts'],
@@ -238,91 +232,3 @@ export const paramDef = {
 	},
 	required: ['draftId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private noteDraftService: NoteDraftService,
-		private noteDraftEntityService: NoteDraftEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const draft = await this.noteDraftService.update(me, ps.draftId, {
-				fileIds: ps.fileIds,
-				pollChoices: ps.poll?.choices,
-				pollMultiple: ps.poll?.multiple,
-				pollExpiresAt: ps.poll?.expiresAt ? new Date(ps.poll.expiresAt) : null,
-				pollExpiredAfter: ps.poll?.expiredAfter,
-				text: ps.text,
-				replyId: ps.replyId,
-				renoteId: ps.renoteId,
-				cw: ps.cw,
-				hashtag: ps.hashtag,
-				localOnly: ps.localOnly,
-				reactionAcceptance: ps.reactionAcceptance,
-				visibility: ps.visibility,
-				visibleUserIds: ps.visibleUserIds,
-				channelId: ps.channelId,
-				scheduledAt: ps.scheduledAt ? new Date(ps.scheduledAt) : null,
-				isActuallyScheduled: ps.isActuallyScheduled,
-			}).catch((err) => {
-				if (err instanceof IdentifiableError) {
-					switch (err.id) {
-						case '49cd6b9d-848e-41ee-b0b9-adaca711a6b1':
-							throw new ApiError(meta.errors.noSuchNoteDraft);
-						case '04da457d-b083-4055-9082-955525eda5a5':
-							throw new ApiError(meta.errors.cannotCreateAlreadyExpiredPoll);
-						case 'b6992544-63e7-67f0-fa7f-32444b1b5306':
-							throw new ApiError(meta.errors.noSuchFile);
-						case '64929870-2540-4d11-af41-3b484d78c956':
-							throw new ApiError(meta.errors.noSuchRenote);
-						case '76cc5583-5a14-4ad3-8717-0298507e32db':
-							throw new ApiError(meta.errors.cannotRenote);
-						case '075ca298-e6e7-485a-b570-51a128bb5168':
-							throw new ApiError(meta.errors.youHaveBeenBlocked);
-						case '81eb8188-aea1-4e35-9a8f-3334a3be9855':
-							throw new ApiError(meta.errors.cannotRenoteDueToVisibility);
-						case '6815399a-6f13-4069-b60d-ed5156249d12':
-							throw new ApiError(meta.errors.noSuchChannel);
-						case 'ed1952ac-2d26-4957-8b30-2deda76bedf7':
-							throw new ApiError(meta.errors.cannotRenoteToExternal);
-						case 'c4721841-22fc-4bb7-ad3d-897ef1d375b5':
-							throw new ApiError(meta.errors.noSuchReply);
-						case 'e6c10b57-2c09-4da3-bd4d-eda05d51d140':
-							throw new ApiError(meta.errors.cannotReplyToPureRenote);
-						case '593c323c-6b6a-4501-a25c-2f36bd2a93d6':
-							throw new ApiError(meta.errors.cannotReplyToInvisibleNote);
-						case '215dbc76-336c-4d2a-9605-95766ba7dab0':
-							throw new ApiError(meta.errors.cannotReplyToSpecifiedNoteWithExtendedVisibility);
-						case 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4':
-							throw new ApiError(meta.errors.noSuchRenoteTarget);
-						case 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a':
-							throw new ApiError(meta.errors.cannotReRenote);
-						case '749ee0f6-d3da-459a-bf02-282e2da4292c':
-							throw new ApiError(meta.errors.noSuchReplyTarget);
-						case '33510210-8452-094c-6227-4a6c05d99f00':
-							throw new ApiError(meta.errors.cannotRenoteOutsideOfChannel);
-						case 'aa6e01d3-a85c-669d-758a-76aab43af334':
-							throw new ApiError(meta.errors.containsProhibitedWords);
-						case '4de0363a-3046-481b-9b0f-feff3e211025':
-							throw new ApiError(meta.errors.containsTooManyMentions);
-						case 'bacdf856-5c51-4159-b88a-804fa5103be5':
-							throw new ApiError(meta.errors.tooManyScheduledNotes);
-						case '94a89a43-3591-400a-9c17-dd166e71fdfa':
-							throw new ApiError(meta.errors.scheduledAtRequired);
-						case 'b34d0c1b-996f-4e34-a428-c636d98df457':
-							throw new ApiError(meta.errors.scheduledAtMustBeInFuture);
-						default:
-							throw err;
-					}
-				}
-				throw err;
-			});
-
-			const updatedDraft = await this.noteDraftEntityService.pack(draft, me);
-
-			return {
-				updatedDraft,
-			};
-		});
-	}
-}

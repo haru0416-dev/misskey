@@ -4,18 +4,7 @@
  */
 
 import ms from 'ms';
-import { Inject, Injectable } from '@nestjs/common';
-import type { MiDriveFile } from '@/models/_.js';
 import { pageNameSchema } from '@/models/Page.js';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { PageEntityService } from '@/core/entities/PageEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { PageService } from '@/core/PageService.js';
-import { pageNameExistsForUserInDatabase } from '@/core/PageStore.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
-import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['pages'],
@@ -71,44 +60,3 @@ export const paramDef = {
 	},
 	required: ['title', 'name', 'content', 'variables', 'script'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private pageService: PageService,
-		private pageEntityService: PageEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			let eyeCatchingImage: MiDriveFile | null = null;
-			if (ps.eyeCatchingImageId != null) {
-				eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, ps.eyeCatchingImageId, me.id);
-
-				if (eyeCatchingImage == null) {
-					throw new ApiError(meta.errors.noSuchFile);
-				}
-			}
-
-			if (await pageNameExistsForUserInDatabase(this.drizzle, me.id, ps.name)) {
-				throw new ApiError(meta.errors.nameAlreadyExists);
-			}
-
-			try {
-				const page = await this.pageService.create(me, {
-					...ps,
-					eyeCatchingImage,
-					summary: ps.summary ?? null,
-				});
-
-				return await this.pageEntityService.pack(page);
-			} catch (err) {
-				if (err instanceof IdentifiableError && err.id === '1a79e38e-3d83-4423-845b-a9d83ff93b61') {
-					throw new ApiError(meta.errors.nameAlreadyExists);
-				}
-				throw err;
-			}
-		});
-	}
-}

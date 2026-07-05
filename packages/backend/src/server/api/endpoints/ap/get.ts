@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ApResolverService } from '@/core/activitypub/ApResolverService.js';
 
 export const meta = {
 	tags: ['federation'],
@@ -36,16 +33,3 @@ export const paramDef = {
 	},
 	required: ['uri'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private apResolverService: ApResolverService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const resolver = await this.apResolverService.createResolver();
-			const object = await resolver.resolve(ps.uri);
-			return object;
-		});
-	}
-}

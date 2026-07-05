@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { UserListEntityService } from '@/core/entities/UserListEntityService.js';
-import { ApiError } from '@/server/api/error.js';
-import { DI } from '@/di-symbols.js';
-import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-
 export const meta = {
 	tags: ['lists', 'account'],
 
@@ -56,29 +47,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable() // eslint-disable-next-line import/no-default-export
-export default class extends Endpoint<typeof meta, typeof paramDef> {
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private userListEntityService: UserListEntityService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			if (typeof ps.userId !== 'undefined') {
-				const user = await fetchUserByIdFromDatabase(this.db, ps.userId);
-				if (user === null) throw new ApiError(meta.errors.noSuchUser);
-				if (user.host !== null) throw new ApiError(meta.errors.remoteUser);
-			} else if (me === null) {
-				throw new ApiError(meta.errors.invalidParam);
-			}
-
-			const userLists = typeof ps.userId === 'undefined'
-				? await listUserListsByUserIdFromDatabase(this.db, me!.id)
-				: await listUserListsByUserIdFromDatabase(this.db, ps.userId, { publicOnly: true });
-
-			return await Promise.all(userLists.map(x => this.userListEntityService.pack(x)));
-		});
-	}
-}

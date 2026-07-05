@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
-import { ModerationLogService } from '@/core/ModerationLogService.js';
-import { fetchAdByIdFromDatabase, updateAdInDatabase } from '@/core/AdStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['admin'],
 
@@ -44,39 +36,3 @@ export const paramDef = {
 	},
 	required: ['id'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private moderationLogService: ModerationLogService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const ad = await fetchAdByIdFromDatabase(this.drizzle, ps.id);
-
-			if (ad == null) throw new ApiError(meta.errors.noSuchAd);
-
-			const updatedAd = await updateAdInDatabase(this.drizzle, ad.id, {
-				url: ps.url,
-				place: ps.place,
-				priority: ps.priority,
-				ratio: ps.ratio,
-				memo: ps.memo,
-				imageUrl: ps.imageUrl,
-				expiresAt: ps.expiresAt ? new Date(ps.expiresAt) : undefined,
-				startsAt: ps.startsAt ? new Date(ps.startsAt) : undefined,
-				dayOfWeek: ps.dayOfWeek,
-				isSensitive: ps.isSensitive,
-			});
-			if (updatedAd == null) throw new ApiError(meta.errors.noSuchAd);
-
-			this.moderationLogService.log(me, 'updateAd', {
-				adId: ad.id,
-				before: ad,
-				after: updatedAd,
-			});
-		});
-	}
-}

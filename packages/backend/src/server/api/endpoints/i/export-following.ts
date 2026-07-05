@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
 import ms from 'ms';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { QueueService } from '@/core/QueueService.js';
 
 export const meta = {
 	secure: true,
@@ -25,14 +22,3 @@ export const paramDef = {
 	},
 	required: [],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		private queueService: QueueService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			this.queueService.createExportFollowingJob(me, ps.excludeMuting, ps.excludeInactive);
-		});
-	}
-}

@@ -3,21 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { fetchAntennaByIdAndUserIdFromDatabase, updateAntennaInDatabase } from '@/core/AntennaStore.js';
-import type { MiMeta } from '@/models/_.js';
-import { DI } from '@/di-symbols.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { IdService } from '@/core/IdService.js';
-import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { trackPromise } from '@/misc/promise-tracker.js';
-import { ChannelMutingService } from '@/core/ChannelMutingService.js';
-import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { ApiError } from '../../error.js';
-
 export const meta = {
 	tags: ['antennas', 'account', 'notes'],
 
@@ -56,73 +41,3 @@ export const paramDef = {
 	},
 	required: ['antennaId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		@Inject(DI.meta)
-		private instanceMeta: MiMeta,
-
-		private idService: IdService,
-		private noteEntityService: NoteEntityService,
-		private fanoutTimelineService: FanoutTimelineService,
-		private globalEventService: GlobalEventService,
-		private channelMutingService: ChannelMutingService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
-			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
-
-			const antenna = await fetchAntennaByIdAndUserIdFromDatabase(this.db, ps.antennaId, me.id);
-
-			if (antenna == null) {
-				throw new ApiError(meta.errors.noSuchAntenna);
-			}
-
-			// falseだった場合はアンテナの配信先が増えたことを通知したい
-			const needPublishEvent = !antenna.isActive;
-
-			antenna.isActive = true;
-			antenna.lastUsedAt = new Date();
-			trackPromise(updateAntennaInDatabase(this.db, antenna.id, {
-				isActive: antenna.isActive,
-				lastUsedAt: antenna.lastUsedAt,
-			}));
-
-			if (needPublishEvent) {
-				this.globalEventService.publishInternalEvent('antennaUpdated', antenna);
-			}
-
-			let noteIds = await this.fanoutTimelineService.get(`antennaTimeline:${antenna.id}`, untilId, sinceId);
-			noteIds = noteIds.slice(0, ps.limit);
-			if (noteIds.length === 0) {
-				return [];
-			}
-
-			// -- ミュートされたチャンネル対策
-			const mutingChannelIds = await this.channelMutingService
-				.list({ requestUserId: me.id }, { idOnly: true })
-				.then(x => x.map(x => x.id));
-
-			// NOTE: センシティブ除外の設定はこのエンドポイントでは無視する。
-			// https://github.com/misskey-dev/misskey/pull/15346#discussion_r1929950255
-
-			const notes = await listFilteredTimelineNotesByIdsFromDatabase(this.db, {
-				ids: noteIds,
-				me,
-				blockedHosts: this.instanceMeta.blockedHosts,
-				mutingChannelIds,
-			});
-			if (sinceId != null && untilId == null) {
-				notes.sort((a, b) => a.id < b.id ? -1 : 1);
-			} else {
-				notes.sort((a, b) => a.id > b.id ? -1 : 1);
-			}
-
-			return await this.noteEntityService.packMany(notes, me);
-		});
-	}
-}

@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
-import { Endpoint } from '@/server/api/endpoint-base.js';
-import { GetterService } from '@/server/api/GetterService.js';
-import { DI } from '@/di-symbols.js';
-import { UserListService } from '@/core/UserListService.js';
-import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { ApiError } from '../../../error.js';
-
 export const meta = {
 	tags: ['lists', 'users'],
 
@@ -46,31 +37,3 @@ export const paramDef = {
 	},
 	required: ['listId', 'userId'],
 } as const;
-
-@Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-
-		private userListService: UserListService,
-		private getterService: GetterService,
-	) {
-		super(meta, paramDef, async (ps, me) => {
-			// Fetch the list
-			const userList = await fetchUserListByIdAndUserIdFromDatabase(this.db, ps.listId, me.id);
-
-			if (userList == null) {
-				throw new ApiError(meta.errors.noSuchList);
-			}
-
-			// Fetch the user
-			const user = await this.getterService.getUser(ps.userId).catch(err => {
-				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
-				throw err;
-			});
-
-			await this.userListService.removeMember(user, userList);
-		});
-	}
-}

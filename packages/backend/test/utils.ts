@@ -19,7 +19,7 @@ import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import type * as misskey from 'misskey-js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import { ApiError } from '@/server/api/error.js';
+import type { HonoApiErrorBody } from '@/server/rest/error.js';
 
 export { server as startServer, jobQueue as startJobQueue } from '@/boot/common.js';
 
@@ -648,8 +648,8 @@ export async function sendEnvResetRequest() {
 
 // 与えられた値を強制的にエラーとみなす。この関数は型安全性を破壊するため、異常系のアサーション以外で用いられるべきではない。
 // FIXME(misskey-js): misskey-jsがエラー情報を公開するようになったらこの関数を廃止する
-export function castAsError(obj: Record<string, unknown>): { error: ApiError } {
-	return obj as { error: ApiError };
+export function castAsError(obj: Record<string, unknown>): HonoApiErrorBody {
+	return obj as HonoApiErrorBody;
 }
 
 export async function captureWebhook<T = SystemWebhookPayload>(postAction: () => Promise<void>, port = WEBHOOK_PORT): Promise<T> {
