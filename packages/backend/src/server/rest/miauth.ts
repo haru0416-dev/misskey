@@ -52,7 +52,7 @@ export async function handleHonoApiMiauthGenToken(
 	user: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ token: string }> {
-	const params = parseHonoApiParams(miauthGenTokenParamDef, body) as MiauthGenTokenBody;
+	const params = parseHonoApiParams(miauthGenTokenParamDef, body);
 	const accessToken = secureRndstr(32);
 	const now = new Date();
 

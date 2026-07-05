@@ -113,7 +113,7 @@ export async function handleHonoApiSwRegister(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<SwRegisterResponse> {
-	const params = parseHonoApiParams(swRegisterParamDef, body) as SwRegisterParams;
+	const params = parseHonoApiParams(swRegisterParamDef, body);
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist != null) {
@@ -174,7 +174,7 @@ export async function handleHonoApiSwShowRegistration(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<SwShowRegistrationResponse | null> {
-	const params = parseHonoApiParams(swShowRegistrationParamDef, body) as SwShowRegistrationParams;
+	const params = parseHonoApiParams(swShowRegistrationParamDef, body);
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist == null) {
@@ -193,7 +193,7 @@ export async function handleHonoApiSwUnregister(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(swShowRegistrationParamDef, body) as SwShowRegistrationParams;
+	const params = parseHonoApiParams(swShowRegistrationParamDef, body);
 	await deleteSwSubscriptionByEndpointFromDatabase(deps.db, me?.id ?? null, params.endpoint);
 
 	if (me != null) {
@@ -206,7 +206,7 @@ export async function handleHonoApiSwUpdateRegistration(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<SwShowRegistrationResponse> {
-	const params = parseHonoApiParams(swUpdateRegistrationParamDef, body) as SwUpdateRegistrationParams;
+	const params = parseHonoApiParams(swUpdateRegistrationParamDef, body);
 	const swSubscription = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (swSubscription == null) {

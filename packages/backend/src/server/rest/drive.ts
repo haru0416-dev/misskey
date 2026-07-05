@@ -242,7 +242,7 @@ export async function handleHonoApiDriveFilesCheckExistence(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<boolean> {
-	const params = parseHonoApiParams(driveFilesCheckExistenceParamDef, body) as DriveFilesCheckExistenceParams;
+	const params = parseHonoApiParams(driveFilesCheckExistenceParamDef, body);
 	return await driveFileExistsByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 }
 
@@ -251,7 +251,7 @@ export async function handleHonoApiDriveFoldersCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedDriveFolder> {
-	const params = parseHonoApiParams(driveFoldersCreateParamDef, body) as DriveFoldersCreateParams;
+	const params = parseHonoApiParams(driveFoldersCreateParamDef, body);
 	let parent: DriveFolderRow | null = null;
 
 	if (params.parentId) {
@@ -280,7 +280,7 @@ export async function handleHonoApiDriveFolders(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedDriveFolder[]> {
-	const params = parseHonoApiParams(driveFoldersParamDef, body) as DriveFoldersParams;
+	const params = parseHonoApiParams(driveFoldersParamDef, body);
 	const pagination = resolveDriveFolderPagination({
 		gen: (time?: number) => genId(deps.config, time),
 	}, params);
@@ -298,7 +298,7 @@ export async function handleHonoApiDriveFoldersFind(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedDriveFolder[]> {
-	const params = parseHonoApiParams(driveFoldersFindParamDef, body) as DriveFoldersFindParams;
+	const params = parseHonoApiParams(driveFoldersFindParamDef, body);
 	const folders = await listDriveFoldersByNameFromDatabase(deps.db, {
 		name: params.name,
 		userId: me.id,
@@ -313,7 +313,7 @@ export async function handleHonoApiDriveFoldersShow(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedDriveFolder> {
-	const params = parseHonoApiParams(driveFoldersShowParamDef, body) as DriveFoldersShowParams;
+	const params = parseHonoApiParams(driveFoldersShowParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
@@ -348,7 +348,7 @@ export async function handleHonoApiDriveFoldersUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedDriveFolder> {
-	const params = parseHonoApiParams(driveFoldersUpdateParamDef, body) as DriveFoldersUpdateParams;
+	const params = parseHonoApiParams(driveFoldersUpdateParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
@@ -399,7 +399,7 @@ export async function handleHonoApiDriveFoldersDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(driveFoldersDeleteParamDef, body) as DriveFoldersDeleteParams;
+	const params = parseHonoApiParams(driveFoldersDeleteParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {

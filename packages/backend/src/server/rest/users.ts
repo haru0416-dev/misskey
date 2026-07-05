@@ -121,7 +121,7 @@ export async function handleHonoApiUsersAchievements(
 	deps: HonoApiUsersDependencies,
 	body: Record<string, unknown>,
 ): Promise<MiUserProfile['achievements']> {
-	const params = parseHonoApiParams(usersAchievementsParamDef, body) as UsersAchievementsParams;
+	const params = parseHonoApiParams(usersAchievementsParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, params.userId);
 	return profile.achievements;
 }
@@ -131,7 +131,7 @@ export async function handleHonoApiUsersListsList(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedUserList[]> {
-	const params = parseHonoApiParams(usersListsListParamDef, body) as UsersListsListParams;
+	const params = parseHonoApiParams(usersListsListParamDef, body);
 
 	if (params.userId !== undefined) {
 		const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
@@ -172,7 +172,7 @@ export async function handleHonoApiUsersListsShow(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedUserListShow> {
-	const params = parseHonoApiParams(usersListsShowParamDef, body) as UsersListsShowParams;
+	const params = parseHonoApiParams(usersListsShowParamDef, body);
 	const userList = !params.forPublic && me !== null
 		? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
 		: await fetchPublicUserListByIdFromDatabase(deps.db, params.listId);
@@ -202,7 +202,7 @@ export async function handleHonoApiUsersListsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(usersListsDeleteParamDef, body) as UsersListsDeleteParams;
+	const params = parseHonoApiParams(usersListsDeleteParamDef, body);
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
 	if (userList == null) {
@@ -222,7 +222,7 @@ export async function handleHonoApiUsersListsUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedUserList> {
-	const params = parseHonoApiParams(usersListsUpdateParamDef, body) as UsersListsUpdateParams;
+	const params = parseHonoApiParams(usersListsUpdateParamDef, body);
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
 	if (userList == null) {

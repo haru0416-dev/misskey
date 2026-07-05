@@ -46,7 +46,7 @@ export async function handleHonoApiUsernameAvailable(
 	deps: HonoApiAvailabilityDependencies,
 	body: Record<string, unknown>,
 ): Promise<{ available: boolean }> {
-	const params = parseHonoApiParams(usernameAvailableParamDef, body) as UsernameAvailableParams;
+	const params = parseHonoApiParams(usernameAvailableParamDef, body);
 	const [exists, used] = await Promise.all([
 		isLocalUsernameTaken(deps.db, params.username),
 		isUsedUsername(deps.db, params.username),
@@ -64,7 +64,7 @@ export async function handleHonoApiEmailAddressAvailable(
 	deps: HonoApiAvailabilityDependencies,
 	body: Record<string, unknown>,
 ): ReturnType<EmailService['validateEmailForAccount']> {
-	const params = parseHonoApiParams(emailAddressAvailableParamDef, body) as EmailAddressAvailableParams;
+	const params = parseHonoApiParams(emailAddressAvailableParamDef, body);
 	return await deps.emailService.validateEmailForAccount(params.emailAddress);
 }
 

@@ -290,7 +290,7 @@ export async function handleHonoApiGalleryFeatured(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseHonoApiParams(galleryFeaturedParamDef, body) as GalleryFeaturedParams;
+	const params = parseHonoApiParams(galleryFeaturedParamDef, body);
 
 	let postIds: string[];
 	if (galleryPostsRankingCacheLastFetchedAt !== 0 && (Date.now() - galleryPostsRankingCacheLastFetchedAt < 1000 * 60 * 30)) {
@@ -328,7 +328,7 @@ export async function handleHonoApiGalleryPosts(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseHonoApiParams(galleryPostsParamDef, body) as GalleryPostsParams;
+	const params = parseHonoApiParams(galleryPostsParamDef, body);
 	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(deps.config, time) }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		limit: params.limit,
@@ -345,7 +345,7 @@ export async function handleHonoApiGalleryPostsShow(
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsShowNoSuchPostError();
 
@@ -357,7 +357,7 @@ export async function handleHonoApiGalleryPostsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseHonoApiParams(galleryPostsCreateParamDef, body) as GalleryPostsCreateParams;
+	const params = parseHonoApiParams(galleryPostsCreateParamDef, body);
 	const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
 	if (files.length === 0) throw new Error();
 
@@ -379,7 +379,7 @@ export async function handleHonoApiGalleryPostsUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseHonoApiParams(galleryPostsUpdateParamDef, body) as GalleryPostsUpdateParams;
+	const params = parseHonoApiParams(galleryPostsUpdateParamDef, body);
 
 	let files;
 	if (params.fileIds) {
@@ -404,7 +404,7 @@ export async function handleHonoApiGalleryPostsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsDeleteNoSuchPostError();
 
@@ -430,7 +430,7 @@ export async function handleHonoApiGalleryPostsLike(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsLikeNoSuchPostError();
 	if (post.userId === me.id) throw galleryPostsLikeYourPostError();
@@ -463,7 +463,7 @@ export async function handleHonoApiGalleryPostsUnlike(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body) as GalleryPostsPostIdParams;
+	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsUnlikeNoSuchPostError();
 
@@ -504,7 +504,7 @@ export async function handleHonoApiIGalleryPosts(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseHonoApiParams(iGalleryPostsParamDef, body) as IGalleryPostsParams;
+	const params = parseHonoApiParams(iGalleryPostsParamDef, body);
 	const pagination = resolveGalleryPostPagination({ gen: time => genId(deps.config, time) }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -542,7 +542,7 @@ export async function handleHonoApiIGalleryLikes(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(iGalleryLikesParamDef, body) as IGalleryLikesParams;
+	const params = parseHonoApiParams(iGalleryLikesParamDef, body);
 	const pagination = resolveHonoApiIdPagination(deps.config, params);
 
 	const likes = await listGalleryLikesByUserIdFromDatabase(deps.db, me.id, {
@@ -591,7 +591,7 @@ export async function handleHonoApiUsersGalleryPosts(
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(usersGalleryPostsParamDef, body) as UsersGalleryPostsParams;
+	const params = parseHonoApiParams(usersGalleryPostsParamDef, body);
 	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(deps.config, time) }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,

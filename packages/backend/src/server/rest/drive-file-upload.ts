@@ -625,7 +625,7 @@ export async function handleHonoApiDriveFilesCreate(
 	headers: Record<string, string> | null,
 ): Promise<Packed<'DriveFile'>> {
 	castHonoApiMultipartFields(driveFilesCreateParamDef, body);
-	const params = parseHonoApiParams(driveFilesCreateParamDef, body) as DriveFilesCreateParams;
+	const params = parseHonoApiParams(driveFilesCreateParamDef, body);
 
 	let name = params.name ?? file.name ?? null;
 	if (name != null) {
@@ -751,7 +751,7 @@ export function handleHonoApiDriveFilesUploadFromUrl(
 	ip: string | null,
 	headers: Record<string, string> | null,
 ): void {
-	const params = parseHonoApiParams(driveFilesUploadFromUrlParamDef, body) as DriveFilesUploadFromUrlParams;
+	const params = parseHonoApiParams(driveFilesUploadFromUrlParamDef, body);
 
 	// 元の NestJS ハンドラも await/catch せず fire-and-forget しているため、同様に呼び出し元へは即座に返す。
 	uploadDriveFileFromUrlForHonoApi(deps, {

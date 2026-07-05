@@ -3,23 +3,52 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import 'reflect-metadata';
-import { EventEmitter } from 'node:events';
-import { NestFactory } from '@nestjs/core';
-import { CommandModule } from '@/cli/CommandModule.js';
-import { NestLogger } from '@/NestLogger.js';
-import { CommandService } from '@/cli/CommandService.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import { updateMetaInDatabase } from '@/core/MetaStore.js';
+import { createRedisForPub } from '@/runtime-dependencies.js';
+import { createHonoEventPublishers } from '@/server/rest/events.js';
 
 process.title = 'Misskey Cli';
 
-Error.stackTraceLimit = Infinity;
-EventEmitter.defaultMaxListeners = 128;
+async function ping(): Promise<void> {
+	console.log('pong');
+}
 
-const app = await NestFactory.createApplicationContext(CommandModule, {
-	logger: new NestLogger(),
-});
+async function resetCaptcha(): Promise<void> {
+	const config = loadConfig();
+	const pool = createDrizzlePool(config);
+	const db = createDrizzleDatabase(pool, config);
+	const redisForPub = createRedisForPub(config);
 
-const commandService = app.get(CommandService);
+	try {
+		const { publishInternalEvent } = createHonoEventPublishers({
+			config,
+			publish: (host, message) => redisForPub.publish(host, message),
+		});
+
+		const { before, after } = await updateMetaInDatabase(db, {
+			enableHcaptcha: false,
+			hcaptchaSiteKey: null,
+			hcaptchaSecretKey: null,
+			enableMcaptcha: false,
+			mcaptchaSitekey: null,
+			mcaptchaSecretKey: null,
+			mcaptchaInstanceUrl: null,
+			enableRecaptcha: false,
+			recaptchaSiteKey: null,
+			recaptchaSecretKey: null,
+			enableTurnstile: false,
+			turnstileSiteKey: null,
+			turnstileSecretKey: null,
+			enableTestcaptcha: false,
+		});
+		publishInternalEvent('metaUpdated', { before, after });
+	} finally {
+		await pool.end();
+		redisForPub.disconnect();
+	}
+}
 
 const command = process.argv[2] ?? 'help';
 
@@ -31,11 +60,11 @@ switch (command) {
 		break;
 	}
 	case 'ping': {
-		await commandService.ping();
+		await ping();
 		break;
 	}
 	case 'reset-captcha': {
-		await commandService.resetCaptcha();
+		await resetCaptcha();
 		console.log('Captcha has been reset.');
 		break;
 	}

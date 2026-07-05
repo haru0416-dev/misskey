@@ -107,10 +107,6 @@ const adminAnnouncementsUpdateParamDef = {
 	required: ['id'],
 } as const;
 
-type AdminAnnouncementsCreateParams = SchemaType<typeof adminAnnouncementsCreateParamDef>;
-type AdminAnnouncementsDeleteParams = SchemaType<typeof adminAnnouncementsDeleteParamDef>;
-type AdminAnnouncementsListParams = SchemaType<typeof adminAnnouncementsListParamDef>;
-type AdminAnnouncementsUpdateParams = SchemaType<typeof adminAnnouncementsUpdateParamDef>;
 
 function noSuchAnnouncementError(id: string): HonoApiError {
 	return new HonoApiError({
@@ -170,7 +166,7 @@ export async function handleHonoApiAdminAnnouncementsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>> {
-	const params = parseHonoApiParams(adminAnnouncementsCreateParamDef, body) as AdminAnnouncementsCreateParams;
+	const params = parseHonoApiParams(adminAnnouncementsCreateParamDef, body);
 	const { packed } = await createAnnouncementWithSideEffects({
 		db: deps.db,
 		genId: () => genId(deps.config),
@@ -199,7 +195,7 @@ export async function handleHonoApiAdminAnnouncementsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAnnouncementsDeleteParamDef, body) as AdminAnnouncementsDeleteParams;
+	const params = parseHonoApiParams(adminAnnouncementsDeleteParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 
 	if (announcement == null) throw noSuchAnnouncementError('ecad8040-a276-4e85-bda9-015a708d291e');
@@ -214,7 +210,7 @@ export async function handleHonoApiAdminAnnouncementsList(
 	deps: HonoApiAdminAnnouncementDependencies,
 	body: Record<string, unknown>,
 ): Promise<AdminAnnouncement[]> {
-	const params = parseHonoApiParams(adminAnnouncementsListParamDef, body) as AdminAnnouncementsListParams;
+	const params = parseHonoApiParams(adminAnnouncementsListParamDef, body);
 	const announcements = await listAnnouncementsForAdminFromDatabase(deps.db, {
 		limit: params.limit,
 		...resolveAnnouncementPagination({ gen: time => genId(deps.config, time) }, params),
@@ -235,7 +231,7 @@ export async function handleHonoApiAdminAnnouncementsUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAnnouncementsUpdateParamDef, body) as AdminAnnouncementsUpdateParams;
+	const params = parseHonoApiParams(adminAnnouncementsUpdateParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 
 	if (announcement == null) throw noSuchAnnouncementError('d3aae5a7-6372-4cb4-b61c-f511ffc2d7cc');

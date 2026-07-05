@@ -89,9 +89,6 @@ const adminAvatarDecorationsUpdateParamDef = {
 	required: ['id'],
 } as const;
 
-type AdminAvatarDecorationsCreateParams = SchemaType<typeof adminAvatarDecorationsCreateParamDef>;
-type AdminAvatarDecorationsDeleteParams = SchemaType<typeof adminAvatarDecorationsDeleteParamDef>;
-type AdminAvatarDecorationsUpdateParams = SchemaType<typeof adminAvatarDecorationsUpdateParamDef>;
 
 function packAdminAvatarDecorationForHonoApi(
 	config: Config,
@@ -114,7 +111,7 @@ export async function handleHonoApiAdminAvatarDecorationsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<AdminAvatarDecoration> {
-	const params = parseHonoApiParams(adminAvatarDecorationsCreateParamDef, body) as AdminAvatarDecorationsCreateParams;
+	const params = parseHonoApiParams(adminAvatarDecorationsCreateParamDef, body);
 	const created = await createAvatarDecorationWithSideEffects({
 		db: deps.db,
 		genId: () => genId(deps.config),
@@ -136,7 +133,7 @@ export async function handleHonoApiAdminAvatarDecorationsDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAvatarDecorationsDeleteParamDef, body) as AdminAvatarDecorationsDeleteParams;
+	const params = parseHonoApiParams(adminAvatarDecorationsDeleteParamDef, body);
 
 	await deleteAvatarDecorationWithSideEffects({
 		db: deps.db,
@@ -160,7 +157,7 @@ export async function handleHonoApiAdminAvatarDecorationsUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAvatarDecorationsUpdateParamDef, body) as AdminAvatarDecorationsUpdateParams;
+	const params = parseHonoApiParams(adminAvatarDecorationsUpdateParamDef, body);
 
 	await updateAvatarDecorationWithSideEffects({
 		db: deps.db,

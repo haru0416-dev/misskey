@@ -243,7 +243,7 @@ export async function handleHonoApiINotifications(
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(notificationsParamDef, body) as NotificationsParams;
+	const params = parseHonoApiParams(notificationsParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
 
@@ -321,7 +321,7 @@ export async function handleHonoApiINotificationsGrouped(
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(notificationsParamDef, body) as NotificationsParams;
+	const params = parseHonoApiParams(notificationsParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
 

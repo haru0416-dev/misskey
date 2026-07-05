@@ -481,7 +481,7 @@ export async function handleHonoApiIClaimAchievement(
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(claimAchievementParamDef, body) as ClaimAchievementParams;
+	const params = parseHonoApiParams(claimAchievementParamDef, body);
 	await grantAchievementForHonoApi(deps, me.id, params.name);
 }
 
@@ -514,7 +514,7 @@ export async function handleHonoApiNotificationsCreate(
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notificationsCreateParamDef, body) as NotificationsCreateParams;
+	const params = parseHonoApiParams(notificationsCreateParamDef, body);
 	createAppNotification(deps, me.id, {
 		appAccessTokenId: token ? token.id : null,
 		customBody: params.body,

@@ -446,7 +446,7 @@ export async function handleHonoApiChannelsSearch(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel[]> {
-	const params = parseHonoApiParams(channelsSearchParamDef, body) as ChannelsSearchParams;
+	const params = parseHonoApiParams(channelsSearchParamDef, body);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const channels = await listChannelsBySearchFromDatabase(deps.db, {
@@ -466,7 +466,7 @@ export async function handleHonoApiChannelsOwned(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel[]> {
-	const params = parseHonoApiParams(channelsListParamDef, body) as ChannelsListParams;
+	const params = parseHonoApiParams(channelsListParamDef, body);
 	const channels = await listOwnedChannelsFromDatabase(deps.db, me.id, {
 		...resolveChannelPagination({
 			gen: (time?: number) => genId(deps.config, time),
@@ -482,7 +482,7 @@ export async function handleHonoApiChannelsFollowed(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel[]> {
-	const params = parseHonoApiParams(channelsListParamDef, body) as ChannelsListParams;
+	const params = parseHonoApiParams(channelsListParamDef, body);
 	const followings = await listChannelFollowingsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		...resolveChannelPagination({
@@ -522,7 +522,7 @@ export async function handleHonoApiChannelsCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel> {
-	const params = parseHonoApiParams(channelCreateParamDef, body) as ChannelCreateParams;
+	const params = parseHonoApiParams(channelCreateParamDef, body);
 	let bannerId: string | null = null;
 	if (params.bannerId != null) {
 		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.bannerId, me.id);
@@ -551,7 +551,7 @@ export async function handleHonoApiChannelsUpdate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel> {
-	const params = parseHonoApiParams(channelUpdateParamDef, body) as ChannelUpdateParams;
+	const params = parseHonoApiParams(channelUpdateParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw channelUpdateNoSuchChannelError();
@@ -596,7 +596,7 @@ export async function handleHonoApiChannelsFollow(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelFollowParamDef, body) as ChannelFollowParams;
+	const params = parseHonoApiParams(channelFollowParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelFollowNoSuchChannelError();
@@ -618,7 +618,7 @@ export async function handleHonoApiChannelsUnfollow(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelFollowParamDef, body) as ChannelFollowParams;
+	const params = parseHonoApiParams(channelFollowParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelUnfollowNoSuchChannelError();
@@ -636,7 +636,7 @@ export async function handleHonoApiChannelsMuteCreate(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelMuteCreateParamDef, body) as ChannelMuteCreateParams;
+	const params = parseHonoApiParams(channelMuteCreateParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelMuteCreateNoSuchChannelError();
@@ -675,7 +675,7 @@ export async function handleHonoApiChannelsMuteDelete(
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelMuteDeleteParamDef, body) as ChannelMuteDeleteParams;
+	const params = parseHonoApiParams(channelMuteDeleteParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelMuteDeleteNoSuchChannelError();
@@ -717,7 +717,7 @@ export async function handleHonoApiChannelsShow(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel> {
-	const params = parseHonoApiParams(channelShowParamDef, body) as ChannelShowParams;
+	const params = parseHonoApiParams(channelShowParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) throw channelsShowNoSuchChannelError();
 
@@ -729,7 +729,7 @@ export async function handleHonoApiChannelsTimeline(
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(channelTimelineParamDef, body) as ChannelTimelineParams;
+	const params = parseHonoApiParams(channelTimelineParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
 
