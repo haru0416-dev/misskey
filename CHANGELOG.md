@@ -20,6 +20,16 @@
 - Enhance: バックエンドの重複コード (フォロー/ブロック処理の連合インスタンスキャッシュ処理、ユーザー一括取得のフォールバック処理、各種一覧系エンドポイントのページネーション解決処理) を共通化し、未使用の依存パッケージ (`@nestjs/platform-express`, `accepts`, `vary`) を削除
 - Enhance: 投稿の pack 処理でリプライ/リノート先が既に取得済みの場合は再取得しないように改善し、アクセストークンの最終利用日時更新を非同期化するなど、Hono サーバーの細かなパフォーマンス改善
 - Enhance: 起動用 CLI (`bun run cli`) の NestJS 依存を除去し、関数型実装に移行
+- Fix: Hono サーバーでノート作成時のアンテナへの振り分け (キーワードマッチング・タイムライン書き込み・ストリーミング配信) が行われず、アンテナ機能が一切動作していなかった問題を修正
+- Fix: Hono サーバーでユーザー詳細レスポンス (`users/show` 等) からロール・バッヂロール・リレーション (`isFollowing` / `isBlocking` 等)・ピン止めノート・サイレンス状態・モデレーションノート・2要素認証関連のフィールドが欠落していた問題を修正
+- Fix: Hono サーバーで `i` のレスポンスの `securityKeysList` が常に空になり、登録済みセキュリティキーの一覧・名前変更・削除が行えなかった問題を修正
+- Fix: Hono サーバーでタイムライン取得 (`notes/timeline`, `notes/local-timeline`, `notes/hybrid-timeline`, `users/notes`) が fanout タイムライン (Redis) を読まず常にデータベースから取得しており、自分への返信やフォロー中ユーザーの返信 (withReplies) がタイムラインに含まれない・ユーザータイムラインの返信フィルタが効かない問題を修正
+- Fix: Hono サーバーで ActivityPub オブジェクトの GET 配信 (`/users/:id`, `/@:username`, `/notes/:id` の AP 表現、outbox、followers/following、featured、publickey) が一切存在せず、リモートサーバーからこのサーバーのユーザーやノートを照会できなかった問題を修正
+- Fix: Hono サーバーでユーザー・ノート・Pages・Play・クリップ・ギャラリーの各ページが専用の OGP/meta タグ付き HTML を返さず汎用ページのみ返していた問題、および `/users/:id` が `/@:username` にリダイレクトしなかった問題を修正
+- Fix: Hono サーバーでアカウント作成時に `userCreated` の SystemWebhook が送出されなかった問題を修正
+- Fix: Hono サーバーで API のエラー応答に `WWW-Authenticate: Bearer ... error="invalid_request"` ヘッダが付与されず、`Authorization` ヘッダのスキーム名 (`Bearer`) の大文字小文字を区別していなかった問題を修正
+- Enhance: 非公開の Pages / Play のタイトル等メタ情報が未ログイン閲覧者向けページ HTML に含まれないように (公開のもののみ SSR する)
+- Fix: ドライブファイルの accessKey が欠損しているレコードを削除する際に、リクエスト全体が 500 エラーになる問題を修正
 
 ## 2026.6.1
 

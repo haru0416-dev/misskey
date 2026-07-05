@@ -32,10 +32,13 @@ import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } f
 import { HonoApiError } from './error.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packUserLiteForHonoApi, type UserPackingDependencies } from './user.js';
+import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiNoteDependencies = HonoApiDriveFileDependencies & UserPackingDependencies & {
 	redis: Redis.Redis;
+	/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
+	redisForTimelines?: Redis.Redis;
 };
 
 export type HonoApiEmojiPopulateDependencies = {
@@ -785,22 +788,62 @@ export async function handleHonoApiUsersNotes(
 		if (userIdsWhoBlockingMe.includes(params.userId)) return [];
 	}
 
-	const mutingChannelIds = me != null
-		? await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date())
-		: [];
+	const getFromDb = async (dbUntilId: string | null, dbSinceId: string | null, limit: number) => {
+		const mutingChannelIds = me != null
+			? await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date())
+			: [];
 
-	const notes = await listUserTimelineNotesFromDatabase(deps.db, {
-		userId: params.userId,
-		limit: params.limit,
-		sinceId,
-		untilId,
-		withChannelNotes: params.withChannelNotes,
-		withFiles: params.withFiles,
-		withRenotes: params.withRenotes,
-		me: me ?? null,
-		blockedHosts: deps.meta.blockedHosts,
-		mutingChannelIds,
-	});
+		return await listUserTimelineNotesFromDatabase(deps.db, {
+			userId: params.userId,
+			limit,
+			sinceId: dbSinceId,
+			untilId: dbUntilId,
+			withChannelNotes: params.withChannelNotes,
+			withFiles: params.withFiles,
+			withRenotes: params.withRenotes,
+			me: me ?? null,
+			blockedHosts: deps.meta.blockedHosts,
+			mutingChannelIds,
+		});
+	};
+
+	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
+		const isSelf = me != null && me.id === params.userId;
+
+		const redisTimelines = [params.withFiles ? `userTimelineWithFiles:${params.userId}` : `userTimeline:${params.userId}`];
+		if (params.withReplies) redisTimelines.push(`userTimelineWithReplies:${params.userId}`);
+		if (params.withChannelNotes) redisTimelines.push(`userTimelineWithChannel:${params.userId}`);
+
+		const isFollowing = me != null && await followingExistsInDatabase(deps.db, me.id, params.userId);
+
+		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
+			untilId,
+			sinceId,
+			limit: params.limit,
+			allowPartial: params.allowPartial,
+			me,
+			useDbFallback: true,
+			redisTimelines,
+			ignoreAuthorFromMute: true,
+			ignoreAuthorFromInstanceBlock: true,
+			ignoreAuthorFromUserSuspension: true,
+			excludeReplies: params.withChannelNotes && !params.withReplies,
+			excludeNoFiles: params.withChannelNotes && params.withFiles,
+			excludePureRenotes: !params.withRenotes,
+			noteFilter: note => {
+				if (note.channel?.isSensitive && !isSelf) return false;
+				if (note.visibility === 'specified' && (!me || (me.id !== note.userId && !note.visibleUserIds.some(v => v === me.id)))) return false;
+				if (note.visibility === 'followers' && !isFollowing && !isSelf) return false;
+
+				return true;
+			},
+			dbFallback: getFromDb,
+		});
+
+		return await packNoteManyForHonoApi(deps, notes, me);
+	}
+
+	const notes = await getFromDb(untilId, sinceId, params.limit);
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }

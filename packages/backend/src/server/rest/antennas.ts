@@ -3,26 +3,35 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { domainToASCII } from 'node:url';
+import type * as Redis from 'ioredis';
 import {
 	countAntennasByUserIdFromDatabase,
 	createAntennaInDatabase,
 	deleteAntennaFromDatabase,
 	fetchAntennaByIdAndUserIdFromDatabase,
 	fetchAntennaByIdOrFailFromDatabase,
+	listActiveAntennasFromDatabase,
 	listAntennasByUserIdFromDatabase,
 	updateAntennaInDatabase,
 } from '@/core/AntennaStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import * as Acct from '@/misc/acct.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
+import type { Config } from '@/config.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAntenna } from '@/models/Antenna.js';
-import type { MiLocalUser } from '@/models/User.js';
+import type { MiNote } from '@/models/Note.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import type { HonoApiInternalEventPublisher } from './events.js';
+import type { HonoApiAntennaStreamPublisher, HonoApiInternalEventPublisher } from './events.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
@@ -30,6 +39,143 @@ import { parseHonoApiParams } from './validation.js';
 export type HonoApiAntennaDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies & {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
+
+export type HonoApiAntennaFanoutDependencies = {
+	config: Config;
+	db: MiDrizzleDatabase;
+	redisForTimelines: Redis.Redis;
+	publishAntennaStream?: HonoApiAntennaStreamPublisher;
+};
+
+function getFullApAccount(config: Pick<Config, 'host'>, username: string, host: string | null): string {
+	return host ? `${username}@${domainToASCII(host.toLowerCase())}` : `${username}@${domainToASCII(config.host.toLowerCase())}`;
+}
+
+/** AntennaService.checkHitAntenna 相当。 */
+export async function checkHitAntennaForHonoApi(
+	deps: Pick<HonoApiAntennaFanoutDependencies, 'config' | 'db'>,
+	antenna: MiAntenna,
+	note: MiNote,
+	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
+): Promise<boolean> {
+	if (antenna.excludeNotesInSensitiveChannel && note.channel?.isSensitive) return false;
+
+	if (antenna.excludeBots && noteUser.isBot) return false;
+
+	if (antenna.localOnly && noteUser.host != null) return false;
+
+	if (!antenna.withReplies && note.replyId != null) return false;
+
+	if (note.visibility === 'specified') {
+		if (note.userId !== antenna.userId) {
+			if (note.visibleUserIds == null) return false;
+			if (!note.visibleUserIds.includes(antenna.userId)) return false;
+		}
+	}
+
+	if (note.visibility === 'followers') {
+		const isFollowing = await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
+		if (!isFollowing && antenna.userId !== note.userId) return false;
+	}
+
+	if (antenna.src === 'list') {
+		if (antenna.userListId == null) return false;
+		const exists = await userListMembershipExistsInDatabase(deps.db, note.userId, antenna.userListId);
+		if (!exists) return false;
+	} else if (antenna.src === 'users') {
+		const accts = antenna.users.map(x => {
+			const { username, host } = Acct.parse(x);
+			return getFullApAccount(deps.config, username, host).toLowerCase();
+		});
+		if (!accts.includes(getFullApAccount(deps.config, noteUser.username, noteUser.host).toLowerCase())) return false;
+	} else if (antenna.src === 'users_blacklist') {
+		const accts = antenna.users.map(x => {
+			const { username, host } = Acct.parse(x);
+			return getFullApAccount(deps.config, username, host).toLowerCase();
+		});
+		if (accts.includes(getFullApAccount(deps.config, noteUser.username, noteUser.host).toLowerCase())) return false;
+	}
+
+	const keywords = antenna.keywords
+		.map(xs => xs.filter(x => x !== ''))
+		.filter(xs => xs.length > 0);
+
+	if (keywords.length > 0) {
+		if (note.text == null && note.cw == null) return false;
+
+		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
+
+		const matched = keywords.some(and =>
+			and.every(keyword =>
+				antenna.caseSensitive
+					? _text.includes(keyword)
+					: _text.toLowerCase().includes(keyword.toLowerCase()),
+			));
+
+		if (!matched) return false;
+	}
+
+	const excludeKeywords = antenna.excludeKeywords
+		.map(xs => xs.filter(x => x !== ''))
+		.filter(xs => xs.length > 0);
+
+	if (excludeKeywords.length > 0) {
+		if (note.text == null && note.cw == null) return false;
+
+		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
+
+		const matched = excludeKeywords.some(and =>
+			and.every(keyword =>
+				antenna.caseSensitive
+					? _text.includes(keyword)
+					: _text.toLowerCase().includes(keyword.toLowerCase()),
+			));
+
+		if (matched) return false;
+	}
+
+	if (antenna.withFile) {
+		if (note.fileIds && note.fileIds.length === 0) return false;
+	}
+
+	return true;
+}
+
+/**
+ * AntennaService.addNoteToAntennas 相当。原典はプロセス内キャッシュからアクティブなアンテナ一覧を
+ * 取得していたが、ここでは毎回DBから読む (このコードベースのキャッシュ再導入リスクを踏まえた判断)。
+ * FanoutTimelineService.push と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
+ */
+export async function addNoteToAntennasForHonoApi(
+	deps: HonoApiAntennaFanoutDependencies,
+	note: MiNote,
+	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
+): Promise<void> {
+	const antennas = await listActiveAntennasFromDatabase(deps.db);
+	const antennasWithMatchResult = await Promise.all(antennas.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser).then(hit => [antenna, hit] as const)));
+	const matchedAntennas = antennasWithMatchResult.filter(([, hit]) => hit).map(([antenna]) => antenna);
+
+	const redisPipeline = deps.redisForTimelines.pipeline();
+
+	for (const antenna of matchedAntennas) {
+		const tl = `antennaTimeline:${antenna.id}`;
+		if (parseId(deps.config, note.id).date.getTime() > Date.now() - 1000 * 60 * 3) {
+			redisPipeline.lpush('list:' + tl, note.id);
+			if (Math.random() < 0.1) {
+				redisPipeline.ltrim('list:' + tl, 0, 200 - 1);
+			}
+		} else {
+			void deps.redisForTimelines.lindex('list:' + tl, -1).then(lastId => {
+				if (lastId == null || parseId(deps.config, note.id).date.getTime() > parseId(deps.config, lastId).date.getTime()) {
+					void deps.redisForTimelines.lpush('list:' + tl, note.id);
+				}
+			});
+		}
+		deps.publishAntennaStream?.(antenna.id, 'note', note);
+	}
+
+	void redisPipeline.exec();
+}
 
 function noSuchAntennaError(id: string): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such antenna.', code: 'NO_SUCH_ANTENNA', id });

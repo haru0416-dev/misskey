@@ -87,25 +87,27 @@ export function startDriveFileDeletion(
 	isExpired = false,
 	deleter?: MiUser,
 ): void {
+	// accessKey が null のレコード (異常データ) でリクエスト全体を落とさないよう null ガードする。
+	// 原典はキュー経由の遅延削除だったため個別ファイルの失敗がレスポンスへ波及しなかった。
 	if (file.storedInternal) {
-		deps.deleteInternalFile(file.accessKey!);
+		if (file.accessKey != null) deps.deleteInternalFile(file.accessKey);
 
-		if (file.thumbnailUrl) {
-			deps.deleteInternalFile(file.thumbnailAccessKey!);
+		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
+			deps.deleteInternalFile(file.thumbnailAccessKey);
 		}
 
-		if (file.webpublicUrl) {
-			deps.deleteInternalFile(file.webpublicAccessKey!);
+		if (file.webpublicUrl && file.webpublicAccessKey != null) {
+			deps.deleteInternalFile(file.webpublicAccessKey);
 		}
 	} else if (!file.isLink) {
-		deps.enqueueDeleteObjectStorageFile(file.accessKey!);
+		if (file.accessKey != null) deps.enqueueDeleteObjectStorageFile(file.accessKey);
 
-		if (file.thumbnailUrl) {
-			deps.enqueueDeleteObjectStorageFile(file.thumbnailAccessKey!);
+		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
+			deps.enqueueDeleteObjectStorageFile(file.thumbnailAccessKey);
 		}
 
-		if (file.webpublicUrl) {
-			deps.enqueueDeleteObjectStorageFile(file.webpublicAccessKey!);
+		if (file.webpublicUrl && file.webpublicAccessKey != null) {
+			deps.enqueueDeleteObjectStorageFile(file.webpublicAccessKey);
 		}
 	}
 

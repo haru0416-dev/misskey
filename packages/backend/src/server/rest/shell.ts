@@ -280,12 +280,21 @@ function publicCacheHeadersWhenAnonymous(auth: HonoApiAuthenticated, seconds: nu
 
 function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	setApiHeaders(c);
+
+	// ApiCallService.#sendApiError 相当: 401以外のclient系エラーには invalid_request の
+	// WWW-Authenticate を付ける (401系/permission系は error.ts のファクトリが個別に設定済み)。
+	const extraHeaders: Record<string, string> = {};
+	if (err.kind === 'client' && err.status !== 401 && err.code !== 'RATE_LIMIT_EXCEEDED' && err.headers['WWW-Authenticate'] == null) {
+		extraHeaders['WWW-Authenticate'] = `Bearer realm="Misskey", error="invalid_request", error_description="${err.message}"`;
+	}
+
 	return new Response(JSON.stringify(err.toBody()), {
 		status: err.status,
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
+			...extraHeaders,
 			...err.headers,
 		},
 	});
@@ -303,7 +312,8 @@ async function jsonBody(c: Context): Promise<Record<string, unknown>> {
 function tokenFromRequest(c: Context, body: Record<string, unknown>): string | null {
 	const authorization = c.req.header('authorization');
 	if (authorization != null) {
-		const match = authorization.match(/^Bearer\s+(.+)$/i);
+		// 原典 (ApiCallService) 同様、スキーム名は大文字小文字を区別する ('bearer' は不可)
+		const match = authorization.match(/^Bearer (.+)$/);
 		if (match) return match[1];
 	}
 
