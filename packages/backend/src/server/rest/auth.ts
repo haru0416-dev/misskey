@@ -40,7 +40,7 @@ export async function authenticateHonoApiToken(
 	const accessToken = await fetchAccessTokenByHashOrTokenFromDatabase(deps.db, token.toLowerCase(), token);
 	if (accessToken == null) throw authenticationFailedError();
 
-	await updateAccessTokenLastUsedAtInDatabase(deps.db, accessToken.id, new Date());
+	void updateAccessTokenLastUsedAtInDatabase(deps.db, accessToken.id, new Date());
 
 	const user = await fetchLocalUserByIdFromDatabase(deps.db, accessToken.userId);
 	if (user == null) throw authenticationFailedError();

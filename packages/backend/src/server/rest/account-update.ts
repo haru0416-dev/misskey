@@ -34,7 +34,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import { acceptAllFollowRequestsForHonoApi, type HonoApiFollowingDependencies } from './following.js';
+import { acceptAllFollowRequestsForHonoApi, genLocalUserUri, type HonoApiFollowingDependencies } from './following.js';
 import { HonoApiError } from './error.js';
 import { addActivityContext, deliverNoteActivityForHonoApi, renderEmoji, renderUpdateForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
 import { isKeyWordIncludedForHonoApi } from './notes-create.js';
@@ -261,10 +261,6 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 			throw iUpdateInvalidRegexpError();
 		}
 	}
-}
-
-function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
 }
 
 function tryRewriteUrl(maybeUrl: string): string {

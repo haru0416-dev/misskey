@@ -21,7 +21,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser, MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from './error.js';
+import { clientErrorWithStatus } from './error.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -52,15 +52,6 @@ type FlashUpdateParams = {
 	visibility?: MiFlash['visibility'];
 };
 
-function clientError(status: number, message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({
-		status,
-		message,
-		code,
-		id,
-	});
-}
-
 export async function handleHonoApiFlashUpdate(
 	deps: HonoApiFlashDependencies,
 	me: MiLocalUser,
@@ -69,10 +60,10 @@ export async function handleHonoApiFlashUpdate(
 	const params = parseHonoApiParams(flashUpdateParamDef, body) as FlashUpdateParams;
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
-		throw clientError(400, 'No such flash.', 'NO_SUCH_FLASH', '611e13d2-309e-419a-a5e4-e0422da39b02');
+		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', '611e13d2-309e-419a-a5e4-e0422da39b02');
 	}
 	if (flash.userId !== me.id) {
-		throw clientError(400, 'Access denied.', 'ACCESS_DENIED', '08e60c88-5948-478e-a132-02ec701d67b2');
+		throw clientErrorWithStatus(400, 'Access denied.', 'ACCESS_DENIED', '08e60c88-5948-478e-a132-02ec701d67b2');
 	}
 
 	const values: Partial<Parameters<typeof updateFlashInDatabase>[2]> = {
@@ -194,11 +185,11 @@ export async function handleHonoApiFlashDelete(
 	const params = parseHonoApiParams(flashDeleteParamDef, body) as FlashDeleteParams;
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
-		throw clientError(400, 'No such flash.', 'NO_SUCH_FLASH', 'de1623ef-bbb3-4289-a71e-14cfa83d9740');
+		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'de1623ef-bbb3-4289-a71e-14cfa83d9740');
 	}
 
 	if (!await isHonoApiModerator(deps, me) && flash.userId !== me.id) {
-		throw clientError(400, 'Access denied.', 'ACCESS_DENIED', '1036ad7b-9f92-4fff-89c3-0e50dc941704');
+		throw clientErrorWithStatus(400, 'Access denied.', 'ACCESS_DENIED', '1036ad7b-9f92-4fff-89c3-0e50dc941704');
 	}
 
 	await deleteFlashInDatabase(deps.db, flash.id);
@@ -406,7 +397,7 @@ export async function handleHonoApiFlashShow(
 	const params = parseHonoApiParams(flashShowParamDef, body) as FlashShowParams;
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
-		throw clientError(400, 'No such flash.', 'NO_SUCH_FLASH', 'f0d34a1a-d29a-401d-90ba-1982122b5630');
+		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'f0d34a1a-d29a-401d-90ba-1982122b5630');
 	}
 
 	return await packFlashForHonoApi(deps, flash, me);

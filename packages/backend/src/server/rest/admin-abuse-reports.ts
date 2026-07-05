@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { randomUUID } from 'node:crypto';
 import sanitizeHtml from 'sanitize-html';
 import { deleteAbuseReportNotificationRecipientsFromDatabase, listAbuseReportNotificationRecipientsFromDatabase } from '@/core/AbuseReportNotificationRecipientStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdFromDatabase, listAbuseUserReportsFromDatabase, markAbuseUserReportForwardedInDatabase, resolveAbuseUserReportInDatabase, resolveAbuseUserReportPagination, updateAbuseUserReportModerationNoteInDatabase } from '@/core/AbuseUserReportStore.js';
@@ -15,7 +14,6 @@ import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IActivity, IFlag, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { DeliverQueue, SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
@@ -31,6 +29,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { HonoApiAdminStreamPublisher } from './events.js';
 import { HonoApiError } from './error.js';
+import { addActivityContext, genLocalUserUri } from './following.js';
 import { isHonoApiAdministrator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packUserDetailedNotMeManyForHonoApi, packUserLiteManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -143,10 +142,6 @@ function noSuchAbuseReportForForwardError(): HonoApiError {
 	});
 }
 
-function genLocalUserUri(config: Config, userId: MiLocalUser['id']): string {
-	return `${config.url}/users/${userId}`;
-}
-
 function renderFlag(config: Config, user: MiLocalUser, object: IObject | string, content: string): IFlag {
 	return {
 		type: 'Flag',
@@ -154,14 +149,6 @@ function renderFlag(config: Config, user: MiLocalUser, object: IObject | string,
 		content,
 		object,
 	};
-}
-
-function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
-	if (activity.id == null) {
-		activity.id = `${config.url}/${randomUUID()}`;
-	}
-
-	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
 }
 
 async function packAbuseReportForSystemWebhook<T extends 'abuseReport' | 'abuseReportResolved'>(

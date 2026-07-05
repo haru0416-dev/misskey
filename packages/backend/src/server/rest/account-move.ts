@@ -31,7 +31,7 @@ import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from '.
 import { createRoleAssignedNotification, type HonoApiNotificationDependencies } from './notification.js';
 import type { HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
-import type { HonoApiFollowingDependencies } from './following.js';
+import { genLocalUserUri, type HonoApiFollowingDependencies } from './following.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAccountMoveDependencies =
@@ -71,10 +71,6 @@ const iMoveParamDef = {
 type IMoveParams = {
 	moveToAccount: string;
 };
-
-function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
-}
 
 function getUserUriForHonoApi(config: Pick<Config, 'url'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);

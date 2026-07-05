@@ -36,7 +36,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { xaddHonoApiNotification } from './notification.js';
 import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, resolveAlsoKnownAsForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
@@ -167,15 +167,6 @@ type FollowingNotification = {
 	message?: string | null;
 };
 
-function clientError(message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({
-		status: 400,
-		message,
-		code,
-		id,
-	});
-}
-
 function followingCreateNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
 }
@@ -244,7 +235,7 @@ export function isRemoteUser(user: MiUser): user is MiUser & { host: string; uri
 	return user.host !== null;
 }
 
-function genLocalUserUri(config: Config, userId: MiUser['id']): string {
+export function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
 	return `${config.url}/users/${userId}`;
 }
 
@@ -261,7 +252,7 @@ export function renderFollow(config: Config, follower: MiUser, followee: MiUser,
 	};
 }
 
-function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
+export function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
 	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
 
 	return {

@@ -15,7 +15,7 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiMuting } from '@/models/Muting.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, clientError } from './error.js';
 import { resolveHonoApiIdPagination } from './following.js';
 import { packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -77,15 +77,6 @@ type HonoApiRenoteMutingResponse = {
 	muteeId: MiUser['id'];
 	mutee: UserDetailedNotMeHonoApiResponse;
 };
-
-function clientError(message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({
-		status: 400,
-		message,
-		code,
-		id,
-	});
-}
 
 function muteCreateNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', '6fef56f3-e765-4957-88e5-c6f65329b8a5');

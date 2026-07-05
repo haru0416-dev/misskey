@@ -15,8 +15,7 @@ import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase,
 import { deleteUserListMembershipInDatabase } from '@/core/UserListMembershipStore.js';
 import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
-import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import type { IActivity, IBlock, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
+import type { IActivity, IBlock, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -25,10 +24,10 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
-import { refreshUserFollowingsCache } from './following.js';
+import { addActivityContext, genLocalUserUri, isLocalUser, isRemoteUser, refreshUserFollowingsCache, renderFollow, renderReject, renderUndo } from './following.js';
 import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -72,54 +71,12 @@ type HonoApiBlockingResponse = {
 	blockee: UserDetailedNotMeHonoApiResponse;
 };
 
-function clientError(message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({
-		status: 400,
-		message,
-		code,
-		id,
-	});
-}
-
 function blockingCreateNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', '7cc4f851-e2f1-4621-9633-ec9e1d00c01e');
 }
 
 function blockingDeleteNoSuchUserError(): HonoApiError {
 	return clientError('No such user.', 'NO_SUCH_USER', '8621d8bf-c358-4303-a066-5ea78610eb3f');
-}
-
-function isLocalUser(user: MiUser): user is MiUser & { host: null } {
-	return user.host === null;
-}
-
-function isRemoteUser(user: MiUser): user is MiUser & { host: string; uri: string; inbox: string } {
-	return user.host !== null;
-}
-
-function genLocalUserUri(config: Config, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
-}
-
-function getUserUri(config: Config, user: MiUser): string {
-	return isRemoteUser(user) ? user.uri : genLocalUserUri(config, user.id);
-}
-
-function renderFollow(config: Config, follower: MiUser, followee: MiUser, requestId?: string | null): IFollow {
-	return {
-		id: requestId ?? `${config.url}/follows/${follower.id}/${followee.id}`,
-		type: 'Follow',
-		actor: getUserUri(config, follower),
-		object: getUserUri(config, followee),
-	};
-}
-
-function renderReject(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IReject {
-	return {
-		type: 'Reject',
-		actor: genLocalUserUri(config, user.id),
-		object,
-	};
 }
 
 function renderBlock(config: Config, blocking: MiBlocking & { blockee: MiUser }): IBlock {
@@ -133,26 +90,6 @@ function renderBlock(config: Config, blocking: MiBlocking & { blockee: MiUser })
 		actor: genLocalUserUri(config, blocking.blockerId),
 		object: blocking.blockee.uri,
 	};
-}
-
-function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
-	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
-
-	return {
-		type: 'Undo',
-		...(id ? { id } : {}),
-		actor: genLocalUserUri(config, user.id),
-		object,
-		published: new Date().toISOString(),
-	};
-}
-
-function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
-	if (activity.id == null) {
-		activity.id = `${config.url}/${randomUUID()}`;
-	}
-
-	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
 }
 
 async function getTargetUserOrThrow(
