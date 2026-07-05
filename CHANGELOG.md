@@ -10,6 +10,9 @@
 - Fix: Hono サーバーでユーザーの Atom/RSS/JSON feed を返せるように
 - Fix: マイグレーションの統合により欠落していた誕生日検索用のデータベース関数 (`get_birthday_date`) を復元し、`users/following` の `birthday` パラメータや `users/get-following-users-by-birthday` が動作しなくなっていた問題を修正
 - Fix: Hono サーバーで `users/update-memo` が動作せず、`users/show` 等のレスポンスでパーソナルメモ (`memo`) が常に `null` になっていた問題を修正
+- Fix: Hono サーバーで ActivityPub の inbox エンドポイント (`/inbox`, `/users/:user/inbox`) が存在せず、リモートからの配送 (フォロー、リアクション等) を一切受け付けられなくなっていた問題を修正
+- Fix: Hono サーバーで投稿のストリーミング配信 (ホーム/ローカル/グローバル/ハイブリッドタイムライン、ハッシュタグ、チャンネル、ユーザーリスト、アンテナ) が Redis 経由のイベント配送形式の不整合により一切機能していなかった問題を修正
+- Fix: Hono サーバーでリモートアクターの引っ越し (`movedTo`) を検知した際、フォロワーの自動移行やブロック/ミュート/ロール/リストの引き継ぎが行われていなかった問題を修正
 
 ## 2026.6.1
 
