@@ -48,7 +48,7 @@ import {
 } from '@/core/QueueModule.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
-import { createHonoChartWriters, saveHonoChartWriters, startHonoChartWriterSaveInterval, type HonoChartWriters } from '@/server/hono-chart-runtime.js';
+import { createHonoChartWriters, saveHonoChartWriters, startHonoChartWriterSaveInterval, type HonoChartWriters } from '@/server/chart-runtime.js';
 
 export type RuntimeDependencies = {
 	config: Config;
