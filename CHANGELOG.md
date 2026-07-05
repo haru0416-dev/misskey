@@ -26,6 +26,9 @@
 - Fix: Hono サーバーでタイムライン取得 (`notes/timeline`, `notes/local-timeline`, `notes/hybrid-timeline`, `users/notes`) が fanout タイムライン (Redis) を読まず常にデータベースから取得しており、自分への返信やフォロー中ユーザーの返信 (withReplies) がタイムラインに含まれない・ユーザータイムラインの返信フィルタが効かない問題を修正
 - Fix: Hono サーバーで ActivityPub オブジェクトの GET 配信 (`/users/:id`, `/@:username`, `/notes/:id` の AP 表現、outbox、followers/following、featured、publickey) が一切存在せず、リモートサーバーからこのサーバーのユーザーやノートを照会できなかった問題を修正
 - Fix: Hono サーバーでユーザー・ノート・Pages・Play・クリップ・ギャラリーの各ページが専用の OGP/meta タグ付き HTML を返さず汎用ページのみ返していた問題、および `/users/:id` が `/@:username` にリダイレクトしなかった問題を修正
+- Fix: Hono サーバーでアカウント作成時に `userCreated` の SystemWebhook が送出されなかった問題を修正
+- Fix: Hono サーバーで API のエラー応答に `WWW-Authenticate: Bearer ... error="invalid_request"` ヘッダが付与されず、`Authorization` ヘッダのスキーム名 (`Bearer`) の大文字小文字を区別していなかった問題を修正
+- Enhance: 非公開の Pages / Play のタイトル等メタ情報が未ログイン閲覧者向けページ HTML に含まれないように (公開のもののみ SSR する)
 
 ## 2026.6.1
 

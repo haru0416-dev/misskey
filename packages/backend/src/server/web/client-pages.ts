@@ -113,7 +113,9 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/play/:id', async (c, next) => {
 		const flash = await fetchFlashByIdFromDatabase(deps.db, c.req.param('id'));
 
-		if (flash != null) {
+		// 原典 (ClientServerService) は visibility を見ずに描画していたが、非公開 Play の
+		// タイトル等が匿名訪問者へ漏れるため public のみ SSR する (非公開は汎用ページへ)。
+		if (flash != null && flash.visibility === 'public') {
 			const packedFlash = await packFlashForHonoApi(deps, flash, null) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
 
@@ -192,7 +194,8 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			}
 
 			const page = await fetchPageByNameAndUserIdFromDatabase(deps.db, segments[2]!, user.id);
-			if (page == null) {
+			// 原典は非公開 Page も描画していたが、タイトル等が匿名訪問者へ漏れるため public のみ SSR する。
+			if (page == null || page.visibility !== 'public') {
 				await next();
 				return;
 			}
@@ -204,7 +207,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 				page: packedPage,
 				profile,
 				...(await deps.getCommonData()),
-			}), entityPageHeaders(profile, page.visibility === 'public' ? 'public, max-age=15' : 'private, max-age=0, must-revalidate'));
+			}), entityPageHeaders(profile));
 		}
 
 		// /@:user or /@:user/:sub
