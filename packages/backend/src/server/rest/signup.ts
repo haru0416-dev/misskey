@@ -22,9 +22,12 @@ import { generateNativeUserToken } from '@/misc/token.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
+import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
+import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
 import { HonoApiError, signupValidationError } from './error.js';
 import { completeHonoApiSignin, type HonoApiSigninDependencies, type HonoApiSigninFlowResult, type HonoApiSigninRequest } from './signin.js';
-import { packMeDetailedForHonoApi } from './user.js';
+import { packMeDetailedForHonoApi, packUserLiteForHonoApi } from './user.js';
 
 type SignupBody = {
 	username?: unknown;
@@ -45,6 +48,8 @@ export type SignupDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	publishInternalEvent?: SignupInternalEventPublisher;
+	/** userCreated system webhook の配送に必要。省略時は通知しない。 */
+	systemWebhookDeliverQueue?: SystemWebhookDeliverQueue;
 };
 
 function validateUsername(username: unknown): asserts username is string {
@@ -169,6 +174,17 @@ export async function createLocalSignupAccount(
 	});
 
 	await assignRootUserIfMissing(deps, account.id);
+
+	// SignupService.signup 相当: userCreated system webhook をエンキューする (原典同様 await しない)。
+	if (deps.systemWebhookDeliverQueue != null) {
+		const queue = deps.systemWebhookDeliverQueue;
+		void (async () => {
+			const webhooks = await listSystemWebhooksFromDatabase(deps.db, { isActive: true, on: ['userCreated'] });
+			if (webhooks.length === 0) return;
+			const packed = await packUserLiteForHonoApi(deps, account);
+			await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(queue, webhook, 'userCreated', packed)));
+		})().catch(() => {});
+	}
 
 	return { account, token };
 }

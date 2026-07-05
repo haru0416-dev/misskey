@@ -183,6 +183,29 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 			meta: deps.meta,
 			inboxQueue: deps.inboxQueue,
 		},
+		apObject: {
+			config,
+			db: deps.db,
+			meta: deps.meta,
+			redis: deps.redis,
+			redisForTimelines: deps.redisForTimelines,
+			deliverQueue: deps.deliverQueue,
+			userWebhookDeliverQueue: deps.userWebhookDeliverQueue,
+			httpRequestService: deps.httpRequestService,
+			publishInternalEvent: eventPublishers.publishInternalEvent,
+			publishMainStream: eventPublishers.publishMainStream,
+		},
+		clientPages: {
+			config,
+			db: deps.db,
+			meta: deps.meta,
+			redis: deps.redis,
+			getCommonData: createClientCommonDataLoader({
+				config,
+				db: deps.db,
+				meta: deps.meta,
+			}),
+		},
 	});
 	const streamDeps = {
 		config,
