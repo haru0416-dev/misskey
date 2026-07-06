@@ -6,6 +6,7 @@
 import { sql } from 'drizzle-orm';
 import { bigint, boolean, integer, jsonb, pgEnum, pgTable, varchar } from 'drizzle-orm/pg-core';
 import type { SoftwareSuspension } from '@/models/Meta.js';
+import type { RolePolicies } from '@/core/role-policies.js';
 
 type ClientOptions = {
 	entrancePageStyle: 'classic' | 'simple';
@@ -117,7 +118,7 @@ export const meta = pgTable('meta', {
 	enableStatsForFederatedInstances: boolean().default(true).notNull(),
 	enableServerMachineStats: boolean().default(false).notNull(),
 	enableIdenticonGeneration: boolean().default(true).notNull(),
-	policies: jsonb().$type<Record<string, any>>().default({}).notNull(),
+	policies: jsonb().$type<Partial<RolePolicies>>().default({}).notNull(),
 	serverRules: varchar({ length: 280 }).array().default(emptyVarcharArray).notNull(),
 	manifestJsonOverride: varchar({ length: 8192 }).default('{}').notNull(),
 	bannedEmailDomains: varchar({ length: 1024 }).array().default(emptyVarcharArray).notNull(),

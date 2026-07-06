@@ -3,6 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type {
+	MiAbuseUserReport,
+	MiAnnouncement,
+	MiEmoji,
+	MiFlash,
+	MiGalleryPost,
+	MiMeta,
+	MiNote,
+	MiPage,
+	MiRole,
+} from '@/models/_.js';
+import type { MiAbuseReportNotificationRecipient } from '@/models/AbuseReportNotificationRecipient.js';
+import type { MiAd } from '@/models/Ad.js';
+import type { MiChatRoom } from '@/models/ChatRoom.js';
+import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
+import type { AvatarDecorationRow } from '@/db/schema/avatar-decoration.js';
+import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
+
 /**
  * note - 通知オンにしているユーザーが投稿した
  * follow - フォローされた
@@ -139,8 +157,9 @@ export const moderationLogTypes = [
 
 export type ModerationLogPayloads = {
 	updateServerSettings: {
-		before: any | null;
-		after: any | null;
+		// meta.tsではMiMeta全体、admin-roles.tsではpolicies部分のみが渡される
+		before: (MiMeta | MiMeta['policies']) | null;
+		after: (MiMeta | MiMeta['policies']) | null;
 	};
 	suspend: {
 		userId: string;
@@ -161,16 +180,16 @@ export type ModerationLogPayloads = {
 	};
 	addCustomEmoji: {
 		emojiId: string;
-		emoji: any;
+		emoji: MiEmoji;
 	};
 	updateCustomEmoji: {
 		emojiId: string;
-		before: any;
-		after: any;
+		before: MiEmoji;
+		after: MiEmoji;
 	};
 	deleteCustomEmoji: {
 		emojiId: string;
-		emoji: any;
+		emoji: MiEmoji;
 	};
 	assignRole: {
 		userId: string;
@@ -189,16 +208,16 @@ export type ModerationLogPayloads = {
 	};
 	createRole: {
 		roleId: string;
-		role: any;
+		role: MiRole;
 	};
 	updateRole: {
 		roleId: string;
-		before: any;
-		after: any;
+		before: MiRole;
+		after: MiRole;
 	};
 	deleteRole: {
 		roleId: string;
-		role: any;
+		role: MiRole;
 	};
 	clearQueue: Record<string, never>;
 	promoteQueue: Record<string, never>;
@@ -215,39 +234,39 @@ export type ModerationLogPayloads = {
 		noteUserId: string;
 		noteUserUsername: string;
 		noteUserHost: string | null;
-		note: any;
+		note: MiNote;
 	};
 	createGlobalAnnouncement: {
 		announcementId: string;
-		announcement: any;
+		announcement: MiAnnouncement;
 	};
 	createUserAnnouncement: {
 		announcementId: string;
-		announcement: any;
+		announcement: MiAnnouncement;
 		userId: string;
 		userUsername: string;
 		userHost: string | null;
 	};
 	updateGlobalAnnouncement: {
 		announcementId: string;
-		before: any;
-		after: any;
+		before: MiAnnouncement;
+		after: MiAnnouncement;
 	};
 	updateUserAnnouncement: {
 		announcementId: string;
-		before: any;
-		after: any;
+		before: MiAnnouncement;
+		after: MiAnnouncement;
 		userId: string;
 		userUsername: string;
 		userHost: string | null;
 	};
 	deleteGlobalAnnouncement: {
 		announcementId: string;
-		announcement: any;
+		announcement: MiAnnouncement;
 	};
 	deleteUserAnnouncement: {
 		announcementId: string;
-		announcement: any;
+		announcement: MiAnnouncement;
 		userId: string;
 		userUsername: string;
 		userHost: string | null;
@@ -285,48 +304,48 @@ export type ModerationLogPayloads = {
 	};
 	resolveAbuseReport: {
 		reportId: string;
-		report: any;
+		report: MiAbuseUserReport;
 		forwarded?: boolean;
 		resolvedAs?: string | null;
 	};
 	forwardAbuseReport: {
 		reportId: string;
-		report: any;
+		report: MiAbuseUserReport;
 	};
 	updateAbuseReportNote: {
 		reportId: string;
-		report: any;
+		report: MiAbuseUserReport;
 		before: string;
 		after: string;
 	};
 	createInvitation: {
-		invitations: any[];
+		invitations: RegistrationTicketRow[];
 	};
 	createAd: {
 		adId: string;
-		ad: any;
+		ad: MiAd;
 	};
 	updateAd: {
 		adId: string;
-		before: any;
-		after: any;
+		before: MiAd;
+		after: MiAd;
 	};
 	deleteAd: {
 		adId: string;
-		ad: any;
+		ad: MiAd;
 	};
 	createAvatarDecoration: {
 		avatarDecorationId: string;
-		avatarDecoration: any;
+		avatarDecoration: AvatarDecorationRow;
 	};
 	updateAvatarDecoration: {
 		avatarDecorationId: string;
-		before: any;
-		after: any;
+		before: AvatarDecorationRow;
+		after: AvatarDecorationRow;
 	};
 	deleteAvatarDecoration: {
 		avatarDecorationId: string;
-		avatarDecoration: any;
+		avatarDecoration: AvatarDecorationRow;
 	};
 	unsetMfa: {
 		userId: string;
@@ -347,29 +366,31 @@ export type ModerationLogPayloads = {
 	};
 	createSystemWebhook: {
 		systemWebhookId: string;
-		webhook: any;
+		webhook: MiSystemWebhook;
 	};
 	updateSystemWebhook: {
 		systemWebhookId: string;
-		before: any;
-		after: any;
+		before: MiSystemWebhook;
+		after: MiSystemWebhook;
 	};
 	deleteSystemWebhook: {
 		systemWebhookId: string;
-		webhook: any;
+		webhook: MiSystemWebhook;
 	};
 	createAbuseReportNotificationRecipient: {
 		recipientId: string;
-		recipient: any;
+		recipient: MiAbuseReportNotificationRecipient;
 	};
 	updateAbuseReportNotificationRecipient: {
 		recipientId: string;
-		before: any;
-		after: any;
+		before: MiAbuseReportNotificationRecipient;
+		after: MiAbuseReportNotificationRecipient;
 	};
 	deleteAbuseReportNotificationRecipient: {
 		recipientId: string;
-		recipient: any;
+		// 呼び出し元(AbuseReportNotificationService.deleteRecipient / admin-abuse-report-notification-recipient.ts)が
+		// 削除前に listAbuseReportNotificationRecipientsFromDatabase({ ids: [id] }) の結果(配列)をそのまま渡している
+		recipient: MiAbuseReportNotificationRecipient[];
 	};
 	deleteAccount: {
 		userId: string;
@@ -380,23 +401,23 @@ export type ModerationLogPayloads = {
 		pageId: string;
 		pageUserId: string;
 		pageUserUsername: string;
-		page: any;
+		page: MiPage;
 	};
 	deleteFlash: {
 		flashId: string;
 		flashUserId: string;
 		flashUserUsername: string;
-		flash: any;
+		flash: MiFlash;
 	};
 	deleteGalleryPost: {
 		postId: string;
 		postUserId: string;
 		postUserUsername: string;
-		post: any;
+		post: MiGalleryPost;
 	};
 	deleteChatRoom: {
 		roomId: string;
-		room: any;
+		room: MiChatRoom;
 	};
 	updateProxyAccountDescription: {
 		before: string | null;

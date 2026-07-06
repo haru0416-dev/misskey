@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { RolePolicies } from '@/core/role-policies.js';
 import { MiUser } from './User.js';
 
 export class MiMeta {
@@ -212,7 +213,7 @@ export class MiMeta {
 
 	public enableIdenticonGeneration: boolean;
 
-	public policies: Record<string, any>;
+	public policies: Partial<RolePolicies>;
 
 	public serverRules: string[];
 

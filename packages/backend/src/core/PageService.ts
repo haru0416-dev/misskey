@@ -21,8 +21,8 @@ export interface PageBody {
 	title: string;
 	name: string;
 	summary: string | null;
-	content: Array<Record<string, any>>;
-	variables: Array<Record<string, any>>;
+	content: Array<Record<string, unknown>>;
+	variables: Array<Record<string, unknown>>;
 	script: string;
 	eyeCatchingImage?: MiDriveFile | null;
 	font: 'serif' | 'sans-serif';

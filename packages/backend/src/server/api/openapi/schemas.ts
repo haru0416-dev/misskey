@@ -3,14 +3,27 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { deepClone } from '@/misc/clone.js';
+import { deepClone, type Cloneable } from '@/misc/clone.js';
 import type { Schema } from '@/misc/json-schema.js';
 import { refs } from '@/misc/json-schema.js';
 
-export function convertSchemaToOpenApiSchema(schema: Schema, type: 'param' | 'res', includeSelfRef: boolean): any {
+/** OpenAPI 3.1 の schema object の緩い構造的表現。厳密な OpenAPI 型を持ち込まず、この変換関数が実際に読み書きするフィールドだけを型付けする。 */
+export type OpenApiSchemaObject = {
+	type?: string | string[];
+	properties?: Record<string, OpenApiSchemaObject>;
+	required?: string[];
+	items?: OpenApiSchemaObject;
+	anyOf?: OpenApiSchemaObject[];
+	oneOf?: OpenApiSchemaObject[];
+	allOf?: OpenApiSchemaObject[];
+	$ref?: string;
+	[key: string]: unknown;
+};
+
+export function convertSchemaToOpenApiSchema(schema: Schema, type: 'param' | 'res', includeSelfRef: boolean): OpenApiSchemaObject {
 	// optional, nullable, refはスキーマ定義に含まれないので分離しておく
-	const { optional, nullable, ref, selfRef, ...res1 }: any = schema;
-	const res = deepClone(res1);
+	const { optional, nullable, ref, selfRef, ...res1 } = schema as Schema & Record<string, unknown>;
+	const res = deepClone(res1 as unknown as Cloneable) as OpenApiSchemaObject;
 
 	if (schema.type === 'object' && schema.properties) {
 		if (type === 'res') {
@@ -21,6 +34,7 @@ export function convertSchemaToOpenApiSchema(schema: Schema, type: 'param' | 're
 			}
 		}
 
+		res.properties ??= {};
 		for (const k of Object.keys(schema.properties)) {
 			res.properties[k] = convertSchemaToOpenApiSchema(schema.properties[k], type, includeSelfRef);
 		}
@@ -44,9 +58,9 @@ export function convertSchemaToOpenApiSchema(schema: Schema, type: 'param' | 're
 		}
 		delete res.type;
 	} else if (schema.nullable) {
-		if (Array.isArray(schema.type) && !schema.type.includes('null')) {
+		if (Array.isArray(res.type) && !res.type.includes('null')) {
 			res.type.push('null');
-		} else if (typeof schema.type === 'string') {
+		} else if (typeof res.type === 'string') {
 			res.type = [res.type, 'null'];
 		}
 	}

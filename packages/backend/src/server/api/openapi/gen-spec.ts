@@ -7,18 +7,18 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import endpoints, { IEndpoint } from '../endpoints.js';
 import { errors as basicErrors } from './errors.js';
-import { getSchemas, convertSchemaToOpenApiSchema } from './schemas.js';
+import { getSchemas, convertSchemaToOpenApiSchema, type OpenApiSchemaObject } from './schemas.js';
 
 /**
  * Zod スキーマを JSON Schema (OpenAPI 互換) に変換する。
  * Misskey 独自拡張 (optional/ref/selfRef 等) を持たないため schemas.ts の変換は不要で、
  * zod の `toJSONSchema` 出力(標準 JSON Schema)をそのまま使える。`$schema` キーだけ落とす。
  */
-function convertZodParamsToOpenApiSchema(schema: z.ZodType): any {
+function convertZodParamsToOpenApiSchema(schema: z.ZodType): OpenApiSchemaObject {
 	// io: 'input' — .default() を持つフィールドはリクエストでは省略可能なので required に含めない
 	// (省略時はサーバー側でデフォルト値が補完される。'output' だと補完後の値の存在を前提に required 扱いになってしまう)。
 	const { $schema, ...rest } = z.toJSONSchema(schema, { io: 'input' });
-	return rest;
+	return rest as OpenApiSchemaObject;
 }
 
 export function genOpenapiSpec(config: Config, includeSelfRef = false) {
@@ -39,7 +39,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			url: config.apiUrl,
 		}],
 
-		paths: {} as any,
+		paths: {} as Record<string, { get?: Record<string, unknown>; post: Record<string, unknown> }>,
 
 		components: {
 			schemas: getSchemas(includeSelfRef),
@@ -60,7 +60,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 	for (const [i, endpoint] of copiedEndpoints.entries()) {
 		const originalParams = endpoints[i].params;
 		const params = originalParams instanceof z.ZodType ? originalParams : endpoint.params;
-		const errors = {} as any;
+		const errors: Record<string, { value: { error: unknown } }> = {};
 
 		if (endpoint.meta.errors) {
 			for (const e of Object.values(endpoint.meta.errors)) {

@@ -52,6 +52,6 @@ export type CommonData = MinimumCommonData & {
 	clientCtxJson?: string;
 };
 
-export type CommonPropsMinimum<T = Record<string, any>> = MinimumCommonData & T;
+export type CommonPropsMinimum<T = Record<string, unknown>> = MinimumCommonData & T;
 
-export type CommonProps<T = Record<string, any>> = CommonData & T;
+export type CommonProps<T = Record<string, unknown>> = CommonData & T;

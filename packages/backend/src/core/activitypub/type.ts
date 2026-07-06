@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type Obj = { [x: string]: any };
+export type Obj = Record<string, unknown>;
 export type ApObject = IObject | string | (IObject | string)[];
 
 export interface IObject {
@@ -11,8 +11,8 @@ export interface IObject {
 	type: string | string[];
 	id?: string;
 	name?: string | null;
-	summary?: string;
-	_misskey_summary?: string;
+	summary?: string | null;
+	_misskey_summary?: string | null;
 	_misskey_followedMessage?: string | null;
 	_misskey_requireSigninToViewContents?: boolean;
 	_misskey_makeNotesFollowersOnlyBefore?: number | null;
@@ -21,13 +21,21 @@ export interface IObject {
 	cc?: ApObject;
 	to?: ApObject;
 	attributedTo?: ApObject;
-	attachment?: any[];
-	inReplyTo?: any;
+	attachment?: IObject[];
+	inReplyTo?: string | IObject | null;
 	replies?: ICollection;
 	content?: string | null;
 	startTime?: Date;
 	endTime?: Date;
+	// icon/image はAP仕様上、単一のImageオブジェクトか、その配列で表現され得る
+	// (https://www.w3.org/TR/activitystreams-vocabulary/#dfn-icon)。
+	// また `url` フィールド (ApObject | string) がAP仕様どおり動的なため、
+	// ApNoteService.ts 等の消費側コードは `.url` への緩いアクセスを前提にしている。
+	// このフィールドをより厳密な型に倒すと、それらの消費側 (本タスクの編集対象外) で
+	// 型エラーを誘発するため、意図的に any のまま残す。
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	icon?: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	image?: any;
 	mediaType?: string;
 	url?: ApObject | string;
@@ -197,6 +205,8 @@ export interface IActor extends IObject {
 	};
 	'vcard:bday'?: string;
 	'vcard:Address'?: string;
+	// Misskey拡張 (猫耳モード)
+	isCat?: boolean;
 }
 
 export const isCollection = (object: IObject): object is ICollection =>
@@ -252,7 +262,7 @@ export interface IApEmoji extends IObject {
 }
 
 export const isEmoji = (object: IObject): object is IApEmoji =>
-	getApType(object) === 'Emoji' && !Array.isArray(object.icon) && object.icon.url != null;
+	getApType(object) === 'Emoji' && !Array.isArray(object.icon) && object.icon?.url != null;
 
 export interface IKey extends IObject {
 	type: 'Key';

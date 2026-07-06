@@ -37,7 +37,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { JsonLdService } from './JsonLdService.js';
 import { ApMfmService } from './ApMfmService.js';
 import { CONTEXT } from './misc/contexts.js';
-import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IMove, IObject, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate } from './type.js';
+import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IMove, IObject, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate, ApObject } from './type.js';
 
 @Injectable()
 export class ApRendererService {
@@ -533,7 +533,9 @@ export class ApRendererService {
 
 		const keypair = await this.userKeypairService.getUserKeypair(user.id);
 
-		const person: any = {
+		// AP Person はMisskey独自拡張 (vcard:bday 等) を含む動的なオブジェクトのため、
+		// IObjectで表現しきれない追加プロパティは Record<string, unknown> 側で許容する。
+		const person: IObject & Record<string, unknown> = {
 			type: isSystem ? 'Application' : user.isBot ? 'Service' : 'Person',
 			id,
 			inbox: `${id}/inbox`,
@@ -671,7 +673,7 @@ export class ApRendererService {
 	}
 
 	@bindThis
-	public addContext<T extends IObject>(x: T): T & { '@context': any; id: string; } {
+	public addContext<T extends IObject>(x: T): T & { '@context': typeof CONTEXT; id: string; } {
 		if (typeof x === 'object' && x.id == null) {
 			x.id = `${this.config.url}/${randomUUID()}`;
 		}
@@ -680,14 +682,16 @@ export class ApRendererService {
 	}
 
 	@bindThis
-	public async attachLdSignature(activity: any, user: { id: MiUser['id']; host: null; }): Promise<IActivity> {
+	public async attachLdSignature(activity: IActivity, user: { id: MiUser['id']; host: null; }): Promise<IActivity> {
 		const keypair = await this.userKeypairService.getUserKeypair(user.id);
 
 		const jsonLd = this.jsonLdService.use();
 		jsonLd.debug = false;
-		activity = await jsonLd.signRsaSignature2017(activity, keypair.privateKey, `${this.config.url}/users/${user.id}#main-key`);
+		const signed = await jsonLd.signRsaSignature2017(activity, keypair.privateKey, `${this.config.url}/users/${user.id}#main-key`);
 
-		return activity;
+		// signRsaSignature2017 は動的なJSON-LDペイロードを Record<string, unknown> として
+		// 返すため、元のIActivity形状 + signature が保持されていることを前提にキャストする。
+		return signed as unknown as IActivity;
 	}
 
 	/**
@@ -700,8 +704,8 @@ export class ApRendererService {
 	 * @param next URL of next page (optional)
 	 */
 	@bindThis
-	public renderOrderedCollectionPage(id: string, totalItems: any, orderedItems: any, partOf: string, prev?: string, next?: string) {
-		const page: any = {
+	public renderOrderedCollectionPage(id: string, totalItems: number, orderedItems: ApObject, partOf: string, prev?: string, next?: string): IObject & { partOf: string; totalItems: number; orderedItems: ApObject; prev?: string; next?: string } {
+		const page: IObject & { partOf: string; totalItems: number; orderedItems: ApObject; prev?: string; next?: string } = {
 			id,
 			partOf,
 			type: 'OrderedCollectionPage',
@@ -724,8 +728,8 @@ export class ApRendererService {
 	 * @param orderedItems attached objects (optional)
 	 */
 	@bindThis
-	public renderOrderedCollection(id: string, totalItems: number, first?: string, last?: string, orderedItems?: IObject[]) {
-		const page: any = {
+	public renderOrderedCollection(id: string, totalItems: number, first?: string, last?: string, orderedItems?: IObject[]): IObject & { totalItems: number; first?: string; last?: string; orderedItems?: IObject[] } {
+		const page: IObject & { totalItems: number; first?: string; last?: string; orderedItems?: IObject[] } = {
 			id,
 			type: 'OrderedCollection',
 			totalItems,

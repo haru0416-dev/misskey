@@ -9,7 +9,7 @@ import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { } from '@/models/Blocking.js';
 import type { MiUser } from '@/models/User.js';
-import type { MiPage } from '@/models/Page.js';
+import type { MiPage, MiPageContentBlock } from '@/models/Page.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
@@ -44,9 +44,9 @@ export class PageEntityService {
 		const page = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(this.drizzle, src);
 
 		const attachedFiles: Promise<MiDriveFile | null>[] = [];
-		const collectFile = (xs: any[]) => {
+		const collectFile = (xs: MiPageContentBlock[]) => {
 			for (const x of xs) {
-				if (x.type === 'image') {
+				if (x.type === 'image' && x.fileId) {
 					attachedFiles.push(fetchDriveFileByIdAndUserIdFromDatabase(this.drizzle, x.fileId, page.userId));
 				}
 				if (x.children) {
@@ -58,7 +58,7 @@ export class PageEntityService {
 
 		// 後方互換性のため
 		let migrated = false;
-		const migrate = (xs: any[]) => {
+		const migrate = (xs: MiPageContentBlock[]) => {
 			for (const x of xs) {
 				if (x.type === 'input') {
 					if (x.inputType === 'text') {
@@ -66,7 +66,7 @@ export class PageEntityService {
 					}
 					if (x.inputType === 'number') {
 						x.type = 'numberInput';
-						if (x.default) x.default = parseInt(x.default, 10);
+						if (x.default) x.default = parseInt(String(x.default), 10);
 					}
 					migrated = true;
 				}

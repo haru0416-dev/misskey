@@ -788,9 +788,9 @@ export class DriveService {
 			} as DeleteObjectCommandInput;
 
 			await this.s3Service.delete(this.meta, param);
-		} catch (err: any) {
-			if (err.name === 'NoSuchKey') {
-				this.deleteLogger.warn(`The object storage had no such key to delete: ${key}. Skipping this.`, err as Error);
+		} catch (err) {
+			if (err instanceof Error && err.name === 'NoSuchKey') {
+				this.deleteLogger.warn(`The object storage had no such key to delete: ${key}. Skipping this.`, err);
 				return;
 			} else {
 				throw new Error(`Failed to delete the file from the object storage with the given key: ${key}`, {

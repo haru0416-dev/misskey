@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export class I18n<T extends Record<string, any>> {
+export class I18n<T extends Record<string, unknown>> {
 	public locale: T;
 
 	constructor(locale: T) {
@@ -16,13 +16,13 @@ export class I18n<T extends Record<string, any>> {
 
 	// string にしているのは、ドット区切りでのパス指定を許可するため
 	// なるべくこのメソッド使うよりもlocale直接参照の方がvueのキャッシュ効いてパフォーマンスが良いかも
-	public t(key: string, args?: Record<string, any>): string {
+	public t(key: string, args?: Record<string, unknown>): string {
 		try {
-			let str = key.split('.').reduce((o, i) => o[i], this.locale as any) as string;
+			let str = key.split('.').reduce((o: unknown, i) => (o as Record<string, unknown>)[i], this.locale) as string;
 
 			if (args) {
 				for (const [k, v] of Object.entries(args)) {
-					str = str.replace(`{${k}}`, v);
+					str = str.replace(`{${k}}`, String(v));
 				}
 			}
 			return str;

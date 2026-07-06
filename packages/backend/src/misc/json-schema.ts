@@ -158,8 +158,9 @@ type StringDefToType<T extends TypeStringef> =
 	T extends 'integer' ? number :
 	T extends 'number' ? number :
 	T extends 'string' ? string | Date :
-	T extends 'array' ? ReadonlyArray<any> :
-	T extends 'object' ? Record<string, any> :
+	T extends 'array' ? ReadonlyArray<unknown> :
+	T extends 'object' ? Record<string, unknown> :
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	any;
 
 // https://swagger.io/specification/?sbsearch=optional#schema-object
@@ -179,12 +180,12 @@ export interface Schema extends OfSchema {
 	readonly properties?: Obj;
 	readonly required?: ReadonlyArray<Extract<keyof NonNullable<this['properties']>, string>>;
 	readonly description?: string;
-	readonly example?: any;
+	readonly example?: unknown;
 	readonly format?: string;
 	readonly ref?: keyof typeof refs;
 	readonly selfRef?: boolean;
 	readonly enum?: ReadonlyArray<string | null>;
-	readonly default?: (this['type'] extends TypeStringef ? StringDefToType<this['type']> : any) | null;
+	readonly default?: (this['type'] extends TypeStringef ? StringDefToType<this['type']> : unknown) | null;
 	readonly maxLength?: number;
 	readonly minLength?: number;
 	readonly maximum?: number;
@@ -221,7 +222,9 @@ type NullOrUndefined<p extends Schema, T> =
 
 // https://stackoverflow.com/questions/54938141/typescript-convert-union-to-intersection
 // Get intersection from union
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+// NOTE: `U extends unknown` (not `any`) is the standard any-free idiom to force
+// distribution over the union U while inferring the intersection.
+type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
 
 type ArrayToIntersection<T extends ReadonlyArray<Schema>> =
 	T extends readonly [infer Head, ...infer Tail]
@@ -236,10 +239,15 @@ type ArrayToIntersection<T extends ReadonlyArray<Schema>> =
 
 // https://github.com/misskey-dev/misskey/pull/8144#discussion_r785287552
 // To get union, we use `Foo extends any ? Hoge<Foo> : never`
-type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends any ? SchemaType<X> : never;
-//type UnionObjectSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends any ? ObjectSchemaType<X> : never;
-type UnionObjType<s extends Obj, a extends readonly any[], X extends ReadonlyArray<keyof s> = a[number]> = X extends any ? ObjType<s, X> : never;
-type ArrayUnion<T> = T extends any ? Array<T> : never;
+// NOTE: `a`'s `any[]` bound is load-bearing here: `a[number]` feeds the default
+// value of X (constrained to Schema / ReadonlyArray<keyof s>), and narrowing it
+// to `unknown[]` breaks that constraint check. Kept as `any[]` deliberately.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown ? SchemaType<X> : never;
+//type UnionObjectSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown ? ObjectSchemaType<X> : never;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UnionObjType<s extends Obj, a extends readonly any[], X extends ReadonlyArray<keyof s> = a[number]> = X extends unknown ? ObjType<s, X> : never;
+type ArrayUnion<T> = T extends unknown ? Array<T> : never;
 type ArrayToTuple<X extends ReadonlyArray<Schema>> = { [K in keyof X]: SchemaType<X[K]> };
 
 type ObjectSchemaTypeDef<p extends Schema> =
@@ -252,6 +260,10 @@ type ObjectSchemaTypeDef<p extends Schema> =
 		:
 		p['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['anyOf']> :
 		p['allOf'] extends ReadonlyArray<Schema> ? ArrayToIntersection<p['allOf']> :
+		// NOTE: consumers (e.g. MetaEntityPacker.ts) assign concrete third-party option
+		// objects (Sentry BrowserOptions/VueOptions/etc.) into fields typed via this branch;
+		// narrowing to Record<string, unknown> breaks that structural assignment. Kept as any.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		p['additionalProperties'] extends true ? Record<string, any> :
 		p['additionalProperties'] extends Schema ?
 			p['additionalProperties'] extends infer AdditionalProperties ?

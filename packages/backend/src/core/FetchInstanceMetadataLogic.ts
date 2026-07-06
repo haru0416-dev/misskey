@@ -29,6 +29,14 @@ type NodeInfo = {
 	};
 };
 
+/** Web App Manifest (https://developer.mozilla.org/docs/Web/Manifest) のうち実際に参照するフィールドのみ。 */
+type WebAppManifest = {
+	icons?: { src?: string }[];
+	theme_color?: string;
+	name?: string;
+	short_name?: string;
+};
+
 export type FetchInstanceMetadataDependencies = {
 	httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
 	logger: Pick<Logger, 'error' | 'info'> & Partial<Pick<Logger, 'succ'>>;
@@ -107,11 +115,11 @@ async function fetchDom(
 async function fetchManifest(
 	deps: Pick<FetchInstanceMetadataDependencies, 'httpRequestService'>,
 	instance: MiInstance,
-): Promise<Record<string, unknown> | null> {
+): Promise<WebAppManifest | null> {
 	const url = 'https://' + instance.host;
 	const manifestUrl = url + '/manifest.json';
 
-	return await deps.httpRequestService.getJson(manifestUrl) as Record<string, unknown>;
+	return await deps.httpRequestService.getJson(manifestUrl) as WebAppManifest;
 }
 
 async function fetchFaviconUrl(
@@ -145,7 +153,7 @@ async function fetchFaviconUrl(
 async function fetchIconUrl(
 	instance: MiInstance,
 	doc: htmlParser.HTMLElement | null,
-	manifest: Record<string, any> | null,
+	manifest: WebAppManifest | null,
 ): Promise<string | null> {
 	if (manifest && manifest.icons && manifest.icons.length > 0 && manifest.icons[0].src) {
 		const url = 'https://' + instance.host;
@@ -177,11 +185,11 @@ async function fetchIconUrl(
 async function getThemeColor(
 	info: NodeInfo | null,
 	doc: htmlParser.HTMLElement | null,
-	manifest: Record<string, any> | null,
+	manifest: WebAppManifest | null,
 ): Promise<string | null> {
 	const themeColor = info?.metadata?.themeColor ?? doc?.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? manifest?.theme_color;
 
-	if (themeColor) {
+	if (typeof themeColor === 'string') {
 		const color = new tinycolor(themeColor);
 		if (color.isValid()) return color.toHexString();
 	}
@@ -192,7 +200,7 @@ async function getThemeColor(
 async function getSiteName(
 	info: NodeInfo | null,
 	doc: htmlParser.HTMLElement | null,
-	manifest: Record<string, any> | null,
+	manifest: WebAppManifest | null,
 ): Promise<string | null> {
 	if (info && info.metadata) {
 		if (typeof info.metadata.nodeName === 'string') {
@@ -211,7 +219,7 @@ async function getSiteName(
 	}
 
 	if (manifest) {
-		return manifest.name ?? manifest.short_name;
+		return manifest.name ?? manifest.short_name ?? null;
 	}
 
 	return null;
@@ -220,7 +228,7 @@ async function getSiteName(
 async function getDescription(
 	info: NodeInfo | null,
 	doc: htmlParser.HTMLElement | null,
-	manifest: Record<string, any> | null,
+	manifest: WebAppManifest | null,
 ): Promise<string | null> {
 	if (info && info.metadata) {
 		if (typeof info.metadata.nodeDescription === 'string') {
@@ -243,7 +251,7 @@ async function getDescription(
 	}
 
 	if (manifest) {
-		return manifest.name ?? manifest.short_name;
+		return manifest.name ?? manifest.short_name ?? null;
 	}
 
 	return null;

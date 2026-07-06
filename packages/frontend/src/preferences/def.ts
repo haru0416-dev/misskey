@@ -41,6 +41,9 @@ export type StatusbarStore = {
 	type: string | null;
 	size: 'verySmall' | 'small' | 'medium' | 'large' | 'veryLarge';
 	black: boolean;
+	// NOTE: ステータスバーの種類ごとに具体的な形が異なる動的なプロパティ袋。
+	// 個々の設定画面 (pages/settings/statusbar.*.vue) やレンダラー (ui/_common_/statusbars.vue) が
+	// 個別のキーを具体的なプリミティブ型として直接読み書きするため、あえて緩い型のままにしている。
 	props: Record<string, any>;
 };
 
@@ -52,7 +55,7 @@ export type DataSaverStore = {
 	code: boolean;
 };
 
-type OmitStrict<T, K extends keyof T> = T extends any ? Pick<T, Exclude<keyof T, K>> : never;
+type OmitStrict<T, K extends keyof T> = T extends unknown ? Pick<T, Exclude<keyof T, K>> : never;
 
 // NOTE: デフォルト値は他の設定の状態に依存してはならない(依存していた場合、ユーザーがその設定項目単体で「初期値にリセット」した場合不具合の原因になる)
 
@@ -87,6 +90,9 @@ export const PREF_DEF = definePreferences({
 			name: string;
 			id: string;
 			place: string | null;
+			// NOTE: ウィジェットの種類ごとに実際のデータ形状が異なる。deepEqual (JsonLike前提) や
+			// widgets/widget.ts でのフォーム値との相互変換を通じて他の設定値のunion型にも波及するため、
+			// あえて緩い型のままにしている。
 			data: Record<string, any>;
 		}[],
 	},
@@ -403,6 +409,8 @@ export const PREF_DEF = definePreferences({
 		default: false,
 	},
 	plugins: {
+		// NOTE: プラグインごとに実際のconfigスキーマが異なる動的なデータ。plugin.ts / pages/settings/plugin.vue が
+		// Plugin['config'] (FormWithDefault) の形として直接扱うため、あえて緩い型のままにしている。
 		default: [] as (OmitStrict<Plugin, 'config'> & { config: Record<string, any> })[],
 		mergeStrategy: (a, b) => {
 			const sameIdExists = a.some(x => b.some(y => x.installId === y.installId));
