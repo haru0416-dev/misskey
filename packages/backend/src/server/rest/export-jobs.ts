@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { DbQueue } from '@/core/QueueModule.js';
 import { parseHonoApiParams } from './validation.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -23,14 +24,10 @@ const EXPORT_JOB_OPTIONS = {
 	},
 } as const;
 
-const exportFollowingParamDef = {
-	type: 'object',
-	properties: {
-		excludeMuting: { type: 'boolean', default: false },
-		excludeInactive: { type: 'boolean', default: false },
-	},
-	required: [],
-} as const;
+const exportFollowingParamDef = z.object({
+	excludeMuting: z.boolean().optional().default(false),
+	excludeInactive: z.boolean().optional().default(false),
+});
 
 type ExportFollowingParams = {
 	excludeMuting: boolean;

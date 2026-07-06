@@ -4,6 +4,7 @@
  */
 
 import push from 'web-push';
+import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/ChatApprovalStore.js';
 import {
@@ -64,6 +65,7 @@ import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
@@ -1054,14 +1056,10 @@ async function getUserForHonoApiChat(deps: HonoApiChatDependencies, userId: stri
 // handlers
 // ---------------------------------------------------------------------------
 
-const chatHistoryParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		room: { type: 'boolean', default: false },
-	},
-	required: [],
-} as const;
+const chatHistoryParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	room: z.boolean().optional().default(false),
+});
 
 type ChatHistoryParams = { limit: number; room: boolean };
 
@@ -1090,7 +1088,7 @@ export async function handleHonoApiChatHistory(deps: HonoApiChatDependencies, me
 	return packedMessages;
 }
 
-const chatReadAllParamDef = { type: 'object', properties: {}, required: [] } as const;
+const chatReadAllParamDef = z.object({});
 
 export async function handleHonoApiChatReadAll(deps: HonoApiChatDependencies, me: MiLocalUser, body: Record<string, unknown>): Promise<void> {
 	parseHonoApiParams(chatReadAllParamDef, body);
@@ -1098,15 +1096,11 @@ export async function handleHonoApiChatReadAll(deps: HonoApiChatDependencies, me
 	await readAllChatMessagesForHonoApi(deps, me.id);
 }
 
-const chatMessagesCreateToUserParamDef = {
-	type: 'object',
-	properties: {
-		text: { type: 'string', nullable: true, maxLength: 2000 },
-		fileId: { type: 'string', format: 'misskey:id' },
-		toUserId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['toUserId'],
-} as const;
+const chatMessagesCreateToUserParamDef = z.object({
+	text: z.string().max(2000).nullable().optional(),
+	fileId: misskeyId().optional(),
+	toUserId: misskeyId(),
+});
 
 type ChatMessagesCreateToUserParams = { text?: string | null; fileId?: string; toUserId: string };
 
@@ -1133,15 +1127,11 @@ export async function handleHonoApiChatMessagesCreateToUser(deps: HonoApiChatDep
 	return await createChatMessageToUserForHonoApi(deps, me, toUser, { text: params.text, file });
 }
 
-const chatMessagesCreateToRoomParamDef = {
-	type: 'object',
-	properties: {
-		text: { type: 'string', nullable: true, maxLength: 2000 },
-		fileId: { type: 'string', format: 'misskey:id' },
-		toRoomId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['toRoomId'],
-} as const;
+const chatMessagesCreateToRoomParamDef = z.object({
+	text: z.string().max(2000).nullable().optional(),
+	fileId: misskeyId().optional(),
+	toRoomId: misskeyId(),
+});
 
 type ChatMessagesCreateToRoomParams = { text?: string | null; fileId?: string; toRoomId: string };
 
@@ -1165,11 +1155,9 @@ export async function handleHonoApiChatMessagesCreateToRoom(deps: HonoApiChatDep
 	return await createChatMessageToRoomForHonoApi(deps, me, room, { text: params.text, file });
 }
 
-const chatMessagesDeleteParamDef = {
-	type: 'object',
-	properties: { messageId: { type: 'string', format: 'misskey:id' } },
-	required: ['messageId'],
-} as const;
+const chatMessagesDeleteParamDef = z.object({
+	messageId: misskeyId(),
+});
 
 type ChatMessagesDeleteParams = { messageId: string };
 
@@ -1183,14 +1171,10 @@ export async function handleHonoApiChatMessagesDelete(deps: HonoApiChatDependenc
 	await deleteChatMessageForHonoApi(deps, message);
 }
 
-const chatMessagesReactParamDef = {
-	type: 'object',
-	properties: {
-		messageId: { type: 'string', format: 'misskey:id' },
-		reaction: { type: 'string' },
-	},
-	required: ['messageId', 'reaction'],
-} as const;
+const chatMessagesReactParamDef = z.object({
+	messageId: misskeyId(),
+	reaction: z.string(),
+});
 
 type ChatMessagesReactParams = { messageId: string; reaction: string };
 
@@ -1200,14 +1184,10 @@ export async function handleHonoApiChatMessagesReact(deps: HonoApiChatDependenci
 	await reactToChatMessageForHonoApi(deps, params.messageId, me.id, params.reaction);
 }
 
-const chatMessagesUnreactParamDef = {
-	type: 'object',
-	properties: {
-		messageId: { type: 'string', format: 'misskey:id' },
-		reaction: { type: 'string' },
-	},
-	required: ['messageId', 'reaction'],
-} as const;
+const chatMessagesUnreactParamDef = z.object({
+	messageId: misskeyId(),
+	reaction: z.string(),
+});
 
 type ChatMessagesUnreactParams = { messageId: string; reaction: string };
 
@@ -1217,18 +1197,14 @@ export async function handleHonoApiChatMessagesUnreact(deps: HonoApiChatDependen
 	await unreactToChatMessageForHonoApi(deps, params.messageId, me.id, params.reaction);
 }
 
-const chatMessagesRoomTimelineParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		roomId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['roomId'],
-} as const;
+const chatMessagesRoomTimelineParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	roomId: misskeyId(),
+});
 
 type ChatMessagesRoomTimelineParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number; roomId: string };
 
@@ -1253,16 +1229,12 @@ export async function handleHonoApiChatMessagesRoomTimeline(deps: HonoApiChatDep
 	return await packChatMessagesLiteForRoomForHonoApi(deps, messages);
 }
 
-const chatMessagesSearchParamDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string', minLength: 1, maxLength: 256 },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		userId: { type: 'string', format: 'misskey:id', nullable: true },
-		roomId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: ['query'],
-} as const;
+const chatMessagesSearchParamDef = z.object({
+	query: z.string().min(1).max(256),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	userId: misskeyId().nullable().optional(),
+	roomId: misskeyId().nullable().optional(),
+});
 
 type ChatMessagesSearchParams = { query: string; limit: number; userId?: string | null; roomId?: string | null };
 
@@ -1281,11 +1253,9 @@ export async function handleHonoApiChatMessagesSearch(deps: HonoApiChatDependenc
 	return await packChatMessagesDetailedForHonoApi(deps, messages, me);
 }
 
-const chatMessagesShowParamDef = {
-	type: 'object',
-	properties: { messageId: { type: 'string', format: 'misskey:id' } },
-	required: ['messageId'],
-} as const;
+const chatMessagesShowParamDef = z.object({
+	messageId: misskeyId(),
+});
 
 type ChatMessagesShowParams = { messageId: string };
 
@@ -1302,18 +1272,14 @@ export async function handleHonoApiChatMessagesShow(deps: HonoApiChatDependencie
 	return await packChatMessageDetailedForHonoApi(deps, message, me);
 }
 
-const chatMessagesUserTimelineParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const chatMessagesUserTimelineParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	userId: misskeyId(),
+});
 
 type ChatMessagesUserTimelineParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number; userId: string };
 
@@ -1333,14 +1299,10 @@ export async function handleHonoApiChatMessagesUserTimeline(deps: HonoApiChatDep
 	return await packChatMessagesLiteFor1on1ForHonoApi(deps, messages);
 }
 
-const chatRoomsCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', maxLength: 256 },
-		description: { type: 'string', maxLength: 1024 },
-	},
-	required: ['name'],
-} as const;
+const chatRoomsCreateParamDef = z.object({
+	name: z.string().max(256),
+	description: z.string().max(1024).optional(),
+});
 
 type ChatRoomsCreateParams = { name: string; description?: string };
 
@@ -1352,11 +1314,9 @@ export async function handleHonoApiChatRoomsCreate(deps: HonoApiChatDependencies
 	return await packChatRoomForHonoApi(deps, room);
 }
 
-const chatRoomsDeleteParamDef = {
-	type: 'object',
-	properties: { roomId: { type: 'string', format: 'misskey:id' } },
-	required: ['roomId'],
-} as const;
+const chatRoomsDeleteParamDef = z.object({
+	roomId: misskeyId(),
+});
 
 type ChatRoomsDeleteParams = { roomId: string };
 
@@ -1372,15 +1332,11 @@ export async function handleHonoApiChatRoomsDelete(deps: HonoApiChatDependencies
 	await deleteChatRoomForHonoApi(deps, room, me);
 }
 
-const chatRoomsUpdateParamDef = {
-	type: 'object',
-	properties: {
-		roomId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', maxLength: 256 },
-		description: { type: 'string', maxLength: 1024 },
-	},
-	required: ['roomId'],
-} as const;
+const chatRoomsUpdateParamDef = z.object({
+	roomId: misskeyId(),
+	name: z.string().max(256).optional(),
+	description: z.string().max(1024).optional(),
+});
 
 type ChatRoomsUpdateParams = { roomId: string; name?: string; description?: string };
 
@@ -1395,11 +1351,9 @@ export async function handleHonoApiChatRoomsUpdate(deps: HonoApiChatDependencies
 	return await packChatRoomForHonoApi(deps, updated, me);
 }
 
-const chatRoomsShowParamDef = {
-	type: 'object',
-	properties: { roomId: { type: 'string', format: 'misskey:id' } },
-	required: ['roomId'],
-} as const;
+const chatRoomsShowParamDef = z.object({
+	roomId: misskeyId(),
+});
 
 type ChatRoomsShowParams = { roomId: string };
 
@@ -1415,17 +1369,13 @@ export async function handleHonoApiChatRoomsShow(deps: HonoApiChatDependencies, 
 	return await packChatRoomForHonoApi(deps, room, me);
 }
 
-const chatRoomsOwnedParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const chatRoomsOwnedParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type ChatRoomsOwnedParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
@@ -1440,11 +1390,9 @@ export async function handleHonoApiChatRoomsOwned(deps: HonoApiChatDependencies,
 	return await packChatRoomsForHonoApi(deps, rooms, me);
 }
 
-const chatRoomsJoinParamDef = {
-	type: 'object',
-	properties: { roomId: { type: 'string', format: 'misskey:id' } },
-	required: ['roomId'],
-} as const;
+const chatRoomsJoinParamDef = z.object({
+	roomId: misskeyId(),
+});
 
 type ChatRoomsJoinParams = { roomId: string };
 
@@ -1454,17 +1402,13 @@ export async function handleHonoApiChatRoomsJoin(deps: HonoApiChatDependencies, 
 	await joinToChatRoomForHonoApi(deps, me.id, params.roomId);
 }
 
-const chatRoomsJoiningParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const chatRoomsJoiningParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type ChatRoomsJoiningParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
@@ -1479,11 +1423,9 @@ export async function handleHonoApiChatRoomsJoining(deps: HonoApiChatDependencie
 	return await packChatRoomMembershipsForHonoApi(deps, memberships, me, { populateUser: false, populateRoom: true });
 }
 
-const chatRoomsLeaveParamDef = {
-	type: 'object',
-	properties: { roomId: { type: 'string', format: 'misskey:id' } },
-	required: ['roomId'],
-} as const;
+const chatRoomsLeaveParamDef = z.object({
+	roomId: misskeyId(),
+});
 
 type ChatRoomsLeaveParams = { roomId: string };
 
@@ -1493,18 +1435,14 @@ export async function handleHonoApiChatRoomsLeave(deps: HonoApiChatDependencies,
 	await leaveChatRoomForHonoApi(deps, me.id, params.roomId);
 }
 
-const chatRoomsMembersParamDef = {
-	type: 'object',
-	properties: {
-		roomId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['roomId'],
-} as const;
+const chatRoomsMembersParamDef = z.object({
+	roomId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type ChatRoomsMembersParams = { roomId: string; limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
@@ -1524,14 +1462,10 @@ export async function handleHonoApiChatRoomsMembers(deps: HonoApiChatDependencie
 	return await packChatRoomMembershipsForHonoApi(deps, memberships, me, { populateUser: true, populateRoom: false });
 }
 
-const chatRoomsMuteParamDef = {
-	type: 'object',
-	properties: {
-		roomId: { type: 'string', format: 'misskey:id' },
-		mute: { type: 'boolean' },
-	},
-	required: ['roomId', 'mute'],
-} as const;
+const chatRoomsMuteParamDef = z.object({
+	roomId: misskeyId(),
+	mute: z.boolean(),
+});
 
 type ChatRoomsMuteParams = { roomId: string; mute: boolean };
 
@@ -1541,14 +1475,10 @@ export async function handleHonoApiChatRoomsMute(deps: HonoApiChatDependencies, 
 	await muteChatRoomForHonoApi(deps, me.id, params.roomId, params.mute);
 }
 
-const chatRoomsInvitationsCreateParamDef = {
-	type: 'object',
-	properties: {
-		roomId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['roomId', 'userId'],
-} as const;
+const chatRoomsInvitationsCreateParamDef = z.object({
+	roomId: misskeyId(),
+	userId: misskeyId(),
+});
 
 type ChatRoomsInvitationsCreateParams = { roomId: string; userId: string };
 
@@ -1563,11 +1493,9 @@ export async function handleHonoApiChatRoomsInvitationsCreate(deps: HonoApiChatD
 	return await packChatRoomInvitationForHonoApi(deps, invitation, me);
 }
 
-const chatRoomsInvitationsIgnoreParamDef = {
-	type: 'object',
-	properties: { roomId: { type: 'string', format: 'misskey:id' } },
-	required: ['roomId'],
-} as const;
+const chatRoomsInvitationsIgnoreParamDef = z.object({
+	roomId: misskeyId(),
+});
 
 type ChatRoomsInvitationsIgnoreParams = { roomId: string };
 
@@ -1577,17 +1505,13 @@ export async function handleHonoApiChatRoomsInvitationsIgnore(deps: HonoApiChatD
 	await ignoreChatRoomInvitationForHonoApi(deps, me.id, params.roomId);
 }
 
-const chatRoomsInvitationsInboxParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const chatRoomsInvitationsInboxParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type ChatRoomsInvitationsInboxParams = { limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 
@@ -1602,18 +1526,14 @@ export async function handleHonoApiChatRoomsInvitationsInbox(deps: HonoApiChatDe
 	return await packChatRoomInvitationsForHonoApi(deps, invitations, me);
 }
 
-const chatRoomsInvitationsOutboxParamDef = {
-	type: 'object',
-	properties: {
-		roomId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['roomId'],
-} as const;
+const chatRoomsInvitationsOutboxParamDef = z.object({
+	roomId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type ChatRoomsInvitationsOutboxParams = { roomId: string; limit: number; sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number };
 

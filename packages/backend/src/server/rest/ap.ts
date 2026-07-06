@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { getApId, isActor, isPost, type IObject } from '@/core/activitypub/type.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiNote } from '@/models/Note.js';
@@ -24,13 +25,9 @@ import { packUserDetailedNotMeForHonoApi, type UserPackingDependencies } from '.
 import { packNoteForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 
-const apGetParamDef = {
-	type: 'object',
-	properties: {
-		uri: { type: 'string' },
-	},
-	required: ['uri'],
-} as const;
+const apGetParamDef = z.object({
+	uri: z.string(),
+});
 
 type ApGetParams = {
 	uri: string;
@@ -43,13 +40,9 @@ export async function handleHonoApiApGet(deps: HonoApiApResolveDependencies, bod
 
 export type HonoApiApShowDependencies = HonoApiApNoteDependencies & HonoApiApPersonDependencies & UserPackingDependencies & HonoApiNoteDependencies;
 
-const apShowParamDef = {
-	type: 'object',
-	properties: {
-		uri: { type: 'string' },
-	},
-	required: ['uri'],
-} as const;
+const apShowParamDef = z.object({
+	uri: z.string(),
+});
 
 type ApShowParams = {
 	uri: string;

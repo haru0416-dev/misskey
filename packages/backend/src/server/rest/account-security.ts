@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
 import type { EmailService } from '@/core/EmailService.js';
@@ -52,15 +53,11 @@ async function assertHonoApiTwoFactorIfEnabled(
 	}
 }
 
-const changePasswordParamDef = {
-	type: 'object',
-	properties: {
-		currentPassword: { type: 'string' },
-		newPassword: { type: 'string', minLength: 1 },
-		token: { type: 'string', nullable: true },
-	},
-	required: ['currentPassword', 'newPassword'],
-} as const;
+const changePasswordParamDef = z.object({
+	currentPassword: z.string(),
+	newPassword: z.string().min(1),
+	token: z.string().nullable().optional(),
+});
 
 type ChangePasswordParams = {
 	currentPassword: string;
@@ -91,13 +88,9 @@ export async function handleHonoApiIChangePassword(
 	});
 }
 
-const regenerateTokenParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-	},
-	required: ['password'],
-} as const;
+const regenerateTokenParamDef = z.object({
+	password: z.string(),
+});
 
 type RegenerateTokenParams = {
 	password: string;
@@ -129,14 +122,10 @@ export async function handleHonoApiIRegenerateToken(
 	deps.publishMainStream?.(me.id, 'myTokenRegenerated');
 }
 
-const deleteAccountParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		token: { type: 'string', nullable: true },
-	},
-	required: ['password'],
-} as const;
+const deleteAccountParamDef = z.object({
+	password: z.string(),
+	token: z.string().nullable().optional(),
+});
 
 type DeleteAccountParams = {
 	password: string;
@@ -174,15 +163,11 @@ function iUpdateEmailRequiredError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Email address is required.', code: 'EMAIL_REQUIRED', id: '324c7a88-59f2-492f-903f-89134f93e47e' });
 }
 
-const updateEmailParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		email: { type: 'string', nullable: true },
-		token: { type: 'string', nullable: true },
-	},
-	required: ['password'],
-} as const;
+const updateEmailParamDef = z.object({
+	password: z.string(),
+	email: z.string().nullable().optional(),
+	token: z.string().nullable().optional(),
+});
 
 type UpdateEmailParams = {
 	password: string;

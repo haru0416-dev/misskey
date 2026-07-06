@@ -4,6 +4,7 @@
  */
 
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
@@ -39,6 +40,7 @@ import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -56,13 +58,9 @@ export type HonoApiNotesDependencies = HonoApiNoteDependencies & HonoApiNotifica
 	redisForTimelines?: Redis.Redis;
 };
 
-const notesShowParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+const notesShowParamDef = z.object({
+	noteId: misskeyId(),
+});
 
 type NotesShowParams = {
 	noteId: string;
@@ -95,18 +93,14 @@ function notesShowContentRestrictedByServerError(): HonoApiError {
 	});
 }
 
-const noteIdPaginationParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['noteId'],
-} as const;
+const noteIdPaginationParamDef = z.object({
+	noteId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type NoteIdPaginationParams = {
 	noteId: string;
@@ -154,15 +148,11 @@ function notesConversationNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'e1035875-9551-45ec-afa8-1ded1fcb53c8' });
 }
 
-const notesConversationParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-	},
-	required: ['noteId'],
-} as const;
+const notesConversationParamDef = z.object({
+	noteId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	offset: z.number().int().optional().default(0),
+});
 
 type NotesConversationParams = {
 	noteId: string;
@@ -207,19 +197,15 @@ export async function handleHonoApiNotesConversation(
 	return await packNoteManyForHonoApi(deps, conversation.filter(n => n != null), me);
 }
 
-const notesMentionsParamDef = {
-	type: 'object',
-	properties: {
-		following: { type: 'boolean', default: false },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		visibility: { type: 'string' },
-	},
-	required: [],
-} as const;
+const notesMentionsParamDef = z.object({
+	following: z.boolean().optional().default(false),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	visibility: z.string().optional(),
+});
 
 type NotesMentionsParams = {
 	following: boolean;
@@ -299,13 +285,9 @@ export async function handleHonoApiNotesRenotes(
 	return await packNoteManyForHonoApi(deps, renotes, me);
 }
 
-const noteIdOnlyParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+const noteIdOnlyParamDef = z.object({
+	noteId: misskeyId(),
+});
 
 type NoteIdOnlyParams = {
 	noteId: string;
@@ -459,19 +441,15 @@ function notesGlobalTimelineDisabledError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Global timeline has been disabled.', code: 'GTL_DISABLED', id: '0332fc13-6ab2-4427-ae80-a9fadffd1a6b' });
 }
 
-const notesGlobalTimelineParamDef = {
-	type: 'object',
-	properties: {
-		withFiles: { type: 'boolean', default: false },
-		withRenotes: { type: 'boolean', default: true },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const notesGlobalTimelineParamDef = z.object({
+	withFiles: z.boolean().optional().default(false),
+	withRenotes: z.boolean().optional().default(true),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type NotesGlobalTimelineParams = {
 	withFiles: boolean;
@@ -508,22 +486,18 @@ export async function handleHonoApiNotesGlobalTimeline(
 	return await packNoteManyForHonoApi(deps, timeline, me);
 }
 
-const notesParamDef = {
-	type: 'object',
-	properties: {
-		local: { type: 'boolean', default: false },
-		reply: { type: 'boolean' },
-		renote: { type: 'boolean' },
-		withFiles: { type: 'boolean' },
-		poll: { type: 'boolean' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const notesParamDef = z.object({
+	local: z.boolean().optional().default(false),
+	reply: z.boolean().optional(),
+	renote: z.boolean().optional(),
+	withFiles: z.boolean().optional(),
+	poll: z.boolean().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type NotesParams = {
 	local: boolean;
@@ -568,21 +542,17 @@ function notesLocalTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dd9c8400-1cb5-4eef-8a31-200c5f933793' });
 }
 
-const notesLocalTimelineParamDef = {
-	type: 'object',
-	properties: {
-		withFiles: { type: 'boolean', default: false },
-		withRenotes: { type: 'boolean', default: true },
-		withReplies: { type: 'boolean', default: false },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		allowPartial: { type: 'boolean', default: false },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const notesLocalTimelineParamDef = z.object({
+	withFiles: z.boolean().optional().default(false),
+	withRenotes: z.boolean().optional().default(true),
+	withReplies: z.boolean().optional().default(false),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	allowPartial: z.boolean().optional().default(false),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type NotesLocalTimelineParams = {
 	withFiles: boolean;
@@ -661,24 +631,20 @@ function notesHybridTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dfaa3eb7-8002-4cb7-bcc4-1095df46656f' });
 }
 
-const notesHybridTimelineParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		allowPartial: { type: 'boolean', default: false },
-		includeMyRenotes: { type: 'boolean', default: true },
-		includeRenotedMyNotes: { type: 'boolean', default: true },
-		includeLocalRenotes: { type: 'boolean', default: true },
-		withFiles: { type: 'boolean', default: false },
-		withRenotes: { type: 'boolean', default: true },
-		withReplies: { type: 'boolean', default: false },
-	},
-	required: [],
-} as const;
+const notesHybridTimelineParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	allowPartial: z.boolean().optional().default(false),
+	includeMyRenotes: z.boolean().optional().default(true),
+	includeRenotedMyNotes: z.boolean().optional().default(true),
+	includeLocalRenotes: z.boolean().optional().default(true),
+	withFiles: z.boolean().optional().default(false),
+	withRenotes: z.boolean().optional().default(true),
+	withReplies: z.boolean().optional().default(false),
+});
 
 type NotesHybridTimelineParams = {
 	limit: number;
@@ -806,15 +772,11 @@ async function getNotesFeaturedRanking(
 let globalNotesRankingCache: string[] = [];
 let globalNotesRankingCacheLastFetchedAt = 0;
 
-const notesFeaturedParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		untilId: { type: 'string', format: 'misskey:id' },
-		channelId: { type: 'string', nullable: true, format: 'misskey:id' },
-	},
-	required: [],
-} as const;
+const notesFeaturedParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	untilId: misskeyId().optional(),
+	channelId: misskeyId().nullable().optional(),
+});
 
 type NotesFeaturedParams = {
 	limit: number;
@@ -910,24 +872,20 @@ function notesSearchUnavailableError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Search of notes unavailable.', code: 'UNAVAILABLE', id: '0b44998d-77aa-4427-80d0-d2c9b8523011' });
 }
 
-const notesSearchParamDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string' },
-		rangeStartAt: { type: 'integer', nullable: true },
-		rangeEndAt: { type: 'integer', nullable: true },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		host: { type: 'string' },
-		userId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-		channelId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: ['query'],
-} as const;
+const notesSearchParamDef = z.object({
+	query: z.string(),
+	rangeStartAt: z.number().int().nullable().optional(),
+	rangeEndAt: z.number().int().nullable().optional(),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	offset: z.number().int().optional().default(0),
+	host: z.string().optional(),
+	userId: misskeyId().nullable().optional().default(null),
+	channelId: misskeyId().nullable().optional().default(null),
+});
 
 type NotesSearchParams = {
 	query: string;
@@ -981,53 +939,42 @@ export async function handleHonoApiNotesSearch(
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
 
-const notesSearchByTagParamDef = {
-	allOf: [
-		{
-			anyOf: [
-				{
-					type: 'object',
-					properties: {
-						tag: { type: 'string', minLength: 1 },
-					},
-					required: ['tag'],
-				},
-				{
-					type: 'object',
-					properties: {
-						query: {
-							type: 'array',
-							items: {
-								type: 'array',
-								items: {
-									type: 'string',
-									minLength: 1,
-								},
-								minItems: 1,
-							},
-							minItems: 1,
-						},
-					},
-					required: ['query'],
-				},
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				reply: { type: 'boolean', nullable: true, default: null },
-				renote: { type: 'boolean', nullable: true, default: null },
-				withFiles: { type: 'boolean', default: false },
-				poll: { type: 'boolean', nullable: true, default: null },
-				sinceId: { type: 'string', format: 'misskey:id' },
-				untilId: { type: 'string', format: 'misskey:id' },
-				sinceDate: { type: 'integer' },
-				untilDate: { type: 'integer' },
-				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-			},
-		},
-	],
-} as const;
+// 元の ajv スキーマは `allOf: [{ anyOf: [tag必須, query必須] }, { 共通プロパティ (additionalProperties 制限なし) }]`。
+// anyOf の各分岐は互いのプロパティを一切検証しない (例: query 分岐は tag の型を問わない) ため、
+// tag/query 自体には型制約を掛けず (z.unknown()) 、「anyOf のどちらかの分岐を素朴に満たすか」を
+// isValidTagBranch/isValidQueryBranch で ajv 同等に再現し、superRefine で判定する。
+// これにより「tag が不正でも query が有効なら許可」のような ajv 特有の緩さを完全一致させる。
+function isValidTagBranch(tag: unknown): tag is string {
+	return typeof tag === 'string' && tag.length >= 1;
+}
+
+function isValidQueryBranch(query: unknown): query is string[][] {
+	return Array.isArray(query) && query.length >= 1 && query.every(inner =>
+		Array.isArray(inner) && inner.length >= 1 && inner.every(tag => typeof tag === 'string' && tag.length >= 1),
+	);
+}
+
+const notesSearchByTagParamDef = z.object({
+	tag: z.unknown().optional(),
+	query: z.unknown().optional(),
+	reply: z.boolean().nullable().optional().default(null),
+	renote: z.boolean().nullable().optional().default(null),
+	withFiles: z.boolean().optional().default(false),
+	poll: z.boolean().nullable().optional().default(null),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+}).superRefine((data, ctx) => {
+	if (!isValidTagBranch(data.tag) && !isValidQueryBranch(data.query)) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			message: 'must match "anyOf" schema (tag or query)',
+			path: [],
+		});
+	}
+});
 
 type NotesSearchByTagParams = {
 	tag?: string;
@@ -1086,13 +1033,9 @@ export async function handleHonoApiNotesSearchByTag(
 	}
 }
 
-const notesShowPartialBulkParamDef = {
-	type: 'object',
-	properties: {
-		noteIds: { type: 'array', items: { type: 'string', format: 'misskey:id' }, maxItems: 100, minItems: 1 },
-	},
-	required: ['noteIds'],
-} as const;
+const notesShowPartialBulkParamDef = z.object({
+	noteIds: z.array(misskeyId()).min(1).max(100),
+});
 
 type NotesShowPartialBulkParams = {
 	noteIds: string[];
@@ -1107,23 +1050,19 @@ export async function handleHonoApiNotesShowPartialBulk(
 	return await fetchNoteDiffsForHonoApi(deps, notes);
 }
 
-const notesTimelineParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		allowPartial: { type: 'boolean', default: false },
-		includeMyRenotes: { type: 'boolean', default: true },
-		includeRenotedMyNotes: { type: 'boolean', default: true },
-		includeLocalRenotes: { type: 'boolean', default: true },
-		withFiles: { type: 'boolean', default: false },
-		withRenotes: { type: 'boolean', default: true },
-	},
-	required: [],
-} as const;
+const notesTimelineParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	allowPartial: z.boolean().optional().default(false),
+	includeMyRenotes: z.boolean().optional().default(true),
+	includeRenotedMyNotes: z.boolean().optional().default(true),
+	includeLocalRenotes: z.boolean().optional().default(true),
+	withFiles: z.boolean().optional().default(false),
+	withRenotes: z.boolean().optional().default(true),
+});
 
 type NotesTimelineParams = {
 	limit: number;
@@ -1202,24 +1141,20 @@ function notesUserListTimelineNoSuchListError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such list.', code: 'NO_SUCH_LIST', id: '8fb1fbd5-e476-4c37-9fb0-43d55b63a2ff' });
 }
 
-const notesUserListTimelineParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		allowPartial: { type: 'boolean', default: false },
-		includeMyRenotes: { type: 'boolean', default: true },
-		includeRenotedMyNotes: { type: 'boolean', default: true },
-		includeLocalRenotes: { type: 'boolean', default: true },
-		withRenotes: { type: 'boolean', default: true },
-		withFiles: { type: 'boolean', default: false },
-	},
-	required: ['listId'],
-} as const;
+const notesUserListTimelineParamDef = z.object({
+	listId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	allowPartial: z.boolean().optional().default(false),
+	includeMyRenotes: z.boolean().optional().default(true),
+	includeRenotedMyNotes: z.boolean().optional().default(true),
+	includeLocalRenotes: z.boolean().optional().default(true),
+	withRenotes: z.boolean().optional().default(true),
+	withFiles: z.boolean().optional().default(false),
+});
 
 type NotesUserListTimelineParams = {
 	listId: string;
@@ -1267,15 +1202,11 @@ export async function handleHonoApiNotesUserListTimeline(
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
 
-const notesPollsRecommendationParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		excludeChannels: { type: 'boolean', default: false },
-	},
-	required: [],
-} as const;
+const notesPollsRecommendationParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	offset: z.number().int().optional().default(0),
+	excludeChannels: z.boolean().optional().default(false),
+});
 
 type NotesPollsRecommendationParams = {
 	limit: number;

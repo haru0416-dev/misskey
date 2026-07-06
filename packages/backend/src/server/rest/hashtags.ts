@@ -4,6 +4,7 @@
  */
 
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import {
 	fetchHashtagByNameFromDatabase,
 	listHashtagsFromDatabase,
@@ -27,41 +28,25 @@ export type HonoApiHashtagDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
 };
 
-const hashtagsTrendParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const hashtagsTrendParamDef = z.object({});
 
-const hashtagsListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		attachedToUserOnly: { type: 'boolean', default: false },
-		attachedToLocalUserOnly: { type: 'boolean', default: false },
-		attachedToRemoteUserOnly: { type: 'boolean', default: false },
-		sort: { type: 'string', enum: ['+mentionedUsers', '-mentionedUsers', '+mentionedLocalUsers', '-mentionedLocalUsers', '+mentionedRemoteUsers', '-mentionedRemoteUsers', '+attachedUsers', '-attachedUsers', '+attachedLocalUsers', '-attachedLocalUsers', '+attachedRemoteUsers', '-attachedRemoteUsers'] },
-	},
-	required: ['sort'],
-} as const;
+const hashtagsListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	attachedToUserOnly: z.boolean().optional().default(false),
+	attachedToLocalUserOnly: z.boolean().optional().default(false),
+	attachedToRemoteUserOnly: z.boolean().optional().default(false),
+	sort: z.enum(['+mentionedUsers', '-mentionedUsers', '+mentionedLocalUsers', '-mentionedLocalUsers', '+mentionedRemoteUsers', '-mentionedRemoteUsers', '+attachedUsers', '-attachedUsers', '+attachedLocalUsers', '-attachedLocalUsers', '+attachedRemoteUsers', '-attachedRemoteUsers']),
+});
 
-const hashtagsSearchParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		query: { type: 'string' },
-		offset: { type: 'integer', default: 0 },
-	},
-	required: ['query'],
-} as const;
+const hashtagsSearchParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	query: z.string(),
+	offset: z.number().int().optional().default(0),
+});
 
-const hashtagsShowParamDef = {
-	type: 'object',
-	properties: {
-		tag: { type: 'string' },
-	},
-	required: ['tag'],
-} as const;
+const hashtagsShowParamDef = z.object({
+	tag: z.string(),
+});
 
 
 function getCurrentFeaturedWindow(windowRange: number): number {
@@ -221,18 +206,14 @@ export async function handleHonoApiHashtagsShow(
 	return packHonoApiHashtag(hashtag);
 }
 
-const hashtagsUsersParamDef = {
-	type: 'object',
-	properties: {
-		tag: { type: 'string' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt'] },
-		state: { type: 'string', enum: ['all', 'alive'], default: 'all' },
-		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'local' },
-	},
-	required: ['tag', 'sort'],
-} as const;
+const hashtagsUsersParamDef = z.object({
+	tag: z.string(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	offset: z.number().int().optional().default(0),
+	sort: z.enum(['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt']),
+	state: z.enum(['all', 'alive']).optional().default('all'),
+	origin: z.enum(['combined', 'local', 'remote']).optional().default('local'),
+});
 
 type HashtagsUsersParams = {
 	tag: string;

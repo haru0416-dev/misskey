@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { JobType } from 'bullmq';
 import type { Config } from '@/config.js';
 import { clearQueue, getDelayedDeliverHosts, getDelayedInboxHosts, getLegacyQueueCounts, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, pauseQueue, promoteQueueJobs, QUEUE_TYPES, removeQueueJob, resumeQueue, retryQueueJob, type AdminQueueDependencies, type QueueClearState, type QueueType } from '@/core/QueueAdminLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiUser } from '@/models/User.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -17,63 +17,43 @@ export type HonoApiAdminQueueDependencies = AdminQueueDependencies & {
 	db: MiDrizzleDatabase;
 };
 
-const adminQueueNoParamsDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const adminQueueNoParamsDef = z.object({});
 
-const adminQueueSelectParamDef = {
-	type: 'object',
-	properties: {
-		queue: { type: 'string', enum: QUEUE_TYPES },
-	},
-	required: ['queue'],
-} as const;
+const adminQueueSelectParamDef = z.object({
+	queue: z.enum(QUEUE_TYPES),
+});
 
-const adminQueueClearParamDef = {
-	type: 'object',
-	properties: {
-		queue: { type: 'string', enum: QUEUE_TYPES },
-		state: { type: 'string', enum: ['*', 'completed', 'wait', 'active', 'paused', 'prioritized', 'delayed', 'failed'] },
-	},
-	required: ['queue', 'state'],
-} as const;
+const adminQueueClearParamDef = z.object({
+	queue: z.enum(QUEUE_TYPES),
+	state: z.enum(['*', 'completed', 'wait', 'active', 'paused', 'prioritized', 'delayed', 'failed']),
+});
 
-const adminQueueJobsParamDef = {
-	type: 'object',
-	properties: {
-		queue: { type: 'string', enum: QUEUE_TYPES },
-		state: { type: 'array', items: { type: 'string', enum: ['active', 'wait', 'delayed', 'completed', 'failed', 'paused'] } },
-		search: { type: 'string' },
-	},
-	required: ['queue', 'state'],
-} as const;
+const adminQueueJobsParamDef = z.object({
+	queue: z.enum(QUEUE_TYPES),
+	state: z.array(z.enum(['active', 'wait', 'delayed', 'completed', 'failed', 'paused'])),
+	search: z.string().optional(),
+});
 
-const adminQueueJobParamDef = {
-	type: 'object',
-	properties: {
-		queue: { type: 'string', enum: QUEUE_TYPES },
-		jobId: { type: 'string' },
-	},
-	required: ['queue', 'jobId'],
-} as const;
+const adminQueueJobParamDef = z.object({
+	queue: z.enum(QUEUE_TYPES),
+	jobId: z.string(),
+});
 
-type AdminQueueSelectParams = SchemaType<typeof adminQueueSelectParamDef> & {
+type AdminQueueSelectParams = z.infer<typeof adminQueueSelectParamDef> & {
 	queue: QueueType;
 };
 
-type AdminQueueClearParams = SchemaType<typeof adminQueueClearParamDef> & {
+type AdminQueueClearParams = z.infer<typeof adminQueueClearParamDef> & {
 	queue: QueueType;
 	state: QueueClearState;
 };
 
-type AdminQueueJobsParams = SchemaType<typeof adminQueueJobsParamDef> & {
+type AdminQueueJobsParams = z.infer<typeof adminQueueJobsParamDef> & {
 	queue: QueueType;
 	state: JobType[];
 };
 
-type AdminQueueJobParams = SchemaType<typeof adminQueueJobParamDef> & {
+type AdminQueueJobParams = z.infer<typeof adminQueueJobParamDef> & {
 	queue: QueueType;
 };
 

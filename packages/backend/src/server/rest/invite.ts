@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	countRegistrationTicketsCreatedSinceFromDatabase,
@@ -20,6 +21,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { generateInviteCode } from '@/misc/generate-invite-code.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -34,51 +36,31 @@ export type HonoApiInviteDependencies = {
 	meta: MiMeta;
 };
 
-const emptyParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const emptyParamDef = z.object({});
 
-const inviteDeleteParamDef = {
-	type: 'object',
-	properties: {
-		inviteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['inviteId'],
-} as const;
+const inviteDeleteParamDef = z.object({
+	inviteId: misskeyId(),
+});
 
-const inviteListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const inviteListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
-const adminInviteCreateParamDef = {
-	type: 'object',
-	properties: {
-		count: { type: 'integer', minimum: 1, maximum: 100, default: 1 },
-		expiresAt: { type: 'string', nullable: true },
-	},
-	required: [],
-} as const;
+const adminInviteCreateParamDef = z.object({
+	count: z.number().int().min(1).max(100).optional().default(1),
+	expiresAt: z.string().nullable().optional(),
+});
 
-const adminInviteListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		offset: { type: 'integer', default: 0 },
-		type: { type: 'string', enum: ['unused', 'used', 'expired', 'all'], default: 'all' },
-		sort: { type: 'string', enum: ['+createdAt', '-createdAt', '+usedAt', '-usedAt'] },
-	},
-	required: [],
-} as const;
+const adminInviteListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	offset: z.number().int().optional().default(0),
+	type: z.enum(['unused', 'used', 'expired', 'all']).optional().default('all'),
+	sort: z.enum(['+createdAt', '-createdAt', '+usedAt', '-usedAt']).optional(),
+});
 
 
 function adminInviteCreateInvalidDateTimeError(): HonoApiError {

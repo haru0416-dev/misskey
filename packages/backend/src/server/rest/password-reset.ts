@@ -5,6 +5,7 @@
 
 import type * as Redis from 'ioredis';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { EmailService } from '@/core/EmailService.js';
 import { createPasswordResetRequestInDatabase, deletePasswordResetRequestFromDatabase, fetchPasswordResetRequestByTokenFromDatabase } from '@/core/PasswordResetRequestStore.js';
@@ -27,28 +28,20 @@ export type HonoApiPasswordResetDependencies = {
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
 
-const requestResetPasswordParamDef = {
-	type: 'object',
-	properties: {
-		username: { type: 'string' },
-		email: { type: 'string' },
-	},
-	required: ['username', 'email'],
-} as const;
+const requestResetPasswordParamDef = z.object({
+	username: z.string(),
+	email: z.string(),
+});
 
 type RequestResetPasswordParams = {
 	username: string;
 	email: string;
 };
 
-const resetPasswordParamDef = {
-	type: 'object',
-	properties: {
-		token: { type: 'string' },
-		password: { type: 'string' },
-	},
-	required: ['token', 'password'],
-} as const;
+const resetPasswordParamDef = z.object({
+	token: z.string(),
+	password: z.string(),
+});
 
 type ResetPasswordParams = {
 	token: string;

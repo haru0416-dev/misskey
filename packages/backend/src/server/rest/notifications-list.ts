@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/FollowRequestStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
@@ -11,6 +12,7 @@ import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiGroupedNotification, MiNotification } from '@/models/Notification.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -212,20 +214,18 @@ export async function packNotificationsForHonoApi<T extends MiNotification | MiG
 	return packed.filter((x): x is Record<string, unknown> => x != null);
 }
 
-const notificationsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		markAsRead: { type: 'boolean', default: true },
-		includeTypes: { type: 'array', items: { type: 'string', enum: [...notificationTypes, ...obsoleteNotificationTypes] } },
-		excludeTypes: { type: 'array', items: { type: 'string', enum: [...notificationTypes, ...obsoleteNotificationTypes] } },
-	},
-	required: [],
-} as const;
+const notificationTypeEnumValues = [...notificationTypes, ...obsoleteNotificationTypes] as const;
+
+const notificationsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	markAsRead: z.boolean().optional().default(true),
+	includeTypes: z.array(z.enum(notificationTypeEnumValues)).optional(),
+	excludeTypes: z.array(z.enum(notificationTypeEnumValues)).optional(),
+});
 
 type NotificationsParams = {
 	limit: number;

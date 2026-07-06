@@ -4,6 +4,7 @@
  */
 
 import { sql } from 'drizzle-orm';
+import { z } from 'zod';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -21,11 +22,7 @@ type TableStatsResponse = Record<string, {
 	size: number;
 }>;
 
-const adminStatsParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const adminStatsParamDef = z.object({});
 
 export async function handleHonoApiAdminGetIndexStats(
 	deps: HonoApiAdminStatsDependencies,

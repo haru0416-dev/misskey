@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiMainStreamPublisher } from './events.js';
 import { HonoApiError } from './error.js';
@@ -14,15 +16,11 @@ export type HonoApiPagePushDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const pagePushParamDef = {
-	type: 'object',
-	properties: {
-		pageId: { type: 'string', format: 'misskey:id' },
-		event: { type: 'string' },
-		var: {},
-	},
-	required: ['pageId', 'event'],
-} as const;
+const pagePushParamDef = z.object({
+	pageId: misskeyId(),
+	event: z.string(),
+	var: z.unknown().optional(),
+});
 
 type PagePushParams = {
 	pageId: string;

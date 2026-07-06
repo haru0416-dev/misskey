@@ -3,22 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { listUserIpsFromDatabase } from '@/core/UserIpStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminUserIpsDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const adminGetUserIpsParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const adminGetUserIpsParamDef = z.object({
+	userId: misskeyId(),
+});
 
 
 type AdminGetUserIpsResponse = {

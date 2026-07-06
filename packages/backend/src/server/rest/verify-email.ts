@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByEmailVerifyCodeFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -16,13 +17,9 @@ export type HonoApiVerifyEmailDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const verifyEmailParamDef = {
-	type: 'object',
-	properties: {
-		code: { type: 'string' },
-	},
-	required: ['code'],
-} as const;
+const verifyEmailParamDef = z.object({
+	code: z.string(),
+});
 
 type VerifyEmailParams = {
 	code: string;
