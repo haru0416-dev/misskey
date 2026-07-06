@@ -4,6 +4,7 @@
  */
 
 import Parser from 'rss-parser';
+import { z } from 'zod';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -13,13 +14,9 @@ export type HonoApiFetchRssDependencies = {
 	httpRequestService: HttpRequestService;
 };
 
-const fetchRssParamDef = {
-	type: 'object',
-	properties: {
-		url: { type: 'string' },
-	},
-	required: ['url'],
-} as const;
+const fetchRssParamDef = z.object({
+	url: z.string(),
+});
 
 type FetchRssParams = {
 	url: string;

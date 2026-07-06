@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import {
 	createAbuseReportNotificationRecipientInDatabase,
 	deleteAbuseReportNotificationRecipientsFromDatabase,
@@ -16,7 +17,8 @@ import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { fetchSystemWebhookByIdOrFailFromDatabase, listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -26,74 +28,42 @@ import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
 
-const adminAbuseReportNotificationRecipientListParamDef = {
-	type: 'object',
-	properties: {
-		method: {
-			type: 'array',
-			items: {
-				type: 'string',
-				enum: ['email', 'webhook'],
-			},
-		},
-	},
-	required: [],
-} as const;
+const adminAbuseReportNotificationRecipientListParamDef = z.object({
+	method: z.array(z.enum(['email', 'webhook'])).optional(),
+});
 
-const adminAbuseReportNotificationRecipientShowParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminAbuseReportNotificationRecipientShowParamDef = z.object({
+	id: misskeyId(),
+});
 
-const adminAbuseReportNotificationRecipientCreateParamDef = {
-	type: 'object',
-	properties: {
-		isActive: { type: 'boolean' },
-		name: { type: 'string', minLength: 1, maxLength: 255 },
-		method: {
-			type: 'string',
-			enum: ['email', 'webhook'],
-		},
-		userId: { type: 'string', format: 'misskey:id' },
-		systemWebhookId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['isActive', 'name', 'method'],
-} as const;
+const adminAbuseReportNotificationRecipientCreateParamDef = z.object({
+	isActive: z.boolean(),
+	name: z.string().min(1).max(255),
+	method: z.enum(['email', 'webhook']),
+	userId: misskeyId().optional(),
+	systemWebhookId: misskeyId().optional(),
+});
 
-const adminAbuseReportNotificationRecipientUpdateParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-		isActive: { type: 'boolean' },
-		name: { type: 'string', minLength: 1, maxLength: 255 },
-		method: {
-			type: 'string',
-			enum: ['email', 'webhook'],
-		},
-		userId: { type: 'string', format: 'misskey:id' },
-		systemWebhookId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id', 'isActive', 'name', 'method'],
-} as const;
+const adminAbuseReportNotificationRecipientUpdateParamDef = z.object({
+	id: misskeyId(),
+	isActive: z.boolean(),
+	name: z.string().min(1).max(255),
+	method: z.enum(['email', 'webhook']),
+	userId: misskeyId().optional(),
+	systemWebhookId: misskeyId().optional(),
+});
 
-const adminAbuseReportNotificationRecipientDeleteParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminAbuseReportNotificationRecipientDeleteParamDef = z.object({
+	id: misskeyId(),
+});
 
-type AdminAbuseReportNotificationRecipientListParams = Omit<SchemaType<typeof adminAbuseReportNotificationRecipientListParamDef>, 'method'> & {
+type AdminAbuseReportNotificationRecipientListParams = Omit<z.infer<typeof adminAbuseReportNotificationRecipientListParamDef>, 'method'> & {
 	method?: RecipientMethod[];
 };
-type AdminAbuseReportNotificationRecipientCreateParams = Omit<SchemaType<typeof adminAbuseReportNotificationRecipientCreateParamDef>, 'method'> & {
+type AdminAbuseReportNotificationRecipientCreateParams = Omit<z.infer<typeof adminAbuseReportNotificationRecipientCreateParamDef>, 'method'> & {
 	method: RecipientMethod;
 };
-type AdminAbuseReportNotificationRecipientUpdateParams = Omit<SchemaType<typeof adminAbuseReportNotificationRecipientUpdateParamDef>, 'method'> & {
+type AdminAbuseReportNotificationRecipientUpdateParams = Omit<z.infer<typeof adminAbuseReportNotificationRecipientUpdateParamDef>, 'method'> & {
 	method: RecipientMethod;
 };
 

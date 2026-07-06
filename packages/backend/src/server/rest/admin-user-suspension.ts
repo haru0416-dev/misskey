@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { deleteFollowRequestsByFolloweeIdFromDatabase, deleteFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import { listFollowingsForUnfollowByFollowerIdFromDatabase, listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
@@ -13,6 +14,7 @@ import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
@@ -29,13 +31,9 @@ export type HonoApiAdminUserSuspensionDependencies = {
 	publishInternalEvent?: <K extends 'userChangeSuspendedState'>(type: K, value: { id: MiUser['id']; isSuspended: MiUser['isSuspended'] }) => void;
 };
 
-const adminUserSuspensionParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const adminUserSuspensionParamDef = z.object({
+	userId: misskeyId(),
+});
 
 
 function renderDelete(config: Config, object: IObject | string, user: { id: MiUser['id']; host: null }): IDelete {

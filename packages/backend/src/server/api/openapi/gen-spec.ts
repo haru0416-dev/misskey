@@ -3,10 +3,23 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import endpoints, { IEndpoint } from '../endpoints.js';
 import { errors as basicErrors } from './errors.js';
 import { getSchemas, convertSchemaToOpenApiSchema } from './schemas.js';
+
+/**
+ * Zod スキーマを JSON Schema (OpenAPI 互換) に変換する。
+ * Misskey 独自拡張 (optional/ref/selfRef 等) を持たないため schemas.ts の変換は不要で、
+ * zod の `toJSONSchema` 出力(標準 JSON Schema)をそのまま使える。`$schema` キーだけ落とす。
+ */
+function convertZodParamsToOpenApiSchema(schema: z.ZodType): any {
+	// io: 'input' — .default() を持つフィールドはリクエストでは省略可能なので required に含めない
+	// (省略時はサーバー側でデフォルト値が補完される。'output' だと補完後の値の存在を前提に required 扱いになってしまう)。
+	const { $schema, ...rest } = z.toJSONSchema(schema, { io: 'input' });
+	return rest;
+}
 
 export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 	const spec = {
@@ -40,9 +53,13 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		},
 	};
 
-	// 書き換えたりするのでディープコピーしておく。そのまま編集するとメモリ上の値が汚れて次回以降の出力に影響する
+	// 書き換えたりするのでディープコピーしておく。そのまま編集するとメモリ上の値が汚れて次回以降の出力に影響する。
+	// ただし JSON.stringify は Zod スキーマインスタンスを保持できない (プレーンオブジェクトとして潰れる) ため、
+	// params が Zod スキーマのエンドポイントだけは元の (非コピー) 配列から都度参照する。
 	const copiedEndpoints = JSON.parse(JSON.stringify(endpoints)) as IEndpoint[];
-	for (const endpoint of copiedEndpoints) {
+	for (const [i, endpoint] of copiedEndpoints.entries()) {
+		const originalParams = endpoints[i].params;
+		const params = originalParams instanceof z.ZodType ? originalParams : endpoint.params;
 		const errors = {} as any;
 
 		if (endpoint.meta.errors) {
@@ -70,7 +87,9 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		}
 
 		const requestType = endpoint.meta.requireFile ? 'multipart/form-data' : 'application/json';
-		const schema = { ...convertSchemaToOpenApiSchema(endpoint.params, 'param', false) };
+		const schema = params instanceof z.ZodType
+			? { ...convertZodParamsToOpenApiSchema(params) }
+			: { ...convertSchemaToOpenApiSchema(params, 'param', false) };
 
 		if (endpoint.meta.requireFile) {
 			schema.properties = {

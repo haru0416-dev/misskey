@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { clipFavoriteExistsInDatabase, countClipFavoritesFromDatabase, fetchFavoriteClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
 import { countClipNotesByClipIdFromDatabase, createClipNoteInDatabase, deleteClipNoteInDatabase } from '@/core/ClipNoteStore.js';
 import {
@@ -23,6 +24,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiClip } from '@/models/Clip.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -38,11 +40,7 @@ export type HonoApiClipNotesDependencies = HonoApiNoteDependencies & {
 	meta: MiMeta;
 };
 
-const emptyParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const emptyParamDef = z.object({});
 
 function getDatabaseErrorCode(error: unknown): unknown {
 	let current: unknown = error;
@@ -61,17 +59,13 @@ function getDatabaseErrorCode(error: unknown): unknown {
 	return undefined;
 }
 
-const clipsListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const clipsListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type ClipsListParams = {
 	limit: number;
@@ -81,27 +75,19 @@ type ClipsListParams = {
 	untilDate?: number;
 };
 
-const clipIdParamDef = {
-	type: 'object',
-	properties: {
-		clipId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['clipId'],
-} as const;
+const clipIdParamDef = z.object({
+	clipId: misskeyId(),
+});
 
-const clipNotesParamDef = {
-	type: 'object',
-	properties: {
-		clipId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		search: { type: 'string', minLength: 1, maxLength: 100, nullable: true },
-	},
-	required: ['clipId'],
-} as const;
+const clipNotesParamDef = z.object({
+	clipId: misskeyId(),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	search: z.string().min(1).max(100).nullable().optional(),
+});
 
 type ClipNotesParams = {
 	clipId: string;
@@ -117,15 +103,11 @@ type ClipIdParams = {
 	clipId: string;
 };
 
-const clipsCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		isPublic: { type: 'boolean', default: false },
-		description: { type: 'string', nullable: true, maxLength: 2048 },
-	},
-	required: ['name'],
-} as const;
+const clipsCreateParamDef = z.object({
+	name: z.string().min(1).max(100),
+	isPublic: z.boolean().default(false),
+	description: z.string().max(2048).nullable().optional(),
+});
 
 type ClipsCreateParams = {
 	name: string;
@@ -133,16 +115,12 @@ type ClipsCreateParams = {
 	description?: string | null;
 };
 
-const clipsUpdateParamDef = {
-	type: 'object',
-	properties: {
-		clipId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		isPublic: { type: 'boolean' },
-		description: { type: 'string', nullable: true, maxLength: 2048 },
-	},
-	required: ['clipId'],
-} as const;
+const clipsUpdateParamDef = z.object({
+	clipId: misskeyId(),
+	name: z.string().min(1).max(100).optional(),
+	isPublic: z.boolean().optional(),
+	description: z.string().max(2048).nullable().optional(),
+});
 
 type ClipsUpdateParams = {
 	clipId: string;
@@ -151,14 +129,10 @@ type ClipsUpdateParams = {
 	description?: string | null;
 };
 
-const clipsNoteParamDef = {
-	type: 'object',
-	properties: {
-		clipId: { type: 'string', format: 'misskey:id' },
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['clipId', 'noteId'],
-} as const;
+const clipsNoteParamDef = z.object({
+	clipId: misskeyId(),
+	noteId: misskeyId(),
+});
 
 type ClipsNoteParams = {
 	clipId: string;
@@ -429,18 +403,14 @@ export async function handleHonoApiClipsNotes(
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
 
-const usersClipsParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['userId'],
-} as const;
+const usersClipsParamDef = z.object({
+	userId: misskeyId(),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type UsersClipsParams = {
 	userId: string;

@@ -66,7 +66,6 @@
 		"@simplewebauthn/server": "13.3.1",
 		"@sinonjs/fake-timers": "15.4.0",
 		"@smithy/node-http-handler": "4.8.1",
-		"ajv": "8.20.0",
 		"archiver": "8.0.0",
 		"bcryptjs": "3.0.3",
 		"blurhash": "2.0.5",
@@ -129,7 +128,8 @@
 		"tsc-alias": "1.8.17",
 		"ulid": "3.0.2",
 		"web-push": "3.6.7",
-		"xev": "3.0.2"
+		"xev": "3.0.2",
+		"zod": "4.4.3"
 	},
 	"devDependencies": {
 		"@kitajs/ts-html-plugin": "4.1.4",

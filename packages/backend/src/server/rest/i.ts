@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { listSigninHistoryFromDatabase, type SigninHistoryOrder } from '@/core/SigninStore.js';
@@ -10,6 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -21,17 +23,13 @@ export type HonoApiIDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 };
 
-const iSigninHistoryParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const iSigninHistoryParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 
 export function packHonoApiSignin(

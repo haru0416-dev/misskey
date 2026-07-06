@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { z } from 'zod';
 import { adjustInstanceNotesCountFromDatabase } from '@/core/InstanceStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import {
@@ -13,6 +14,7 @@ import {
 	listNotesByUserIdAndRenoteIdFromDatabase,
 } from '@/core/NoteStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -41,13 +43,9 @@ function notesDeleteAccessDeniedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9' });
 }
 
-const notesDeleteParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+const notesDeleteParamDef = z.object({
+	noteId: misskeyId(),
+});
 
 type NotesDeleteParams = {
 	noteId: string;
@@ -138,13 +136,9 @@ function notesUnrenoteNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'efd4a259-2442-496b-8dd7-b255aa1a160f' });
 }
 
-const notesUnrenoteParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+const notesUnrenoteParamDef = z.object({
+	noteId: misskeyId(),
+});
 
 type NotesUnrenoteParams = {
 	noteId: string;

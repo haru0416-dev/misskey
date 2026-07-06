@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase, listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase, listBlockingsByBlockerIdWithPaginationFromDatabase, resolveBlockingPagination } from '@/core/BlockingStore.js';
 import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
@@ -21,6 +22,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
@@ -41,25 +43,17 @@ export type HonoApiAccountBlockingDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const userIdParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const userIdParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const blockingListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const blockingListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 
 type HonoApiBlockingResponse = {

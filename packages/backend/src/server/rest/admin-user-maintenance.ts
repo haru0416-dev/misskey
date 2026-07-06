@@ -4,6 +4,7 @@
  */
 
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, unsetUserMfaInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
@@ -11,6 +12,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -22,22 +24,14 @@ export type HonoApiAdminUserMaintenanceDependencies = {
 	meta: MiMeta;
 };
 
-const adminUserMaintenanceParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const adminUserMaintenanceParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const adminUpdateUserNoteParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		text: { type: 'string' },
-	},
-	required: ['userId', 'text'],
-} as const;
+const adminUpdateUserNoteParamDef = z.object({
+	userId: misskeyId(),
+	text: z.string(),
+});
 
 
 type ResetPasswordResponse = {

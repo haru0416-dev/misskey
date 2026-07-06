@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { fetchFavoriteChannelIdsFromDatabase, fetchFavoritedChannelIdsInDatabase } from '@/core/ChannelFavoriteStore.js';
 import {
@@ -38,6 +39,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -57,17 +59,13 @@ export type HonoApiChannelsDependencies = {
 
 type HonoApiPackedChannel = Packed<'Channel'>;
 
-const channelsListParamDef = {
-	type: 'object',
-	properties: {
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 5 },
-	},
-	required: [],
-} as const;
+const channelsListParamDef = z.object({
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(5),
+});
 
 type ChannelsListParams = {
 	sinceId?: string | null;
@@ -77,43 +75,31 @@ type ChannelsListParams = {
 	limit: number;
 };
 
-const channelsSearchParamDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string' },
-		type: { type: 'string', enum: ['nameAndDescription', 'nameOnly'], default: 'nameAndDescription' },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 5 },
-	},
-	required: ['query'],
-} as const;
+const channelsSearchParamDef = z.object({
+	query: z.string(),
+	type: z.enum(['nameAndDescription', 'nameOnly']).optional().default('nameAndDescription'),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(5),
+});
 
 type ChannelsSearchParams = ChannelsListParams & {
 	query: string;
 	type: 'nameAndDescription' | 'nameOnly';
 };
 
-const emptyParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const emptyParamDef = z.object({});
 
-const channelCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 128 },
-		description: { type: 'string', nullable: true, maxLength: 2048 },
-		bannerId: { type: 'string', format: 'misskey:id', nullable: true },
-		color: { type: 'string', minLength: 1, maxLength: 16 },
-		isSensitive: { type: 'boolean', nullable: true },
-		allowRenoteToExternal: { type: 'boolean', nullable: true },
-	},
-	required: ['name'],
-} as const;
+const channelCreateParamDef = z.object({
+	name: z.string().min(1).max(128),
+	description: z.string().max(2048).nullable().optional(),
+	bannerId: misskeyId().nullable().optional(),
+	color: z.string().min(1).max(16).optional(),
+	isSensitive: z.boolean().nullable().optional(),
+	allowRenoteToExternal: z.boolean().nullable().optional(),
+});
 
 type ChannelCreateParams = {
 	name: string;
@@ -124,26 +110,17 @@ type ChannelCreateParams = {
 	allowRenoteToExternal?: boolean | null;
 };
 
-const channelUpdateParamDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 128 },
-		description: { type: 'string', nullable: true, maxLength: 2048 },
-		bannerId: { type: 'string', format: 'misskey:id', nullable: true },
-		isArchived: { type: 'boolean', nullable: true },
-		pinnedNoteIds: {
-			type: 'array',
-			items: {
-				type: 'string', format: 'misskey:id',
-			},
-		},
-		color: { type: 'string', minLength: 1, maxLength: 16 },
-		isSensitive: { type: 'boolean', nullable: true },
-		allowRenoteToExternal: { type: 'boolean', nullable: true },
-	},
-	required: ['channelId'],
-} as const;
+const channelUpdateParamDef = z.object({
+	channelId: misskeyId(),
+	name: z.string().min(1).max(128).optional(),
+	description: z.string().max(2048).nullable().optional(),
+	bannerId: misskeyId().nullable().optional(),
+	isArchived: z.boolean().nullable().optional(),
+	pinnedNoteIds: z.array(misskeyId()).optional(),
+	color: z.string().min(1).max(16).optional(),
+	isSensitive: z.boolean().nullable().optional(),
+	allowRenoteToExternal: z.boolean().nullable().optional(),
+});
 
 type ChannelUpdateParams = {
 	channelId: string;
@@ -157,72 +134,48 @@ type ChannelUpdateParams = {
 	allowRenoteToExternal?: boolean | null;
 };
 
-const channelFollowParamDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['channelId'],
-} as const;
+const channelFollowParamDef = z.object({
+	channelId: misskeyId(),
+});
 
 type ChannelFollowParams = {
 	channelId: string;
 };
 
-const channelMuteCreateParamDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-		expiresAt: {
-			type: 'integer',
-			nullable: true,
-			description: 'A Unix Epoch timestamp that must lie in the future. `null` means an indefinite mute.',
-		},
-	},
-	required: ['channelId'],
-} as const;
+const channelMuteCreateParamDef = z.object({
+	channelId: misskeyId(),
+	expiresAt: z.number().int().nullable().optional(),
+});
 
 type ChannelMuteCreateParams = {
 	channelId: string;
 	expiresAt?: number | null;
 };
 
-const channelMuteDeleteParamDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['channelId'],
-} as const;
+const channelMuteDeleteParamDef = z.object({
+	channelId: misskeyId(),
+});
 
 type ChannelMuteDeleteParams = {
 	channelId: string;
 };
 
-const channelShowParamDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['channelId'],
-} as const;
+const channelShowParamDef = z.object({
+	channelId: misskeyId(),
+});
 
 type ChannelShowParams = {
 	channelId: string;
 };
 
-const channelTimelineParamDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['channelId'],
-} as const;
+const channelTimelineParamDef = z.object({
+	channelId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type ChannelTimelineParams = {
 	channelId: string;

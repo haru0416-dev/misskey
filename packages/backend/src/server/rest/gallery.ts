@@ -4,6 +4,7 @@
  */
 
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
 import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase, listGalleryLikesByUserIdFromDatabase } from '@/core/GalleryLikeStore.js';
 import {
@@ -25,6 +26,7 @@ import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
@@ -80,37 +82,25 @@ async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshol
 let galleryPostsRankingCache: string[] = [];
 let galleryPostsRankingCacheLastFetchedAt = 0;
 
-const galleryFeaturedParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		untilId: { type: 'string', format: 'misskey:id' },
-	},
-	required: [],
-} as const;
+const galleryFeaturedParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	untilId: misskeyId().optional(),
+});
 
 type GalleryFeaturedParams = {
 	limit: number;
 	untilId?: string;
 };
 
-const galleryPopularParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const galleryPopularParamDef = z.object({});
 
-const galleryPostsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const galleryPostsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type GalleryPostsParams = {
 	limit: number;
@@ -120,18 +110,12 @@ type GalleryPostsParams = {
 	untilDate?: number;
 };
 
-const galleryPostsCreateParamDef = {
-	type: 'object',
-	properties: {
-		title: { type: 'string', minLength: 1 },
-		description: { type: 'string', nullable: true },
-		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 32, items: {
-			type: 'string', format: 'misskey:id',
-		} },
-		isSensitive: { type: 'boolean', default: false },
-	},
-	required: ['title', 'fileIds'],
-} as const;
+const galleryPostsCreateParamDef = z.object({
+	title: z.string().min(1),
+	description: z.string().nullable().optional(),
+	fileIds: uniqueItems(z.array(misskeyId()).min(1).max(32)),
+	isSensitive: z.boolean().optional().default(false),
+});
 
 type GalleryPostsCreateParams = {
 	title: string;
@@ -140,19 +124,13 @@ type GalleryPostsCreateParams = {
 	isSensitive: boolean;
 };
 
-const galleryPostsUpdateParamDef = {
-	type: 'object',
-	properties: {
-		postId: { type: 'string', format: 'misskey:id' },
-		title: { type: 'string', minLength: 1 },
-		description: { type: 'string', nullable: true },
-		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 32, items: {
-			type: 'string', format: 'misskey:id',
-		} },
-		isSensitive: { type: 'boolean', default: false },
-	},
-	required: ['postId'],
-} as const;
+const galleryPostsUpdateParamDef = z.object({
+	postId: misskeyId(),
+	title: z.string().min(1).optional(),
+	description: z.string().nullable().optional(),
+	fileIds: uniqueItems(z.array(misskeyId()).min(1).max(32)).optional(),
+	isSensitive: z.boolean().optional().default(false),
+});
 
 type GalleryPostsUpdateParams = {
 	postId: string;
@@ -162,13 +140,9 @@ type GalleryPostsUpdateParams = {
 	isSensitive: boolean;
 };
 
-const galleryPostsPostIdParamDef = {
-	type: 'object',
-	properties: {
-		postId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['postId'],
-} as const;
+const galleryPostsPostIdParamDef = z.object({
+	postId: misskeyId(),
+});
 
 type GalleryPostsPostIdParams = {
 	postId: string;
@@ -479,17 +453,13 @@ export async function handleHonoApiGalleryPostsUnlike(
 	await decrementGalleryPostLikedCountInDatabase(deps.db, post.id);
 }
 
-const iGalleryPostsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const iGalleryPostsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type IGalleryPostsParams = {
 	limit: number;
@@ -517,17 +487,13 @@ export async function handleHonoApiIGalleryPosts(
 	return await packGalleryPostsManyForHonoApi(deps, posts, me);
 }
 
-const iGalleryLikesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const iGalleryLikesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type IGalleryLikesParams = {
 	limit: number;
@@ -564,18 +530,14 @@ export async function handleHonoApiIGalleryLikes(
 	})));
 }
 
-const usersGalleryPostsParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['userId'],
-} as const;
+const usersGalleryPostsParamDef = z.object({
+	userId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type UsersGalleryPostsParams = {
 	userId: string;

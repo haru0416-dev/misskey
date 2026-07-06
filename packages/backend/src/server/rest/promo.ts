@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { createPromoNoteInDatabase, isPromoNoteExists } from '@/core/PromoNoteStore.js';
 import { createPromoReadInDatabase, isPromoReadExists } from '@/core/PromoReadStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
@@ -18,22 +20,14 @@ export type HonoApiPromoDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const promoReadParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+const promoReadParamDef = z.object({
+	noteId: misskeyId(),
+});
 
-const adminPromoCreateParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		expiresAt: { type: 'integer' },
-	},
-	required: ['noteId', 'expiresAt'],
-} as const;
+const adminPromoCreateParamDef = z.object({
+	noteId: misskeyId(),
+	expiresAt: z.number().int(),
+});
 
 type PromoReadParams = {
 	noteId: string;

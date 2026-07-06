@@ -24,12 +24,14 @@ import {
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Redis } from 'ioredis';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
@@ -49,135 +51,76 @@ export type HonoApiAdminRoleDependencies = {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const adminRolesAssignParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-		expiresAt: {
-			type: 'integer',
-			nullable: true,
-		},
-	},
-	required: ['roleId', 'userId'],
-} as const;
+const adminRolesAssignParamDef = z.object({
+	roleId: misskeyId(),
+	userId: misskeyId(),
+	expiresAt: z.number().int().nullable().optional(),
+});
 
-const adminRolesCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string' },
-		description: { type: 'string' },
-		color: { type: 'string', nullable: true },
-		iconUrl: { type: 'string', nullable: true },
-		target: { type: 'string', enum: ['manual', 'conditional'] },
-		condFormula: { type: 'object' },
-		isPublic: { type: 'boolean' },
-		isModerator: { type: 'boolean' },
-		isAdministrator: { type: 'boolean' },
-		isExplorable: { type: 'boolean', default: false },
-		asBadge: { type: 'boolean' },
-		preserveAssignmentOnMoveAccount: { type: 'boolean' },
-		canEditMembersByModerator: { type: 'boolean' },
-		displayOrder: { type: 'number' },
-		policies: {
-			type: 'object',
-		},
-	},
-	required: [
-		'name',
-		'description',
-		'color',
-		'iconUrl',
-		'target',
-		'condFormula',
-		'isPublic',
-		'isModerator',
-		'isAdministrator',
-		'asBadge',
-		'canEditMembersByModerator',
-		'displayOrder',
-		'policies',
-	],
-} as const;
+const adminRolesCreateParamDef = z.object({
+	name: z.string(),
+	description: z.string(),
+	color: z.string().nullable(),
+	iconUrl: z.string().nullable(),
+	target: z.enum(['manual', 'conditional']),
+	condFormula: z.record(z.string(), z.unknown()),
+	isPublic: z.boolean(),
+	isModerator: z.boolean(),
+	isAdministrator: z.boolean(),
+	isExplorable: z.boolean().optional().default(false),
+	asBadge: z.boolean(),
+	preserveAssignmentOnMoveAccount: z.boolean().optional(),
+	canEditMembersByModerator: z.boolean(),
+	displayOrder: z.number(),
+	policies: z.record(z.string(), z.unknown()),
+});
 
-const adminRolesListParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const adminRolesListParamDef = z.object({});
 
-const adminRolesDeleteParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['roleId'],
-} as const;
+const adminRolesDeleteParamDef = z.object({
+	roleId: misskeyId(),
+});
 
-const adminRolesShowParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['roleId'],
-} as const;
+const adminRolesShowParamDef = z.object({
+	roleId: misskeyId(),
+});
 
-const adminRolesUnassignParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['roleId', 'userId'],
-} as const;
+const adminRolesUnassignParamDef = z.object({
+	roleId: misskeyId(),
+	userId: misskeyId(),
+});
 
-const adminRolesUpdateParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string' },
-		description: { type: 'string' },
-		color: { type: 'string', nullable: true },
-		iconUrl: { type: 'string', nullable: true },
-		target: { type: 'string', enum: ['manual', 'conditional'] },
-		condFormula: { type: 'object' },
-		isPublic: { type: 'boolean' },
-		isModerator: { type: 'boolean' },
-		isAdministrator: { type: 'boolean' },
-		isExplorable: { type: 'boolean' },
-		asBadge: { type: 'boolean' },
-		preserveAssignmentOnMoveAccount: { type: 'boolean' },
-		canEditMembersByModerator: { type: 'boolean' },
-		displayOrder: { type: 'number' },
-		policies: {
-			type: 'object',
-		},
-	},
-	required: ['roleId'],
-} as const;
+const adminRolesUpdateParamDef = z.object({
+	roleId: misskeyId(),
+	name: z.string().optional(),
+	description: z.string().optional(),
+	color: z.string().nullable().optional(),
+	iconUrl: z.string().nullable().optional(),
+	target: z.enum(['manual', 'conditional']).optional(),
+	condFormula: z.record(z.string(), z.unknown()).optional(),
+	isPublic: z.boolean().optional(),
+	isModerator: z.boolean().optional(),
+	isAdministrator: z.boolean().optional(),
+	isExplorable: z.boolean().optional(),
+	asBadge: z.boolean().optional(),
+	preserveAssignmentOnMoveAccount: z.boolean().optional(),
+	canEditMembersByModerator: z.boolean().optional(),
+	displayOrder: z.number().optional(),
+	policies: z.record(z.string(), z.unknown()).optional(),
+});
 
-const adminRolesUpdateDefaultPoliciesParamDef = {
-	type: 'object',
-	properties: {
-		policies: {
-			type: 'object',
-		},
-	},
-	required: ['policies'],
-} as const;
+const adminRolesUpdateDefaultPoliciesParamDef = z.object({
+	policies: z.record(z.string(), z.unknown()),
+});
 
-const adminRolesUsersParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: ['roleId'],
-} as const;
+const adminRolesUsersParamDef = z.object({
+	roleId: misskeyId(),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+});
 
 
 type AdminRoleUser = {

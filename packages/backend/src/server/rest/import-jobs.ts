@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { DbQueue } from '@/core/QueueModule.js';
 import type { DownloadService } from '@/core/DownloadService.js';
@@ -10,6 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -79,13 +81,9 @@ async function validateImportFile(
 	return { id: file.id };
 }
 
-const importBlockingParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const importBlockingParamDef = z.object({
+	fileId: misskeyId(),
+});
 
 type ImportBlockingParams = { fileId: string };
 
@@ -107,14 +105,10 @@ export async function handleHonoApiIImportBlocking(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importFollowingParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-		withReplies: { type: 'boolean' },
-	},
-	required: ['fileId'],
-} as const;
+const importFollowingParamDef = z.object({
+	fileId: misskeyId(),
+	withReplies: z.boolean().optional(),
+});
 
 type ImportFollowingParams = { fileId: string; withReplies?: boolean };
 
@@ -137,13 +131,9 @@ export async function handleHonoApiIImportFollowing(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importMutingParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const importMutingParamDef = z.object({
+	fileId: misskeyId(),
+});
 
 type ImportMutingParams = { fileId: string };
 
@@ -165,13 +155,9 @@ export async function handleHonoApiIImportMuting(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importUserListsParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const importUserListsParamDef = z.object({
+	fileId: misskeyId(),
+});
 
 type ImportUserListsParams = { fileId: string };
 
@@ -193,13 +179,9 @@ export async function handleHonoApiIImportUserLists(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importAntennasParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const importAntennasParamDef = z.object({
+	fileId: misskeyId(),
+});
 
 type ImportAntennasParams = { fileId: string };
 

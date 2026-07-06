@@ -5,6 +5,7 @@
 
 import { createHash } from 'node:crypto';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -18,14 +19,10 @@ export type HonoApiFetchExternalResourcesDependencies = {
 	httpRequestService: HttpRequestService;
 };
 
-const fetchExternalResourcesParamDef = {
-	type: 'object',
-	properties: {
-		url: { type: 'string' },
-		hash: { type: 'string' },
-	},
-	required: ['url', 'hash'],
-} as const;
+const fetchExternalResourcesParamDef = z.object({
+	url: z.string(),
+	hash: z.string(),
+});
 
 type FetchExternalResourcesParams = {
 	url: string;

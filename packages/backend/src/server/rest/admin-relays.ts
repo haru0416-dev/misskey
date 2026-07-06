@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/RelayLogic.js';
@@ -23,19 +24,11 @@ export type HonoApiAdminRelaysDependencies = {
 	deliverQueue: DeliverQueue;
 };
 
-const adminRelaysListParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const adminRelaysListParamDef = z.object({});
 
-const adminRelaysWriteParamDef = {
-	type: 'object',
-	properties: {
-		inbox: { type: 'string' },
-	},
-	required: ['inbox'],
-} as const;
+const adminRelaysWriteParamDef = z.object({
+	inbox: z.string(),
+});
 
 type AdminRelaysListResponse = {
 	id: MiRelay['id'];

@@ -28,8 +28,10 @@ import { extractHashtags } from '@/misc/extract-hashtags.js';
 import { langmap } from '@/misc/langmap.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
-import { birthdaySchema, descriptionSchema, followedMessageSchema, locationSchema, nameSchema } from '@/models/User.js';
-import { notificationRecieveConfig } from '@/models/json-schema/user.js';
+import { z } from 'zod';
+import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
+import { birthdayZodSchema, descriptionZodSchema, followedMessageZodSchema, locationZodSchema, nameZodSchema } from '@/models/User.js';
+import { notificationRecieveConfigZodSchema } from '@/models/json-schema/user.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -91,146 +93,74 @@ function iUpdateYourAccountMovedError(): HonoApiError {
 	return new HonoApiError({ status: 403, message: 'You have moved your account.', code: 'YOUR_ACCOUNT_MOVED', id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31' });
 }
 
-const muteWords = { type: 'array', items: { oneOf: [
-	{ type: 'array', items: { type: 'string' } },
-	{ type: 'string' },
-] } } as const;
+const muteWordsZodSchema = z.array(z.union([z.array(z.string()), z.string()]));
 
-const iUpdateParamDef = {
-	type: 'object',
-	properties: {
-		name: { ...nameSchema, nullable: true },
-		description: { ...descriptionSchema, nullable: true },
-		followedMessage: { ...followedMessageSchema, nullable: true },
-		location: { ...locationSchema, nullable: true },
-		birthday: { ...birthdaySchema, nullable: true },
-		lang: { type: 'string', enum: [null, ...Object.keys(langmap)] as string[], nullable: true },
-		avatarId: { type: 'string', format: 'misskey:id', nullable: true },
-		avatarDecorations: { type: 'array', maxItems: 16, items: {
-			type: 'object',
-			properties: {
-				id: { type: 'string', format: 'misskey:id' },
-				angle: { type: 'number', nullable: true, maximum: 0.5, minimum: -0.5 },
-				flipH: { type: 'boolean', nullable: true },
-				offsetX: { type: 'number', nullable: true, maximum: 0.25, minimum: -0.25 },
-				offsetY: { type: 'number', nullable: true, maximum: 0.25, minimum: -0.25 },
-			},
-			required: ['id'],
-		} },
-		bannerId: { type: 'string', format: 'misskey:id', nullable: true },
-		fields: {
-			type: 'array',
-			minItems: 0,
-			maxItems: 16,
-			items: {
-				type: 'object',
-				properties: {
-					name: { type: 'string' },
-					value: { type: 'string' },
-				},
-				required: ['name', 'value'],
-			},
-		},
-		isLocked: { type: 'boolean' },
-		isExplorable: { type: 'boolean' },
-		hideOnlineStatus: { type: 'boolean' },
-		publicReactions: { type: 'boolean' },
-		carefulBot: { type: 'boolean' },
-		autoAcceptFollowed: { type: 'boolean' },
-		noCrawle: { type: 'boolean' },
-		preventAiLearning: { type: 'boolean' },
-		requireSigninToViewContents: { type: 'boolean' },
-		makeNotesFollowersOnlyBefore: { type: 'integer', nullable: true },
-		makeNotesHiddenBefore: { type: 'integer', nullable: true },
-		isBot: { type: 'boolean' },
-		isCat: { type: 'boolean' },
-		injectFeaturedNote: { type: 'boolean' },
-		receiveAnnouncementEmail: { type: 'boolean' },
-		alwaysMarkNsfw: { type: 'boolean' },
-		autoSensitive: { type: 'boolean' },
-		followingVisibility: { type: 'string', enum: ['public', 'followers', 'private'] },
-		followersVisibility: { type: 'string', enum: ['public', 'followers', 'private'] },
-		chatScope: { type: 'string', enum: ['everyone', 'followers', 'following', 'mutual', 'none'] },
-		pinnedPageId: { type: 'string', format: 'misskey:id', nullable: true },
-		mutedWords: muteWords,
-		hardMutedWords: muteWords,
-		mutedInstances: { type: 'array', items: {
-			type: 'string',
-		} },
-		notificationRecieveConfig: {
-			type: 'object',
-			nullable: false,
-			properties: {
-				note: notificationRecieveConfig,
-				follow: notificationRecieveConfig,
-				mention: notificationRecieveConfig,
-				reply: notificationRecieveConfig,
-				renote: notificationRecieveConfig,
-				quote: notificationRecieveConfig,
-				reaction: notificationRecieveConfig,
-				pollEnded: notificationRecieveConfig,
-				scheduledNotePosted: notificationRecieveConfig,
-				scheduledNotePostFailed: notificationRecieveConfig,
-				receiveFollowRequest: notificationRecieveConfig,
-				followRequestAccepted: notificationRecieveConfig,
-				roleAssigned: notificationRecieveConfig,
-				chatRoomInvitationReceived: notificationRecieveConfig,
-				achievementEarned: notificationRecieveConfig,
-				app: notificationRecieveConfig,
-				test: notificationRecieveConfig,
-			},
-		},
-		emailNotificationTypes: { type: 'array', items: {
-			type: 'string',
-		} },
-		alsoKnownAs: {
-			type: 'array',
-			maxItems: 10,
-			uniqueItems: true,
-			items: { type: 'string' },
-		},
-	},
-} as const;
-
-type IUpdateParams = {
-	name?: string | null;
-	description?: string | null;
-	followedMessage?: string | null;
-	location?: string | null;
-	birthday?: string | null;
-	lang?: string | null;
-	avatarId?: string | null;
-	avatarDecorations?: { id: string; angle?: number | null; flipH?: boolean | null; offsetX?: number | null; offsetY?: number | null }[];
-	bannerId?: string | null;
-	fields?: { name: string; value: string }[];
-	isLocked?: boolean;
-	isExplorable?: boolean;
-	hideOnlineStatus?: boolean;
-	publicReactions?: boolean;
-	carefulBot?: boolean;
-	autoAcceptFollowed?: boolean;
-	noCrawle?: boolean;
-	preventAiLearning?: boolean;
-	requireSigninToViewContents?: boolean;
-	makeNotesFollowersOnlyBefore?: number | null;
-	makeNotesHiddenBefore?: number | null;
-	isBot?: boolean;
-	isCat?: boolean;
-	injectFeaturedNote?: boolean;
-	receiveAnnouncementEmail?: boolean;
-	alwaysMarkNsfw?: boolean;
-	autoSensitive?: boolean;
-	followingVisibility?: 'public' | 'followers' | 'private';
-	followersVisibility?: 'public' | 'followers' | 'private';
-	chatScope?: 'everyone' | 'followers' | 'following' | 'mutual' | 'none';
-	pinnedPageId?: string | null;
-	mutedWords?: (string[] | string)[];
-	hardMutedWords?: (string[] | string)[];
-	mutedInstances?: string[];
-	notificationRecieveConfig?: Record<string, unknown>;
-	emailNotificationTypes?: string[];
-	alsoKnownAs?: string[];
-};
+const iUpdateParamDef = z.object({
+	name: nameZodSchema.nullable().optional(),
+	description: descriptionZodSchema.nullable().optional(),
+	followedMessage: followedMessageZodSchema.nullable().optional(),
+	location: locationZodSchema.nullable().optional(),
+	birthday: birthdayZodSchema.nullable().optional(),
+	lang: z.union([z.enum(Object.keys(langmap) as [string, ...string[]]), z.null()]).optional(),
+	avatarId: misskeyId().nullable().optional(),
+	avatarDecorations: z.array(z.object({
+		id: misskeyId(),
+		angle: z.number().min(-0.5).max(0.5).nullable().optional(),
+		flipH: z.boolean().nullable().optional(),
+		offsetX: z.number().min(-0.25).max(0.25).nullable().optional(),
+		offsetY: z.number().min(-0.25).max(0.25).nullable().optional(),
+	})).max(16).optional(),
+	bannerId: misskeyId().nullable().optional(),
+	fields: z.array(z.object({
+		name: z.string(),
+		value: z.string(),
+	})).min(0).max(16).optional(),
+	isLocked: z.boolean().optional(),
+	isExplorable: z.boolean().optional(),
+	hideOnlineStatus: z.boolean().optional(),
+	publicReactions: z.boolean().optional(),
+	carefulBot: z.boolean().optional(),
+	autoAcceptFollowed: z.boolean().optional(),
+	noCrawle: z.boolean().optional(),
+	preventAiLearning: z.boolean().optional(),
+	requireSigninToViewContents: z.boolean().optional(),
+	makeNotesFollowersOnlyBefore: z.number().int().nullable().optional(),
+	makeNotesHiddenBefore: z.number().int().nullable().optional(),
+	isBot: z.boolean().optional(),
+	isCat: z.boolean().optional(),
+	injectFeaturedNote: z.boolean().optional(),
+	receiveAnnouncementEmail: z.boolean().optional(),
+	alwaysMarkNsfw: z.boolean().optional(),
+	autoSensitive: z.boolean().optional(),
+	followingVisibility: z.enum(['public', 'followers', 'private']).optional(),
+	followersVisibility: z.enum(['public', 'followers', 'private']).optional(),
+	chatScope: z.enum(['everyone', 'followers', 'following', 'mutual', 'none']).optional(),
+	pinnedPageId: misskeyId().nullable().optional(),
+	mutedWords: muteWordsZodSchema.optional(),
+	hardMutedWords: muteWordsZodSchema.optional(),
+	mutedInstances: z.array(z.string()).optional(),
+	notificationRecieveConfig: z.object({
+		note: notificationRecieveConfigZodSchema.optional(),
+		follow: notificationRecieveConfigZodSchema.optional(),
+		mention: notificationRecieveConfigZodSchema.optional(),
+		reply: notificationRecieveConfigZodSchema.optional(),
+		renote: notificationRecieveConfigZodSchema.optional(),
+		quote: notificationRecieveConfigZodSchema.optional(),
+		reaction: notificationRecieveConfigZodSchema.optional(),
+		pollEnded: notificationRecieveConfigZodSchema.optional(),
+		scheduledNotePosted: notificationRecieveConfigZodSchema.optional(),
+		scheduledNotePostFailed: notificationRecieveConfigZodSchema.optional(),
+		receiveFollowRequest: notificationRecieveConfigZodSchema.optional(),
+		followRequestAccepted: notificationRecieveConfigZodSchema.optional(),
+		roleAssigned: notificationRecieveConfigZodSchema.optional(),
+		chatRoomInvitationReceived: notificationRecieveConfigZodSchema.optional(),
+		achievementEarned: notificationRecieveConfigZodSchema.optional(),
+		app: notificationRecieveConfigZodSchema.optional(),
+		test: notificationRecieveConfigZodSchema.optional(),
+	}).optional(),
+	emailNotificationTypes: z.array(z.string()).optional(),
+	alsoKnownAs: uniqueItems(z.array(z.string()).max(10)).optional(),
+});
 
 function checkMuteWordCount(mutedWords: (string[] | string)[], limit: number): void {
 	const count = (arr: (string[] | string)[]) => {

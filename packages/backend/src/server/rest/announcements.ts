@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { fetchAnnouncementByIdFromDatabase, listAnnouncementsForUserFromDatabase, listUnreadAnnouncementsForUserFromDatabase, resolveAnnouncementPagination, updateAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAnnouncement, MiUser } from '@/models/_.js';
 import { HonoApiError } from './error.js';
 import type { HonoApiMainStreamPublisher } from './events.js';
@@ -21,34 +23,22 @@ export type HonoApiAnnouncementDependencies = {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const announcementsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		isActive: { type: 'boolean', default: true },
-	},
-	required: [],
-} as const;
+const announcementsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	isActive: z.boolean().default(true),
+});
 
-const announcementShowParamDef = {
-	type: 'object',
-	properties: {
-		announcementId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['announcementId'],
-} as const;
+const announcementShowParamDef = z.object({
+	announcementId: misskeyId(),
+});
 
-const readAnnouncementParamDef = {
-	type: 'object',
-	properties: {
-		announcementId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['announcementId'],
-} as const;
+const readAnnouncementParamDef = z.object({
+	announcementId: misskeyId(),
+});
 
 
 function noSuchAnnouncementError(): HonoApiError {

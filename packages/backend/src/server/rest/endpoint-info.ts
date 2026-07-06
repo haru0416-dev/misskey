@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { SchemaType } from '@/misc/json-schema.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -14,13 +15,9 @@ function getEndpoints(): Promise<ApiEndpoints> {
 	return endpointsPromise ??= import('../api/endpoints.js').then(module => module.default);
 }
 
-const endpointParamDef = {
-	type: 'object',
-	properties: {
-		endpoint: { type: 'string' },
-	},
-	required: ['endpoint'],
-} as const;
+const endpointParamDef = z.object({
+	endpoint: z.string(),
+});
 
 
 function apiParamTypeLabel(value: unknown): string {
@@ -30,6 +27,19 @@ function apiParamTypeLabel(value: unknown): string {
 	}
 
 	return 'string';
+}
+
+/**
+ * paramDef が Zod スキーマの場合は JSON Schema (標準形) に変換して properties を取り出す。
+ * union 型 (allOf/anyOf 由来) は `properties` を持たないため空になる — これは旧 ajv 版でも
+ * allOf のみで直下に properties を持たない paramDef (例: users/show) では同様だった。
+ */
+function paramProperties(params: unknown): Record<string, unknown> {
+	if (params != null && typeof params === 'object' && 'safeParse' in params) {
+		const jsonSchema = z.toJSONSchema(params as z.ZodType) as { properties?: Record<string, unknown> };
+		return jsonSchema.properties ?? {};
+	}
+	return (params as { properties?: Record<string, unknown> } | undefined)?.properties ?? {};
 }
 
 export async function handleHonoApiEndpoints(): Promise<string[]> {
@@ -49,7 +59,7 @@ export async function handleHonoApiEndpoint(body: Record<string, unknown>): Prom
 	if (endpoint == null) return null;
 
 	return {
-		params: Object.entries(endpoint.params.properties ?? {}).map(([name, value]) => ({
+		params: Object.entries(paramProperties(endpoint.params)).map(([name, value]) => ({
 			name,
 			type: apiParamTypeLabel(value),
 		})),

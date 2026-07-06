@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase, deleteChannelFavoriteFromDatabase } from '@/core/ChannelFavoriteStore.js';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
@@ -20,6 +21,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { parseId } from '@/misc/id/parse-id.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from './error.js';
 import { resolveHonoApiIdPagination } from './following.js';
@@ -33,45 +35,25 @@ export type HonoApiFavoriteDependencies = {
 
 export type HonoApiIFavoritesDependencies = HonoApiNoteDependencies;
 
-const userListParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['listId'],
-} as const;
+const userListParamDef = z.object({
+	listId: misskeyId(),
+});
 
-const clipParamDef = {
-	type: 'object',
-	properties: {
-		clipId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['clipId'],
-} as const;
+const clipParamDef = z.object({
+	clipId: misskeyId(),
+});
 
-const channelParamDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['channelId'],
-} as const;
+const channelParamDef = z.object({
+	channelId: misskeyId(),
+});
 
-const pageParamDef = {
-	type: 'object',
-	properties: {
-		pageId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['pageId'],
-} as const;
+const pageParamDef = z.object({
+	pageId: misskeyId(),
+});
 
-const flashParamDef = {
-	type: 'object',
-	properties: {
-		flashId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['flashId'],
-} as const;
+const flashParamDef = z.object({
+	flashId: misskeyId(),
+});
 
 type UserListParams = { listId: string };
 type ClipParams = { clipId: string };
@@ -301,17 +283,13 @@ export async function handleHonoApiFlashUnlike(
 	void decrementFlashLikedCountInDatabase(deps.db, flash.id);
 }
 
-const iFavoritesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const iFavoritesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type IFavoritesParams = {
 	limit: number;

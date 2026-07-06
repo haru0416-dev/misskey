@@ -6,6 +6,7 @@
 import bcrypt from 'bcryptjs';
 import * as OTPAuth from 'otpauth';
 import * as QRCode from 'qrcode';
+import { z } from 'zod';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 import {
 	countUserSecurityKeysByUserIdFromDatabase,
@@ -58,14 +59,10 @@ async function publishMeUpdatedForHonoApi(deps: HonoApiI2faDependencies, me: MiL
 	deps.publishMainStream?.(me.id, 'meUpdated', await packMeDetailedForHonoApi(deps, me, { includeSecrets: true }));
 }
 
-const i2faRegisterParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		token: { type: 'string', nullable: true },
-	},
-	required: ['password'],
-} as const;
+const i2faRegisterParamDef = z.object({
+	password: z.string(),
+	token: z.string().nullable().optional(),
+});
 
 type I2faRegisterParams = {
 	password: string;
@@ -107,13 +104,9 @@ export async function handleHonoApiI2faRegister(
 	};
 }
 
-const i2faDoneParamDef = {
-	type: 'object',
-	properties: {
-		token: { type: 'string' },
-	},
-	required: ['token'],
-} as const;
+const i2faDoneParamDef = z.object({
+	token: z.string(),
+});
 
 type I2faDoneParams = {
 	token: string;
@@ -150,14 +143,10 @@ export async function handleHonoApiI2faDone(
 	return { backupCodes };
 }
 
-const i2faRegisterKeyParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		token: { type: 'string', nullable: true },
-	},
-	required: ['password'],
-} as const;
+const i2faRegisterKeyParamDef = z.object({
+	password: z.string(),
+	token: z.string().nullable().optional(),
+});
 
 type I2faRegisterKeyParams = {
 	password: string;
@@ -194,16 +183,12 @@ export async function handleHonoApiI2faRegisterKey(
 	);
 }
 
-const i2faKeyDoneParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		token: { type: 'string', nullable: true },
-		name: { type: 'string', minLength: 1, maxLength: 30 },
-		credential: { type: 'object' },
-	},
-	required: ['password', 'name', 'credential'],
-} as const;
+const i2faKeyDoneParamDef = z.object({
+	password: z.string(),
+	token: z.string().nullable().optional(),
+	name: z.string().min(1).max(30),
+	credential: z.record(z.string(), z.unknown()),
+});
 
 type I2faKeyDoneParams = {
 	password: string;
@@ -247,14 +232,10 @@ export async function handleHonoApiI2faKeyDone(
 	};
 }
 
-const i2faUpdateKeyParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 30 },
-		credentialId: { type: 'string' },
-	},
-	required: ['name', 'credentialId'],
-} as const;
+const i2faUpdateKeyParamDef = z.object({
+	name: z.string().min(1).max(30),
+	credentialId: z.string(),
+});
 
 type I2faUpdateKeyParams = {
 	name: string;
@@ -283,15 +264,11 @@ export async function handleHonoApiI2faUpdateKey(
 	return {};
 }
 
-const i2faRemoveKeyParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		token: { type: 'string', nullable: true },
-		credentialId: { type: 'string' },
-	},
-	required: ['password', 'credentialId'],
-} as const;
+const i2faRemoveKeyParamDef = z.object({
+	password: z.string(),
+	token: z.string().nullable().optional(),
+	credentialId: z.string(),
+});
 
 type I2faRemoveKeyParams = {
 	password: string;
@@ -324,14 +301,10 @@ export async function handleHonoApiI2faRemoveKey(
 	return {};
 }
 
-const i2faUnregisterParamDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		token: { type: 'string', nullable: true },
-	},
-	required: ['password'],
-} as const;
+const i2faUnregisterParamDef = z.object({
+	password: z.string(),
+	token: z.string().nullable().optional(),
+});
 
 type I2faUnregisterParams = {
 	password: string;
@@ -359,13 +332,9 @@ export async function handleHonoApiI2faUnregister(
 	await publishMeUpdatedForHonoApi(deps, me);
 }
 
-const i2faPasswordLessParamDef = {
-	type: 'object',
-	properties: {
-		value: { type: 'boolean' },
-	},
-	required: ['value'],
-} as const;
+const i2faPasswordLessParamDef = z.object({
+	value: z.boolean(),
+});
 
 type I2faPasswordLessParams = {
 	value: boolean;

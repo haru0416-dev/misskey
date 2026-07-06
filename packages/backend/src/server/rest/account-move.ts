@@ -4,6 +4,7 @@
  */
 
 import { domainToASCII } from 'node:url';
+import { z } from 'zod';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import { assignRoleWithSideEffects, RoleAlreadyAssignedError } from '@/core/RoleLogic.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
@@ -61,13 +62,9 @@ function iMoveAlreadyMovedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Account was already moved to another account.', code: 'ALREADY_MOVED', id: 'b234a14e-9ebe-4581-8000-074b3c215962' });
 }
 
-const iMoveParamDef = {
-	type: 'object',
-	properties: {
-		moveToAccount: { type: 'string' },
-	},
-	required: ['moveToAccount'],
-} as const;
+const iMoveParamDef = z.object({
+	moveToAccount: z.string(),
+});
 
 type IMoveParams = {
 	moveToAccount: string;

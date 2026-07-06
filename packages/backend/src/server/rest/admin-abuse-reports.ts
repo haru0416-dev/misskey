@@ -4,6 +4,7 @@
  */
 
 import sanitizeHtml from 'sanitize-html';
+import { z } from 'zod';
 import { deleteAbuseReportNotificationRecipientsFromDatabase, listAbuseReportNotificationRecipientsFromDatabase } from '@/core/AbuseReportNotificationRecipientStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdFromDatabase, listAbuseUserReportsFromDatabase, markAbuseUserReportForwardedInDatabase, resolveAbuseUserReportInDatabase, resolveAbuseUserReportPagination, updateAbuseUserReportModerationNoteInDatabase } from '@/core/AbuseUserReportStore.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
@@ -22,7 +23,7 @@ import type { SystemWebhookPayload } from '@/core/SystemWebhookService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiAbuseReportNotificationRecipient } from '@/models/AbuseReportNotificationRecipient.js';
 import type { MiMeta } from '@/models/_.js';
@@ -47,48 +48,32 @@ export type HonoApiUsersReportAbuseDependencies = HonoApiAdminAbuseReportsDepend
 	publishAdminStream?: HonoApiAdminStreamPublisher;
 };
 
-const adminResolveAbuseUserReportParamDef = {
-	type: 'object',
-	properties: {
-		reportId: { type: 'string', format: 'misskey:id' },
-		resolvedAs: { type: 'string', enum: ['accept', 'reject', null], nullable: true },
-	},
-	required: ['reportId'],
-} as const;
+const adminResolveAbuseUserReportParamDef = z.object({
+	reportId: misskeyId(),
+	resolvedAs: z.union([z.enum(['accept', 'reject']), z.null()]).nullable().optional(),
+});
 
-const adminUpdateAbuseUserReportParamDef = {
-	type: 'object',
-	properties: {
-		reportId: { type: 'string', format: 'misskey:id' },
-		moderationNote: { type: 'string' },
-	},
-	required: ['reportId'],
-} as const;
+const adminUpdateAbuseUserReportParamDef = z.object({
+	reportId: misskeyId(),
+	moderationNote: z.string().optional(),
+});
 
-const adminForwardAbuseUserReportParamDef = {
-	type: 'object',
-	properties: {
-		reportId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['reportId'],
-} as const;
+const adminForwardAbuseUserReportParamDef = z.object({
+	reportId: misskeyId(),
+});
 
-const adminAbuseUserReportsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		state: { type: 'string', nullable: true, default: null },
-		reporterOrigin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'combined' },
-		targetUserOrigin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'combined' },
-	},
-	required: [],
-} as const;
+const adminAbuseUserReportsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	state: z.string().nullable().optional().default(null),
+	reporterOrigin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
+	targetUserOrigin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
+});
 
-type AdminAbuseUserReportsParams = SchemaType<typeof adminAbuseUserReportsParamDef> & {
+type AdminAbuseUserReportsParams = z.infer<typeof adminAbuseUserReportsParamDef> & {
 	state: string | null;
 	reporterOrigin: 'combined' | 'local' | 'remote';
 	targetUserOrigin: 'combined' | 'local' | 'remote';
@@ -476,14 +461,10 @@ function usersReportAbuseCannotReportAdminError(): HonoApiError {
 	});
 }
 
-const usersReportAbuseParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		comment: { type: 'string', minLength: 1, maxLength: 2048 },
-	},
-	required: ['userId', 'comment'],
-} as const;
+const usersReportAbuseParamDef = z.object({
+	userId: misskeyId(),
+	comment: z.string().min(1).max(2048),
+});
 
 type UsersReportAbuseParams = {
 	userId: string;

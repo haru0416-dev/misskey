@@ -4,6 +4,7 @@
  */
 
 import { permissions } from 'misskey-js';
+import type { z } from 'zod';
 import type { KeyOf, Schema } from '@/misc/json-schema.js';
 
 import * as endpointsObject from './endpoint-list.js';
@@ -127,7 +128,9 @@ export type IEndpointMeta = (Omit<IEndpointMetaBase, 'requireCrential' | 'requir
 export interface IEndpoint {
 	name: string;
 	meta: IEndpointMeta;
-	params: Schema;
+	// TODO(ajv->zod移行 Phase B): 現状 z.ZodType は users/show・notes/create の2エンドポイントのみ。
+	// 移行が進むにつれて増える想定。
+	params: Schema | z.ZodType;
 }
 
 const endpoints: IEndpoint[] = Object.entries(endpointsObject).map(([name, ep]) => {

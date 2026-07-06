@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { startDriveFileDeletion, type DriveFileDeletionDependencies } from '@/core/DriveFileDeletionLogic.js';
 import {
 	fetchDriveFileByIdFromDatabase,
@@ -23,6 +24,7 @@ import type { ObjectStorageQueue } from '@/core/QueueModule.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
 import { checkChatAvailabilityForHonoApi, packChatMessagesDetailedForHonoApi, type HonoApiChatDependencies } from './chat.js';
@@ -46,20 +48,16 @@ function accessDeniedError(id: string): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id });
 }
 
-const driveFilesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-		type: { type: 'string', nullable: true, pattern: '^[a-zA-Z/\\-*]+$' },
-		sort: { type: 'string', nullable: true, enum: ['+createdAt', '-createdAt', '+name', '-name', '+size', '-size', null] },
-	},
-	required: [],
-} as const;
+const driveFilesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	folderId: misskeyId().nullable().default(null),
+	type: z.string().regex(/^[a-zA-Z/\-*]+$/).nullable().optional(),
+	sort: z.union([z.enum(['+createdAt', '-createdAt', '+name', '-name', '+size', '-size']), z.null()]).optional(),
+});
 
 type DriveFilesParams = {
 	limit: number;
@@ -100,18 +98,14 @@ export async function handleHonoApiDriveFilesList(
 	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
 }
 
-const driveStreamParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		type: { type: 'string', pattern: '^[a-zA-Z/\\-*]+$' },
-	},
-	required: [],
-} as const;
+const driveStreamParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	type: z.string().regex(/^[a-zA-Z/\-*]+$/).optional(),
+});
 
 type DriveStreamParams = {
 	limit: number;
@@ -148,24 +142,10 @@ export async function handleHonoApiDriveStream(
 	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
 }
 
-const driveFilesShowParamDef = {
-	anyOf: [
-		{
-			type: 'object',
-			properties: {
-				fileId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['fileId'],
-		},
-		{
-			type: 'object',
-			properties: {
-				url: { type: 'string' },
-			},
-			required: ['url'],
-		},
-	],
-} as const;
+const driveFilesShowParamDef = z.union([
+	z.object({ fileId: misskeyId() }),
+	z.object({ url: z.string() }),
+]);
 
 type DriveFilesShowParams = { fileId: string } | { url: string };
 
@@ -189,14 +169,10 @@ export async function handleHonoApiDriveFilesShow(
 	return await packDriveFileOrFailForHonoApi(deps, file, { detail: true, withUser: true, self: true });
 }
 
-const driveFilesFindParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string' },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: ['name'],
-} as const;
+const driveFilesFindParamDef = z.object({
+	name: z.string(),
+	folderId: misskeyId().nullable().default(null),
+});
 
 type DriveFilesFindParams = {
 	name: string;
@@ -219,13 +195,9 @@ export async function handleHonoApiDriveFilesFind(
 	return await packDriveFileManyForHonoApi(deps, files, { self: true });
 }
 
-const driveFilesFindByHashParamDef = {
-	type: 'object',
-	properties: {
-		md5: { type: 'string' },
-	},
-	required: ['md5'],
-} as const;
+const driveFilesFindByHashParamDef = z.object({
+	md5: z.string(),
+});
 
 type DriveFilesFindByHashParams = {
 	md5: string;
@@ -243,18 +215,14 @@ export async function handleHonoApiDriveFilesFindByHash(
 	return await packDriveFileManyForHonoApi(deps, files, { self: true });
 }
 
-const driveFilesAttachedNotesParamDef = {
-	type: 'object',
-	properties: {
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const driveFilesAttachedNotesParamDef = z.object({
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+	fileId: misskeyId(),
+});
 
 type DriveFilesAttachedNotesParams = {
 	sinceId?: string;
@@ -314,13 +282,9 @@ export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDepend
 	};
 }
 
-const driveFilesDeleteParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const driveFilesDeleteParamDef = z.object({
+	fileId: misskeyId(),
+});
 
 type DriveFilesDeleteParams = {
 	fileId: string;
@@ -343,17 +307,13 @@ export async function handleHonoApiDriveFilesDelete(
 	startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, false, me);
 }
 
-const driveFilesUpdateParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true },
-		name: { type: 'string' },
-		isSensitive: { type: 'boolean' },
-		comment: { type: 'string', nullable: true, maxLength: 512 },
-	},
-	required: ['fileId'],
-} as const;
+const driveFilesUpdateParamDef = z.object({
+	fileId: misskeyId(),
+	folderId: misskeyId().nullable().optional(),
+	name: z.string().optional(),
+	isSensitive: z.boolean().optional(),
+	comment: z.string().max(512).nullable().optional(),
+});
 
 type DriveFilesUpdateParams = {
 	fileId: string;
@@ -433,14 +393,10 @@ export async function handleHonoApiDriveFilesUpdate(
 	return packed;
 }
 
-const driveFilesMoveBulkParamDef = {
-	type: 'object',
-	properties: {
-		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 100, items: { type: 'string', format: 'misskey:id' } },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: ['fileIds'],
-} as const;
+const driveFilesMoveBulkParamDef = z.object({
+	fileIds: uniqueItems(z.array(misskeyId()).min(1).max(100)),
+	folderId: misskeyId().nullable().optional(),
+});
 
 type DriveFilesMoveBulkParams = {
 	fileIds: string[];
@@ -459,18 +415,14 @@ export async function handleHonoApiDriveFilesMoveBulk(
 	await updateDriveFilesFolderByIdsAndUserIdInDatabase(deps.db, params.fileIds, me.id, folder ? folder.id : null);
 }
 
-const driveFilesAttachedChatMessagesParamDef = {
-	type: 'object',
-	properties: {
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const driveFilesAttachedChatMessagesParamDef = z.object({
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+	fileId: misskeyId(),
+});
 
 type DriveFilesAttachedChatMessagesParams = {
 	sinceId?: string;
