@@ -121,6 +121,16 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 		cacheControl: 'public, max-age=604800',
 	});
 	registerStaticMount(app, {
+		prefix: '/vite/',
+		root: resolve(deps.config.rootDir, 'built/_frontend_vite_'),
+		cacheControl: 'public, max-age=2592000, immutable',
+	});
+	registerStaticMount(app, {
+		prefix: '/embed_vite/',
+		root: resolve(deps.config.rootDir, 'built/_frontend_embed_vite_'),
+		cacheControl: 'public, max-age=2592000, immutable',
+	});
+	registerStaticMount(app, {
 		prefix: '/tarball/',
 		root: resolve(deps.config.rootDir, 'built/tarball'),
 		cacheControl: 'public, max-age=2592000, immutable',

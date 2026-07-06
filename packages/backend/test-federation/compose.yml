@@ -76,6 +76,18 @@ services:
         target: /misskey/packages/aiscript-languageserver-stub/package.json
         read_only: true
       - type: bind
+        source: ../../re2-stub/package.json
+        target: /misskey/packages/re2-stub/package.json
+        read_only: true
+      - type: bind
+        source: ../../re2-stub/index.js
+        target: /misskey/packages/re2-stub/index.js
+        read_only: true
+      - type: bind
+        source: ../../re2-stub/index.d.ts
+        target: /misskey/packages/re2-stub/index.d.ts
+        read_only: true
+      - type: bind
         source: ../../sw/package.json
         target: /misskey/packages/sw/package.json
         read_only: true
@@ -168,6 +180,18 @@ services:
       - type: bind
         source: ../../aiscript-languageserver-stub/package.json
         target: /misskey/packages/aiscript-languageserver-stub/package.json
+        read_only: true
+      - type: bind
+        source: ../../re2-stub/package.json
+        target: /misskey/packages/re2-stub/package.json
+        read_only: true
+      - type: bind
+        source: ../../re2-stub/index.js
+        target: /misskey/packages/re2-stub/index.js
+        read_only: true
+      - type: bind
+        source: ../../re2-stub/index.d.ts
+        target: /misskey/packages/re2-stub/index.d.ts
         read_only: true
       - type: bind
         source: ../../sw/package.json

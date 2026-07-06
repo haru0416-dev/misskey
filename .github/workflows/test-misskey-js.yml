@@ -45,4 +45,3 @@ jobs:
         run: bun run --bun --filter misskey-js test
         env:
           CI: true
-
