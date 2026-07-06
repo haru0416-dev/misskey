@@ -15,6 +15,7 @@ import { isSafeAidxT } from '@/misc/id/aidx.js';
 import { isSafeMeidT } from '@/misc/id/meid.js';
 import { isSafeMeidgT } from '@/misc/id/meidg.js';
 import { isSafeObjectIdT } from '@/misc/id/object-id.js';
+import { isSafeUuidv7T } from '@/misc/id/uuidv7.js';
 import {
 	getApId,
 	getApIds,
@@ -74,6 +75,7 @@ function isSafeTimestampForHonoApi(config: Pick<Config, 'id'>, t: number): boole
 		case 'meidg': return isSafeMeidgT(t);
 		case 'ulid': return t > 0;
 		case 'objectid': return isSafeObjectIdT(t);
+		case 'uuidv7': return isSafeUuidv7T(t);
 		default: throw new Error('unrecognized id generation method');
 	}
 }
