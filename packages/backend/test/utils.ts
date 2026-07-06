@@ -379,7 +379,10 @@ export function connectStream<C extends keyof misskey.Channels>(user: UserToken,
 		}
 		const ws = new WebSocket(url, options);
 
+		// Bunランタイムのws互換実装は 'unexpected-response' を発火せず 'error' になる。
+		// どちらも拾わないと接続失敗時にPromiseが永久に未解決となりテストがタイムアウトする
 		ws.on('unexpected-response', (req, res) => rej(res));
+		ws.on('error', err => rej(err));
 		ws.on('open', () => {
 			ws.on('message', data => {
 				const msg = JSON.parse(data.toString());

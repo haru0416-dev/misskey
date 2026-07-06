@@ -30,10 +30,15 @@ on:
       - bun.lock
       - .github/workflows/test-frontend.yml
       - .github/misskey/test.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   vitest:
     name: Unit tests (frontend)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v6.0.2
@@ -49,13 +54,16 @@ jobs:
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config
       - name: Build
-        run: bun run build
+        # フロントエンド単体テストはviteの本番ビルド成果物を使わない。
+        # 参照される i18n / icons-subsetter / misskey-js だけをビルドする
+        run: bun run build-pre && bun run build:frontend-deps
       - name: Test
         run: bun run --bun --filter frontend test
 
   e2e:
     name: E2E tests (frontend)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false

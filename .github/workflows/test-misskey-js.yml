@@ -13,6 +13,10 @@ on:
     paths:
       - packages/misskey-js/**
       - .github/workflows/test-misskey-js.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Unit tests (misskey.js)
@@ -41,9 +45,3 @@ jobs:
         run: bun run --bun --filter misskey-js test
         env:
           CI: true
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./packages/misskey-js/coverage/coverage-final.json

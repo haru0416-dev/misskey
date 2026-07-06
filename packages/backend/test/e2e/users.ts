@@ -835,8 +835,15 @@ describe('ユーザー', () => {
 		}
 
 		const parameters = { query: searchPrefix, limit: 100 } as const;
-		const expected = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
-		assert.strictEqual(expected.length, created.length);
+		// notes/createによるuser.updatedAtの反映は非同期なので、全員分が反映されて
+		// 並び順 (updatedAt DESC = 作成の逆順) が安定するまで待ってから期待値を固定する
+		const orderStabilized = [...created].reverse().map(u => u.id).join(',');
+		let expected = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
+		for (let i = 0; i < 30 && expected.map(u => u.id).join(',') !== orderStabilized; i++) {
+			await new Promise(resolve => setTimeout(resolve, 100));
+			expected = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
+		}
+		assert.deepStrictEqual(expected.map(u => u.id).join(','), orderStabilized);
 		// users/searchはoffsetのみサポートする
 		await testPaginationConsistency(expected, async (paginationParam) => {
 			return successfulApiCall({ endpoint: 'users/search', parameters: { ...parameters, ...paginationParam }, user: alice });

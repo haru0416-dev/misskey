@@ -9,6 +9,10 @@ on:
     paths:
       - packages/backend/**
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # pull_request_target safety: permissions: read-all, and there are no secrets used in this job
   generate-misskey-js:
