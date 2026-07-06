@@ -74,12 +74,8 @@ jobs:
         # i18n / misskey-js だけをビルドする (backend本体はテストスクリプトがビルドする)
         run: bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Test
-        run: bun run --bun --filter backend test-and-coverage
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./packages/backend/coverage/coverage-final.json
+        # v8 coverage は Node の inspector API 依存で Bun ランタイムでは動かないため、カバレッジ無しで実行する
+        run: bun run --bun --filter backend test
 
   e2e:
     name: E2E tests (backend)
@@ -114,12 +110,8 @@ jobs:
       - name: Build
         run: bun run build
       - name: Test
-        run: bun run --bun --filter backend test-and-coverage:e2e
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./packages/backend/coverage/coverage-final.json
+        # v8 coverage は Node の inspector API 依存で Bun ランタイムでは動かないため、カバレッジ無しで実行する
+        run: bun run --bun --filter backend test:e2e
 
   migration:
     name: Migration tests (backend)
