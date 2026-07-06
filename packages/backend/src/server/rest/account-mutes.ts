@@ -4,6 +4,7 @@
  */
 
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { createMutingInDatabase, deleteMutingsByIdsFromDatabase, fetchMutingByMuterIdAndMuteeIdFromDatabase, listMuteeIdsByMuterIdFromDatabase, listMutingsByMuterIdWithPaginationFromDatabase, mutingExistsInDatabase, resolveMutingPagination } from '@/core/MutingStore.js';
 import { createRenoteMutingInDatabase, deleteRenoteMutingsByIdsFromDatabase, fetchRenoteMutingFromDatabase, listRenoteMuteeIdsByMuterIdFromDatabase, listRenoteMutingsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
@@ -11,7 +12,8 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMuting } from '@/models/Muting.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
@@ -26,38 +28,22 @@ export type HonoApiAccountMuteDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
 };
 
-const muteCreateParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		expiresAt: {
-			type: 'integer',
-			nullable: true,
-			description: 'A Unix Epoch timestamp that must lie in the future. `null` means an indefinite mute.',
-		},
-	},
-	required: ['userId'],
-} as const;
+const muteCreateParamDef = z.object({
+	userId: misskeyId(),
+	expiresAt: z.number().int().nullable().optional(),
+});
 
-const userIdParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const userIdParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const muteListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const muteListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 
 type HonoApiMutingResponse = {

@@ -4,11 +4,13 @@
  */
 
 import { domainToASCII } from 'node:url';
+import { z } from 'zod';
 import { toArray, toSingle } from '@/misc/prelude/array.js';
 import { truncate } from '@/misc/truncate.js';
 import { checkHttps } from '@/misc/check-https.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import { MfmService } from '@/core/MfmService.js';
 import { ApMfmService } from '@/core/activitypub/ApMfmService.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
@@ -720,13 +722,9 @@ export async function validateAlsoKnownAsForHonoApi(
 	return resultUser;
 }
 
-const federationUpdateRemoteUserParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const federationUpdateRemoteUserParamDef = z.object({
+	userId: misskeyId(),
+});
 
 type FederationUpdateRemoteUserParams = {
 	userId: MiUser['id'];

@@ -5,6 +5,7 @@
 
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
@@ -15,7 +16,8 @@ import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/Rol
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiBroadcastStreamPublisher } from './events.js';
@@ -30,200 +32,110 @@ export type HonoApiEmojiDependencies = DriveFileUploadDependencies & {
 	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
 };
 
-const emojiParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string' },
-	},
-	required: ['name'],
-} as const;
+const emojiParamDef = z.object({
+	name: z.string(),
+});
 
-const adminEmojiListParamDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string', nullable: true, default: null },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const adminEmojiListParamDef = z.object({
+	query: z.string().nullable().default(null),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
-const adminEmojiListRemoteParamDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string', nullable: true, default: null },
-		host: {
-			type: 'string',
-			nullable: true,
-			default: null,
-			description: 'Use `null` to represent the local host.',
-		},
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const adminEmojiListRemoteParamDef = z.object({
+	query: z.string().nullable().default(null),
+	/** Use `null` to represent the local host. */
+	host: z.string().nullable().default(null),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
-const adminEmojiAddParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' },
-		fileId: { type: 'string', format: 'misskey:id' },
-		category: {
-			type: 'string',
-			nullable: true,
-			description: 'Use `null` to reset the category.',
-		},
-		aliases: {
-			type: 'array',
-			items: {
-				type: 'string',
-			},
-		},
-		license: { type: 'string', nullable: true },
-		isSensitive: { type: 'boolean' },
-		localOnly: { type: 'boolean' },
-		roleIdsThatCanBeUsedThisEmojiAsReaction: {
-			type: 'array',
-			items: {
-				type: 'string',
-			},
-		},
-	},
-	required: ['name', 'fileId'],
-} as const;
+const adminEmojiAddParamDef = z.object({
+	name: z.string().regex(/^[a-zA-Z0-9_]+$/),
+	fileId: misskeyId(),
+	/** Use `null` to reset the category. */
+	category: z.string().nullable().optional(),
+	aliases: z.array(z.string()).optional(),
+	license: z.string().nullable().optional(),
+	isSensitive: z.boolean().optional(),
+	localOnly: z.boolean().optional(),
+	roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
+});
 
-const adminEmojiUpdateParamDef = {
-	allOf: [
-		{
-			anyOf: [
-				{
-					type: 'object',
-					properties: {
-						id: { type: 'string', format: 'misskey:id' },
-					},
-					required: ['id'],
-				},
-				{
-					type: 'object',
-					properties: {
-						name: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' },
-					},
-					required: ['name'],
-				},
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				fileId: { type: 'string', format: 'misskey:id' },
-				category: {
-					type: 'string',
-					nullable: true,
-					description: 'Use `null` to reset the category.',
-				},
-				aliases: { type: 'array', items: {
-					type: 'string',
-				} },
-				license: { type: 'string', nullable: true },
-				isSensitive: { type: 'boolean' },
-				localOnly: { type: 'boolean' },
-				roleIdsThatCanBeUsedThisEmojiAsReaction: { type: 'array', items: {
-					type: 'string',
-				} },
-			},
-		},
-	],
-} as const;
+/**
+ * 旧 ajv 版は `allOf: [{ anyOf: [{required:['id']}, {required:['name']}] }, {...}]` という形で
+ * 「id か name のどちらかが単独で妥当ならOK」という判定だった。
+ * anyOf の各分岐は他方のプロパティを一切参照しないため、id/name の一方が有効な形式ならもう一方の
+ * 値が不正な形式・型であっても全体としては valid になる(ajv で実測して確認済み)。
+ * この挙動を再現するため、id/name はここでは型を固定せず (z.unknown())、superRefine内で
+ * それぞれ個別に misskeyId/name パターンとして安全にパースできるかどうかだけを判定する。
+ */
+const adminEmojiUpdateParamDef = z.object({
+	id: z.unknown().optional(),
+	name: z.unknown().optional(),
+	fileId: misskeyId().optional(),
+	/** Use `null` to reset the category. */
+	category: z.string().nullable().optional(),
+	aliases: z.array(z.string()).optional(),
+	license: z.string().nullable().optional(),
+	isSensitive: z.boolean().optional(),
+	localOnly: z.boolean().optional(),
+	roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
+}).superRefine((data, ctx) => {
+	const idValid = misskeyId().safeParse(data.id).success;
+	const nameValid = z.string().regex(/^[a-zA-Z0-9_]+$/).safeParse(data.name).success;
+	if (!idValid && !nameValid) {
+		ctx.addIssue({
+			code: 'custom',
+			message: 'must match a schema in anyOf',
+		});
+	}
+});
 
-const adminEmojiAliasesBulkParamDef = {
-	type: 'object',
-	properties: {
-		ids: { type: 'array', items: {
-			type: 'string', format: 'misskey:id',
-		} },
-		aliases: { type: 'array', items: {
-			type: 'string',
-		} },
-	},
-	required: ['ids', 'aliases'],
-} as const;
+const adminEmojiAliasesBulkParamDef = z.object({
+	ids: z.array(misskeyId()),
+	aliases: z.array(z.string()),
+});
 
-const adminEmojiDeleteParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminEmojiDeleteParamDef = z.object({
+	id: misskeyId(),
+});
 
-const adminEmojiDeleteBulkParamDef = {
-	type: 'object',
-	properties: {
-		ids: { type: 'array', items: {
-			type: 'string', format: 'misskey:id',
-		} },
-	},
-	required: ['ids'],
-} as const;
+const adminEmojiDeleteBulkParamDef = z.object({
+	ids: z.array(misskeyId()),
+});
 
-const adminEmojiCopyParamDef = {
-	type: 'object',
-	properties: {
-		emojiId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['emojiId'],
-} as const;
+const adminEmojiCopyParamDef = z.object({
+	emojiId: misskeyId(),
+});
 
-const adminEmojiImportZipParamDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+const adminEmojiImportZipParamDef = z.object({
+	fileId: misskeyId(),
+});
 
-const adminEmojiSetCategoryBulkParamDef = {
-	type: 'object',
-	properties: {
-		ids: { type: 'array', items: {
-			type: 'string', format: 'misskey:id',
-		} },
-		category: {
-			type: 'string',
-			nullable: true,
-			description: 'Use `null` to reset the category.',
-		},
-	},
-	required: ['ids'],
-} as const;
+const adminEmojiSetCategoryBulkParamDef = z.object({
+	ids: z.array(misskeyId()),
+	/** Use `null` to reset the category. */
+	category: z.string().nullable().optional(),
+});
 
-const adminEmojiSetLicenseBulkParamDef = {
-	type: 'object',
-	properties: {
-		ids: { type: 'array', items: {
-			type: 'string', format: 'misskey:id',
-		} },
-		license: {
-			type: 'string',
-			nullable: true,
-			description: 'Use `null` to reset the license.',
-		},
-	},
-	required: ['ids'],
-} as const;
+const adminEmojiSetLicenseBulkParamDef = z.object({
+	ids: z.array(misskeyId()),
+	/** Use `null` to reset the license. */
+	license: z.string().nullable().optional(),
+});
 
 type EmojiParams = {
 	name: string;
 };
-type AdminEmojiListParams = SchemaType<typeof adminEmojiListParamDef>;
-type AdminEmojiListRemoteParams = SchemaType<typeof adminEmojiListRemoteParamDef>;
+type AdminEmojiListParams = z.infer<typeof adminEmojiListParamDef>;
+type AdminEmojiListRemoteParams = z.infer<typeof adminEmojiListRemoteParamDef>;
 type AdminEmojiUpdateParams = {
 	id?: string;
 	name?: string;
@@ -832,56 +744,34 @@ const fetchEmojisSortKeys = [
 	'+roleIdsThatCanBeUsedThisEmojiAsReaction', '-roleIdsThatCanBeUsedThisEmojiAsReaction',
 ] as const;
 
-const v2AdminEmojiListQueryParamDef = {
-	type: 'object',
-	nullable: true,
-	properties: {
-		updatedAtFrom: { type: 'string' },
-		updatedAtTo: { type: 'string' },
-		name: { type: 'string' },
-		host: { type: 'string' },
-		uri: { type: 'string' },
-		publicUrl: { type: 'string' },
-		originalUrl: { type: 'string' },
-		type: { type: 'string' },
-		aliases: { type: 'string' },
-		category: { type: 'string' },
-		license: { type: 'string' },
-		isSensitive: { type: 'boolean' },
-		localOnly: { type: 'boolean' },
-		hostType: {
-			type: 'string',
-			enum: fetchEmojisHostTypes,
-			default: 'all',
-		},
-		roleIds: {
-			type: 'array',
-			items: { type: 'string', format: 'misskey:id' },
-		},
-	},
-} as const;
+const v2AdminEmojiListQueryParamDef = z.object({
+	updatedAtFrom: z.string().optional(),
+	updatedAtTo: z.string().optional(),
+	name: z.string().optional(),
+	host: z.string().optional(),
+	uri: z.string().optional(),
+	publicUrl: z.string().optional(),
+	originalUrl: z.string().optional(),
+	type: z.string().optional(),
+	aliases: z.string().optional(),
+	category: z.string().optional(),
+	license: z.string().optional(),
+	isSensitive: z.boolean().optional(),
+	localOnly: z.boolean().optional(),
+	hostType: z.enum(fetchEmojisHostTypes).default('all'),
+	roleIds: z.array(misskeyId()).optional(),
+}).nullable();
 
-const v2AdminEmojiListParamDef = {
-	type: 'object',
-	properties: {
-		query: v2AdminEmojiListQueryParamDef,
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		page: { type: 'integer' },
-		sortKeys: {
-			type: 'array',
-			default: ['-id'],
-			items: {
-				type: 'string',
-				enum: fetchEmojisSortKeys,
-			},
-		},
-	},
-	required: [],
-} as const;
+const v2AdminEmojiListParamDef = z.object({
+	query: v2AdminEmojiListQueryParamDef.optional(),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+	page: z.number().int().optional(),
+	sortKeys: z.array(z.enum(fetchEmojisSortKeys)).default(['-id']),
+});
 
 
 async function packHonoEmojiDetailedAdmin(

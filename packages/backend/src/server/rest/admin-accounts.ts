@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DbQueue, DeliverQueue } from '@/core/QueueModule.js';
@@ -11,8 +12,9 @@ import { updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js'
 import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiUser } from '@/models/_.js';
-import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';
+import { descriptionZodSchema, localUsernameZodSchema, passwordZodSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import bcrypt from 'bcryptjs';
 import { HonoApiError } from './error.js';
@@ -28,38 +30,23 @@ export type HonoApiAdminAccountsDependencies = UserPackingDependencies & SignupD
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-const adminAccountCreateParamDef = {
-	type: 'object',
-	properties: {
-		username: localUsernameSchema,
-		password: passwordSchema,
-		setupPassword: { type: 'string', nullable: true },
-	},
-	required: ['username', 'password'],
-} as const;
+const adminAccountCreateParamDef = z.object({
+	username: localUsernameZodSchema,
+	password: passwordZodSchema,
+	setupPassword: z.string().nullable().optional(),
+});
 
-const adminAccountsFindByEmailParamDef = {
-	type: 'object',
-	properties: {
-		email: { type: 'string' },
-	},
-	required: ['email'],
-} as const;
+const adminAccountsFindByEmailParamDef = z.object({
+	email: z.string(),
+});
 
-const adminAccountDeleteParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const adminAccountDeleteParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const adminUpdateProxyAccountParamDef = {
-	type: 'object',
-	properties: {
-		description: { ...descriptionSchema, nullable: true },
-	},
-} as const;
+const adminUpdateProxyAccountParamDef = z.object({
+	description: descriptionZodSchema.nullable().optional(),
+});
 
 
 function userNotFoundError(): HonoApiError {

@@ -5,6 +5,7 @@
 
 import * as crypto from 'node:crypto';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { createAccessTokenInDatabase, existsAccessTokenByAppIdAndUserIdFromDatabase, fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase } from '@/core/AccessTokenStore.js';
 import { createAuthSessionInDatabase, deleteAuthSessionByIdFromDatabase, fetchAuthSessionByTokenAndAppIdFromDatabase, fetchAuthSessionByTokenFromDatabase, updateAuthSessionUserIdInDatabase } from '@/core/AuthSessionStore.js';
@@ -27,30 +28,18 @@ export type HonoApiAuthSessionDependencies = HonoApiAppDependencies & {
 	meta: MiMeta;
 };
 
-const authSessionGenerateParamDef = {
-	type: 'object',
-	properties: {
-		appSecret: { type: 'string' },
-	},
-	required: ['appSecret'],
-} as const;
+const authSessionGenerateParamDef = z.object({
+	appSecret: z.string(),
+});
 
-const authSessionShowParamDef = {
-	type: 'object',
-	properties: {
-		token: { type: 'string' },
-	},
-	required: ['token'],
-} as const;
+const authSessionShowParamDef = z.object({
+	token: z.string(),
+});
 
-const authSessionUserkeyParamDef = {
-	type: 'object',
-	properties: {
-		appSecret: { type: 'string' },
-		token: { type: 'string' },
-	},
-	required: ['appSecret', 'token'],
-} as const;
+const authSessionUserkeyParamDef = z.object({
+	appSecret: z.string(),
+	token: z.string(),
+});
 
 type AuthSessionGenerateParams = {
 	appSecret: string;

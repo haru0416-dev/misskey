@@ -4,6 +4,7 @@
  */
 
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	createSwSubscriptionInDatabase,
@@ -28,33 +29,21 @@ export type HonoApiSwDependencies = {
 	redis: Redis.Redis;
 };
 
-const swRegisterParamDef = {
-	type: 'object',
-	properties: {
-		endpoint: { type: 'string' },
-		auth: { type: 'string' },
-		publickey: { type: 'string' },
-		sendReadMessage: { type: 'boolean', default: false },
-	},
-	required: ['endpoint', 'auth', 'publickey'],
-} as const;
+const swRegisterParamDef = z.object({
+	endpoint: z.string(),
+	auth: z.string(),
+	publickey: z.string(),
+	sendReadMessage: z.boolean().default(false),
+});
 
-const swShowRegistrationParamDef = {
-	type: 'object',
-	properties: {
-		endpoint: { type: 'string' },
-	},
-	required: ['endpoint'],
-} as const;
+const swShowRegistrationParamDef = z.object({
+	endpoint: z.string(),
+});
 
-const swUpdateRegistrationParamDef = {
-	type: 'object',
-	properties: {
-		endpoint: { type: 'string' },
-		sendReadMessage: { type: 'boolean' },
-	},
-	required: ['endpoint'],
-} as const;
+const swUpdateRegistrationParamDef = z.object({
+	endpoint: z.string(),
+	sendReadMessage: z.boolean().optional(),
+});
 
 type SwRegisterParams = {
 	endpoint: string;

@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import { Readable } from 'node:stream';
 import * as streamPromises from 'node:stream/promises';
+import { z } from 'zod';
 import sharp from 'sharp';
 import type { Sharp } from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
@@ -42,6 +43,7 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type Logger from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -596,16 +598,22 @@ export async function addDriveFileForHonoApi(
 	return file;
 }
 
-const driveFilesCreateParamDef = {
-	type: 'object',
+const driveFilesCreateParamDef = z.object({
+	folderId: misskeyId().nullable().optional().default(null),
+	name: z.string().nullable().optional().default(null),
+	comment: z.string().max(DB_MAX_IMAGE_COMMENT_LENGTH).nullable().optional().default(null),
+	isSensitive: z.boolean().optional().default(false),
+	force: z.boolean().optional().default(false),
+});
+
+// multipart フォームは全フィールドを文字列で送るため、castHonoApiMultipartFields で
+// boolean/number/integer 型のフィールドのみ JSON.parse して型を戻す。driveFilesCreateParamDef の
+// 対象プロパティのうち boolean 型なのは isSensitive/force のみ (他は string 系)。
+const driveFilesCreateMultipartCastFields = {
 	properties: {
-		folderId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-		name: { type: 'string', nullable: true, default: null },
-		comment: { type: 'string', nullable: true, maxLength: DB_MAX_IMAGE_COMMENT_LENGTH, default: null },
-		isSensitive: { type: 'boolean', default: false },
-		force: { type: 'boolean', default: false },
+		isSensitive: { type: 'boolean' },
+		force: { type: 'boolean' },
 	},
-	required: [],
 } as const;
 
 type DriveFilesCreateParams = {
@@ -624,7 +632,7 @@ export async function handleHonoApiDriveFilesCreate(
 	ip: string | null,
 	headers: Record<string, string> | null,
 ): Promise<Packed<'DriveFile'>> {
-	castHonoApiMultipartFields(driveFilesCreateParamDef, body);
+	castHonoApiMultipartFields(driveFilesCreateMultipartCastFields, body);
 	const params = parseHonoApiParams(driveFilesCreateParamDef, body);
 
 	let name = params.name ?? file.name ?? null;
@@ -676,18 +684,14 @@ export async function handleHonoApiDriveFilesCreate(
 	}
 }
 
-const driveFilesUploadFromUrlParamDef = {
-	type: 'object',
-	properties: {
-		url: { type: 'string' },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-		isSensitive: { type: 'boolean', default: false },
-		comment: { type: 'string', nullable: true, maxLength: 512, default: null },
-		marker: { type: 'string', nullable: true, default: null },
-		force: { type: 'boolean', default: false },
-	},
-	required: ['url'],
-} as const;
+const driveFilesUploadFromUrlParamDef = z.object({
+	url: z.string(),
+	folderId: misskeyId().nullable().optional().default(null),
+	isSensitive: z.boolean().optional().default(false),
+	comment: z.string().max(512).nullable().optional().default(null),
+	marker: z.string().nullable().optional().default(null),
+	force: z.boolean().optional().default(false),
+});
 
 type DriveFilesUploadFromUrlParams = {
 	url: string;

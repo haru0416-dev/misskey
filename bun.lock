@@ -46,7 +46,6 @@
         "@simplewebauthn/server": "13.3.1",
         "@sinonjs/fake-timers": "15.4.0",
         "@smithy/node-http-handler": "4.8.1",
-        "ajv": "8.20.0",
         "archiver": "8.0.0",
         "bcryptjs": "3.0.3",
         "blurhash": "2.0.5",
@@ -110,6 +109,7 @@
         "ulid": "3.0.2",
         "web-push": "3.6.7",
         "xev": "3.0.2",
+        "zod": "4.4.3",
       },
       "devDependencies": {
         "@kitajs/ts-html-plugin": "4.1.4",
@@ -3567,6 +3567,8 @@
     "yoctocolors": ["yoctocolors@2.1.2", "", {}, "sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug=="],
 
     "zip-stream": ["zip-stream@7.0.5", "", { "dependencies": { "compress-commons": "7.0.1", "normalize-path": "3.0.0", "readable-stream": "4.7.0" } }, "sha512-dSvYKdvLsAHCDqPOhIwk/q5CvuWtTB3Dgpoe0uVEFjTzIOAmsQpprX25InCvrvJsirEbu1OHyy67n/kAj1Sw/w=="],
+
+    "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "zwitch": ["zwitch@2.0.4", "", {}, "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="],
 

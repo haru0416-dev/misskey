@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { createAccessTokenInDatabase, fetchAccessTokenBySessionFromDatabase, markAccessTokenFetchedInDatabase } from '@/core/AccessTokenStore.js';
 import type { Config } from '@/config.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { uniqueItems } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { createTokenNotification, type HonoApiNotificationDependencies } from './notification.js';
@@ -29,23 +31,13 @@ type MiauthGenTokenBody = {
 	permission: string[];
 };
 
-const miauthGenTokenParamDef = {
-	type: 'object',
-	properties: {
-		session: { type: 'string', nullable: true },
-		name: { type: 'string', nullable: true },
-		description: { type: 'string', nullable: true },
-		iconUrl: { type: 'string', nullable: true },
-		permission: {
-			type: 'array',
-			uniqueItems: true,
-			items: {
-				type: 'string',
-			},
-		},
-	},
-	required: ['session', 'permission'],
-} as const;
+const miauthGenTokenParamDef = z.object({
+	session: z.string().nullable(),
+	name: z.string().nullable().optional(),
+	description: z.string().nullable().optional(),
+	iconUrl: z.string().nullable().optional(),
+	permission: uniqueItems(z.array(z.string())),
+});
 
 export async function handleHonoApiMiauthGenToken(
 	deps: HonoApiMiauthDependencies,

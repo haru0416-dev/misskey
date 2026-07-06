@@ -5,6 +5,7 @@
 
 import { domainToASCII, URLSearchParams } from 'node:url';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
@@ -26,6 +27,7 @@ import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { deepClone } from '@/misc/clone.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
@@ -571,15 +573,11 @@ export function normalizeHonoApiUsersFeaturedNotesQuery(query: Record<string, st
 	return body;
 }
 
-const usersFeaturedNotesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		untilId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const usersFeaturedNotesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	untilId: misskeyId().optional(),
+	userId: misskeyId(),
+});
 
 type UsersFeaturedNotesParams = {
 	limit: number;
@@ -653,14 +651,10 @@ function notesTranslateCannotTranslateInvisibleNoteError(): HonoApiError {
 	});
 }
 
-const notesTranslateParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		targetLang: { type: 'string' },
-	},
-	required: ['noteId', 'targetLang'],
-} as const;
+const notesTranslateParamDef = z.object({
+	noteId: misskeyId(),
+	targetLang: z.string(),
+});
 
 type NotesTranslateParams = {
 	noteId: string;
@@ -730,23 +724,19 @@ export async function handleHonoApiNotesTranslate(
 	};
 }
 
-const usersNotesParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		withReplies: { type: 'boolean', default: false },
-		withRenotes: { type: 'boolean', default: true },
-		withChannelNotes: { type: 'boolean', default: false },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		allowPartial: { type: 'boolean', default: false },
-		withFiles: { type: 'boolean', default: false },
-	},
-	required: ['userId'],
-} as const;
+const usersNotesParamDef = z.object({
+	userId: misskeyId(),
+	withReplies: z.boolean().default(false),
+	withRenotes: z.boolean().default(true),
+	withChannelNotes: z.boolean().default(false),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	allowPartial: z.boolean().default(false),
+	withFiles: z.boolean().default(false),
+});
 
 type UsersNotesParams = {
 	userId: string;

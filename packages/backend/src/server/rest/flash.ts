@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { flashLikeExistsInDatabase, listFlashLikesByUserIdFromDatabase, listLikedFlashIdsByUserIdFromDatabase } from '@/core/FlashLikeStore.js';
 import {
 	createFlashInDatabase,
@@ -19,6 +20,7 @@ import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser, MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from './error.js';
@@ -28,20 +30,14 @@ import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiFlashDependencies = HonoApiRolePolicyDependencies & UserPackingDependencies;
 
-const flashUpdateParamDef = {
-	type: 'object',
-	properties: {
-		flashId: { type: 'string', format: 'misskey:id' },
-		title: { type: 'string' },
-		summary: { type: 'string' },
-		script: { type: 'string' },
-		permissions: { type: 'array', items: {
-			type: 'string',
-		} },
-		visibility: { type: 'string', enum: ['public', 'private'] },
-	},
-	required: ['flashId'],
-} as const;
+const flashUpdateParamDef = z.object({
+	flashId: misskeyId(),
+	title: z.string().optional(),
+	summary: z.string().optional(),
+	script: z.string().optional(),
+	permissions: z.array(z.string()).optional(),
+	visibility: z.enum(['public', 'private']).optional(),
+});
 
 type FlashUpdateParams = {
 	flashId: string;
@@ -125,17 +121,13 @@ export async function packFlashManyForHonoApi(
 	})));
 }
 
-const flashCreateParamDef = {
-	type: 'object',
-	properties: {
-		title: { type: 'string' },
-		summary: { type: 'string' },
-		script: { type: 'string' },
-		permissions: { type: 'array', items: { type: 'string' } },
-		visibility: { type: 'string', enum: ['public', 'private'], default: 'public' },
-	},
-	required: ['title', 'summary', 'script', 'permissions'],
-} as const;
+const flashCreateParamDef = z.object({
+	title: z.string(),
+	summary: z.string(),
+	script: z.string(),
+	permissions: z.array(z.string()),
+	visibility: z.enum(['public', 'private']).optional().default('public'),
+});
 
 type FlashCreateParams = {
 	title: string;
@@ -165,13 +157,9 @@ export async function handleHonoApiFlashCreate(
 	return await packFlashForHonoApi(deps, flash);
 }
 
-const flashDeleteParamDef = {
-	type: 'object',
-	properties: {
-		flashId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['flashId'],
-} as const;
+const flashDeleteParamDef = z.object({
+	flashId: misskeyId(),
+});
 
 type FlashDeleteParams = {
 	flashId: string;
@@ -205,14 +193,10 @@ export async function handleHonoApiFlashDelete(
 	}
 }
 
-const flashFeaturedParamDef = {
-	type: 'object',
-	properties: {
-		offset: { type: 'integer', minimum: 0, default: 0 },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: [],
-} as const;
+const flashFeaturedParamDef = z.object({
+	offset: z.number().int().min(0).optional().default(0),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+});
 
 type FlashFeaturedParams = {
 	offset: number;
@@ -233,17 +217,13 @@ export async function handleHonoApiFlashFeatured(
 	return await packFlashManyForHonoApi(deps, result, me);
 }
 
-const flashMyParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const flashMyParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type FlashMyParams = {
 	limit: number;
@@ -271,18 +251,14 @@ export async function handleHonoApiFlashMy(
 	return await packFlashManyForHonoApi(deps, flashes);
 }
 
-const flashMyLikesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		search: { type: 'string', minLength: 1, maxLength: 100, nullable: true },
-	},
-	required: [],
-} as const;
+const flashMyLikesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	search: z.string().min(1).max(100).nullable().optional(),
+});
 
 type FlashMyLikesParams = {
 	limit: number;
@@ -336,18 +312,14 @@ export async function handleHonoApiFlashMyLikes(
 	})));
 }
 
-const flashSearchParamDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string', minLength: 1, maxLength: 100 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 5 },
-	},
-	required: ['query'],
-} as const;
+const flashSearchParamDef = z.object({
+	query: z.string().min(1).max(100),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(5),
+});
 
 type FlashSearchParams = {
 	query: string;
@@ -377,13 +349,9 @@ export async function handleHonoApiFlashSearch(
 	return await packFlashManyForHonoApi(deps, result, me);
 }
 
-const flashShowParamDef = {
-	type: 'object',
-	properties: {
-		flashId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['flashId'],
-} as const;
+const flashShowParamDef = z.object({
+	flashId: misskeyId(),
+});
 
 type FlashShowParams = {
 	flashId: string;
@@ -403,18 +371,14 @@ export async function handleHonoApiFlashShow(
 	return await packFlashForHonoApi(deps, flash, me);
 }
 
-const usersFlashsParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['userId'],
-} as const;
+const usersFlashsParamDef = z.object({
+	userId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type UsersFlashsParams = {
 	userId: string;

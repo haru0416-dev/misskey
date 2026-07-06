@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import {
 	createAvatarDecorationWithSideEffects,
 	deleteAvatarDecorationWithSideEffects,
@@ -17,6 +18,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
@@ -39,55 +41,35 @@ type AdminAvatarDecoration = {
 	category: string | null;
 };
 
-const adminAvatarDecorationsCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1 },
-		description: { type: 'string' },
-		url: { type: 'string', minLength: 1 },
-		roleIdsThatCanBeUsedThisDecoration: { type: 'array', items: {
-			type: 'string',
-		} },
-		category: { type: 'string', nullable: true },
-	},
-	required: ['name', 'description', 'url'],
-} as const;
+const adminAvatarDecorationsCreateParamDef = z.object({
+	name: z.string().min(1),
+	description: z.string(),
+	url: z.string().min(1),
+	roleIdsThatCanBeUsedThisDecoration: z.array(z.string()).optional(),
+	category: z.string().nullable().optional(),
+});
 
-const adminAvatarDecorationsDeleteParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminAvatarDecorationsDeleteParamDef = z.object({
+	id: misskeyId(),
+});
 
-const adminAvatarDecorationsListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		userId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: [],
-} as const;
+const adminAvatarDecorationsListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	userId: misskeyId().nullable().optional(),
+});
 
-const adminAvatarDecorationsUpdateParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1 },
-		description: { type: 'string' },
-		url: { type: 'string', minLength: 1 },
-		roleIdsThatCanBeUsedThisDecoration: { type: 'array', items: {
-			type: 'string',
-		} },
-		category: { type: 'string', nullable: true },
-	},
-	required: ['id'],
-} as const;
+const adminAvatarDecorationsUpdateParamDef = z.object({
+	id: misskeyId(),
+	name: z.string().min(1).optional(),
+	description: z.string().optional(),
+	url: z.string().min(1).optional(),
+	roleIdsThatCanBeUsedThisDecoration: z.array(z.string()).optional(),
+	category: z.string().nullable().optional(),
+});
 
 
 function packAdminAvatarDecorationForHonoApi(

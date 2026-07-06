@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { Config } from '@/config.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
 import { resolveHonoApiIdPagination } from './following.js';
@@ -27,20 +28,16 @@ type HonoApiModerationLogResponse = {
 	user: UserDetailedNotMeHonoApiResponse;
 };
 
-const adminShowModerationLogsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		type: { type: 'string', nullable: true },
-		userId: { type: 'string', format: 'misskey:id', nullable: true },
-		search: { type: 'string', nullable: true },
-	},
-	required: [],
-} as const;
+const adminShowModerationLogsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	type: z.string().nullable().optional(),
+	userId: misskeyId().nullable().optional(),
+	search: z.string().nullable().optional(),
+});
 
 
 async function packModerationLogsForHonoApi(

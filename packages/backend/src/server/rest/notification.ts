@@ -5,6 +5,7 @@
 
 import { ReplyError, type Redis } from 'ioredis';
 import { setTimeout as delay } from 'node:timers/promises';
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -128,15 +129,11 @@ type HonoPackedAppNotification = {
 	icon: string | null;
 };
 
-const notificationsCreateParamDef = {
-	type: 'object',
-	properties: {
-		body: { type: 'string' },
-		header: { type: 'string', nullable: true },
-		icon: { type: 'string', nullable: true },
-	},
-	required: ['body'],
-} as const;
+const notificationsCreateParamDef = z.object({
+	body: z.string(),
+	header: z.string().nullable().optional(),
+	icon: z.string().nullable().optional(),
+});
 
 type NotificationsCreateParams = {
 	body: string;
@@ -144,13 +141,9 @@ type NotificationsCreateParams = {
 	icon?: string | null;
 };
 
-const claimAchievementParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', enum: ACHIEVEMENT_TYPES },
-	},
-	required: ['name'],
-} as const;
+const claimAchievementParamDef = z.object({
+	name: z.enum(ACHIEVEMENT_TYPES),
+});
 
 type ClaimAchievementParams = {
 	name: typeof ACHIEVEMENT_TYPES[number];
