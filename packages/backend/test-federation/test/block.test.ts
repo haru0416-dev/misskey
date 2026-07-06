@@ -37,8 +37,10 @@ describe('Block', () => {
 			strictEqual(followers.length, 0);
 		});
 
-		// FIXME: this is invalid case
-		test('Cannot follow even if unblocked', async () => {
+		// NOTE: upstream では Undo(Block) の連合が機能せず「解除後もブロックされたまま」になる既知バグを
+		// FIXME 付きで固定化していたが、本ポートはブロック解除が正しく連合されるため、
+		// upstream が test.skip で同梱していた本来の期待値 (下の 'Can follow if unblocked') を有効化する
+		test.skip('Cannot follow even if unblocked', async () => {
 			// unblock here
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
@@ -53,7 +55,7 @@ describe('Block', () => {
 			);
 		});
 
-		test.skip('Can follow if unblocked', async () => {
+		test('Can follow if unblocked', async () => {
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
 
@@ -160,8 +162,9 @@ describe('Block', () => {
 			);
 		});
 
-		// FIXME: this is invalid case
-		test('Cannot reaction even if unblocked', async () => {
+		// NOTE: 上の follow と同様、本ポートではブロック解除が正しく連合されるため FIXME ケースを skip し
+		// upstream が test.skip で同梱していた本来の期待値を有効化する
+		test.skip('Cannot reaction even if unblocked', async () => {
 			// unblock here
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
@@ -179,13 +182,14 @@ describe('Block', () => {
 			);
 		});
 
-		test.skip('Can reaction if unblocked', async () => {
+		test('Can reaction if unblocked', async () => {
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
 			await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' });
+			await sleep();
 
 			const _note = await alice.client.request('notes/show', { noteId: note.id });
 			deepStrictEqual(_note.reactions, { '😅': 1 });

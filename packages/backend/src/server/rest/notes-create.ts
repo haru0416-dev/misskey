@@ -65,9 +65,12 @@ import { addNoteToAntennasForHonoApi } from './antennas.js';
 import { HonoApiError } from './error.js';
 import { deliverNoteActivityForHonoApi, renderNoteOrRenoteActivityForHonoApi, resolveRemoteRecipientForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
 import { packNoteForHonoApi, isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import type { Packed } from '@/misc/json-schema.js';
+import type { MiNotification } from '@/models/Notification.js';
+import { getHonoApiRolePolicies, getHonoApiUserRoles, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import { packNotificationsForHonoApi, type HonoApiNotificationsListDependencies } from './notifications-list.js';
 import { xaddHonoApiNotification, type HonoApiNotificationDependencies } from './notification.js';
-import type { HonoApiAntennaStreamPublisher, HonoApiMainStreamPublisher, HonoApiNotesStreamPublisher } from './events.js';
+import type { HonoApiAntennaStreamPublisher, HonoApiMainStreamPublisher, HonoApiNotesStreamPublisher, HonoApiRoleTimelineStreamPublisher } from './events.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -87,6 +90,7 @@ export type HonoApiNotesCreateDependencies =
 		publishNotesStream?: HonoApiNotesStreamPublisher;
 		publishMainStream?: HonoApiMainStreamPublisher;
 		publishAntennaStream?: HonoApiAntennaStreamPublisher;
+		publishRoleTimelineStream?: HonoApiRoleTimelineStreamPublisher;
 	};
 
 function isSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: string | null): boolean {
@@ -199,7 +203,7 @@ function pushFanoutTimelineForHonoApi(deps: HonoApiNotesCreateDependencies, tl: 
 }
 
 export async function createNoteNotificationForHonoApi(
-	deps: HonoApiNotificationDependencies,
+	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
 	notifieeId: MiUser['id'],
 	notifierId: MiUser['id'],
 	type: 'mention' | 'reply' | 'renote' | 'quote' | 'note' | 'reaction',
@@ -240,7 +244,13 @@ export async function createNoteNotificationForHonoApi(
 		...extra,
 	};
 	await xaddHonoApiNotification(deps, notifieeId, notification);
-	deps.publishMainStream?.(notifieeId, 'notification', notification);
+
+	// 原典 NotificationService と同じく、mainStream には pack済みの通知 (user/note が埋まった形) を流す。
+	// 生の保存形 (notifierId/noteId のみ) を流すとクライアントは通知を表示できない
+	const [packed] = await packNotificationsForHonoApi(deps, [notification as unknown as MiNotification], notifieeId);
+	if (packed != null) {
+		deps.publishMainStream?.(notifieeId, 'notification', packed);
+	}
 }
 
 type NotificationType = 'reply' | 'renote' | 'quote' | 'mention';
@@ -539,6 +549,9 @@ export async function postNoteCreatedForHonoApi(
 
 		deps.publishNotesStream?.(noteObj);
 
+		// 原典 NoteCreateService と同じく、投稿者の保持ロールのタイムラインへ配信する (awaitしない)
+		void addNoteToRoleTimelinesForHonoApi(deps, noteObj).catch(() => {});
+
 		void enqueueUserWebhookForHonoApi(deps, user.id, 'note', noteObj);
 
 		const nm = new HonoNotificationManager(user, note);
@@ -610,6 +623,20 @@ export async function postNoteCreatedForHonoApi(
 			if (count === 1) void incrementChannelUsersCountInDatabase(deps.db, data.channel!.id);
 		}).catch(() => {});
 	}
+}
+
+/** RoleService.addNoteToRoleTimeline 相当。投稿者の保持ロール (コンディショナル含む) のタイムラインへfanoutし、roleTimelineStream を配信する。 */
+async function addNoteToRoleTimelinesForHonoApi(deps: HonoApiNotesCreateDependencies, noteObj: Packed<'Note'>): Promise<void> {
+	const user = await fetchUserByIdOrFailFromDatabase(deps.db, noteObj.userId);
+	const roles = await getHonoApiUserRoles(deps, user);
+	if (roles.length === 0) return;
+
+	const r = deps.redisForTimelines.pipeline();
+	for (const role of roles) {
+		pushFanoutTimelineForHonoApi(deps, `roleTimeline:${role.id}`, noteObj.id, 1000, r);
+		deps.publishRoleTimelineStream?.(role.id, 'note', noteObj);
+	}
+	await r.exec();
 }
 
 async function pushNoteToFanoutTimelinesForHonoApi(deps: HonoApiNotesCreateDependencies, note: MiNote, user: { id: MiUser['id']; host: MiUser['host'] }): Promise<void> {

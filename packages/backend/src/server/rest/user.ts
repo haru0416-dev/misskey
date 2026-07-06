@@ -42,7 +42,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from './error.js';
-import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import { packNoteManyForHonoApi, populateEmojis, type HonoApiNoteDependencies } from './note.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
 import { getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiAdministrator, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
@@ -86,6 +86,7 @@ function packUserLiteCoreForHonoApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	avatarDecorations: HonoApiAvatarDecorationLite[],
+	emojis: Record<string, string>,
 ): Packed<'UserLite'> {
 	return {
 		id: user.id,
@@ -101,7 +102,7 @@ function packUserLiteCoreForHonoApi(
 		makeNotesFollowersOnlyBefore: user.makeNotesFollowersOnlyBefore ?? undefined,
 		makeNotesHiddenBefore: user.makeNotesHiddenBefore ?? undefined,
 		instance: undefined,
-		emojis: {},
+		emojis,
 		onlineStatus: getOnlineStatus(user),
 		badgeRoles: [],
 	};
@@ -142,8 +143,9 @@ export async function packUserLiteForHonoApi(
 ): Promise<Packed<'UserLite'>> {
 	const user = typeof src === 'object' ? src : await fetchUserByIdOrFailFromDatabase(deps.db, src);
 	const avatarDecorations = await buildHonoApiAvatarDecorations(deps, [user]);
+	const emojis = await populateEmojis(deps, user.emojis, user.host);
 
-	return packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? []);
+	return packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? [], emojis);
 }
 
 /** srcs (MiUser本体 or ID) を MiUser[] に解決する。バッチ取得で見つからなかったIDは1件ずつ fetchUserByIdOrFailFromDatabase にフォールバックする (見つからなければ throw)。 */
@@ -166,8 +168,9 @@ export async function packUserLiteManyForHonoApi(
 ): Promise<Packed<'UserLite'>[]> {
 	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
 	const avatarDecorations = await buildHonoApiAvatarDecorations(deps, users);
+	const emojisPerUser = await Promise.all(users.map(user => populateEmojis(deps, user.emojis, user.host)));
 
-	return users.map(user => packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? []));
+	return users.map((user, i) => packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? [], emojisPerUser[i]!));
 }
 
 type UserRelationForPack = Awaited<ReturnType<typeof getUserRelationForHonoApi>>;
@@ -339,7 +342,7 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		makeNotesFollowersOnlyBefore: user.makeNotesFollowersOnlyBefore ?? undefined,
 		makeNotesHiddenBefore: user.makeNotesHiddenBefore ?? undefined,
 		instance: undefined,
-		emojis: {},
+		emojis: await populateEmojis(deps, user.emojis, user.host),
 		onlineStatus: getOnlineStatus(user),
 		badgeRoles: extras.badgeRoles,
 		url: profile.url,
@@ -449,7 +452,7 @@ export async function packMeDetailedForHonoApi(
 		makeNotesFollowersOnlyBefore: user.makeNotesFollowersOnlyBefore ?? undefined,
 		makeNotesHiddenBefore: user.makeNotesHiddenBefore ?? undefined,
 		instance: undefined,
-		emojis: {},
+		emojis: await populateEmojis(deps, user.emojis, user.host),
 		onlineStatus: getOnlineStatus(user),
 		badgeRoles: extras.badgeRoles,
 		url: profile.url,

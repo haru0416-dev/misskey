@@ -371,9 +371,12 @@ async function processRemoteMoveForHonoApi(deps: HonoApiUpdatePersonDependencies
  *   更新されなくなるが、プロフィール本体の更新という本エンドポイントの主目的には影響しない。
  * - cacheService.uriPersonCache の更新: プロセス内メモリキャッシュのため省略 (既存の移行方針と同様)。
  */
-export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependencies, uri: string, exist: MiRemoteUser, movePreventUris: string[] = []): Promise<void> {
+export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependencies, uri: string, exist: MiRemoteUser, movePreventUris: string[] = [], hint?: IObject): Promise<void> {
 	const history = new Set<string>();
-	const object = await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
+	// 原典 ApPersonService.updatePerson と同じく、Update activity に埋め込まれた
+	// オブジェクトが渡されていれば再フェッチしない (中間キャッシュ (nginx等) が
+	// 古い Person を返すと更新が反映されないため、hint の利用は正しさに直結する)
+	const object = hint ?? await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
 
 	const person = validateActorForHonoApi(deps.config, object, uri);
 
