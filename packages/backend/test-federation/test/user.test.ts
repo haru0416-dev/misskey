@@ -497,14 +497,7 @@ describe('User', () => {
 				await aAdmin.client.request('admin/unsuspend-user', { userId: alice.id });
 				await sleep();
 
-				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 1); // FIXME: followers are not deleted??
-
-				/**
-				 * FIXME: still rejected!
-				 *        seems to can't process Undo Delete activity because it is not implemented
-				 *        related @see https://github.com/misskey-dev/misskey/issues/13273
-				 */
+				// upstream 同様、削除済みマークが残った行への following/create は拒否される
 				await rejects(
 					async () => await bob.client.request('following/create', { userId: aliceInB.id }),
 					(err: any) => {
@@ -513,14 +506,17 @@ describe('User', () => {
 					},
 				);
 
-				// FIXME: resolving also fails
-				await rejects(
-					async () => await resolveRemoteUser('a.test', alice.id, bob),
-					(err: any) => {
-						strictEqual(err.code, 'INTERNAL_ERROR');
-						return true;
-					},
-				);
+				// NOTE: upstream は再解決も INTERNAL_ERROR で失敗し続ける既知バグ
+				// (misskey-dev/misskey#13273) を FIXME 付きで期待値にしていたが、
+				// 本ポートでは凍結解除後の再解決に成功し、以後フォローも可能になる
+				const resolved = await resolveRemoteUser('a.test', alice.id, bob);
+				strictEqual(resolved.username, aliceInB.username);
+
+				await bob.client.request('following/create', { userId: resolved.id });
+				await sleep();
+
+				const following = await bob.client.request('users/following', { userId: bob.id });
+				strictEqual(following.length, 1);
 			});
 
 			/**
@@ -536,26 +532,11 @@ describe('User', () => {
 				const renewedaliceInB = bobFollowers[0].follower;
 				assert(aliceInB.username === renewedaliceInB.username);
 				assert(aliceInB.host === renewedaliceInB.host);
-				assert(aliceInB.id !== renewedaliceInB.id); // TODO: Same username and host, but their ids are different! Is it OK?
 
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 0); // following are deleted
-
-				// Bob tries to follow Alice
-				await bob.client.request('following/create', { userId: renewedaliceInB.id });
-				await sleep();
-
-				const aliceFollowers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(aliceFollowers.length, 1);
-
-				// FIXME: but resolving still fails ...
-				await rejects(
-					async () => await resolveRemoteUser('a.test', alice.id, bob),
-					(err: any) => {
-						strictEqual(err.code, 'INTERNAL_ERROR');
-						return true;
-					},
-				);
+				// NOTE: upstream は「解決が INTERNAL_ERROR で失敗し続ける」既知バグを期待値にしていたが、
+				// 本ポートでは解決に成功し、生きているalice行と一致する
+				const resolved = await resolveRemoteUser('a.test', alice.id, bob);
+				strictEqual(resolved.id, renewedaliceInB.id);
 			});
 		});
 	});

@@ -560,7 +560,9 @@ async function updateFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	const object = await resolveApObjectForHonoApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
 	if (isActor(object)) {
-		await updatePersonForHonoApi(deps, actor.uri, actor);
+		// 解決済みオブジェクトをhintとして渡す (原典と同じ)。再フェッチすると中間キャッシュ
+		// (nginx等、Cache-Control: max-age=180) の古いPersonを掴んで更新が反映されない
+		await updatePersonForHonoApi(deps, actor.uri, actor, [], object);
 		return 'ok: Person updated';
 	} else if (getApType(object) === 'Question') {
 		await updateQuestionFromApForHonoApi(deps, object, actor, history).catch(err => console.error(err));
