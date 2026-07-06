@@ -31,6 +31,7 @@
 - Fix: Hono サーバーで API のエラー応答に `WWW-Authenticate: Bearer ... error="invalid_request"` ヘッダが付与されず、`Authorization` ヘッダのスキーム名 (`Bearer`) の大文字小文字を区別していなかった問題を修正
 - Enhance: 非公開の Pages / Play のタイトル等メタ情報が未ログイン閲覧者向けページ HTML に含まれないように (公開のもののみ SSR する)
 - Fix: ドライブファイルの accessKey が欠損しているレコードを削除する際に、リクエスト全体が 500 エラーになる問題を修正
+- Fix: Hono サーバーがビルド済みフロントエンドアセット (`/vite/`, `/embed_vite/`) を配信せず、クライアントが `APP_IMPORT` エラーで一切起動できなかった問題を修正
 
 ## 2026.6.1
 

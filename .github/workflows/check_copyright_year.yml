@@ -6,6 +6,10 @@ on:
       - master
       - develop
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check_copyright_year:
     runs-on: ubuntu-latest

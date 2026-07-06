@@ -12,6 +12,10 @@ on:
     paths:
       - packages/backend/**
       - .github/workflows/validate-api-json.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-api-json:
     runs-on: ubuntu-latest

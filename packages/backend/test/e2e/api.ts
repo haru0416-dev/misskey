@@ -7,12 +7,13 @@ process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import { describe, beforeAll, test } from 'vitest';
-import { IncomingMessage } from 'node:http';
+import * as http from 'node:http';
+import type { IncomingMessage } from 'node:http';
 import {
 	api,
-	connectStream,
 	createAppToken,
 	failedApiCall,
+	port,
 	relativeFetch,
 	signup,
 	successfulApiCall,
@@ -20,6 +21,32 @@ import {
 	waitFire,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
+
+/** /streaming へのWebSocketアップグレード要求を送り、拒否時のHTTPレスポンスを返す */
+function requestStreamingUpgrade(headers: Record<string, string>): Promise<IncomingMessage> {
+	return new Promise((resolve, reject) => {
+		const req = http.get({
+			host: '127.0.0.1',
+			port,
+			path: '/streaming',
+			headers: {
+				...headers,
+				'Connection': 'Upgrade',
+				'Upgrade': 'websocket',
+				'Sec-WebSocket-Version': '13',
+				'Sec-WebSocket-Key': Buffer.from('0123456789abcdef').toString('base64'),
+			},
+		}, (res) => {
+			res.resume();
+			resolve(res);
+		});
+		req.on('upgrade', (res, socket) => {
+			socket.destroy();
+			reject(new Error(`unexpected upgrade success (status ${res.statusCode})`));
+		});
+		req.on('error', reject);
+	});
+}
 
 describe('API', () => {
 	let alice: misskey.entities.SignupResponse;
@@ -230,18 +257,12 @@ describe('API', () => {
 			});
 
 			test('streaming', async () => {
-				await assert.rejects(connectStream(
-					{
-						token: 'syuilo',
-						bearer: true,
-					},
-					'homeTimeline',
-					() => { },
-				), (err: IncomingMessage) => {
-					assert.strictEqual(err.statusCode, 401);
-					assert.ok(err.headers['www-authenticate']?.startsWith('Bearer realm="Misskey", error="invalid_token", error_description'));
-					return true;
-				});
+				// Bunランタイムのws互換実装は 'unexpected-response' イベントを発火しないため、
+				// connectStreamの失敗経由では401応答を観測できない (Promiseが永久に未解決になる)。
+				// アップグレード要求への拒否応答はnode:httpで直接検証する
+				const res = await requestStreamingUpgrade({ Authorization: 'Bearer syuilo' });
+				assert.strictEqual(res.statusCode, 401);
+				assert.ok(res.headers['www-authenticate']?.startsWith('Bearer realm="Misskey", error="invalid_token", error_description'));
 			});
 		});
 
