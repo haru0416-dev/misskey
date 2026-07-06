@@ -8,7 +8,12 @@ import { URL } from 'node:url';
 import { promisify } from 'node:util';
 import { Inject, Injectable } from '@nestjs/common';
 import * as htmlParser from 'node-html-parser';
-import { RsaKeyPair } from 'slacc';
+import { Signer } from 'slacc';
+import type { SignatureAlgorithmIdentifier } from 'slacc';
+
+// slacc の SignatureAlgorithmIdentifier は ambient const enum のため isolatedModules 下では値として import できない。
+// 値自体は enum メンバー名と同じ文字列なので、型だけ import してリテラルをそのまま渡す。
+const RSA_2048_8192 = 'Rsa2048_8192' as SignatureAlgorithmIdentifier;
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
@@ -95,7 +100,8 @@ export class ApRequestCreator {
 
 	static async #signToRequest(request: Request, key: PrivateKey, includeHeaders: string[]): Promise<Signed> {
 		const signingString = this.#genSigningString(request, includeHeaders);
-		const sign = promisify(RsaKeyPair.prototype.sign).bind(RsaKeyPair.fromPem(key.privateKeyPem));
+		const signer = Signer.fromPkcs8Pem(RSA_2048_8192, key.privateKeyPem);
+		const sign = promisify(signer.signRaw).bind(signer);
 		const signature = (await sign(Buffer.from(signingString))).toString('base64');
 		const signatureHeader = `keyId="${key.keyId}",algorithm="rsa-sha256",headers="${includeHeaders.join(' ')}",signature="${signature}"`;
 
