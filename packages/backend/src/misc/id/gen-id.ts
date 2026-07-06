@@ -10,6 +10,7 @@ import { genAidx } from './aidx.js';
 import { genMeid } from './meid.js';
 import { genMeidg } from './meidg.js';
 import { genObjectId } from './object-id.js';
+import { genUuidv7 } from './uuidv7.js';
 
 export function genId(config: Pick<Config, 'id'>, time?: number): string {
 	const t = (!time || (time > Date.now())) ? Date.now() : time;
@@ -21,6 +22,7 @@ export function genId(config: Pick<Config, 'id'>, time?: number): string {
 		case 'meidg': return genMeidg(t);
 		case 'ulid': return ulid(t);
 		case 'objectid': return genObjectId(t);
+		case 'uuidv7': return genUuidv7(t);
 		default: throw new Error('unrecognized id generation method');
 	}
 }

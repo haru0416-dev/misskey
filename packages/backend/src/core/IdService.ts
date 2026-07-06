@@ -13,6 +13,7 @@ import { isSafeMeidgT, parseMeidgFull } from '@/misc/id/meidg.js';
 import { isSafeObjectIdT, parseObjectIdFull } from '@/misc/id/object-id.js';
 import { bindThis } from '@/decorators.js';
 import { parseUlidFull } from '@/misc/id/ulid.js';
+import { isSafeUuidv7T, parseUuidv7Full } from '@/misc/id/uuidv7.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 
@@ -36,6 +37,7 @@ export class IdService {
 			case 'meidg': return isSafeMeidgT(t);
 			case 'ulid': return t > 0;
 			case 'objectid': return isSafeObjectIdT(t);
+			case 'uuidv7': return isSafeUuidv7T(t);
 			default: throw new Error('unrecognized id generation method');
 		}
 	}
@@ -64,6 +66,7 @@ export class IdService {
 			case 'meid': return parseMeidFull(id);
 			case 'meidg': return parseMeidgFull(id);
 			case 'ulid': return parseUlidFull(id);
+			case 'uuidv7': return parseUuidv7Full(id);
 			default: throw new Error('unrecognized id generation method');
 		}
 	}
