@@ -5,10 +5,10 @@
 
 import { createPublicKey } from 'node:crypto';
 import { domainToASCII } from 'node:url';
-import RE2 from 're2';
 import * as mfm from 'mfm-js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
+import RE2 from '@/misc/re2.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
