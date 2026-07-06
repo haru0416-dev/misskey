@@ -54,27 +54,16 @@ on:
       - package.json
       - scripts/**
       - .github/workflows/lint.yml
-jobs:
-  bun_install:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
-          submodules: true
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2.2.0
-        with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   oxlint:
-    needs: [bun_install]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
         with:
-          fetch-depth: 0
           submodules: true
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.2.0
@@ -84,12 +73,10 @@ jobs:
       - run: bun run lint:ox
 
   oxfmt:
-    needs: [bun_install]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
         with:
-          fetch-depth: 0
           submodules: true
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.2.0
@@ -99,7 +86,6 @@ jobs:
       - run: bun run format:ox:check
 
   typecheck:
-    needs: [bun_install]
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
@@ -112,7 +98,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
         with:
-          fetch-depth: 0
           submodules: true
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.2.0

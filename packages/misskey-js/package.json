@@ -26,7 +26,7 @@
 		"api-prod": "api-extractor run --verbose",
 		"typecheck": "tsgo --noEmit",
 		"lint": "bun run --bun typecheck",
-		"vitest": "vitest run --coverage",
+		"vitest": "vitest run",
 		"test": "bun run --bun vitest && bun run --bun tsd",
 		"update-autogen-code": "bun run --filter misskey-js-type-generator generate && rm -rf src/autogen && cp -R generator/built/autogen src/autogen"
 	},
