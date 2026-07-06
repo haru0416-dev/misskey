@@ -6,7 +6,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Response } from 'node-fetch';
 import {
 	CaptchaError,
 	CaptchaErrorCode,
@@ -16,6 +15,7 @@ import {
 } from '@/core/CaptchaService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestSendResponse } from '@/core/HttpRequestService.js';
 import { MetaService } from '@/core/MetaService.js';
 import { MiMeta } from '@/models/Meta.js';
 import { LoggerService } from '@/core/LoggerService.js';
@@ -68,14 +68,14 @@ describe('CaptchaService', () => {
 			ok: true,
 			status: 200,
 			json: async () => (result),
-		} as Response);
+		} as unknown as HttpRequestSendResponse);
 	}
 
 	function failureHttpMock() {
 		httpRequestService.send.mockResolvedValue({
 			ok: false,
 			status: 400,
-		} as Response);
+		} as unknown as HttpRequestSendResponse);
 	}
 
 	function failureVerificationMock(result: object) {
@@ -83,7 +83,7 @@ describe('CaptchaService', () => {
 			ok: true,
 			status: 200,
 			json: async () => (result),
-		} as Response);
+		} as unknown as HttpRequestSendResponse);
 	}
 
 	async function testCaptchaError(code: CaptchaErrorCode, test: () => Promise<void>) {
