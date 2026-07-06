@@ -17,6 +17,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { emoji } from '@/db/schema/emoji.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { createDriveFileInDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
 import { insertEmojiInDatabase, fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
@@ -88,6 +89,9 @@ describe('hono-queue-emojis', () => {
 	});
 
 	afterAll(async () => {
+		// export/importテストで作成したhost: nullの絵文字を残すと、
+		// 後続で実行される他のテストファイル (CustomEmojiService等) の全件カウントを汚染する
+		await runtime.db.delete(emoji);
 		await runtime.dispose();
 	});
 
