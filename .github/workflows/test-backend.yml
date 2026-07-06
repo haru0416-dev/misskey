@@ -11,6 +11,8 @@ on:
       - packages/misskey-js/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml
+      - bun.lock
+      - package.json
   pull_request:
     paths:
       - packages/backend/**
@@ -18,12 +20,19 @@ on:
       - packages/misskey-js/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml
+      - bun.lock
+      - package.json
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unit:
     name: Unit tests (backend)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:18
@@ -61,7 +70,9 @@ jobs:
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config
       - name: Build
-        run: bun run build
+        # backend単体テストにフロントエンドのviteビルドは不要。backendが参照する
+        # i18n / misskey-js だけをビルドする (backend本体はテストスクリプトがビルドする)
+        run: bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Test
         run: bun run --bun --filter backend test-and-coverage
       - name: Upload to Codecov
@@ -73,6 +84,7 @@ jobs:
   e2e:
     name: E2E tests (backend)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:18
@@ -112,6 +124,7 @@ jobs:
   migration:
     name: Migration tests (backend)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:18
@@ -138,7 +151,8 @@ jobs:
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config
       - name: Build
-        run: bun run build
+        # migration実行に必要なのはbackendとその依存のみ
+        run: bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Run migrations
         run: MISSKEY_CONFIG_YML=test.yml bun run --bun --filter backend migrate
       - name: Check no migrations are remaining

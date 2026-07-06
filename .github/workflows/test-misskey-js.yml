@@ -13,6 +13,10 @@ on:
     paths:
       - packages/misskey-js/**
       - .github/workflows/test-misskey-js.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Unit tests (misskey.js)

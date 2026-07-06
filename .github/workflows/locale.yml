@@ -1,4 +1,4 @@
-name: Lint
+name: Lint (locale)
 
 on:
   push:
@@ -11,6 +11,10 @@ on:
       - packages/i18n/**
       - locales/**
       - .github/workflows/locale.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   locale_verify:
     runs-on: ubuntu-latest
