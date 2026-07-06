@@ -15,6 +15,7 @@ import { parseMeidFull } from '@/misc/id/meid.js';
 import { parseMeidgFull } from '@/misc/id/meidg.js';
 import { parseObjectIdFull } from '@/misc/id/object-id.js';
 import { parseUlidFull } from '@/misc/id/ulid.js';
+import { parseUuidv7Full } from '@/misc/id/uuidv7.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
@@ -163,6 +164,7 @@ function parseIdFull(config: Config, id: string): { date: number; additional: bi
 		case 'meid': return parseMeidFull(id);
 		case 'meidg': return parseMeidgFull(id);
 		case 'ulid': return parseUlidFull(id);
+		case 'uuidv7': return parseUuidv7Full(id);
 		default: throw new Error('unrecognized id generation method');
 	}
 }

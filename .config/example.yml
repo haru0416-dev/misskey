@@ -289,11 +289,12 @@ fulltextSearch:
 # meid ... Similar to ObjectID, Millisecond accuracy
 # ulid ... Millisecond accuracy
 # objectid ... This is left for backward compatibility
+# uuidv7 ... UUIDv7 (RFC 9562), hex without hyphens, Millisecond accuracy
 
 # ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
 # ID SETTINGS AFTER THAT!
 
-id: 'aidx'
+id: 'uuidv7'
 
 #   ┌────────────────┐
 #───┘ Error tracking └──────────────────────────────────────────

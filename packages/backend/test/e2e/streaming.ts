@@ -11,7 +11,7 @@ import { WebSocket } from 'ws';
 import { loadConfig } from '@/config.js';
 import { createFollowingInDatabase } from '@/core/FollowingStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { genAidx } from '@/misc/id/aidx.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { api, createAppToken, initTestDb, port, post, signup, waitFire, type UserToken } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -22,7 +22,7 @@ describe('Streaming', () => {
 
 	const follow = async (follower: any, followee: any) => {
 		await createFollowingInDatabase(db, {
-			id: genAidx(Date.now()),
+			id: genId(loadConfig()),
 			followerId: follower.id,
 			followeeId: followee.id,
 			followerHost: follower.host,
