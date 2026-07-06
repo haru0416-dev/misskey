@@ -6,7 +6,9 @@
 import Limiter from 'ratelimiter';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
+import type { MiUser } from '@/models/User.js';
 import { rateLimitExceededError } from './error.js';
+import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 
 export type HonoApiRateLimitDependencies = {
 	config: Config;
@@ -88,4 +90,20 @@ export async function assertHonoApiRateLimit(
 	}, actor, factor)) {
 		throw rateLimitExceededError();
 	}
+}
+
+/**
+ * 元の ApiCallService と同じく、認証済みユーザーにはロールポリシーの rateLimitFactor を適用する。
+ * factor <= 0 はレート制限なし、1 未満は緩和、1 超は強化 (duration/max に反映される)。
+ */
+export async function assertHonoApiRateLimitForUser(
+	deps: HonoApiRateLimitDependencies & HonoApiRolePolicyDependencies,
+	endpointName: string,
+	limitation: HonoApiEndpointRateLimit,
+	user: MiUser,
+): Promise<void> {
+	const factor = (await getHonoApiRolePolicies(deps, user)).rateLimitFactor;
+	if (factor <= 0) return;
+
+	await assertHonoApiRateLimit(deps, endpointName, limitation, user.id, factor);
 }

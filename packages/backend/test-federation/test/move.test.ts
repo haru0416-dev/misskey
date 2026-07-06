@@ -30,7 +30,14 @@ describe('Move', () => {
 			// Move @alice@a.test ==> @bob@b.test
 			await bob.client.request('i/update', { alsoKnownAs: [`@${alice.username}@a.test`] });
 			await alice.client.request('i/move', { moveToAccount: `@${bob.username}@b.test` });
-			await sleep();
+
+			// フォロワー移行はrelationshipキュー経由の多段処理 (follow → 配送 → Accept) のため、
+			// 固定sleepでは足りないことがある。反映されるまで有界ポーリングで待つ
+			for (let i = 0; i < 40; i++) {
+				await sleep();
+				const following = await carol.client.request('users/following', { userId: carol.id });
+				if (following.length >= 2) break;
+			}
 		});
 
 		test('Check from follower', async () => {

@@ -36,12 +36,20 @@ export type JobQueueRuntime = {
 export async function jobQueue(): Promise<JobQueueRuntime> {
 	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
 	const { createHonoQueueWorkers } = await import('../queue/worker.js');
+	const { createHonoEventPublishers } = await import('../server/rest/events.js');
 
 	const config = loadConfig();
 	const deps = await createRuntimeDependencies(config);
 	const logger = deps.loggerService.getLogger('queue', 'orange');
+	// 原典の QueueProcessorService は DI 経由で GlobalEventService (全ストリーム配信) を持っていた。
+	// publisher を渡さないと、AP受信 (inbox) で作成されたノート・通知等のストリーム配信が
+	// optional チェーンで黙って無効化され、リモート発のイベントが一切WebSocketに流れなくなる
 	const workers = createHonoQueueWorkers({
 		...deps,
+		...createHonoEventPublishers({
+			config,
+			publish: (host, message) => deps.redisForPub.publish(host, message),
+		}),
 		logger,
 	});
 

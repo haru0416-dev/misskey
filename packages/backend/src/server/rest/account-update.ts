@@ -41,6 +41,7 @@ import { isKeyWordIncludedForHonoApi } from './notes-create.js';
 import { getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { getIdenticonUrl, packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
+import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from './ap-person.js';
 
 export type HonoApiAccountUpdateDependencies =
 	HonoApiRolePolicyDependencies &
@@ -380,9 +381,12 @@ function toPunyForHonoApi(host: string): string {
 async function resolveAlsoKnownAsUserForHonoApi(deps: HonoApiAccountUpdateDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
 	const normalizedHost = host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.host) ? null : toPunyForHonoApi(host);
-	const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, username, normalizedHost);
-	if (user == null) throw iUpdateNoSuchUserError();
-	return user;
+	// 原典は RemoteUserResolveService.resolveUser — 未知のリモートユーザーはWebFingerで解決する
+	// deps の型に HonoApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
+	// (shell の実 deps は両方を満たす)
+	return await resolveUserForHonoApi(deps as unknown as HonoApiApPersonDependencies, username, normalizedHost).catch(() => {
+		throw iUpdateNoSuchUserError();
+	});
 }
 
 function getUserUriForHonoApi(config: Pick<Config, 'url'>, user: MiUser): string | null {

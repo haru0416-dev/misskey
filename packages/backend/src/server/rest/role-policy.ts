@@ -199,3 +199,16 @@ export async function isHonoApiAdministrator(
 	const roles = await getHonoApiUserRoles(deps, user);
 	return roles.some(role => role.isAdministrator);
 }
+
+/**
+ * `requiredRolePolicy` 相当のゲート判定。元の ApiCallService は
+ * `if (ep.meta.requiredRolePolicy != null && !user.isRoot)` として root を常に通していた。
+ */
+export async function hasHonoApiRolePolicyOrIsRoot(
+	deps: HonoApiRolePolicyDependencies,
+	user: MiUser,
+	policy: keyof RolePolicies,
+): Promise<boolean> {
+	if (deps.meta.rootUserId === user.id) return true;
+	return !!(await getHonoApiRolePolicies(deps, user))[policy];
+}

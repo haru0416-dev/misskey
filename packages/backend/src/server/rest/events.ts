@@ -7,6 +7,7 @@ import type { AdminEventTypes, AntennaEventTypes, BroadcastTypes, ChatEventTypes
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
+import type { MiRole } from '@/models/Role.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
@@ -66,6 +67,8 @@ export type HonoApiChatRoomStreamPublisher = <K extends keyof ChatEventTypes>(
 
 export type HonoApiNotesStreamPublisher = (note: Packed<'Note'>) => void;
 
+export type HonoApiRoleTimelineStreamPublisher = (roleId: MiRole['id'], type: 'note', value: Packed<'Note'>) => void;
+
 export type HonoApiNoteStreamPublisher = <K extends keyof NoteEventTypes>(
 	note: Pick<MiNote, 'id' | 'userId' | 'visibility' | 'visibleUserIds'>,
 	type: K,
@@ -99,6 +102,7 @@ export type HonoEventPublishers = {
 	publishChatRoomStream: HonoApiChatRoomStreamPublisher;
 	publishNotesStream: HonoApiNotesStreamPublisher;
 	publishNoteStream: HonoApiNoteStreamPublisher;
+	publishRoleTimelineStream: HonoApiRoleTimelineStreamPublisher;
 };
 
 export function createHonoEventPublishers(deps: HonoRedisEventPublisherDependencies): HonoEventPublishers {
@@ -113,6 +117,7 @@ export function createHonoEventPublishers(deps: HonoRedisEventPublisherDependenc
 		publishChatUserStream: (fromUserId, toUserId, type, value) => publishToChannel(deps, `chatUserStream:${fromUserId}-${toUserId}`, type, value),
 		publishChatRoomStream: (toRoomId, type, value) => publishToChannel(deps, `chatRoomStream:${toRoomId}`, type, value),
 		publishNotesStream: note => publishToChannel(deps, 'notesStream', null, note),
+		publishRoleTimelineStream: (roleId, type, value) => publishToChannel(deps, `roleTimelineStream:${roleId}`, type, value),
 		publishNoteStream: (note, type, value) => publishToChannel(deps, `noteStream:${note.id}`, type, {
 			id: note.id,
 			userId: note.userId,
