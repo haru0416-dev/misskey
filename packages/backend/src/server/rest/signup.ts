@@ -5,8 +5,8 @@
 
 import { domainToASCII } from 'node:url';
 import bcrypt from 'bcryptjs';
-import RE2 from 're2';
 import type { Config } from '@/config.js';
+import RE2 from '@/misc/re2.js';
 import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
 import { updateMetaInDatabase } from '@/core/MetaStore.js';
 import { fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
