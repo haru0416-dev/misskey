@@ -22,13 +22,13 @@ import { deepClone } from '@/utility/clone.js';
 //	[K in keyof T as K extends string ? K extends `${infer A}.${infer B}` ? A : K : K]: K extends `${infer A}.${infer B}` ? DottedToNested<{ [key in B]: T[K] }> : T[K];
 //};
 
-type PREF = typeof PREF_DEF;
+export type PREF = typeof PREF_DEF;
 type DefaultValues = {
-	[K in keyof PREF]: PREF[K]['default'] extends (...args: any) => infer R ? R : PREF[K]['default'];
+	[K in keyof PREF]: PREF[K]['default'] extends () => infer R ? R : PREF[K]['default'];
 };
-type ValueOf<K extends keyof PREF> = DefaultValues[K];
+export type ValueOf<K extends keyof PREF> = DefaultValues[K];
 
-type Scope = Partial<{
+export type Scope = Partial<{
 	server: string | null; // host
 	account: string | null; // userId
 	device: string | null; // 将来のため
@@ -82,7 +82,7 @@ export type PreferencesProfile = {
 };
 
 export type PossiblyNonNormalizedPreferencesProfile = Omit<PreferencesProfile, 'preferences'> & {
-	preferences: Record<string, [scope: Scope, value: any, meta: ValueMeta][]>;
+	preferences: Record<string, [scope: Scope, value: unknown, meta: ValueMeta][]>;
 };
 
 export type StorageProvider = {
@@ -93,14 +93,14 @@ export type StorageProvider = {
 	cloudSet: <K extends keyof PREF>(ctx: { key: K; scope: Scope; value: ValueOf<K>; }) => Promise<void>;
 };
 
-type PreferencesDefinitionRecord<Default, T = Default extends (...args: any) => infer R ? R : Default> = {
+type PreferencesDefinitionRecord<Default, T = Default extends () => infer R ? R : Default> = {
 	default: Default;
 	accountDependent?: boolean;
 	serverDependent?: boolean;
 	mergeStrategy?: (a: T, b: T) => T;
 };
 
-export type PreferencesDefinition = Record<string, PreferencesDefinitionRecord<any>>;
+export type PreferencesDefinition = Record<string, PreferencesDefinitionRecord<unknown>>;
 
 type PreferencesManagerEvents = {
 	'committed': <K extends keyof PREF>(ctx: {
@@ -148,7 +148,7 @@ function createEmptyProfile(): PossiblyNonNormalizedPreferencesProfile {
 }
 
 function normalizePreferences(preferences: PossiblyNonNormalizedPreferencesProfile['preferences'], account: { id: string } | null): PreferencesProfile['preferences'] {
-	const data = {} as Record<string, [scope: Scope, value: any, meta: ValueMeta][]>;
+	const data = {} as Record<string, [scope: Scope, value: unknown, meta: ValueMeta][]>;
 	for (const key in PREF_DEF) {
 		const records = preferences[key];
 		if (records == null || records.length === 0) {
@@ -227,12 +227,14 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 
 		// apply states
 		for (const key in states) {
-			(this.s[key as keyof PREF] as any) = states[key as keyof PREF];
-			(this.r[key as keyof PREF] as Ref<any>) = ref(this.s[key as keyof PREF]);
+			(this.s[key as keyof PREF] as unknown) = states[key as keyof PREF];
+			(this.r[key as keyof PREF] as Ref<unknown>) = ref(this.s[key as keyof PREF]);
 		}
 
 		// normalizeの結果変わっていたら保存
-		if (!deepEqual(loadedProfile, this.profile)) {
+		// NOTE: loadedProfileは正規化前の生データ(値の型は未検証)なので、
+		//       deepEqualの厳密なJSON互換パラメータ型とは境界でのみ型消去して比較する
+		if (!deepEqual(loadedProfile as unknown as Parameters<typeof deepEqual>[0], this.profile)) {
 			this.save();
 		}
 
@@ -305,7 +307,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 	public model<K extends keyof PREF, V = ValueOf<K>>(
 		key: K,
 	): Ref<V>;
-	public model<K extends keyof PREF, V extends Exclude<any, ValueOf<K>>>(
+	public model<K extends keyof PREF, V extends Exclude<unknown, ValueOf<K>>>(
 		key: K,
 		getter: (v: ValueOf<K>) => V,
 		setter: (v: V) => ValueOf<K>,
@@ -343,7 +345,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 		for (const _key in PREF_DEF) {
 			const key = _key as keyof PREF;
 			const record = this.getMatchedRecordOf(key);
-			(states[key] as any) = record[1];
+			(states[key] as unknown) = record[1];
 		}
 
 		return states;
@@ -465,7 +467,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 			const merge = (PREF_DEF as PreferencesDefinition)[key].mergeStrategy;
 			let mergedValue: ValueOf<K> | undefined = undefined; // null と区別したいため
 			try {
-				if (merge != null) mergedValue = merge(local, remote);
+				if (merge != null) mergedValue = merge(local, remote) as ValueOf<K> | undefined;
 			} catch (_) {
 				// nop
 			}

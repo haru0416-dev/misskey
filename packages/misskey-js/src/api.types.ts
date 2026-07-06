@@ -41,12 +41,16 @@ type StrictExtract<Union, Cond> = Cond extends Union ? Union : never;
 
 type IsCaseMatched<E extends keyof Endpoints, P extends Endpoints[E]['req'], C extends number> =
 	Endpoints[E]['res'] extends SwitchCase
+		// `any`は「2番目の要素の型を問わずマッチさせる」ワイルドカードとして使用している。
+		// `unknown`に変えると`unknown extends 実際のResult型`がfalseになるケースが出てマッチしなくなるため、
+		// この位置に限っては`any`の特殊な変性(何にでもextendsする)が必須。実測: test-d/api.tsのusers/showケースがtsdで壊れる。
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		? IsNeverType<StrictExtract<Endpoints[E]['res']['$switch']['$cases'][C], [P, any]>> extends false ? true : false
 		: false;
 
 type GetCaseResult<E extends keyof Endpoints, P extends Endpoints[E]['req'], C extends number> =
 	Endpoints[E]['res'] extends SwitchCase
+		// 同上: ここも`any`はワイルドカードとして必須(`unknown`不可)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		? StrictExtract<Endpoints[E]['res']['$switch']['$cases'][C], [P, any]>[1]
 		: never;

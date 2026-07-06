@@ -23,7 +23,7 @@ type HonoApiModerationLogResponse = {
 	id: string;
 	createdAt: string;
 	type: string;
-	info: Record<string, any>;
+	info: Record<string, unknown>;
 	userId: string;
 	user: UserDetailedNotMeHonoApiResponse;
 };

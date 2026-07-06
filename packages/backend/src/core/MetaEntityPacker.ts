@@ -125,8 +125,8 @@ export async function packMetaDetailed(
 		requireSetup: deps.meta.rootUserId == null,
 		proxyAccountName: proxyAccount.username,
 		features: {
-			localTimeline: meta.policies.ltlAvailable,
-			globalTimeline: meta.policies.gtlAvailable,
+			localTimeline: packed.policies.ltlAvailable,
+			globalTimeline: packed.policies.gtlAvailable,
 			registration: !meta.disableRegistration,
 			emailRequiredForSignup: meta.emailRequiredForSignup,
 			hcaptcha: meta.enableHcaptcha,

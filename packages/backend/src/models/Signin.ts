@@ -16,7 +16,7 @@ export class MiSignin {
 
 	public ip: string;
 
-	public headers: Record<string, any>;
+	public headers: Record<string, unknown>;
 
 	public success: boolean;
 }

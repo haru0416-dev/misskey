@@ -75,7 +75,7 @@ const camelToSnake = (str: string): string => {
 	return str.replace(/([A-Z])/g, s => '_' + s.charAt(0).toLowerCase());
 };
 
-const removeDuplicates = (array: any[]) => Array.from(new Set(array));
+const removeDuplicates = <T,>(array: T[]) => Array.from(new Set(array));
 
 const quoteIdentifier = (value: string): string => `"${value.replaceAll('"', '""')}"`;
 
@@ -116,7 +116,7 @@ type UnflattenSingleton<K extends string, V> = K extends `${infer A}.${infer B}`
 	? { [_ in A]: UnflattenSingleton<B, V>; }
 	: { [_ in K]: V; };
 
-type Unflatten<T extends Record<string, any>> = UnionToIntersection<
+type Unflatten<T extends Record<string, unknown>> = UnionToIntersection<
 	{
 		[K in Extract<keyof T, string>]: UnflattenSingleton<K, T[K]>;
 	}[Extract<keyof T, string>]
@@ -130,14 +130,22 @@ type ToJsonSchema<S> = {
 	required: (keyof S)[];
 };
 
+type JsonSchemaBuilderNode = {
+	type: 'object' | 'array';
+	properties?: Record<string, JsonSchemaBuilderNode>;
+	items?: { type: 'number' };
+	required?: string[];
+};
+
 export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatten<ChartResult<S>>> {
-	const unflatten = (str: string, parent: Record<string, any>) => {
+	const unflatten = (str: string, parent: JsonSchemaBuilderNode) => {
 		const keys = str.split('.');
 		const key = keys.shift();
 		const nextKey = keys[0];
 
 		if (key == null) return;
 
+		parent.properties ??= {};
 		if (parent.properties[key] == null) {
 			parent.properties[key] = nextKey ? {
 				type: 'object',
@@ -151,12 +159,12 @@ export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatt
 			};
 		}
 
-		if (nextKey) unflatten(keys.join('.'), parent.properties[key] as Record<string, any>);
+		if (nextKey) unflatten(keys.join('.'), parent.properties[key]);
 	};
 
-	const jsonSchema = {
+	const jsonSchema: JsonSchemaBuilderNode = {
 		type: 'object',
-		properties: {} as Record<string, unknown>,
+		properties: {},
 		required: [],
 	};
 

@@ -77,7 +77,7 @@ export interface MainEventTypes {
 		id: MiSignin['id'];
 		createdAt: string;
 		ip: string;
-		headers: Record<string, any>;
+		headers: Record<string, unknown>;
 		success: boolean;
 	};
 	registryUpdated: {
@@ -203,7 +203,9 @@ export interface InternalEventTypes {
 	unfollow: { followerId: MiUser['id']; followeeId: MiUser['id']; };
 	blockingCreated: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
 	blockingDeleted: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
-	policiesUpdated: MiRole['policies'];
+	// 実際に publish しているのは root ポリシー上書き (MiMeta['policies']、フラットな Partial<RolePolicies>) であり、
+	// ロール個別の Record<string, {useDefault,priority,value}> 形式 (MiRole['policies']) ではない。
+	policiesUpdated: MiMeta['policies'];
 	roleCreated: MiRole;
 	roleDeleted: MiRole;
 	roleUpdated: MiRole;

@@ -16,5 +16,5 @@ export class MiModerationLog {
 
 	public type: string;
 
-	public info: Record<string, any>;
+	public info: Record<string, unknown>;
 }

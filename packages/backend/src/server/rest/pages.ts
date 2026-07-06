@@ -31,7 +31,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import { MiPage, pageNameSchema } from '@/models/Page.js';
+import { MiPage, pageNameSchema, type MiPageContentBlock } from '@/models/Page.js';
 import type { PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -73,9 +73,9 @@ export async function packPageForHonoApi(
 	const pageEntity = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(deps.db, src);
 
 	const attachedFiles: string[] = [];
-	const collectFiles = (items: any[]): void => {
+	const collectFiles = (items: MiPageContentBlock[]): void => {
 		for (const item of items) {
-			if (item.type === 'image') {
+			if (item.type === 'image' && item.fileId) {
 				attachedFiles.push(item.fileId);
 			}
 			if (item.children) {
@@ -86,7 +86,7 @@ export async function packPageForHonoApi(
 	collectFiles(pageEntity.content);
 
 	let migrated = false;
-	const migrate = (items: any[]): void => {
+	const migrate = (items: MiPageContentBlock[]): void => {
 		for (const item of items) {
 			if (item.type === 'input') {
 				if (item.inputType === 'text') {
@@ -94,7 +94,7 @@ export async function packPageForHonoApi(
 				}
 				if (item.inputType === 'number') {
 					item.type = 'numberInput';
-					if (item.default) item.default = parseInt(item.default, 10);
+					if (item.default) item.default = parseInt(String(item.default), 10);
 				}
 				migrated = true;
 			}
@@ -189,8 +189,8 @@ type PagesCreateParams = {
 	title: string;
 	name: string;
 	summary?: string | null;
-	content: Record<string, any>[];
-	variables: Record<string, any>[];
+	content: Record<string, unknown>[];
+	variables: Record<string, unknown>[];
 	script: string;
 	eyeCatchingImageId?: string | null;
 	font: 'serif' | 'sans-serif';
@@ -261,8 +261,8 @@ type PagesUpdateParams = {
 	title?: string;
 	name?: string;
 	summary?: string | null;
-	content?: Record<string, any>[];
-	variables?: Record<string, any>[];
+	content?: Record<string, unknown>[];
+	variables?: Record<string, unknown>[];
 	script?: string;
 	eyeCatchingImageId?: string | null;
 	font?: 'serif' | 'sans-serif';

@@ -5,6 +5,7 @@
 
 import { URLSearchParams } from 'node:url';
 import * as nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import juice from 'juice';
 import { Inject, Injectable } from '@nestjs/common';
 import { validate as validateEmail } from 'deep-email-validator';
@@ -49,17 +50,20 @@ export class EmailService {
 
 		const enableAuth = this.meta.smtpUser != null && this.meta.smtpUser !== '';
 
-		const transporter = nodemailer.createTransport({
-			host: this.meta.smtpHost,
-			port: this.meta.smtpPort,
+		// `proxy` は @types/nodemailer の SMTPTransport.Options に無いが、実際の nodemailer は
+		// (nodemailer-proxy 経由で) サポートしている型定義側の欠落なので、ここだけ拡張して型を保つ。
+		const options: nodemailer.TransportOptions & SMTPTransport.Options & { proxy?: string } = {
+			host: this.meta.smtpHost ?? undefined,
+			port: this.meta.smtpPort ?? undefined,
 			secure: this.meta.smtpSecure,
 			ignoreTLS: !enableAuth,
 			proxy: this.config.proxySmtp,
 			auth: enableAuth ? {
-				user: this.meta.smtpUser,
-				pass: this.meta.smtpPass,
+				user: this.meta.smtpUser ?? undefined,
+				pass: this.meta.smtpPass ?? undefined,
 			} : undefined,
-		} as any);
+		};
+		const transporter = nodemailer.createTransport(options);
 
 		const htmlContent = `<!doctype html>
 <html>

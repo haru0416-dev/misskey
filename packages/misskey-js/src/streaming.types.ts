@@ -48,8 +48,7 @@ export type Channels = {
 			registryUpdated: (payload: {
 				scope?: string[];
 				key: string;
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				value: any | null;
+				value: unknown;
 			}) => void;
 			driveFileCreated: (payload: DriveFile) => void;
 			readAntenna: (payload: Antenna) => void;

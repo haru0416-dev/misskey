@@ -55,7 +55,7 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 	bg.addColorStop(0, bgColors[0]);
 	bg.addColorStop(1, bgColors[1]);
 
-	ctx.fillStyle = bg as any;
+	ctx.fillStyle = bg;
 	ctx.beginPath();
 	ctx.fillRect(0, 0, size, size);
 

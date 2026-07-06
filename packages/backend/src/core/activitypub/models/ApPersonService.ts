@@ -250,23 +250,24 @@ export class ApPersonService implements OnModuleInit {
 		return null;
 	}
 
-	private async resolveAvatarAndBanner(user: MiRemoteUser, icon: any, image: any): Promise<Partial<Pick<MiRemoteUser, 'avatarId' | 'bannerId' | 'avatarUrl' | 'bannerUrl' | 'avatarBlurhash' | 'bannerBlurhash'>>> {
+	private async resolveAvatarAndBanner(user: MiRemoteUser, icon: unknown, image: unknown): Promise<Partial<Pick<MiRemoteUser, 'avatarId' | 'bannerId' | 'avatarUrl' | 'bannerUrl' | 'avatarBlurhash' | 'bannerBlurhash'>>> {
 		if (user == null) throw new Error('failed to create user: user is null');
 
-		const [avatar, banner] = await Promise.all([icon, image].map(img => {
+		const [avatar, banner] = await Promise.all([icon, image].map(imgInput => {
 			// icon and image may be arrays
 			// see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-icon
+			let img: unknown = imgInput;
 			if (Array.isArray(img)) {
-				img = img.find(item => item && item.url) ?? null;
+				img = img.find((item: unknown) => item && (item as { url?: unknown }).url) ?? null;
 			}
 
 			// if we have an explicitly missing image, return an
 			// explicitly-null set of values
-			if ((img == null) || (typeof img === 'object' && img.url == null)) {
+			if ((img == null) || (typeof img === 'object' && (img as { url?: unknown }).url == null)) {
 				return { id: null, url: null, blurhash: null };
 			}
 
-			return this.apImageService.resolveImage(user, img).catch(() => null);
+			return this.apImageService.resolveImage(user, img as string | IObject).catch(() => null);
 		}));
 
 		if (((avatar != null && avatar.id != null) || (banner != null && banner.id != null))
@@ -398,7 +399,7 @@ export class ApPersonService implements OnModuleInit {
 					uri: person.id,
 					tags,
 					isBot,
-					isCat: (person as any).isCat === true,
+					isCat: person.isCat === true,
 					requireSigninToViewContents: (person as any).requireSigninToViewContents === true,
 					makeNotesFollowersOnlyBefore: (person as any).makeNotesFollowersOnlyBefore ?? null,
 					makeNotesHiddenBefore: (person as any).makeNotesHiddenBefore ?? null,
@@ -563,7 +564,7 @@ export class ApPersonService implements OnModuleInit {
 			name: truncate(person.name, nameLength),
 			tags,
 			isBot: getApType(object) === 'Service' || getApType(object) === 'Application',
-			isCat: (person as any).isCat === true,
+			isCat: person.isCat === true,
 			isLocked: person.manuallyApprovesFollowers,
 			movedToUri: person.movedTo ?? null,
 			alsoKnownAs: person.alsoKnownAs ? toArray(person.alsoKnownAs) : null,

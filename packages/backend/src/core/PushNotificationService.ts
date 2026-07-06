@@ -46,7 +46,7 @@ function truncateBody<T extends keyof PushNotificationsTypes>(type: T, body: Pus
 				cw: undefined,
 				reply: undefined,
 				renote: undefined,
-				user: type === 'notification' ? undefined as any : body.note.user,
+				user: type === 'notification' ? undefined : body.note.user,
 			},
 		} : {}),
 	};
@@ -109,7 +109,7 @@ export class PushNotificationService implements OnApplicationShutdown {
 				dateTime: Date.now(),
 			}), {
 				proxy: this.config.proxy,
-			}).catch((err: any) => {
+			}).catch((err: push.WebPushError) => {
 				//swLogger.info(err.statusCode);
 				//swLogger.info(err.headers);
 				//swLogger.info(err.body);

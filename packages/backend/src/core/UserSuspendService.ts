@@ -93,7 +93,7 @@ export class UserSuspendService {
 			const queue = await listSharedInboxesFromFollowingsInDatabase(this.db);
 
 			for (const inbox of queue) {
-				this.queueService.deliver(user as any, content, inbox, true);
+				this.queueService.deliver(user, content, inbox, true);
 			}
 		}
 	}
