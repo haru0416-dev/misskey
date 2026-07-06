@@ -12,7 +12,7 @@ import { bindThis } from '@/decorators.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CONTEXT, PRELOADED_CONTEXTS } from './misc/contexts.js';
 import { validateContentTypeSetAsJsonLD } from './misc/validator.js';
-import type { JsonLdDocument } from 'jsonld';
+import type { ContextDefinition, JsonLdDocument } from 'jsonld';
 import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.js';
 
 // RsaSignature2017 implementation is based on https://github.com/transmute-industries/RsaSignature2017
@@ -61,7 +61,7 @@ export class JsonLd {
 	}
 
 	@bindThis
-	public async signRsaSignature2017(data: any, privateKey: string, creator: string, domain?: string, created?: Date): Promise<any> {
+	public async signRsaSignature2017(data: unknown, privateKey: string, creator: string, domain?: string, created?: Date): Promise<Record<string, unknown>> {
 		const options: {
 			type: string;
 			creator: string;
@@ -86,7 +86,7 @@ export class JsonLd {
 		const signature = await sign(Buffer.from(toBeSigned));
 
 		return {
-			...data,
+			...(data as Record<string, unknown>),
 			signature: {
 				...options,
 				signatureValue: signature.toString('base64'),
@@ -95,27 +95,31 @@ export class JsonLd {
 	}
 
 	@bindThis
-	public async verifyRsaSignature2017(data: any, publicKey: string): Promise<boolean> {
-		const toBeSigned = await this.createVerifyData(data, data.signature);
+	public async verifyRsaSignature2017(data: unknown, publicKey: string): Promise<boolean> {
+		const signed = data as { signature?: { signatureValue: string } };
+		if (signed.signature == null) {
+			throw new Error('verifyRsaSignature2017: data.signature is required');
+		}
+		const toBeSigned = await this.createVerifyData(data, signed.signature);
 		const verifier = crypto.createVerify('sha256');
 		verifier.update(toBeSigned);
-		return verifier.verify(publicKey, data.signature.signatureValue, 'base64');
+		return verifier.verify(publicKey, signed.signature.signatureValue, 'base64');
 	}
 
 	@bindThis
-	public async createVerifyData(data: any, options: any): Promise<string> {
-		const transformedOptions = {
-			...options,
+	public async createVerifyData(data: unknown, options: unknown): Promise<string> {
+		const transformedOptions: Record<string, unknown> = {
+			...(options as Record<string, unknown>),
 			'@context': 'https://w3id.org/identity/v1',
 		};
 		delete transformedOptions['type'];
 		delete transformedOptions['id'];
 		delete transformedOptions['signatureValue'];
-		const canonizedOptions = await this.normalize(transformedOptions);
+		const canonizedOptions = await this.normalize(transformedOptions as unknown as JsonLdDocument);
 		const optionsHash = this.sha256(canonizedOptions.toString());
-		const transformedData = { ...data };
+		const transformedData: Record<string, unknown> = { ...(data as Record<string, unknown>) };
 		delete transformedData['signature'];
-		const cannonizedData = await this.normalize(transformedData);
+		const cannonizedData = await this.normalize(transformedData as unknown as JsonLdDocument);
 		if (this.debug) console.debug(`cannonizedData: ${cannonizedData}`);
 		const documentHash = this.sha256(cannonizedData.toString());
 		const verifyData = `${optionsHash}${documentHash}`;
@@ -123,11 +127,11 @@ export class JsonLd {
 	}
 
 	@bindThis
-	public async compact(data: any, context: any = CONTEXT): Promise<JsonLdDocument> {
+	public async compact(data: unknown, context: unknown = CONTEXT): Promise<JsonLdDocument> {
 		const customLoader = this.getLoader();
 		// XXX: Importing jsonld dynamically since Jest frequently fails to import it statically
 		// https://github.com/misskey-dev/misskey/pull/9894#discussion_r1103753595
-		return (await import('jsonld')).default.compact(data, context, {
+		return (await import('jsonld')).default.compact(data as unknown as JsonLdDocument, context as ContextDefinition, {
 			documentLoader: customLoader,
 		});
 	}
@@ -148,8 +152,7 @@ export class JsonLd {
 	public freeze(): void { this.frozen = true; }
 
 	@bindThis
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	public checkForForbiddenDirectives(value: any): void {
+	public checkForForbiddenDirectives(value: unknown): void {
 		if (typeof value === 'object' && value !== null) {
 			if (Array.isArray(value)) {
 				for (const item of value) this.checkForForbiddenDirectives(item);

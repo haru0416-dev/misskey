@@ -6,6 +6,19 @@
 import { MiUser } from './User.js';
 import { MiDriveFile } from './DriveFile.js';
 
+/**
+ * Pages のコンテンツブロック。ブロック種別 (text/image/input/section 等) ごとにプロパティが異なる
+ * 動的な構造のため、実際に参照・代入されるフィールドのみ緩く型付けし、その他は unknown として素通しする。
+ */
+export type MiPageContentBlock = {
+	type?: string;
+	fileId?: string;
+	children?: MiPageContentBlock[];
+	inputType?: string;
+	default?: unknown;
+	[key: string]: unknown;
+};
+
 export class MiPage {
 	public id: string;
 
@@ -31,9 +44,9 @@ export class MiPage {
 
 	public eyeCatchingImage: MiDriveFile | null;
 
-	public content: Record<string, any>[];
+	public content: MiPageContentBlock[];
 
-	public variables: Record<string, any>[];
+	public variables: MiPageContentBlock[];
 
 	public script: string;
 
@@ -52,7 +65,7 @@ export class MiPage {
 		if (data == null) return;
 
 		for (const [k, v] of Object.entries(data)) {
-			(this as any)[k] = v;
+			(this as Record<string, unknown>)[k] = v;
 		}
 	}
 }

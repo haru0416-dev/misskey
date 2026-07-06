@@ -69,10 +69,10 @@ export class MiUserProfile {
 	public moderationNote: string | null;
 
 	// TODO: そのうち消す
-	public clientData: Record<string, any>;
+	public clientData: Record<string, unknown>;
 
 	// TODO: そのうち消す
-	public room: Record<string, any>;
+	public room: Record<string, unknown>;
 
 	public autoAcceptFollowed: boolean;
 
@@ -136,7 +136,7 @@ export class MiUserProfile {
 		if (data == null) return;
 
 		for (const [k, v] of Object.entries(data)) {
-			(this as any)[k] = v;
+			(this as Record<string, unknown>)[k] = v;
 		}
 	}
 }

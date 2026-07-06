@@ -14,8 +14,7 @@ export type APIError = {
 	code: string;
 	message: string;
 	kind: 'client' | 'server';
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	info: Record<string, any>;
+	info: Record<string, unknown>;
 };
 
 export function isAPIError(reason: Record<PropertyKey, unknown>): reason is APIError {
@@ -30,8 +29,7 @@ export type FetchLike = (input: string, init?: {
 	headers: { [key in string]: string }
 }) => Promise<{
 	status: number;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	json(): Promise<any>;
+	json(): Promise<unknown>;
 }>;
 
 export class APIClient {
@@ -51,8 +49,7 @@ export class APIClient {
 		this.fetch = opts.fetch ?? ((...args) => fetch(...args));
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private assertIsRecord<T>(obj: T): obj is T & Record<string, any> {
+	private assertIsRecord<T>(obj: T): obj is T & Record<string, unknown> {
 		return obj !== null && typeof obj === 'object' && !Array.isArray(obj);
 	}
 
@@ -97,7 +94,8 @@ export class APIClient {
 						} else if (typeof value === 'object') {
 							payload.append(key, JSON.stringify(value));
 						} else {
-							payload.append(key, value);
+							// FormDataは元々string以外の値を渡されると自動でstringへ変換するため、明示的に変換しても挙動は変わらない
+							payload.append(key, String(value));
 						}
 					}
 				}
@@ -115,11 +113,13 @@ export class APIClient {
 				const body = res.status === 204 ? null : await res.json();
 
 				if (res.status === 200 || res.status === 204) {
-					resolve(body);
+					// エンドポイントごとのレスポンス型はautogenのスキーマ経由でしか静的に表現できないため、
+					// サーバーがそのスキーマ通りに応答してくることを信頼してキャストする
+					resolve(body as SwitchCaseResponseType<E, P>);
 				} else {
 					reject({
 						[MK_API_ERROR]: true,
-						...body.error,
+						...(this.assertIsRecord(body) && this.assertIsRecord(body.error) ? body.error : {}),
 					});
 				}
 			}).catch(reject);

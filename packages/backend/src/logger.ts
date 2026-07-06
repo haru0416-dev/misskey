@@ -38,7 +38,7 @@ export default class Logger {
 	}
 
 	@bindThis
-	private log(level: Level, message: string, data?: Record<string, any> | null, important = false, subContexts: Context[] = []): void {
+	private log(level: Level, message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false, subContexts: Context[] = []): void {
 		if (envOption.quiet) return;
 
 		if (this.parentLogger) {
@@ -75,37 +75,35 @@ export default class Logger {
 	}
 
 	@bindThis
-	public error(x: string | Error, data?: Record<string, any> | null, important = false): void { // 実行を継続できない状況で使う
+	public error(x: string | Error, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // 実行を継続できない状況で使う
 		if (x instanceof Error) {
-			data = data ?? {};
-			data.e = x;
-			this.log('error', x.toString(), data, important);
-		} else if (typeof x === 'object') {
-			this.log('error', `${(x as any).message ?? (x as any).name ?? x}`, data, important);
+			const record: Record<string, unknown> = (data instanceof Error || Array.isArray(data)) ? { data } : data ?? {};
+			record.e = x;
+			this.log('error', x.toString(), record, important);
 		} else {
 			this.log('error', `${x}`, data, important);
 		}
 	}
 
 	@bindThis
-	public warn(message: string, data?: Record<string, any> | null, important = false): void { // 実行を継続できるが改善すべき状況で使う
+	public warn(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // 実行を継続できるが改善すべき状況で使う
 		this.log('warning', message, data, important);
 	}
 
 	@bindThis
-	public succ(message: string, data?: Record<string, any> | null, important = false): void { // 何かに成功した状況で使う
+	public succ(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // 何かに成功した状況で使う
 		this.log('success', message, data, important);
 	}
 
 	@bindThis
-	public debug(message: string, data?: Record<string, any> | null, important = false): void { // デバッグ用に使う(開発者に必要だが利用者に不要な情報)
+	public debug(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // デバッグ用に使う(開発者に必要だが利用者に不要な情報)
 		if (process.env.NODE_ENV !== 'production' || envOption.verbose) {
 			this.log('debug', message, data, important);
 		}
 	}
 
 	@bindThis
-	public info(message: string, data?: Record<string, any> | null, important = false): void { // それ以外
+	public info(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // それ以外
 		this.log('info', message, data, important);
 	}
 }
