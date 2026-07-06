@@ -6,6 +6,7 @@
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import semver from 'semver';
+import { z } from 'zod';
 import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
@@ -31,6 +32,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiInstance, MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
@@ -54,77 +56,55 @@ export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies &
 	relationshipQueue: RelationshipQueue;
 };
 
-const federationInstancesParamDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string', nullable: true },
-		blocked: { type: 'boolean', nullable: true },
-		notResponding: { type: 'boolean', nullable: true },
-		suspended: { type: 'boolean', nullable: true },
-		silenced: { type: 'boolean', nullable: true },
-		federating: { type: 'boolean', nullable: true },
-		subscribing: { type: 'boolean', nullable: true },
-		publishing: { type: 'boolean', nullable: true },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		offset: { type: 'integer', default: 0 },
-		sort: {
-			type: 'string',
-			nullable: true,
-			enum: [
-				'+pubSub',
-				'-pubSub',
-				'+notes',
-				'-notes',
-				'+users',
-				'-users',
-				'+following',
-				'-following',
-				'+followers',
-				'-followers',
-				'+firstRetrievedAt',
-				'-firstRetrievedAt',
-				'+latestRequestReceivedAt',
-				'-latestRequestReceivedAt',
-				null,
-			],
-		},
-	},
-	required: [],
-} as const;
+const federationInstancesParamDef = z.object({
+	host: z.string().nullable().optional(),
+	blocked: z.boolean().nullable().optional(),
+	notResponding: z.boolean().nullable().optional(),
+	suspended: z.boolean().nullable().optional(),
+	silenced: z.boolean().nullable().optional(),
+	federating: z.boolean().nullable().optional(),
+	subscribing: z.boolean().nullable().optional(),
+	publishing: z.boolean().nullable().optional(),
+	limit: z.number().int().min(1).max(100).default(30),
+	offset: z.number().int().default(0),
+	sort: z.union([
+		z.enum([
+			'+pubSub',
+			'-pubSub',
+			'+notes',
+			'-notes',
+			'+users',
+			'-users',
+			'+following',
+			'-following',
+			'+followers',
+			'-followers',
+			'+firstRetrievedAt',
+			'-firstRetrievedAt',
+			'+latestRequestReceivedAt',
+			'-latestRequestReceivedAt',
+		]),
+		z.null(),
+	]).optional(),
+});
 
-const federationShowInstanceParamDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string' },
-	},
-	required: ['host'],
-} as const;
+const federationShowInstanceParamDef = z.object({
+	host: z.string(),
+});
 
-const adminFederationUpdateInstanceParamDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string' },
-		isSuspended: { type: 'boolean' },
-		moderationNote: { type: 'string' },
-	},
-	required: ['host'],
-} as const;
+const adminFederationUpdateInstanceParamDef = z.object({
+	host: z.string(),
+	isSuspended: z.boolean().optional(),
+	moderationNote: z.string().optional(),
+});
 
-const adminFederationHostParamDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string' },
-	},
-	required: ['host'],
-} as const;
+const adminFederationHostParamDef = z.object({
+	host: z.string(),
+});
 
-const federationStatsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: [],
-} as const;
+const federationStatsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+});
 
 type FederationInstancesSort =
 	| '+pubSub'
@@ -544,18 +524,14 @@ export async function handleHonoApiFederationStats(
 	};
 }
 
-const federationUsersParamDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string' },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: ['host'],
-} as const;
+const federationUsersParamDef = z.object({
+	host: z.string(),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+});
 
 
 export async function handleHonoApiFederationUsers(
@@ -582,18 +558,14 @@ export async function handleHonoApiFederationUsers(
 	return await packUserDetailedNotMeManyForHonoApi(deps, users, me);
 }
 
-const federationHostFollowingParamDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string' },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: ['host'],
-} as const;
+const federationHostFollowingParamDef = z.object({
+	host: z.string(),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+});
 
 
 export async function handleHonoApiFederationFollowers(

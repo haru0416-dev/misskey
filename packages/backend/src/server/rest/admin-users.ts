@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { listRoleAssignmentsByRoleIdsFromDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { listSigninsByUserIdFromDatabase } from '@/core/SigninStore.js';
@@ -13,6 +14,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -59,32 +61,20 @@ type AdminShowUserResponse = {
 	}[];
 };
 
-const adminShowUserParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const adminShowUserParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const adminShowUsersParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt', '+lastActiveDate', '-lastActiveDate'] },
-		state: { type: 'string', enum: ['all', 'alive', 'available', 'admin', 'moderator', 'adminOrModerator', 'suspended'], default: 'all' },
-		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'combined' },
-		username: { type: 'string', nullable: true, default: null },
-		hostname: {
-			type: 'string',
-			nullable: true,
-			default: null,
-			description: 'The local host is represented with `null`.',
-		},
-	},
-	required: [],
-} as const;
+const adminShowUsersParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	offset: z.number().int().optional().default(0),
+	sort: z.enum(['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt', '+lastActiveDate', '-lastActiveDate']).optional(),
+	state: z.enum(['all', 'alive', 'available', 'admin', 'moderator', 'adminOrModerator', 'suspended']).optional().default('all'),
+	origin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
+	username: z.string().nullable().optional().default(null),
+	/** The local host is represented with `null`. */
+	hostname: z.string().nullable().optional().default(null),
+});
 
 
 function isActiveRoleAssignment(assign: MiRoleAssignment): boolean {

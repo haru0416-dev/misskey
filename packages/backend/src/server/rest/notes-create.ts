@@ -7,7 +7,9 @@ import { randomUUID } from 'node:crypto';
 import { domainToASCII } from 'node:url';
 import * as mfm from 'mfm-js';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { DB_MAX_NOTE_TEXT_LENGTH, MAX_NOTE_TEXT_LENGTH } from '@/const.js';
+import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import { extractMentions } from '@/misc/extract-mentions.js';
@@ -941,68 +943,40 @@ export async function fetchAndCreateNoteForHonoApi(
 	});
 }
 
-const notesCreateParamDef = {
-	type: 'object',
-	properties: {
-		visibility: { type: 'string', enum: ['public', 'home', 'followers', 'specified'], default: 'public' },
-		visibleUserIds: { type: 'array', uniqueItems: true, items: { type: 'string', format: 'misskey:id' } },
-		cw: { type: 'string', nullable: true, minLength: 1, maxLength: 100 },
-		localOnly: { type: 'boolean', default: false },
-		reactionAcceptance: { type: 'string', nullable: true, enum: [null, 'likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote'], default: null },
-		noExtractMentions: { type: 'boolean', default: false },
-		noExtractHashtags: { type: 'boolean', default: false },
-		noExtractEmojis: { type: 'boolean', default: false },
-		replyId: { type: 'string', format: 'misskey:id', nullable: true },
-		renoteId: { type: 'string', format: 'misskey:id', nullable: true },
-		channelId: { type: 'string', format: 'misskey:id', nullable: true },
-		text: { type: 'string', minLength: 1, maxLength: MAX_NOTE_TEXT_LENGTH, nullable: true },
-		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 16, items: { type: 'string', format: 'misskey:id' } },
-		mediaIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 16, items: { type: 'string', format: 'misskey:id' } },
-		poll: {
-			type: 'object',
-			nullable: true,
-			properties: {
-				choices: { type: 'array', uniqueItems: true, minItems: 2, maxItems: 10, items: { type: 'string', minLength: 1, maxLength: 50 } },
-				multiple: { type: 'boolean' },
-				expiresAt: { type: 'integer', nullable: true },
-				expiredAfter: { type: 'integer', nullable: true, minimum: 1 },
-			},
-			required: ['choices'],
-		},
-	},
-	if: {
-		properties: {
-			renoteId: { type: 'null' },
-			fileIds: { type: 'null' },
-			mediaIds: { type: 'null' },
-			poll: { type: 'null' },
-		},
-	},
-	then: {
-		properties: {
-			text: { type: 'string', minLength: 1, maxLength: MAX_NOTE_TEXT_LENGTH, pattern: '[^\\s]+' },
-		},
-		required: ['text'],
-	},
-} as const;
-
-type NotesCreateParams = {
-	visibility: 'public' | 'home' | 'followers' | 'specified';
-	visibleUserIds?: string[];
-	cw?: string | null;
-	localOnly: boolean;
-	reactionAcceptance: MiNote['reactionAcceptance'];
-	noExtractMentions: boolean;
-	noExtractHashtags: boolean;
-	noExtractEmojis: boolean;
-	replyId?: string | null;
-	renoteId?: string | null;
-	channelId?: string | null;
-	text?: string | null;
-	fileIds?: string[];
-	mediaIds?: string[];
-	poll?: { choices: string[]; multiple?: boolean; expiresAt?: number | null; expiredAfter?: number | null } | null;
-};
+/**
+ * 旧 ajv の `if`/`then` (renoteId/fileIds/mediaIds/poll が全部 null-or-absent の場合のみ text 必須+非空白必須)
+ * を superRefine で再現する。
+ */
+export const notesCreateParamDef = z.object({
+	visibility: z.enum(['public', 'home', 'followers', 'specified']).default('public'),
+	visibleUserIds: uniqueItems(z.array(misskeyId())).optional(),
+	cw: z.string().min(1).max(100).nullable().optional(),
+	localOnly: z.boolean().default(false),
+	reactionAcceptance: z.union([
+		z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
+		z.null(),
+	]).default(null),
+	noExtractMentions: z.boolean().default(false),
+	noExtractHashtags: z.boolean().default(false),
+	noExtractEmojis: z.boolean().default(false),
+	replyId: misskeyId().nullable().optional(),
+	renoteId: misskeyId().nullable().optional(),
+	channelId: misskeyId().nullable().optional(),
+	text: z.string().min(1).max(MAX_NOTE_TEXT_LENGTH).nullable().optional(),
+	fileIds: uniqueItems(z.array(misskeyId()).min(1).max(16)).optional(),
+	mediaIds: uniqueItems(z.array(misskeyId()).min(1).max(16)).optional(),
+	poll: z.object({
+		choices: uniqueItems(z.array(z.string().min(1).max(50)).min(2).max(10)),
+		multiple: z.boolean().optional(),
+		expiresAt: z.number().int().nullable().optional(),
+		expiredAfter: z.number().int().min(1).nullable().optional(),
+	}).nullable().optional(),
+}).superRefine((data, ctx) => {
+	const noAttachment = data.renoteId == null && data.fileIds == null && data.mediaIds == null && data.poll == null;
+	if (noAttachment && (data.text == null || !/[^\s]+/.test(data.text))) {
+		ctx.addIssue({ code: 'custom', path: ['text'], message: "must have required property 'text'" });
+	}
+});
 
 export async function handleHonoApiNotesCreate(
 	deps: HonoApiNotesCreateDependencies,

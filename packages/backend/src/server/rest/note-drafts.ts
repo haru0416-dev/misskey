@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
@@ -23,6 +24,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
@@ -38,11 +40,7 @@ export type HonoApiNoteDraftDependencies = HonoApiNoteDependencies & HonoApiRole
 	postScheduledNoteQueue: PostScheduledNoteQueue;
 };
 
-const countNoteDraftsParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const countNoteDraftsParamDef = z.object({});
 
 export async function handleHonoApiNotesDraftsCount(
 	deps: HonoApiNoteDraftDependencies,
@@ -53,44 +51,32 @@ export async function handleHonoApiNotesDraftsCount(
 	return await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 }
 
-const notePollParamDef = {
-	type: 'object',
-	nullable: true,
-	properties: {
-		choices: {
-			type: 'array',
-			uniqueItems: true,
-			minItems: 0,
-			maxItems: 10,
-			items: { type: 'string', minLength: 1, maxLength: 50 },
-		},
-		multiple: { type: 'boolean' },
-		expiresAt: { type: 'integer', nullable: true },
-		expiredAfter: { type: 'integer', nullable: true, minimum: 1 },
-	},
-	required: ['choices'],
-} as const;
+const notePollParamDef = z.object({
+	choices: uniqueItems(z.array(z.string().min(1).max(50)).min(0).max(10)),
+	multiple: z.boolean().optional(),
+	expiresAt: z.number().int().nullable().optional(),
+	expiredAfter: z.number().int().min(1).nullable().optional(),
+}).nullable();
 
-const notesDraftsCreateParamDef = {
-	type: 'object',
-	properties: {
-		visibility: { type: 'string', enum: ['public', 'home', 'followers', 'specified'], default: 'public' },
-		visibleUserIds: { type: 'array', uniqueItems: true, items: { type: 'string', format: 'misskey:id' } },
-		cw: { type: 'string', nullable: true, minLength: 1, maxLength: 100 },
-		hashtag: { type: 'string', nullable: true, maxLength: 200 },
-		localOnly: { type: 'boolean', default: false },
-		reactionAcceptance: { type: 'string', nullable: true, enum: [null, 'likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote'], default: null },
-		replyId: { type: 'string', format: 'misskey:id', nullable: true },
-		renoteId: { type: 'string', format: 'misskey:id', nullable: true },
-		channelId: { type: 'string', format: 'misskey:id', nullable: true },
-		text: { type: 'string', minLength: 0, maxLength: MAX_NOTE_TEXT_LENGTH, nullable: true },
-		fileIds: { type: 'array', uniqueItems: true, minItems: 0, maxItems: 16, items: { type: 'string', format: 'misskey:id' } },
-		poll: notePollParamDef,
-		scheduledAt: { type: 'integer', nullable: true },
-		isActuallyScheduled: { type: 'boolean', default: false },
-	},
-	required: [],
-} as const;
+const notesDraftsCreateParamDef = z.object({
+	visibility: z.enum(['public', 'home', 'followers', 'specified']).default('public'),
+	visibleUserIds: uniqueItems(z.array(misskeyId())).optional(),
+	cw: z.string().min(1).max(100).nullable().optional(),
+	hashtag: z.string().max(200).nullable().optional(),
+	localOnly: z.boolean().default(false),
+	reactionAcceptance: z.union([
+		z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
+		z.null(),
+	]).default(null),
+	replyId: misskeyId().nullable().optional(),
+	renoteId: misskeyId().nullable().optional(),
+	channelId: misskeyId().nullable().optional(),
+	text: z.string().min(0).max(MAX_NOTE_TEXT_LENGTH).nullable().optional(),
+	fileIds: uniqueItems(z.array(misskeyId()).min(0).max(16)).optional(),
+	poll: notePollParamDef.optional(),
+	scheduledAt: z.number().int().nullable().optional(),
+	isActuallyScheduled: z.boolean().default(false),
+});
 
 type NotesDraftsCreateParams = {
 	visibility: 'public' | 'home' | 'followers' | 'specified';
@@ -114,27 +100,26 @@ type NotesDraftsCreateParams = {
 	isActuallyScheduled: boolean;
 };
 
-const notesDraftsUpdateParamDef = {
-	type: 'object',
-	properties: {
-		draftId: { type: 'string', nullable: false, format: 'misskey:id' },
-		visibility: { type: 'string', enum: ['public', 'home', 'followers', 'specified'] },
-		visibleUserIds: { type: 'array', uniqueItems: true, items: { type: 'string', format: 'misskey:id' } },
-		cw: { type: 'string', nullable: true, minLength: 1, maxLength: 100 },
-		hashtag: { type: 'string', nullable: true, maxLength: 200 },
-		localOnly: { type: 'boolean' },
-		reactionAcceptance: { type: 'string', nullable: true, enum: [null, 'likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote'] },
-		replyId: { type: 'string', format: 'misskey:id', nullable: true },
-		renoteId: { type: 'string', format: 'misskey:id', nullable: true },
-		channelId: { type: 'string', format: 'misskey:id', nullable: true },
-		text: { type: 'string', minLength: 0, maxLength: MAX_NOTE_TEXT_LENGTH, nullable: true },
-		fileIds: { type: 'array', uniqueItems: true, minItems: 0, maxItems: 16, items: { type: 'string', format: 'misskey:id' } },
-		poll: notePollParamDef,
-		scheduledAt: { type: 'integer', nullable: true },
-		isActuallyScheduled: { type: 'boolean' },
-	},
-	required: ['draftId'],
-} as const;
+const notesDraftsUpdateParamDef = z.object({
+	draftId: misskeyId(),
+	visibility: z.enum(['public', 'home', 'followers', 'specified']).optional(),
+	visibleUserIds: uniqueItems(z.array(misskeyId())).optional(),
+	cw: z.string().min(1).max(100).nullable().optional(),
+	hashtag: z.string().max(200).nullable().optional(),
+	localOnly: z.boolean().optional(),
+	reactionAcceptance: z.union([
+		z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
+		z.null(),
+	]).optional(),
+	replyId: misskeyId().nullable().optional(),
+	renoteId: misskeyId().nullable().optional(),
+	channelId: misskeyId().nullable().optional(),
+	text: z.string().min(0).max(MAX_NOTE_TEXT_LENGTH).nullable().optional(),
+	fileIds: uniqueItems(z.array(misskeyId()).min(0).max(16)).optional(),
+	poll: notePollParamDef.optional(),
+	scheduledAt: z.number().int().nullable().optional(),
+	isActuallyScheduled: z.boolean().optional(),
+});
 
 type NotesDraftsUpdateParams = {
 	draftId: string;
@@ -159,30 +144,22 @@ type NotesDraftsUpdateParams = {
 	isActuallyScheduled?: boolean;
 };
 
-const notesDraftsDeleteParamDef = {
-	type: 'object',
-	properties: {
-		draftId: { type: 'string', nullable: false, format: 'misskey:id' },
-	},
-	required: ['draftId'],
-} as const;
+const notesDraftsDeleteParamDef = z.object({
+	draftId: misskeyId(),
+});
 
 type NotesDraftsDeleteParams = {
 	draftId: string;
 };
 
-const notesDraftsListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		scheduled: { type: 'boolean', nullable: true },
-	},
-	required: [],
-} as const;
+const notesDraftsListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	scheduled: z.boolean().nullable().optional(),
+});
 
 type NotesDraftsListParams = {
 	limit: number;

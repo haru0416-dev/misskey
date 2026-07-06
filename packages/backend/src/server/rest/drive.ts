@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { countDriveFilesByFolderIdFromDatabase, driveFileExistsByMd5AndUserIdFromDatabase, sumDriveFileSizeByUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import {
@@ -21,6 +22,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiDriveStreamPublisher } from './events.js';
 import { HonoApiError } from './error.js';
@@ -35,44 +37,32 @@ export type HonoApiDriveDependencies = {
 
 export type HonoApiPackedDriveFolder = Packed<'DriveFolder'>;
 
-const driveFilesCheckExistenceParamDef = {
-	type: 'object',
-	properties: {
-		md5: { type: 'string' },
-	},
-	required: ['md5'],
-} as const;
+const driveFilesCheckExistenceParamDef = z.object({
+	md5: z.string(),
+});
 
 type DriveFilesCheckExistenceParams = {
 	md5: string;
 };
 
-const driveFoldersCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', default: 'Untitled', maxLength: 200 },
-		parentId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: [],
-} as const;
+const driveFoldersCreateParamDef = z.object({
+	name: z.string().max(200).default('Untitled'),
+	parentId: misskeyId().nullable().optional(),
+});
 
 type DriveFoldersCreateParams = {
 	name: string;
 	parentId?: string | null;
 };
 
-const driveFoldersParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: [],
-} as const;
+const driveFoldersParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	folderId: misskeyId().nullable().default(null),
+});
 
 type DriveFoldersParams = {
 	limit: number;
@@ -83,41 +73,29 @@ type DriveFoldersParams = {
 	folderId: string | null;
 };
 
-const driveFoldersFindParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string' },
-		parentId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: ['name'],
-} as const;
+const driveFoldersFindParamDef = z.object({
+	name: z.string(),
+	parentId: misskeyId().nullable().default(null),
+});
 
 type DriveFoldersFindParams = {
 	name: string;
 	parentId: string | null;
 };
 
-const driveFoldersShowParamDef = {
-	type: 'object',
-	properties: {
-		folderId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['folderId'],
-} as const;
+const driveFoldersShowParamDef = z.object({
+	folderId: misskeyId(),
+});
 
 type DriveFoldersShowParams = {
 	folderId: string;
 };
 
-const driveFoldersUpdateParamDef = {
-	type: 'object',
-	properties: {
-		folderId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', maxLength: 200 },
-		parentId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: ['folderId'],
-} as const;
+const driveFoldersUpdateParamDef = z.object({
+	folderId: misskeyId(),
+	name: z.string().max(200).optional(),
+	parentId: misskeyId().nullable().optional(),
+});
 
 type DriveFoldersUpdateParams = {
 	folderId: string;
@@ -125,13 +103,9 @@ type DriveFoldersUpdateParams = {
 	parentId?: string | null;
 };
 
-const driveFoldersDeleteParamDef = {
-	type: 'object',
-	properties: {
-		folderId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['folderId'],
-} as const;
+const driveFoldersDeleteParamDef = z.object({
+	folderId: misskeyId(),
+});
 
 type DriveFoldersDeleteParams = {
 	folderId: string;

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { createSystemWebhookWithSideEffects, deleteSystemWebhookWithSideEffects, updateSystemWebhookWithSideEffects } from '@/core/SystemWebhookLogic.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { fetchSystemWebhookByIdFromDatabase, listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
@@ -12,7 +13,8 @@ import type { Config } from '@/config.js';
 import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { systemWebhookEventTypes, type SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -27,94 +29,55 @@ export type HonoApiAdminSystemWebhookDependencies = {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-const adminSystemWebhookCreateParamDef = {
-	type: 'object',
-	properties: {
-		isActive: { type: 'boolean' },
-		name: { type: 'string', minLength: 1, maxLength: 255 },
-		on: { type: 'array', items: {
-			type: 'string',
-			enum: systemWebhookEventTypes,
-		} },
-		url: { type: 'string', minLength: 1, maxLength: 1024 },
-		secret: { type: 'string', maxLength: 1024, default: '' },
-	},
-	required: ['isActive', 'name', 'on', 'url'],
-} as const;
+const adminSystemWebhookCreateParamDef = z.object({
+	isActive: z.boolean(),
+	name: z.string().min(1).max(255),
+	on: z.array(z.enum(systemWebhookEventTypes)),
+	url: z.string().min(1).max(1024),
+	secret: z.string().max(1024).default(''),
+});
 
-const adminSystemWebhookDeleteParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminSystemWebhookDeleteParamDef = z.object({
+	id: misskeyId(),
+});
 
-const adminSystemWebhookListParamDef = {
-	type: 'object',
-	properties: {
-		isActive: { type: 'boolean' },
-		on: { type: 'array', items: {
-			type: 'string',
-			enum: systemWebhookEventTypes,
-		} },
-	},
-	required: [],
-} as const;
+const adminSystemWebhookListParamDef = z.object({
+	isActive: z.boolean().optional(),
+	on: z.array(z.enum(systemWebhookEventTypes)).optional(),
+});
 
-const adminSystemWebhookShowParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminSystemWebhookShowParamDef = z.object({
+	id: misskeyId(),
+});
 
-const adminSystemWebhookTestParamDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-		type: {
-			type: 'string',
-			enum: systemWebhookEventTypes,
-		},
-		override: {
-			type: 'object',
-			properties: {
-				url: { type: 'string', nullable: false },
-				secret: { type: 'string', nullable: false },
-			},
-		},
-	},
-	required: ['webhookId', 'type'],
-} as const;
+const adminSystemWebhookTestParamDef = z.object({
+	webhookId: misskeyId(),
+	type: z.enum(systemWebhookEventTypes),
+	override: z.object({
+		url: z.string().optional(),
+		secret: z.string().optional(),
+	}).optional(),
+});
 
-const adminSystemWebhookUpdateParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-		isActive: { type: 'boolean' },
-		name: { type: 'string', minLength: 1, maxLength: 255 },
-		on: { type: 'array', items: {
-			type: 'string',
-			enum: systemWebhookEventTypes,
-		} },
-		url: { type: 'string', minLength: 1, maxLength: 1024 },
-		secret: { type: 'string', maxLength: 1024, default: '' },
-	},
-	required: ['id', 'isActive', 'name', 'on', 'url'],
-} as const;
+const adminSystemWebhookUpdateParamDef = z.object({
+	id: misskeyId(),
+	isActive: z.boolean(),
+	name: z.string().min(1).max(255),
+	on: z.array(z.enum(systemWebhookEventTypes)),
+	url: z.string().min(1).max(1024),
+	secret: z.string().max(1024).default(''),
+});
 
-type AdminSystemWebhookCreateParams = Omit<SchemaType<typeof adminSystemWebhookCreateParamDef>, 'on'> & {
+type AdminSystemWebhookCreateParams = Omit<z.infer<typeof adminSystemWebhookCreateParamDef>, 'on'> & {
 	on: SystemWebhookEventType[];
 };
-type AdminSystemWebhookListParams = Omit<SchemaType<typeof adminSystemWebhookListParamDef>, 'on'> & {
+type AdminSystemWebhookListParams = Omit<z.infer<typeof adminSystemWebhookListParamDef>, 'on'> & {
 	on?: SystemWebhookEventType[];
 };
-type AdminSystemWebhookTestParams = Omit<SchemaType<typeof adminSystemWebhookTestParamDef>, 'type'> & {
+type AdminSystemWebhookTestParams = Omit<z.infer<typeof adminSystemWebhookTestParamDef>, 'type'> & {
 	type: SystemWebhookEventType;
 };
-type AdminSystemWebhookUpdateParams = Omit<SchemaType<typeof adminSystemWebhookUpdateParamDef>, 'on'> & {
+type AdminSystemWebhookUpdateParams = Omit<z.infer<typeof adminSystemWebhookUpdateParamDef>, 'on'> & {
 	on: SystemWebhookEventType[];
 };
 

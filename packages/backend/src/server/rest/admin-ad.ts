@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	createAdInDatabase,
@@ -15,6 +16,7 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAd } from '@/models/Ad.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -26,61 +28,45 @@ export type HonoApiAdminAdDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const adminAdCreateParamDef = {
-	type: 'object',
-	properties: {
-		url: { type: 'string', minLength: 1 },
-		memo: { type: 'string' },
-		place: { type: 'string' },
-		priority: { type: 'string' },
-		ratio: { type: 'integer' },
-		expiresAt: { type: 'integer' },
-		startsAt: { type: 'integer' },
-		imageUrl: { type: 'string', minLength: 1 },
-		dayOfWeek: { type: 'integer' },
-		isSensitive: { type: 'boolean' },
-	},
-	required: ['url', 'memo', 'place', 'priority', 'ratio', 'expiresAt', 'startsAt', 'imageUrl', 'dayOfWeek'],
-} as const;
+const adminAdCreateParamDef = z.object({
+	url: z.string().min(1),
+	memo: z.string(),
+	place: z.string(),
+	priority: z.string(),
+	ratio: z.number().int(),
+	expiresAt: z.number().int(),
+	startsAt: z.number().int(),
+	imageUrl: z.string().min(1),
+	dayOfWeek: z.number().int(),
+	isSensitive: z.boolean().optional(),
+});
 
-const adminAdDeleteParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminAdDeleteParamDef = z.object({
+	id: misskeyId(),
+});
 
-const adminAdListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		publishing: { type: 'boolean', default: null, nullable: true },
-	},
-	required: [],
-} as const;
+const adminAdListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	publishing: z.boolean().nullable().default(null),
+});
 
-const adminAdUpdateParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-		memo: { type: 'string' },
-		url: { type: 'string', minLength: 1 },
-		imageUrl: { type: 'string', minLength: 1 },
-		place: { type: 'string' },
-		priority: { type: 'string' },
-		ratio: { type: 'integer' },
-		expiresAt: { type: 'integer' },
-		startsAt: { type: 'integer' },
-		dayOfWeek: { type: 'integer' },
-		isSensitive: { type: 'boolean' },
-	},
-	required: ['id'],
-} as const;
+const adminAdUpdateParamDef = z.object({
+	id: misskeyId(),
+	memo: z.string().optional(),
+	url: z.string().min(1).optional(),
+	imageUrl: z.string().min(1).optional(),
+	place: z.string().optional(),
+	priority: z.string().optional(),
+	ratio: z.number().int().optional(),
+	expiresAt: z.number().int().optional(),
+	startsAt: z.number().int().optional(),
+	dayOfWeek: z.number().int().optional(),
+	isSensitive: z.boolean().optional(),
+});
 
 
 function noSuchAdError(id: string): HonoApiError {

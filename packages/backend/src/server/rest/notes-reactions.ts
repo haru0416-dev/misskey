@@ -6,6 +6,7 @@
 import { domainToASCII } from 'node:url';
 import ms from 'ms';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -13,6 +14,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
 import { fetchNoteByIdFromDatabase, decrementNoteReactionInDatabase, incrementNoteReactionInDatabase } from '@/core/NoteStore.js';
@@ -324,14 +326,10 @@ export async function deleteNoteReactionForHonoApi(
 	}
 }
 
-const reactionsCreateParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		reaction: { type: 'string' },
-	},
-	required: ['noteId', 'reaction'],
-} as const;
+const reactionsCreateParamDef = z.object({
+	noteId: misskeyId(),
+	reaction: z.string(),
+});
 
 type ReactionsCreateParams = {
 	noteId: string;
@@ -360,13 +358,9 @@ export async function handleHonoApiNotesReactionsCreate(
 	}
 }
 
-const reactionsDeleteParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+const reactionsDeleteParamDef = z.object({
+	noteId: misskeyId(),
+});
 
 type ReactionsDeleteParams = {
 	noteId: string;
@@ -418,19 +412,15 @@ export function normalizeHonoApiNotesReactionsQuery(query: Record<string, string
 	return body;
 }
 
-const notesReactionsParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		type: { type: 'string', nullable: true },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['noteId'],
-} as const;
+const notesReactionsParamDef = z.object({
+	noteId: misskeyId(),
+	type: z.string().nullable().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type NotesReactionsParams = {
 	noteId: string;

@@ -4,6 +4,7 @@
  */
 
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import Chart, { type KVs } from '@/core/chart/core.js';
 import { name as activeUsersChartName, schema as activeUsersChartSchema } from '@/core/chart/charts/entities/active-users.js';
 import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/charts/entities/ap-request.js';
@@ -23,6 +24,7 @@ import { countInstancesFromDatabase } from '@/core/InstanceStore.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import type Logger from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiChartDependencies = {
@@ -87,15 +89,11 @@ export function normalizeHonoApiChartQuery(query: Record<string, string>): Recor
 	return body;
 }
 
-const chartParamDef = {
-	type: 'object',
-	properties: {
-		span: { type: 'string', enum: ['day', 'hour'] },
-		limit: { type: 'integer', minimum: 1, maximum: 500, default: 30 },
-		offset: { type: 'integer', nullable: true, default: null },
-	},
-	required: ['span'],
-} as const;
+const chartParamDef = z.object({
+	span: z.enum(['day', 'hour']),
+	limit: z.number().int().min(1).max(500).default(30),
+	offset: z.number().int().nullable().default(null),
+});
 
 type ChartParams = {
 	span: 'day' | 'hour';
@@ -103,31 +101,23 @@ type ChartParams = {
 	offset?: number | null;
 };
 
-const perUserChartParamDef = {
-	type: 'object',
-	properties: {
-		span: { type: 'string', enum: ['day', 'hour'] },
-		limit: { type: 'integer', minimum: 1, maximum: 500, default: 30 },
-		offset: { type: 'integer', nullable: true, default: null },
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['span', 'userId'],
-} as const;
+const perUserChartParamDef = z.object({
+	span: z.enum(['day', 'hour']),
+	limit: z.number().int().min(1).max(500).default(30),
+	offset: z.number().int().nullable().default(null),
+	userId: misskeyId(),
+});
 
 type PerUserChartParams = ChartParams & {
 	userId: string;
 };
 
-const instanceChartParamDef = {
-	type: 'object',
-	properties: {
-		span: { type: 'string', enum: ['day', 'hour'] },
-		limit: { type: 'integer', minimum: 1, maximum: 500, default: 30 },
-		offset: { type: 'integer', nullable: true, default: null },
-		host: { type: 'string' },
-	},
-	required: ['span', 'host'],
-} as const;
+const instanceChartParamDef = z.object({
+	span: z.enum(['day', 'hour']),
+	limit: z.number().int().min(1).max(500).default(30),
+	offset: z.number().int().nullable().default(null),
+	host: z.string(),
+});
 
 type InstanceChartParams = ChartParams & {
 	host: string;

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
@@ -13,6 +14,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -28,32 +30,20 @@ export type HonoApiRoleDependencies = {
 
 export type HonoApiRoleNotesDependencies = HonoApiNoteDependencies;
 
-const rolesListParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const rolesListParamDef = z.object({});
 
-const rolesShowParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['roleId'],
-} as const;
+const rolesShowParamDef = z.object({
+	roleId: misskeyId(),
+});
 
-const rolesUsersParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: ['roleId'],
-} as const;
+const rolesUsersParamDef = z.object({
+	roleId: misskeyId(),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+});
 
 
 function noSuchRoleError(): HonoApiError {
@@ -83,18 +73,14 @@ function rolesNotesNoSuchRoleError(): HonoApiError {
 	});
 }
 
-const rolesNotesParamDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['roleId'],
-} as const;
+const rolesNotesParamDef = z.object({
+	roleId: misskeyId(),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 
 export async function packHonoApiRole(

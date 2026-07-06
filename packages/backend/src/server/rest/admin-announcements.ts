@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	createAnnouncementWithSideEffects,
@@ -22,6 +23,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { HonoApiBroadcastStreamPublisher, HonoApiMainStreamPublisher } from './events.js';
@@ -52,60 +54,44 @@ type AdminAnnouncement = {
 	reads: number;
 };
 
-const adminAnnouncementsCreateParamDef = {
-	type: 'object',
-	properties: {
-		title: { type: 'string', minLength: 1 },
-		text: { type: 'string', minLength: 1 },
-		imageUrl: { type: 'string', nullable: true, minLength: 0 },
-		icon: { type: 'string', enum: ['info', 'warning', 'error', 'success'], default: 'info' },
-		display: { type: 'string', enum: ['normal', 'banner', 'dialog'], default: 'normal' },
-		forExistingUsers: { type: 'boolean', default: false },
-		silence: { type: 'boolean', default: false },
-		needConfirmationToRead: { type: 'boolean', default: false },
-		userId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: ['title', 'text', 'imageUrl'],
-} as const;
+const adminAnnouncementsCreateParamDef = z.object({
+	title: z.string().min(1),
+	text: z.string().min(1),
+	imageUrl: z.string().min(0).nullable(),
+	icon: z.enum(['info', 'warning', 'error', 'success']).default('info'),
+	display: z.enum(['normal', 'banner', 'dialog']).default('normal'),
+	forExistingUsers: z.boolean().default(false),
+	silence: z.boolean().default(false),
+	needConfirmationToRead: z.boolean().default(false),
+	userId: misskeyId().nullable().default(null),
+});
 
-const adminAnnouncementsDeleteParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+const adminAnnouncementsDeleteParamDef = z.object({
+	id: misskeyId(),
+});
 
-const adminAnnouncementsListParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		userId: { type: 'string', format: 'misskey:id', nullable: true },
-		status: { type: 'string', enum: ['all', 'active', 'archived'], default: 'active' },
-	},
-	required: [],
-} as const;
+const adminAnnouncementsListParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	userId: misskeyId().nullable().optional(),
+	status: z.enum(['all', 'active', 'archived']).default('active'),
+});
 
-const adminAnnouncementsUpdateParamDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-		title: { type: 'string', minLength: 1 },
-		text: { type: 'string', minLength: 1 },
-		imageUrl: { type: 'string', nullable: true, minLength: 0 },
-		icon: { type: 'string', enum: ['info', 'warning', 'error', 'success'] },
-		display: { type: 'string', enum: ['normal', 'banner', 'dialog'] },
-		forExistingUsers: { type: 'boolean' },
-		silence: { type: 'boolean' },
-		needConfirmationToRead: { type: 'boolean' },
-		isActive: { type: 'boolean' },
-	},
-	required: ['id'],
-} as const;
+const adminAnnouncementsUpdateParamDef = z.object({
+	id: misskeyId(),
+	title: z.string().min(1).optional(),
+	text: z.string().min(1).optional(),
+	imageUrl: z.string().min(0).nullable().optional(),
+	icon: z.enum(['info', 'warning', 'error', 'success']).optional(),
+	display: z.enum(['normal', 'banner', 'dialog']).optional(),
+	forExistingUsers: z.boolean().optional(),
+	silence: z.boolean().optional(),
+	needConfirmationToRead: z.boolean().optional(),
+	isActive: z.boolean().optional(),
+});
 
 
 function noSuchAnnouncementError(id: string): HonoApiError {

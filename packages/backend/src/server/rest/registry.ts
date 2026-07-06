@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	deleteRegistryItemFromDatabase,
@@ -27,50 +28,27 @@ export type HonoApiRegistryDependencies = {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const registryScopeSchema = {
-	type: 'array',
-	default: [],
-	items: {
-		type: 'string',
-		pattern: /^[a-zA-Z0-9_]+$/.toString().slice(1, -1),
-	},
-} as const;
+const registryScopeZodSchema = z.array(z.string().regex(/^[a-zA-Z0-9_]+$/)).default([]);
 
-const registryGetParamDef = {
-	type: 'object',
-	properties: {
-		key: { type: 'string' },
-		scope: registryScopeSchema,
-		domain: { type: 'string', nullable: true },
-	},
-	required: ['key', 'scope'],
-} as const;
+const registryGetParamDef = z.object({
+	key: z.string(),
+	scope: registryScopeZodSchema,
+	domain: z.string().nullable().optional(),
+});
 
-const registryScopeParamDef = {
-	type: 'object',
-	properties: {
-		scope: registryScopeSchema,
-		domain: { type: 'string', nullable: true },
-	},
-	required: ['scope'],
-} as const;
+const registryScopeParamDef = z.object({
+	scope: registryScopeZodSchema,
+	domain: z.string().nullable().optional(),
+});
 
-const registrySetParamDef = {
-	type: 'object',
-	properties: {
-		key: { type: 'string', minLength: 1 },
-		value: {},
-		scope: registryScopeSchema,
-		domain: { type: 'string', nullable: true },
-	},
-	required: ['key', 'value', 'scope'],
-} as const;
+const registrySetParamDef = z.object({
+	key: z.string().min(1),
+	value: z.unknown(),
+	scope: registryScopeZodSchema,
+	domain: z.string().nullable().optional(),
+});
 
-const registryScopesWithDomainParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const registryScopesWithDomainParamDef = z.object({});
 
 type RegistrySetParams = {
 	key: string;

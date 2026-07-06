@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { adminUpdateMetaParamDef, buildAdminUpdateMetaPatch } from '@/server/rest/AdminUpdateMetaLogic.js';
+import { adminUpdateMetaJsonSchema, buildAdminUpdateMetaPatch } from '@/server/rest/AdminUpdateMetaLogic.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -13,4 +13,4 @@ export const meta = {
 	kind: 'write:admin:meta',
 } as const;
 
-export const paramDef = adminUpdateMetaParamDef;
+export const paramDef = adminUpdateMetaJsonSchema;

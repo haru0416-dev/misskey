@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { createAppInDatabase, fetchAppByIdFromDatabase, fetchAppByIdOrFailFromDatabase, listAppsByIdsFromDatabase, listAppsByUserIdFromDatabase } from '@/core/AppStore.js';
 import {
@@ -22,6 +23,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { unique } from '@/misc/prelude/array.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
@@ -31,108 +33,39 @@ export type HonoApiAppDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const appCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string' },
-		description: { type: 'string' },
-		permission: {
-			type: 'array',
-			uniqueItems: true,
-			items: {
-				type: 'string',
-			},
-		},
-		callbackUrl: { type: 'string', nullable: true },
-	},
-	required: ['name', 'description', 'permission'],
-} as const;
+const appCreateParamDef = z.object({
+	name: z.string(),
+	description: z.string(),
+	permission: uniqueItems(z.array(z.string())),
+	callbackUrl: z.string().nullable().optional(),
+});
 
-const appShowParamDef = {
-	type: 'object',
-	properties: {
-		appId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['appId'],
-} as const;
+const appShowParamDef = z.object({
+	appId: misskeyId(),
+});
 
-const myAppsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-	},
-	required: [],
-} as const;
+const myAppsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	offset: z.number().int().default(0),
+});
 
-const iAppsParamDef = {
-	type: 'object',
-	properties: {
-		sort: { type: 'string', enum: ['+createdAt', '-createdAt', '+lastUsedAt', '-lastUsedAt'] },
-	},
-	required: [],
-} as const;
+const iAppsParamDef = z.object({
+	sort: z.enum(['+createdAt', '-createdAt', '+lastUsedAt', '-lastUsedAt']).optional(),
+});
 
-const iAuthorizedAppsParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		sort: { type: 'string', enum: ['desc', 'asc'], default: 'desc' },
-	},
-	required: [],
-} as const;
+const iAuthorizedAppsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	offset: z.number().int().default(0),
+	sort: z.enum(['desc', 'asc']).default('desc'),
+});
 
-const iRevokeTokenParamDef = {
-	anyOf: [
-		{
-			type: 'object',
-			properties: {
-				tokenId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['tokenId'],
-		},
-		{
-			type: 'object',
-			properties: {
-				token: { type: 'string', nullable: true },
-			},
-			required: ['token'],
-		},
-	],
-} as const;
-
-type AppCreateParams = {
-	name: string;
-	description: string;
-	permission: string[];
-	callbackUrl?: string | null;
-};
-
-type AppShowParams = {
-	appId: string;
-};
-
-type MyAppsParams = {
-	limit: number;
-	offset: number;
-};
-
-type IAppsParams = {
-	sort?: '+createdAt' | '-createdAt' | '+lastUsedAt' | '-lastUsedAt';
-};
-
-type IAuthorizedAppsParams = {
-	limit: number;
-	offset: number;
-	sort: 'desc' | 'asc';
-};
-
-type IRevokeTokenParams = {
-	tokenId: string;
-} | {
-	token: string | null;
-};
+// 元は anyOf([{ required: ['tokenId'] }, { required: ['token'] }]) の2択。
+// tokenId/token は互いに素なプロパティなので、共通プロパティ optional + superRefine ではなく
+// z.union() で各枝をそのまま表現する (枝ごとの型チェックを他方に影響させないため。詳細は報告参照)。
+const iRevokeTokenParamDef = z.union([
+	z.object({ tokenId: misskeyId() }),
+	z.object({ token: z.string().nullable() }),
+]);
 
 function noSuchAppError(): HonoApiError {
 	return new HonoApiError({

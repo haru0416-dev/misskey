@@ -3,6 +3,22 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
+import { misskeyId } from '@/misc/zod-params.js';
+
+// TODO(ajv->zod移行): endpoints/i/update.ts・endpoints/admin/show-user.ts (res/misskey-js生成専用) が
+// 下記 notificationRecieveConfig をまだ参照しているため残す。Phase B でそちらを移行し終えたら
+// notificationRecieveConfig は削除して notificationRecieveConfigZodSchema にリネームする。
+export const notificationRecieveConfigZodSchema = z.union([
+	z.object({
+		type: z.enum(['all', 'following', 'follower', 'mutualFollow', 'followingOrFollower', 'never']),
+	}),
+	z.object({
+		type: z.literal('list'),
+		userListId: misskeyId(),
+	}),
+]);
+
 export const notificationRecieveConfig = {
 	type: 'object',
 	oneOf: [

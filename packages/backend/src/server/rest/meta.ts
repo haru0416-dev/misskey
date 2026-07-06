@@ -5,6 +5,7 @@
 
 import * as os from 'node:os';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
 import { packMetaDetailed, packMetaLite } from '@/core/MetaEntityPacker.js';
@@ -12,7 +13,8 @@ import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { adminUpdateMetaParamDef, buildAdminUpdateMetaPatch, type AdminUpdateMetaParams } from '@/server/rest/AdminUpdateMetaLogic.js';
@@ -30,27 +32,19 @@ export type HonoApiMetaDependencies = {
 const hashtagRankingWindow = 1000 * 60 * 60;
 const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
-const metaParamDef = {
-	type: 'object',
-	properties: {
-		detail: { type: 'boolean', default: true },
-	},
-	required: [],
-} as const;
+const metaParamDef = z.object({
+	detail: z.boolean().optional().default(true),
+});
 
-const testParamDef = {
-	type: 'object',
-	properties: {
-		required: { type: 'boolean' },
-		string: { type: 'string' },
-		default: { type: 'string', default: 'hello' },
-		nullableDefault: { type: 'string', nullable: true, default: 'hello' },
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['required'],
-} as const;
+const testParamDef = z.object({
+	required: z.boolean(),
+	string: z.string().optional(),
+	default: z.string().optional().default('hello'),
+	nullableDefault: z.string().nullable().optional().default('hello'),
+	id: misskeyId().optional(),
+});
 
-type TestParams = SchemaType<typeof testParamDef>;
+type TestParams = z.infer<typeof testParamDef>;
 
 function currentFeaturedWindow(windowRange: number): number {
 	const passed = new Date().getTime() - featuredEpoc;

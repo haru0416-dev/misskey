@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { EmailService } from '@/core/EmailService.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import { parseHonoApiParams } from './validation.js';
@@ -11,15 +12,11 @@ export type HonoApiAdminEmailDependencies = {
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
 
-const adminSendEmailParamDef = {
-	type: 'object',
-	properties: {
-		to: { type: 'string' },
-		subject: { type: 'string' },
-		text: { type: 'string' },
-	},
-	required: ['to', 'subject', 'text'],
-} as const;
+const adminSendEmailParamDef = z.object({
+	to: z.string(),
+	subject: z.string(),
+	text: z.string(),
+});
 
 
 export async function handleHonoApiAdminSendEmail(

@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { EmailService } from '@/core/EmailService.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import { countUsersActiveAfterFromDatabase, isLocalUsernameTaken } from '@/core/UserStore.js';
 import { USER_ONLINE_THRESHOLD } from '@/const.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { localUsernameSchema } from '@/models/User.js';
+import { localUsernameZodSchema } from '@/models/User.js';
 import type { MiMeta } from '@/models/_.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -18,29 +19,13 @@ export type HonoApiAvailabilityDependencies = {
 	emailService: Pick<EmailService, 'validateEmailForAccount'>;
 };
 
-const usernameAvailableParamDef = {
-	type: 'object',
-	properties: {
-		username: localUsernameSchema,
-	},
-	required: ['username'],
-} as const;
+const usernameAvailableParamDef = z.object({
+	username: localUsernameZodSchema,
+});
 
-const emailAddressAvailableParamDef = {
-	type: 'object',
-	properties: {
-		emailAddress: { type: 'string' },
-	},
-	required: ['emailAddress'],
-} as const;
-
-type UsernameAvailableParams = {
-	username: string;
-};
-
-type EmailAddressAvailableParams = {
-	emailAddress: string;
-};
+const emailAddressAvailableParamDef = z.object({
+	emailAddress: z.string(),
+});
 
 export async function handleHonoApiUsernameAvailable(
 	deps: HonoApiAvailabilityDependencies,

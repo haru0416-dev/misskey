@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { listVisibleNotesByIdsFromDatabase } from '@/core/NoteStore.js';
@@ -12,6 +13,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileSt
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -42,18 +44,14 @@ function usersReactionsNotPublicError(): HonoApiError {
 	});
 }
 
-const usersReactionsParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['userId'],
-} as const;
+const usersReactionsParamDef = z.object({
+	userId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type UsersReactionsParams = {
 	userId: string;

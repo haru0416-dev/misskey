@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
@@ -10,6 +11,7 @@ import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Config } from '@/config.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
 import {
@@ -46,14 +48,10 @@ function pollsVoteYouHaveBeenBlockedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'You cannot vote this poll because you have been blocked by this user.', code: 'YOU_HAVE_BEEN_BLOCKED', id: '85a5377e-b1e9-4617-b0b9-5bea73331e49' });
 }
 
-const notesPollsVoteParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		choice: { type: 'integer' },
-	},
-	required: ['noteId', 'choice'],
-} as const;
+const notesPollsVoteParamDef = z.object({
+	noteId: misskeyId(),
+	choice: z.number().int(),
+});
 
 type NotesPollsVoteParams = {
 	noteId: string;

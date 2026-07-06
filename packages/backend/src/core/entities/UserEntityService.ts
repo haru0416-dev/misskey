@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import _Ajv from 'ajv';
 import { ModuleRef } from '@nestjs/core';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
@@ -15,12 +14,12 @@ import { awaitAll } from '@/misc/prelude/await-all.js';
 import { USER_ACTIVE_THRESHOLD, USER_ONLINE_THRESHOLD } from '@/const.js';
 import type { MiLocalUser, MiPartialLocalUser, MiPartialRemoteUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import {
-	birthdaySchema,
-	descriptionSchema,
-	localUsernameSchema,
-	locationSchema,
-	nameSchema,
-	passwordSchema,
+	birthdayZodSchema,
+	descriptionZodSchema,
+	localUsernameZodSchema,
+	locationZodSchema,
+	nameZodSchema,
+	passwordZodSchema,
 } from '@/models/User.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiFollowing } from '@/models/Following.js';
@@ -65,9 +64,6 @@ import type { OnModuleInit } from '@nestjs/common';
 import type { NoteEntityService } from './NoteEntityService.js';
 import type { PageEntityService } from './PageEntityService.js';
 import { toArray } from '@/misc/prelude/array.js';
-
-const Ajv = _Ajv.default;
-const ajv = new Ajv();
 
 function isLocalUser(user: MiUser): user is MiLocalUser;
 function isLocalUser<T extends { host: MiUser['host'] }>(user: T): user is (T & { host: null; });
@@ -141,12 +137,12 @@ export class UserEntityService implements OnModuleInit {
 	}
 
 	//#region Validators
-	public validateLocalUsername = ajv.compile(localUsernameSchema);
-	public validatePassword = ajv.compile(passwordSchema);
-	public validateName = ajv.compile(nameSchema);
-	public validateDescription = ajv.compile(descriptionSchema);
-	public validateLocation = ajv.compile(locationSchema);
-	public validateBirthday = ajv.compile(birthdaySchema);
+	public validateLocalUsername = (value: unknown): boolean => localUsernameZodSchema.safeParse(value).success;
+	public validatePassword = (value: unknown): boolean => passwordZodSchema.safeParse(value).success;
+	public validateName = (value: unknown): boolean => nameZodSchema.safeParse(value).success;
+	public validateDescription = (value: unknown): boolean => descriptionZodSchema.safeParse(value).success;
+	public validateLocation = (value: unknown): boolean => locationZodSchema.safeParse(value).success;
+	public validateBirthday = (value: unknown): boolean => birthdayZodSchema.safeParse(value).success;
 	//#endregion
 
 	public isLocalUser = isLocalUser;

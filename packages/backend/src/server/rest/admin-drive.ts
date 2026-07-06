@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, listAllDriveFilesByUserIdFromDatabase, listDriveFilesForAdminFromDatabase, listOrphanDriveFilesFromDatabase } from '@/core/DriveFileStore.js';
 import { startDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
@@ -12,7 +13,8 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFolderForHonoApi } from './drive.js';
@@ -29,68 +31,34 @@ export type HonoApiAdminDriveDependencies = HonoApiRolePolicyDependencies & {
 	publishDriveStream?: HonoApiDriveStreamPublisher;
 };
 
-const adminDriveNoParamsDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const adminDriveNoParamsDef = z.object({});
 
-const adminDriveUserParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const adminDriveUserParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const adminDriveShowFileParamDef = {
-	anyOf: [
-		{
-			type: 'object',
-			properties: {
-				fileId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['fileId'],
-		},
-		{
-			type: 'object',
-			properties: {
-				url: { type: 'string' },
-			},
-			required: ['url'],
-		},
-	],
-} as const;
+// Accepts either `fileId` or `url` (both may be present at once); at least one is required.
+const adminDriveShowFileParamDef = z.object({
+	fileId: misskeyId().optional(),
+	url: z.string().optional(),
+}).superRefine((data, ctx) => {
+	if (data.fileId === undefined && data.url === undefined) {
+		ctx.addIssue({ code: 'custom', message: 'must match a schema in anyOf' });
+	}
+});
 
-const adminDriveFilesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		userId: { type: 'string', format: 'misskey:id', nullable: true },
-		type: { type: 'string', nullable: true, pattern: /^[a-zA-Z0-9\/\-*]+$/.toString().slice(1, -1) },
-		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'local' },
-		hostname: {
-			type: 'string',
-			nullable: true,
-			default: null,
-			description: 'The local host is represented with `null`.',
-		},
-	},
-	required: [],
-} as const;
-
-type AdminDriveShowFileParams = SchemaType<typeof adminDriveShowFileParamDef> & (
-	| { fileId: string }
-	| { url: string }
-);
-type AdminDriveFilesParams = SchemaType<typeof adminDriveFilesParamDef> & {
-	origin: 'combined' | 'local' | 'remote';
-	hostname: string | null;
-};
+const adminDriveFilesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	userId: misskeyId().nullable().optional(),
+	type: z.string().regex(/^[a-zA-Z0-9\/\-*]+$/).nullable().optional(),
+	origin: z.enum(['combined', 'local', 'remote']).default('local'),
+	/** The local host is represented with `null`. */
+	hostname: z.string().nullable().default(null),
+});
 
 type AdminDriveFileResponse = {
 	id: string;
@@ -306,9 +274,9 @@ export async function handleHonoApiAdminDriveShowFile(
 	body: Record<string, unknown>,
 ): Promise<AdminDriveFileResponse> {
 	const params = parseHonoApiParams(adminDriveShowFileParamDef, body);
-	const file = 'fileId' in params
+	const file = params.fileId !== undefined
 		? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
-		: await fetchDriveFileByUrlFromDatabase(deps.db, params.url);
+		: await fetchDriveFileByUrlFromDatabase(deps.db, params.url!);
 
 	if (file == null) {
 		throw noSuchFileError();

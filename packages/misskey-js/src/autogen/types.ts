@@ -30315,27 +30315,23 @@ export interface operations {
                     cw?: string | null;
                     /** @default false */
                     localOnly?: boolean;
-                    /**
-                     * @default null
-                     * @enum {string|null}
-                     */
+                    /** @default null */
                     reactionAcceptance?:
-                        | null
-                        | 'likeOnly'
-                        | 'likeOnlyForRemote'
-                        | 'nonSensitiveOnly'
-                        | 'nonSensitiveOnlyForLocalLikeOnlyForRemote';
+                        | (
+                              | 'likeOnly'
+                              | 'likeOnlyForRemote'
+                              | 'nonSensitiveOnly'
+                              | 'nonSensitiveOnlyForLocalLikeOnlyForRemote'
+                          )
+                        | null;
                     /** @default false */
                     noExtractMentions?: boolean;
                     /** @default false */
                     noExtractHashtags?: boolean;
                     /** @default false */
                     noExtractEmojis?: boolean;
-                    /** Format: misskey:id */
                     replyId?: string | null;
-                    /** Format: misskey:id */
                     renoteId?: string | null;
-                    /** Format: misskey:id */
                     channelId?: string | null;
                     text?: string | null;
                     fileIds?: string[];
@@ -37250,21 +37246,23 @@ export interface operations {
     users___show: {
         requestBody: {
             content: {
-                'application/json': (
+                'application/json':
                     | {
                           /** Format: misskey:id */
                           userId: string;
+                          /** @description The local host is represented with `null`. */
+                          host?: string | null;
                       }
                     | {
                           userIds: string[];
+                          /** @description The local host is represented with `null`. */
+                          host?: string | null;
                       }
                     | {
                           username: string;
-                      }
-                ) & {
-                    /** @description The local host is represented with `null`. */
-                    host?: string | null;
-                };
+                          /** @description The local host is represented with `null`. */
+                          host?: string | null;
+                      };
             };
         };
         responses: {

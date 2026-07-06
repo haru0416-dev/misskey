@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import { Writable } from 'node:stream';
 import { domainToASCII } from 'node:url';
 import { format as dateFormat } from 'date-fns';
-import _Ajv from 'ajv';
+import { z } from 'zod';
 import type * as Bull from 'bullmq';
 import { createAntennaInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { countDriveFilesByUserIdFromDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
@@ -29,7 +29,6 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import * as Acct from '@/misc/acct.js';
-import type { Schema, SchemaType } from '@/misc/json-schema.js';
 import type { NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiBlocking, MiClip, MiFollowing, MiMuting, MiNote, MiUser } from '@/models/_.js';
@@ -48,8 +47,6 @@ import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js'
 import { createExportCompletedNotification, type HonoApiNotificationDependencies } from '../../server/rest/notification.js';
 import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '../../server/rest/users-lists.js';
 import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
-
-const Ajv = _Ajv.default;
 
 export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & HonoApiApPersonDependencies & HonoApiUsersListsDependencies & {
 	db: MiDrizzleDatabase;
@@ -110,44 +107,26 @@ function writeToStream(stream: fs.WriteStream, content: string): Promise<void> {
 	});
 }
 
-export const exportedAntennaSchema = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		src: { type: 'string', enum: ['home', 'all', 'users', 'list', 'users_blacklist'] },
-		userListAccts: {
-			type: 'array',
-			items: {
-				type: 'string',
-			},
-			nullable: true,
-		},
-		keywords: { type: 'array', items: {
-			type: 'array', items: {
-				type: 'string',
-			},
-		} },
-		excludeKeywords: { type: 'array', items: {
-			type: 'array', items: {
-				type: 'string',
-			},
-		} },
-		users: { type: 'array', items: {
-			type: 'string',
-		} },
-		caseSensitive: { type: 'boolean' },
-		localOnly: { type: 'boolean' },
-		excludeBots: { type: 'boolean' },
-		withReplies: { type: 'boolean' },
-		withFile: { type: 'boolean' },
-		excludeNotesInSensitiveChannel: { type: 'boolean' },
-	},
-	required: ['name', 'src', 'keywords', 'excludeKeywords', 'users', 'caseSensitive', 'withReplies', 'withFile'],
-} as const satisfies Schema;
+export const exportedAntennaZodSchema = z.object({
+	name: z.string().min(1).max(100),
+	src: z.enum(['home', 'all', 'users', 'list', 'users_blacklist']),
+	userListAccts: z.array(z.string()).nullable().optional(),
+	keywords: z.array(z.array(z.string())),
+	excludeKeywords: z.array(z.array(z.string())),
+	users: z.array(z.string()),
+	caseSensitive: z.boolean(),
+	localOnly: z.boolean().optional(),
+	excludeBots: z.boolean().optional(),
+	withReplies: z.boolean(),
+	withFile: z.boolean(),
+	excludeNotesInSensitiveChannel: z.boolean().optional(),
+});
 
-export type ExportedAntenna = SchemaType<typeof exportedAntennaSchema>;
+export type ExportedAntenna = z.infer<typeof exportedAntennaZodSchema>;
 
-const validateExportedAntenna = new Ajv().compile<ExportedAntenna>(exportedAntennaSchema);
+function validateExportedAntenna(data: unknown): data is ExportedAntenna {
+	return exportedAntennaZodSchema.safeParse(data).success;
+}
 
 /** DeleteDriveFilesProcessorService.process 相当。 */
 export async function handleHonoQueueDeleteDriveFiles(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {

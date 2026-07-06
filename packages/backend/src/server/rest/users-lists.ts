@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import type { RelationshipQueue } from '@/core/QueueModule.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
@@ -28,6 +29,7 @@ import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
@@ -169,13 +171,9 @@ async function getUserForHonoApi(deps: HonoApiUsersListsDependencies, userId: st
 	return user;
 }
 
-const createParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-	},
-	required: ['name'],
-} as const;
+const createParamDef = z.object({
+	name: z.string().min(1).max(100),
+});
 
 type CreateParams = {
 	name: string;
@@ -203,14 +201,10 @@ export async function handleHonoApiUsersListsCreate(
 	return await packUserListByRowForHonoApi(deps, userList);
 }
 
-const createFromPublicParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		listId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['name', 'listId'],
-} as const;
+const createFromPublicParamDef = z.object({
+	name: z.string().min(1).max(100),
+	listId: misskeyId(),
+});
 
 type CreateFromPublicParams = {
 	name: string;
@@ -269,14 +263,10 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	return await packUserListByRowForHonoApi(deps, userList);
 }
 
-const pullParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['listId', 'userId'],
-} as const;
+const pullParamDef = z.object({
+	listId: misskeyId(),
+	userId: misskeyId(),
+});
 
 type PullParams = {
 	listId: string;
@@ -298,14 +288,10 @@ export async function handleHonoApiUsersListsPull(
 	await removeUserListMemberForHonoApi(deps, user, userList);
 }
 
-const pushParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['listId', 'userId'],
-} as const;
+const pushParamDef = z.object({
+	listId: misskeyId(),
+	userId: misskeyId(),
+});
 
 type PushParams = {
 	listId: string;
@@ -346,19 +332,15 @@ export async function handleHonoApiUsersListsPush(
 	}
 }
 
-const getMembershipsParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		forPublic: { type: 'boolean', default: false },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['listId'],
-} as const;
+const getMembershipsParamDef = z.object({
+	listId: misskeyId(),
+	forPublic: z.boolean().default(false),
+	limit: z.number().int().min(1).max(100).default(30),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type GetMembershipsParams = {
 	listId: string;
@@ -394,15 +376,11 @@ export async function handleHonoApiUsersListsGetMemberships(
 	return await packUserListMembershipsManyForHonoApi(deps, memberships);
 }
 
-const updateMembershipParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-		withReplies: { type: 'boolean' },
-	},
-	required: ['listId', 'userId'],
-} as const;
+const updateMembershipParamDef = z.object({
+	listId: misskeyId(),
+	userId: misskeyId(),
+	withReplies: z.boolean().optional(),
+});
 
 type UpdateMembershipParams = {
 	listId: string;

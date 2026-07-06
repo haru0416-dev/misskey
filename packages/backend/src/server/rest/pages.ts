@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { adjustNotesPageCountInDatabase } from '@/core/NoteStore.js';
@@ -29,6 +30,7 @@ import { fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase }
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import { MiPage, pageNameSchema } from '@/models/Page.js';
 import type { PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -37,6 +39,9 @@ import { packDriveFileForHonoApi, packDriveFileManyForHonoApi, type HonoApiDrive
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packUserLiteForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
+
+/** `pageNameSchema` (旧 ajv 用 JSON Schema フラグメント) の pattern を Zod 用に再利用する。 */
+const pageNamePattern = new RegExp(pageNameSchema.pattern);
 
 export type HonoApiPageDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies;
 
@@ -167,22 +172,18 @@ export async function packPageLikeForHonoApi(
 	};
 }
 
-const pagesCreateParamDef = {
-	type: 'object',
-	properties: {
-		title: { type: 'string' },
-		name: { ...pageNameSchema, minLength: 1 },
-		summary: { type: 'string', nullable: true },
-		content: { type: 'array', items: { type: 'object', additionalProperties: true } },
-		variables: { type: 'array', items: { type: 'object', additionalProperties: true } },
-		script: { type: 'string' },
-		eyeCatchingImageId: { type: 'string', format: 'misskey:id', nullable: true },
-		font: { type: 'string', enum: ['serif', 'sans-serif'], default: 'sans-serif' },
-		alignCenter: { type: 'boolean', default: false },
-		hideTitleWhenPinned: { type: 'boolean', default: false },
-	},
-	required: ['title', 'name', 'content', 'variables', 'script'],
-} as const;
+const pagesCreateParamDef = z.object({
+	title: z.string(),
+	name: z.string().min(1).regex(pageNamePattern),
+	summary: z.string().nullable().optional(),
+	content: z.array(z.record(z.string(), z.unknown())),
+	variables: z.array(z.record(z.string(), z.unknown())),
+	script: z.string(),
+	eyeCatchingImageId: misskeyId().nullable().optional(),
+	font: z.enum(['serif', 'sans-serif']).optional().default('sans-serif'),
+	alignCenter: z.boolean().optional().default(false),
+	hideTitleWhenPinned: z.boolean().optional().default(false),
+});
 
 type PagesCreateParams = {
 	title: string;
@@ -241,23 +242,19 @@ export async function handleHonoApiPagesCreate(
 	return await packPageForHonoApi(deps, pageEntity);
 }
 
-const pagesUpdateParamDef = {
-	type: 'object',
-	properties: {
-		pageId: { type: 'string', format: 'misskey:id' },
-		title: { type: 'string' },
-		name: { ...pageNameSchema, minLength: 1 },
-		summary: { type: 'string', nullable: true },
-		content: { type: 'array', items: { type: 'object', additionalProperties: true } },
-		variables: { type: 'array', items: { type: 'object', additionalProperties: true } },
-		script: { type: 'string' },
-		eyeCatchingImageId: { type: 'string', format: 'misskey:id', nullable: true },
-		font: { type: 'string', enum: ['serif', 'sans-serif'] },
-		alignCenter: { type: 'boolean' },
-		hideTitleWhenPinned: { type: 'boolean' },
-	},
-	required: ['pageId'],
-} as const;
+const pagesUpdateParamDef = z.object({
+	pageId: misskeyId(),
+	title: z.string().optional(),
+	name: z.string().min(1).regex(pageNamePattern).optional(),
+	summary: z.string().nullable().optional(),
+	content: z.array(z.record(z.string(), z.unknown())).optional(),
+	variables: z.array(z.record(z.string(), z.unknown())).optional(),
+	script: z.string().optional(),
+	eyeCatchingImageId: misskeyId().nullable().optional(),
+	font: z.enum(['serif', 'sans-serif']).optional(),
+	alignCenter: z.boolean().optional(),
+	hideTitleWhenPinned: z.boolean().optional(),
+});
 
 type PagesUpdateParams = {
 	pageId: string;
@@ -330,13 +327,9 @@ export async function handleHonoApiPagesUpdate(
 	}
 }
 
-const pagesDeleteParamDef = {
-	type: 'object',
-	properties: {
-		pageId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['pageId'],
-} as const;
+const pagesDeleteParamDef = z.object({
+	pageId: misskeyId(),
+});
 
 type PagesDeleteParams = {
 	pageId: string;
@@ -393,25 +386,16 @@ export async function handleHonoApiPagesDelete(
 	}
 }
 
-const pagesShowParamDef = {
-	anyOf: [
-		{
-			type: 'object',
-			properties: {
-				pageId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['pageId'],
-		},
-		{
-			type: 'object',
-			properties: {
-				name: { type: 'string' },
-				username: { type: 'string' },
-			},
-			required: ['name', 'username'],
-		},
-	],
-} as const;
+/**
+ * 旧 ajv 版は `anyOf` で「pageId 単体」または「name+username の組」のどちらかが妥当ならOKとしていた
+ * (各分岐とも additionalProperties: true のため、他方のプロパティが型不正な値で紛れ込んでいても
+ * 分岐自体の可否には影響しない)。z.union はまさに同じ「いずれかの分岐が成功すればOK」という評価をする
+ * ため、素直に anyOf の等価表現として使える (ajv/zod 突き合わせ検証で確認済み)。
+ */
+const pagesShowParamDef = z.union([
+	z.object({ pageId: misskeyId() }),
+	z.object({ name: z.string(), username: z.string() }),
+]);
 
 type PagesShowParams = { pageId: string } | { name: string; username: string };
 
@@ -439,11 +423,7 @@ export async function handleHonoApiPagesShow(
 	return await packPageForHonoApi(deps, pageEntity, me);
 }
 
-const pagesFeaturedParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const pagesFeaturedParamDef = z.object({});
 
 export async function handleHonoApiPagesFeatured(
 	deps: HonoApiPageDependencies,
@@ -457,17 +437,13 @@ export async function handleHonoApiPagesFeatured(
 	return await packPageManyForHonoApi(deps, pages, me);
 }
 
-const iPagesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const iPagesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type IPagesParams = {
 	limit: number;
@@ -495,17 +471,13 @@ export async function handleHonoApiIPages(
 	return await packPageManyForHonoApi(deps, pages);
 }
 
-const iPageLikesParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+const iPageLikesParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type IPageLikesParams = {
 	limit: number;
@@ -564,18 +536,14 @@ export async function handleHonoApiIPageLikes(
 	return await Promise.all(likesWithPages.map(like => packPageLikeForHonoApi(deps, like, me)));
 }
 
-const usersPagesParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['userId'],
-} as const;
+const usersPagesParamDef = z.object({
+	userId: misskeyId(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type UsersPagesParams = {
 	userId: string;

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -12,11 +13,7 @@ export type HonoApiAvatarDecorationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const getAvatarDecorationsParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const getAvatarDecorationsParamDef = z.object({});
 
 export async function handleHonoApiGetAvatarDecorations(
 	deps: HonoApiAvatarDecorationDependencies,

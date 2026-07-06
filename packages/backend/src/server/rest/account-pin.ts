@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { createUserNotePiningInDatabase, deleteUserNotePiningFromDatabase, listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
 import { fetchNoteByIdAndUserIdFromDatabase } from '@/core/NoteStore.js';
 import type { Config } from '@/config.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { HonoApiError } from './error.js';
@@ -33,13 +35,9 @@ function iUnpinNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '454170ce-9d63-4a43-9da1-ea10afe81e21' });
 }
 
-const iPinOrUnpinParamDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+const iPinOrUnpinParamDef = z.object({
+	noteId: misskeyId(),
+});
 
 type IPinOrUnpinParams = {
 	noteId: string;

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { MiDriveFile } from './DriveFile.js';
 
 export class MiUser {
@@ -144,6 +145,8 @@ export type MiPartialRemoteUser = Partial<MiUser> & {
 	uri: string;
 };
 
+// TODO(ajv->zod移行): rest/*.ts の paramDef (ajv) が下記を spread/参照している間は残す。
+// 移行完了後、下記7個は削除して *ZodSchema 側の名前から Zod サフィックスを外す。
 export const localUsernameSchema = { type: 'string', pattern: /^\w{1,20}$/.toString().slice(1, -1) } as const;
 export const passwordSchema = { type: 'string', minLength: 1 } as const;
 export const nameSchema = { type: 'string', minLength: 1, maxLength: 50 } as const;
@@ -151,3 +154,11 @@ export const descriptionSchema = { type: 'string', minLength: 1, maxLength: 1500
 export const followedMessageSchema = { type: 'string', minLength: 1, maxLength: 256 } as const;
 export const locationSchema = { type: 'string', minLength: 1, maxLength: 50 } as const;
 export const birthdaySchema = { type: 'string', pattern: /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.toString().slice(1, -1) } as const;
+
+export const localUsernameZodSchema = z.string().regex(/^\w{1,20}$/);
+export const passwordZodSchema = z.string().min(1);
+export const nameZodSchema = z.string().min(1).max(50);
+export const descriptionZodSchema = z.string().min(1).max(1500);
+export const followedMessageZodSchema = z.string().min(1).max(256);
+export const locationZodSchema = z.string().min(1).max(50);
+export const birthdayZodSchema = z.string().regex(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);

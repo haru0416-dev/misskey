@@ -6,6 +6,7 @@
 import * as os from 'node:os';
 import { sql } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -36,11 +37,7 @@ type AdminServerInfoResponse = {
 	};
 };
 
-const adminServerInfoParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const adminServerInfoParamDef = z.object({});
 
 export async function handleHonoApiAdminServerInfo(
 	deps: HonoApiAdminServerInfoDependencies,

@@ -5,6 +5,7 @@
 
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import {
 	countAntennasByUserIdFromDatabase,
 	createAntennaInDatabase,
@@ -25,6 +26,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAntenna } from '@/models/Antenna.js';
@@ -218,24 +220,20 @@ async function packAntennaForHonoApi(
 
 const antennaSrcEnum = ['home', 'all', 'users', 'list', 'users_blacklist'] as const;
 
-const antennasCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		src: { type: 'string', enum: antennaSrcEnum },
-		userListId: { type: 'string', format: 'misskey:id', nullable: true },
-		keywords: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
-		excludeKeywords: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
-		users: { type: 'array', items: { type: 'string' } },
-		caseSensitive: { type: 'boolean' },
-		localOnly: { type: 'boolean' },
-		excludeBots: { type: 'boolean' },
-		withReplies: { type: 'boolean' },
-		withFile: { type: 'boolean' },
-		excludeNotesInSensitiveChannel: { type: 'boolean' },
-	},
-	required: ['name', 'src', 'keywords', 'excludeKeywords', 'users', 'caseSensitive', 'withReplies', 'withFile'],
-} as const;
+const antennasCreateParamDef = z.object({
+	name: z.string().min(1).max(100),
+	src: z.enum(antennaSrcEnum),
+	userListId: misskeyId().nullable().optional(),
+	keywords: z.array(z.array(z.string())),
+	excludeKeywords: z.array(z.array(z.string())),
+	users: z.array(z.string()),
+	caseSensitive: z.boolean(),
+	localOnly: z.boolean().optional(),
+	excludeBots: z.boolean().optional(),
+	withReplies: z.boolean(),
+	withFile: z.boolean(),
+	excludeNotesInSensitiveChannel: z.boolean().optional(),
+});
 
 type AntennasCreateParams = {
 	name: string;
@@ -299,25 +297,21 @@ export async function handleHonoApiAntennasCreate(
 	return await packAntennaForHonoApi(deps, antenna);
 }
 
-const antennasUpdateParamDef = {
-	type: 'object',
-	properties: {
-		antennaId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		src: { type: 'string', enum: antennaSrcEnum },
-		userListId: { type: 'string', format: 'misskey:id', nullable: true },
-		keywords: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
-		excludeKeywords: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
-		users: { type: 'array', items: { type: 'string' } },
-		caseSensitive: { type: 'boolean' },
-		localOnly: { type: 'boolean' },
-		excludeBots: { type: 'boolean' },
-		withReplies: { type: 'boolean' },
-		withFile: { type: 'boolean' },
-		excludeNotesInSensitiveChannel: { type: 'boolean' },
-	},
-	required: ['antennaId'],
-} as const;
+const antennasUpdateParamDef = z.object({
+	antennaId: misskeyId(),
+	name: z.string().min(1).max(100).optional(),
+	src: z.enum(antennaSrcEnum).optional(),
+	userListId: misskeyId().nullable().optional(),
+	keywords: z.array(z.array(z.string())).optional(),
+	excludeKeywords: z.array(z.array(z.string())).optional(),
+	users: z.array(z.string()).optional(),
+	caseSensitive: z.boolean().optional(),
+	localOnly: z.boolean().optional(),
+	excludeBots: z.boolean().optional(),
+	withReplies: z.boolean().optional(),
+	withFile: z.boolean().optional(),
+	excludeNotesInSensitiveChannel: z.boolean().optional(),
+});
 
 type AntennasUpdateParams = {
 	antennaId: string;
@@ -379,13 +373,9 @@ export async function handleHonoApiAntennasUpdate(
 	return await packAntennaForHonoApi(deps, antenna.id);
 }
 
-const antennasDeleteParamDef = {
-	type: 'object',
-	properties: {
-		antennaId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['antennaId'],
-} as const;
+const antennasDeleteParamDef = z.object({
+	antennaId: misskeyId(),
+});
 
 type AntennasDeleteParams = {
 	antennaId: string;
@@ -406,11 +396,7 @@ export async function handleHonoApiAntennasDelete(
 	deps.publishInternalEvent?.('antennaDeleted', antenna);
 }
 
-const antennasListParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const antennasListParamDef = z.object({});
 
 export async function handleHonoApiAntennasList(
 	deps: HonoApiAntennaDependencies,
@@ -424,13 +410,9 @@ export async function handleHonoApiAntennasList(
 	return await Promise.all(antennas.map(x => packAntennaForHonoApi(deps, x)));
 }
 
-const antennasShowParamDef = {
-	type: 'object',
-	properties: {
-		antennaId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['antennaId'],
-} as const;
+const antennasShowParamDef = z.object({
+	antennaId: misskeyId(),
+});
 
 type AntennasShowParams = {
 	antennaId: string;
@@ -449,14 +431,10 @@ export async function handleHonoApiAntennasShow(
 	return await packAntennaForHonoApi(deps, antenna);
 }
 
-const antennasRemoveNoteParamDef = {
-	type: 'object',
-	properties: {
-		antennaId: { type: 'string', format: 'misskey:id' },
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['antennaId', 'noteId'],
-} as const;
+const antennasRemoveNoteParamDef = z.object({
+	antennaId: misskeyId(),
+	noteId: misskeyId(),
+});
 
 type AntennasRemoveNoteParams = {
 	antennaId: string;
@@ -476,18 +454,14 @@ export async function handleHonoApiAntennasRemoveNote(
 	await deps.redis.lrem(`list:antennaTimeline:${antenna.id}`, 1, params.noteId);
 }
 
-const antennasNotesParamDef = {
-	type: 'object',
-	properties: {
-		antennaId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['antennaId'],
-} as const;
+const antennasNotesParamDef = z.object({
+	antennaId: misskeyId(),
+	limit: z.number().int().min(1).max(100).default(10),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+});
 
 type AntennasNotesParams = {
 	antennaId: string;

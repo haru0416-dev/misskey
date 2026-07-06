@@ -4,11 +4,13 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { countWebhooksByUserIdFromDatabase, createWebhookInDatabase, deleteWebhookFromDatabase, fetchWebhookByIdAndUserIdFromDatabase, listWebhooksByUserIdFromDatabase, updateWebhookInDatabase } from '@/core/WebhookStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { UserWebhookDeliverQueue } from '@/core/QueueModule.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { MiNote } from '@/models/Note.js';
@@ -42,24 +44,14 @@ export type HonoApiUserWebhook = {
 	latestStatus: number | null;
 };
 
-const webhooksListParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const webhooksListParamDef = z.object({});
 
-const webhooksCreateParamDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		url: { type: 'string', minLength: 1, maxLength: 1024 },
-		secret: { type: 'string', maxLength: 1024, default: '' },
-		on: { type: 'array', items: {
-			type: 'string', enum: webhookEventTypes,
-		} },
-	},
-	required: ['name', 'url', 'on'],
-} as const;
+const webhooksCreateParamDef = z.object({
+	name: z.string().min(1).max(100),
+	url: z.string().min(1).max(1024),
+	secret: z.string().max(1024).default(''),
+	on: z.array(z.enum(webhookEventTypes)),
+});
 
 type WebhooksCreateParams = {
 	name: string;
@@ -68,36 +60,22 @@ type WebhooksCreateParams = {
 	on: WebhookEventTypes[];
 };
 
-const webhooksShowParamDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['webhookId'],
-} as const;
+const webhooksShowParamDef = z.object({
+	webhookId: misskeyId(),
+});
 
-const webhooksDeleteParamDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['webhookId'],
-} as const;
+const webhooksDeleteParamDef = z.object({
+	webhookId: misskeyId(),
+});
 
-const webhooksUpdateParamDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		url: { type: 'string', minLength: 1, maxLength: 1024 },
-		secret: { type: 'string', nullable: true, maxLength: 1024 },
-		on: { type: 'array', items: {
-			type: 'string', enum: webhookEventTypes,
-		} },
-		active: { type: 'boolean' },
-	},
-	required: ['webhookId'],
-} as const;
+const webhooksUpdateParamDef = z.object({
+	webhookId: misskeyId(),
+	name: z.string().min(1).max(100).optional(),
+	url: z.string().min(1).max(1024).optional(),
+	secret: z.string().max(1024).nullable().optional(),
+	on: z.array(z.enum(webhookEventTypes)).optional(),
+	active: z.boolean().optional(),
+});
 
 type WebhooksShowParams = {
 	webhookId: string;
@@ -245,21 +223,14 @@ export async function handleHonoApiIWebhooksCreate(
 	return packUserWebhook(webhook);
 }
 
-const webhooksTestParamDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-		type: { type: 'string', enum: webhookEventTypes },
-		override: {
-			type: 'object',
-			properties: {
-				url: { type: 'string' },
-				secret: { type: 'string' },
-			},
-		},
-	},
-	required: ['webhookId', 'type'],
-} as const;
+const webhooksTestParamDef = z.object({
+	webhookId: misskeyId(),
+	type: z.enum(webhookEventTypes),
+	override: z.object({
+		url: z.string().optional(),
+		secret: z.string().optional(),
+	}).optional(),
+});
 
 type WebhooksTestParams = {
 	webhookId: string;

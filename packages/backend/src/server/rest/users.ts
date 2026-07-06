@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
@@ -11,6 +12,7 @@ import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileSt
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
@@ -35,48 +37,28 @@ export type HonoApiPackedUserListShow = HonoApiPackedUserList & {
 	isLiked?: boolean;
 };
 
-const usersAchievementsParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const usersAchievementsParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const usersListsDeleteParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['listId'],
-} as const;
+const usersListsDeleteParamDef = z.object({
+	listId: misskeyId(),
+});
 
-const usersListsListParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: [],
-} as const;
+const usersListsListParamDef = z.object({
+	userId: misskeyId().optional(),
+});
 
-const usersListsShowParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		forPublic: { type: 'boolean', default: false },
-	},
-	required: ['listId'],
-} as const;
+const usersListsShowParamDef = z.object({
+	listId: misskeyId(),
+	forPublic: z.boolean().optional().default(false),
+});
 
-const usersListsUpdateParamDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		isPublic: { type: 'boolean' },
-	},
-	required: ['listId'],
-} as const;
+const usersListsUpdateParamDef = z.object({
+	listId: misskeyId(),
+	name: z.string().min(1).max(100).optional(),
+	isPublic: z.boolean().optional(),
+});
 
 type UsersAchievementsParams = {
 	userId: string;

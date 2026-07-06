@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import { domainToASCII } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
+import { z } from 'zod';
 import type * as Redis from 'ioredis';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
@@ -28,10 +29,11 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiMeta } from '@/models/_.js';
-import { birthdaySchema } from '@/models/User.js';
+import { birthdayZodSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
@@ -53,101 +55,42 @@ export type HonoApiFollowingDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const followingCreateParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		withReplies: { type: 'boolean' },
-	},
-	required: ['userId'],
-} as const;
+const followingCreateParamDef = z.object({
+	userId: misskeyId(),
+	withReplies: z.boolean().optional(),
+});
 
-const followingUserIdParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+const followingUserIdParamDef = z.object({
+	userId: misskeyId(),
+});
 
-const followingUpdateParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		notify: { type: 'string', enum: ['normal', 'none'] },
-		withReplies: { type: 'boolean' },
-	},
-	required: ['userId'],
-} as const;
+const followingUpdateParamDef = z.object({
+	userId: misskeyId(),
+	notify: z.enum(['normal', 'none']).optional(),
+	withReplies: z.boolean().optional(),
+});
 
-const followingUpdateAllParamDef = {
-	type: 'object',
-	properties: {
-		notify: { type: 'string', enum: ['normal', 'none'] },
-		withReplies: { type: 'boolean' },
-	},
-} as const;
+const followingUpdateAllParamDef = z.object({
+	notify: z.enum(['normal', 'none']).optional(),
+	withReplies: z.boolean().optional(),
+});
 
-const followingRequestsListParamDef = {
-	type: 'object',
-	properties: {
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: [],
-} as const;
+const followingRequestsListParamDef = z.object({
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+});
 
-const followingListParamDef = {
-	type: 'object',
-	properties: {
-		notification: { type: 'boolean', default: false },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-} as const;
-
-type FollowingCreateParams = {
-	userId: string;
-	withReplies?: boolean;
-};
-
-type FollowingUserIdParams = {
-	userId: string;
-};
-
-type FollowingUpdateParams = {
-	userId: string;
-	notify?: 'normal' | 'none';
-	withReplies?: boolean;
-};
-
-type FollowingUpdateAllParams = {
-	notify?: 'normal' | 'none';
-	withReplies?: boolean;
-};
-
-type FollowingRequestsListParams = {
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	limit: number;
-};
-
-type FollowingListParams = {
-	notification: boolean;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	limit: number;
-};
+const followingListParamDef = z.object({
+	notification: z.boolean().default(false),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+});
 
 export type FollowingListItem = {
 	id: string;
@@ -1074,53 +1017,46 @@ function toPunyNullableForHonoApi(host: string | null | undefined): string | nul
 	return host == null ? null : domainToASCII(host.toLowerCase());
 }
 
-const usersFollowersOrFollowingParamDef = {
-	allOf: [
-		{
-			anyOf: [
-				{
-					type: 'object',
-					properties: {
-						userId: { type: 'string', format: 'misskey:id' },
-					},
-					required: ['userId'],
-				},
-				{
-					type: 'object',
-					properties: {
-						username: { type: 'string' },
-						host: { type: 'string', nullable: true },
-					},
-					required: ['username', 'host'],
-				},
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				sinceId: { type: 'string', format: 'misskey:id' },
-				untilId: { type: 'string', format: 'misskey:id' },
-				sinceDate: { type: 'integer' },
-				untilDate: { type: 'integer' },
-				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-			},
-		},
-	],
-} as const;
+// 元 ajv 版は `usersFollowersOrFollowingParamDef.allOf[0]` (userId か username+host のどちらか必須の anyOf 部分) を
+// `usersFollowingParamDef` からも参照・spread していた。Zod では anyOf を union で表現するため union 自体は
+// spread できない。代わりに union の各枝 (userId 版 / username+host 版) を再利用可能な base object として定義し、
+// `usersFollowingParamDef` はその base に `.extend({ birthday })` して組み立てる。
+const usersPaginationShape = {
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).default(10),
+};
 
-const usersFollowingParamDef = {
-	allOf: [
-		usersFollowersOrFollowingParamDef.allOf[0],
-		{
-			type: 'object',
-			properties: {
-				...usersFollowersOrFollowingParamDef.allOf[1].properties,
-				birthday: { ...birthdaySchema, nullable: true },
-			},
-		},
-	],
-} as const;
+// `.passthrough()` は元 ajv 版が `additionalProperties: false` を指定しておらず、
+// anyOf のもう一方の枝にしか属さないプロパティ (例: userId 枝に対する username/host) も
+// 素通りさせていた挙動を再現するために必要 (等価性検証スクリプトで確認済み)。
+const usersByUserIdBaseParamDef = z.object({
+	userId: misskeyId(),
+	...usersPaginationShape,
+}).passthrough();
 
+const usersByUsernameHostBaseParamDef = z.object({
+	username: z.string(),
+	host: z.string().nullable(),
+	...usersPaginationShape,
+}).passthrough();
+
+const usersFollowersOrFollowingParamDef = z.union([
+	usersByUserIdBaseParamDef,
+	usersByUsernameHostBaseParamDef,
+]);
+
+const usersFollowingParamDef = z.union([
+	usersByUserIdBaseParamDef.extend({ birthday: birthdayZodSchema.nullable().optional() }),
+	usersByUsernameHostBaseParamDef.extend({ birthday: birthdayZodSchema.nullable().optional() }),
+]);
+
+// z.union の各枝は互いに素なプロパティ集合を持つため、推論される型では userId 版に username/host が
+// (逆も同様) 存在しない扱いになり、分岐後アクセス (`params.username!` 等) が型エラーになる。
+// 元 ajv 版も (allOf/anyOf からの型推論が不正確なため) 同様に手動の flat 型へ `as` キャストしていたので、
+// 同じ手法を踏襲する。実行時の検証・値は z.union 側 (branch ごとの安全な検証) が担う。
 type UsersFollowersOrFollowingParams = {
 	userId?: string;
 	username?: string;
@@ -1241,53 +1177,32 @@ export async function handleHonoApiUsersFollowing(
 	return await packFollowingsForHonoApi(deps, followings);
 }
 
-const usersGetFollowingUsersByBirthdayParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		birthday: {
-			oneOf: [{
-				type: 'object',
-				properties: {
-					month: { type: 'integer', minimum: 1, maximum: 12 },
-					day: { type: 'integer', minimum: 1, maximum: 31 },
-				},
-				required: ['month', 'day'],
-			}, {
-				type: 'object',
-				properties: {
-					begin: {
-						type: 'object',
-						properties: {
-							month: { type: 'integer', minimum: 1, maximum: 12 },
-							day: { type: 'integer', minimum: 1, maximum: 31 },
-						},
-						required: ['month', 'day'],
-					},
-					end: {
-						type: 'object',
-						properties: {
-							month: { type: 'integer', minimum: 1, maximum: 12 },
-							day: { type: 'integer', minimum: 1, maximum: 31 },
-						},
-						required: ['month', 'day'],
-					},
-				},
-				required: ['begin', 'end'],
-			}],
-		},
-	},
-	required: ['birthday'],
-} as const;
+const birthdayMonthDaySchema = z.object({
+	month: z.number().int().min(1).max(12),
+	day: z.number().int().min(1).max(31),
+});
 
-type UsersGetFollowingUsersByBirthdayParams = {
-	limit: number;
-	offset: number;
-	birthday:
-		| { month: number; day: number }
-		| { begin: { month: number; day: number }; end: { month: number; day: number } };
-};
+const birthdayRangeSchema = z.object({
+	begin: birthdayMonthDaySchema,
+	end: birthdayMonthDaySchema,
+});
+
+// 元 ajv 版は `oneOf` (どちらか一方の形にのみ一致することを要求。両方の形に同時に一致する入力は拒否される) だった。
+// Zod の `z.union` は anyOf 相当 (どれか一つでも一致すれば可) のため oneOf の「ちょうど1つ」を表現できない。
+// そのため両方のサブスキーマで安全に safeParse し、一致した個数がちょうど1つであることを明示的に検証する。
+const birthdayOneOfSchema = z.custom<
+	z.infer<typeof birthdayMonthDaySchema> | z.infer<typeof birthdayRangeSchema>
+>((value) => {
+	const matches = [birthdayMonthDaySchema.safeParse(value), birthdayRangeSchema.safeParse(value)]
+		.filter(result => result.success).length;
+	return matches === 1;
+}, { message: 'must match exactly one schema in oneOf' });
+
+const usersGetFollowingUsersByBirthdayParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	offset: z.number().int().default(0),
+	birthday: birthdayOneOfSchema,
+});
 
 export async function handleHonoApiUsersGetFollowingUsersByBirthday(
 	deps: HonoApiFollowingDependencies,

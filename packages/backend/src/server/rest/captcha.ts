@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { z } from 'zod';
 import { captchaErrorCodes, getCaptchaSetting, saveCaptchaSetting, supportedCaptchaProviders, type CaptchaError } from '@/core/CaptchaLogic.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
@@ -20,34 +21,15 @@ export type HonoApiCaptchaDependencies = {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-const captchaCurrentParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const captchaCurrentParamDef = z.object({});
 
-const captchaSaveParamDef = {
-	type: 'object',
-	properties: {
-		provider: {
-			type: 'string',
-			enum: supportedCaptchaProviders,
-		},
-		captchaResult: {
-			type: 'string', nullable: true,
-		},
-		sitekey: {
-			type: 'string', nullable: true,
-		},
-		secret: {
-			type: 'string', nullable: true,
-		},
-		instanceUrl: {
-			type: 'string', nullable: true,
-		},
-	},
-	required: ['provider'],
-} as const;
+const captchaSaveParamDef = z.object({
+	provider: z.enum(supportedCaptchaProviders),
+	captchaResult: z.string().nullable().optional(),
+	sitekey: z.string().nullable().optional(),
+	secret: z.string().nullable().optional(),
+	instanceUrl: z.string().nullable().optional(),
+});
 
 
 function captchaErrorToHonoApiError(error: CaptchaError): HonoApiError {

@@ -5,6 +5,7 @@
 
 import { setTimeout as delay } from 'node:timers/promises';
 import type * as Redis from 'ioredis';
+import { z } from 'zod';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type Logger from '@/logger.js';
@@ -22,11 +23,7 @@ export type HonoApiResetDbDependencies = {
 	publishInternalEvent?: SignupInternalEventPublisher;
 };
 
-const resetDbParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const resetDbParamDef = z.object({});
 
 export async function handleHonoApiResetDb(
 	deps: HonoApiResetDbDependencies,

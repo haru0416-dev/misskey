@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { z } from 'zod';
 import { sql, type SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
@@ -34,6 +35,7 @@ import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase }
 import { deleteUserMemoFromDatabase, fetchUserMemoTextFromDatabase, listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { UserRow } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -575,11 +577,7 @@ export async function packUserDetailedManyForHonoApi(
 	return result;
 }
 
-const pinnedUsersParamDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+const pinnedUsersParamDef = z.object({});
 
 export async function handleHonoApiPinnedUsers(
 	deps: UserPackingDependencies,
@@ -607,23 +605,18 @@ function usersShowNoSuchUserError(): HonoApiError {
 	return new HonoApiError({ status: 404, message: 'No such user.', code: 'NO_SUCH_USER', id: '4362f8dc-731f-4ad8-a694-be5a88922a24' });
 }
 
-const usersShowParamDef = {
-	allOf: [
-		{
-			anyOf: [
-				{ type: 'object', properties: { userId: { type: 'string', format: 'misskey:id' } }, required: ['userId'] },
-				{ type: 'object', properties: { userIds: { type: 'array', uniqueItems: true, items: { type: 'string', format: 'misskey:id' } } }, required: ['userIds'] },
-				{ type: 'object', properties: { username: { type: 'string' } }, required: ['username'] },
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				host: { type: 'string', nullable: true },
-			},
-		},
-	],
-} as const;
+/**
+ * 旧 ajv の `allOf` (anyOf分岐セレクタ + host共通プロパティ) を、分岐ごとに独立した
+ * z.object を z.union で束ねる形で再現する。各分岐は自分の識別子プロパティのみを検証し、
+ * 他の分岐のプロパティは (元の ajv の anyOf+properties と同様) 検証対象外になる。
+ */
+const usersShowHostSchema = z.string().nullable().optional().describe('The local host is represented with `null`.');
+
+export const usersShowParamDef = z.union([
+	z.object({ userId: misskeyId(), host: usersShowHostSchema }),
+	z.object({ userIds: uniqueItems(z.array(misskeyId())), host: usersShowHostSchema }),
+	z.object({ username: z.string(), host: usersShowHostSchema }),
+]);
 
 type UsersShowParams =
 	| { userId: string; host?: string | null }
@@ -695,21 +688,9 @@ export async function handleHonoApiUsersShow(
 	return await packUserDetailedForHonoApi(deps, user, me);
 }
 
-const usersRelationParamDef = {
-	type: 'object',
-	properties: {
-		userId: {
-			oneOf: [
-				{ type: 'string', format: 'misskey:id' },
-				{
-					type: 'array',
-					items: { type: 'string', format: 'misskey:id' },
-				},
-			],
-		},
-	},
-	required: ['userId'],
-} as const;
+const usersRelationParamDef = z.object({
+	userId: z.union([misskeyId(), z.array(misskeyId())]),
+});
 
 type UsersRelationParams = { userId: string | string[] };
 
@@ -894,17 +875,13 @@ async function searchUsersForHonoApi(
 	return users;
 }
 
-const usersSearchParamDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string' },
-		offset: { type: 'integer', default: 0 },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		origin: { type: 'string', enum: ['local', 'remote', 'combined'], default: 'combined' },
-		detail: { type: 'boolean', default: true },
-	},
-	required: ['query'],
-} as const;
+const usersSearchParamDef = z.object({
+	query: z.string(),
+	offset: z.number().int().default(0),
+	limit: z.number().int().min(1).max(100).default(10),
+	origin: z.enum(['local', 'remote', 'combined']).default('combined'),
+	detail: z.boolean().default(true),
+});
 
 type UsersSearchParams = {
 	query: string;
@@ -1028,35 +1005,19 @@ async function selectSearchUserIdsForHonoApi(
 	return result.rows.map(row => row.id);
 }
 
-const usersSearchByUsernameAndHostParamDef = {
-	allOf: [
-		{
-			anyOf: [
-				{
-					type: 'object',
-					properties: {
-						username: { type: 'string', nullable: true },
-					},
-					required: ['username'],
-				},
-				{
-					type: 'object',
-					properties: {
-						host: { type: 'string', nullable: true },
-					},
-					required: ['host'],
-				},
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-				detail: { type: 'boolean', default: true },
-			},
-		},
-	],
-} as const;
+/**
+ * 旧 ajv の `allOf` (username/host いずれかを要求する anyOf 分岐セレクタ + limit/detail 共通プロパティ) を、
+ * usersShowParamDef と同様に分岐ごとの z.object を z.union で束ねる形で再現する。
+ */
+const usersSearchByUsernameAndHostCommon = {
+	limit: z.number().int().min(1).max(100).default(10),
+	detail: z.boolean().default(true),
+};
+
+const usersSearchByUsernameAndHostParamDef = z.union([
+	z.object({ username: z.string().nullable(), ...usersSearchByUsernameAndHostCommon }),
+	z.object({ host: z.string().nullable(), ...usersSearchByUsernameAndHostCommon }),
+]);
 
 type UsersSearchByUsernameAndHostParams = {
 	username?: string | null;
@@ -1095,14 +1056,10 @@ export async function handleHonoApiUsersSearchByUsernameAndHost(
 		: await packUserLiteManyForHonoApi(deps, ids);
 }
 
-const usersRecommendationParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-	},
-	required: [],
-} as const;
+const usersRecommendationParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	offset: z.number().int().default(0),
+});
 
 type UsersRecommendationParams = {
 	limit: number;
@@ -1124,14 +1081,10 @@ export async function handleHonoApiUsersRecommendation(
 	return await packUserDetailedManyForHonoApi(deps, users, me);
 }
 
-const usersGetFrequentlyRepliedUsersParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: ['userId'],
-} as const;
+const usersGetFrequentlyRepliedUsersParamDef = z.object({
+	userId: misskeyId(),
+	limit: z.number().int().min(1).max(100).default(10),
+});
 
 type UsersGetFrequentlyRepliedUsersParams = {
 	userId: string;
@@ -1172,18 +1125,14 @@ export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
 	})));
 }
 
-const usersParamDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		sort: { type: 'string', enum: ['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt'] },
-		state: { type: 'string', enum: ['all', 'alive'], default: 'all' },
-		origin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'local' },
-		hostname: { type: 'string', nullable: true, default: null },
-	},
-	required: [],
-} as const;
+const usersParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	offset: z.number().int().default(0),
+	sort: z.enum(['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt']).optional(),
+	state: z.enum(['all', 'alive']).default('all'),
+	origin: z.enum(['combined', 'local', 'remote']).default('local'),
+	hostname: z.string().nullable().default(null),
+});
 
 type UsersParams = {
 	limit: number;
@@ -1214,14 +1163,10 @@ export async function handleHonoApiUsers(
 	return await packUserDetailedManyForHonoApi(deps, users, me);
 }
 
-const usersUpdateMemoParamDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		memo: { type: 'string', nullable: true },
-	},
-	required: ['userId', 'memo'],
-} as const;
+const usersUpdateMemoParamDef = z.object({
+	userId: misskeyId(),
+	memo: z.string().nullable(),
+});
 
 type UsersUpdateMemoParams = {
 	userId: string;
