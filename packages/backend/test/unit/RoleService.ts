@@ -31,7 +31,8 @@ import {
 } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { MetaService } from '@/core/MetaService.js';
-import { genAidx } from '@/misc/id/aidx.js';
+import { loadConfig } from '@/config.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
@@ -52,7 +53,7 @@ describe('RoleService', () => {
 	async function createUser(data: Partial<UserInsert> = {}) {
 		const un = secureRndstr(16);
 		return await createUserInDatabase(db, {
-			id: genAidx(Date.now()),
+			id: genId(config),
 			username: un,
 			usernameLower: un,
 			...data,
@@ -67,7 +68,7 @@ describe('RoleService', () => {
 
 	async function createRole(data: Partial<MiRole> = {}) {
 		return await createRoleInDatabase(db, {
-			id: genAidx(Date.now()),
+			id: genId(config),
 			updatedAt: new Date(),
 			lastUsedAt: new Date(),
 			name: '',
@@ -90,7 +91,7 @@ describe('RoleService', () => {
 			throw new Error('userId and roleId are required');
 		}
 
-		const id = genAidx(Date.now());
+		const id = genId(config);
 		const expiresAt = new Date();
 		expiresAt.setDate(expiresAt.getDate() + 1);
 
@@ -105,8 +106,11 @@ describe('RoleService', () => {
 		return await fetchRoleAssignmentByIdOrFailFromDatabase(db, id);
 	}
 
-	function aidx() {
-		return genAidx(Date.now());
+	// ロールの作成日時条件はIDから日時を逆算するため、フィクスチャIDは必ず設定と同じ生成方式で作る
+	const config = loadConfig();
+
+	function newId() {
+		return genId(config);
 	}
 
 	beforeEach(async () => {
@@ -220,7 +224,7 @@ describe('RoleService', () => {
 			const user = await createUser();
 			const manualRole = await createRole({ name: 'manual role' });
 			const conditionalRole = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isBot',
 			});
 			await roleService.assign(user.id, manualRole.id);
@@ -391,11 +395,11 @@ describe('RoleService', () => {
 		test('コンディショナルなバッジロールが条件一致で返る', async () => {
 			const user = await createUser({ isBot: true });
 			const condBadgeRole = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isBot',
 			}, { asBadge: true, name: 'cond-badge' });
 			const condNonBadgeRole = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isBot',
 			}, { asBadge: false, name: 'cond-non-badge' });
 
@@ -408,7 +412,7 @@ describe('RoleService', () => {
 			const [user1, user2] = await Promise.all([createUser(), createUser()]);
 			const manualRole = await createRole({ name: 'manual' });
 			const condBadgeRole = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'roleAssignedTo',
 				roleId: manualRole.id,
 			}, { asBadge: true, name: 'assigned-badge' });
@@ -736,19 +740,19 @@ describe('RoleService', () => {
 				createUser({ isBot: false, isCat: false, isSuspended: true }),
 			]);
 			const role1 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isBot',
 			});
 			const role2 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isCat',
 			});
 			const role3 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isSuspended',
 			});
 			const role4 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'and',
 				values: [role1.condFormula, role2.condFormula],
 			});
@@ -771,19 +775,19 @@ describe('RoleService', () => {
 				createUser({ isBot: false, isCat: false, isSuspended: true }),
 			]);
 			const role1 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isBot',
 			});
 			const role2 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isCat',
 			});
 			const role3 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isSuspended',
 			});
 			const role4 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'or',
 				values: [role1.condFormula, role2.condFormula],
 			});
@@ -805,15 +809,15 @@ describe('RoleService', () => {
 				createUser({ isBot: true, isCat: true, isSuspended: false }),
 			]);
 			const role1 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isBot',
 			});
 			const role2 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isCat',
 			});
 			const role4 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'not',
 				value: role1.condFormula,
 			});
@@ -835,7 +839,7 @@ describe('RoleService', () => {
 				}),
 			]);
 			const role2 = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'roleAssignedTo',
 				roleId: role1.id,
 			});
@@ -855,7 +859,7 @@ describe('RoleService', () => {
 				createUser({ host: 'example.com' }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isLocal',
 			});
 
@@ -871,7 +875,7 @@ describe('RoleService', () => {
 				createUser({ host: 'example.com' }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isRemote',
 			});
 
@@ -887,7 +891,7 @@ describe('RoleService', () => {
 				createUser({ isSuspended: true }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isSuspended',
 			});
 
@@ -903,7 +907,7 @@ describe('RoleService', () => {
 				createUser({ isLocked: true }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isLocked',
 			});
 
@@ -919,7 +923,7 @@ describe('RoleService', () => {
 				createUser({ isBot: true }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isBot',
 			});
 
@@ -935,7 +939,7 @@ describe('RoleService', () => {
 				createUser({ isCat: true }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isCat',
 			});
 
@@ -951,7 +955,7 @@ describe('RoleService', () => {
 				createUser({ isExplorable: true }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'isExplorable',
 			});
 
@@ -973,14 +977,14 @@ describe('RoleService', () => {
 
 			const [user1, user2, user3] = await Promise.all([
 				// 4:59
-				createUser({ id: genAidx(d1.getTime()) }),
+				createUser({ id: genId(config, d1.getTime()) }),
 				// 5:00
-				createUser({ id: genAidx(d2.getTime()) }),
+				createUser({ id: genId(config, d2.getTime()) }),
 				// 5:01
-				createUser({ id: genAidx(d3.getTime()) }),
+				createUser({ id: genId(config, d3.getTime()) }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'createdLessThan',
 				// 5 minutes
 				sec: 300,
@@ -1006,14 +1010,14 @@ describe('RoleService', () => {
 
 			const [user1, user2, user3] = await Promise.all([
 				// 4:59
-				createUser({ id: genAidx(d1.getTime()) }),
+				createUser({ id: genId(config, d1.getTime()) }),
 				// 5:00
-				createUser({ id: genAidx(d2.getTime()) }),
+				createUser({ id: genId(config, d2.getTime()) }),
 				// 5:01
-				createUser({ id: genAidx(d3.getTime()) }),
+				createUser({ id: genId(config, d3.getTime()) }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'createdMoreThan',
 				// 5 minutes
 				sec: 300,
@@ -1034,7 +1038,7 @@ describe('RoleService', () => {
 				createUser({ followersCount: 101 }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'followersLessThanOrEq',
 				value: 100,
 			});
@@ -1054,7 +1058,7 @@ describe('RoleService', () => {
 				createUser({ followersCount: 101 }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'followersMoreThanOrEq',
 				value: 100,
 			});
@@ -1074,7 +1078,7 @@ describe('RoleService', () => {
 				createUser({ followingCount: 101 }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'followingLessThanOrEq',
 				value: 100,
 			});
@@ -1094,7 +1098,7 @@ describe('RoleService', () => {
 				createUser({ followingCount: 101 }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'followingMoreThanOrEq',
 				value: 100,
 			});
@@ -1114,7 +1118,7 @@ describe('RoleService', () => {
 				createUser({ notesCount: 11 }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'notesLessThanOrEq',
 				value: 10,
 			});
@@ -1134,7 +1138,7 @@ describe('RoleService', () => {
 				createUser({ notesCount: 11 }),
 			]);
 			const role = await createConditionalRole({
-				id: aidx(),
+				id: newId(),
 				type: 'notesMoreThanOrEq',
 				value: 10,
 			});
