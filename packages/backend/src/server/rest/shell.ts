@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { randomUUID } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
@@ -133,7 +134,7 @@ import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from '.
 import { handleHonoApiAdminPromoCreate, handleHonoApiPromoRead } from './promo.js';
 import { assertHonoApiRateLimitForUser } from './rate-limit.js';
 import { handleHonoApiResetDb } from './reset-db.js';
-import { getHonoApiRolePolicies, isHonoApiAdministrator, isHonoApiModerator } from './role-policy.js';
+import { getHonoApiRolePolicies, hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerator } from './role-policy.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -343,6 +344,25 @@ async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Pro
 			return apiErrorResponse(c, err);
 		}
 
+		// ApiCallService.#onExecError 相当: 予期しない例外は INTERNAL_ERROR として
+		// `info.e` に元エラーの情報を載せて返す (元実装は ApiError(null, { e: ... }))
+		if (err instanceof Error) {
+			return apiErrorResponse(c, new HonoApiError({
+				status: 500,
+				message: 'Internal error occurred. Please contact us if the error persists.',
+				code: 'INTERNAL_ERROR',
+				id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
+				kind: 'server',
+				info: {
+					e: {
+						message: err.message,
+						code: err.name,
+						id: randomUUID(),
+					},
+				},
+			}));
+		}
+
 		throw err;
 	}
 }
@@ -370,13 +390,13 @@ async function assertHonoApiAdmin(deps: ApiShellDependencies, auth: { user: NonN
 }
 
 async function assertHonoApiCanManageAvatarDecorations(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
-	if (!(await getHonoApiRolePolicies(deps, auth.user)).canManageAvatarDecorations) {
+	if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canManageAvatarDecorations'))) {
 		throw rolePermissionDeniedError();
 	}
 }
 
 async function assertHonoApiCanManageCustomEmojis(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
-	if (!(await getHonoApiRolePolicies(deps, auth.user)).canManageCustomEmojis) {
+	if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canManageCustomEmojis'))) {
 		throw rolePermissionDeniedError();
 	}
 }
@@ -2361,7 +2381,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:channels');
-			if (!(await getHonoApiRolePolicies(deps, auth.user)).canCreateChannel) {
+			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canCreateChannel'))) {
 				throw rolePermissionDeniedError();
 			}
 			await assertHonoApiRateLimitForUser(deps, 'channels/create', {
@@ -3849,7 +3869,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertProhibitMoved(auth.user);
-			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportBlocking) {
+			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportBlocking'))) {
 				throw rolePermissionDeniedError();
 			}
 			await assertHonoApiRateLimitForUser(deps, 'i/import-blocking', {
@@ -3869,7 +3889,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertProhibitMoved(auth.user);
-			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportFollowing) {
+			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportFollowing'))) {
 				throw rolePermissionDeniedError();
 			}
 			await assertHonoApiRateLimitForUser(deps, 'i/import-following', {
@@ -3889,7 +3909,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertProhibitMoved(auth.user);
-			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportMuting) {
+			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportMuting'))) {
 				throw rolePermissionDeniedError();
 			}
 			await assertHonoApiRateLimitForUser(deps, 'i/import-muting', {
@@ -3909,7 +3929,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertProhibitMoved(auth.user);
-			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportUserLists) {
+			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportUserLists'))) {
 				throw rolePermissionDeniedError();
 			}
 			await assertHonoApiRateLimitForUser(deps, 'i/import-user-lists', {
@@ -3929,7 +3949,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertProhibitMoved(auth.user);
-			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportAntennas) {
+			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportAntennas'))) {
 				throw rolePermissionDeniedError();
 			}
 			await assertHonoApiRateLimitForUser(deps, 'i/import-antennas', {
@@ -4412,7 +4432,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:invite-codes');
 			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite) {
+			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
 				throw rolePermissionDeniedError();
 			}
 
@@ -4427,7 +4447,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:invite-codes');
 			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite) {
+			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
 				throw rolePermissionDeniedError();
 			}
 
@@ -4443,7 +4463,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:invite-codes');
 			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite) {
+			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
 				throw rolePermissionDeniedError();
 			}
 
@@ -4458,7 +4478,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:invite-codes');
 			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite) {
+			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
 				throw rolePermissionDeniedError();
 			}
 

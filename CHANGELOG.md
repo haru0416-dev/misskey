@@ -37,6 +37,11 @@
 - Fix: ノート作成時にロールタイムライン (`roles/notes`, `roleTimeline` チャンネル) への配信が行われていなかった問題を修正
 - Fix: ノート関連の通知 (リプライ・リノート・引用・メンション・リアクション) の WebSocket 配信が pack 前の内部形式で送られており、クライアントが通知を表示できなかった問題を修正
 - Fix: misskey-js の `Stream` が Bun ランタイムで一切接続できなかった問題を修正 (reconnecting-websocket の既定 `binaryType: 'blob'` が Bun の ws 互換実装で例外になるため、テキスト専用プロトコルで安全な `'arraybuffer'` を既定に変更)
+- Fix: `requiredRolePolicy` 相当のロールポリシー検査 (カスタム絵文字管理・アバターデコレーション管理・チャンネル作成・各種インポート・招待コード) で root ユーザーのバイパスが行われず、root が権限エラーで拒否されていた問題を修正
+- Fix: API ハンドラ内の予期しない例外が元実装の `INTERNAL_ERROR` 形式 (`info.e` 付き) でレスポンスされていなかった問題を修正
+- Fix: ユーザーの pack 結果で `emojis` (名前・プロフィール等のカスタム絵文字URLマップ) が常に空になっていた問題を修正
+- Fix: ActivityPub の `Update(Person)` 受信時に埋め込みオブジェクトを使わず再フェッチしていたため、中間キャッシュ経由で古いプロフィールを取得し更新が反映されないことがある問題を修正
+- Fix: `i/move` の移動先・`i/update` の `alsoKnownAs` で未知のリモートユーザーを WebFinger で解決できなかった問題を修正
 
 ## 2026.6.1
 
