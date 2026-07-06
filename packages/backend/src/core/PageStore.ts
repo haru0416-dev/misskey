@@ -16,8 +16,8 @@ export type PageUpdateValues = {
 	title?: string;
 	name?: string;
 	summary?: string | null;
-	content?: Record<string, any>[];
-	variables?: Record<string, any>[];
+	content?: Record<string, unknown>[];
+	variables?: Record<string, unknown>[];
 	script?: string;
 	alignCenter?: boolean;
 	hideTitleWhenPinned?: boolean;
@@ -175,7 +175,7 @@ export async function createPageInDatabase(
 export async function updatePageContentInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiPage['id'],
-	content: Record<string, any>[],
+	content: Record<string, unknown>[],
 ): Promise<void> {
 	await db
 		.update(page)

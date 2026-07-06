@@ -331,8 +331,8 @@ export class ApNoteService {
 				uri: note.id,
 				url: url,
 			}, silent);
-		} catch (err: any) {
-			if (err.name !== 'duplicated') {
+		} catch (err) {
+			if (!(err instanceof Error) || err.name !== 'duplicated') {
 				throw err;
 			}
 			this.logger.info('The note is already inserted while creating itself, reading again');

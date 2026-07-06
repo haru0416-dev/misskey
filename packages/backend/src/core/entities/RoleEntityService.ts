@@ -69,7 +69,7 @@ export class RoleEntityService {
 
 	@bindThis
 	public packMany(
-		roles: any[],
+		roles: (MiRole['id'] | MiRole)[],
 		me: { id: MiUser['id'] },
 	) {
 		return Promise.all(roles.map(x => this.pack(x, me)));

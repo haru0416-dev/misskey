@@ -465,7 +465,7 @@ async function pushChatNotificationForHonoApi(deps: HonoApiChatDependencies, use
 			dateTime: Date.now(),
 		}), {
 			proxy: deps.config.proxy,
-		}).catch((err: any) => {
+		}).catch((err: push.WebPushError) => {
 			if (err.statusCode === 410) {
 				void deleteSwSubscriptionForPushEndpointFromDatabase(deps.db, {
 					userId,

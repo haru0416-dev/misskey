@@ -23,8 +23,8 @@ export const page = pgTable('page', {
 	font: varchar({ length: 32 }).notNull().$type<'serif' | 'sans-serif'>(),
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
 	eyeCatchingImageId: varchar({ length: 32 }).$type<MiDriveFile['id'] | null>(),
-	content: jsonb().$type<Record<string, any>[]>().default([]).notNull(),
-	variables: jsonb().$type<Record<string, any>[]>().default([]).notNull(),
+	content: jsonb().$type<Record<string, unknown>[]>().default([]).notNull(),
+	variables: jsonb().$type<Record<string, unknown>[]>().default([]).notNull(),
 	script: varchar({ length: 16384 }).default('').notNull(),
 	// public ... 公開 / followers ... フォロワーのみ / specified ... visibleUserIds で指定したユーザーのみ
 	visibility: pageVisibilityEnum().notNull().$type<'public' | 'followers' | 'specified'>(),

@@ -156,7 +156,7 @@ export async function fetchReactiveMeta(db: MiDrizzleDatabase, redisForSub: Redi
 			switch (type) {
 				case 'metaUpdated': {
 					for (const key in body.after) {
-						(meta as any)[key] = (body.after as any)[key];
+						(meta as unknown as Record<string, unknown>)[key] = (body.after as unknown as Record<string, unknown>)[key];
 					}
 					meta.rootUser = null;
 					break;

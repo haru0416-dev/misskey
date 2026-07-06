@@ -24,6 +24,6 @@ export async function logModerationEventInDatabase<T extends typeof moderationLo
 		id: genId(deps.config),
 		userId: moderator.id,
 		type,
-		info: (info as any) ?? {},
+		info: info ?? {},
 	});
 }

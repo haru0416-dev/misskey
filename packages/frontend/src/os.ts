@@ -98,7 +98,7 @@ export const apiWithDialog = (<E extends keyof Misskey.Endpoints>(
 	return promise;
 });
 
-export function promiseDialog<T extends Promise<any>>(
+export function promiseDialog<T extends Promise<unknown>>(
 	promise: T,
 	onSuccess?: ((res: Awaited<T>) => void) | null,
 	onFailure?: ((err: Misskey.api.APIError) => void) | null,
@@ -110,7 +110,7 @@ export function promiseDialog<T extends Promise<any>>(
 	promise.then(res => {
 		if (onSuccess) {
 			showing.value = false;
-			onSuccess(res);
+			onSuccess(res as Awaited<T>);
 		} else {
 			success.value = true;
 			window.setTimeout(() => {
@@ -145,8 +145,8 @@ let popupIdCount = 0;
 export const popups = ref<{
 	id: number;
 	component: Component;
-	props: Record<string, any>;
-	events: Record<string, any>;
+	props: Record<string, unknown>;
+	events: Record<string, unknown>;
 }[]>([]);
 
 const zIndexes = {
@@ -736,12 +736,12 @@ export function chooseFileFromPc(
 			res(Array.from(input.files));
 
 			// 一応廃棄
-			(window as any).__misskey_input_ref__ = null;
+			Object.assign(window, { __misskey_input_ref__: null });
 		};
 
 		// https://qiita.com/fukasawah/items/b9dc732d95d99551013d
 		// iOS Safari で正常に動かす為のおまじない
-		(window as any).__misskey_input_ref__ = input;
+		Object.assign(window, { __misskey_input_ref__: input });
 
 		input.click();
 	});
