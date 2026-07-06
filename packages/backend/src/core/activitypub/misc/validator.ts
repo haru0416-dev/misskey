@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Response } from 'node-fetch';
+/** node-fetch / グローバル fetch / send() のラッパーいずれのレスポンスでも受けられる最小限の構造。 */
+type ResponseLike = { headers: { get(name: string): string | null } };
 
-export function validateContentTypeSetAsActivityPub(response: Response): void {
+export function validateContentTypeSetAsActivityPub(response: ResponseLike): void {
 	const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
 
 	if (contentType === '') {
@@ -22,7 +23,7 @@ export function validateContentTypeSetAsActivityPub(response: Response): void {
 
 const plusJsonSuffixRegex = /^\s*(application|text)\/[a-zA-Z0-9\.\-\+]+\+json\s*(;|$)/;
 
-export function validateContentTypeSetAsJsonLD(response: Response): void {
+export function validateContentTypeSetAsJsonLD(response: ResponseLike): void {
 	const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
 
 	if (contentType === '') {

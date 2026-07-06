@@ -33,7 +33,6 @@
 		"generate-api-json": "bun run compile-config && bun ./scripts/generate_api_json.js"
 	},
 	"optionalDependencies": {
-		"bufferutil": "4.1.0",
 		"slacc-android-arm-eabi": "0.1.5",
 		"slacc-android-arm64": "0.1.5",
 		"slacc-darwin-arm64": "0.1.5",
@@ -46,8 +45,7 @@
 		"slacc-linux-x64-gnu": "0.1.5",
 		"slacc-linux-x64-musl": "0.1.5",
 		"slacc-win32-arm64-msvc": "0.1.5",
-		"slacc-win32-x64-msvc": "0.1.5",
-		"utf-8-validate": "6.0.6"
+		"slacc-win32-x64-msvc": "0.1.5"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "3.1073.0",
@@ -104,10 +102,8 @@
 		"ms": "3.0.0-canary.202508261828",
 		"nanoid": "5.1.14",
 		"nested-property": "4.0.0",
-		"node-fetch": "3.3.2",
 		"node-html-parser": "7.1.0",
 		"nodemailer": "9.0.1",
-		"os-utils": "0.0.14",
 		"otpauth": "9.5.1",
 		"pg": "8.22.0",
 		"pkce-challenge": "6.0.0",
@@ -133,13 +129,14 @@
 		"tsc-alias": "1.8.17",
 		"ulid": "3.0.2",
 		"web-push": "3.6.7",
-		"ws": "8.21.0",
 		"xev": "3.0.2"
 	},
 	"devDependencies": {
 		"@kitajs/ts-html-plugin": "4.1.4",
 		"@rollup/plugin-esm-shim": "0.1.8",
 		"@sentry/vue": "10.59.0",
+		"bufferutil": "4.1.0",
+		"utf-8-validate": "6.0.6",
 		"@types/archiver": "8.0.0",
 		"@types/fluent-ffmpeg": "2.1.28",
 		"@types/http-link-header": "1.0.7",
@@ -171,12 +168,14 @@
 		"execa": "9.6.1",
 		"fkill": "10.0.3",
 		"js-yaml": "4.2.0",
+		"node-fetch": "3.3.2",
 		"pid-port": "2.1.1",
 		"rolldown": "1.1.2",
 		"simple-oauth2": "5.1.0",
 		"supertest": "7.2.2",
 		"vite": "8.1.0",
 		"vitest": "4.1.9",
-		"vitest-mock-extended": "4.0.0"
+		"vitest-mock-extended": "4.0.0",
+		"ws": "8.21.0"
 	}
 }

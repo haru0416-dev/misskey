@@ -3,20 +3,38 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import os from 'node:os';
 import Xev from 'xev';
-import * as osUtils from 'os-utils';
 import type { MiMeta } from '@/models/_.js';
 
 const ev = new Xev();
 
 const INTERVAL_MS = 2000;
+const CPU_SAMPLE_MS = 1000;
 
 const roundCpu = (num: number) => Math.round(num * 1000) / 1000;
 const round = (num: number) => Math.round(num * 10) / 10;
 
+function cpuTicks() {
+	let idle = 0;
+	let total = 0;
+	for (const cpu of os.cpus()) {
+		idle += cpu.times.idle;
+		total += cpu.times.user + cpu.times.nice + cpu.times.sys + cpu.times.idle + cpu.times.irq;
+	}
+	return { idle, total };
+}
+
+/** os-utils の cpuUsage() 相当。CPU_SAMPLE_MS 間隔でtickを2回サンプリングし、idle以外の割合を返す。 */
 function cpuUsage(): Promise<number> {
+	const start = cpuTicks();
 	return new Promise(resolve => {
-		osUtils.cpuUsage(usage => resolve(usage));
+		setTimeout(() => {
+			const end = cpuTicks();
+			const idleDelta = end.idle - start.idle;
+			const totalDelta = end.total - start.total;
+			resolve(totalDelta === 0 ? 0 : 1 - idleDelta / totalDelta);
+		}, CPU_SAMPLE_MS);
 	});
 }
 
