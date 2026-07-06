@@ -4,6 +4,7 @@
  */
 
 import { webhookEventTypes } from '@/models/Webhook.js';
+import { webhooksCreateParamDef } from '@/server/rest/webhooks.js';
 
 // TODO: UserWebhook schemaの適用
 export const meta = {
@@ -49,17 +50,6 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		url: { type: 'string', minLength: 1, maxLength: 1024 },
-		secret: { type: 'string', maxLength: 1024, default: '' },
-		on: { type: 'array', items: {
-			type: 'string', enum: webhookEventTypes,
-		} },
-	},
-	required: ['name', 'url', 'on'],
-} as const;
+export const paramDef = webhooksCreateParamDef;
 
 // TODO: ロジックをサービスに切り出す

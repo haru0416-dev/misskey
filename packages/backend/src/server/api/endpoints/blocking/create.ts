@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { userIdParamDef } from '@/server/rest/account-blocking.js';
 
 export const meta = {
 	tags: ['account'],
@@ -44,10 +45,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = userIdParamDef;

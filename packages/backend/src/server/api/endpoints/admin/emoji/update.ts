@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminEmojiUpdateDocsParamDef } from '@/server/rest/emojis.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -29,45 +31,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	allOf: [
-		{
-			anyOf: [
-				{
-					type: 'object',
-					properties: {
-						id: { type: 'string', format: 'misskey:id' },
-					},
-					required: ['id'],
-				},
-				{
-					type: 'object',
-					properties: {
-						name: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' },
-					},
-					required: ['name'],
-				},
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				fileId: { type: 'string', format: 'misskey:id' },
-				category: {
-					type: 'string',
-					nullable: true,
-					description: 'Use `null` to reset the category.',
-				},
-				aliases: { type: 'array', items: {
-					type: 'string',
-				} },
-				license: { type: 'string', nullable: true },
-				isSensitive: { type: 'boolean' },
-				localOnly: { type: 'boolean' },
-				roleIdsThatCanBeUsedThisEmojiAsReaction: { type: 'array', items: {
-					type: 'string',
-				} },
-			},
-		},
-	],
-} as const;
+export const paramDef = adminEmojiUpdateDocsParamDef;

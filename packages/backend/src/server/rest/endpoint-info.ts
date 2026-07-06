@@ -15,7 +15,7 @@ function getEndpoints(): Promise<ApiEndpoints> {
 	return endpointsPromise ??= import('../api/endpoints.js').then(module => module.default);
 }
 
-const endpointParamDef = z.object({
+export const endpointParamDef = z.object({
 	endpoint: z.string(),
 });
 

@@ -4,6 +4,7 @@
  */
 
 import * as os from 'node:os';
+import { adminServerInfoParamDef } from '@/server/rest/admin-server-info.js';
 
 export const meta = {
 	requireCredential: true,
@@ -89,8 +90,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = adminServerInfoParamDef;

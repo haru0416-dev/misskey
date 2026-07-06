@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { registryScopeParamDef } from '@/server/rest/registry.js';
+
 export const meta = {
 	requireCredential: true,
 	kind: 'read:account',
@@ -12,13 +14,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		scope: { type: 'array', default: [], items: {
-			type: 'string', pattern: /^[a-zA-Z0-9_]+$/.toString().slice(1, -1),
-		} },
-		domain: { type: 'string', nullable: true },
-	},
-	required: ['scope'],
-} as const;
+export const paramDef = registryScopeParamDef;

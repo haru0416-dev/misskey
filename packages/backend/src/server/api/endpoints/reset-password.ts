@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { resetPasswordParamDef } from '@/server/rest/password-reset.js';
+
 export const meta = {
 	tags: ['reset password'],
 
@@ -15,11 +17,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		token: { type: 'string' },
-		password: { type: 'string' },
-	},
-	required: ['token', 'password'],
-} as const;
+export const paramDef = resetPasswordParamDef;

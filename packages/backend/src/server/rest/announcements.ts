@@ -23,7 +23,7 @@ export type HonoApiAnnouncementDependencies = {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const announcementsParamDef = z.object({
+export const announcementsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -32,11 +32,11 @@ const announcementsParamDef = z.object({
 	isActive: z.boolean().default(true),
 });
 
-const announcementShowParamDef = z.object({
+export const announcementShowParamDef = z.object({
 	announcementId: misskeyId(),
 });
 
-const readAnnouncementParamDef = z.object({
+export const readAnnouncementParamDef = z.object({
 	announcementId: misskeyId(),
 });
 

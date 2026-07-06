@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { emptyParamDef } from '@/server/rest/invite.js';
+
 export const meta = {
 	tags: ['meta'],
 
@@ -22,8 +24,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = emptyParamDef;

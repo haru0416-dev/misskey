@@ -36,13 +36,13 @@ export type HonoApiInviteDependencies = {
 	meta: MiMeta;
 };
 
-const emptyParamDef = z.object({});
+export const emptyParamDef = z.object({});
 
-const inviteDeleteParamDef = z.object({
+export const inviteDeleteParamDef = z.object({
 	inviteId: misskeyId(),
 });
 
-const inviteListParamDef = z.object({
+export const inviteListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(30),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -50,12 +50,12 @@ const inviteListParamDef = z.object({
 	untilDate: z.number().int().optional(),
 });
 
-const adminInviteCreateParamDef = z.object({
+export const adminInviteCreateParamDef = z.object({
 	count: z.number().int().min(1).max(100).optional().default(1),
 	expiresAt: z.string().nullable().optional(),
 });
 
-const adminInviteListParamDef = z.object({
+export const adminInviteListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(30),
 	offset: z.number().int().optional().default(0),
 	type: z.enum(['unused', 'used', 'expired', 'all']).optional().default('all'),

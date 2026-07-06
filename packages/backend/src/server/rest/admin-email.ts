@@ -12,7 +12,7 @@ export type HonoApiAdminEmailDependencies = {
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
 
-const adminSendEmailParamDef = z.object({
+export const adminSendEmailParamDef = z.object({
 	to: z.string(),
 	subject: z.string(),
 	text: z.string(),

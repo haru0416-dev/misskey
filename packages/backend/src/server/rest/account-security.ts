@@ -53,7 +53,7 @@ async function assertHonoApiTwoFactorIfEnabled(
 	}
 }
 
-const changePasswordParamDef = z.object({
+export const changePasswordParamDef = z.object({
 	currentPassword: z.string(),
 	newPassword: z.string().min(1),
 	token: z.string().nullable().optional(),
@@ -88,7 +88,7 @@ export async function handleHonoApiIChangePassword(
 	});
 }
 
-const regenerateTokenParamDef = z.object({
+export const regenerateTokenParamDef = z.object({
 	password: z.string(),
 });
 
@@ -122,7 +122,7 @@ export async function handleHonoApiIRegenerateToken(
 	deps.publishMainStream?.(me.id, 'myTokenRegenerated');
 }
 
-const deleteAccountParamDef = z.object({
+export const deleteAccountParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 });
@@ -163,7 +163,7 @@ function iUpdateEmailRequiredError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Email address is required.', code: 'EMAIL_REQUIRED', id: '324c7a88-59f2-492f-903f-89134f93e47e' });
 }
 
-const updateEmailParamDef = z.object({
+export const updateEmailParamDef = z.object({
 	password: z.string(),
 	email: z.string().nullable().optional(),
 	token: z.string().nullable().optional(),

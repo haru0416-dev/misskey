@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { usersSearchByUsernameAndHostParamDef } from '@/server/rest/user.js';
+
 export const meta = {
 	tags: ['users'],
 
@@ -21,32 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	allOf: [
-		{
-			anyOf: [
-				{
-					type: 'object',
-					properties: {
-						username: { type: 'string', nullable: true },
-					},
-					required: ['username'],
-				},
-				{
-					type: 'object',
-					properties: {
-						host: { type: 'string', nullable: true },
-					},
-					required: ['host'],
-				},
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-				detail: { type: 'boolean', default: true },
-			},
-		},
-	],
-} as const;
+export const paramDef = usersSearchByUsernameAndHostParamDef;

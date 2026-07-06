@@ -3,27 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { iRevokeTokenParamDef } from '@/server/rest/app.js';
+
 export const meta = {
 	requireCredential: true,
 
 	secure: true,
 } as const;
 
-export const paramDef = {
-	anyOf: [
-		{
-			type: 'object',
-			properties: {
-				tokenId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['tokenId'],
-		},
-		{
-			type: 'object',
-			properties: {
-				token: { type: 'string', nullable: true },
-			},
-			required: ['token'],
-		},
-	],
-} as const;
+export const paramDef = iRevokeTokenParamDef;

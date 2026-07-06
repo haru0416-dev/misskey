@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { driveFilesMoveBulkParamDef } from '@/server/rest/drive-files.js';
+
 export const meta = {
 	tags: ['drive'],
 
@@ -14,11 +16,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		fileIds: { type: 'array', uniqueItems: true, minItems: 1, maxItems: 100, items: { type: 'string', format: 'misskey:id' } },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: ['fileIds'],
-} as const;
+export const paramDef = driveFilesMoveBulkParamDef;

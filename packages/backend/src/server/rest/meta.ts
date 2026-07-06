@@ -32,11 +32,11 @@ export type HonoApiMetaDependencies = {
 const hashtagRankingWindow = 1000 * 60 * 60;
 const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
-const metaParamDef = z.object({
+export const metaParamDef = z.object({
 	detail: z.boolean().optional().default(true),
 });
 
-const testParamDef = z.object({
+export const testParamDef = z.object({
 	required: z.boolean(),
 	string: z.string().optional(),
 	default: z.string().optional().default('hello'),

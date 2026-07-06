@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { iPinOrUnpinParamDef } from '@/server/rest/account-pin.js';
+
 export const meta = {
 	tags: ['account', 'notes'],
 
@@ -38,10 +40,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+export const paramDef = iPinOrUnpinParamDef;

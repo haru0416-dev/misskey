@@ -81,7 +81,7 @@ async function validateImportFile(
 	return { id: file.id };
 }
 
-const importBlockingParamDef = z.object({
+export const importBlockingParamDef = z.object({
 	fileId: misskeyId(),
 });
 
@@ -105,7 +105,7 @@ export async function handleHonoApiIImportBlocking(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importFollowingParamDef = z.object({
+export const importFollowingParamDef = z.object({
 	fileId: misskeyId(),
 	withReplies: z.boolean().optional(),
 });
@@ -131,7 +131,7 @@ export async function handleHonoApiIImportFollowing(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importMutingParamDef = z.object({
+export const importMutingParamDef = z.object({
 	fileId: misskeyId(),
 });
 
@@ -155,7 +155,7 @@ export async function handleHonoApiIImportMuting(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importUserListsParamDef = z.object({
+export const importUserListsParamDef = z.object({
 	fileId: misskeyId(),
 });
 
@@ -179,7 +179,7 @@ export async function handleHonoApiIImportUserLists(
 	}, IMPORT_JOB_OPTIONS);
 }
 
-const importAntennasParamDef = z.object({
+export const importAntennasParamDef = z.object({
 	fileId: misskeyId(),
 });
 

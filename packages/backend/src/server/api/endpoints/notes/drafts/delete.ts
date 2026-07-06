@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { notesDraftsDeleteParamDef } from '@/server/rest/note-drafts.js';
+
 export const meta = {
 	tags: ['notes', 'drafts'],
 
@@ -27,10 +29,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		draftId: { type: 'string', nullable: false, format: 'misskey:id' },
-	},
-	required: ['draftId'],
-} as const;
+export const paramDef = notesDraftsDeleteParamDef;

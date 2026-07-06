@@ -326,7 +326,7 @@ export async function deleteNoteReactionForHonoApi(
 	}
 }
 
-const reactionsCreateParamDef = z.object({
+export const reactionsCreateParamDef = z.object({
 	noteId: misskeyId(),
 	reaction: z.string(),
 });
@@ -358,7 +358,7 @@ export async function handleHonoApiNotesReactionsCreate(
 	}
 }
 
-const reactionsDeleteParamDef = z.object({
+export const reactionsDeleteParamDef = z.object({
 	noteId: misskeyId(),
 });
 
@@ -412,7 +412,7 @@ export function normalizeHonoApiNotesReactionsQuery(query: Record<string, string
 	return body;
 }
 
-const notesReactionsParamDef = z.object({
+export const notesReactionsParamDef = z.object({
 	noteId: misskeyId(),
 	type: z.string().nullable().optional(),
 	limit: z.number().int().min(1).max(100).default(10),

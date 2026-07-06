@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { pagesDeleteParamDef } from '@/server/rest/pages.js';
+
 export const meta = {
 	tags: ['pages'],
 
@@ -25,10 +27,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		pageId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['pageId'],
-} as const;
+export const paramDef = pagesDeleteParamDef;

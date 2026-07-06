@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { hashtagsSearchParamDef } from '@/server/rest/hashtags.js';
+
 export const meta = {
 	tags: ['hashtags'],
 
@@ -18,12 +20,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		query: { type: 'string' },
-		offset: { type: 'integer', default: 0 },
-	},
-	required: ['query'],
-} as const;
+export const paramDef = hashtagsSearchParamDef;

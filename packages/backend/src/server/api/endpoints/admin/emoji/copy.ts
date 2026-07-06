@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminEmojiCopyParamDef } from '@/server/rest/emojis.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -36,12 +38,6 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		emojiId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['emojiId'],
-} as const;
+export const paramDef = adminEmojiCopyParamDef;
 
 // TODO: ロジックをサービスに切り出す

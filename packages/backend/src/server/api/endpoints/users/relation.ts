@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { usersRelationParamDef } from '@/server/rest/user.js';
+
 export const meta = {
 	tags: ['users'],
 
@@ -106,18 +108,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: {
-			oneOf: [
-				{ type: 'string', format: 'misskey:id' },
-				{
-					type: 'array',
-					items: { type: 'string', format: 'misskey:id' },
-				},
-			],
-		},
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = usersRelationParamDef;

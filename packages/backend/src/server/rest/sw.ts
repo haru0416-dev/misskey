@@ -29,18 +29,18 @@ export type HonoApiSwDependencies = {
 	redis: Redis.Redis;
 };
 
-const swRegisterParamDef = z.object({
+export const swRegisterParamDef = z.object({
 	endpoint: z.string(),
 	auth: z.string(),
 	publickey: z.string(),
 	sendReadMessage: z.boolean().default(false),
 });
 
-const swShowRegistrationParamDef = z.object({
+export const swShowRegistrationParamDef = z.object({
 	endpoint: z.string(),
 });
 
-const swUpdateRegistrationParamDef = z.object({
+export const swUpdateRegistrationParamDef = z.object({
 	endpoint: z.string(),
 	sendReadMessage: z.boolean().optional(),
 });

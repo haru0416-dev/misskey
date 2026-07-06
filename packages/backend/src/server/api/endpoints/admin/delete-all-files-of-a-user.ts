@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminDriveUserParamDef } from '@/server/rest/admin-drive.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,10 +13,4 @@ export const meta = {
 	kind: 'write:admin:delete-all-files-of-a-user',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = adminDriveUserParamDef;

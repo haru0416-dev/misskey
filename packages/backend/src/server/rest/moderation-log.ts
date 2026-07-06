@@ -28,7 +28,7 @@ type HonoApiModerationLogResponse = {
 	user: UserDetailedNotMeHonoApiResponse;
 };
 
-const adminShowModerationLogsParamDef = z.object({
+export const adminShowModerationLogsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

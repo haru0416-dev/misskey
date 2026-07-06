@@ -89,7 +89,7 @@ export function normalizeHonoApiChartQuery(query: Record<string, string>): Recor
 	return body;
 }
 
-const chartParamDef = z.object({
+export const chartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
 	limit: z.number().int().min(1).max(500).default(30),
 	offset: z.number().int().nullable().default(null),
@@ -101,7 +101,7 @@ type ChartParams = {
 	offset?: number | null;
 };
 
-const perUserChartParamDef = z.object({
+export const perUserChartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
 	limit: z.number().int().min(1).max(500).default(30),
 	offset: z.number().int().nullable().default(null),
@@ -112,7 +112,7 @@ type PerUserChartParams = ChartParams & {
 	userId: string;
 };
 
-const instanceChartParamDef = z.object({
+export const instanceChartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
 	limit: z.number().int().min(1).max(500).default(30),
 	offset: z.number().int().nullable().default(null),
