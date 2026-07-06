@@ -41,6 +41,16 @@ cp .github/misskey/test.yml .config/test.yml
 - 配置: `packages/backend/test/` 配下
 - カバレッジ: `bun run --bun --filter backend test-and-coverage`
 
+### e2e フルスイートの既知の落とし穴 (Bun ランタイムで vitest を起動すると壊れる)
+
+`test:e2e` / `test-and-coverage:e2e` は最後のテスト実行ステップだけ `bun` ではなく `node ./scripts/run_e2e.js` で行っている。これは意図的な回避策 (2026-07-07 対応):
+
+- `test/e2e/*.ts` が28ファイル(現状の全件)ある状態で `vitest --config vitest.config.e2e.ts` を **Bun ランタイムで** 実行すると (`include` glob 経由でも、全ファイルパスを明示的にCLI引数で渡しても同様)、`TypeError: undefined is not an object (evaluating 'z.string')` (`src/models/User.ts` の `import { z } from 'zod'` がロード時点で未初期化) が発生し、**全テストファイルが即座に (実行時間 約11秒で) 巻き添えで失敗する**。
+- 同じコマンドを **Node.js で** 実行すると再現しない。ファイル数を21〜27程度に減らした場合はBunでも再現しないため、「Bun + 一定数以上のファイル」という組み合わせで初めて顕在化するBun側のESM初期化順序のバグと推測される (Bun 1.3.14 時点)。単体ファイルや少数ファイルの実行では再現しないため見つかりにくい。
+- `scripts/run_e2e.js` は `test/e2e/` 配下を自前で列挙し (vitest の `include` glob 自体は原因ではなかったが、ファイルパスを明示的に渡す形は変更していない)、`execa` で `vitest` を子プロセスとして起動する。このスクリプト自体を `node` で実行することが重要 (`bun ./scripts/run_e2e.js` で起動すると、execa 経由で起動される vitest の子プロセスも巻き込まれて同じ症状が出る)。
+- 新しい `test/e2e/*.ts` ファイルを追加しても `run_e2e.js` が動的に拾うため、package.json 側の追加対応は不要。
+- もし将来 Bun のバージョンアップでこの問題が解消されたことを確認できたら、`node ./scripts/run_e2e.js` を `bun ./scripts/run_e2e.js` に戻す、あるいは `run_e2e.js` 自体を経由せず `vitest --config vitest.config.e2e.ts` 直呼びに戻してよい。
+
 ## e2e テストの配置
 
 `packages/backend/test/e2e/` の現状ファイル例:
