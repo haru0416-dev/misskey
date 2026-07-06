@@ -131,7 +131,7 @@ import { handleHonoApiPagePush } from './page-push.js';
 import { handleHonoApiIPageLikes, handleHonoApiIPages, handleHonoApiPagesCreate, handleHonoApiPagesDelete, handleHonoApiPagesFeatured, handleHonoApiPagesShow, handleHonoApiPagesUpdate, handleHonoApiUsersPages } from './pages.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from './password-reset.js';
 import { handleHonoApiAdminPromoCreate, handleHonoApiPromoRead } from './promo.js';
-import { assertHonoApiRateLimit } from './rate-limit.js';
+import { assertHonoApiRateLimitForUser } from './rate-limit.js';
 import { handleHonoApiResetDb } from './reset-db.js';
 import { getHonoApiRolePolicies, isHonoApiAdministrator, isHonoApiModerator } from './role-policy.js';
 import {
@@ -1760,10 +1760,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 				assertCredential(auth);
 				assertProhibitMoved(auth.user);
 				assertTokenPermission(auth, 'write:drive');
-				await assertHonoApiRateLimit(deps, 'drive/files/create', {
+				await assertHonoApiRateLimitForUser(deps, 'drive/files/create', {
 					duration: 60 * 60 * 1000,
 					max: 120,
-				}, auth.user.id);
+				}, auth.user);
 
 				const ip = getRequestIp(c, deps.config);
 				const headers = Object.fromEntries(c.req.raw.headers.entries());
@@ -1782,10 +1782,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:drive');
-			await assertHonoApiRateLimit(deps, 'drive/files/upload-from-url', {
+			await assertHonoApiRateLimitForUser(deps, 'drive/files/upload-from-url', {
 				duration: 60 * 60 * 1000,
 				max: 60,
-			}, auth.user.id);
+			}, auth.user);
 
 			const ip = getRequestIp(c, deps.config);
 			const headers = Object.fromEntries(c.req.raw.headers.entries());
@@ -1924,10 +1924,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:drive');
-			await assertHonoApiRateLimit(deps, 'drive/folders/create', {
+			await assertHonoApiRateLimitForUser(deps, 'drive/folders/create', {
 				duration: 60 * 60 * 1000,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiDriveFoldersCreate(deps, auth.user, body));
 		});
@@ -2234,10 +2234,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:blocks');
-			await assertHonoApiRateLimit(deps, 'blocking/create', {
+			await assertHonoApiRateLimitForUser(deps, 'blocking/create', {
 				duration: 60 * 60 * 1000,
 				max: 20,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiBlockingCreate(deps, auth.user, body));
 		});
@@ -2249,10 +2249,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:blocks');
-			await assertHonoApiRateLimit(deps, 'blocking/delete', {
+			await assertHonoApiRateLimitForUser(deps, 'blocking/delete', {
 				duration: 60 * 60 * 1000,
 				max: 100,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiBlockingDelete(deps, auth.user, body));
 		});
@@ -2364,10 +2364,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			if (!(await getHonoApiRolePolicies(deps, auth.user)).canCreateChannel) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimit(deps, 'channels/create', {
+			await assertHonoApiRateLimitForUser(deps, 'channels/create', {
 				duration: 60 * 60 * 1000,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiChannelsCreate(deps, auth.user, body));
 		});
@@ -2785,10 +2785,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimit(deps, 'chat/messages/create-to-user', {
+			await assertHonoApiRateLimitForUser(deps, 'chat/messages/create-to-user', {
 				duration: 60 * 60 * 1000,
 				max: 500,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiChatMessagesCreateToUser(deps, auth.user, body));
 		});
@@ -2801,10 +2801,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimit(deps, 'chat/messages/create-to-room', {
+			await assertHonoApiRateLimitForUser(deps, 'chat/messages/create-to-room', {
 				duration: 60 * 60 * 1000,
 				max: 500,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiChatMessagesCreateToRoom(deps, auth.user, body));
 		});
@@ -2897,10 +2897,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimit(deps, 'chat/rooms/create', {
+			await assertHonoApiRateLimitForUser(deps, 'chat/rooms/create', {
 				duration: 24 * 60 * 60 * 1000,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiChatRoomsCreate(deps, auth.user, body));
 		});
@@ -3016,10 +3016,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimit(deps, 'chat/rooms/invitations/create', {
+			await assertHonoApiRateLimitForUser(deps, 'chat/rooms/invitations/create', {
 				duration: 24 * 60 * 60 * 1000,
 				max: 50,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsCreate(deps, auth.user, body));
 		});
@@ -3170,10 +3170,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimit(deps, 'clips/add-note', {
+			await assertHonoApiRateLimitForUser(deps, 'clips/add-note', {
 				duration: 60 * 60 * 1000,
 				max: 20,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiClipsAddNote(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3200,10 +3200,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:notes');
-			await assertHonoApiRateLimit(deps, 'notes/create', {
+			await assertHonoApiRateLimitForUser(deps, 'notes/create', {
 				duration: 60 * 60 * 1000,
 				max: 300,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiNotesCreate(deps, auth.user, body));
 		});
@@ -3215,7 +3215,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:notes');
-			await assertHonoApiRateLimit(deps, 'notes/delete', notesDeleteRateLimit, auth.user.id);
+			await assertHonoApiRateLimitForUser(deps, 'notes/delete', notesDeleteRateLimit, auth.user);
 
 			await handleHonoApiNotesDelete(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3228,7 +3228,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:notes');
-			await assertHonoApiRateLimit(deps, 'notes/unrenote', notesUnrenoteRateLimit, auth.user.id);
+			await assertHonoApiRateLimitForUser(deps, 'notes/unrenote', notesUnrenoteRateLimit, auth.user);
 
 			await handleHonoApiNotesUnrenote(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3254,7 +3254,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:reactions');
-			await assertHonoApiRateLimit(deps, 'notes/reactions/delete', reactionsDeleteRateLimit, auth.user.id);
+			await assertHonoApiRateLimitForUser(deps, 'notes/reactions/delete', reactionsDeleteRateLimit, auth.user);
 
 			await handleHonoApiNotesReactionsDelete(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3366,10 +3366,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:favorites');
-			await assertHonoApiRateLimit(deps, 'notes/favorites/create', {
+			await assertHonoApiRateLimitForUser(deps, 'notes/favorites/create', {
 				duration: 60 * 60 * 1000,
 				max: 20,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiNotesFavoritesCreate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3394,10 +3394,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimit(deps, 'notes/thread-muting/create', {
+			await assertHonoApiRateLimitForUser(deps, 'notes/thread-muting/create', {
 				duration: 60 * 60 * 1000,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiNotesThreadMutingCreate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3671,10 +3671,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 				throw rolePermissionDeniedError();
 			}
 			assertTokenPermission(auth, 'read:federation');
-			await assertHonoApiRateLimit(deps, 'ap/get', {
+			await assertHonoApiRateLimitForUser(deps, 'ap/get', {
 				duration: 60 * 60 * 1000,
 				max: 30,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiApGet(deps, body));
 		});
@@ -3694,10 +3694,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:account');
-			await assertHonoApiRateLimit(deps, 'ap/show', {
+			await assertHonoApiRateLimitForUser(deps, 'ap/show', {
 				duration: 60 * 60 * 1000,
 				max: 30,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiApShow(deps, auth.user, body));
 		});
@@ -3720,10 +3720,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'export-custom-emojis', {
+			await assertHonoApiRateLimitForUser(deps, 'export-custom-emojis', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiExportCustomEmojis(deps, auth.user);
 			return emptyResponse(c);
@@ -3736,10 +3736,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-notes', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-notes', {
 				duration: 24 * 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportNotes(deps, auth.user);
 			return emptyResponse(c);
@@ -3752,10 +3752,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-clips', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-clips', {
 				duration: 24 * 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportClips(deps, auth.user);
 			return emptyResponse(c);
@@ -3768,10 +3768,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-favorites', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-favorites', {
 				duration: 24 * 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportFavorites(deps, auth.user);
 			return emptyResponse(c);
@@ -3784,10 +3784,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-following', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-following', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportFollowing(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3800,10 +3800,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-mute', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-mute', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportMute(deps, auth.user);
 			return emptyResponse(c);
@@ -3816,10 +3816,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-blocking', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-blocking', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportBlocking(deps, auth.user);
 			return emptyResponse(c);
@@ -3832,10 +3832,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-user-lists', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-user-lists', {
 				duration: 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportUserLists(deps, auth.user);
 			return emptyResponse(c);
@@ -3852,10 +3852,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportBlocking) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimit(deps, 'i/import-blocking', {
+			await assertHonoApiRateLimitForUser(deps, 'i/import-blocking', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiIImportBlocking(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3872,10 +3872,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportFollowing) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimit(deps, 'i/import-following', {
+			await assertHonoApiRateLimitForUser(deps, 'i/import-following', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiIImportFollowing(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3892,10 +3892,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportMuting) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimit(deps, 'i/import-muting', {
+			await assertHonoApiRateLimitForUser(deps, 'i/import-muting', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiIImportMuting(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3912,10 +3912,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportUserLists) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimit(deps, 'i/import-user-lists', {
+			await assertHonoApiRateLimitForUser(deps, 'i/import-user-lists', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiIImportUserLists(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3932,10 +3932,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			if (!(await getHonoApiRolePolicies(deps, auth.user)).canImportAntennas) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimit(deps, 'i/import-antennas', {
+			await assertHonoApiRateLimitForUser(deps, 'i/import-antennas', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiIImportAntennas(deps, auth.user, body);
 			return emptyResponse(c);
@@ -3948,10 +3948,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/export-antennas', {
+			await assertHonoApiRateLimitForUser(deps, 'i/export-antennas', {
 				duration: 60 * 60 * 1000,
 				max: 1,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiIExportAntennas(deps, auth.user);
 			return emptyResponse(c);
@@ -3982,10 +3982,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimit(deps, 'following/create', {
+			await assertHonoApiRateLimitForUser(deps, 'following/create', {
 				duration: 60 * 60 * 1000,
 				max: 100,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiFollowingCreate(deps, auth.user, body));
 		});
@@ -4008,10 +4008,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimit(deps, 'following/delete', {
+			await assertHonoApiRateLimitForUser(deps, 'following/delete', {
 				duration: 60 * 60 * 1000,
 				max: 100,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiFollowingDelete(deps, auth.user, body));
 		});
@@ -4023,10 +4023,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimit(deps, 'following/update', {
+			await assertHonoApiRateLimitForUser(deps, 'following/update', {
 				duration: 60 * 60 * 1000,
 				max: 100,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiFollowingUpdate(deps, auth.user, body));
 		});
@@ -4038,10 +4038,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimit(deps, 'following/invalidate', {
+			await assertHonoApiRateLimitForUser(deps, 'following/invalidate', {
 				duration: 60 * 60 * 1000,
 				max: 100,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiFollowingInvalidate(deps, auth.user, body));
 		});
@@ -4147,10 +4147,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:gallery');
-			await assertHonoApiRateLimit(deps, 'gallery/posts/create', {
+			await assertHonoApiRateLimitForUser(deps, 'gallery/posts/create', {
 				duration: 60 * 60 * 1000,
 				max: 20,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiGalleryPostsCreate(deps, auth.user, body));
 		});
@@ -4163,10 +4163,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:gallery');
-			await assertHonoApiRateLimit(deps, 'gallery/posts/update', {
+			await assertHonoApiRateLimitForUser(deps, 'gallery/posts/update', {
 				duration: 60 * 60 * 1000,
 				max: 300,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiGalleryPostsUpdate(deps, auth.user, body));
 		});
@@ -4265,10 +4265,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:flash');
-			await assertHonoApiRateLimit(deps, 'flash/update', {
+			await assertHonoApiRateLimitForUser(deps, 'flash/update', {
 				duration: 60 * 60 * 1000,
 				max: 300,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiFlashUpdate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -4282,10 +4282,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:flash');
-			await assertHonoApiRateLimit(deps, 'flash/create', {
+			await assertHonoApiRateLimitForUser(deps, 'flash/create', {
 				duration: 60 * 60 * 1000,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiFlashCreate(deps, auth.user, body));
 		});
@@ -4358,10 +4358,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimit(deps, 'following/update-all', {
+			await assertHonoApiRateLimitForUser(deps, 'following/update-all', {
 				duration: 60 * 60 * 1000,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiFollowingUpdateAll(deps, auth.user, body);
 			return emptyResponse(c);
@@ -4472,10 +4472,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:notifications');
-			await assertHonoApiRateLimit(deps, 'notifications/create', {
+			await assertHonoApiRateLimitForUser(deps, 'notifications/create', {
 				duration: 1000 * 60,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiNotificationsCreate(deps, auth.user, auth.token, body);
 			return emptyResponse(c);
@@ -4512,10 +4512,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:notifications');
-			await assertHonoApiRateLimit(deps, 'notifications/test-notification', {
+			await assertHonoApiRateLimitForUser(deps, 'notifications/test-notification', {
 				duration: 1000 * 60,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			handleHonoApiNotificationsTestNotification(deps, auth.user);
 			return emptyResponse(c);
@@ -4536,10 +4536,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:pages');
-			await assertHonoApiRateLimit(deps, 'pages/create', {
+			await assertHonoApiRateLimitForUser(deps, 'pages/create', {
 				duration: 60 * 60 * 1000,
 				max: 10,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiPagesCreate(deps, auth.user, body));
 		});
@@ -4552,10 +4552,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:pages');
-			await assertHonoApiRateLimit(deps, 'pages/update', {
+			await assertHonoApiRateLimitForUser(deps, 'pages/update', {
 				duration: 60 * 60 * 1000,
 				max: 300,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiPagesUpdate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -4824,10 +4824,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimit(deps, 'i/update', {
+			await assertHonoApiRateLimitForUser(deps, 'i/update', {
 				duration: 60 * 60 * 1000,
 				max: 20,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiIUpdate(deps, auth.user, auth.token, body));
 		});
@@ -4840,10 +4840,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertProhibitMoved(auth.user);
-			await assertHonoApiRateLimit(deps, 'i/move', {
+			await assertHonoApiRateLimitForUser(deps, 'i/move', {
 				duration: 24 * 60 * 60 * 1000,
 				max: 5,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiIMove(deps, auth.user, body));
 		});
@@ -4878,10 +4878,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:notifications');
-			await assertHonoApiRateLimit(deps, 'i/notifications', {
+			await assertHonoApiRateLimitForUser(deps, 'i/notifications', {
 				duration: 30000,
 				max: 30,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiINotifications(deps, auth.user, body));
 		});
@@ -4893,10 +4893,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:notifications');
-			await assertHonoApiRateLimit(deps, 'i/notifications-grouped', {
+			await assertHonoApiRateLimitForUser(deps, 'i/notifications-grouped', {
 				duration: 30000,
 				max: 30,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiINotificationsGrouped(deps, auth.user, body));
 		});
@@ -4955,10 +4955,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimit(deps, 'i/update-email', {
+			await assertHonoApiRateLimitForUser(deps, 'i/update-email', {
 				duration: 60 * 60 * 1000,
 				max: 3,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiIUpdateEmail(deps, auth.user, body));
 		});
@@ -5276,10 +5276,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertTokenPermission(auth, 'read:account');
-			await assertHonoApiRateLimit(deps, 'i/webhooks/test', {
+			await assertHonoApiRateLimitForUser(deps, 'i/webhooks/test', {
 				duration: 15 * 60 * 1000,
 				max: 60,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiIWebhooksTest(deps, auth.user, body);
 			return emptyResponse(c);
@@ -5333,10 +5333,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimit(deps, 'notes/drafts/create', {
+			await assertHonoApiRateLimitForUser(deps, 'notes/drafts/create', {
 				duration: 60 * 60 * 1000,
 				max: 300,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiNotesDraftsCreate(deps, auth.user, body));
 		});
@@ -5349,10 +5349,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimit(deps, 'notes/drafts/update', {
+			await assertHonoApiRateLimitForUser(deps, 'notes/drafts/update', {
 				duration: 60 * 60 * 1000,
 				max: 300,
-			}, auth.user.id);
+			}, auth.user);
 
 			return jsonResponse(c, await handleHonoApiNotesDraftsUpdate(deps, auth.user, body));
 		});
@@ -5667,10 +5667,10 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimit(deps, 'users/lists/push', {
+			await assertHonoApiRateLimitForUser(deps, 'users/lists/push', {
 				duration: 60 * 60 * 1000,
 				max: 30,
-			}, auth.user.id);
+			}, auth.user);
 
 			await handleHonoApiUsersListsPush(deps, auth.user, body);
 			return emptyResponse(c);
