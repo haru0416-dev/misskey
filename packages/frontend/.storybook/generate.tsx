@@ -6,6 +6,7 @@
 import { existsSync, readFileSync, globSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { basename, dirname } from 'node:path/posix';
+import { fileURLToPath } from 'node:url';
 import { GENERATOR, type State, generate } from 'astring';
 import type * as estree from 'estree';
 import { format } from 'prettier';
@@ -435,6 +436,11 @@ function toStories(component: string): Promise<string> {
 		}
 	);
 }
+
+// bun はエントリファイルの JSX 変換に `$cwd/tsconfig.json` を使う (このファイル自身の
+// jsxFactory: 'h' は .storybook/tsconfig.json 由来なので cwd を .storybook にして起動する必要がある)。
+// 以下の相対 glob パターンは packages/frontend 基準のため、ここで cwd を戻す。
+process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 
 // glob('src/{components,pages,ui,widgets}/**/*.vue')
 (async () => {

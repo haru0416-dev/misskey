@@ -16,7 +16,6 @@
 		"packages/i18n",
 		"packages/icons-subsetter",
 		"packages/aiscript-languageserver-stub",
-		"packages/re2-stub",
 		"packages/sw",
 		"packages/misskey-js",
 		"packages/misskey-js/generator",

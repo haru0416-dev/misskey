@@ -4,7 +4,7 @@
  */
 
 import { AhoCorasick } from 'slacc';
-import RE2 from 're2';
+import RE2 from './re2.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 

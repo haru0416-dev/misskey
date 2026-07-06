@@ -5,13 +5,13 @@
 
 import { URL, domainToASCII } from 'node:url';
 import { Inject, Injectable } from '@nestjs/common';
-import RE2 from 're2';
 import semver from 'semver';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { bindThis } from '@/decorators.js';
 import { MiMeta, SoftwareSuspension } from '@/models/Meta.js';
 import { MiInstance } from '@/models/Instance.js';
+import RE2 from '@/misc/re2.js';
 
 @Injectable()
 export class UtilityService {
