@@ -3,15 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Test, TestingModule } from '@nestjs/testing';
-import { describe, beforeEach, beforeAll, afterEach, afterAll, vi, test, expect } from 'vitest';
+import { describe, beforeEach, beforeAll, afterEach, afterAll, test, expect } from 'vitest';
 import { UserSearchService } from '@/core/UserSearchService.js';
 import type { MiUser } from '@/models/User.js';
 import { IdService } from '@/core/IdService.js';
-import { GlobalModule } from '@/GlobalModule.js';
-import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { user, type UserInsert } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import { following } from '@/db/schema/following.js';
@@ -20,9 +19,9 @@ import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createFollowingInDatabase } from '@/core/FollowingStore.js';
 
 describe('UserSearchService', () => {
-	let app: TestingModule;
 	let service: UserSearchService;
 
+	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	let idService: IdService;
 
@@ -86,30 +85,17 @@ describe('UserSearchService', () => {
 	}
 
 	beforeAll(async () => {
-		app = await Test
-			.createTestingModule({
-				imports: [
-					GlobalModule,
-				],
-				providers: [
-					UserSearchService,
-					{
-						provide: UserEntityService, useFactory: vi.fn(() => ({
-							// とりあえずIDが返れば確認が出来るので
-							packMany: (value: any) => value,
-						})),
-					},
-					IdService,
-				],
-			})
-			.compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
+		idService = new IdService(config);
 
-		await app.init();
+		const userEntityService = {
+			// とりあえずIDが返れば確認が出来るので
+			packMany: (value: any) => value,
+		} as unknown as UserEntityService;
 
-		db = app.get(DI.drizzle);
-
-		service = app.get(UserSearchService);
-		idService = app.get(IdService);
+		service = new UserSearchService(config, db, userEntityService);
 	});
 
 	beforeEach(async () => {
@@ -133,7 +119,7 @@ describe('UserSearchService', () => {
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	describe('searchByUsernameAndHost', () => {

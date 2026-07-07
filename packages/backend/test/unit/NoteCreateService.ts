@@ -4,11 +4,8 @@
  */
 
 import { beforeAll, describe, test, expect } from 'vitest';
-import { Test } from '@nestjs/testing';
 
-import { CoreModule } from '@/core/CoreModule.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
-import { GlobalModule } from '@/GlobalModule.js';
 import { MiNote } from '@/models/Note.js';
 import { IPoll } from '@/models/Poll.js';
 import { MiDriveFile } from '@/models/DriveFile.js';
@@ -16,11 +13,15 @@ import { MiDriveFile } from '@/models/DriveFile.js';
 describe('NoteCreateService', () => {
 	let noteCreateService: NoteCreateService;
 
-	beforeAll(async () => {
-		const app = await Test.createTestingModule({
-			imports: [GlobalModule, CoreModule],
-		}).compile();
-		noteCreateService = app.get<NoteCreateService>(NoteCreateService);
+	beforeAll(() => {
+		// isRenote/isQuote are pure (no dependency access), so every constructor
+		// param (29 total) can stay unset for this file's tests.
+		const unused = undefined as never;
+		noteCreateService = new NoteCreateService(
+			unused, unused, unused, unused, unused, unused, unused, unused, unused, unused,
+			unused, unused, unused, unused, unused, unused, unused, unused, unused, unused,
+			unused, unused, unused, unused, unused, unused, unused, unused, unused,
+		);
 	});
 
 	describe('is-renote', () => {

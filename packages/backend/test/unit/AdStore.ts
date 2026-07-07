@@ -5,10 +5,9 @@
 
 process.env.NODE_ENV = 'test';
 
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { Test } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
-import { DI } from '@/di-symbols.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { ad } from '@/db/schema/ad.js';
 import {
 	createAdInDatabase,
@@ -18,30 +17,29 @@ import {
 	listAdsFromDatabase,
 	updateAdInDatabase,
 } from '@/core/AdStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { genAidx } from '@/misc/id/aidx.js';
-import type { TestingModule } from '@nestjs/testing';
 
 describe('AdStore', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 
+	beforeAll(() => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
+	});
+
+	afterAll(async () => {
+		await pool.end();
+	});
+
 	beforeEach(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-		}).compile();
-
-		app.enableShutdownHooks();
-
-		db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		await db.delete(ad);
 	});
 
 	afterEach(async () => {
 		await db.delete(ad);
-		await app.close();
 	});
 
 	test('lists active ads for the current day', async () => {

@@ -7,17 +7,14 @@
 import { setTimeout } from 'node:timers/promises';
 import { afterEach, beforeEach, afterAll, beforeAll, describe, test, expect, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
+import type * as Redis from 'ioredis';
 import { randomString } from '../utils.js';
 import type { MiUser } from '@/models/User.js';
 import { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import { IdService } from '@/core/IdService.js';
-import { GlobalModule } from '@/GlobalModule.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
 import { QueueService } from '@/core/QueueService.js';
-import { LoggerService } from '@/core/LoggerService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
 import { systemWebhook } from '@/db/schema/system-webhook.js';
 import { user, type UserInsert } from '@/db/schema/user.js';
@@ -26,17 +23,22 @@ import {
 	fetchSystemWebhookByIdFromDatabase,
 } from '@/core/SystemWebhookStore.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import { createRedisForPub, createRedisForSub } from '@/runtime-dependencies.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 
 describe('SystemWebhookService', () => {
-	let app: TestingModule;
 	let service: SystemWebhookService;
 
 	// --------------------------------------------------------------------------------------
 
+	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let queueService: Mocked<QueueService>;
+	let redisForPub: Redis.Redis;
+	let redisForSub: Redis.Redis;
 
 	// --------------------------------------------------------------------------------------
 
@@ -69,37 +71,26 @@ describe('SystemWebhookService', () => {
 	// --------------------------------------------------------------------------------------
 
 	async function beforeAllImpl() {
-		app = await Test
-			.createTestingModule({
-				imports: [
-					GlobalModule,
-				],
-				providers: [
-					SystemWebhookService,
-					IdService,
-					LoggerService,
-					GlobalEventService,
-					{
-						provide: QueueService, useFactory: () => ({ systemWebhookDeliver: vi.fn() }),
-					},
-					{
-						provide: ModerationLogService, useFactory: () => ({ log: () => Promise.resolve() }),
-					},
-				],
-			})
-			.compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 
-		db = app.get(DI.drizzle);
+		idService = new IdService(config);
+		queueService = { systemWebhookDeliver: vi.fn() } as unknown as Mocked<QueueService>;
+		const moderationLogService = { log: () => Promise.resolve() } as unknown as ModerationLogService;
 
-		service = app.get(SystemWebhookService);
-		idService = app.get(IdService);
-		queueService = app.get(QueueService) as Mocked<QueueService>;
+		redisForPub = createRedisForPub(config);
+		redisForSub = await createRedisForSub(config);
+		const globalEventService = new GlobalEventService(config, redisForPub);
 
-		app.enableShutdownHooks();
+		service = new SystemWebhookService(redisForSub, db, idService, queueService, moderationLogService, globalEventService);
 	}
 
 	async function afterAllImpl() {
-		await app.close();
+		service.dispose();
+		redisForSub.disconnect();
+		redisForPub.disconnect();
+		await pool.end();
 	}
 
 	async function beforeEachImpl() {

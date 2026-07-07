@@ -5,20 +5,32 @@
 
 import * as assert from 'assert';
 import { beforeAll, describe, test } from 'vitest';
-import { Test } from '@nestjs/testing';
 
-import { CoreModule } from '@/core/CoreModule.js';
 import { ReactionService } from '@/core/ReactionService.js';
-import { GlobalModule } from '@/GlobalModule.js';
 
 describe('ReactionService', () => {
 	let reactionService: ReactionService;
 
-	beforeAll(async () => {
-		const app = await Test.createTestingModule({
-			imports: [GlobalModule, CoreModule],
-		}).compile();
-		reactionService = app.get<ReactionService>(ReactionService);
+	beforeAll(() => {
+		const unused = undefined as never;
+		reactionService = new ReactionService(
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+			unused,
+		);
 	});
 
 	describe('normalize', () => {

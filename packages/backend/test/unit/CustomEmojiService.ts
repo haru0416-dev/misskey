@@ -3,48 +3,42 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, beforeAll, describe, test, expect } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
+import { afterAll, afterEach, beforeAll, describe, test, expect } from 'vitest';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
-import { EmojiEntityService } from '@/core/entities/EmojiEntityService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { IdService } from '@/core/IdService.js';
-import { ModerationLogService } from '@/core/ModerationLogService.js';
-import { UtilityService } from '@/core/UtilityService.js';
-import { DI } from '@/di-symbols.js';
-import { GlobalModule } from '@/GlobalModule.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { emoji, type EmojiInsert } from '@/db/schema/emoji.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { MiEmoji } from '@/models/Emoji.js';
 
 describe('CustomEmojiService', () => {
-	let app: TestingModule;
 	let service: CustomEmojiService;
 
+	let pool: MiDrizzlePool;
 	let drizzle: MiDrizzleDatabase;
 	let idService: IdService;
 
 	beforeAll(async () => {
-		app = await Test
-			.createTestingModule({
-				imports: [
-					GlobalModule,
-				],
-				providers: [
-					CustomEmojiService,
-					UtilityService,
-					IdService,
-					EmojiEntityService,
-					ModerationLogService,
-					GlobalEventService,
-				],
-			})
-			.compile();
-		app.enableShutdownHooks();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		drizzle = createDrizzleDatabase(pool, config);
+		idService = new IdService(config);
 
-		service = app.get<CustomEmojiService>(CustomEmojiService);
-		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
-		idService = app.get<IdService>(IdService);
+		const unused = undefined as never;
+		service = new CustomEmojiService(
+			unused,
+			drizzle,
+			unused,
+			idService,
+			unused,
+			unused,
+			unused,
+		);
+	});
+
+	afterAll(async () => {
+		await pool.end();
 	});
 
 	describe('fetchEmojis', () => {

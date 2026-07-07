@@ -6,40 +6,35 @@
 process.env.NODE_ENV = 'test';
 
 import { afterAll, beforeAll, describe, test, expect, vi } from 'vitest';
-import { Test } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
-import { DI } from '@/di-symbols.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { MetaService } from '@/core/MetaService.js';
-import { CoreModule } from '@/core/CoreModule.js';
-import type { TestingModule } from '@nestjs/testing';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type * as Redis from 'ioredis';
 
 describe('MetaService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
+	let db: MiDrizzleDatabase;
 	let metaService: MetaService;
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-				CoreModule,
-			],
-		}).compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 
-		app.enableShutdownHooks();
-
-		metaService = app.get<MetaService>(MetaService, { strict: false });
+		const redisForSub = { on: () => {}, off: () => {} } as unknown as Redis.Redis;
+		const unused = undefined as never;
+		metaService = new MetaService(redisForSub, db, unused, unused);
 
 		// Make it cached
 		await metaService.fetch();
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	test('fetch (cache)', async () => {
-		const db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		const spy = vi.spyOn(db, 'transaction');
 
 		const result = await metaService.fetch();
@@ -49,7 +44,6 @@ describe('MetaService', () => {
 	});
 
 	test('fetch (force)', async () => {
-		const db = app.get<MiDrizzleDatabase>(DI.drizzle);
 		const spy = vi.spyOn(db, 'transaction');
 
 		const result = await metaService.fetch(true);

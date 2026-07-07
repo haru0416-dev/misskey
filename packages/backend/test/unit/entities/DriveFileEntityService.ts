@@ -6,14 +6,12 @@
 process.env.NODE_ENV = 'test';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, vi, test } from 'vitest';
-import { Test } from '@nestjs/testing';
-import type { TestingModule } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
-import { CoreModule } from '@/core/CoreModule.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
@@ -21,12 +19,13 @@ import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
 import type { UserInsert } from '@/db/schema/user.js';
 import type { DriveFileInsert } from '@/db/schema/drive-file.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type { MiMeta } from '@/models/Meta.js';
 
 const describeBenchmark = process.env.RUN_BENCHMARKS === '1' ? describe : describe.skip;
 
 describe('DriveFileEntityService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let service: DriveFileEntityService;
 	let driveFolderEntityService: DriveFolderEntityService;
 	let db: MiDrizzleDatabase;
@@ -103,18 +102,25 @@ describe('DriveFileEntityService', () => {
 	};
 
 	beforeAll(async () => {
-		const moduleBuilder = Test.createTestingModule({
-			imports: [GlobalModule, CoreModule],
-		});
-		moduleBuilder.overrideProvider(UserEntityService).useValue(userEntityServiceMock as any);
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 
-		app = await moduleBuilder.compile();
-		await app.init();
-		app.enableShutdownHooks();
+		const meta = { proxyRemoteFiles: false } as MiMeta;
+		const idService = new IdService(config);
+		const unused = undefined as never;
 
-		service = app.get<DriveFileEntityService>(DriveFileEntityService);
-		driveFolderEntityService = app.get<DriveFolderEntityService>(DriveFolderEntityService);
-		db = app.get<MiDrizzleDatabase>(DI.drizzle);
+		driveFolderEntityService = new DriveFolderEntityService(db, idService);
+		service = new DriveFileEntityService(
+			config,
+			meta,
+			db,
+			userEntityServiceMock as unknown as UserEntityService,
+			unused,
+			driveFolderEntityService,
+			unused,
+			idService,
+		);
 	});
 
 	beforeEach(() => {
@@ -123,7 +129,7 @@ describe('DriveFileEntityService', () => {
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	describe('pack', () => {

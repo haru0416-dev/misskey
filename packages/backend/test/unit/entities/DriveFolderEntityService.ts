@@ -6,23 +6,21 @@
 process.env.NODE_ENV = 'test';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { Test } from '@nestjs/testing';
-import type { TestingModule } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
-import { CoreModule } from '@/core/CoreModule.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { DriveFolderEntityService } from '@/core/entities/DriveFolderEntityService.js';
-import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
 import { genAidx } from '@/misc/id/aidx.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { createDriveFolderInDatabase } from '@/core/DriveFolderStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import type { DriveFileInsert } from '@/db/schema/drive-file.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 
 const describeBenchmark = process.env.RUN_BENCHMARKS === '1' ? describe : describe.skip;
 
 describe('DriveFolderEntityService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let service: DriveFolderEntityService;
 	let db: MiDrizzleDatabase;
 	let idCounter = 0;
@@ -73,18 +71,16 @@ describe('DriveFolderEntityService', () => {
 	};
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [GlobalModule, CoreModule],
-		}).compile();
-		await app.init();
-		app.enableShutdownHooks();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 
-		service = app.get<DriveFolderEntityService>(DriveFolderEntityService);
-		db = app.get<MiDrizzleDatabase>(DI.drizzle);
+		const idService = new IdService(config);
+		service = new DriveFolderEntityService(db, idService);
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	describe('pack', () => {
