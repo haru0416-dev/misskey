@@ -4,10 +4,6 @@
  */
 
 import * as fs from 'node:fs';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import { Heading, List, Node } from 'mdast';
-import { toString } from 'mdast-util-to-string';
 
 export class Release {
 	public readonly releaseName: string;
@@ -29,37 +25,53 @@ export class ReleaseCategory {
 	}
 }
 
-function isHeading(node: Node): node is Heading {
-	return node.type === 'heading';
-}
+const codeFenceRegexp = /^(```|~~~)/;
+const releaseHeadingRegexp = /^##\s+(.+?)\s*$/;
+const categoryHeadingRegexp = /^###\s+(.+?)\s*$/;
+// CommonMark と同じく bullet の直後は ASCII 空白/タブのみ区切りとして扱う (全角スペース等は不可)。
+// 中身が空の bullet (`-` のみの行) も 1 項目として数える
+const listItemRegexp = /^[-*+](?:[ \t]+(.*?))?[ \t]*$/;
 
-function isList(node: Node): node is List {
-	return node.type === 'list';
-}
-
+/**
+ * CHANGELOG.md を「## リリース → ### カテゴリ → トップレベルの箇条書き」の構造として
+ * 行ベースでパースする。checker はリリース名・カテゴリ名・項目数しか見ないため、
+ * 項目テキストは生の Markdown のまま保持する (インデントされたネスト項目は数えない)。
+ */
 export function parseChangeLog(path: string): Release[] {
 	const input = fs.readFileSync(path, { encoding: 'utf8' });
-	const processor = unified().use(remarkParse);
 
 	const releases: Release[] = [];
-	const root = processor.parse(input);
-
 	let release: Release | null = null;
 	let category: ReleaseCategory | null = null;
-	for (const it of root.children) {
-		if (isHeading(it) && it.depth === 2) {
-			// リリース
-			release = new Release(toString(it));
-			releases.push(release);
-		} else if (isHeading(it) && it.depth === 3 && release) {
-			// リリース配下のカテゴリ
-			category = new ReleaseCategory(toString(it));
-			release.categories.push(category);
-		} else if (isList(it) && category) {
-			for (const listItem of it.children) {
-				// カテゴリ配下のリスト項目
-				category.items.push(toString(listItem));
+	let inCodeFence = false;
+
+	for (const line of input.split('\n')) {
+		if (codeFenceRegexp.test(line)) {
+			inCodeFence = !inCodeFence;
+			continue;
+		}
+		if (inCodeFence) continue;
+
+		const categoryHeading = line.match(categoryHeadingRegexp);
+		if (categoryHeading) {
+			if (release) {
+				category = new ReleaseCategory(categoryHeading[1]);
+				release.categories.push(category);
 			}
+			continue;
+		}
+
+		const releaseHeading = line.match(releaseHeadingRegexp);
+		if (releaseHeading) {
+			release = new Release(releaseHeading[1]);
+			releases.push(release);
+			category = null;
+			continue;
+		}
+
+		const listItem = line.match(listItemRegexp);
+		if (listItem && category) {
+			category.items.push(listItem[1] ?? '');
 		}
 	}
 

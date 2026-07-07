@@ -3,18 +3,21 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
 
 const __dirname = import.meta.dirname;
 
-(async () => {
-	fs.rmSync(__dirname + '/../packages/backend/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/backend/src-js', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/frontend/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/frontend-embed/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/icons-subsetter/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/i18n/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/sw/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/misskey-js/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../built', { recursive: true, force: true });
-})();
+const buildOutputs = [
+	'packages/backend/built',
+	'packages/backend/built-test',
+	'packages/backend/src-js',
+	'packages/frontend/built',
+	'packages/frontend-embed/built',
+	'packages/icons-subsetter/built',
+	'packages/i18n/built',
+	'packages/sw/built',
+	'packages/misskey-js/built',
+	'built',
+];
+
+await Promise.all(buildOutputs.map((dir) => fs.rm(`${__dirname}/../${dir}`, { recursive: true, force: true })));
