@@ -51,7 +51,7 @@ cp .github/misskey/test.yml .config/test.yml
 - ★ **フォーク爆弾の教訓 (2026-07-07 実際にホストがフリーズした)**: `bun run --bun` は PATH の先頭に `/tmp/bun-node-<hash>/` を注入し、その中の `node` は **bun 本体への symlink**。そのため素朴に `execa('node', ...)` で再起動すると子もまた Bun になり無限再帰でプロセスが際限なく増える (600個超を観測)。さらに、スクリプト自身を本物の node で再起動できても **PATH を掃除しないと** そこから spawn する `node_modules/.bin/vitest` (shebang `#!/usr/bin/env node`) が再び Bun に化ける。`respawn_with_node.js` は (1) realpath 比較で本物の node を解決し、(2) shim ディレクトリを PATH から除去して子に渡し、(3) 環境変数ガードで2段目以降の respawn を禁止する。この3点を欠いた「自己再起動スクリプト」を書いてはいけない。
 - vitest には必ず `run` サブコマンドを明示する (省略すると watch モードに入り得て、プロセスが終了せず残り続ける)。
 - 新しいテストファイルを追加しても vitest の include glob / `run_e2e.js` の列挙が動的に拾うため、package.json 側の追加対応は不要。
-- もし将来 Bun のバージョンアップでこの問題が解消されたことを確認できたら、`run_unit.js` / `run_e2e.js` を経由せず `vitest run --config ...` 直呼びに戻してよい。
+- upstream バグは [oven-sh/bun#21614](https://github.com/oven-sh/bun/issues/21614) (zod の `export { z }` namespace 再export が、変換された中間モジュール経由の import でのみ束縛を失う。最小 repro 付きコメント提出済 2026-07-07)。この Issue がクローズされ、修正版 Bun で再現しないことを確認できたら、`run_unit.js` / `run_e2e.js` を経由せず `vitest run --config ...` 直呼びに戻してよい。
 
 ## e2e テストの配置
 
