@@ -8,22 +8,16 @@ process.env.NODE_ENV = 'test';
 import * as assert from 'assert';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import { Test } from '@nestjs/testing';
-import { afterAll, beforeAll, describe, test } from 'vitest';
-import { mockDeep } from 'vitest-mock-extended';
-import { GlobalModule } from '@/GlobalModule.js';
+import { beforeAll, describe, test } from 'vitest';
 import { FileInfo, FileInfoService } from '@/core/FileInfoService.js';
-//import { DI } from '@/di-symbols.js';
 import { AiService } from '@/core/AiService.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import type { TestingModule } from '@nestjs/testing';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 const resources = `${_dirname}/../resources`;
 
 describe('FileInfoService', () => {
-	let app: TestingModule;
 	let fileInfoService: FileInfoService;
 	const strip = (fileInfo: FileInfo): Omit<Partial<FileInfo>, 'warnings' | 'blurhash' | 'sensitive' | 'porn'> => {
 		const fi: Partial<FileInfo> = fileInfo;
@@ -35,34 +29,13 @@ describe('FileInfoService', () => {
 		return fi;
 	}
 
-	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-			providers: [
-				AiService,
-				LoggerService,
-				FileInfoService,
-			],
-		})
-			.useMocker((token) => {
-				//if (token === AiService) {
-				//	return {  };
-				//}
-				if (typeof token === 'function') {
-					return mockDeep<typeof token>();
-				}
-			})
-			.compile();
-
-		app.enableShutdownHooks();
-
-		fileInfoService = app.get<FileInfoService>(FileInfoService);
-	});
-
-	afterAll(async () => {
-		await app.close();
+	beforeAll(() => {
+		const loggerService = new LoggerService();
+		const aiService = {
+			detectSensitive: async () => null,
+			detectSensitiveMany: async (sources: Buffer[]) => sources.map(() => null),
+		} as unknown as AiService;
+		fileInfoService = new FileInfoService(aiService, loggerService);
 	});
 
 	test('Empty file', async () => {

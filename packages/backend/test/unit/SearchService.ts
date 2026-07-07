@@ -4,19 +4,20 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
 import type { Index, Meilisearch } from 'meilisearch';
+import type * as Redis from 'ioredis';
 import { type Config, loadConfig } from '@/config.js';
-import { GlobalModule } from '@/GlobalModule.js';
-import { CoreModule } from '@/core/CoreModule.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import { createMeilisearchClient, createRedisClient } from '@/runtime-dependencies.js';
 import { SearchService } from '@/core/SearchService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
-import { DI } from '@/di-symbols.js';
+import { LoggerService } from '@/core/LoggerService.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
+import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { blocking } from '@/db/schema/blocking.js';
 import { channel, type ChannelInsert } from '@/db/schema/channel.js';
 import { following } from '@/db/schema/following.js';
@@ -34,11 +35,13 @@ import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 describe('SearchService', () => {
 	type TestContext = {
-		app: TestingModule;
+		pool: MiDrizzlePool;
 		service: SearchService;
 		cacheService: CacheService;
 		idService: IdService;
 		db: MiDrizzleDatabase;
+		redisClient: Redis.Redis;
+		meilisearchClient: Meilisearch | null;
 		indexer?: (note: MiNote) => Promise<void>;
 	};
 
@@ -66,28 +69,40 @@ describe('SearchService', () => {
 	};
 
 	async function buildContext(configOverride?: Config): Promise<TestContext> {
-		const builder = Test.createTestingModule({
-			imports: [
-				GlobalModule,
-				CoreModule,
-			],
-		});
+		const config = configOverride ?? loadConfig();
+		const pool = createDrizzlePool(config);
+		const db = createDrizzleDatabase(pool, config);
+		const redisClient = createRedisClient(config);
+		const meilisearchClient = createMeilisearchClient(config);
 
-		if (configOverride) {
-			builder.overrideProvider(DI.config).useValue(configOverride);
-		}
+		// SystemAccountService-style stub: onMessage is never triggered by these tests, so a
+		// real pub/sub subscription is unnecessary (matches MetaService.ts/RelayService.ts pattern).
+		const redisForSub = { on: () => {}, off: () => {} } as unknown as Redis.Redis;
+		// blockedHosts is the only field SearchService reads from meta; no test populates it.
+		const meta = { blockedHosts: [] } as unknown as MiMeta;
 
-		const app = await builder.compile();
-
-		app.enableShutdownHooks();
+		const idService = new IdService(config);
+		const loggerService = new LoggerService();
+		// CacheService's userEntityService param is only read from a Redis pub/sub handler that
+		// these tests never trigger (see CacheService.ts:143), so it can stay unconstructed.
+		const unused = undefined as never;
+		const cacheService = new CacheService(redisClient, redisForSub, db, unused);
+		const service = new SearchService(config, meilisearchClient, db, meta, cacheService, idService, loggerService);
 
 		return {
-			app,
-			service: app.get(SearchService),
-			cacheService: app.get(CacheService),
-			idService: app.get(IdService),
-			db: app.get(DI.drizzle),
+			pool,
+			service,
+			cacheService,
+			idService,
+			db,
+			redisClient,
+			meilisearchClient,
 		};
+	}
+
+	async function closeContext(ctx: TestContext) {
+		await ctx.redisClient.quit();
+		await ctx.pool.end();
 	}
 
 	async function cleanupContext(ctx: TestContext) {
@@ -518,7 +533,7 @@ describe('SearchService', () => {
 		});
 
 		afterAll(async () => {
-			await ctx.app.close();
+			await closeContext(ctx);
 		});
 
 		afterEach(async () => {
@@ -552,7 +567,7 @@ describe('SearchService', () => {
 			};
 
 			ctx = await buildContext(meiliConfig);
-			meilisearch = ctx.app.get(DI.meilisearch) as Meilisearch;
+			meilisearch = ctx.meilisearchClient as Meilisearch;
 			meilisearchIndex = meilisearch.index(`${meiliConfig.meilisearch!.index}---notes`);
 
 			const settingsTask = await meilisearchIndex.updateSettings(meilisearchSettings);
@@ -583,7 +598,7 @@ describe('SearchService', () => {
 		});
 
 		afterAll(async () => {
-			await ctx.app.close();
+			await closeContext(ctx);
 		});
 
 		afterEach(async () => {
