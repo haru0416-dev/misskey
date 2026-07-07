@@ -28,13 +28,22 @@ jobs:
         uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version-file: .bun-version
+      - name: Cache bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
       - name: Install FFmpeg
         run: |
           sudo apt install -y ffmpeg
       - name: Build Misskey
+        # fed コンテナがマウントするのは built/ (backend) + misskey-js/built + i18n/built のみで、
+        # フロントエンドの vite ビルドは不要 (test-backend.yml と同じ絞り込み)。
         run: |
           bun install --frozen-lockfile
-          bun run build
+          bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Setup
         run: |
           echo "BUN_VERSION=$(cat .bun-version)" >> $GITHUB_ENV
