@@ -4,7 +4,8 @@
  */
 
 import { get } from 'idb-keyval';
-import * as Misskey from 'misskey-js';
+import * as acct from 'misskey-js/acct.js';
+import type * as Misskey from 'misskey-js';
 import { FETCH_TIMEOUT_MS } from '@/const.js';
 import type { PushNotificationDataMap } from '@/types.js';
 import type { I18n } from '@@/js/i18n.js';
@@ -148,7 +149,7 @@ globalThis.addEventListener('notificationclick', (ev: ServiceWorkerGlobalScopeEv
 						if ('userId' in data.body) await swos.api('following/create', loginId, { userId: data.body.userId });
 						break;
 					case 'showUser':
-						if ('user' in data.body) client = await swos.openUser(Misskey.acct.toString(data.body.user), loginId);
+						if ('user' in data.body) client = await swos.openUser(acct.toString(data.body.user), loginId);
 						break;
 					case 'reply':
 						if ('note' in data.body) client = await swos.openPost({ reply: data.body.note }, loginId);
@@ -185,7 +186,7 @@ globalThis.addEventListener('notificationclick', (ev: ServiceWorkerGlobalScopeEv
 								if ('note' in data.body) {
 									client = await swos.openNote(data.body.note.id, loginId);
 								} else if ('user' in data.body) {
-									client = await swos.openUser(Misskey.acct.toString(data.body.user), loginId);
+									client = await swos.openUser(acct.toString(data.body.user), loginId);
 								}
 								break;
 						}

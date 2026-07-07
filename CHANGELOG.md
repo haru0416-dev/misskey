@@ -5,6 +5,7 @@
 - Enhance: フロントエンド/ビルドツール周辺の未使用依存パッケージ19個を削除 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
 
 ### Client
+- Enhance: Service Worker のバンドルサイズを46%削減 (30.2KB→16.3KB minified)。SWでは使用しないWebSocketストリーミング系コードが `misskey-js` の全体importで混入していたのを、subpath import + type-only import に分離して排除
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
