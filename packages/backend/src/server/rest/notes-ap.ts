@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
+import { JsonLd } from '@/core/activitypub/JsonLdService.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverQueue } from '@/core/QueueModule.js';
@@ -15,10 +16,14 @@ import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
 import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import { listRelaysByStatusFromDatabase } from '@/core/RelayStore.js';
 import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase, listUsersByUrisOrIdsFromDatabase } from '@/core/UserStore.js';
+import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
 import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { MfmService } from '@/core/MfmService.js';
 import type { Config } from '@/config.js';
+import { deepClone } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
@@ -33,6 +38,12 @@ export type HonoApiNoteApDependencies = {
 	meta: Pick<MiMeta, 'proxyRemoteFiles'>;
 	db: MiDrizzleDatabase;
 	deliverQueue: DeliverQueue;
+};
+
+/** リレー配信 (deliverToRelaysForHonoApi) を行う呼び出し元が満たすべき依存。LD 署名の
+ * JSON-LD 正規化で remote context の取得があり得るため full HttpRequestService を要求する。 */
+export type HonoApiRelayDeliverDependencies = HonoApiNoteApDependencies & {
+	httpRequestService: HttpRequestService;
 };
 
 function isRemoteUser(user: Pick<MiUser, 'host'>): boolean {
@@ -447,7 +458,7 @@ export async function deliverSingleActivityForHonoApi(
 	enqueueDeliverJob(deps.deliverQueue, deps.config as Config, author, activity as unknown as IActivity, inbox, false);
 }
 
-export async function deliverQuestionUpdateForHonoApi(deps: HonoApiNoteApDependencies, noteId: MiNote['id']): Promise<void> {
+export async function deliverQuestionUpdateForHonoApi(deps: HonoApiRelayDeliverDependencies, noteId: MiNote['id']): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, noteId);
 	if (note == null) throw new Error('note not found');
 	if (note.localOnly) return;
@@ -458,5 +469,43 @@ export async function deliverQuestionUpdateForHonoApi(deps: HonoApiNoteApDepende
 	if (!isRemoteUser(user)) {
 		const content = addActivityContext(deps.config, renderUpdateForHonoApi(deps.config, await renderNoteForHonoApi(deps, note, false), user));
 		await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
+		// 原典 PollService#deliverQuestionUpdate 同様、リレー配信は await しない。
+		void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, content).catch(() => {});
+	}
+}
+
+/** ApRendererService#attachLdSignature 相当。RsaSignature2017 (LD 署名) をアクティビティに付与する。 */
+export async function attachLdSignatureForHonoApi(
+	deps: Pick<HonoApiRelayDeliverDependencies, 'db' | 'config' | 'httpRequestService'>,
+	activity: Record<string, unknown>,
+	user: { id: MiUser['id']; host: null },
+): Promise<Record<string, unknown>> {
+	const keypair = await fetchUserKeypairFromDatabase(deps.db, user.id);
+
+	const jsonLd = new JsonLd(deps.httpRequestService);
+	jsonLd.debug = false;
+	return await jsonLd.signRsaSignature2017(activity, keypair.privateKey, `${deps.config.url}/users/${user.id}#main-key`);
+}
+
+/** RelayService#deliverToRelays 相当。原典の 10 分 MemorySingleCache (relaysCache) は、確立済みの
+ * 「hono 側では in-process cache を持たない」方針に従い accepted リレーの直接 DB 読みに置換
+ * (小さなテーブルの単純 SELECT で、リレー未設定インスタンスでは空配列即 return)。 */
+export async function deliverToRelaysForHonoApi(
+	deps: HonoApiRelayDeliverDependencies,
+	user: { id: MiUser['id']; host: null },
+	activity: Record<string, unknown> | null,
+): Promise<void> {
+	if (activity == null) return;
+
+	const relays = await listRelaysByStatusFromDatabase(deps.db, 'accepted');
+	if (relays.length === 0) return;
+
+	const copy = deepClone(activity as Parameters<typeof deepClone>[0]) as Record<string, unknown> & { to?: unknown };
+	if (!copy.to) copy.to = ['https://www.w3.org/ns/activitystreams#Public'];
+
+	const signed = await attachLdSignatureForHonoApi(deps, copy, user);
+
+	for (const relay of relays) {
+		void enqueueDeliverJob(deps.deliverQueue, deps.config, user, signed as unknown as IActivity, relay.inbox, false);
 	}
 }

@@ -5,6 +5,7 @@
 
 import { createPublicKey } from 'node:crypto';
 import { domainToASCII } from 'node:url';
+import type * as Redis from 'ioredis';
 import * as mfm from 'mfm-js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
@@ -39,7 +40,7 @@ import type { MiUserKeypair } from '@/models/UserKeypair.js';
 import { acceptAllFollowRequestsForHonoApi, genLocalUserUri, type HonoApiFollowingDependencies } from './following.js';
 import { HonoApiError } from './error.js';
 import { addActivityContext, deliverNoteActivityForHonoApi, renderEmoji, renderUpdateForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
-import { isKeyWordIncludedForHonoApi } from './notes-create.js';
+import { isKeyWordIncludedForHonoApi, updateHashtagsRankingForHonoApi } from './notes-create.js';
 import { getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { getIdenticonUrl, packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -51,6 +52,8 @@ export type HonoApiAccountUpdateDependencies =
 	UserPackingDependencies &
 	HonoApiNoteApDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'getHtml'>;
+		/** hashtag ランキング (updateHashtagsRankingForHonoApi) 用。 */
+		redis: Redis.Redis;
 	};
 
 function iUpdateNoSuchAvatarError(): HonoApiError {
@@ -325,9 +328,12 @@ function getUserUriForHonoApi(config: Pick<Config, 'url'>, user: MiUser): string
 
 export async function updateUsertagsForHonoApi(deps: HonoApiAccountUpdateDependencies, user: MiUser, tags: string[]): Promise<void> {
 	for (const tag of tags) {
+		const name = normalizeForSearch(tag);
+		// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget (デタッチ側でも呼ばれる)。
+		void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
 		await recordHashtagUsageInDatabase(deps.db, {
 			id: genId(deps.config),
-			name: normalizeForSearch(tag),
+			name,
 			userId: user.id,
 			isLocalUser: user.host == null,
 			isRemoteUser: user.host != null,
@@ -337,9 +343,11 @@ export async function updateUsertagsForHonoApi(deps: HonoApiAccountUpdateDepende
 	}
 
 	for (const tag of user.tags.filter(x => !tags.includes(x))) {
+		const name = normalizeForSearch(tag);
+		void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
 		await recordHashtagUsageInDatabase(deps.db, {
 			id: genId(deps.config),
-			name: normalizeForSearch(tag),
+			name,
 			userId: user.id,
 			isLocalUser: user.host == null,
 			isRemoteUser: user.host != null,
@@ -580,7 +588,7 @@ export async function handleHonoApiIUpdate(
 	updates.emojis = emojis;
 	updates.tags = tags;
 
-	// ハッシュタグ更新 (ランキング更新 (Redis) は hono 側未移植のため見送り)
+	// ハッシュタグ更新 (ランキング更新 (Redis) 込み)
 	void updateUsertagsForHonoApi(deps, user, tags).catch(() => {});
 	//#endregion
 

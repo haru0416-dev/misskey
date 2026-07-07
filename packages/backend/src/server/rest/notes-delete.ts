@@ -21,16 +21,17 @@ import { HonoApiError } from './error.js';
 import type { HonoApiNoteStreamPublisher } from './events.js';
 import {
 	deliverNoteActivityForHonoApi,
+	deliverToRelaysForHonoApi,
 	renderNoteDeleteOrUndoAnnounceActivityForHonoApi,
 	resolveMentionedAndInvolvedRemoteUsersForHonoApi,
-	type HonoApiNoteApDependencies,
+	type HonoApiRelayDeliverDependencies,
 } from './notes-ap.js';
 import { fetchOrRegisterInstanceForHonoApi } from './notes-create.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiNotesDeleteDependencies = HonoApiNoteApDependencies & HonoApiRolePolicyDependencies & {
+export type HonoApiNotesDeleteDependencies = HonoApiRelayDeliverDependencies & HonoApiRolePolicyDependencies & {
 	chartWriters: HonoChartWriters;
 	publishNoteStream?: HonoApiNoteStreamPublisher;
 };
@@ -76,6 +77,9 @@ export async function deleteNoteForHonoApi(
 				directRecipients,
 				deliverToFollowers: true,
 			});
+
+			// 原典 NoteDeleteService#deliverToConcerned 同様、リレーにも配信する (fire-and-forget)。
+			void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, activity).catch(() => {});
 		})().catch(() => {});
 	}
 
