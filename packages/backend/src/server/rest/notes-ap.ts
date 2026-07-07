@@ -12,11 +12,11 @@ import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverQueue } from '@/core/QueueModule.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
 import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
-import { listRelaysByStatusFromDatabase } from '@/core/RelayStore.js';
+import { listRelaysByStatusFromDatabaseCached } from '@/core/RelayStore.js';
 import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase, listUsersByUrisOrIdsFromDatabase } from '@/core/UserStore.js';
 import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
 import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
@@ -152,7 +152,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 	const noMisskeyContent = extraHtml == null && parsed.every(n => ['text', 'unicodeEmoji', 'emojiCode', 'mention', 'hashtag', 'url'].includes(n.type));
 	const content = mfmService.toHtml(parsed, JSON.parse(note.mentionedRemoteUsers), extraHtml);
 
-	const emojiRows = (await Promise.all(note.emojis.map(name => fetchEmojiByNameAndHostFromDatabase(deps.db, name, null))))
+	const emojiRows = (await Promise.all(note.emojis.map(name => fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null))))
 		.filter((e): e is MiEmoji => e != null && !e.localOnly);
 	const apemojis = emojiRows.map(e => renderEmoji(deps.config, e));
 
@@ -372,7 +372,7 @@ export async function renderLikeForHonoApi(
 
 	if (reaction.startsWith(':')) {
 		const name = reaction.replaceAll(':', '');
-		const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, name, null);
+		const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
 		if (emoji != null && !emoji.localOnly) {
 			object.tag = [renderEmoji(deps.config, emoji)];
 		}
@@ -497,7 +497,7 @@ export async function deliverToRelaysForHonoApi(
 ): Promise<void> {
 	if (activity == null) return;
 
-	const relays = await listRelaysByStatusFromDatabase(deps.db, 'accepted');
+	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
 	if (relays.length === 0) return;
 
 	const copy = deepClone(activity as Parameters<typeof deepClone>[0]) as Record<string, unknown> & { to?: unknown };

@@ -8,7 +8,7 @@ import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase } from '@/core/NoteReactionStore.js';
@@ -174,7 +174,7 @@ async function populateEmoji(
 	const { name, host } = parseEmojiStr(deps.config, emojiName, noteUserHost);
 	if (name == null || host == null) return null;
 
-	const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, name, host);
+	const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, host);
 	if (emoji == null) return null;
 
 	return emoji.publicUrl || emoji.originalUrl;

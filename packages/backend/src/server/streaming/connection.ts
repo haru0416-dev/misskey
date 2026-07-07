@@ -173,7 +173,10 @@ export class HonoStreamConnection {
 		if (this.user != null) {
 			await this.fetch();
 			if (!this.fetchIntervalId) {
-				this.fetchIntervalId = setInterval(() => void this.fetch(), 1000 * 10);
+				// 原典は RedisKVCache 越しの 10 秒間隔 (実質イベント駆動で安価) だったが、hono 側は
+				// 毎回 7 クエリの直接 DB 読みなので間隔を 60 秒に伸ばす。接続直後は上の await fetch()
+				// が即時反映するため、影響は「接続中にミュート等を変更した場合の反映が最大60秒遅れる」のみ。
+				this.fetchIntervalId = setInterval(() => void this.fetch(), 1000 * 60);
 			}
 		}
 	}
