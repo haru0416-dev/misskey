@@ -4,39 +4,26 @@
  */
 
 import { execSync } from 'node:child_process';
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
+import { createRequire } from 'node:module';
 
 const __dirname = import.meta.dirname;
+const require = createRequire(import.meta.url);
 
-(async () => {
-	fs.rmSync(__dirname + '/../packages/backend/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/backend/src-js', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/backend/node_modules', { recursive: true, force: true });
+// clean.mjs のビルド成果物削除に加えて、全 workspace + root の node_modules と
+// bun のグローバルキャッシュも消す
+const { workspaces } = require('../package.json');
 
-	fs.rmSync(__dirname + '/../packages/frontend-shared/node_modules', { recursive: true, force: true });
+execSync('bun run clean', {
+	cwd: `${__dirname}/../`,
+	stdio: 'inherit',
+});
 
-	fs.rmSync(__dirname + '/../packages/frontend-builder/node_modules', { recursive: true, force: true });
+await Promise.all([...workspaces, '.'].map(dir =>
+	fs.rm(`${__dirname}/../${dir}/node_modules`, { recursive: true, force: true }),
+));
 
-	fs.rmSync(__dirname + '/../packages/frontend/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/frontend/node_modules', { recursive: true, force: true });
-
-	fs.rmSync(__dirname + '/../packages/frontend-embed/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/frontend-embed/node_modules', { recursive: true, force: true });
-
-	fs.rmSync(__dirname + '/../packages/sw/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/sw/node_modules', { recursive: true, force: true });
-
-	fs.rmSync(__dirname + '/../packages/i18n/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/i18n/node_modules', { recursive: true, force: true });
-
-	fs.rmSync(__dirname + '/../packages/misskey-js/built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../packages/misskey-js/node_modules', { recursive: true, force: true });
-
-	fs.rmSync(__dirname + '/../built', { recursive: true, force: true });
-	fs.rmSync(__dirname + '/../node_modules', { recursive: true, force: true });
-
-	execSync('bun pm cache rm', {
-		cwd: __dirname + '/../',
-		stdio: 'inherit',
-	});
-})();
+execSync('bun pm cache rm', {
+	cwd: `${__dirname}/../`,
+	stdio: 'inherit',
+});
