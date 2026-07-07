@@ -7,31 +7,26 @@ process.env.NODE_ENV = 'test';
 
 import { describe, expect, beforeEach, afterEach, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import { mockDeep } from 'vitest-mock-extended';
-import { Test } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
 import { AnnouncementService } from '@/core/AnnouncementService.js';
 import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
 import { createAnnouncementInDatabase, fetchAnnouncementByIdOrFailFromDatabase } from '@/core/AnnouncementStore.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
-import type { MiUser } from '@/models/User.js';
-import { DI } from '@/di-symbols.js';
 import { announcement, type AnnouncementInsert } from '@/db/schema/announcement.js';
 import { announcementRead } from '@/db/schema/announcement-read.js';
 import { meta as metaTable } from '@/db/schema/meta.js';
 import { user, type UserInsert } from '@/db/schema/user.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { genAidx } from '@/misc/id/aidx.js';
-import { CacheService } from '@/core/CacheService.js';
 import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
-import type { TestingModule } from '@nestjs/testing';
 
 describe('AnnouncementService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let announcementService: AnnouncementService;
 	let drizzle: MiDrizzleDatabase;
 	let globalEventService: Mocked<GlobalEventService>;
@@ -59,40 +54,20 @@ describe('AnnouncementService', () => {
 		} as AnnouncementInsert);
 	}
 
-	beforeEach(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-			providers: [
-				AnnouncementService,
-				AnnouncementEntityService,
-				CacheService,
-				IdService,
-			],
-		})
-			.useMocker((token) => {
-				if (token === GlobalEventService) {
-					return {
-						publishMainStream: vi.fn(),
-						publishBroadcastStream: vi.fn(),
-					};
-				} else if (token === ModerationLogService) {
-					return {
-						log: vi.fn(),
-					};
-				} else if (typeof token === 'function') {
-					return mockDeep<typeof token>();
-				}
-			})
-			.compile();
+	beforeEach(() => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		drizzle = createDrizzleDatabase(pool, config);
 
-		app.enableShutdownHooks();
+		const idService = new IdService(config);
+		const announcementEntityService = new AnnouncementEntityService(drizzle, idService);
+		globalEventService = {
+			publishMainStream: vi.fn(),
+			publishBroadcastStream: vi.fn(),
+		} as unknown as Mocked<GlobalEventService>;
+		moderationLogService = { log: vi.fn() } as unknown as Mocked<ModerationLogService>;
 
-		announcementService = app.get<AnnouncementService>(AnnouncementService);
-		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
-		globalEventService = app.get<GlobalEventService>(GlobalEventService) as Mocked<GlobalEventService>;
-		moderationLogService = app.get<ModerationLogService>(ModerationLogService) as Mocked<ModerationLogService>;
+		announcementService = new AnnouncementService(drizzle, idService, globalEventService, moderationLogService, announcementEntityService);
 	});
 
 	afterEach(async () => {
@@ -103,7 +78,7 @@ describe('AnnouncementService', () => {
 			drizzle.delete(user),
 		]);
 
-		await app.close();
+		await pool.end();
 	});
 
 	describe('getUnreadAnnouncements', () => {

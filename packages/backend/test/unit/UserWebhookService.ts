@@ -5,29 +5,27 @@
 
 import { afterEach, beforeEach, describe, expect, test, beforeAll, afterAll, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
 import { randomString } from '../utils.js';
 import { MiUser } from '@/models/User.js';
 import type { MiWebhook } from '@/models/Webhook.js';
 import { IdService } from '@/core/IdService.js';
-import { GlobalModule } from '@/GlobalModule.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
-import { DI } from '@/di-symbols.js';
 import { QueueService } from '@/core/QueueService.js';
-import { LoggerService } from '@/core/LoggerService.js';
 import { UserWebhookService } from '@/core/UserWebhookService.js';
 import { webhook } from '@/db/schema/webhook.js';
 import { user, type UserInsert } from '@/db/schema/user.js';
 import { createWebhookInDatabase } from '@/core/WebhookStore.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type * as Redis from 'ioredis';
 
 describe('UserWebhookService', () => {
-	let app: TestingModule;
 	let service: UserWebhookService;
 
 	// --------------------------------------------------------------------------------------
 
+	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	let idService: IdService;
 	let queueService: Mocked<QueueService>;
@@ -60,34 +58,19 @@ describe('UserWebhookService', () => {
 	// --------------------------------------------------------------------------------------
 
 	async function beforeAllImpl() {
-		app = await Test
-			.createTestingModule({
-				imports: [
-					GlobalModule,
-				],
-				providers: [
-					UserWebhookService,
-					IdService,
-					LoggerService,
-					GlobalEventService,
-					{
-						provide: QueueService, useFactory: () => ({ userWebhookDeliver: vi.fn() }),
-					},
-				],
-			})
-			.compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
+		idService = new IdService(config);
+		queueService = { userWebhookDeliver: vi.fn() } as unknown as Mocked<QueueService>;
 
-		db = app.get(DI.drizzle);
+		const redisForSub = { on: () => {}, off: () => {} } as unknown as Redis.Redis;
 
-		service = app.get(UserWebhookService);
-		idService = app.get(IdService);
-		queueService = app.get(QueueService) as Mocked<QueueService>;
-
-		app.enableShutdownHooks();
+		service = new UserWebhookService(redisForSub, db, queueService);
 	}
 
 	async function afterAllImpl() {
-		await app.close();
+		await pool.end();
 	}
 
 	async function beforeEachImpl() {

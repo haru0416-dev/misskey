@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+process.env.NODE_ENV = 'test';
+
+import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
 import {
 	CaptchaError,
 	CaptchaErrorCode,
@@ -13,7 +14,6 @@ import {
 	CaptchaSaveResult,
 	CaptchaService,
 } from '@/core/CaptchaService.js';
-import { GlobalModule } from '@/GlobalModule.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { HttpRequestSendResponse } from '@/core/HttpRequestService.js';
 import { MetaService } from '@/core/MetaService.js';
@@ -21,46 +21,25 @@ import { MiMeta } from '@/models/Meta.js';
 import { LoggerService } from '@/core/LoggerService.js';
 
 describe('CaptchaService', () => {
-	let app: TestingModule;
 	let service: CaptchaService;
 	let httpRequestService: Mocked<HttpRequestService>;
 	let metaService: Mocked<MetaService>;
 
-	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-			providers: [
-				CaptchaService,
-				LoggerService,
-				{
-					provide: HttpRequestService, useFactory: () => ({ send: vi.fn() }),
-				},
-				{
-					provide: MetaService, useFactory: () => ({
-						fetch: vi.fn(),
-						update: vi.fn(),
-					}),
-				},
-			],
-		}).compile();
+	beforeAll(() => {
+		httpRequestService = { send: vi.fn() } as unknown as Mocked<HttpRequestService>;
+		metaService = {
+			fetch: vi.fn(),
+			update: vi.fn(),
+		} as unknown as Mocked<MetaService>;
+		const loggerService = new LoggerService();
 
-		app.enableShutdownHooks();
-
-		service = app.get(CaptchaService);
-		httpRequestService = app.get(HttpRequestService) as Mocked<HttpRequestService>;
-		metaService = app.get(MetaService) as Mocked<MetaService>;
+		service = new CaptchaService(httpRequestService, metaService, loggerService);
 	});
 
 	beforeEach(() => {
 		httpRequestService.send.mockClear();
 		metaService.update.mockClear();
 		metaService.fetch.mockClear();
-	});
-
-	afterAll(async () => {
-		await app.close();
 	});
 
 	function successMock(result: object) {

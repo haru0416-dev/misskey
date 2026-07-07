@@ -6,25 +6,29 @@
 process.env.NODE_ENV = 'test';
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { Test } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
 import { HashtagService } from '@/core/HashtagService.js';
 import { FeaturedService } from '@/core/FeaturedService.js';
 import { IdService } from '@/core/IdService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { UtilityService } from '@/core/UtilityService.js';
-import { DI } from '@/di-symbols.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { hashtag } from '@/db/schema/hashtag.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type { MiMeta } from '@/models/Meta.js';
 import { genAidx } from '@/misc/id/aidx.js';
-import type { TestingModule } from '@nestjs/testing';
+import type * as Redis from 'ioredis';
 
 describe('HashtagService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	let hashtagService: HashtagService;
 
-	beforeEach(async () => {
+	beforeEach(() => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
+
 		const pipeline = {
 			pfadd: vi.fn().mockReturnThis(),
 			expire: vi.fn().mockReturnThis(),
@@ -32,58 +36,25 @@ describe('HashtagService', () => {
 			exec: vi.fn().mockResolvedValue([]),
 		};
 
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-			providers: [
-				HashtagService,
-				IdService,
-				{
-					provide: DI.meta,
-					useValue: {
-						hiddenTags: [],
-						sensitiveWords: [],
-					},
-				},
-				{
-					provide: DI.redis,
-					useValue: {
-						sismember: vi.fn().mockResolvedValue(0),
-						pipeline: vi.fn(() => pipeline),
-					},
-				},
-				{
-					provide: UserEntityService,
-					useValue: {
-						isLocalUser: (user: { host: string | null }) => user.host == null,
-						isRemoteUser: (user: { host: string | null }) => user.host != null,
-					},
-				},
-				{
-					provide: FeaturedService,
-					useValue: {
-						updateHashtagsRanking: vi.fn(),
-					},
-				},
-				{
-					provide: UtilityService,
-					useValue: {
-						isKeyWordIncluded: vi.fn(() => false),
-					},
-				},
-			],
-		}).compile();
+		const meta = { hiddenTags: [], sensitiveWords: [] } as unknown as MiMeta;
+		const redisClient = {
+			sismember: vi.fn().mockResolvedValue(0),
+			pipeline: vi.fn(() => pipeline),
+		} as unknown as Redis.Redis;
+		const userEntityService = {
+			isLocalUser: (user: { host: string | null }) => user.host == null,
+			isRemoteUser: (user: { host: string | null }) => user.host != null,
+		} as unknown as UserEntityService;
+		const featuredService = { updateHashtagsRanking: vi.fn() } as unknown as FeaturedService;
+		const idService = new IdService(config);
+		const utilityService = { isKeyWordIncluded: vi.fn(() => false) } as unknown as UtilityService;
 
-		app.enableShutdownHooks();
-
-		db = app.get<MiDrizzleDatabase>(DI.drizzle);
-		hashtagService = app.get<HashtagService>(HashtagService);
+		hashtagService = new HashtagService(meta, redisClient, db, userEntityService, featuredService, idService, utilityService);
 	});
 
 	afterEach(async () => {
 		await db.delete(hashtag);
-		await app.close();
+		await pool.end();
 	});
 
 	test('mentioned hashtag counts each user once', async () => {

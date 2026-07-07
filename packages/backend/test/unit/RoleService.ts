@@ -9,20 +9,18 @@ import { setTimeout } from 'node:timers/promises';
 import { describe, beforeEach, afterEach, test, expect, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import { mockDeep } from 'vitest-mock-extended';
-import { Test } from '@nestjs/testing';
 import * as lolex from '@sinonjs/fake-timers';
-import type { TestingModule } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
+import type { ModuleRef } from '@nestjs/core';
 import { RoleService } from '@/core/RoleService.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
-import { DI } from '@/di-symbols.js';
 import { meta as metaTable } from '@/db/schema/meta.js';
 import { role as roleTable } from '@/db/schema/role.js';
 import { user, type UserInsert } from '@/db/schema/user.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import {
 	createRoleAssignmentInDatabase,
 	deleteAllRoleAssignmentsFromDatabase,
@@ -30,7 +28,8 @@ import {
 	listRoleAssignmentsByUserIdFromDatabase,
 } from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { MetaService } from '@/core/MetaService.js';
+import { ModerationLogService } from '@/core/ModerationLogService.js';
+import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
 import { loadConfig } from '@/config.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
@@ -41,11 +40,23 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { RoleCondFormulaValue } from '@/models/Role.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import {
+	createRedisClient,
+	createRedisForPub,
+	createRedisForSub,
+	closeRedisConnection,
+	fetchReactiveMeta,
+} from '@/runtime-dependencies.js';
+import type * as Redis from 'ioredis';
 
 describe('RoleService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let roleService: RoleService;
+	let cacheService: CacheService;
 	let db: MiDrizzleDatabase;
+	let redisClient: Redis.Redis;
+	let redisForPub: Redis.Redis;
+	let redisForSub: Redis.Redis;
 	let meta: Mocked<MiMeta>;
 	let notificationService: Mocked<NotificationService>;
 	let clock: lolex.Clock;
@@ -121,45 +132,42 @@ describe('RoleService', () => {
 			shouldClearNativeTimers: true,
 		});
 
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-			providers: [
-				RoleService,
-				CacheService,
-				IdService,
-				GlobalEventService,
-				UserEntityService,
-				{
-					provide: NotificationService,
-					useFactory: () => ({
-						createNotification: vi.fn(),
-					}),
-				},
-				{
-					provide: NotificationService.name,
-					useExisting: NotificationService,
-				},
-			],
-		})
-			.useMocker((token) => {
-				if (token === MetaService) {
-					return { fetch: vi.fn() };
-				}
-				if (typeof token === 'function') {
-					return mockDeep<typeof token>();
-				}
-			})
-			.compile();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 
-		app.enableShutdownHooks();
+		redisClient = createRedisClient(config);
+		redisForPub = createRedisForPub(config);
+		redisForSub = await createRedisForSub(config);
 
-		roleService = app.get<RoleService>(RoleService);
-		db = app.get<MiDrizzleDatabase>(DI.drizzle);
+		meta = await fetchReactiveMeta(db, redisForSub) as Mocked<MiMeta>;
 
-		meta = app.get<MiMeta>(DI.meta) as Mocked<MiMeta>;
-		notificationService = app.get<NotificationService>(NotificationService) as Mocked<NotificationService>;
+		const idService = new IdService(config);
+		const globalEventService = new GlobalEventService(config, redisForPub);
+		const unused = undefined as never;
+		const userEntityService = new UserEntityService(unused, config, meta, redisClient, db);
+		cacheService = new CacheService(redisClient, redisForSub, db, userEntityService);
+		const moderationLogService = mockDeep<ModerationLogService>();
+		const fanoutTimelineService = mockDeep<FanoutTimelineService>();
+
+		notificationService = { createNotification: vi.fn() } as unknown as Mocked<NotificationService>;
+		const moduleRef = {
+			get: (token: unknown) => token === NotificationService.name ? notificationService : undefined,
+		} as unknown as ModuleRef;
+
+		roleService = new RoleService(
+			moduleRef,
+			config,
+			meta,
+			unused,
+			redisForSub,
+			db,
+			cacheService,
+			userEntityService,
+			globalEventService,
+			idService,
+			moderationLogService,
+			fanoutTimelineService,
+		);
 
 		await roleService.onModuleInit();
 	});
@@ -178,7 +186,15 @@ describe('RoleService', () => {
 			db.delete(roleTable),
 		]);
 
-		await app.close();
+		roleService.dispose();
+		cacheService.dispose();
+
+		await Promise.all([
+			pool.end(),
+			closeRedisConnection(redisClient),
+			closeRedisConnection(redisForPub),
+			closeRedisConnection(redisForSub),
+		]);
 	});
 
 	describe('getUserAssigns', () => {

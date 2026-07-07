@@ -4,28 +4,29 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Test, TestingModule } from '@nestjs/testing';
+process.env.NODE_ENV = 'test';
+
 import { beforeAll, afterAll, beforeEach, afterEach, test, expect, describe, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import { WebhookTestService } from '@/core/WebhookTestService.js';
 import { UserWebhookPayload, UserWebhookService } from '@/core/UserWebhookService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
-import { GlobalModule } from '@/GlobalModule.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiWebhook } from '@/models/Webhook.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { IdService } from '@/core/IdService.js';
-import { DI } from '@/di-symbols.js';
 import { QueueService } from '@/core/QueueService.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { user, type UserInsert } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 describe('WebhookTestService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let service: WebhookTestService;
 
 	// --------------------------------------------------------------------------------------
@@ -55,46 +56,32 @@ describe('WebhookTestService', () => {
 	// --------------------------------------------------------------------------------------
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-			providers: [
-				WebhookTestService,
-				IdService,
-				{
-					provide: CustomEmojiService, useFactory: () => ({
-						populateEmojis: vi.fn(),
-					}),
-				},
-				{
-					provide: QueueService, useFactory: () => ({
-						systemWebhookDeliver: vi.fn(),
-						userWebhookDeliver: vi.fn(),
-					}),
-				},
-				{
-					provide: UserWebhookService, useFactory: () => ({
-						fetchWebhooks: vi.fn(),
-					}),
-				},
-				{
-					provide: SystemWebhookService, useFactory: () => ({
-						fetchSystemWebhooks: vi.fn(),
-					}),
-				},
-			],
-		}).compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 
-		db = app.get(DI.drizzle);
+		idService = new IdService(config);
 
-		service = app.get(WebhookTestService);
-		idService = app.get(IdService);
-		queueService = app.get(QueueService) as Mocked<QueueService>;
-		userWebhookService = app.get(UserWebhookService) as Mocked<UserWebhookService>;
-		systemWebhookService = app.get(SystemWebhookService) as Mocked<SystemWebhookService>;
+		const customEmojiService = {
+			populateEmojis: vi.fn(),
+		} as unknown as Mocked<CustomEmojiService>;
+		queueService = {
+			systemWebhookDeliver: vi.fn(),
+			userWebhookDeliver: vi.fn(),
+		} as unknown as Mocked<QueueService>;
+		userWebhookService = {
+			fetchWebhooks: vi.fn(),
+		} as unknown as Mocked<UserWebhookService>;
+		systemWebhookService = {
+			fetchSystemWebhooks: vi.fn(),
+		} as unknown as Mocked<SystemWebhookService>;
 
-		app.enableShutdownHooks();
+		service = new WebhookTestService(
+			customEmojiService,
+			userWebhookService,
+			systemWebhookService,
+			queueService,
+		);
 	});
 
 	beforeEach(async () => {
@@ -120,7 +107,7 @@ describe('WebhookTestService', () => {
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	// --------------------------------------------------------------------------------------

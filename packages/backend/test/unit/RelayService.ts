@@ -7,55 +7,40 @@ process.env.NODE_ENV = 'test';
 
 import { afterAll, beforeAll, describe, test, expect, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import { Test } from '@nestjs/testing';
-import { mockDeep } from 'vitest-mock-extended';
-import type { TestingModule } from '@nestjs/testing';
-import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import type * as Redis from 'ioredis';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { IdService } from '@/core/IdService.js';
 import { QueueService } from '@/core/QueueService.js';
 import { RelayService } from '@/core/RelayService.js';
 import { SystemAccountService } from '@/core/SystemAccountService.js';
-import { GlobalModule } from '@/GlobalModule.js';
-import { UtilityService } from '@/core/UtilityService.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type { MiMeta } from '@/models/Meta.js';
 
 describe('RelayService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let relayService: RelayService;
 	let queueService: Mocked<QueueService>;
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-			],
-			providers: [
-				IdService,
-				ApRendererService,
-				RelayService,
-				UserEntityService,
-				SystemAccountService,
-				UtilityService,
-			],
-		})
-			.useMocker((token) => {
-				if (token === QueueService) {
-					return { deliver: vi.fn() };
-				}
-				if (typeof token === 'function') {
-					return mockDeep<typeof token>();
-				}
-			})
-			.compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		const db: MiDrizzleDatabase = createDrizzleDatabase(pool, config);
 
-		app.enableShutdownHooks();
+		const idService = new IdService(config);
+		const redisForSub = { on: () => {}, off: () => {} } as unknown as Redis.Redis;
+		const meta = { name: null } as MiMeta;
+		const systemAccountService = new SystemAccountService(redisForSub, meta, db, idService);
+		queueService = { deliver: vi.fn() } as unknown as Mocked<QueueService>;
+		// deliverToRelays (the only caller of apRendererService) is not exercised by any test
+		// in this file — see the RelayService test-bootstrap task notes.
+		const unused = undefined as never;
 
-		relayService = app.get<RelayService>(RelayService);
-		queueService = app.get<QueueService>(QueueService) as Mocked<QueueService>;
+		relayService = new RelayService(config, db, idService, queueService, systemAccountService, unused);
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	test('addRelay', async () => {
