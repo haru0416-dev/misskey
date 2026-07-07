@@ -61,7 +61,9 @@ export class ReconnectingWebSocket {
 	private messageQueue: string[] = [];
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private connectionTimer: ReturnType<typeof setTimeout> | null = null;
-	private _binaryType = 'blob';
+	// 明示的に設定されるまでソケットの binaryType には触れない (実装により有効値が異なり、
+	// 例えば npm の ws は環境次第で 'blob' 代入が例外になる)
+	private _binaryType: string | null = null;
 
 	constructor(url: string, protocols?: string | string[], options: ReconnectingWebSocketOptions = {}) {
 		this.url = url;
@@ -79,7 +81,7 @@ export class ReconnectingWebSocket {
 	}
 
 	public get binaryType(): string {
-		return this._binaryType;
+		return this._binaryType ?? this.ws?.binaryType ?? 'blob';
 	}
 
 	public set binaryType(value: string) {
@@ -144,7 +146,7 @@ export class ReconnectingWebSocket {
 		const ws: WebSocketLike = this.protocols !== undefined
 			? new this.wsConstructor(this.url, this.protocols)
 			: new this.wsConstructor(this.url);
-		ws.binaryType = this._binaryType;
+		if (this._binaryType != null) ws.binaryType = this._binaryType;
 		this.ws = ws;
 
 		// 一定時間内に open しなければ接続を打ち切って再試行する
