@@ -160,6 +160,46 @@ describe('Streaming', () => {
 		server.close();
 	});
 
+	test('サーバー切断後に自動再接続し、共有チャンネルを再購読する', async () => {
+		let server = new WS('wss://misskey.test/streaming');
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const connected: unknown[] = [];
+		stream.on('_connected_', () => connected.push(true));
+		stream.useChannel('main');
+
+		await server.connected;
+		const first = JSON.parse(await server.nextMessage as string);
+		expect(first.type).toEqual('connect');
+		expect(first.body.channel).toEqual('main');
+
+		// サーバー側から切断し、同じURLで新しいサーバーを立てる
+		server.close();
+		server = new WS('wss://misskey.test/streaming');
+
+		// 自動再接続して main チャンネルの connect が再送される
+		await server.connected;
+		const resub = JSON.parse(await server.nextMessage as string);
+		expect(resub.type).toEqual('connect');
+		expect(resub.body.channel).toEqual('main');
+		expect(resub.body.id).toEqual(first.body.id);
+		expect(connected.length).toEqual(2);
+
+		stream.close();
+		server.close();
+	});
+
+	test('未接続時の send は例外を投げずに破棄される', async () => {
+		const server = new WS('wss://misskey.test/streaming');
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		await server.connected;
+		server.close();
+
+		// 切断直後 (再接続前) の送信が例外にならないこと
+		expect(() => stream.heartbeat()).not.toThrow();
+
+		stream.close();
+	});
+
 	// TODO: SharedConnection#dispose して一定時間経ったら disconnect メッセージがサーバーに送られてくるかのテスト
 
 	// TODO: チャンネル接続が使いまわされるかのテスト

@@ -6,10 +6,8 @@
 
 import type { AuthenticationResponseJSON } from '@simplewebauthn/browser';
 import { EventEmitter } from 'eventemitter3';
-import { Options } from 'reconnecting-websocket';
 import type { PublicKeyCredentialCreationOptionsJSON as PublicKeyCredentialCreationOptionsJSON_2 } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialRequestOptionsJSON as PublicKeyCredentialRequestOptionsJSON_2 } from '@simplewebauthn/browser';
-import _ReconnectingWebSocket from 'reconnecting-websocket';
 import type { RegistrationResponseJSON } from '@simplewebauthn/browser';
 
 // Warning: (ae-forgotten-export) The symbol "components" needs to be exported by the entry point index.d.ts
@@ -546,6 +544,8 @@ class APIClient {
     fetch: FetchLike;
     // (undocumented)
     origin: string;
+    // (undocumented)
+    request<E extends keyof Endpoints, P extends Endpoints[E]['req']>(endpoint: E, params?: P, credential?: string | null): Promise<SwitchCaseResponseType<E, P>>;
 }
 
 // @public (undocumented)
@@ -3518,7 +3518,7 @@ export class Stream extends EventEmitter<StreamEvents> implements IStream {
     constructor(origin: string, user: {
         token: string;
     } | null, options?: {
-        WebSocket?: Options['WebSocket'];
+        WebSocket?: ReconnectingWebSocketOptions['WebSocket'];
         binaryType?: ReconnectingWebSocket['binaryType'];
     });
     // (undocumented)
@@ -3800,7 +3800,8 @@ type VerifyEmailRequest = operations['verify-email']['requestBody']['content']['
 // Warnings were encountered during analysis:
 //
 // src/entities.ts:59:2 - (ae-forgotten-export) The symbol "ModerationLogPayloads" needs to be exported by the entry point index.d.ts
-// src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:55:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:56:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
