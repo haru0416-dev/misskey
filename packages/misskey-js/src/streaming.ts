@@ -50,6 +50,9 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	private sharedConnectionPools: Pool[] = [];
 	private sharedConnections: SharedConnection[] = [];
 	private nonSharedConnections: NonSharedConnection[] = [];
+	// onMessage は受信メッセージ毎に呼ばれるホットパスなので、id からの逆引きを O(1) にする
+	// (shared connection は pool の id を共有するため、値はリストで持つ)
+	private connectionsById = new Map<string, Connection[]>();
 	private idCounter = 0;
 
 	constructor(origin: string, user: { token: string; } | null, options?: {
@@ -101,6 +104,23 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		return (++this.idCounter).toString();
 	}
 
+	private indexConnection(connection: Connection): void {
+		let list = this.connectionsById.get(connection.id);
+		if (list == null) {
+			list = [];
+			this.connectionsById.set(connection.id, list);
+		}
+		list.push(connection);
+	}
+
+	private unindexConnection(connection: Connection): void {
+		const list = this.connectionsById.get(connection.id);
+		if (list == null) return;
+		const index = list.indexOf(connection);
+		if (index !== -1) list.splice(index, 1);
+		if (list.length === 0) this.connectionsById.delete(connection.id);
+	}
+
 	public useChannel<C extends keyof Channels>(channel: C, params?: Channels[C]['params'], name?: string): Connection<Channels[C]> {
 		if (params) {
 			return this.connectToChannel(channel, params);
@@ -119,11 +139,13 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 
 		const connection = new SharedConnection<Channels[C]>(this, channel, pool, name);
 		this.sharedConnections.push(connection as unknown as SharedConnection);
+		this.indexConnection(connection as unknown as SharedConnection);
 		return connection;
 	}
 
 	public removeSharedConnection(connection: SharedConnection): void {
 		this.sharedConnections = this.sharedConnections.filter(c => c !== connection);
+		this.unindexConnection(connection);
 	}
 
 	public removeSharedConnectionPool(pool: Pool): void {
@@ -133,11 +155,13 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	private connectToChannel<C extends keyof Channels>(channel: C, params: Channels[C]['params']): NonSharedConnection<Channels[C]> {
 		const connection = new NonSharedConnection(this, channel, this.genId(), params);
 		this.nonSharedConnections.push(connection as unknown as NonSharedConnection);
+		this.indexConnection(connection as unknown as NonSharedConnection);
 		return connection;
 	}
 
 	public disconnectToChannel(connection: NonSharedConnection): void {
 		this.nonSharedConnections = this.nonSharedConnections.filter(c => c !== connection);
+		this.unindexConnection(connection);
 	}
 
 	/**
@@ -173,22 +197,13 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		const { type, body } = JSON.parse(message.data);
 
 		if (type === 'channel') {
-			const id = body.id;
+			const connections = this.connectionsById.get(body.id);
 
-			let connections: Connection[];
-
-			connections = this.sharedConnections.filter(c => c.id === id);
-
-			if (connections.length === 0) {
-				const found = this.nonSharedConnections.find(c => c.id === id);
-				if (found) {
-					connections = [found];
+			if (connections) {
+				for (const c of connections) {
+					c.emit(body.type, body.body);
+					c.inCount++;
 				}
-			}
-
-			for (const c of connections) {
-				c.emit(body.type, body.body);
-				c.inCount++;
 			}
 		} else {
 			this.emit(type, body);

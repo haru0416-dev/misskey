@@ -6,6 +6,7 @@
 
 ### Client
 - Enhance: Service Worker のバンドルサイズを46%削減 (30.2KB→16.3KB minified)。SWでは使用しないWebSocketストリーミング系コードが `misskey-js` の全体importで混入していたのを、subpath import + type-only import に分離して排除
+- Enhance: ストリーミングのメッセージ受信処理を高速化 (misskey-js のチャンネル振り分けを受信毎の線形探索+配列生成から Map による O(1) 参照に変更。接続チャンネル数が多いほど効果大)
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
