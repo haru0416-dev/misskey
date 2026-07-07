@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { QUEUE_TYPES, QueueService } from '@/core/QueueService.js';
+import { QUEUE_TYPES } from '@/core/QueueAdminLogic.js';
 
 export const meta = {
 	tags: ['admin'],
