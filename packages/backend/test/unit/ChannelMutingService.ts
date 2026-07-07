@@ -6,9 +6,9 @@
 /* eslint-disable */
 
 import { afterEach, beforeEach, describe, expect, beforeAll, afterAll, test } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { GlobalModule } from '@/GlobalModule.js';
-import { CoreModule } from '@/core/CoreModule.js';
+import type * as Redis from 'ioredis';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { IdService } from '@/core/IdService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
@@ -16,7 +16,7 @@ import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiChannelMuting } from '@/models/ChannelMuting.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { channelMuting, type ChannelMutingInsert } from '@/db/schema/channel-muting.js';
 import { channel, type ChannelInsert } from '@/db/schema/channel.js';
 import { driveFile, type DriveFileInsert } from '@/db/schema/drive-file.js';
@@ -27,14 +27,17 @@ import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import { DI } from '@/di-symbols.js';
+import { createRedisClient, createRedisForPub, createRedisForSub, closeRedisConnection } from '@/runtime-dependencies.js';
 import { setTimeout } from 'node:timers/promises';
 
 describe('ChannelMutingService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let service: ChannelMutingService;
 	let drizzle: MiDrizzleDatabase;
 	let idService: IdService;
+	let redisClient: Redis.Redis;
+	let redisForPub: Redis.Redis;
+	let redisForSub: Redis.Redis;
 
 	let alice: MiUser;
 	let bob: MiUser;
@@ -96,27 +99,27 @@ describe('ChannelMutingService', () => {
 	}
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-				CoreModule,
-			],
-			providers: [
-				GlobalEventService,
-				IdService,
-				ChannelMutingService,
-			],
-		}).compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		drizzle = createDrizzleDatabase(pool, config);
 
-		app.enableShutdownHooks();
+		idService = new IdService(config);
+		redisClient = createRedisClient(config);
+		redisForPub = createRedisForPub(config);
+		redisForSub = await createRedisForSub(config);
+		const globalEventService = new GlobalEventService(config, redisForPub);
 
-		service = app.get<ChannelMutingService>(ChannelMutingService);
-		idService = app.get<IdService>(IdService);
-		drizzle = app.get<MiDrizzleDatabase>(DI.drizzle);
+		service = new ChannelMutingService(redisClient, redisForSub, drizzle, idService, globalEventService);
 	});
 
 	afterAll(async () => {
-		await app.close();
+		service.dispose();
+		await Promise.all([
+			pool.end(),
+			closeRedisConnection(redisClient),
+			closeRedisConnection(redisForPub),
+			closeRedisConnection(redisForSub),
+		]);
 	});
 
 	beforeEach(async () => {

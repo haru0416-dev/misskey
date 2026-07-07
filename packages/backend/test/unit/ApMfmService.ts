@@ -5,20 +5,16 @@
 
 import * as assert from 'assert';
 import { describe, test, beforeAll } from 'vitest';
-import { Test } from '@nestjs/testing';
 
-import { CoreModule } from '@/core/CoreModule.js';
+import { loadConfig } from '@/config.js';
 import { ApMfmService } from '@/core/activitypub/ApMfmService.js';
-import { GlobalModule } from '@/GlobalModule.js';
+import { MfmService } from '@/core/MfmService.js';
 
 describe('ApMfmService', () => {
 	let apMfmService: ApMfmService;
 
-	beforeAll(async () => {
-		const app = await Test.createTestingModule({
-			imports: [GlobalModule, CoreModule],
-		}).compile();
-		apMfmService = app.get<ApMfmService>(ApMfmService);
+	beforeAll(() => {
+		apMfmService = new ApMfmService(new MfmService(loadConfig()));
 	});
 
 	describe('getNoteHtml', () => {

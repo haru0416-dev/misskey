@@ -4,15 +4,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Test, TestingModule } from '@nestjs/testing';
 import { afterAll, afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { FlashService } from '@/core/FlashService.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiUser } from '@/models/User.js';
-import { DI } from '@/di-symbols.js';
-import { GlobalModule } from '@/GlobalModule.js';
-import { CoreModule } from '@/core/CoreModule.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { user, type UserInsert } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import { flash, type FlashInsert } from '@/db/schema/flash.js';
@@ -22,7 +20,7 @@ import { createUserInDatabase } from '@/core/UserStore.js';
 import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
 describe('FlashService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let service: FlashService;
 
 	// --------------------------------------------------------------------------------------
@@ -68,21 +66,12 @@ describe('FlashService', () => {
 	// --------------------------------------------------------------------------------------
 
 	beforeEach(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				GlobalModule,
-				CoreModule,
-			],
-			providers: [
-				FlashService,
-				IdService,
-			],
-		}).compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		drizzle = createDrizzleDatabase(pool, config);
+		idService = new IdService(config);
 
-		service = app.get(FlashService);
-
-		drizzle = app.get(DI.drizzle);
-		idService = app.get(IdService);
+		service = new FlashService(drizzle, idService);
 
 		root = await createUser({ username: 'root', usernameLower: 'root' });
 		alice = await createUser({ username: 'alice', usernameLower: 'alice' });
@@ -97,7 +86,7 @@ describe('FlashService', () => {
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	// --------------------------------------------------------------------------------------

@@ -5,19 +5,18 @@
 
 import { describe, expect, beforeAll, afterAll, beforeEach, afterEach, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
+import type * as Redis from 'ioredis';
 import { randomString } from '../utils.js';
+import { loadConfig } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
 import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
-import { DI } from '@/di-symbols.js';
-import { GlobalModule } from '@/GlobalModule.js';
 import { IdService } from '@/core/IdService.js';
 import { EmailService } from '@/core/EmailService.js';
 import { RoleService } from '@/core/RoleService.js';
-import { MetaService } from '@/core/MetaService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { SystemWebhookService } from '@/core/SystemWebhookService.js';
@@ -33,12 +32,12 @@ import {
 import { createSystemWebhookInDatabase } from '@/core/SystemWebhookStore.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { createUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 
 process.env.NODE_ENV = 'test';
 
 describe('AbuseReportNotificationService', () => {
-	let app: TestingModule;
+	let pool: MiDrizzlePool;
 	let service: AbuseReportNotificationService;
 
 	// --------------------------------------------------------------------------------------
@@ -102,51 +101,35 @@ describe('AbuseReportNotificationService', () => {
 	// --------------------------------------------------------------------------------------
 
 	beforeAll(async () => {
-		app = await Test
-			.createTestingModule({
-				imports: [
-					GlobalModule,
-				],
-				providers: [
-					AbuseReportNotificationService,
-					IdService,
-					{
-						provide: RoleService, useFactory: () => ({ getModeratorIds: vi.fn() }),
-					},
-					{
-						provide: SystemWebhookService, useFactory: () => ({ enqueueSystemWebhook: vi.fn() }),
-					},
-					{
-						provide: UserEntityService, useFactory: () => ({
-							pack: (v: any) => Promise.resolve(v),
-							packMany: (v: any) => Promise.resolve(v),
-						}),
-					},
-					{
-						provide: EmailService, useFactory: () => ({ sendEmail: vi.fn() }),
-					},
-					{
-						provide: MetaService, useFactory: () => ({ fetch: vi.fn() }),
-					},
-					{
-						provide: ModerationLogService, useFactory: () => ({ log: () => Promise.resolve() }),
-					},
-					{
-						provide: GlobalEventService, useFactory: () => ({ publishAdminStream: vi.fn() }),
-					},
-				],
-			})
-			.compile();
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 
-		db = app.get(DI.drizzle);
+		idService = new IdService(config);
+		roleService = { getModeratorIds: vi.fn() } as unknown as Mocked<RoleService>;
+		webhookService = { enqueueSystemWebhook: vi.fn() } as unknown as Mocked<SystemWebhookService>;
+		const userEntityService = {
+			pack: (v: any) => Promise.resolve(v),
+			packMany: (v: any) => Promise.resolve(v),
+		} as unknown as UserEntityService;
+		emailService = { sendEmail: vi.fn() } as unknown as Mocked<EmailService>;
+		const moderationLogService = { log: () => Promise.resolve() } as unknown as ModerationLogService;
+		const globalEventService = { publishAdminStream: vi.fn() } as unknown as GlobalEventService;
+		const redisForSub = { on: () => {} } as unknown as Redis.Redis;
+		const unused = undefined as never;
 
-		service = app.get(AbuseReportNotificationService);
-		idService = app.get(IdService);
-		roleService = app.get(RoleService) as Mocked<RoleService>;
-		emailService = app.get<EmailService>(EmailService) as Mocked<EmailService>;
-		webhookService = app.get<SystemWebhookService>(SystemWebhookService) as Mocked<SystemWebhookService>;
-
-		app.enableShutdownHooks();
+		service = new AbuseReportNotificationService(
+			unused,
+			db,
+			redisForSub,
+			idService,
+			roleService,
+			webhookService,
+			emailService,
+			moderationLogService,
+			globalEventService,
+			userEntityService,
+		);
 	});
 
 	beforeEach(async () => {
@@ -170,7 +153,7 @@ describe('AbuseReportNotificationService', () => {
 	});
 
 	afterAll(async () => {
-		await app.close();
+		await pool.end();
 	});
 
 	// --------------------------------------------------------------------------------------
