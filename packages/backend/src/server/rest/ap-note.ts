@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import promiseLimit from 'promise-limit';
+import { promiseLimit } from '@/misc/promise-limit.js';
 import type * as Redis from 'ioredis';
 import { concat, toArray, unique } from '@/misc/prelude/array.js';
 import { checkHttps } from '@/misc/check-https.js';

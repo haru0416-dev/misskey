@@ -10,7 +10,7 @@ import { notesDeleteParamDef, notesUnrenoteParamDef } from '@/server/rest/notes-
 import { notesPollsVoteParamDef } from '@/server/rest/notes-polls-vote.js';
 import { notesReactionsParamDef, reactionsCreateParamDef, reactionsDeleteParamDef } from '@/server/rest/notes-reactions.js';
 import { noteIdOnlyParamDef, noteIdPaginationParamDef, notesConversationParamDef, notesFeaturedParamDef, notesGlobalTimelineParamDef, notesHybridTimelineParamDef, notesLocalTimelineParamDef, notesMentionsParamDef, notesParamDef, notesPollsRecommendationParamDef, notesSearchByTagDocsParamDef, notesSearchParamDef, notesShowParamDef, notesShowPartialBulkParamDef, notesTimelineParamDef, notesUserListTimelineParamDef } from '@/server/rest/notes.js';
-import ms from 'ms';
+import { SECOND, HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'notes': {
@@ -108,7 +108,7 @@ export const endpointMetas = {
 			prohibitMoved: true,
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
 			},
 
@@ -223,9 +223,9 @@ export const endpointMetas = {
 			kind: 'write:notes',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
-				minInterval: ms('1sec'),
+				minInterval: SECOND,
 			},
 
 			errors: {
@@ -408,7 +408,7 @@ export const endpointMetas = {
 			},
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
 			},
 		} as const,
@@ -609,7 +609,7 @@ export const endpointMetas = {
 			},
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
 			},
 		} as const,
@@ -646,7 +646,7 @@ export const endpointMetas = {
 			kind: 'write:favorites',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 20,
 			},
 
@@ -961,9 +961,9 @@ export const endpointMetas = {
 			kind: 'write:reactions',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 60,
-				minInterval: ms('3sec'),
+				minInterval: 3 * SECOND,
 			},
 
 			errors: {
@@ -1174,7 +1174,7 @@ export const endpointMetas = {
 			kind: 'write:account',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 10,
 			},
 
@@ -1270,9 +1270,9 @@ export const endpointMetas = {
 			kind: 'write:notes',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
-				minInterval: ms('1sec'),
+				minInterval: SECOND,
 			},
 
 			errors: {

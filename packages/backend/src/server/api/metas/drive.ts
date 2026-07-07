@@ -7,7 +7,7 @@ import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/ser
 import { driveFilesAttachedChatMessagesParamDef, driveFilesAttachedNotesParamDef, driveFilesDeleteParamDef, driveFilesFindByHashParamDef, driveFilesFindParamDef, driveFilesMoveBulkParamDef, driveFilesParamDef, driveFilesShowParamDef, driveFilesUpdateParamDef, driveStreamParamDef } from '@/server/rest/drive-files.js';
 import { driveFilesCheckExistenceParamDef, driveFoldersCreateParamDef, driveFoldersDeleteParamDef, driveFoldersFindParamDef, driveFoldersParamDef, driveFoldersShowParamDef, driveFoldersUpdateParamDef } from '@/server/rest/drive.js';
 import { z } from 'zod';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'drive': {
@@ -139,7 +139,7 @@ export const endpointMetas = {
 			prohibitMoved: true,
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 120,
 			},
 
@@ -359,7 +359,7 @@ export const endpointMetas = {
 			tags: ['drive'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 60,
 			},
 
@@ -402,7 +402,7 @@ export const endpointMetas = {
 			kind: 'write:drive',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 10,
 			},
 

@@ -4,7 +4,7 @@
  */
 
 import { followingCreateParamDef, followingListParamDef, followingRequestsListParamDef, followingUpdateAllParamDef, followingUpdateParamDef, followingUserIdParamDef } from '@/server/rest/following.js';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'following/create': {
@@ -12,7 +12,7 @@ export const endpointMetas = {
 			tags: ['following', 'users'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 100,
 			},
 
@@ -67,7 +67,7 @@ export const endpointMetas = {
 			tags: ['following', 'users'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 100,
 			},
 
@@ -108,7 +108,7 @@ export const endpointMetas = {
 			tags: ['following', 'users'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 100,
 			},
 
@@ -312,7 +312,7 @@ export const endpointMetas = {
 			tags: ['following', 'users'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 100,
 			},
 
@@ -353,7 +353,7 @@ export const endpointMetas = {
 			tags: ['following', 'users'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 10,
 			},
 

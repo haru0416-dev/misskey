@@ -4,10 +4,11 @@
  */
 
 import { URLSearchParams } from 'node:url';
+import { promises as dns } from 'node:dns';
 import * as nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import juice from 'juice';
-import { validate as validateEmail } from 'deep-email-validator';
+import disposableEmailDomains from 'disposable-email-domains';
 import { UtilityService } from '@/core/UtilityService.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
@@ -15,6 +16,37 @@ import { LoggerService } from '@/core/LoggerService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+
+const disposableEmailDomainsSet = new Set(disposableEmailDomains);
+
+/**
+ * deep-email-validator の validateDisposable + validateMx 相当。
+ * 使い捨てドメインリストとの照合と、MX レコードが引けるかどうかを検査する。
+ */
+async function validateEmailDeliverability(emailAddress: string): Promise<{
+	valid: boolean;
+	reason: 'disposable' | 'mx' | null;
+}> {
+	const domain = emailAddress.split('@')[1]?.toLowerCase();
+	if (!domain) {
+		return { valid: false, reason: 'mx' };
+	}
+
+	if (disposableEmailDomainsSet.has(domain)) {
+		return { valid: false, reason: 'disposable' };
+	}
+
+	try {
+		const records = await dns.resolveMx(domain);
+		if (records.length === 0) {
+			return { valid: false, reason: 'mx' };
+		}
+	} catch {
+		return { valid: false, reason: 'mx' };
+	}
+
+	return { valid: true, reason: null };
+}
 
 export function createEmailService(
 	config: Config,
@@ -183,14 +215,9 @@ export function createEmailService(
 			} else if (meta.enableTruemailApi && meta.truemailInstance && meta.truemailAuthKey != null) {
 				validated = await trueMail(meta.truemailInstance, emailAddress, meta.truemailAuthKey);
 			} else {
-				validated = await validateEmail({
-					email: emailAddress,
-					validateRegex: true,
-					validateMx: true,
-					validateTypo: false, // TLDを見ているみたいだけどclubとか弾かれるので
-					validateDisposable: true, // 捨てアドかどうかチェック
-					validateSMTP: false, // 日本だと25ポートが殆どのプロバイダーで塞がれていてタイムアウトになるので
-				});
+				// 従来 deep-email-validator に相当する検査 (regex は validateEmailFormat で確認済)。
+				// SMTP 検査は日本だと25ポートが殆どのプロバイダーで塞がれていてタイムアウトになるのでしない
+				validated = await validateEmailDeliverability(emailAddress);
 			}
 		}
 

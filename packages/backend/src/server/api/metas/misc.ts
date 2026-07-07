@@ -31,7 +31,7 @@ import { pinnedUsersParamDef } from '@/server/rest/user.js';
 import { verifyEmailParamDef } from '@/server/rest/verify-email.js';
 import { z } from 'zod';
 import * as Redis from 'ioredis';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'announcements': {
@@ -83,7 +83,7 @@ export const endpointMetas = {
 			kind: 'read:federation',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 30,
 			},
 
@@ -105,7 +105,7 @@ export const endpointMetas = {
 			kind: 'read:account',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 30,
 			},
 
@@ -346,7 +346,7 @@ export const endpointMetas = {
 			tags: ['account'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 20,
 			},
 
@@ -387,7 +387,7 @@ export const endpointMetas = {
 			tags: ['account'],
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 100,
 			},
 
@@ -561,7 +561,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 		} as const,
@@ -575,7 +575,7 @@ export const endpointMetas = {
 			secure: true,
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 50,
 			},
 
@@ -1015,7 +1015,7 @@ export const endpointMetas = {
 			kind: 'write:mutes',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 20,
 			},
 
@@ -1242,7 +1242,7 @@ export const endpointMetas = {
 			kind: 'write:mutes',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 20,
 			},
 
@@ -1327,7 +1327,7 @@ export const endpointMetas = {
 			description: 'Request a users password to be reset.',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 3,
 			},
 

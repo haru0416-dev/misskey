@@ -15,7 +15,7 @@ import { usersReactionsParamDef } from '@/server/rest/user-reactions.js';
 import { usersGetFrequentlyRepliedUsersParamDef, usersParamDef, usersRecommendationParamDef, usersRelationParamDef, usersSearchByUsernameAndHostParamDef, usersSearchParamDef, usersShowParamDef, usersUpdateMemoParamDef } from '@/server/rest/user.js';
 import { createFromPublicParamDef, createParamDef, getMembershipsParamDef, pullParamDef, pushParamDef, updateMembershipParamDef } from '@/server/rest/users-lists.js';
 import { usersAchievementsParamDef, usersListsDeleteParamDef, usersListsListParamDef, usersListsShowParamDef, usersListsUpdateParamDef } from '@/server/rest/users.js';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'users': {
@@ -515,7 +515,7 @@ export const endpointMetas = {
 			description: 'Add a user to an existing list.',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 30,
 			},
 

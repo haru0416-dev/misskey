@@ -4,7 +4,7 @@
  */
 
 import { clipIdParamDef, clipNotesParamDef, clipsCreateParamDef, clipsListParamDef, clipsNoteParamDef, clipsUpdateParamDef, emptyParamDef } from '@/server/rest/clips.js';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'clips/add-note': {
@@ -18,7 +18,7 @@ export const endpointMetas = {
 			kind: 'write:account',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 20,
 			},
 
