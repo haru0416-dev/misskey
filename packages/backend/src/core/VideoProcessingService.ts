@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import FFmpeg from 'fluent-ffmpeg';
+import { join } from 'node:path';
+import { ffprobe, runFfmpeg } from '@/misc/ffmpeg.js';
 import type { Config } from '@/config.js';
 import { ImageProcessingService } from '@/core/ImageProcessingService.js';
 import type { IImage } from '@/core/ImageProcessingService.js';
@@ -18,19 +19,16 @@ export function createVideoProcessingService(
 		const [dir, cleanup] = await createTempDir();
 
 		try {
-			await new Promise((res, rej) => {
-				FFmpeg({
-					source,
-				})
-					.on('end', res)
-					.on('error', rej)
-					.screenshot({
-						folder: dir,
-						filename: 'out.png',	// must have .png extension
-						count: 1,
-						timestamps: ['5%'],
-					});
-			});
+			// 従来の fluent-ffmpeg screenshot({ timestamps: ['5%'] }) と同じく、動画長の 5% 地点のフレームを切り出す
+			const duration = Number((await ffprobe(source).catch(() => null))?.format.duration);
+			const seek = Number.isFinite(duration) ? duration * 0.05 : 0;
+
+			await runFfmpeg([
+				'-ss', seek.toFixed(3),
+				'-i', source,
+				'-frames:v', '1',
+				'-y', join(dir, 'out.png'),
+			]);
 
 			return await imageProcessingService.convertToWebp(`${dir}/out.png`, 498, 422);
 		} finally {

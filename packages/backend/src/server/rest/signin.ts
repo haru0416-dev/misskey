@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import bcrypt from 'bcryptjs';
+import { comparePassword } from '@/misc/password.js';
 import type * as Misskey from 'misskey-js';
 import type * as Redis from 'ioredis';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
@@ -356,7 +356,7 @@ export async function handleHonoApiSigninFlow(
 		return { status: 400 };
 	}
 
-	const same = await bcrypt.compare(password, profile.password!);
+	const same = await comparePassword(password, profile.password!);
 
 	if (!profile.twoFactorEnabled) {
 		try {

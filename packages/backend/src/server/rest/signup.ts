@@ -4,7 +4,7 @@
  */
 
 import { domainToASCII } from 'node:url';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import RE2 from '@/misc/re2.js';
 import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
@@ -197,8 +197,7 @@ export async function signupWithHonoApi(deps: SignupDependencies, body: SignupBo
 	const username = body.username;
 	const normalizedHost = process.env.NODE_ENV === 'test' ? normalizeHost(body.host) : null;
 
-	const salt = await bcrypt.genSalt(8);
-	const hash = await bcrypt.hash(body.password, salt);
+	const hash = await hashPassword(body.password);
 	const { account, token } = await createLocalSignupAccount(deps, {
 		username,
 		host: normalizedHost,

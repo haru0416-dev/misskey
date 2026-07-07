@@ -5,7 +5,7 @@
 
 import { URL } from 'node:url';
 import * as htmlParser from 'node-html-parser';
-import tinycolor from 'tinycolor2';
+import convert from 'color-convert';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type Logger from '@/logger.js';
 import type { MiInstance } from '@/models/Instance.js';
@@ -190,11 +190,37 @@ async function getThemeColor(
 	const themeColor = info?.metadata?.themeColor ?? doc?.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? manifest?.theme_color;
 
 	if (typeof themeColor === 'string') {
-		const color = new tinycolor(themeColor);
-		if (color.isValid()) return color.toHexString();
+		return parseCssColorToHex(themeColor);
 	}
 
 	return null;
+}
+
+// parses hex / rgb() / hsl() / named CSS colors to '#rrggbb' (replaces tinycolor2)
+function parseCssColorToHex(input: string): string | null {
+	const str = input.trim().toLowerCase();
+
+	const hex = str.match(/^#([0-9a-f]{3}|[0-9a-f]{6})(?:[0-9a-f]{2})?$/)?.[1];
+	if (hex) {
+		return '#' + (hex.length === 3 ? [...hex].map(c => c + c).join('') : hex);
+	}
+
+	const rgb = str.match(/^rgba?\(\s*(\d{1,3})[,\s]+(\d{1,3})[,\s]+(\d{1,3})(?:[,\s/]+[\d.%]+)?\s*\)$/);
+	if (rgb) {
+		const channels = rgb.slice(1, 4).map(v => Math.min(255, Number(v))) as [number, number, number];
+		return '#' + convert.rgb.hex(channels).toLowerCase();
+	}
+
+	const hsl = str.match(/^hsla?\(\s*([\d.]+)(?:deg)?[,\s]+([\d.]+)%[,\s]+([\d.]+)%(?:[,\s/]+[\d.%]+)?\s*\)$/);
+	if (hsl) {
+		return '#' + convert.hsl.hex([Number(hsl[1]), Number(hsl[2]), Number(hsl[3])]).toLowerCase();
+	}
+
+	try {
+		return '#' + convert.keyword.hex(str as Parameters<typeof convert.keyword.hex>[0]).toLowerCase();
+	} catch {
+		return null;
+	}
 }
 
 async function getSiteName(

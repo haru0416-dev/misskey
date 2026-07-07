@@ -24,9 +24,6 @@ updates:
       aws-sdk:
         patterns:
           - '@aws-sdk/*'
-      nestjs:
-        patterns:
-          - '@nestjs/*'
       slacc:
         patterns:
           - 'slacc-*'

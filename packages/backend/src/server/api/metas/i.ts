@@ -22,7 +22,7 @@ import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/pages.js';
 import { registryGetParamDef, registryScopeParamDef, registryScopesWithDomainParamDef, registrySetParamDef } from '@/server/rest/registry.js';
 import { webhooksCreateParamDef, webhooksDeleteParamDef, webhooksListParamDef, webhooksShowParamDef, webhooksTestParamDef, webhooksUpdateParamDef } from '@/server/rest/webhooks.js';
 import { z } from 'zod';
-import ms from 'ms';
+import { MINUTE, HOUR, DAY } from '@/const.js';
 
 export const endpointMetas = {
 	'i': {
@@ -356,7 +356,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 		} as const,
@@ -367,7 +367,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 		} as const,
@@ -378,7 +378,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1day'),
+				duration: DAY,
 				max: 1,
 			},
 		} as const,
@@ -389,7 +389,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1day'),
+				duration: DAY,
 				max: 1,
 			},
 		} as const,
@@ -400,7 +400,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 		} as const,
@@ -411,7 +411,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 		} as const,
@@ -422,7 +422,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1day'),
+				duration: DAY,
 				max: 1,
 			},
 		} as const,
@@ -433,7 +433,7 @@ export const endpointMetas = {
 			secure: true,
 			requireCredential: true,
 			limit: {
-				duration: ms('1min'),
+				duration: MINUTE,
 				max: 1,
 			},
 		} as const,
@@ -518,7 +518,7 @@ export const endpointMetas = {
 			prohibitMoved: true,
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 			errors: {
@@ -554,7 +554,7 @@ export const endpointMetas = {
 			prohibitMoved: true,
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 
@@ -593,7 +593,7 @@ export const endpointMetas = {
 			requiredRolePolicy: 'canImportFollowing',
 			prohibitMoved: true,
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 
@@ -633,7 +633,7 @@ export const endpointMetas = {
 			prohibitMoved: true,
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 
@@ -672,7 +672,7 @@ export const endpointMetas = {
 			requiredRolePolicy: 'canImportUserLists',
 			prohibitMoved: true,
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 1,
 			},
 
@@ -712,7 +712,7 @@ export const endpointMetas = {
 			requireCredential: true,
 			prohibitMoved: true,
 			limit: {
-				duration: ms('1day'),
+				duration: DAY,
 				max: 5,
 			},
 
@@ -1109,7 +1109,7 @@ export const endpointMetas = {
 			kind: 'write:account',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 20,
 			},
 
@@ -1203,7 +1203,7 @@ export const endpointMetas = {
 			secure: true,
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 3,
 			},
 
@@ -1347,7 +1347,7 @@ export const endpointMetas = {
 			kind: 'read:account',
 
 			limit: {
-				duration: ms('15min'),
+				duration: 15 * MINUTE,
 				max: 60,
 			},
 

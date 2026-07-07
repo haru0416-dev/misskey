@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
+import { hashPassword, comparePassword } from '@/misc/password.js';
 import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
 import type { EmailService } from '@/core/EmailService.js';
 import type { DbQueue, DeliverQueue } from '@/core/queues.js';
@@ -75,13 +75,12 @@ export async function handleHonoApiIChangePassword(
 
 	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);
 
-	const passwordMatched = await bcrypt.compare(params.currentPassword, profile.password!);
+	const passwordMatched = await comparePassword(params.currentPassword, profile.password!);
 	if (!passwordMatched) {
 		throw new Error('incorrect password');
 	}
 
-	const salt = await bcrypt.genSalt(8);
-	const hash = await bcrypt.hash(params.newPassword, salt);
+	const hash = await hashPassword(params.newPassword);
 
 	await updateUserProfileInDatabase(deps.db, me.id, {
 		password: hash,
@@ -107,7 +106,7 @@ export async function handleHonoApiIRegenerateToken(
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
-	const same = await bcrypt.compare(params.password, profile.password!);
+	const same = await comparePassword(params.password, profile.password!);
 	if (!same) {
 		throw new Error('incorrect password');
 	}
@@ -145,7 +144,7 @@ export async function handleHonoApiIDeleteAccount(
 	const userDetailed = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 	if (userDetailed.isDeleted) return;
 
-	const passwordMatched = await bcrypt.compare(params.password, profile.password!);
+	const passwordMatched = await comparePassword(params.password, profile.password!);
 	if (!passwordMatched) {
 		throw new Error('incorrect password');
 	}
@@ -185,7 +184,7 @@ export async function handleHonoApiIUpdateEmail(
 
 	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);
 
-	const passwordMatched = await bcrypt.compare(params.password, profile.password!);
+	const passwordMatched = await comparePassword(params.password, profile.password!);
 	if (!passwordMatched) throw iUpdateEmailIncorrectPasswordError();
 
 	if (params.email != null) {

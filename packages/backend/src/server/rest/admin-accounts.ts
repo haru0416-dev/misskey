@@ -16,7 +16,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiUser } from '@/models/_.js';
 import { descriptionZodSchema, localUsernameZodSchema, passwordZodSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/misc/password.js';
 import { HonoApiError } from './error.js';
 import type { HonoApiAuthenticated } from './auth.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
@@ -95,10 +95,9 @@ export async function handleHonoApiAdminAccountsCreate(
 		throw adminAccountCreateAccessDeniedError();
 	}
 
-	const salt = await bcrypt.genSalt(8);
-	const { account, token } = await createLocalSignupAccount(deps, {
+		const { account, token } = await createLocalSignupAccount(deps, {
 		username: params.username,
-		passwordHash: await bcrypt.hash(params.password, salt),
+		passwordHash: await hashPassword(params.password),
 		host: null,
 		ignorePreservedUsernames: true,
 	});

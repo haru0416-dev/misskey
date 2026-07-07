@@ -4,9 +4,9 @@
  */
 
 import * as fs from 'node:fs';
-import * as stream from 'node:stream/promises';
+import * as stream from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import chalk from 'chalk';
-import got, * as Got from 'got';
 import { parse } from 'content-disposition';
 import type { Config } from '@/config.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
@@ -26,46 +26,44 @@ export function createDownloadService(
 	}> {
 		logger.info(`Downloading ${chalk.cyan(url)} to ${chalk.cyanBright(path)} ...`);
 
-		const timeout = 30 * 1000;
+		const responseTimeout = 30 * 1000;
 		const operationTimeout = 60 * 1000;
 		const maxSize = config.maxFileSize;
 
 		const urlObj = new URL(url);
 		let filename = urlObj.pathname.split('/').pop() ?? 'untitled';
 
-		const req = got.stream(url, {
-			headers: {
-				'User-Agent': config.userAgent,
-			},
-			timeout: {
-				lookup: timeout,
-				connect: timeout,
-				secureConnect: timeout,
-				socket: timeout,	// read timeout
-				response: timeout,
-				send: timeout,
-				request: operationTimeout,	// whole operation timeout
-			},
-			agent: {
-				http: httpRequestService.getAgentForHttp(urlObj, true),
-				https: httpRequestService.getAgentForHttps(urlObj, true),
-			},
-			http2: false,	// default
-			retry: {
-				limit: 0,
-			},
-			enableUnixSockets: false,
-		}).on('response', (res: Got.Response) => {
-			const contentLength = res.headers['content-length'];
+		const controller = new AbortController();
+		const operationTimer = setTimeout(() => controller.abort(), operationTimeout);
+		// レスポンスヘッダ受信までのタイムアウト (fetch 解決後に解除される)
+		const responseTimer = setTimeout(() => controller.abort(), responseTimeout);
+
+		try {
+			const res = await httpRequestService.fetchFollowingRedirects(url, {
+				method: 'GET',
+				headers: {
+					'User-Agent': config.userAgent,
+				},
+				body: undefined,
+				signal: controller.signal,
+			}, false).finally(() => clearTimeout(responseTimer));
+
+			if (!res.ok) {
+				await res.body?.cancel().catch(() => {});
+				throw new StatusError(`${res.status} ${res.statusText}`, res.status, res.statusText);
+			}
+
+			const contentLength = res.headers.get('content-length');
 			if (contentLength != null) {
 				const size = Number(contentLength);
 				if (size > maxSize) {
 					logger.warn(`maxSize exceeded (${size} > ${maxSize}) on response`);
-					req.destroy();
+					await res.body?.cancel().catch(() => {});
+					throw new StatusError(`Payload Too Large (${size} > ${maxSize})`, 413, 'Payload Too Large');
 				}
 			}
 
-			const contentDisposition = res.headers['content-disposition'];
+			const contentDisposition = res.headers.get('content-disposition');
 			if (contentDisposition != null) {
 				try {
 					const parsed = parse(contentDisposition);
@@ -76,21 +74,27 @@ export function createDownloadService(
 					logger.warn(`Failed to parse content-disposition: ${contentDisposition}`, { stack: e });
 				}
 			}
-		}).on('downloadProgress', (progress: Got.Progress) => {
-			if (progress.transferred > maxSize) {
-				logger.warn(`maxSize exceeded (${progress.transferred} > ${maxSize}) on downloadProgress`);
-				req.destroy();
-			}
-		});
 
-		try {
-			await stream.pipeline(req, fs.createWriteStream(path));
-		} catch (e) {
-			if (e instanceof Got.HTTPError) {
-				throw new StatusError(`${e.response.statusCode} ${e.response.statusMessage}`, e.response.statusCode, e.response.statusMessage);
-			} else {
-				throw e;
-			}
+			let transferred = 0;
+			const limitSize = new stream.Transform({
+				transform(chunk: Buffer, _encoding, callback) {
+					transferred += chunk.length;
+					if (transferred > maxSize) {
+						logger.warn(`maxSize exceeded (${transferred} > ${maxSize}) on download`);
+						callback(new StatusError(`Payload Too Large (${transferred} > ${maxSize})`, 413, 'Payload Too Large'));
+						return;
+					}
+					callback(null, chunk);
+				},
+			});
+
+			const body = res.body != null
+				? stream.Readable.fromWeb(res.body as import('node:stream/web').ReadableStream)
+				: stream.Readable.from([]);
+			await pipeline(body, limitSize, fs.createWriteStream(path));
+		} finally {
+			clearTimeout(operationTimer);
+			clearTimeout(responseTimer);
 		}
 
 		logger.succ(`Download finished: ${chalk.cyan(url)}`);

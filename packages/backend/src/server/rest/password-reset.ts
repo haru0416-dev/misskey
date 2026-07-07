@@ -4,7 +4,7 @@
  */
 
 import type * as Redis from 'ioredis';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { EmailService } from '@/core/EmailService.js';
@@ -96,8 +96,7 @@ export async function handleHonoApiResetPassword(
 		throw new Error();
 	}
 
-	const salt = await bcrypt.genSalt(8);
-	const hash = await bcrypt.hash(params.password, salt);
+	const hash = await hashPassword(params.password);
 
 	await updateUserProfileInDatabase(deps.db, req.userId, {
 		password: hash,

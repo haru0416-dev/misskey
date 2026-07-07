@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import ms from 'ms';
+import { DAY } from '@/const.js';
 import { z } from 'zod';
 import { sql, type SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
@@ -1075,7 +1075,7 @@ export async function handleHonoApiUsersRecommendation(
 	const users = await listRecommendedUsersFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		offset: params.offset,
-		updatedAfter: new Date(Date.now() - ms('7days')),
+		updatedAfter: new Date(Date.now() - 7 * DAY),
 	});
 
 	return await packUserDetailedManyForHonoApi(deps, users, me);

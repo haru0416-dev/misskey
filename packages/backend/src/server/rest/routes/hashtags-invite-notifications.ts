@@ -36,6 +36,14 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
+	app.get('/hashtags/trend', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, c.req.query()), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
+		});
+	});
+
 	app.post('/hashtags/trend', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);

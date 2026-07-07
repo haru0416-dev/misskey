@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Limiter from 'ratelimiter';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
@@ -26,16 +25,35 @@ export type HonoApiEndpointRateLimit = Omit<HonoApiRateLimit, 'key'> & {
 	key?: string;
 };
 
-async function checkLimiter(options: Limiter.LimiterOption): Promise<Limiter.LimiterInfo> {
-	return await new Promise<Limiter.LimiterInfo>((resolve, reject) => {
-		new Limiter(options).get((err, info) => {
-			if (err) {
-				reject(err);
-				return;
-			}
-			resolve(info);
-		});
-	});
+/**
+ * `ratelimiter` パッケージと同じ sliding-window-log 方式・同じキー形式 (`limit:{id}` の zset)。
+ * 窓内エントリ数を数えてから今回分を必ず追加する (= 制限超過中のリクエストも窓を延長する) 点も踏襲。
+ */
+async function checkLimiter(options: {
+	id: string;
+	duration: number;
+	max: number;
+	db: Redis.Redis;
+}): Promise<{ remaining: number }> {
+	const key = `limit:${options.id}`;
+	// 旧実装 (microtime) と同じくマイクロ秒スケールのスコアを使う。
+	// Date.now() はミリ秒精度なので、同一ミリ秒内の zadd メンバー衝突を乱数で回避する。
+	const now = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+	const start = now - options.duration * 1000;
+
+	const res = await options.db.multi()
+		.zremrangebyscore(key, 0, start)
+		.zcard(key)
+		.zadd(key, now, String(now))
+		.pexpire(key, options.duration)
+		.exec();
+
+	if (res == null) throw new Error('rate limiter transaction failed');
+	const zcard = res[1];
+	if (zcard?.[0] != null) throw zcard[0];
+	const count = Number(zcard?.[1] ?? 0);
+
+	return { remaining: count < options.max ? options.max - count : 0 };
 }
 
 export async function isHonoApiRateLimited(

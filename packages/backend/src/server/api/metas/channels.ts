@@ -5,7 +5,7 @@
 
 import { channelCreateParamDef, channelFollowParamDef, channelMuteCreateParamDef, channelMuteDeleteParamDef, channelShowParamDef, channelUpdateParamDef, channelsListParamDef, channelsSearchParamDef, emptyParamDef } from '@/server/rest/channels.js';
 import { channelParamDef } from '@/server/rest/favorites.js';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'channels/create': {
@@ -21,7 +21,7 @@ export const endpointMetas = {
 			requiredRolePolicy: 'canCreateChannel',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 10,
 			},
 
