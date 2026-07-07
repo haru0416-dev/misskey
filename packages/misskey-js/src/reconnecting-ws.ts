@@ -109,9 +109,12 @@ export class ReconnectingWebSocket {
 	public close(): void {
 		this.closed = true;
 		this.clearTimers();
-		if (this.ws) {
-			this.ws.close();
-			this.detach(this.ws);
+		const ws = this.ws;
+		if (ws) {
+			// Bun の WebSocket は close() が同期的に close イベントを発火し、その中で
+			// this.ws が null 化されるため、null チェック済みのローカル変数で扱う
+			ws.close();
+			this.detach(ws);
 			this.ws = null;
 		}
 	}
