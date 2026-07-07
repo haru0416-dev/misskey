@@ -14,7 +14,7 @@ export type HonoApiFetchRssDependencies = {
 	httpRequestService: HttpRequestService;
 };
 
-const fetchRssParamDef = z.object({
+export const fetchRssParamDef = z.object({
 	url: z.string(),
 });
 

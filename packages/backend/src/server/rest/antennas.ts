@@ -220,7 +220,7 @@ async function packAntennaForHonoApi(
 
 const antennaSrcEnum = ['home', 'all', 'users', 'list', 'users_blacklist'] as const;
 
-const antennasCreateParamDef = z.object({
+export const antennasCreateParamDef = z.object({
 	name: z.string().min(1).max(100),
 	src: z.enum(antennaSrcEnum),
 	userListId: misskeyId().nullable().optional(),
@@ -297,7 +297,7 @@ export async function handleHonoApiAntennasCreate(
 	return await packAntennaForHonoApi(deps, antenna);
 }
 
-const antennasUpdateParamDef = z.object({
+export const antennasUpdateParamDef = z.object({
 	antennaId: misskeyId(),
 	name: z.string().min(1).max(100).optional(),
 	src: z.enum(antennaSrcEnum).optional(),
@@ -373,7 +373,7 @@ export async function handleHonoApiAntennasUpdate(
 	return await packAntennaForHonoApi(deps, antenna.id);
 }
 
-const antennasDeleteParamDef = z.object({
+export const antennasDeleteParamDef = z.object({
 	antennaId: misskeyId(),
 });
 
@@ -396,7 +396,7 @@ export async function handleHonoApiAntennasDelete(
 	deps.publishInternalEvent?.('antennaDeleted', antenna);
 }
 
-const antennasListParamDef = z.object({});
+export const antennasListParamDef = z.object({});
 
 export async function handleHonoApiAntennasList(
 	deps: HonoApiAntennaDependencies,
@@ -410,7 +410,7 @@ export async function handleHonoApiAntennasList(
 	return await Promise.all(antennas.map(x => packAntennaForHonoApi(deps, x)));
 }
 
-const antennasShowParamDef = z.object({
+export const antennasShowParamDef = z.object({
 	antennaId: misskeyId(),
 });
 
@@ -431,7 +431,7 @@ export async function handleHonoApiAntennasShow(
 	return await packAntennaForHonoApi(deps, antenna);
 }
 
-const antennasRemoveNoteParamDef = z.object({
+export const antennasRemoveNoteParamDef = z.object({
 	antennaId: misskeyId(),
 	noteId: misskeyId(),
 });
@@ -454,7 +454,7 @@ export async function handleHonoApiAntennasRemoveNote(
 	await deps.redis.lrem(`list:antennaTimeline:${antenna.id}`, 1, params.noteId);
 }
 
-const antennasNotesParamDef = z.object({
+export const antennasNotesParamDef = z.object({
 	antennaId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),

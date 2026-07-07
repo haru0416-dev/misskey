@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { rolesListParamDef } from '@/server/rest/roles.js';
+
 export const meta = {
 	tags: ['role'],
 
@@ -20,10 +22,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-	},
-	required: [
-	],
-} as const;
+export const paramDef = rolesListParamDef;

@@ -56,7 +56,7 @@ export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies &
 	relationshipQueue: RelationshipQueue;
 };
 
-const federationInstancesParamDef = z.object({
+export const federationInstancesParamDef = z.object({
 	host: z.string().nullable().optional(),
 	blocked: z.boolean().nullable().optional(),
 	notResponding: z.boolean().nullable().optional(),
@@ -88,21 +88,21 @@ const federationInstancesParamDef = z.object({
 	]).optional(),
 });
 
-const federationShowInstanceParamDef = z.object({
+export const federationShowInstanceParamDef = z.object({
 	host: z.string(),
 });
 
-const adminFederationUpdateInstanceParamDef = z.object({
+export const adminFederationUpdateInstanceParamDef = z.object({
 	host: z.string(),
 	isSuspended: z.boolean().optional(),
 	moderationNote: z.string().optional(),
 });
 
-const adminFederationHostParamDef = z.object({
+export const adminFederationHostParamDef = z.object({
 	host: z.string(),
 });
 
-const federationStatsParamDef = z.object({
+export const federationStatsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
@@ -524,7 +524,7 @@ export async function handleHonoApiFederationStats(
 	};
 }
 
-const federationUsersParamDef = z.object({
+export const federationUsersParamDef = z.object({
 	host: z.string(),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -558,7 +558,7 @@ export async function handleHonoApiFederationUsers(
 	return await packUserDetailedNotMeManyForHonoApi(deps, users, me);
 }
 
-const federationHostFollowingParamDef = z.object({
+export const federationHostFollowingParamDef = z.object({
 	host: z.string(),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

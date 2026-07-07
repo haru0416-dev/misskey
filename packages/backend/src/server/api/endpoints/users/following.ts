@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { birthdaySchema } from '@/models/User.js';
+import { usersFollowingParamDef } from '@/server/rest/following.js';
 
 export const meta = {
 	tags: ['users'],
@@ -43,41 +43,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	allOf: [
-		{
-			anyOf: [
-				{
-					type: 'object',
-					properties: {
-						userId: { type: 'string', format: 'misskey:id' },
-					},
-					required: ['userId'],
-				},
-				{
-					type: 'object',
-					properties: {
-						username: { type: 'string' },
-						host: {
-							type: 'string',
-							nullable: true,
-							description: 'The local host is represented with `null`.',
-						},
-					},
-					required: ['username', 'host'],
-				},
-			],
-		},
-		{
-			type: 'object',
-			properties: {
-				sinceId: { type: 'string', format: 'misskey:id' },
-				untilId: { type: 'string', format: 'misskey:id' },
-				sinceDate: { type: 'integer' },
-				untilDate: { type: 'integer' },
-				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-				birthday: { ...birthdaySchema, nullable: true, description: '@deprecated use get-following-users-by-birthday instead.' },
-			},
-		},
-	],
-} as const;
+export const paramDef = usersFollowingParamDef;

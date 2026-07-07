@@ -4,6 +4,7 @@
  */
 
 import * as Redis from 'ioredis';
+import { resetDbParamDef } from '@/server/rest/reset-db.js';
 
 export const meta = {
 	tags: ['non-productive'],
@@ -17,8 +18,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = resetDbParamDef;

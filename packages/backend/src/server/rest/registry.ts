@@ -30,25 +30,25 @@ export type HonoApiRegistryDependencies = {
 
 const registryScopeZodSchema = z.array(z.string().regex(/^[a-zA-Z0-9_]+$/)).default([]);
 
-const registryGetParamDef = z.object({
+export const registryGetParamDef = z.object({
 	key: z.string(),
 	scope: registryScopeZodSchema,
 	domain: z.string().nullable().optional(),
 });
 
-const registryScopeParamDef = z.object({
+export const registryScopeParamDef = z.object({
 	scope: registryScopeZodSchema,
 	domain: z.string().nullable().optional(),
 });
 
-const registrySetParamDef = z.object({
+export const registrySetParamDef = z.object({
 	key: z.string().min(1),
 	value: z.unknown(),
 	scope: registryScopeZodSchema,
 	domain: z.string().nullable().optional(),
 });
 
-const registryScopesWithDomainParamDef = z.object({});
+export const registryScopesWithDomainParamDef = z.object({});
 
 type RegistrySetParams = {
 	key: string;

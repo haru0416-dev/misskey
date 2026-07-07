@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { userListParamDef } from '@/server/rest/favorites.js';
+
 export const meta = {
 	requireCredential: true,
 	kind: 'write:account',
@@ -21,10 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['listId'],
-} as const;
+export const paramDef = userListParamDef;

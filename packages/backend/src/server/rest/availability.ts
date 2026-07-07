@@ -19,11 +19,11 @@ export type HonoApiAvailabilityDependencies = {
 	emailService: Pick<EmailService, 'validateEmailForAccount'>;
 };
 
-const usernameAvailableParamDef = z.object({
+export const usernameAvailableParamDef = z.object({
 	username: localUsernameZodSchema,
 });
 
-const emailAddressAvailableParamDef = z.object({
+export const emailAddressAvailableParamDef = z.object({
 	emailAddress: z.string(),
 });
 

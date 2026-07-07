@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { chatMessagesSearchParamDef } from '@/server/rest/chat.js';
+
 export const meta = {
 	tags: ['chat'],
 
@@ -29,13 +31,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string', minLength: 1, maxLength: 256 },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		userId: { type: 'string', format: 'misskey:id', nullable: true },
-		roomId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: ['query'],
-} as const;
+export const paramDef = chatMessagesSearchParamDef;

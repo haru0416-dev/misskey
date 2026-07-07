@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { flashDeleteParamDef } from '@/server/rest/flash.js';
+
 export const meta = {
 	tags: ['flashs'],
 
@@ -25,10 +27,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		flashId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['flashId'],
-} as const;
+export const paramDef = flashDeleteParamDef;

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { inviteDeleteParamDef } from '@/server/rest/invite.js';
+
 export const meta = {
 	tags: ['meta'],
 
@@ -31,10 +33,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		inviteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['inviteId'],
-} as const;
+export const paramDef = inviteDeleteParamDef;

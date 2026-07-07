@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { importMutingParamDef } from '@/server/rest/import-jobs.js';
 
 export const meta = {
 	secure: true,
@@ -43,10 +44,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['fileId'],
-} as const;
+export const paramDef = importMutingParamDef;

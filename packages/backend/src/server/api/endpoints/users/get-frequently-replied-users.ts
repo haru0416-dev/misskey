@@ -4,6 +4,7 @@
  */
 
 import { maximum } from '@/misc/prelude/array.js';
+import { usersGetFrequentlyRepliedUsersParamDef } from '@/server/rest/user.js';
 
 export const meta = {
 	tags: ['users'],
@@ -41,11 +42,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = usersGetFrequentlyRepliedUsersParamDef;

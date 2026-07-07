@@ -59,7 +59,7 @@ export type HonoApiChannelsDependencies = {
 
 type HonoApiPackedChannel = Packed<'Channel'>;
 
-const channelsListParamDef = z.object({
+export const channelsListParamDef = z.object({
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
 	sinceDate: z.number().int().optional(),
@@ -75,7 +75,7 @@ type ChannelsListParams = {
 	limit: number;
 };
 
-const channelsSearchParamDef = z.object({
+export const channelsSearchParamDef = z.object({
 	query: z.string(),
 	type: z.enum(['nameAndDescription', 'nameOnly']).optional().default('nameAndDescription'),
 	sinceId: misskeyId().optional(),
@@ -90,9 +90,9 @@ type ChannelsSearchParams = ChannelsListParams & {
 	type: 'nameAndDescription' | 'nameOnly';
 };
 
-const emptyParamDef = z.object({});
+export const emptyParamDef = z.object({});
 
-const channelCreateParamDef = z.object({
+export const channelCreateParamDef = z.object({
 	name: z.string().min(1).max(128),
 	description: z.string().max(2048).nullable().optional(),
 	bannerId: misskeyId().nullable().optional(),
@@ -110,7 +110,7 @@ type ChannelCreateParams = {
 	allowRenoteToExternal?: boolean | null;
 };
 
-const channelUpdateParamDef = z.object({
+export const channelUpdateParamDef = z.object({
 	channelId: misskeyId(),
 	name: z.string().min(1).max(128).optional(),
 	description: z.string().max(2048).nullable().optional(),
@@ -134,7 +134,7 @@ type ChannelUpdateParams = {
 	allowRenoteToExternal?: boolean | null;
 };
 
-const channelFollowParamDef = z.object({
+export const channelFollowParamDef = z.object({
 	channelId: misskeyId(),
 });
 
@@ -142,7 +142,7 @@ type ChannelFollowParams = {
 	channelId: string;
 };
 
-const channelMuteCreateParamDef = z.object({
+export const channelMuteCreateParamDef = z.object({
 	channelId: misskeyId(),
 	expiresAt: z.number().int().nullable().optional(),
 });
@@ -152,7 +152,7 @@ type ChannelMuteCreateParams = {
 	expiresAt?: number | null;
 };
 
-const channelMuteDeleteParamDef = z.object({
+export const channelMuteDeleteParamDef = z.object({
 	channelId: misskeyId(),
 });
 
@@ -160,7 +160,7 @@ type ChannelMuteDeleteParams = {
 	channelId: string;
 };
 
-const channelShowParamDef = z.object({
+export const channelShowParamDef = z.object({
 	channelId: misskeyId(),
 });
 
@@ -168,7 +168,7 @@ type ChannelShowParams = {
 	channelId: string;
 };
 
-const channelTimelineParamDef = z.object({
+export const channelTimelineParamDef = z.object({
 	channelId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),

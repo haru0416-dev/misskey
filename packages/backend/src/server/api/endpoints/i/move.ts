@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { iMoveParamDef } from '@/server/rest/account-move.js';
 
 export const meta = {
 	tags: ['users'],
@@ -55,10 +56,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		moveToAccount: { type: 'string' },
-	},
-	required: ['moveToAccount'],
-} as const;
+export const paramDef = iMoveParamDef;

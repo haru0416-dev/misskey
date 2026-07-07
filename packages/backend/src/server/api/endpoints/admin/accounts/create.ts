@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { localUsernameSchema, passwordSchema } from '@/models/User.js';
+import { adminAccountCreateParamDef } from '@/server/rest/admin-accounts.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -44,12 +44,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		username: localUsernameSchema,
-		password: passwordSchema,
-		setupPassword: { type: 'string', nullable: true },
-	},
-	required: ['username', 'password'],
-} as const;
+export const paramDef = adminAccountCreateParamDef;

@@ -171,7 +171,7 @@ async function getUserForHonoApi(deps: HonoApiUsersListsDependencies, userId: st
 	return user;
 }
 
-const createParamDef = z.object({
+export const createParamDef = z.object({
 	name: z.string().min(1).max(100),
 });
 
@@ -201,7 +201,7 @@ export async function handleHonoApiUsersListsCreate(
 	return await packUserListByRowForHonoApi(deps, userList);
 }
 
-const createFromPublicParamDef = z.object({
+export const createFromPublicParamDef = z.object({
 	name: z.string().min(1).max(100),
 	listId: misskeyId(),
 });
@@ -263,7 +263,7 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	return await packUserListByRowForHonoApi(deps, userList);
 }
 
-const pullParamDef = z.object({
+export const pullParamDef = z.object({
 	listId: misskeyId(),
 	userId: misskeyId(),
 });
@@ -288,7 +288,7 @@ export async function handleHonoApiUsersListsPull(
 	await removeUserListMemberForHonoApi(deps, user, userList);
 }
 
-const pushParamDef = z.object({
+export const pushParamDef = z.object({
 	listId: misskeyId(),
 	userId: misskeyId(),
 });
@@ -332,7 +332,7 @@ export async function handleHonoApiUsersListsPush(
 	}
 }
 
-const getMembershipsParamDef = z.object({
+export const getMembershipsParamDef = z.object({
 	listId: misskeyId(),
 	forPublic: z.boolean().default(false),
 	limit: z.number().int().min(1).max(100).default(30),
@@ -376,7 +376,7 @@ export async function handleHonoApiUsersListsGetMemberships(
 	return await packUserListMembershipsManyForHonoApi(deps, memberships);
 }
 
-const updateMembershipParamDef = z.object({
+export const updateMembershipParamDef = z.object({
 	listId: misskeyId(),
 	userId: misskeyId(),
 	withReplies: z.boolean().optional(),

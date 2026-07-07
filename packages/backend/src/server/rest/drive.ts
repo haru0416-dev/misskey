@@ -37,7 +37,7 @@ export type HonoApiDriveDependencies = {
 
 export type HonoApiPackedDriveFolder = Packed<'DriveFolder'>;
 
-const driveFilesCheckExistenceParamDef = z.object({
+export const driveFilesCheckExistenceParamDef = z.object({
 	md5: z.string(),
 });
 
@@ -45,7 +45,7 @@ type DriveFilesCheckExistenceParams = {
 	md5: string;
 };
 
-const driveFoldersCreateParamDef = z.object({
+export const driveFoldersCreateParamDef = z.object({
 	name: z.string().max(200).default('Untitled'),
 	parentId: misskeyId().nullable().optional(),
 });
@@ -55,7 +55,7 @@ type DriveFoldersCreateParams = {
 	parentId?: string | null;
 };
 
-const driveFoldersParamDef = z.object({
+export const driveFoldersParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -73,7 +73,7 @@ type DriveFoldersParams = {
 	folderId: string | null;
 };
 
-const driveFoldersFindParamDef = z.object({
+export const driveFoldersFindParamDef = z.object({
 	name: z.string(),
 	parentId: misskeyId().nullable().default(null),
 });
@@ -83,7 +83,7 @@ type DriveFoldersFindParams = {
 	parentId: string | null;
 };
 
-const driveFoldersShowParamDef = z.object({
+export const driveFoldersShowParamDef = z.object({
 	folderId: misskeyId(),
 });
 
@@ -91,7 +91,7 @@ type DriveFoldersShowParams = {
 	folderId: string;
 };
 
-const driveFoldersUpdateParamDef = z.object({
+export const driveFoldersUpdateParamDef = z.object({
 	folderId: misskeyId(),
 	name: z.string().max(200).optional(),
 	parentId: misskeyId().nullable().optional(),
@@ -103,7 +103,7 @@ type DriveFoldersUpdateParams = {
 	parentId?: string | null;
 };
 
-const driveFoldersDeleteParamDef = z.object({
+export const driveFoldersDeleteParamDef = z.object({
 	folderId: misskeyId(),
 });
 

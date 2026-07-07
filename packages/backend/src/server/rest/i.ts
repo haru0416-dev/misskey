@@ -23,7 +23,7 @@ export type HonoApiIDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 };
 
-const iSigninHistoryParamDef = z.object({
+export const iSigninHistoryParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

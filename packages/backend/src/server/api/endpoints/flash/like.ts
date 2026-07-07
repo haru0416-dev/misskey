@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { flashParamDef } from '@/server/rest/favorites.js';
+
 export const meta = {
 	tags: ['flash'],
 
@@ -33,10 +35,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		flashId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['flashId'],
-} as const;
+export const paramDef = flashParamDef;

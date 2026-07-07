@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { notesFeaturedParamDef } from '@/server/rest/notes.js';
+
 export const meta = {
 	tags: ['notes'],
 
@@ -21,12 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		untilId: { type: 'string', format: 'misskey:id' },
-		channelId: { type: 'string', nullable: true, format: 'misskey:id' },
-	},
-	required: [],
-} as const;
+export const paramDef = notesFeaturedParamDef;

@@ -577,7 +577,7 @@ export async function packUserDetailedManyForHonoApi(
 	return result;
 }
 
-const pinnedUsersParamDef = z.object({});
+export const pinnedUsersParamDef = z.object({});
 
 export async function handleHonoApiPinnedUsers(
 	deps: UserPackingDependencies,
@@ -688,7 +688,7 @@ export async function handleHonoApiUsersShow(
 	return await packUserDetailedForHonoApi(deps, user, me);
 }
 
-const usersRelationParamDef = z.object({
+export const usersRelationParamDef = z.object({
 	userId: z.union([misskeyId(), z.array(misskeyId())]),
 });
 
@@ -875,7 +875,7 @@ async function searchUsersForHonoApi(
 	return users;
 }
 
-const usersSearchParamDef = z.object({
+export const usersSearchParamDef = z.object({
 	query: z.string(),
 	offset: z.number().int().default(0),
 	limit: z.number().int().min(1).max(100).default(10),
@@ -1014,7 +1014,7 @@ const usersSearchByUsernameAndHostCommon = {
 	detail: z.boolean().default(true),
 };
 
-const usersSearchByUsernameAndHostParamDef = z.union([
+export const usersSearchByUsernameAndHostParamDef = z.union([
 	z.object({ username: z.string().nullable(), ...usersSearchByUsernameAndHostCommon }),
 	z.object({ host: z.string().nullable(), ...usersSearchByUsernameAndHostCommon }),
 ]);
@@ -1056,7 +1056,7 @@ export async function handleHonoApiUsersSearchByUsernameAndHost(
 		: await packUserLiteManyForHonoApi(deps, ids);
 }
 
-const usersRecommendationParamDef = z.object({
+export const usersRecommendationParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	offset: z.number().int().default(0),
 });
@@ -1081,7 +1081,7 @@ export async function handleHonoApiUsersRecommendation(
 	return await packUserDetailedManyForHonoApi(deps, users, me);
 }
 
-const usersGetFrequentlyRepliedUsersParamDef = z.object({
+export const usersGetFrequentlyRepliedUsersParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
 });
@@ -1125,7 +1125,7 @@ export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
 	})));
 }
 
-const usersParamDef = z.object({
+export const usersParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	offset: z.number().int().default(0),
 	sort: z.enum(['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt']).optional(),
@@ -1163,7 +1163,7 @@ export async function handleHonoApiUsers(
 	return await packUserDetailedManyForHonoApi(deps, users, me);
 }
 
-const usersUpdateMemoParamDef = z.object({
+export const usersUpdateMemoParamDef = z.object({
 	userId: misskeyId(),
 	memo: z.string().nullable(),
 });

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { usersUpdateMemoParamDef } from '@/server/rest/user.js';
+
 export const meta = {
 	tags: ['account'],
 
@@ -19,15 +21,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		memo: {
-			type: 'string',
-			nullable: true,
-			description: 'A personal memo for the target user. If null or empty, delete the memo.',
-		},
-	},
-	required: ['userId', 'memo'],
-} as const;
+export const paramDef = usersUpdateMemoParamDef;

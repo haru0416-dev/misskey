@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminUpdateAbuseUserReportParamDef } from '@/server/rest/admin-abuse-reports.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -21,11 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		reportId: { type: 'string', format: 'misskey:id' },
-		moderationNote: { type: 'string' },
-	},
-	required: ['reportId'],
-} as const;
+export const paramDef = adminUpdateAbuseUserReportParamDef;

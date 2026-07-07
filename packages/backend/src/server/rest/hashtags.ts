@@ -28,9 +28,9 @@ export type HonoApiHashtagDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
 };
 
-const hashtagsTrendParamDef = z.object({});
+export const hashtagsTrendParamDef = z.object({});
 
-const hashtagsListParamDef = z.object({
+export const hashtagsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	attachedToUserOnly: z.boolean().optional().default(false),
 	attachedToLocalUserOnly: z.boolean().optional().default(false),
@@ -38,13 +38,13 @@ const hashtagsListParamDef = z.object({
 	sort: z.enum(['+mentionedUsers', '-mentionedUsers', '+mentionedLocalUsers', '-mentionedLocalUsers', '+mentionedRemoteUsers', '-mentionedRemoteUsers', '+attachedUsers', '-attachedUsers', '+attachedLocalUsers', '-attachedLocalUsers', '+attachedRemoteUsers', '-attachedRemoteUsers']),
 });
 
-const hashtagsSearchParamDef = z.object({
+export const hashtagsSearchParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	query: z.string(),
 	offset: z.number().int().optional().default(0),
 });
 
-const hashtagsShowParamDef = z.object({
+export const hashtagsShowParamDef = z.object({
 	tag: z.string(),
 });
 
@@ -206,7 +206,7 @@ export async function handleHonoApiHashtagsShow(
 	return packHonoApiHashtag(hashtag);
 }
 
-const hashtagsUsersParamDef = z.object({
+export const hashtagsUsersParamDef = z.object({
 	tag: z.string(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	offset: z.number().int().optional().default(0),

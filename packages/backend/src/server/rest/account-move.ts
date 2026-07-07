@@ -62,7 +62,7 @@ function iMoveAlreadyMovedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Account was already moved to another account.', code: 'ALREADY_MOVED', id: 'b234a14e-9ebe-4581-8000-074b3c215962' });
 }
 
-const iMoveParamDef = z.object({
+export const iMoveParamDef = z.object({
 	moveToAccount: z.string(),
 });
 

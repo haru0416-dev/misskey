@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { captchaErrorCodes, CaptchaService, supportedCaptchaProviders } from '@/core/CaptchaService.js';
+import { captchaSaveParamDef } from '@/server/rest/captcha.js';
 
 export const meta = {
 	tags: ['admin', 'captcha'],
@@ -54,25 +54,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		provider: {
-			type: 'string',
-			enum: supportedCaptchaProviders,
-		},
-		captchaResult: {
-			type: 'string', nullable: true,
-		},
-		sitekey: {
-			type: 'string', nullable: true,
-		},
-		secret: {
-			type: 'string', nullable: true,
-		},
-		instanceUrl: {
-			type: 'string', nullable: true,
-		},
-	},
-	required: ['provider'],
-} as const;
+export const paramDef = captchaSaveParamDef;

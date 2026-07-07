@@ -4,6 +4,7 @@
  */
 
 import { CaptchaService, supportedCaptchaProviders } from '@/core/CaptchaService.js';
+import { captchaCurrentParamDef } from '@/server/rest/captcha.js';
 
 export const meta = {
 	tags: ['admin', 'captcha'],
@@ -54,4 +55,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {} as const;
+export const paramDef = captchaCurrentParamDef;

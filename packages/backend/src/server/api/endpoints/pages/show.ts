@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { pagesShowParamDef } from '@/server/rest/pages.js';
+
 export const meta = {
 	tags: ['pages'],
 
@@ -23,22 +25,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	anyOf: [
-		{
-			type: 'object',
-			properties: {
-				pageId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['pageId'],
-		},
-		{
-			type: 'object',
-			properties: {
-				name: { type: 'string' },
-				username: { type: 'string' },
-			},
-			required: ['name', 'username'],
-		},
-	],
-} as const;
+export const paramDef = pagesShowParamDef;

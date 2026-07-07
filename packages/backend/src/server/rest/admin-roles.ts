@@ -51,13 +51,13 @@ export type HonoApiAdminRoleDependencies = {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const adminRolesAssignParamDef = z.object({
+export const adminRolesAssignParamDef = z.object({
 	roleId: misskeyId(),
 	userId: misskeyId(),
 	expiresAt: z.number().int().nullable().optional(),
 });
 
-const adminRolesCreateParamDef = z.object({
+export const adminRolesCreateParamDef = z.object({
 	name: z.string(),
 	description: z.string(),
 	color: z.string().nullable(),
@@ -75,22 +75,22 @@ const adminRolesCreateParamDef = z.object({
 	policies: z.record(z.string(), z.unknown()),
 });
 
-const adminRolesListParamDef = z.object({});
+export const adminRolesListParamDef = z.object({});
 
-const adminRolesDeleteParamDef = z.object({
+export const adminRolesDeleteParamDef = z.object({
 	roleId: misskeyId(),
 });
 
-const adminRolesShowParamDef = z.object({
+export const adminRolesShowParamDef = z.object({
 	roleId: misskeyId(),
 });
 
-const adminRolesUnassignParamDef = z.object({
+export const adminRolesUnassignParamDef = z.object({
 	roleId: misskeyId(),
 	userId: misskeyId(),
 });
 
-const adminRolesUpdateParamDef = z.object({
+export const adminRolesUpdateParamDef = z.object({
 	roleId: misskeyId(),
 	name: z.string().optional(),
 	description: z.string().optional(),
@@ -109,11 +109,11 @@ const adminRolesUpdateParamDef = z.object({
 	policies: z.record(z.string(), z.unknown()).optional(),
 });
 
-const adminRolesUpdateDefaultPoliciesParamDef = z.object({
+export const adminRolesUpdateDefaultPoliciesParamDef = z.object({
 	policies: z.record(z.string(), z.unknown()),
 });
 
-const adminRolesUsersParamDef = z.object({
+export const adminRolesUsersParamDef = z.object({
 	roleId: misskeyId(),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

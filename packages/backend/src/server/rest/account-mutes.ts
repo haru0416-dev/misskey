@@ -28,16 +28,16 @@ export type HonoApiAccountMuteDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
 };
 
-const muteCreateParamDef = z.object({
+export const muteCreateParamDef = z.object({
 	userId: misskeyId(),
 	expiresAt: z.number().int().nullable().optional(),
 });
 
-const userIdParamDef = z.object({
+export const userIdParamDef = z.object({
 	userId: misskeyId(),
 });
 
-const muteListParamDef = z.object({
+export const muteListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(30),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

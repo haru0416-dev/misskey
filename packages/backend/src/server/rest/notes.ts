@@ -58,7 +58,7 @@ export type HonoApiNotesDependencies = HonoApiNoteDependencies & HonoApiNotifica
 	redisForTimelines?: Redis.Redis;
 };
 
-const notesShowParamDef = z.object({
+export const notesShowParamDef = z.object({
 	noteId: misskeyId(),
 });
 
@@ -93,7 +93,7 @@ function notesShowContentRestrictedByServerError(): HonoApiError {
 	});
 }
 
-const noteIdPaginationParamDef = z.object({
+export const noteIdPaginationParamDef = z.object({
 	noteId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
@@ -148,7 +148,7 @@ function notesConversationNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'e1035875-9551-45ec-afa8-1ded1fcb53c8' });
 }
 
-const notesConversationParamDef = z.object({
+export const notesConversationParamDef = z.object({
 	noteId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	offset: z.number().int().optional().default(0),
@@ -197,7 +197,7 @@ export async function handleHonoApiNotesConversation(
 	return await packNoteManyForHonoApi(deps, conversation.filter(n => n != null), me);
 }
 
-const notesMentionsParamDef = z.object({
+export const notesMentionsParamDef = z.object({
 	following: z.boolean().optional().default(false),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
@@ -285,7 +285,7 @@ export async function handleHonoApiNotesRenotes(
 	return await packNoteManyForHonoApi(deps, renotes, me);
 }
 
-const noteIdOnlyParamDef = z.object({
+export const noteIdOnlyParamDef = z.object({
 	noteId: misskeyId(),
 });
 
@@ -441,7 +441,7 @@ function notesGlobalTimelineDisabledError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Global timeline has been disabled.', code: 'GTL_DISABLED', id: '0332fc13-6ab2-4427-ae80-a9fadffd1a6b' });
 }
 
-const notesGlobalTimelineParamDef = z.object({
+export const notesGlobalTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 	withRenotes: z.boolean().optional().default(true),
 	limit: z.number().int().min(1).max(100).optional().default(10),
@@ -486,7 +486,7 @@ export async function handleHonoApiNotesGlobalTimeline(
 	return await packNoteManyForHonoApi(deps, timeline, me);
 }
 
-const notesParamDef = z.object({
+export const notesParamDef = z.object({
 	local: z.boolean().optional().default(false),
 	reply: z.boolean().optional(),
 	renote: z.boolean().optional(),
@@ -542,7 +542,7 @@ function notesLocalTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dd9c8400-1cb5-4eef-8a31-200c5f933793' });
 }
 
-const notesLocalTimelineParamDef = z.object({
+export const notesLocalTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 	withRenotes: z.boolean().optional().default(true),
 	withReplies: z.boolean().optional().default(false),
@@ -631,7 +631,7 @@ function notesHybridTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dfaa3eb7-8002-4cb7-bcc4-1095df46656f' });
 }
 
-const notesHybridTimelineParamDef = z.object({
+export const notesHybridTimelineParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -772,7 +772,7 @@ async function getNotesFeaturedRanking(
 let globalNotesRankingCache: string[] = [];
 let globalNotesRankingCacheLastFetchedAt = 0;
 
-const notesFeaturedParamDef = z.object({
+export const notesFeaturedParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	untilId: misskeyId().optional(),
 	channelId: misskeyId().nullable().optional(),
@@ -872,7 +872,7 @@ function notesSearchUnavailableError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Search of notes unavailable.', code: 'UNAVAILABLE', id: '0b44998d-77aa-4427-80d0-d2c9b8523011' });
 }
 
-const notesSearchParamDef = z.object({
+export const notesSearchParamDef = z.object({
 	query: z.string(),
 	rangeStartAt: z.number().int().nullable().optional(),
 	rangeEndAt: z.number().int().nullable().optional(),
@@ -954,7 +954,7 @@ function isValidQueryBranch(query: unknown): query is string[][] {
 	);
 }
 
-const notesSearchByTagParamDef = z.object({
+export const notesSearchByTagParamDef = z.object({
 	tag: z.unknown().optional(),
 	query: z.unknown().optional(),
 	reply: z.boolean().nullable().optional().default(null),
@@ -975,6 +975,27 @@ const notesSearchByTagParamDef = z.object({
 		});
 	}
 });
+
+// OpenAPI/misskey-js コード生成専用。上の superRefine (tag/query の anyOf 判定) は
+// JSON Schema 化できないため、docs 用には元 ajv 版と同じ allOf+anyOf 構造を union+intersection で表現する。
+const notesSearchByTagCommonFieldsDocsSchema = z.object({
+	reply: z.boolean().nullable().optional().default(null),
+	renote: z.boolean().nullable().optional().default(null),
+	withFiles: z.boolean().optional().default(false),
+	poll: z.boolean().nullable().optional().default(null),
+	sinceId: misskeyId().optional(),
+	untilId: misskeyId().optional(),
+	sinceDate: z.number().int().optional(),
+	untilDate: z.number().int().optional(),
+	limit: z.number().int().min(1).max(100).optional().default(10),
+});
+export const notesSearchByTagDocsParamDef = z.intersection(
+	z.union([
+		z.object({ tag: z.string().min(1) }),
+		z.object({ query: z.array(z.array(z.string().min(1)).min(1)).min(1) }),
+	]),
+	notesSearchByTagCommonFieldsDocsSchema,
+);
 
 type NotesSearchByTagParams = {
 	tag?: string;
@@ -1033,7 +1054,7 @@ export async function handleHonoApiNotesSearchByTag(
 	}
 }
 
-const notesShowPartialBulkParamDef = z.object({
+export const notesShowPartialBulkParamDef = z.object({
 	noteIds: z.array(misskeyId()).min(1).max(100),
 });
 
@@ -1050,7 +1071,7 @@ export async function handleHonoApiNotesShowPartialBulk(
 	return await fetchNoteDiffsForHonoApi(deps, notes);
 }
 
-const notesTimelineParamDef = z.object({
+export const notesTimelineParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -1141,7 +1162,7 @@ function notesUserListTimelineNoSuchListError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such list.', code: 'NO_SUCH_LIST', id: '8fb1fbd5-e476-4c37-9fb0-43d55b63a2ff' });
 }
 
-const notesUserListTimelineParamDef = z.object({
+export const notesUserListTimelineParamDef = z.object({
 	listId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
@@ -1202,7 +1223,7 @@ export async function handleHonoApiNotesUserListTimeline(
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
 
-const notesPollsRecommendationParamDef = z.object({
+export const notesPollsRecommendationParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	offset: z.number().int().optional().default(0),
 	excludeChannels: z.boolean().optional().default(false),

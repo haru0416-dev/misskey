@@ -44,9 +44,9 @@ export type HonoApiUserWebhook = {
 	latestStatus: number | null;
 };
 
-const webhooksListParamDef = z.object({});
+export const webhooksListParamDef = z.object({});
 
-const webhooksCreateParamDef = z.object({
+export const webhooksCreateParamDef = z.object({
 	name: z.string().min(1).max(100),
 	url: z.string().min(1).max(1024),
 	secret: z.string().max(1024).default(''),
@@ -60,15 +60,15 @@ type WebhooksCreateParams = {
 	on: WebhookEventTypes[];
 };
 
-const webhooksShowParamDef = z.object({
+export const webhooksShowParamDef = z.object({
 	webhookId: misskeyId(),
 });
 
-const webhooksDeleteParamDef = z.object({
+export const webhooksDeleteParamDef = z.object({
 	webhookId: misskeyId(),
 });
 
-const webhooksUpdateParamDef = z.object({
+export const webhooksUpdateParamDef = z.object({
 	webhookId: misskeyId(),
 	name: z.string().min(1).max(100).optional(),
 	url: z.string().min(1).max(1024).optional(),
@@ -223,7 +223,7 @@ export async function handleHonoApiIWebhooksCreate(
 	return packUserWebhook(webhook);
 }
 
-const webhooksTestParamDef = z.object({
+export const webhooksTestParamDef = z.object({
 	webhookId: misskeyId(),
 	type: z.enum(webhookEventTypes),
 	override: z.object({

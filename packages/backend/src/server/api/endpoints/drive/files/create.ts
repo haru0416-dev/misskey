@@ -4,7 +4,7 @@
  */
 
 import ms from 'ms';
-import { DB_MAX_IMAGE_COMMENT_LENGTH } from '@/const.js';
+import { driveFilesCreateParamDef } from '@/server/rest/drive-file-upload.js';
 
 export const meta = {
 	tags: ['drive'],
@@ -64,14 +64,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		folderId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-		name: { type: 'string', nullable: true, default: null },
-		comment: { type: 'string', nullable: true, maxLength: DB_MAX_IMAGE_COMMENT_LENGTH, default: null },
-		isSensitive: { type: 'boolean', default: false },
-		force: { type: 'boolean', default: false },
-	},
-	required: [],
-} as const;
+export const paramDef = driveFilesCreateParamDef;

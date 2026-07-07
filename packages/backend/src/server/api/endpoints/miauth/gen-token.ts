@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { miauthGenTokenParamDef } from '@/server/rest/miauth.js';
+
 export const meta = {
 	tags: ['auth'],
 
@@ -22,16 +24,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		session: { type: 'string', nullable: true },
-		name: { type: 'string', nullable: true },
-		description: { type: 'string', nullable: true },
-		iconUrl: { type: 'string', nullable: true },
-		permission: { type: 'array', uniqueItems: true, items: {
-			type: 'string',
-		} },
-	},
-	required: ['session', 'permission'],
-} as const;
+export const paramDef = miauthGenTokenParamDef;

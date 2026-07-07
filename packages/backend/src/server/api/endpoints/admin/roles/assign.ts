@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminRolesAssignParamDef } from '@/server/rest/admin-roles.js';
+
 export const meta = {
 	tags: ['admin', 'role'],
 
@@ -31,18 +33,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		roleId: { type: 'string', format: 'misskey:id' },
-		userId: { type: 'string', format: 'misskey:id' },
-		expiresAt: {
-			type: 'integer',
-			nullable: true,
-		},
-	},
-	required: [
-		'roleId',
-		'userId',
-	],
-} as const;
+export const paramDef = adminRolesAssignParamDef;

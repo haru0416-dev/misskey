@@ -43,7 +43,7 @@ function notesDeleteAccessDeniedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9' });
 }
 
-const notesDeleteParamDef = z.object({
+export const notesDeleteParamDef = z.object({
 	noteId: misskeyId(),
 });
 
@@ -136,7 +136,7 @@ function notesUnrenoteNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'efd4a259-2442-496b-8dd7-b255aa1a160f' });
 }
 
-const notesUnrenoteParamDef = z.object({
+export const notesUnrenoteParamDef = z.object({
 	noteId: misskeyId(),
 });
 

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { endpointParamDef } from '@/server/rest/endpoint-info.js';
+
 // 循環参照を回避
 let endpointsPromise: Promise<typeof import('../endpoints.js').default> | undefined;
 
@@ -33,10 +35,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		endpoint: { type: 'string' },
-	},
-	required: ['endpoint'],
-} as const;
+export const paramDef = endpointParamDef;

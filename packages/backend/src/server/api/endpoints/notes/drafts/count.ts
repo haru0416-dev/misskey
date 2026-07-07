@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { countNoteDraftsParamDef } from '@/server/rest/note-drafts.js';
+
 export const meta = {
 	tags: ['notes', 'drafts'],
 
@@ -22,9 +24,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-	},
-	required: [],
-} as const;
+export const paramDef = countNoteDraftsParamDef;

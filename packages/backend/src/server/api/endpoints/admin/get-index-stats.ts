@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminStatsParamDef } from '@/server/rest/admin-stats.js';
+
 export const meta = {
 	requireCredential: true,
 	requireAdmin: true,
@@ -21,8 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = adminStatsParamDef;

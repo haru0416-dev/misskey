@@ -28,7 +28,7 @@ export type HonoApiPasswordResetDependencies = {
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
 
-const requestResetPasswordParamDef = z.object({
+export const requestResetPasswordParamDef = z.object({
 	username: z.string(),
 	email: z.string(),
 });
@@ -38,7 +38,7 @@ type RequestResetPasswordParams = {
 	email: string;
 };
 
-const resetPasswordParamDef = z.object({
+export const resetPasswordParamDef = z.object({
 	token: z.string(),
 	password: z.string(),
 });

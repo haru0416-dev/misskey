@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { authSessionGenerateParamDef } from '@/server/rest/auth-session.js';
+
 export const meta = {
 	tags: ['auth'],
 
@@ -33,10 +35,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		appSecret: { type: 'string' },
-	},
-	required: ['appSecret'],
-} as const;
+export const paramDef = authSessionGenerateParamDef;

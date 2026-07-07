@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { i2faPasswordLessParamDef } from '@/server/rest/i-2fa.js';
+
 export const meta = {
 	requireCredential: true,
 
@@ -17,10 +19,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		value: { type: 'boolean' },
-	},
-	required: ['value'],
-} as const;
+export const paramDef = i2faPasswordLessParamDef;

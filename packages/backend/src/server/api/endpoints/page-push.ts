@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { pagePushParamDef } from '@/server/rest/page-push.js';
+
 export const meta = {
 	requireCredential: true,
 	secure: true,
@@ -16,12 +18,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		pageId: { type: 'string', format: 'misskey:id' },
-		event: { type: 'string' },
-		var: {},
-	},
-	required: ['pageId', 'event'],
-} as const;
+export const paramDef = pagePushParamDef;

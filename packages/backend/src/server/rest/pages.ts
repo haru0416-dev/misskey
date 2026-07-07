@@ -172,7 +172,7 @@ export async function packPageLikeForHonoApi(
 	};
 }
 
-const pagesCreateParamDef = z.object({
+export const pagesCreateParamDef = z.object({
 	title: z.string(),
 	name: z.string().min(1).regex(pageNamePattern),
 	summary: z.string().nullable().optional(),
@@ -242,7 +242,7 @@ export async function handleHonoApiPagesCreate(
 	return await packPageForHonoApi(deps, pageEntity);
 }
 
-const pagesUpdateParamDef = z.object({
+export const pagesUpdateParamDef = z.object({
 	pageId: misskeyId(),
 	title: z.string().optional(),
 	name: z.string().min(1).regex(pageNamePattern).optional(),
@@ -327,7 +327,7 @@ export async function handleHonoApiPagesUpdate(
 	}
 }
 
-const pagesDeleteParamDef = z.object({
+export const pagesDeleteParamDef = z.object({
 	pageId: misskeyId(),
 });
 
@@ -392,7 +392,7 @@ export async function handleHonoApiPagesDelete(
  * 分岐自体の可否には影響しない)。z.union はまさに同じ「いずれかの分岐が成功すればOK」という評価をする
  * ため、素直に anyOf の等価表現として使える (ajv/zod 突き合わせ検証で確認済み)。
  */
-const pagesShowParamDef = z.union([
+export const pagesShowParamDef = z.union([
 	z.object({ pageId: misskeyId() }),
 	z.object({ name: z.string(), username: z.string() }),
 ]);
@@ -423,7 +423,7 @@ export async function handleHonoApiPagesShow(
 	return await packPageForHonoApi(deps, pageEntity, me);
 }
 
-const pagesFeaturedParamDef = z.object({});
+export const pagesFeaturedParamDef = z.object({});
 
 export async function handleHonoApiPagesFeatured(
 	deps: HonoApiPageDependencies,
@@ -437,7 +437,7 @@ export async function handleHonoApiPagesFeatured(
 	return await packPageManyForHonoApi(deps, pages, me);
 }
 
-const iPagesParamDef = z.object({
+export const iPagesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -471,7 +471,7 @@ export async function handleHonoApiIPages(
 	return await packPageManyForHonoApi(deps, pages);
 }
 
-const iPageLikesParamDef = z.object({
+export const iPageLikesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -536,7 +536,7 @@ export async function handleHonoApiIPageLikes(
 	return await Promise.all(likesWithPages.map(like => packPageLikeForHonoApi(deps, like, me)));
 }
 
-const usersPagesParamDef = z.object({
+export const usersPagesParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),

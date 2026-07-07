@@ -4,6 +4,7 @@
  */
 
 import { QUEUE_TYPES, QueueService } from '@/core/QueueService.js';
+import { adminQueueSelectParamDef } from '@/server/rest/admin-queue.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -125,10 +126,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		queue: { type: 'string', enum: QUEUE_TYPES },
-	},
-	required: ['queue'],
-} as const;
+export const paramDef = adminQueueSelectParamDef;

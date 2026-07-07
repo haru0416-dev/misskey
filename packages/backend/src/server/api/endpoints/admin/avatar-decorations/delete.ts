@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminAvatarDecorationsDeleteParamDef } from '@/server/rest/admin-avatar-decorations.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -13,10 +15,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		id: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['id'],
-} as const;
+export const paramDef = adminAvatarDecorationsDeleteParamDef;

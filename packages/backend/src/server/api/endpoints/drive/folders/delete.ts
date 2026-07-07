@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { driveFoldersDeleteParamDef } from '@/server/rest/drive.js';
+
 export const meta = {
 	tags: ['drive'],
 
@@ -25,10 +27,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		folderId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['folderId'],
-} as const;
+export const paramDef = driveFoldersDeleteParamDef;

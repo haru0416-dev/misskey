@@ -22,7 +22,7 @@ type TableStatsResponse = Record<string, {
 	size: number;
 }>;
 
-const adminStatsParamDef = z.object({});
+export const adminStatsParamDef = z.object({});
 
 export async function handleHonoApiAdminGetIndexStats(
 	deps: HonoApiAdminStatsDependencies,

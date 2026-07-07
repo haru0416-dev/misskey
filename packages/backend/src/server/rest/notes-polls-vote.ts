@@ -48,7 +48,7 @@ function pollsVoteYouHaveBeenBlockedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'You cannot vote this poll because you have been blocked by this user.', code: 'YOU_HAVE_BEEN_BLOCKED', id: '85a5377e-b1e9-4617-b0b9-5bea73331e49' });
 }
 
-const notesPollsVoteParamDef = z.object({
+export const notesPollsVoteParamDef = z.object({
 	noteId: misskeyId(),
 	choice: z.number().int(),
 });

@@ -598,7 +598,7 @@ export async function addDriveFileForHonoApi(
 	return file;
 }
 
-const driveFilesCreateParamDef = z.object({
+export const driveFilesCreateParamDef = z.object({
 	folderId: misskeyId().nullable().optional().default(null),
 	name: z.string().nullable().optional().default(null),
 	comment: z.string().max(DB_MAX_IMAGE_COMMENT_LENGTH).nullable().optional().default(null),
@@ -684,7 +684,7 @@ export async function handleHonoApiDriveFilesCreate(
 	}
 }
 
-const driveFilesUploadFromUrlParamDef = z.object({
+export const driveFilesUploadFromUrlParamDef = z.object({
 	url: z.string(),
 	folderId: misskeyId().nullable().optional().default(null),
 	isSensitive: z.boolean().optional().default(false),

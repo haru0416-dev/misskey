@@ -722,7 +722,7 @@ export async function validateAlsoKnownAsForHonoApi(
 	return resultUser;
 }
 
-const federationUpdateRemoteUserParamDef = z.object({
+export const federationUpdateRemoteUserParamDef = z.object({
 	userId: misskeyId(),
 });
 

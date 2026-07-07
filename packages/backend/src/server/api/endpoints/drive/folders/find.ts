@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { driveFoldersFindParamDef } from '@/server/rest/drive.js';
+
 export const meta = {
 	tags: ['drive'],
 
@@ -21,11 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string' },
-		parentId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: ['name'],
-} as const;
+export const paramDef = driveFoldersFindParamDef;

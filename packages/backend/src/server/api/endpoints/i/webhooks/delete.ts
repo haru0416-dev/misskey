@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { webhooksDeleteParamDef } from '@/server/rest/webhooks.js';
+
 export const meta = {
 	tags: ['webhooks'],
 
@@ -19,12 +21,6 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['webhookId'],
-} as const;
+export const paramDef = webhooksDeleteParamDef;
 
 // TODO: ロジックをサービスに切り出す

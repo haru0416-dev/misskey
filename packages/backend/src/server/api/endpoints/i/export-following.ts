@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { exportFollowingParamDef } from '@/server/rest/export-jobs.js';
 
 export const meta = {
 	secure: true,
@@ -14,11 +15,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		excludeMuting: { type: 'boolean', default: false },
-		excludeInactive: { type: 'boolean', default: false },
-	},
-	required: [],
-} as const;
+export const paramDef = exportFollowingParamDef;

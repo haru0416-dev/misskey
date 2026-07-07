@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { i2faKeyDoneParamDef } from '@/server/rest/i-2fa.js';
+
 export const meta = {
 	requireCredential: true,
 
@@ -33,15 +35,6 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		token: { type: 'string', nullable: true },
-		name: { type: 'string', minLength: 1, maxLength: 30 },
-		credential: { type: 'object' },
-	},
-	required: ['password', 'name', 'credential'],
-} as const;
+export const paramDef = i2faKeyDoneParamDef;
 
 // eslint-disable-next-line import/no-default-export

@@ -4,6 +4,7 @@
  */
 
 //import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { adminEmojiListParamDef } from '@/server/rest/emojis.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -22,15 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string', nullable: true, default: null },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: [],
-} as const;
+export const paramDef = adminEmojiListParamDef;

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminUserSuspensionParamDef } from '@/server/rest/admin-user-suspension.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,10 +13,4 @@ export const meta = {
 	kind: 'write:admin:unsuspend-user',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = adminUserSuspensionParamDef;

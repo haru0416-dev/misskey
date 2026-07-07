@@ -28,15 +28,15 @@ import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
 
-const adminAbuseReportNotificationRecipientListParamDef = z.object({
+export const adminAbuseReportNotificationRecipientListParamDef = z.object({
 	method: z.array(z.enum(['email', 'webhook'])).optional(),
 });
 
-const adminAbuseReportNotificationRecipientShowParamDef = z.object({
+export const adminAbuseReportNotificationRecipientShowParamDef = z.object({
 	id: misskeyId(),
 });
 
-const adminAbuseReportNotificationRecipientCreateParamDef = z.object({
+export const adminAbuseReportNotificationRecipientCreateParamDef = z.object({
 	isActive: z.boolean(),
 	name: z.string().min(1).max(255),
 	method: z.enum(['email', 'webhook']),
@@ -44,7 +44,7 @@ const adminAbuseReportNotificationRecipientCreateParamDef = z.object({
 	systemWebhookId: misskeyId().optional(),
 });
 
-const adminAbuseReportNotificationRecipientUpdateParamDef = z.object({
+export const adminAbuseReportNotificationRecipientUpdateParamDef = z.object({
 	id: misskeyId(),
 	isActive: z.boolean(),
 	name: z.string().min(1).max(255),
@@ -53,7 +53,7 @@ const adminAbuseReportNotificationRecipientUpdateParamDef = z.object({
 	systemWebhookId: misskeyId().optional(),
 });
 
-const adminAbuseReportNotificationRecipientDeleteParamDef = z.object({
+export const adminAbuseReportNotificationRecipientDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 

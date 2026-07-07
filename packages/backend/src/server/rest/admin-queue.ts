@@ -19,22 +19,22 @@ export type HonoApiAdminQueueDependencies = AdminQueueDependencies & {
 
 const adminQueueNoParamsDef = z.object({});
 
-const adminQueueSelectParamDef = z.object({
+export const adminQueueSelectParamDef = z.object({
 	queue: z.enum(QUEUE_TYPES),
 });
 
-const adminQueueClearParamDef = z.object({
+export const adminQueueClearParamDef = z.object({
 	queue: z.enum(QUEUE_TYPES),
 	state: z.enum(['*', 'completed', 'wait', 'active', 'paused', 'prioritized', 'delayed', 'failed']),
 });
 
-const adminQueueJobsParamDef = z.object({
+export const adminQueueJobsParamDef = z.object({
 	queue: z.enum(QUEUE_TYPES),
 	state: z.array(z.enum(['active', 'wait', 'delayed', 'completed', 'failed', 'paused'])),
 	search: z.string().optional(),
 });
 
-const adminQueueJobParamDef = z.object({
+export const adminQueueJobParamDef = z.object({
 	queue: z.enum(QUEUE_TYPES),
 	jobId: z.string(),
 });

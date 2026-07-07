@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { metaParamDef } from '@/server/rest/meta.js';
+
 export const meta = {
 	tags: ['meta'],
 
@@ -17,10 +19,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		detail: { type: 'boolean', default: true },
-	},
-	required: [],
-} as const;
+export const paramDef = metaParamDef;

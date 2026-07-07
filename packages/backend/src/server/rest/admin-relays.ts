@@ -24,9 +24,9 @@ export type HonoApiAdminRelaysDependencies = {
 	deliverQueue: DeliverQueue;
 };
 
-const adminRelaysListParamDef = z.object({});
+export const adminRelaysListParamDef = z.object({});
 
-const adminRelaysWriteParamDef = z.object({
+export const adminRelaysWriteParamDef = z.object({
 	inbox: z.string(),
 });
 
