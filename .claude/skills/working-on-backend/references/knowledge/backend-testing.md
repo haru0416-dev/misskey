@@ -41,15 +41,17 @@ cp .github/misskey/test.yml .config/test.yml
 - 配置: `packages/backend/test/` 配下
 - カバレッジ: `bun run --bun --filter backend test-and-coverage`
 
-### e2e フルスイートの既知の落とし穴 (Bun ランタイムで vitest を起動すると壊れる)
+### unit / e2e フルスイートの既知の落とし穴 (Bun ランタイムで vitest を起動すると壊れる)
 
-`test:e2e` / `test-and-coverage:e2e` は最後のテスト実行ステップだけ `bun` ではなく `node ./scripts/run_e2e.js` で行っている。これは意図的な回避策 (2026-07-07 対応):
+`test` / `test:e2e` / `test-and-coverage(:e2e)` は最後のテスト実行ステップを `scripts/run_unit.js` / `scripts/run_e2e.js` 経由で行っている。これは意図的な回避策 (2026-07-07 対応):
 
-- `test/e2e/*.ts` が28ファイル(現状の全件)ある状態で `vitest --config vitest.config.e2e.ts` を **Bun ランタイムで** 実行すると (`include` glob 経由でも、全ファイルパスを明示的にCLI引数で渡しても同様)、`TypeError: undefined is not an object (evaluating 'z.string')` (`src/models/User.ts` の `import { z } from 'zod'` がロード時点で未初期化) が発生し、**全テストファイルが即座に (実行時間 約11秒で) 巻き添えで失敗する**。
-- 同じコマンドを **Node.js で** 実行すると再現しない。ファイル数を21〜27程度に減らした場合はBunでも再現しないため、「Bun + 一定数以上のファイル」という組み合わせで初めて顕在化するBun側のESM初期化順序のバグと推測される (Bun 1.3.14 時点)。単体ファイルや少数ファイルの実行では再現しないため見つかりにくい。
-- `scripts/run_e2e.js` は `test/e2e/` 配下を自前で列挙し (vitest の `include` glob 自体は原因ではなかったが、ファイルパスを明示的に渡す形は変更していない)、`execa` で `vitest` を子プロセスとして起動する。このスクリプト自体を `node` で実行することが重要 (`bun ./scripts/run_e2e.js` で起動すると、execa 経由で起動される vitest の子プロセスも巻き込まれて同じ症状が出る)。
-- 新しい `test/e2e/*.ts` ファイルを追加しても `run_e2e.js` が動的に拾うため、package.json 側の追加対応は不要。
-- もし将来 Bun のバージョンアップでこの問題が解消されたことを確認できたら、`node ./scripts/run_e2e.js` を `bun ./scripts/run_e2e.js` に戻す、あるいは `run_e2e.js` 自体を経由せず `vitest --config vitest.config.e2e.ts` 直呼びに戻してよい。
+- テストファイルが一定数以上ある状態で vitest を **Bun ランタイムで** 実行すると (`include` glob 経由でも、全ファイルパスを明示的にCLI引数で渡しても同様)、`zod` の named export `z` が未初期化のまま参照され (unit では `[vite] The requested module 'zod' does not provide an export named 'z'`、e2e では `TypeError: undefined is not an object (evaluating 'z.string')`)、**全テストファイルが即座に巻き添えで失敗する**。
+- 同じコマンドを **Node.js で** 実行すると再現しない。ファイル数を減らすとBunでも再現しないため、「Bun + 一定数以上のファイル」という組み合わせで初めて顕在化するBun側のESM初期化順序のバグと推測される (Bun 1.3.14 時点)。単体ファイルや少数ファイルの実行では再現しないため見つかりにくい。
+- 両スクリプトは自分が Bun で起動されたことを検知すると `scripts/respawn_with_node.js` で **本物の Node.js** により自分自身を再起動する。
+- ★ **フォーク爆弾の教訓 (2026-07-07 実際にホストがフリーズした)**: `bun run --bun` は PATH の先頭に `/tmp/bun-node-<hash>/` を注入し、その中の `node` は **bun 本体への symlink**。そのため素朴に `execa('node', ...)` で再起動すると子もまた Bun になり無限再帰でプロセスが際限なく増える (600個超を観測)。さらに、スクリプト自身を本物の node で再起動できても **PATH を掃除しないと** そこから spawn する `node_modules/.bin/vitest` (shebang `#!/usr/bin/env node`) が再び Bun に化ける。`respawn_with_node.js` は (1) realpath 比較で本物の node を解決し、(2) shim ディレクトリを PATH から除去して子に渡し、(3) 環境変数ガードで2段目以降の respawn を禁止する。この3点を欠いた「自己再起動スクリプト」を書いてはいけない。
+- vitest には必ず `run` サブコマンドを明示する (省略すると watch モードに入り得て、プロセスが終了せず残り続ける)。
+- 新しいテストファイルを追加しても vitest の include glob / `run_e2e.js` の列挙が動的に拾うため、package.json 側の追加対応は不要。
+- もし将来 Bun のバージョンアップでこの問題が解消されたことを確認できたら、`run_unit.js` / `run_e2e.js` を経由せず `vitest run --config ...` 直呼びに戻してよい。
 
 ## e2e テストの配置
 

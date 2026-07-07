@@ -13,16 +13,12 @@
 //
 // `bun run --bun` はスクリプト文字列内に `node ...` と明示していても Bun 自身で
 // 実行してしまう (`--bun` フラグの仕様) ため、package.json 側の対策では回避できない。
-// このファイル自身が Bun で起動されたことを検知したら、Node.js で自分自身を
-// 再起動することで確実に Node.js 上で vitest を実行させる。
+// このファイル自身が Bun で起動されたことを検知したら、本物の Node.js で自分自身を
+// 再起動することで確実に Node.js 上で vitest を実行させる
+// (node の解決方法とフォーク爆弾対策は respawn_with_node.js のコメント参照)。
 if (typeof Bun !== 'undefined') {
-	const { execa } = await import('execa');
-	const result = await execa('node', [import.meta.filename, ...process.argv.slice(2)], {
-		stdout: process.stdout,
-		stderr: process.stderr,
-		reject: false,
-	});
-	process.exit(result.exitCode ?? 1);
+	const { respawnWithNode } = await import('./respawn_with_node.js');
+	await respawnWithNode(); // 戻ってこない (子プロセスの終了コードで exit する)
 }
 
 import { readdirSync } from 'node:fs';
@@ -45,7 +41,7 @@ function findTestFiles(dir) {
 const files = findTestFiles('test/e2e').sort();
 const extraArgs = process.argv.slice(2);
 
-const result = await execa('vitest', ['--config', 'vitest.config.e2e.ts', ...extraArgs, ...files], {
+const result = await execa('vitest', ['run', '--config', 'vitest.config.e2e.ts', ...extraArgs, ...files], {
 	stdout: process.stdout,
 	stderr: process.stderr,
 	preferLocal: true,
