@@ -23,22 +23,17 @@ await bun(['run', 'clean']);
 // アセットのビルドで依存しているので一番最初に必要
 await bun(['run', '--bun', '--filter', 'i18n', 'build']);
 
+// build:backend-deps (= i18n + misskey-js build) は、i18n が直前で・misskey-js がこの
+// Promise.all 内でそれぞれビルドされるため呼ばない (同一 built/ への並行二重ビルドになる)
 await Promise.all([
 	bun(['run', 'build-pre']),
 	bun(['run', 'build-assets']),
-	bun(['run', 'build:backend-deps']),
 	// icons-subsetterは開発段階では使用されないが、型エラーを抑制するためにはじめの一度だけビルドする
 	bun(['run', '--bun', '--filter', 'icons-subsetter', 'build']),
 	bun(['run', '--bun', '--filter', 'misskey-js', 'build']),
 ]);
 
 execa('bun', ['run', 'build-pre', '--watch'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
-
-execa('bun', ['run', 'build-assets', '--watch'], {
 	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,

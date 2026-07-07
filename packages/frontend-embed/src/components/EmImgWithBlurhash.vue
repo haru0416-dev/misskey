@@ -46,7 +46,6 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 
 <script lang="ts" setup>
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch, ref } from 'vue';
-import { v4 as uuid } from 'uuid';
 import { render } from 'buraha';
 
 const props = withDefaults(defineProps<{
@@ -70,7 +69,7 @@ const props = withDefaults(defineProps<{
 	onlyAvgColor: false,
 });
 
-const viewId = uuid();
+const viewId = crypto.randomUUID();
 const canvas = shallowRef<HTMLCanvasElement>();
 const root = shallowRef<HTMLDivElement>();
 const img = shallowRef<HTMLImageElement>();
