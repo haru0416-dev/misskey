@@ -32,6 +32,19 @@ function applyRenoteMutingPaginationCondition(
 	}
 }
 
+/** muteeId のリノートをミュートしている muterId 一覧 (ノート作成ファンアウトの一括判定用)。 */
+export async function listRenoteMuterIdsByMuteeIdFromDatabase(
+	db: MiDrizzleDatabase,
+	muteeId: MiUser['id'],
+): Promise<MiUser['id'][]> {
+	const rows = await db
+		.select({ muterId: renoteMuting.muterId })
+		.from(renoteMuting)
+		.where(eq(renoteMuting.muteeId, muteeId));
+
+	return rows.map(row => row.muterId);
+}
+
 export async function renoteMutingExistsInDatabase(
 	db: MiDrizzleDatabase,
 	muterId: MiUser['id'],
