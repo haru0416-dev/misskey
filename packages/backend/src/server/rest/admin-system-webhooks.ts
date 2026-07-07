@@ -10,7 +10,7 @@ import { fetchSystemWebhookByIdFromDatabase, listSystemWebhooksFromDatabase } fr
 import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/SystemWebhookTestLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
-import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';

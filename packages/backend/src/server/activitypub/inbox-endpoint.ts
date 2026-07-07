@@ -9,7 +9,7 @@ import { Hono } from 'hono';
 import httpSignature from '@peertube/http-signature';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
-import type { InboxQueue } from '@/core/QueueModule.js';
+import type { InboxQueue } from '@/core/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { InboxJobData } from '@/queue/types.js';
 

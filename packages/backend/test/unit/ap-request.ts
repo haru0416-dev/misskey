@@ -8,7 +8,7 @@ import * as assert from 'assert';
 import httpSignature from '@peertube/http-signature';
 
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
-import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
+import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { assertActivityMatchesUrl, FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 import { IObject } from '@/core/activitypub/type.js';
 

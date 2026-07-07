@@ -7,7 +7,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
 import type { EmailService } from '@/core/EmailService.js';
-import type { DbQueue, DeliverQueue } from '@/core/QueueModule.js';
+import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import type { UserAuthService } from '@/core/UserAuthService.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';

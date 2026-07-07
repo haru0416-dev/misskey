@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { DbQueue, DeliverQueue } from '@/core/QueueModule.js';
+import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';

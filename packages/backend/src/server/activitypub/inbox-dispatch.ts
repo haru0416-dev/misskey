@@ -58,7 +58,7 @@ import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/NoteStore.js';
 import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { DbQueue } from '@/core/QueueModule.js';
+import type { DbQueue } from '@/core/queues.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import {

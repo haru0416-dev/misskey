@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import type { RelationshipQueue } from '@/core/QueueModule.js';
+import type { RelationshipQueue } from '@/core/queues.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import {
 	countUserListMembershipsByUserListIdInDatabase,

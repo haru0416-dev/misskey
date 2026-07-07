@@ -6,7 +6,7 @@
 import { domainToASCII } from 'node:url';
 import httpSignature from '@peertube/http-signature';
 import * as Bull from 'bullmq';
-import { JsonLd, JsonLdError } from '@/core/activitypub/JsonLdService.js';
+import { JsonLd, JsonLdError } from '@/core/activitypub/json-ld.js';
 import { getApId, isActor, isDelete } from '@/core/activitypub/type.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import { StatusError } from '@/misc/status-error.js';

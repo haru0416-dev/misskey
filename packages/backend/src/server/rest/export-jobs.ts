@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import type { DbQueue } from '@/core/QueueModule.js';
+import type { DbQueue } from '@/core/queues.js';
 import { parseHonoApiParams } from './validation.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ThinUser } from '@/queue/types.js';

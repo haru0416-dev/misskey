@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { DbQueue, DeliverQueue } from '@/core/QueueModule.js';
+import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
 import { updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
 import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js';

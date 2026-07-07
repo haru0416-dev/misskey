@@ -20,7 +20,7 @@ import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } fr
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { listNotesByAttachedFileIdFromDatabase } from '@/core/NoteStore.js';
-import type { ObjectStorageQueue } from '@/core/QueueModule.js';
+import type { ObjectStorageQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';

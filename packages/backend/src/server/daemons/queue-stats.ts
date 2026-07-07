@@ -6,7 +6,7 @@
 import Xev from 'xev';
 import * as Bull from 'bullmq';
 import { QUEUE, baseQueueOptions } from '@/queue/const.js';
-import type { DeliverQueue, InboxQueue } from '@/core/QueueModule.js';
+import type { DeliverQueue, InboxQueue } from '@/core/queues.js';
 import type { Config } from '@/config.js';
 
 const ev = new Xev();

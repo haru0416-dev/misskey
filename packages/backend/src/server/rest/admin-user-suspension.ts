@@ -8,7 +8,7 @@ import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { deleteFollowRequestsByFolloweeIdFromDatabase, deleteFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import { listFollowingsForUnfollowByFollowerIdFromDatabase, listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { DeliverQueue, RelationshipQueue } from '@/core/QueueModule.js';
+import type { DeliverQueue, RelationshipQueue } from '@/core/queues.js';
 import { updateUserSuspendedStateInDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';

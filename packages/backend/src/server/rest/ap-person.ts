@@ -69,7 +69,7 @@ import { updateUsertagsForHonoApi } from './account-update.js';
 import { getHonoApiRolePolicies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 import { fetchOrRegisterInstanceForHonoApi } from './notes-create.js';
-import type { RelationshipQueue } from '@/core/QueueModule.js';
+import type { RelationshipQueue } from '@/core/queues.js';
 
 export type HonoApiApPersonDependencies = HonoApiApResolveDependencies & HonoApiDriveFileUploadDependencies & {
 	relationshipQueue: RelationshipQueue;
