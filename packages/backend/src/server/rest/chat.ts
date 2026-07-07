@@ -54,7 +54,7 @@ import {
 } from '@/core/ChatRoomStore.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { countMutualFollowingsBetweenUsersFromDatabase } from '@/core/FollowingStore.js';
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
@@ -960,7 +960,7 @@ async function resolveChatReactionForHonoApi(deps: HonoApiChatDependencies, reac
 	} else {
 		const name = custom[1]!;
 		if (requireExists) {
-			const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, name, null);
+			const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
 			if (emoji == null) throw new Error('no such emoji');
 		}
 		return `:${name}:`;

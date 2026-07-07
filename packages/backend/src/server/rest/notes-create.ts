@@ -46,7 +46,7 @@ import {
 	incrementNoteRenoteCountInDatabase,
 	incrementNoteRepliesCountInDatabase,
 } from '@/core/NoteStore.js';
-import { noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
+import { listNoteThreadMutedUserIdsFromDatabase, noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
 import { listUserListMembershipsForFanoutByUserIdFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { listUserProfilesByUserIdsFromDatabase, fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import {
@@ -57,7 +57,7 @@ import {
 	listUsersByIdsFromDatabase,
 } from '@/core/UserStore.js';
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import { listRenoteMuterIdsByMuteeIdFromDatabase } from '@/core/RenoteMutingStore.js';
 import { countMutualFollowingsBetweenUsersFromDatabase, followingExistsInDatabase } from '@/core/FollowingStore.js';
 import type { EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
@@ -546,11 +546,14 @@ export async function postNoteCreatedForHonoApi(
 	}
 
 	if (data.visibility === 'public' || data.visibility === 'home') {
-		for (const tag of tags) {
-			const name = normalizeForSearch(tag);
+		// 原典は直列 await だが、タグごとに独立した行への書き込みなので並列化する。
+		// recordHashtagUsageInDatabase は read-modify-write のため、同名に正規化される重複タグは
+		// Set で除去して競合を避ける (直列実行時と最終状態は同じ — 2回目の同名書き込みは no-op)。
+		const names = [...new Set(tags.map(tag => normalizeForSearch(tag)))];
+		await Promise.all(names.map(name => {
 			// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget。
 			void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
-			await recordHashtagUsageInDatabase(deps.db, {
+			return recordHashtagUsageInDatabase(deps.db, {
 				id: genId(deps.config),
 				name,
 				userId: user.id,
@@ -559,7 +562,7 @@ export async function postNoteCreatedForHonoApi(
 				isUserAttached: false,
 				increment: true,
 			});
-		}
+		}));
 	}
 
 	await incrementUserNotesCountAndUpdatedAtInDatabase(deps.db, user.id, new Date());
@@ -579,11 +582,13 @@ export async function postNoteCreatedForHonoApi(
 		listNotificationFollowerIdsByFolloweeIdFromDatabase(deps.db, user.id).then(async followerIds => {
 			if (note.visibility !== 'specified') {
 				const isPureRenote = isRenoteData(data) && !isQuoteData(data);
+				// 原典はキャッシュ済み Set (userIdsWhoMeMutingRenotes) の per-follower 参照だった。
+				// フォロワー毎の exists クエリではなく1クエリで Set を作って判定する。
+				const renoteMuterIds = isPureRenote
+					? new Set(await listRenoteMuterIdsByMuteeIdFromDatabase(deps.db, user.id))
+					: null;
 				for (const followerId of followerIds) {
-					if (isPureRenote) {
-						const renoteMuted = await renoteMutingExistsInDatabase(deps.db, followerId, user.id);
-						if (renoteMuted) continue;
-					}
+					if (renoteMuterIds?.has(followerId)) continue;
 					void createNoteNotificationForHonoApi(deps, followerId, user.id, 'note', { noteId: note.id });
 				}
 			}
@@ -619,15 +624,16 @@ export async function postNoteCreatedForHonoApi(
 
 		const nm = new HonoNotificationManager(user, note);
 
-		for (const u of mentionedUsers.filter(u => u.host == null)) {
-			const isThreadMuted = await noteThreadMutingExistsInDatabase(deps.db, u.id, note.threadId ?? note.id);
-			if (isThreadMuted) continue;
-
+		// スレッドミュート判定はメンション先ローカルユーザー全員分を1クエリで引き、
+		// pack + 配信はユーザー毎に独立なので並列化する (原典は直列 await)。
+		const localMentionedUsers = mentionedUsers.filter(u => u.host == null);
+		const threadMutedUserIds = new Set(await listNoteThreadMutedUserIdsFromDatabase(deps.db, note.threadId ?? note.id, localMentionedUsers.map(u => u.id)));
+		await Promise.all(localMentionedUsers.filter(u => !threadMutedUserIds.has(u.id)).map(async u => {
 			const detailPackedNote = await packNoteForHonoApi(deps, note, u, { detail: true });
 			deps.publishMainStream?.(u.id, 'mention', detailPackedNote);
 			void enqueueUserWebhookForHonoApi(deps, u.id, 'mention', detailPackedNote);
 			nm.push(u.id, 'mention');
-		}
+		}));
 
 		if (data.reply) {
 			if (data.reply.userHost === null) {
@@ -695,6 +701,7 @@ export async function postNoteCreatedForHonoApi(
 
 /** RoleService.addNoteToRoleTimeline 相当。投稿者の保持ロール (コンディショナル含む) のタイムラインへfanoutし、roleTimelineStream を配信する。 */
 async function addNoteToRoleTimelinesForHonoApi(deps: HonoApiNotesCreateDependencies, noteObj: Packed<'Note'>): Promise<void> {
+	// コンディショナルロール評価には full MiUser が必要 (呼び出し元は部分型しか持たない) のためここでフェッチする。
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, noteObj.userId);
 	const roles = await getHonoApiUserRoles(deps, user);
 	if (roles.length === 0) return;
@@ -804,10 +811,13 @@ export async function createNoteForHonoApi(
 		data.localOnly = true;
 	}
 
+	// ロールポリシーはこの関数内で2箇所 (canPublicNote / mentionLimit) から参照するため1回だけ解決する。
+	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
+
 	if (data.visibility === 'public' && data.channel == null) {
 		if (isKeyWordIncludedForHonoApi(data.cw ?? data.text ?? '', deps.meta.sensitiveWords)) {
 			data.visibility = 'home';
-		} else if ((await getHonoApiRolePolicies(deps, user as MiUser)).canPublicNote === false) {
+		} else if (policies.canPublicNote === false) {
 			data.visibility = 'home';
 		}
 	}
@@ -894,7 +904,6 @@ export async function createNoteForHonoApi(
 		}
 	}
 
-	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
 	const effectiveMentionCount = Math.max(finalMentionedUsers.length, data.apMentionRawCount ?? 0);
 	if (effectiveMentionCount > 0 && effectiveMentionCount > policies.mentionLimit) {
 		throw new IdentifiableError('9f466dab-c856-48cd-9e65-ff90ff750580', 'Note contains too many mentions');

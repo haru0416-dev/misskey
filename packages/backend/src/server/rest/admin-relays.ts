@@ -7,7 +7,7 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/RelayLogic.js';
-import { listRelaysByStatusFromDatabase, listRelaysFromDatabase, updateRelayStatusInDatabase } from '@/core/RelayStore.js';
+import { listRelaysByStatusFromDatabaseCached, listRelaysFromDatabase, updateRelayStatusInDatabase } from '@/core/RelayStore.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -69,11 +69,11 @@ export async function relayRejectedForHonoApi(deps: Pick<HonoApiAdminRelaysDepen
 }
 
 /**
- * RelayService.isRelayActor 相当。RelayService内の10分キャッシュ (MemorySingleCache) は
- * Honoプロセスでは同等のキャッシュ層を持たないため省略し、直接DBを読む。
+ * RelayService.isRelayActor 相当。原典の10分キャッシュに対応する RelayStore 側の
+ * 同期無効化付き短命キャッシュ (listRelaysByStatusFromDatabaseCached) を使う。
  */
 export async function isRelayActorForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, actor: { inbox: string | null; sharedInbox: string | null }): Promise<boolean> {
-	const relays = await listRelaysByStatusFromDatabase(deps.db, 'accepted');
+	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
 	return relays.some(relay =>
 		(actor.inbox != null && relay.inbox === actor.inbox)
 		|| (actor.sharedInbox != null && relay.inbox === actor.sharedInbox),
