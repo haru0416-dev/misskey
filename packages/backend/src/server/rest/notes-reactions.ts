@@ -16,7 +16,7 @@ import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
 import { fetchNoteByIdFromDatabase, decrementNoteReactionInDatabase, incrementNoteReactionInDatabase } from '@/core/NoteStore.js';
 import {
 	createNoteReactionInDatabase,
@@ -179,7 +179,7 @@ export async function createNoteReactionForHonoApi(
 		if (custom) {
 			const reacterHost = user.host != null ? domainToASCII(user.host.toLowerCase()) : null;
 			const name = custom[1]!;
-			const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, name, reacterHost);
+			const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, reacterHost);
 
 			if (emoji) {
 				const roles = emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0
@@ -248,7 +248,7 @@ export async function createNoteReactionForHonoApi(
 	}
 
 	const decoded = decodeReactionForHonoApi(reaction);
-	const customEmoji: MiEmoji | null = decoded.name == null ? null : await fetchEmojiByNameAndHostFromDatabase(deps.db, decoded.name, decoded.host ?? null);
+	const customEmoji: MiEmoji | null = decoded.name == null ? null : await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, decoded.name, decoded.host ?? null);
 
 	deps.publishNoteStream?.(note, 'reacted', {
 		reaction: decoded.reaction,
