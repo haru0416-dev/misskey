@@ -6,6 +6,7 @@
 	"license": "MIT",
 	"main": "./built/index.js",
 	"types": "./built/index.d.ts",
+	"sideEffects": false,
 	"exports": {
 		".": {
 			"import": "./built/index.js",
@@ -50,7 +51,6 @@
 	],
 	"dependencies": {
 		"@simplewebauthn/browser": "13.3.0",
-		"eventemitter3": "5.0.4",
-		"reconnecting-websocket": "4.4.0"
+		"eventemitter3": "5.0.4"
 	}
 }
