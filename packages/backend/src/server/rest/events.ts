@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { AdminEventTypes, AntennaEventTypes, BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, NoteEventTypes, UserListEventTypes } from '@/core/GlobalEventService.js';
+import type { AdminEventTypes, AntennaEventTypes, BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, NoteEventTypes, UserListEventTypes } from '@/core/global-events.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';

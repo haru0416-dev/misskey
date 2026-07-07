@@ -13,7 +13,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiRelay } from '@/models/Relay.js';
 import type { MiMeta } from '@/models/_.js';
-import type { DeliverQueue } from '@/core/QueueModule.js';
+import type { DeliverQueue } from '@/core/queues.js';
 import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
 

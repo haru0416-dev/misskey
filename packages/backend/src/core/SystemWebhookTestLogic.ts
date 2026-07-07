@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { AbuseReportPayload, InactiveModeratorsWarningPayload, SystemWebhookPayload } from '@/core/SystemWebhookService.js';
+import type { AbuseReportPayload, InactiveModeratorsWarningPayload, SystemWebhookPayload } from '@/core/system-webhook-types.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAbuseUserReport, MiUser } from '@/models/_.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';

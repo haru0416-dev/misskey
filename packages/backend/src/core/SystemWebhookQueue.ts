@@ -4,8 +4,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
-import type { SystemWebhookPayload } from '@/core/SystemWebhookService.js';
+import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
+import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { SystemWebhookDeliverJobData } from '@/queue/types.js';
 
