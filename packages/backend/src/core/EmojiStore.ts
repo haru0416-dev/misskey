@@ -104,6 +104,42 @@ export async function fetchEmojiByNameAndHostOrFailFromDatabase(
 	return row;
 }
 
+//#region name@host 単位のプロセスローカル短命キャッシュ (AvatarDecorationStore と同じ同期無効化パターン)
+const EMOJI_CACHE_TTL_MS = 1000 * 60;
+const EMOJI_CACHE_MAX_ENTRIES = 5000;
+const emojiByNameAndHostCache = new Map<string, { row: MiEmoji | null; cachedAt: number }>();
+
+function invalidateEmojiCache(): void {
+	emojiByNameAndHostCache.clear();
+}
+
+/**
+ * fetchEmojiByNameAndHostFromDatabase のプロセスローカル短命キャッシュ版 (原典 CustomEmojiService の
+ * MemoryKVCache<MiEmoji | null> 相当。存在しない絵文字も null でキャッシュする)。
+ * ノート/リアクション/AP レンダリングのカスタム絵文字解決 (絵文字1件=1クエリのホットパス) 専用。
+ * このプロセスの書き込みは EmojiStore の書き込み関数内で同期無効化されるが、別プロセスの書き込みは
+ * 最大 TTL (60秒) 遅れる。即時性が必要な管理系・単発参照系は非キャッシュ版を使うこと。
+ */
+export async function fetchEmojiByNameAndHostFromDatabaseCached(
+	db: MiDrizzleDatabase,
+	name: MiEmoji['name'],
+	host: MiEmoji['host'],
+): Promise<MiEmoji | null> {
+	const key = `${name}@${host ?? ''}`;
+	const hit = emojiByNameAndHostCache.get(key);
+	if (hit != null && Date.now() - hit.cachedAt < EMOJI_CACHE_TTL_MS) {
+		return hit.row;
+	}
+
+	const row = await fetchEmojiByNameAndHostFromDatabase(db, name, host);
+	if (emojiByNameAndHostCache.size >= EMOJI_CACHE_MAX_ENTRIES) {
+		emojiByNameAndHostCache.clear();
+	}
+	emojiByNameAndHostCache.set(key, { row, cachedAt: Date.now() });
+	return row;
+}
+//#endregion
+
 export async function listEmojisByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiEmoji['id'][],
@@ -223,6 +259,7 @@ export async function insertEmojiInDatabase(
 		throw new Error('Failed to create emoji');
 	}
 
+	invalidateEmojiCache();
 	return row;
 }
 
@@ -235,6 +272,8 @@ export async function updateEmojiInDatabase(
 		.update(emoji)
 		.set(values)
 		.where(eq(emoji.id, id));
+
+	invalidateEmojiCache();
 }
 
 export async function updateEmojisByIdsInDatabase(
@@ -248,6 +287,8 @@ export async function updateEmojisByIdsInDatabase(
 		.update(emoji)
 		.set(values)
 		.where(inArray(emoji.id, ids));
+
+	invalidateEmojiCache();
 }
 
 /**
@@ -269,6 +310,7 @@ export async function updateEmojiByHostAndNameInDatabase(
 		))
 		.returning();
 
+	invalidateEmojiCache();
 	return row ?? null;
 }
 
@@ -279,6 +321,8 @@ export async function deleteEmojiByIdFromDatabase(
 	await db
 		.delete(emoji)
 		.where(eq(emoji.id, id));
+
+	invalidateEmojiCache();
 }
 
 /**
@@ -295,6 +339,8 @@ export async function deleteEmojiByNameAndHostFromDatabase(
 			eq(emoji.name, name),
 			host == null ? isNull(emoji.host) : eq(emoji.host, host),
 		));
+
+	invalidateEmojiCache();
 }
 
 /**

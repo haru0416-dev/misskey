@@ -14,6 +14,32 @@ type UpdateResultLike = {
 	affected: number;
 };
 
+//#region status 別リレー一覧のプロセスローカル短命キャッシュ (AvatarDecorationStore と同じ同期無効化パターン)
+const RELAY_CACHE_TTL_MS = 1000 * 60;
+const relaysByStatusCache = new Map<string, { rows: RelayRow[]; cachedAt: number }>();
+
+function invalidateRelayCache(): void {
+	relaysByStatusCache.clear();
+}
+
+/**
+ * listRelaysByStatusFromDatabase のプロセスローカル短命キャッシュ版 (原典 RelayService の
+ * 10分 MemorySingleCache 相当)。公開ノート作成毎の accepted リレー解決と inbox の
+ * リレーアクター判定ホットパス専用。リレーは管理者操作でしか変化せず、このプロセスの書き込みは
+ * RelayStore の書き込み関数内で同期無効化される。管理系一覧は非キャッシュ版を使うこと。
+ */
+export async function listRelaysByStatusFromDatabaseCached(db: MiDrizzleDatabase, status: MiRelay['status']): Promise<RelayRow[]> {
+	const hit = relaysByStatusCache.get(status);
+	if (hit != null && Date.now() - hit.cachedAt < RELAY_CACHE_TTL_MS) {
+		return hit.rows;
+	}
+
+	const rows = await listRelaysByStatusFromDatabase(db, status);
+	relaysByStatusCache.set(status, { rows, cachedAt: Date.now() });
+	return rows;
+}
+//#endregion
+
 export async function createRelayInDatabase(db: MiDrizzleDatabase, data: RelayInsert): Promise<RelayRow> {
 	const [row] = await db
 		.insert(relay)
@@ -24,6 +50,7 @@ export async function createRelayInDatabase(db: MiDrizzleDatabase, data: RelayIn
 		throw new Error('Relay row was not created');
 	}
 
+	invalidateRelayCache();
 	return row;
 }
 
@@ -41,6 +68,8 @@ export async function deleteRelayFromDatabase(db: MiDrizzleDatabase, id: MiRelay
 	await db
 		.delete(relay)
 		.where(eq(relay.id, id));
+
+	invalidateRelayCache();
 }
 
 export async function listRelaysFromDatabase(db: MiDrizzleDatabase): Promise<RelayRow[]> {
@@ -63,6 +92,7 @@ export async function updateRelayStatusInDatabase(db: MiDrizzleDatabase, id: MiR
 		.where(eq(relay.id, id))
 		.returning({ id: relay.id });
 
+	invalidateRelayCache();
 	return {
 		generatedMaps: [],
 		raw: [],
