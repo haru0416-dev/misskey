@@ -10,6 +10,8 @@
 - Enhance: パスワードのハッシュ化/照合を Bun ランタイムではネイティブ実装 (`Bun.password`) で行うように変更しサインイン/サインアップを高速化 (既存の bcrypt ハッシュとは互換で、Node 実行時や72バイト超のパスワードは従来どおり bcryptjs で処理)
 - Enhance: バックエンドの依存パッケージを整理し、未メンテのライブラリ16個を削除 (`got`/`fluent-ffmpeg`/`deep-email-validator`/`ratelimiter`/`probe-image-size`/`tinycolor2`/`stringz`/`tmp` 等を fetch・ffmpeg 直接起動・自前実装・`sharp`・`Intl.Segmenter` 等へ置き換え。レート制限は従来と同一の Redis キー形式・アルゴリズムを維持)
 - Change: アバター未設定ユーザーの identicon の模様が変わるように (乱数生成器の変更のため。配色パレット等は不変)
+- Fix: 開発モード (`bun run dev`) で `/vite/` が vite dev サーバーへプロキシされず、フロントエンドが一切表示されなかった問題を修正 (NestJS→Hono 移行時に dev プロキシが失われていた)
+- Fix: `GET /api/hashtags/trend` が 404 を返し、トレンドウィジェットが表示されなかった問題を修正 (NestJS→Hono 移行時に allowGet エンドポイントのうちこの1件だけ GET ルートが登録漏れしていた)
 - Enhance: 依存パッケージのセキュリティ更新 (間接依存の undici を 7.28.0 に統一し High 3件の脆弱性を解消、`@sentry/node` 10.62 / AWS SDK 等のマイナー更新、未使用の devDependencies 4件を削除)
 - Feat: ID生成方式に `uuidv7` (RFC 9562、ハイフン無しhex表現) を追加し、新規インスタンスの既定値として採用 (既存インスタンスのID設定は変更不可のため影響なし)
 - Fix: Hono サーバーでリレーへのアクティビティ配信 (LD 署名付き) が行われず、公開投稿・投稿削除・投票更新・ピン留め変更・アカウント移行がリレーに一切流れていなかった問題を修正
