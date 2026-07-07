@@ -7,7 +7,7 @@ import { permissions } from 'misskey-js';
 import type { z } from 'zod';
 import type { KeyOf, Schema } from '@/misc/json-schema.js';
 
-import * as endpointsObject from './endpoint-list.js';
+import { endpointMetas } from './endpoint-metas.js';
 
 interface IEndpointMetaBase {
 	readonly stability?: 'deprecated' | 'experimental' | 'stable';
@@ -133,7 +133,7 @@ export interface IEndpoint {
 	params: Schema | z.ZodType;
 }
 
-const endpoints: IEndpoint[] = Object.entries(endpointsObject).map(([name, ep]) => {
+const endpoints: IEndpoint[] = Object.entries(endpointMetas).map(([name, ep]) => {
 	return {
 		name: name,
 		get meta() {
