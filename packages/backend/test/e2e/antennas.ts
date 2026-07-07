@@ -21,7 +21,7 @@ import {
 import type * as misskey from 'misskey-js';
 import { loadConfig } from '@/config.js';
 import { updateAntennaInDatabase } from '@/core/AntennaStore.js';
-import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 
 const compareBy = <T extends { id: string }>(selector: (s: T) => string = (s: T): string => s.id) => (a: T, b: T): number => {

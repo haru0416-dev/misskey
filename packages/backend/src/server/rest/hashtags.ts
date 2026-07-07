@@ -21,7 +21,7 @@ import { HonoApiError } from './error.js';
 import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
-const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
+export const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
 const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
 export type HonoApiHashtagDependencies = UserPackingDependencies & {
@@ -49,9 +49,14 @@ export const hashtagsShowParamDef = z.object({
 });
 
 
-function getCurrentFeaturedWindow(windowRange: number): number {
+export function getCurrentFeaturedWindow(windowRange: number): number {
 	const passed = new Date().getTime() - featuredEpoc;
 	return Math.floor(passed / windowRange);
+}
+
+/** hashtagUsers:* redis キーの時刻ウィンドウ文字列 (YYYYMMDDHHmm、10分間隔に丸めた Date を渡す)。 */
+export function formatHashtagUsersWindow(now: Date): string {
+	return `${now.getUTCFullYear()}${(now.getUTCMonth() + 1).toString().padStart(2, '0')}${now.getUTCDate().toString().padStart(2, '0')}${now.getUTCHours().toString().padStart(2, '0')}${now.getUTCMinutes().toString().padStart(2, '0')}`;
 }
 
 async function getFeaturedRanking(
@@ -99,7 +104,7 @@ async function getHashtagCharts(
 	const redisPipeline = redis.pipeline();
 
 	for (let i = 0; i < range; i++) {
-		const window = `${now.getUTCFullYear()}${(now.getUTCMonth() + 1).toString().padStart(2, '0')}${now.getUTCDate().toString().padStart(2, '0')}${now.getUTCHours().toString().padStart(2, '0')}${now.getUTCMinutes().toString().padStart(2, '0')}`;
+		const window = formatHashtagUsersWindow(now);
 		for (const hashtag of hashtags) {
 			redisPipeline.pfcount(`hashtagUsers:${hashtag}:${window}`);
 		}

@@ -3,13 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable, Inject } from '@nestjs/common';
-import { DI } from '@/di-symbols.js';
-import { bindThis } from '@/decorators.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { MiMeta } from '@/models/_.js';
-import type Logger from '@/logger.js';
 
 /**
  * 正規化済み画像に対する nsfwjs 互換の予測値。
@@ -68,27 +64,19 @@ function isDetectImagesResponse(v: unknown): v is DetectImagesResponse {
 // サイドカーの判定エンドポイント。baseUrl にパスプレフィックスがあっても連結できるよう先頭スラッシュは付けない。
 const DETECT_IMAGES_PATH = 'v1/detect-images';
 
-@Injectable()
-export class AiService {
-	private logger: Logger;
-
-	constructor(
-		@Inject(DI.meta)
-		private meta: MiMeta,
-
-		private httpRequestService: HttpRequestService,
-		private loggerService: LoggerService,
-	) {
-		this.logger = this.loggerService.getLogger('ai');
-	}
+export function createAiService(
+	meta: MiMeta,
+	httpRequestService: HttpRequestService,
+	loggerService: LoggerService,
+) {
+	const logger = loggerService.getLogger('ai');
 
 	/**
 	 * 正規化済み画像 1 枚を外部サービスに送り、生の予測値を得る。
 	 * 接続先未設定・通信失敗・タイムアウト時は null（= 非センシティブ扱い）を返す。
 	 */
-	@bindThis
-	public async detectSensitive(source: Buffer): Promise<Prediction[] | null> {
-		return (await this.detectSensitiveMany([source]))[0] ?? null;
+	async function detectSensitive(source: Buffer): Promise<Prediction[] | null> {
+		return (await detectSensitiveMany([source]))[0] ?? null;
 	}
 
 	/**
@@ -97,39 +85,37 @@ export class AiService {
 	 * 接続先未設定・通信失敗・タイムアウト時は該当分を null（= 非センシティブ扱い）にしてフォールバックする
 	 * （API 呼び出し失敗時はセンシティブではない判定とする方針: misskey-dev/misskey#16804）。
 	 */
-	@bindThis
-	public async detectSensitiveMany(sources: Buffer[]): Promise<(Prediction[] | null)[]> {
+	async function detectSensitiveMany(sources: Buffer[]): Promise<(Prediction[] | null)[]> {
 		if (sources.length === 0) return [];
 
-		const baseUrl = this.meta.sensitiveMediaDetectionApiUrl;
+		const baseUrl = meta.sensitiveMediaDetectionApiUrl;
 		if (baseUrl == null || baseUrl.trim() === '') {
 			// 接続先が未設定なら検出不能。全件 null（非センシティブ扱い）を返す。
 			return sources.map(() => null);
 		}
 
-		const apiKey = this.meta.sensitiveMediaDetectionApiKey;
-		const timeout = this.meta.sensitiveMediaDetectionTimeout;
-		const chunkSize = Math.max(1, this.meta.sensitiveMediaDetectionMaxImagesPerRequest);
+		const apiKey = meta.sensitiveMediaDetectionApiKey;
+		const timeout = meta.sensitiveMediaDetectionTimeout;
+		const chunkSize = Math.max(1, meta.sensitiveMediaDetectionMaxImagesPerRequest);
 
 		const base = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
 		let url: string;
 		try {
 			url = new URL(DETECT_IMAGES_PATH, base).href;
 		} catch {
-			this.logger.warn(`invalid sensitiveMediaDetectionApiUrl: ${baseUrl}`);
+			logger.warn(`invalid sensitiveMediaDetectionApiUrl: ${baseUrl}`);
 			return sources.map(() => null);
 		}
 
 		const results: (Prediction[] | null)[] = [];
 		for (let i = 0; i < sources.length; i += chunkSize) {
 			const chunk = sources.slice(i, i + chunkSize);
-			results.push(...await this.detectChunk(url, apiKey, timeout, chunk));
+			results.push(...await detectChunk(url, apiKey, timeout, chunk));
 		}
 		return results;
 	}
 
-	@bindThis
-	private async detectChunk(url: string, apiKey: string | null, timeout: number, chunk: Buffer[]): Promise<(Prediction[] | null)[]> {
+	async function detectChunk(url: string, apiKey: string | null, timeout: number, chunk: Buffer[]): Promise<(Prediction[] | null)[]> {
 		try {
 			const form = new FormData();
 			for (let i = 0; i < chunk.length; i++) {
@@ -146,7 +132,7 @@ export class AiService {
 
 			// 外部サービスとして通常の proxy / private address 制限を HttpRequestService.send 側で適用する。
 			// サイドカーへの private network 接続は allowedPrivateNetworks 等で明示的に許可する。
-			const res = await this.httpRequestService.send(url, {
+			const res = await httpRequestService.send(url, {
 				method: 'POST',
 				headers,
 				body: form,
@@ -154,17 +140,17 @@ export class AiService {
 			}, { throwErrorWhenResponseNotOk: false });
 
 			if (!res.ok) {
-				this.logger.warn(`sensitive detection request failed: ${res.status} ${res.statusText}`);
+				logger.warn(`sensitive detection request failed: ${res.status} ${res.statusText}`);
 				return chunk.map(() => null);
 			}
 
 			const body = await res.json();
 			if (!isDetectImagesResponse(body)) {
-				this.logger.warn(`sensitive detection responded with unexpected shape: ${JSON.stringify(body)}`);
+				logger.warn(`sensitive detection responded with unexpected shape: ${JSON.stringify(body)}`);
 				return chunk.map(() => null);
 			}
 			if (!body.success) {
-				this.logger.warn(`sensitive detection responded with failure: ${body.error.code}`);
+				logger.warn(`sensitive detection responded with failure: ${body.error.code}`);
 				return chunk.map(() => null);
 			}
 
@@ -174,8 +160,12 @@ export class AiService {
 				return (item.success) ? item.predictions : null;
 			});
 		} catch (err) {
-			this.logger.warn(`sensitive detection error: ${err instanceof Error ? err.message : String(err)}`);
+			logger.warn(`sensitive detection error: ${err instanceof Error ? err.message : String(err)}`);
 			return chunk.map(() => null);
 		}
 	}
+
+	return { detectSensitive, detectSensitiveMany };
 }
+
+export type AiService = ReturnType<typeof createAiService>;

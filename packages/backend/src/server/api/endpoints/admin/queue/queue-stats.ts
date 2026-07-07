@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { QUEUE_TYPES, QueueService } from '@/core/QueueService.js';
+import { QUEUE_TYPES } from '@/core/QueueAdminLogic.js';
 import { adminQueueSelectParamDef } from '@/server/rest/admin-queue.js';
 
 export const meta = {

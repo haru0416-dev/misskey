@@ -11,8 +11,8 @@ import { checkHttps } from '@/misc/check-https.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import { MfmService } from '@/core/MfmService.js';
-import { ApMfmService } from '@/core/activitypub/ApMfmService.js';
+import { createMfmService } from '@/core/MfmService.js';
+import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
 import {
 	getApId,
@@ -180,7 +180,7 @@ export function analyzeAttachmentsForHonoApi(config: Pick<Config, 'url'>, attach
 		for (const attachment of attachments.filter(isPropertyValue)) {
 			fields.push({
 				name: attachment.name,
-				value: new MfmService(config as Config).fromHtml(attachment.value),
+				value: createMfmService(config as Config).fromHtml(attachment.value),
 			});
 		}
 	}
@@ -467,7 +467,7 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 	if (person._misskey_summary) {
 		description = truncate(person._misskey_summary, summaryLength);
 	} else if (person.summary) {
-		description = new ApMfmService(new MfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
+		description = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
 	}
 
 	await updateUserProfileInDatabase(deps.db, exist.id, {
@@ -557,7 +557,7 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	if (person._misskey_summary) {
 		description = truncate(person._misskey_summary, summaryLength);
 	} else if (person.summary) {
-		description = new ApMfmService(new MfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
+		description = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
 	}
 
 	let user: MiRemoteUser;

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { CustomEmojiService, fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/CustomEmojiService.js';
+import { fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/CustomEmojiService.js';
 
 export const meta = {
 	tags: ['admin'],

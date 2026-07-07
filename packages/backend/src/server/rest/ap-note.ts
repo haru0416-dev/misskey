@@ -36,8 +36,8 @@ import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from
 import { fetchNoteByUriFromDatabase } from '@/core/NoteStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { MfmService } from '@/core/MfmService.js';
-import { ApMfmService } from '@/core/activitypub/ApMfmService.js';
+import { createMfmService } from '@/core/MfmService.js';
+import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
 import type { Config } from '@/config.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { MiNote } from '@/models/Note.js';
@@ -310,7 +310,7 @@ export async function createNoteFromApForHonoApi(
 	} else if (typeof note._misskey_content !== 'undefined') {
 		text = note._misskey_content as string;
 	} else if (typeof note.content === 'string') {
-		text = new ApMfmService(new MfmService(deps.config as Config)).htmlToMfm(note.content, note.tag);
+		text = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(note.content, note.tag);
 	}
 
 	const poll = await extractPollFromQuestionForHonoApi(deps, note, history).catch(() => undefined);

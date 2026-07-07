@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { QueueService } from '@/core/QueueService.js';
 import { adminQueueJobsParamDef } from '@/server/rest/admin-queue.js';
 
 export const meta = {

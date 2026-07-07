@@ -7,12 +7,14 @@ import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import {
+	appendUserToAntennasInDatabase,
 	countAntennasByUserIdFromDatabase,
 	createAntennaInDatabase,
 	deleteAntennaFromDatabase,
 	fetchAntennaByIdAndUserIdFromDatabase,
 	fetchAntennaByIdOrFailFromDatabase,
 	listActiveAntennasFromDatabase,
+	listAntennasByIdsFromDatabase,
 	listAntennasByUserIdFromDatabase,
 	updateAntennaInDatabase,
 } from '@/core/AntennaStore.js';
@@ -141,6 +143,41 @@ export async function checkHitAntennaForHonoApi(
 	}
 
 	return true;
+}
+
+/**
+ * AntennaService.onMoveAccount 相当。src ユーザーを users リストに含むアンテナへ dst の acct を追記する。
+ * 原典はプロセス内キャッシュ (getAntennas) からアンテナ一覧を取得していたが、addNoteToAntennasForHonoApi
+ * と同じ判断で毎回DBから読む。
+ */
+export async function onMoveAccountForHonoApi(
+	deps: { config: Pick<Config, 'host'>; db: MiDrizzleDatabase; publishInternalEvent?: HonoApiInternalEventPublisher },
+	src: MiUser,
+	dst: MiUser,
+): Promise<void> {
+	// There is a possibility for users to add the srcUser to their antennas, but it's low, so we don't check it.
+
+	const srcUserAcct = getFullApAccount(deps.config, src.username, src.host).toLowerCase();
+	const antennasToMigrate = (await listActiveAntennasFromDatabase(deps.db)).filter(antenna => {
+		return antenna.users.some(user => {
+			const { username, host } = Acct.parse(user);
+			return getFullApAccount(deps.config, username, host).toLowerCase() === srcUserAcct;
+		});
+	});
+
+	if (antennasToMigrate.length === 0) return;
+
+	const antennaIds = antennasToMigrate.map(x => x.id);
+
+	// Update the antennas by appending dst users acct to the users list
+	const dstUserAcct = '@' + Acct.toString({ username: dst.username, host: dst.host });
+
+	await appendUserToAntennasInDatabase(deps.db, antennaIds, dstUserAcct);
+
+	// announce update to event
+	for (const newAntenna of await listAntennasByIdsFromDatabase(deps.db, antennaIds)) {
+		deps.publishInternalEvent?.('antennaUpdated', newAntenna);
+	}
 }
 
 /**

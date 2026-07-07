@@ -3,29 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
 import * as mfm from 'mfm-js';
 import { MfmService } from '@/core/MfmService.js';
 import type { MiNote } from '@/models/Note.js';
-import { bindThis } from '@/decorators.js';
 import { extractApHashtagObjects } from './models/tag.js';
 import type { IObject } from './type.js';
 
-@Injectable()
-export class ApMfmService {
-	constructor(
-		private mfmService: MfmService,
-	) {
-	}
-
-	@bindThis
-	public htmlToMfm(html: string, tag?: IObject | IObject[]): string {
+export function createApMfmService(mfmService: MfmService) {
+	function htmlToMfm(html: string, tag?: IObject | IObject[]): string {
 		const hashtagNames = extractApHashtagObjects(tag).map(x => x.name);
-		return this.mfmService.fromHtml(html, hashtagNames);
+		return mfmService.fromHtml(html, hashtagNames);
 	}
 
-	@bindThis
-	public getNoteHtml(note: Pick<MiNote, 'text' | 'mentionedRemoteUsers'>, extraHtml: string | null = null) {
+	function getNoteHtml(note: Pick<MiNote, 'text' | 'mentionedRemoteUsers'>, extraHtml: string | null = null) {
 		let noMisskeyContent = false;
 		const srcMfm = (note.text ?? '');
 
@@ -35,11 +25,15 @@ export class ApMfmService {
 			noMisskeyContent = true;
 		}
 
-		const content = this.mfmService.toHtml(parsed, JSON.parse(note.mentionedRemoteUsers), extraHtml);
+		const content = mfmService.toHtml(parsed, JSON.parse(note.mentionedRemoteUsers), extraHtml);
 
 		return {
 			content,
 			noMisskeyContent,
 		};
 	}
+
+	return { htmlToMfm, getNoteHtml };
 }
+
+export type ApMfmService = ReturnType<typeof createApMfmService>;

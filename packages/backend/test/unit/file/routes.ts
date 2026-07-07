@@ -11,14 +11,14 @@ import { describe, expect, test, beforeAll, afterAll, afterEach } from 'vitest';
 import sharp from 'sharp';
 import { initTestDb, randomString } from '../../utils.js';
 import type { AiService } from '@/core/AiService.js';
-import { DownloadService } from '@/core/DownloadService.js';
-import { FileInfoService } from '@/core/FileInfoService.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
-import { ImageProcessingService } from '@/core/ImageProcessingService.js';
-import { InternalStorageService } from '@/core/InternalStorageService.js';
-import { IdService } from '@/core/IdService.js';
-import { LoggerService } from '@/core/LoggerService.js';
-import { VideoProcessingService } from '@/core/VideoProcessingService.js';
+import { createDownloadService } from '@/core/DownloadService.js';
+import { createFileInfoService } from '@/core/FileInfoService.js';
+import { createHttpRequestService } from '@/core/HttpRequestService.js';
+import { createImageProcessingService } from '@/core/ImageProcessingService.js';
+import { createInternalStorageService, type InternalStorageService } from '@/core/InternalStorageService.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { createLoggerService } from '@/core/LoggerService.js';
+import { createVideoProcessingService } from '@/core/VideoProcessingService.js';
 import { loadConfig, type Config } from '@/config.js';
 import { createFileServerApp } from '@/server/file/routes.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
@@ -130,7 +130,6 @@ describe('createFileServerApp', () => {
 	let app: Hono;
 	let externalApp: Hono;
 	let internalStorageService: InternalStorageService;
-	let idService: IdService;
 	let config: Config;
 	let remoteServer: Server;
 	let remotePngUrl: string;
@@ -162,7 +161,7 @@ describe('createFileServerApp', () => {
 		const accessKey = params.accessKey;
 		const url = params.uri ?? `${config.url}/files/${accessKey}`;
 		await createDriveFileInDatabase(drizzle, {
-			id: idService.gen(),
+			id: genId(config),
 			userId: null,
 			userHost: null,
 			md5: '00000000000000000000000000000000',
@@ -198,18 +197,17 @@ describe('createFileServerApp', () => {
 		drizzlePool = createDrizzlePool(config);
 		drizzle = createDrizzleDatabase(drizzlePool, config);
 
-		const loggerService = new LoggerService();
+		const loggerService = createLoggerService();
 		const aiService = {
 			detectSensitive: async () => null,
 			detectSensitiveMany: async (sources: Buffer[]) => sources.map(() => null),
 		} as unknown as AiService;
-		const fileInfoService = new FileInfoService(aiService, loggerService);
-		const httpRequestService = new HttpRequestService(config);
-		const downloadService = new DownloadService(config, httpRequestService, loggerService);
-		const imageProcessingService = new ImageProcessingService();
-		const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
-		internalStorageService = new InternalStorageService(config);
-		idService = new IdService(config);
+		const fileInfoService = createFileInfoService(aiService, loggerService);
+		const httpRequestService = createHttpRequestService(config);
+		const downloadService = createDownloadService(config, httpRequestService, loggerService);
+		const imageProcessingService = createImageProcessingService();
+		const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
+		internalStorageService = createInternalStorageService(config);
 		app = createFileServerApp({
 			config,
 			db: drizzle,

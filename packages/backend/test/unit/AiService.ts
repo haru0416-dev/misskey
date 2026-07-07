@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { AiService } from '@/core/AiService.js';
+import { createAiService } from '@/core/AiService.js';
 import type { AiService as AiServiceType, Prediction } from '@/core/AiService.js';
 import type { MiMeta } from '@/models/_.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
@@ -27,7 +27,7 @@ function makeService(metaOverrides: Partial<typeof DEFAULT_META> = {}): AiServic
 	const loggerService = {
 		getLogger: () => ({ warn: () => {}, error: () => {}, info: () => {} }),
 	} as unknown as LoggerService;
-	return new AiService(meta, httpRequestService, loggerService);
+	return createAiService(meta, httpRequestService, loggerService);
 }
 
 function neutral(): Prediction[] {
