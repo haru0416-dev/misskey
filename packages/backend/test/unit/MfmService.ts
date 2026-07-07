@@ -8,13 +8,13 @@ import * as mfm from 'mfm-js';
 import { beforeAll, describe, test } from 'vitest';
 
 import { loadConfig } from '@/config.js';
-import { MfmService } from '@/core/MfmService.js';
+import { createMfmService, type MfmService } from '@/core/MfmService.js';
 
 describe('MfmService', () => {
 	let mfmService: MfmService;
 
 	beforeAll(() => {
-		mfmService = new MfmService(loadConfig());
+		mfmService = createMfmService(loadConfig());
 	});
 
 	describe('toHtml', () => {

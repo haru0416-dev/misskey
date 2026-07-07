@@ -10,8 +10,6 @@ import * as stream from 'node:stream';
 import ipaddr from 'ipaddr.js';
 import CacheableLookup from 'cacheable-lookup';
 import { HttpProxyAgent, HttpsProxyAgent } from 'hpagent';
-import { Inject, Injectable } from '@nestjs/common';
-import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { StatusError } from '@/misc/status-error.js';
 import { bindThis } from '@/decorators.js';
@@ -191,95 +189,74 @@ class HttpsRequestServiceAgent extends https.Agent {
 	}
 }
 
-@Injectable()
-export class HttpRequestService {
+export function createHttpRequestService(config: Config) {
+	/**
+	 * send() の事前 SSRF チェックで使う DNS リゾルバ (結果は 1h キャッシュ)。
+	 */
+	const dnsCache = new CacheableLookup({
+		maxTtl: 3600,	// 1hours
+		errorTtl: 30,	// 30secs
+		lookup: false,	// nativeのdns.lookupにfallbackしない
+	});
+
+	const agentOption = {
+		keepAlive: true,
+		keepAliveMsecs: 30 * 1000,
+		lookup: dnsCache.lookup as unknown as net.LookupFunction,
+		localAddress: config.outgoingAddress,
+	};
+
 	/**
 	 * Get http non-proxy agent (without local address filtering)
 	 */
-	private readonly httpNative: http.Agent;
+	const httpNative: http.Agent = new http.Agent(agentOption);
 
 	/**
 	 * Get https non-proxy agent (without local address filtering)
 	 */
-	private readonly httpsNative: https.Agent;
+	const httpsNative: https.Agent = new https.Agent(agentOption);
 
 	/**
 	 * Get http non-proxy agent
 	 */
-	private readonly http: http.Agent;
+	const httpNonProxyAgent: http.Agent = new HttpRequestServiceAgent(config, agentOption);
 
 	/**
 	 * Get https non-proxy agent
 	 */
-	private readonly https: https.Agent;
+	const httpsNonProxyAgent: https.Agent = new HttpsRequestServiceAgent(config, agentOption);
+
+	const maxSockets = Math.max(256, config.deliverJobConcurrency ?? 128);
 
 	/**
 	 * Get http proxy or non-proxy agent
 	 */
-	public readonly httpAgent: http.Agent;
+	const httpAgent: http.Agent = config.proxy
+		? new HttpProxyAgent({
+			keepAlive: true,
+			keepAliveMsecs: 30 * 1000,
+			maxSockets,
+			maxFreeSockets: 256,
+			scheduling: 'lifo',
+			proxy: config.proxy,
+			localAddress: config.outgoingAddress,
+		})
+		: httpNonProxyAgent;
 
 	/**
 	 * Get https proxy or non-proxy agent
 	 */
-	public readonly httpsAgent: https.Agent;
-
-	/**
-	 * send() の事前 SSRF チェックで使う DNS リゾルバ (結果は 1h キャッシュ)。
-	 */
-	private readonly dnsCache: CacheableLookup;
-
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-	) {
-		const cache = new CacheableLookup({
-			maxTtl: 3600,	// 1hours
-			errorTtl: 30,	// 30secs
-			lookup: false,	// nativeのdns.lookupにfallbackしない
-		});
-		this.dnsCache = cache;
-
-		const agentOption = {
+	const httpsAgent: https.Agent = config.proxy
+		? new HttpsProxyAgent({
 			keepAlive: true,
 			keepAliveMsecs: 30 * 1000,
-			lookup: cache.lookup as unknown as net.LookupFunction,
+			maxSockets,
+			maxFreeSockets: 256,
+			scheduling: 'lifo',
+			proxy: config.proxy,
 			localAddress: config.outgoingAddress,
-		};
-
-		this.httpNative = new http.Agent(agentOption);
-
-		this.httpsNative = new https.Agent(agentOption);
-
-		this.http = new HttpRequestServiceAgent(config, agentOption);
-
-		this.https = new HttpsRequestServiceAgent(config, agentOption);
-
-		const maxSockets = Math.max(256, config.deliverJobConcurrency ?? 128);
-
-		this.httpAgent = config.proxy
-			? new HttpProxyAgent({
-				keepAlive: true,
-				keepAliveMsecs: 30 * 1000,
-				maxSockets,
-				maxFreeSockets: 256,
-				scheduling: 'lifo',
-				proxy: config.proxy,
-				localAddress: config.outgoingAddress,
-			})
-			: this.http;
-
-		this.httpsAgent = config.proxy
-			? new HttpsProxyAgent({
-				keepAlive: true,
-				keepAliveMsecs: 30 * 1000,
-				maxSockets,
-				maxFreeSockets: 256,
-				scheduling: 'lifo',
-				proxy: config.proxy,
-				localAddress: config.outgoingAddress,
-			})
-			: this.https;
-	}
+		})
+		: httpsNonProxyAgent;
 
 	/**
 	 * Get agent by URL
@@ -287,18 +264,17 @@ export class HttpRequestService {
 	 * @param bypassProxy Always bypass proxy
 	 * @param isLocalAddressAllowed
 	 */
-	@bindThis
-	public getAgentByUrl(url: URL, bypassProxy = false, isLocalAddressAllowed = false): http.Agent | https.Agent {
-		if (bypassProxy || (this.config.proxyBypassHosts ?? []).includes(url.hostname)) {
+	function getAgentByUrl(url: URL, bypassProxy = false, isLocalAddressAllowed = false): http.Agent | https.Agent {
+		if (bypassProxy || (config.proxyBypassHosts ?? []).includes(url.hostname)) {
 			if (isLocalAddressAllowed) {
-				return url.protocol === 'http:' ? this.httpNative : this.httpsNative;
+				return url.protocol === 'http:' ? httpNative : httpsNative;
 			}
-			return url.protocol === 'http:' ? this.http : this.https;
+			return url.protocol === 'http:' ? httpNonProxyAgent : httpsNonProxyAgent;
 		} else {
-			if (isLocalAddressAllowed && (!this.config.proxy)) {
-				return url.protocol === 'http:' ? this.httpNative : this.httpsNative;
+			if (isLocalAddressAllowed && (!config.proxy)) {
+				return url.protocol === 'http:' ? httpNative : httpsNative;
 			}
-			return url.protocol === 'http:' ? this.httpAgent : this.httpsAgent;
+			return url.protocol === 'http:' ? httpAgent : httpsAgent;
 		}
 	}
 
@@ -307,14 +283,13 @@ export class HttpRequestService {
 	 * @param url URL
 	 * @param isLocalAddressAllowed
 	 */
-	@bindThis
-	public getAgentForHttp(url: URL, isLocalAddressAllowed = false): http.Agent {
-		if ((this.config.proxyBypassHosts ?? []).includes(url.hostname)) {
+	function getAgentForHttp(url: URL, isLocalAddressAllowed = false): http.Agent {
+		if ((config.proxyBypassHosts ?? []).includes(url.hostname)) {
 			return isLocalAddressAllowed
-				? this.httpNative
-				: this.http;
+				? httpNative
+				: httpNonProxyAgent;
 		} else {
-			return this.httpAgent;
+			return httpAgent;
 		}
 	}
 
@@ -323,14 +298,13 @@ export class HttpRequestService {
 	 * @param url URL
 	 * @param isLocalAddressAllowed
 	 */
-	@bindThis
-	public getAgentForHttps(url: URL, isLocalAddressAllowed = false): https.Agent {
-		if ((this.config.proxyBypassHosts ?? []).includes(url.hostname)) {
+	function getAgentForHttps(url: URL, isLocalAddressAllowed = false): https.Agent {
+		if ((config.proxyBypassHosts ?? []).includes(url.hostname)) {
 			return isLocalAddressAllowed
-				? this.httpsNative
-				: this.https;
+				? httpsNative
+				: httpsNonProxyAgent;
 		} else {
-			return this.httpsAgent;
+			return httpsAgent;
 		}
 	}
 
@@ -343,8 +317,7 @@ export class HttpRequestService {
 	 * 実質縮小される)、宛先への直接的な private-IP アクセスは確実に遮断できる。
 	 * `getAgentByUrl` 等 got/S3 経路は Node 実行時 (テスト) には従来どおり socket レベルで遮断される。
 	 */
-	@bindThis
-	public async assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<void> {
+	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<void> {
 		if (isLocalAddressAllowed) return;
 		if (process.env.NODE_ENV !== 'production') return;
 
@@ -355,7 +328,7 @@ export class HttpRequestService {
 			addresses = [host];
 		} else {
 			addresses = await new Promise<string[]>((resolve, reject) => {
-				this.dnsCache.lookup(host, { all: true }, (err, result) => {
+				dnsCache.lookup(host, { all: true }, (err, result) => {
 					if (err) return reject(err);
 					const entries = Array.isArray(result) ? result : [result];
 					resolve(entries.map(e => (typeof e === 'string' ? e : e.address)));
@@ -364,15 +337,14 @@ export class HttpRequestService {
 		}
 
 		for (const address of addresses) {
-			if (ipaddr.isValid(address) && isPrivateIp(address, this.config.allowedPrivateNetworks)) {
+			if (ipaddr.isValid(address) && isPrivateIp(address, config.allowedPrivateNetworks)) {
 				throw new StatusError(`Blocked address: ${address}`, 403, 'Blocked');
 			}
 		}
 	}
 
-	@bindThis
-	public async getActivityJson(url: string, isLocalAddressAllowed = false, allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict): Promise<IObject> {
-		const res = await this.send(url, {
+	async function getActivityJson(url: string, isLocalAddressAllowed = false, allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict): Promise<IObject> {
+		const res = await send(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
@@ -393,9 +365,8 @@ export class HttpRequestService {
 		return activity;
 	}
 
-	@bindThis
-	public async getJson<T = unknown>(url: string, accept = 'application/json, */*', headers?: Record<string, string>, isLocalAddressAllowed = false): Promise<T> {
-		const res = await this.send(url, {
+	async function getJson<T = unknown>(url: string, accept = 'application/json, */*', headers?: Record<string, string>, isLocalAddressAllowed = false): Promise<T> {
+		const res = await send(url, {
 			method: 'GET',
 			headers: Object.assign({
 				Accept: accept,
@@ -408,9 +379,8 @@ export class HttpRequestService {
 		return await res.json() as T;
 	}
 
-	@bindThis
-	public async getHtml(url: string, accept = 'text/html, */*', headers?: Record<string, string>, isLocalAddressAllowed = false): Promise<string> {
-		const res = await this.send(url, {
+	async function getHtml(url: string, accept = 'text/html, */*', headers?: Record<string, string>, isLocalAddressAllowed = false): Promise<string> {
+		const res = await send(url, {
 			method: 'GET',
 			headers: Object.assign({
 				Accept: accept,
@@ -430,8 +400,7 @@ export class HttpRequestService {
 	 * 誘導する SSRF が成立してしまう。そのため `redirect: 'manual'` で 1 ホップずつ検査しながら追跡する。
 	 * メソッド/ボディの引き継ぎは WHATWG fetch の既定と同じ (303 と POST への 301/302 は GET 化して body を落とす)。
 	 */
-	@bindThis
-	private async fetchFollowingRedirects(
+	async function fetchFollowingRedirects(
 		initialUrl: string,
 		baseInit: { method: string; headers: Record<string, string>; body: RequestInit['body']; signal: AbortSignal },
 		isLocalAddressAllowed: boolean,
@@ -442,11 +411,11 @@ export class HttpRequestService {
 		const headers = { ...baseInit.headers };
 
 		for (let redirects = 0; ; redirects++) {
-			await this.assertUrlAllowed(currentUrl, isLocalAddressAllowed);
+			await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
 
 			// proxy 経由の宛先解決は proxy 側が行うため、bypass 対象や proxyBypassHosts は素通しにする。
-			const useProxy = this.config.proxy != null
-				&& !(this.config.proxyBypassHosts ?? []).includes(currentUrl.hostname);
+			const useProxy = config.proxy != null
+				&& !(config.proxyBypassHosts ?? []).includes(currentUrl.hostname);
 
 			const init: RequestInit & { proxy?: string } = {
 				method,
@@ -455,7 +424,7 @@ export class HttpRequestService {
 				redirect: 'manual',
 				signal: baseInit.signal,
 			};
-			if (useProxy) init.proxy = this.config.proxy;
+			if (useProxy) init.proxy = config.proxy;
 
 			const res = await fetch(currentUrl, init);
 
@@ -490,8 +459,7 @@ export class HttpRequestService {
 		}
 	}
 
-	@bindThis
-	public async send(
+	async function send(
 		url: string,
 		args: {
 			method?: string,
@@ -515,10 +483,10 @@ export class HttpRequestService {
 		let res: Response;
 		let body: Uint8Array;
 		try {
-			res = await this.fetchFollowingRedirects(url, {
+			res = await fetchFollowingRedirects(url, {
 				method: args.method ?? 'GET',
 				headers: {
-					'User-Agent': this.config.userAgent,
+					'User-Agent': config.userAgent,
 					...(args.headers ?? {}),
 				},
 				body: args.body,
@@ -543,4 +511,19 @@ export class HttpRequestService {
 
 		return wrapped;
 	}
+
+	return {
+		httpAgent,
+		httpsAgent,
+		getAgentByUrl,
+		getAgentForHttp,
+		getAgentForHttps,
+		assertUrlAllowed,
+		getActivityJson,
+		getJson,
+		getHtml,
+		send,
+	};
 }
+
+export type HttpRequestService = ReturnType<typeof createHttpRequestService>;

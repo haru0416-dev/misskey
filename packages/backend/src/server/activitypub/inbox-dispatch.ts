@@ -505,7 +505,8 @@ async function flagFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRem
 	return 'ok';
 }
 
-/** ApInboxService.move 相当。移行カスケード (AccountMoveService 相当) は updatePersonForHonoApi 同様に未移植のまま。 */
+/** ApInboxService.move 相当。移行カスケードは updatePersonForHonoApi 内の processRemoteMoveForHonoApi
+ * (movedToUri の新規出現/変更検知で postMoveProcessForHonoApi を呼ぶ) 経由で実行される。 */
 async function moveFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IMove, history: Set<string>): Promise<string> {
 	const targetUri = getApHrefNullable(activity.target);
 	if (!targetUri) return 'skip: invalid activity target';

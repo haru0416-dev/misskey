@@ -17,7 +17,7 @@ import { loadConfig } from '@/config.js';
 import { createDrizzlePool } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import type * as misskey from 'misskey-js';
-import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
 

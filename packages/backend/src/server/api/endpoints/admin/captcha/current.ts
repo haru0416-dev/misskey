@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { CaptchaService, supportedCaptchaProviders } from '@/core/CaptchaService.js';
+import { supportedCaptchaProviders } from '@/core/CaptchaLogic.js';
 import { captchaCurrentParamDef } from '@/server/rest/captcha.js';
 
 export const meta = {

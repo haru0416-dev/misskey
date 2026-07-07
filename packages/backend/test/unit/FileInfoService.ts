@@ -9,9 +9,9 @@ import * as assert from 'assert';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { beforeAll, describe, test } from 'vitest';
-import { FileInfo, FileInfoService } from '@/core/FileInfoService.js';
-import { AiService } from '@/core/AiService.js';
-import { LoggerService } from '@/core/LoggerService.js';
+import { createFileInfoService, type FileInfo, type FileInfoService } from '@/core/FileInfoService.js';
+import type { AiService } from '@/core/AiService.js';
+import { createLoggerService } from '@/core/LoggerService.js';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
@@ -30,12 +30,12 @@ describe('FileInfoService', () => {
 	}
 
 	beforeAll(() => {
-		const loggerService = new LoggerService();
+		const loggerService = createLoggerService();
 		const aiService = {
 			detectSensitive: async () => null,
 			detectSensitiveMany: async (sources: Buffer[]) => sources.map(() => null),
 		} as unknown as AiService;
-		fileInfoService = new FileInfoService(aiService, loggerService);
+		fileInfoService = createFileInfoService(aiService, loggerService);
 	});
 
 	test('Empty file', async () => {

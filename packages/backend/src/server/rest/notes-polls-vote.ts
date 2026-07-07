@@ -20,11 +20,12 @@ import {
 	deliverSingleActivityForHonoApi,
 	renderVoteForHonoApi,
 	type HonoApiNoteApDependencies,
+	type HonoApiRelayDeliverDependencies,
 } from './notes-ap.js';
 import type { HonoApiNoteStreamPublisher } from './events.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiNotesPollsVoteDependencies = HonoApiNoteApDependencies & {
+export type HonoApiNotesPollsVoteDependencies = HonoApiRelayDeliverDependencies & {
 	config: HonoApiNoteApDependencies['config'] & Pick<Config, 'id'>;
 	publishNoteStream?: HonoApiNoteStreamPublisher;
 };

@@ -11,7 +11,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { generateNativeUserToken } from '@/misc/token.js';
-import type { SYSTEM_ACCOUNT_TYPES } from '@/core/SystemAccountService.js';
+import type { SYSTEM_ACCOUNT_TYPES } from '@/core/system-account-runtime.js';
 
 export type SystemAccountType = typeof SYSTEM_ACCOUNT_TYPES[number];
 

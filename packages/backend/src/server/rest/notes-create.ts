@@ -65,7 +65,8 @@ import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { addNoteToAntennasForHonoApi } from './antennas.js';
 import { HonoApiError } from './error.js';
-import { deliverNoteActivityForHonoApi, renderNoteOrRenoteActivityForHonoApi, resolveRemoteRecipientForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
+import { formatHashtagUsersWindow, getCurrentFeaturedWindow, HASHTAG_RANKING_WINDOW } from './hashtags.js';
+import { deliverNoteActivityForHonoApi, deliverToRelaysForHonoApi, renderNoteOrRenoteActivityForHonoApi, resolveRemoteRecipientForHonoApi, type HonoApiNoteApDependencies, type HonoApiRelayDeliverDependencies } from './notes-ap.js';
 import { packNoteForHonoApi, isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiNotification } from '@/models/Notification.js';
@@ -79,12 +80,14 @@ import { parseHonoApiParams } from './validation.js';
 export type HonoApiNotesCreateDependencies =
 	& HonoApiNoteDependencies
 	& HonoApiNoteApDependencies
+	& HonoApiRelayDeliverDependencies
 	& HonoApiRolePolicyDependencies
 	& HonoApiNotificationDependencies
 	& {
 		config: Config;
 		meta: MiMeta;
 		db: MiDrizzleDatabase;
+		redis: Redis.Redis;
 		redisForTimelines: Redis.Redis;
 		chartWriters: HonoChartWriters;
 		userWebhookDeliverQueue: UserWebhookDeliverQueue;
@@ -128,6 +131,61 @@ export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): b
 			return false;
 		}
 	});
+}
+
+/** FeaturedService#updateHashtagsRanking 相当 (updateRankingOf の hashtag 特化形)。 */
+async function updateFeaturedHashtagsRankingForHonoApi(redis: Redis.Redis, hashtag: string, score = 1): Promise<void> {
+	const currentWindow = getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW);
+	const redisTransaction = redis.multi();
+	redisTransaction.zincrby(`featuredHashtagsRanking:${currentWindow}`, score, hashtag);
+	redisTransaction.expire(
+		`featuredHashtagsRanking:${currentWindow}`,
+		(HASHTAG_RANKING_WINDOW * 3) / 1000,
+		'NX', // "NX -- Set expiry only when the key has no expiry" = 有効期限がないときだけ設定
+	);
+	await redisTransaction.exec();
+}
+
+/** HashtagService#updateHashtagsRanking 相当。hashtag は normalizeForSearch 済みで渡すこと。 */
+export async function updateHashtagsRankingForHonoApi(
+	deps: { meta: Pick<MiMeta, 'hiddenTags' | 'sensitiveWords'>; redis: Redis.Redis },
+	hashtag: string,
+	userId: MiUser['id'],
+): Promise<void> {
+	const hiddenTags = deps.meta.hiddenTags.map(t => normalizeForSearch(t));
+	if (hiddenTags.includes(hashtag)) return;
+	if (isKeyWordIncludedForHonoApi(hashtag, deps.meta.sensitiveWords)) return;
+
+	// YYYYMMDDHHmm (10分間隔)
+	const now = new Date();
+	now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
+	const window = formatHashtagUsersWindow(now);
+
+	const exist = await deps.redis.sismember(`hashtagUsers:${hashtag}`, userId);
+	if (exist === 1) return;
+
+	// 原典 HashtagService#updateHashtagsRanking 同様、featured ランキング更新は await しない。
+	void updateFeaturedHashtagsRankingForHonoApi(deps.redis, hashtag, 1);
+
+	const redisPipeline = deps.redis.pipeline();
+
+	// チャート用
+	redisPipeline.pfadd(`hashtagUsers:${hashtag}:${window}`, userId);
+	redisPipeline.expire(`hashtagUsers:${hashtag}:${window}`,
+		60 * 60 * 24 * 3, // 3日間
+		'NX', // "NX -- Set expiry only when the key has no expiry" = 有効期限がないときだけ設定
+	);
+
+	// ユニークカウント用
+	// TODO: Bloom Filter を使うようにしても良さそう
+	redisPipeline.sadd(`hashtagUsers:${hashtag}`, userId);
+	redisPipeline.expire(`hashtagUsers:${hashtag}`,
+		60 * 60, // 1時間
+		'NX', // "NX -- Set expiry only when the key has no expiry" = 有効期限がないときだけ設定
+	);
+
+	// 原典同様 exec も await しない。
+	void redisPipeline.exec();
 }
 
 function noSuchRenoteTargetError(): HonoApiError {
@@ -489,9 +547,12 @@ export async function postNoteCreatedForHonoApi(
 
 	if (data.visibility === 'public' || data.visibility === 'home') {
 		for (const tag of tags) {
+			const name = normalizeForSearch(tag);
+			// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget。
+			void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
 			await recordHashtagUsageInDatabase(deps.db, {
 				id: genId(deps.config),
-				name: normalizeForSearch(tag),
+				name,
 				userId: user.id,
 				isLocalUser: user.host == null,
 				isRemoteUser: user.host != null,
@@ -615,6 +676,11 @@ export async function postNoteCreatedForHonoApi(
 					directRecipients,
 					deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
 				});
+
+				// 原典 NoteCreateService 同様、public ノートのみリレーへ配信 (fire-and-forget)。
+				if (note.visibility === 'public') {
+					void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, activity).catch(() => {});
+				}
 			})().catch(() => {});
 		}
 	}

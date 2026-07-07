@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable, Inject } from '@nestjs/common';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Redis from 'ioredis';
-import { DI } from '@/di-symbols.js';
 import Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
@@ -17,13 +15,10 @@ import type { KVs } from '../core.js';
 /**
  * For testing
  */
-@Injectable()
 export default class TestIntersectionChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.drizzle)
 		private db: MiDrizzleDatabase,
 
-		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
 		logger: Logger,

@@ -5,7 +5,6 @@
 
 import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { Injectable } from '@nestjs/common';
 import { Signer } from 'slacc';
 import type { SignatureAlgorithmIdentifier } from 'slacc';
 
@@ -250,7 +249,6 @@ export class JsonLd {
 	}
 }
 
-@Injectable()
 export class JsonLdService {
 	constructor(
 		private httpRequestService: HttpRequestService,

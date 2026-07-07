@@ -7,7 +7,6 @@ import * as fs from 'node:fs';
 import * as crypto from 'node:crypto';
 import { join } from 'node:path';
 import * as stream from 'node:stream/promises';
-import { Injectable } from '@nestjs/common';
 import { FSWatcher } from 'chokidar';
 import * as fileType from 'file-type';
 import FFmpeg from 'fluent-ffmpeg';
@@ -18,8 +17,6 @@ import * as blurhash from 'blurhash';
 import { createTempDir } from '@/misc/create-temp.js';
 import { AiService } from '@/core/AiService.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import type Logger from '@/logger.js';
-import { bindThis } from '@/decorators.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import type { Prediction } from '@/core/AiService.js';
 
@@ -49,22 +46,16 @@ const TYPE_SVG = {
 	ext: 'svg',
 };
 
-@Injectable()
-export class FileInfoService {
-	private logger: Logger;
-
-	constructor(
-		private aiService: AiService,
-		private loggerService: LoggerService,
-	) {
-		this.logger = this.loggerService.getLogger('file-info');
-	}
+export function createFileInfoService(
+	aiService: AiService,
+	loggerService: LoggerService,
+) {
+	const logger = loggerService.getLogger('file-info');
 
 	/**
 	 * Get file information
 	 */
-	@bindThis
-	public async getFileInfo(path: string, opts: {
+	async function getFileInfo(path: string, opts: {
 		fileName?: string | null;
 		skipSensitiveDetection: boolean;
 		sensitiveThreshold?: number;
@@ -73,10 +64,10 @@ export class FileInfoService {
 	}): Promise<FileInfo> {
 		const warnings = [] as string[];
 
-		const size = await this.getFileSize(path);
-		const md5 = await this.calcHash(path);
+		const size = await getFileSize(path);
+		const md5 = await calcHash(path);
 
-		let type = await this.detectType(path);
+		let type = await detectType(path);
 
 		if (type.mime === TYPE_OCTET_STREAM.mime && opts.fileName != null) {
 			const ext = opts.fileName.split('.').pop();
@@ -115,7 +106,7 @@ export class FileInfoService {
 			'image/svg+xml',
 			'image/vnd.adobe.photoshop',
 		].includes(type.mime)) {
-			const imageSize = await this.detectImageSize(path).catch(e => {
+			const imageSize = await detectImageSize(path).catch(e => {
 				warnings.push(`detectImageSize failed: ${e}`);
 				return undefined;
 			});
@@ -150,7 +141,7 @@ export class FileInfoService {
 			'image/avif',
 			'image/svg+xml',
 		].includes(type.mime)) {
-			blurhash = await this.getBlurhash(path, type.mime).catch(e => {
+			blurhash = await getBlurhash(path, type.mime).catch(e => {
 				warnings.push(`getBlurhash failed: ${e}`);
 				return undefined;
 			});
@@ -160,7 +151,7 @@ export class FileInfoService {
 		let porn = false;
 
 		if (!opts.skipSensitiveDetection) {
-			await this.detectSensitivity(
+			await detectSensitivity(
 				path,
 				type.mime,
 				opts.sensitiveThreshold ?? 0.5,
@@ -187,8 +178,7 @@ export class FileInfoService {
 		};
 	}
 
-	@bindThis
-	private async detectSensitivity(source: string, mime: string, sensitiveThreshold: number, sensitiveThresholdForPorn: number, analyzeVideo: boolean): Promise<[sensitive: boolean, porn: boolean]> {
+	async function detectSensitivity(source: string, mime: string, sensitiveThreshold: number, sensitiveThresholdForPorn: number, analyzeVideo: boolean): Promise<[sensitive: boolean, porn: boolean]> {
 		let sensitive = false;
 		let porn = false;
 
@@ -253,7 +243,7 @@ export class FileInfoService {
 				let frameIndex = 0;
 				let targetIndex = 0;
 				let nextIndex = 1;
-				for await (const path of this.asyncIterateFrames(outDir, command)) {
+				for await (const path of asyncIterateFrames(outDir, command)) {
 					try {
 						const index = frameIndex++;
 						if (index !== targetIndex) {
@@ -266,7 +256,7 @@ export class FileInfoService {
 						fs.promises.unlink(path);
 					}
 				}
-				const predictions = await this.aiService.detectSensitiveMany(frameBuffers);
+				const predictions = await aiService.detectSensitiveMany(frameBuffers);
 				const results = predictions.filter((x): x is Prediction[] => x != null).map(x => judgePrediction(x));
 				// 判定に成功したフレームが 0 件のとき（接続先未設定・通信失敗等）は、
 				// Math.ceil(0) との比較が 0 >= 0 で真になり全動画がセンシティブ扱いになってしまうため、
@@ -291,7 +281,7 @@ export class FileInfoService {
 				.flatten({ background: { r: 119, g: 119, b: 119 } }) // 透過部分を18%グレーで塗りつぶす
 				.png()
 				.toBuffer();
-			const result = await this.aiService.detectSensitive(png);
+			const result = await aiService.detectSensitive(png);
 			if (result) {
 				[sensitive, porn] = judgePrediction(result);
 			}
@@ -300,7 +290,7 @@ export class FileInfoService {
 		return [sensitive, porn];
 	}
 
-	private async *asyncIterateFrames(cwd: string, command: FFmpeg.FfmpegCommand): AsyncGenerator<string, void> {
+	async function* asyncIterateFrames(cwd: string, command: FFmpeg.FfmpegCommand): AsyncGenerator<string, void> {
 		const watcher = new FSWatcher({
 			cwd,
 		});
@@ -314,7 +304,7 @@ export class FileInfoService {
 			const current = `${i}.png`;
 			const next = `${i + 1}.png`;
 			const framePath = join(cwd, current);
-			if (await this.exists(join(cwd, next))) {
+			if (await exists(join(cwd, next))) {
 				yield framePath;
 			} else if (!finished) { // eslint-disable-line @typescript-eslint/no-unnecessary-condition
 				watcher.add(next);
@@ -330,7 +320,7 @@ export class FileInfoService {
 					command.once('error', reject);
 				});
 				yield framePath;
-			} else if (await this.exists(framePath)) {
+			} else if (await exists(framePath)) {
 				yield framePath;
 			} else {
 				return;
@@ -338,13 +328,11 @@ export class FileInfoService {
 		}
 	}
 
-	@bindThis
-	private exists(path: string): Promise<boolean> {
+	function exists(path: string): Promise<boolean> {
 		return fs.promises.access(path).then(() => true, () => false);
 	}
 
-	@bindThis
-	public fixMime(mime: string): string {
+	function fixMime(mime: string): string {
 		// see https://github.com/misskey-dev/misskey/pull/10686
 		if (mime === 'audio/x-flac') {
 			return 'audio/flac';
@@ -363,9 +351,8 @@ export class FileInfoService {
 	 * @param path ファイルパス
 	 * @returns ビデオトラックがあるかどうか（エラー発生時は常に`true`を返す）
 	 */
-	@bindThis
-	private hasVideoTrackOnVideoFile(path: string): Promise<boolean> {
-		const sublogger = this.logger.createSubLogger('ffprobe');
+	function hasVideoTrackOnVideoFile(path: string): Promise<boolean> {
+		const sublogger = logger.createSubLogger('ffprobe');
 		sublogger.info(`Checking the video file. File path: ${path}`);
 		return new Promise((resolve) => {
 			try {
@@ -387,13 +374,12 @@ export class FileInfoService {
 	/**
 	 * Detect MIME Type and extension
 	 */
-	@bindThis
-	public async detectType(path: string): Promise<{
+	async function detectType(path: string): Promise<{
 		mime: string;
 		ext: string | null;
 	}> {
 	// Check 0 byte
-		const fileSize = await this.getFileSize(path);
+		const fileSize = await getFileSize(path);
 		if (fileSize === 0) {
 			return TYPE_OCTET_STREAM;
 		}
@@ -402,11 +388,11 @@ export class FileInfoService {
 
 		if (type) {
 		// XMLはSVGかもしれない
-			if (type.mime === 'application/xml' && await this.checkSvg(path)) {
+			if (type.mime === 'application/xml' && await checkSvg(path)) {
 				return TYPE_SVG;
 			}
 
-			if ((type.mime.startsWith('video') || type.mime === 'application/ogg') && !(await this.hasVideoTrackOnVideoFile(path))) {
+			if ((type.mime.startsWith('video') || type.mime === 'application/ogg') && !(await hasVideoTrackOnVideoFile(path))) {
 				const newMime = `audio/${type.mime.split('/')[1]}`;
 				if (newMime === 'audio/mp4') {
 					return {
@@ -421,13 +407,13 @@ export class FileInfoService {
 			}
 
 			return {
-				mime: this.fixMime(type.mime),
+				mime: fixMime(type.mime),
 				ext: type.ext,
 			};
 		}
 
 		// 種類が不明でもSVGかもしれない
-		if (await this.checkSvg(path)) {
+		if (await checkSvg(path)) {
 			return TYPE_SVG;
 		}
 
@@ -438,10 +424,9 @@ export class FileInfoService {
 	/**
 	 * Check the file is SVG or not
 	 */
-	@bindThis
-	public async checkSvg(path: string): Promise<boolean> {
+	async function checkSvg(path: string): Promise<boolean> {
 		try {
-			const size = await this.getFileSize(path);
+			const size = await getFileSize(path);
 			if (size > 1 * 1024 * 1024) return false;
 			const buffer = await fs.promises.readFile(path);
 			return isSvg(buffer.toString());
@@ -453,16 +438,14 @@ export class FileInfoService {
 	/**
 	 * Get file size
 	 */
-	@bindThis
-	public async getFileSize(path: string): Promise<number> {
+	async function getFileSize(path: string): Promise<number> {
 		return (await fs.promises.stat(path)).size;
 	}
 
 	/**
 	 * Calculate MD5 hash
 	 */
-	@bindThis
-	private async calcHash(path: string): Promise<string> {
+	async function calcHash(path: string): Promise<string> {
 		const hash = crypto.createHash('md5').setEncoding('hex');
 		await stream.pipeline(fs.createReadStream(path), hash);
 		return hash.read();
@@ -471,8 +454,7 @@ export class FileInfoService {
 	/**
 	 * Detect dimensions of image
 	 */
-	@bindThis
-	private async detectImageSize(path: string): Promise<{
+	async function detectImageSize(path: string): Promise<{
 		width: number;
 		height: number;
 		wUnits: string;
@@ -488,8 +470,7 @@ export class FileInfoService {
 	/**
 	 * Calculate blurhash string of image
 	 */
-	@bindThis
-	private async getBlurhash(path: string, type: string): Promise<string> {
+	async function getBlurhash(path: string, type: string): Promise<string> {
 		const sharp = await sharpBmp(path, type);
 		const { data: buffer, info } = await sharp
 			.raw()
@@ -498,4 +479,8 @@ export class FileInfoService {
 			.toBuffer({ resolveWithObject: true });
 		return blurhash.encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
 	}
+
+	return { getFileInfo, fixMime, detectType, checkSvg, getFileSize };
 }
+
+export type FileInfoService = ReturnType<typeof createFileInfoService>;
