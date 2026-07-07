@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { InternalEventTypes } from '@/core/GlobalEventService.js';
+import type { InternalEventTypes } from '@/core/global-events.js';
 import {
 	createRoleAssignmentInDatabase,
 	deleteRoleAssignmentByIdFromDatabase,

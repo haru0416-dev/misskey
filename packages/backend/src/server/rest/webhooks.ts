@@ -11,7 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import type { UserWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { UserWebhookDeliverQueue } from '@/core/queues.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { MiNote } from '@/models/Note.js';
 import type { MiLocalUser } from '@/models/User.js';

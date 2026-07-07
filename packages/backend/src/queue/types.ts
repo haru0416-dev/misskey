@@ -10,8 +10,8 @@ import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import type { SystemWebhookPayload } from '@/core/SystemWebhookService.js';
-import type { UserWebhookPayload } from '@/core/UserWebhookService.js';
+import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
+import type { UserWebhookPayload } from '@/core/user-webhook-types.js';
 import type httpSignature from '@peertube/http-signature';
 
 /** ImportAntennasProcessorService.ts で定義されていたエクスポート/インポート用の型。 */

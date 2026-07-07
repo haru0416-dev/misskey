@@ -20,7 +20,7 @@ import {
 	updateUserInDatabase,
 } from '@/core/UserStore.js';
 import { listAllFollowingsByFollowerIdFromDatabase, listLocalFollowerFollowingsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
-import type { RelationshipQueue } from '@/core/QueueModule.js';
+import type { RelationshipQueue } from '@/core/queues.js';
 import type { RelationshipJobData, ThinUser } from '@/queue/types.js';
 import { genId } from '@/misc/id/gen-id.js';
 import * as Acct from '@/misc/acct.js';

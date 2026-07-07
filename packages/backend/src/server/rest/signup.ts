@@ -24,7 +24,7 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
-import type { SystemWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
 import { HonoApiError, signupValidationError } from './error.js';
 import { completeHonoApiSignin, type HonoApiSigninDependencies, type HonoApiSigninFlowResult, type HonoApiSigninRequest } from './signin.js';
 import { packMeDetailedForHonoApi, packUserLiteForHonoApi } from './user.js';

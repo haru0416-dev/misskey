@@ -8,7 +8,7 @@ import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
+import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { FetchAllowSoftFailMask, assertActivityMatchesUrl } from '@/core/activitypub/misc/check-against-url.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import { isCollectionOrOrderedCollection, type ICollection, type IObject, type IOrderedCollection } from '@/core/activitypub/type.js';

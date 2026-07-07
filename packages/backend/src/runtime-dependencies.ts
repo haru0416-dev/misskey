@@ -11,7 +11,7 @@ import type { MiMeta } from '@/models/_.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { allSettled } from '@/misc/promise-tracker.js';
-import type { GlobalEvents } from '@/core/GlobalEventService.js';
+import type { GlobalEvents } from '@/core/global-events.js';
 import { createAiService, type AiService } from '@/core/AiService.js';
 import { createDownloadService, type DownloadService } from '@/core/DownloadService.js';
 import { createFileInfoService, type FileInfoService } from '@/core/FileInfoService.js';
@@ -45,7 +45,7 @@ import {
 	type SystemQueue,
 	type SystemWebhookDeliverQueue,
 	type UserWebhookDeliverQueue,
-} from '@/core/QueueModule.js';
+} from '@/core/queues.js';
 import { createVideoProcessingService, type VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { createUrlPreviewService, type UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import { createHonoChartWriters, saveHonoChartWriters, startHonoChartWriterSaveInterval, type HonoChartWriters } from '@/server/chart-runtime.js';

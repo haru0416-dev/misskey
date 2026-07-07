@@ -4,8 +4,8 @@
  */
 
 import type { Config } from '@/config.js';
-import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
-import type { DeliverQueue } from '@/core/QueueModule.js';
+import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
+import type { DeliverQueue } from '@/core/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverJobData, ThinUser } from '@/queue/types.js';
 

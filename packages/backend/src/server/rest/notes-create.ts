@@ -59,7 +59,7 @@ import {
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { listRenoteMuterIdsByMuteeIdFromDatabase } from '@/core/RenoteMutingStore.js';
 import { countMutualFollowingsBetweenUsersFromDatabase, followingExistsInDatabase } from '@/core/FollowingStore.js';
-import type { EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

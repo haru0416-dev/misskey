@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import type { DbQueue } from '@/core/QueueModule.js';
+import type { DbQueue } from '@/core/queues.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';

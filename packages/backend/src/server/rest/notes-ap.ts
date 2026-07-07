@@ -6,11 +6,11 @@
 import { randomUUID } from 'node:crypto';
 import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
-import { JsonLd } from '@/core/activitypub/JsonLdService.js';
+import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
+import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import type { DeliverQueue } from '@/core/QueueModule.js';
+import type { DeliverQueue } from '@/core/queues.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
 import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/NoteStore.js';
