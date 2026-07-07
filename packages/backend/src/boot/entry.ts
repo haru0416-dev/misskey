@@ -16,8 +16,6 @@ import Logger from '@/logger.js';
 import { envOption } from '../env.js';
 import { readyRef } from './ready.js';
 
-import 'reflect-metadata';
-
 process.title = `Misskey (${cluster.isPrimary ? 'master' : 'worker'})`;
 
 Error.stackTraceLimit = Infinity;
