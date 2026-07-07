@@ -27,7 +27,8 @@ import * as Acct from '@/misc/acct.js';
 import type { Config } from '@/config.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { addActivityContext, deliverNoteActivityForHonoApi, renderUpdateForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
+import { addActivityContext, deliverNoteActivityForHonoApi, deliverToRelaysForHonoApi, renderUpdateForHonoApi, type HonoApiNoteApDependencies, type HonoApiRelayDeliverDependencies } from './notes-ap.js';
+import { onMoveAccountForHonoApi } from './antennas.js';
 import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from './account-update.js';
 import { createRoleAssignedNotification, type HonoApiNotificationDependencies } from './notification.js';
 import type { HonoApiRolePolicyDependencies } from './role-policy.js';
@@ -41,6 +42,7 @@ export type HonoApiAccountMoveDependencies =
 	HonoApiFollowingDependencies &
 	HonoApiNotificationDependencies &
 	HonoApiNoteApDependencies &
+	HonoApiRelayDeliverDependencies &
 	HonoApiAccountUpdateDependencies &
 	UserPackingDependencies & {
 		relationshipQueue: RelationshipQueue;
@@ -258,7 +260,8 @@ async function moveFromLocalForHonoApi(deps: HonoApiAccountMoveDependencies, src
 	const srcPerson = await renderPersonForHonoApi(deps, updatedSrc);
 	const updateAct = addActivityContext(deps.config, renderUpdateForHonoApi(deps.config, srcPerson, updatedSrc));
 	await deliverNoteActivityForHonoApi(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
-	// リレー配信 (RelayService.deliverToRelays) は LD 署名基盤が hono 側未移植のため見送り。
+	// 原典 AccountMoveService#moveFromLocal 同様、リレー配信は await しない。
+	void deliverToRelaysForHonoApi(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
 
 	const moveAct = addActivityContext(deps.config, renderMoveForHonoApi(deps.config, updatedSrc, dst));
 	await deliverNoteActivityForHonoApi(deps, updatedSrc, moveAct, { directRecipients: [], deliverToFollowers: true });
@@ -286,8 +289,7 @@ export async function postMoveProcessForHonoApi(deps: HonoApiAccountMoveDependen
 			copyMutingsForHonoApi(deps, src, dst),
 			copyRolesForHonoApi(deps, src, dst),
 			updateListsForHonoApi(deps, src, dst),
-			// AntennaService.onMoveAccount (アンテナのユーザー一覧に dst を追記) は hono 側未移植のため見送り。
-			// 原文でも try/catch で握りつぶされる non-fatal な副作用であり、e2e でも検証されていない。
+			onMoveAccountForHonoApi(deps, src, dst),
 		]);
 	} catch {
 		// skip if any error happens

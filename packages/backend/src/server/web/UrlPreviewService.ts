@@ -3,15 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import type { SummalyResult } from '@misskey-dev/summaly';
-import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
-import type Logger from '@/logger.js';
 import { query } from '@/misc/prelude/url.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import { bindThis } from '@/decorators.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
 import { MiMeta } from '@/models/Meta.js';
 
@@ -27,37 +23,25 @@ export type UrlPreviewReply = {
 	header: (name: string, value: string | number | undefined) => unknown;
 };
 
-@Injectable()
-export class UrlPreviewService {
-	private logger: Logger;
-	private readonly summalyDefaultUserAgent: string;
+export function createUrlPreviewService(
+	config: Config,
+	meta: MiMeta,
+	httpRequestService: HttpRequestService,
+	loggerService: LoggerService,
+) {
+	const logger = loggerService.getLogger('url-preview');
+	const summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${config.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
 
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
-		@Inject(DI.meta)
-		private meta: MiMeta,
-
-		private httpRequestService: HttpRequestService,
-		private loggerService: LoggerService,
-	) {
-		this.logger = this.loggerService.getLogger('url-preview');
-		this.summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${this.config.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
-	}
-
-	@bindThis
-	private wrap(url?: string | null): string | null {
+	function wrap(url?: string | null): string | null {
 		return url != null
-			? `${this.config.mediaProxy}/preview.webp?${query({
+			? `${config.mediaProxy}/preview.webp?${query({
 				url,
 				preview: '1',
 			})}`
 			: null;
 	}
 
-	@bindThis
-	public async handle(
+	async function handle(
 		request: UrlPreviewRequest,
 		reply: UrlPreviewReply,
 	): Promise<object | undefined> {
@@ -78,7 +62,7 @@ export class UrlPreviewService {
 		}
 		const normalizedLang = lang ?? undefined;
 
-		if (!this.meta.urlPreviewEnabled) {
+		if (!meta.urlPreviewEnabled) {
 			reply.code(403);
 			return {
 				error: {
@@ -90,16 +74,16 @@ export class UrlPreviewService {
 			};
 		}
 
-		this.logger.info(this.meta.urlPreviewSummaryProxyUrl
+		logger.info(meta.urlPreviewSummaryProxyUrl
 			? `(Proxy) Getting preview of ${url}@${normalizedLang} ...`
 			: `Getting preview of ${url}@${normalizedLang} ...`);
 
 		try {
-			const summary = this.meta.urlPreviewSummaryProxyUrl
-				? await this.fetchSummaryFromProxy(url, this.meta, normalizedLang)
-				: await this.fetchSummary(url, this.meta, normalizedLang);
+			const summary = meta.urlPreviewSummaryProxyUrl
+				? await fetchSummaryFromProxy(url, meta, normalizedLang)
+				: await fetchSummary(url, meta, normalizedLang);
 
-			this.logger.succ(`Got preview of ${url}: ${summary.title}`);
+			logger.succ(`Got preview of ${url}: ${summary.title}`);
 
 			if (!(summary.url.startsWith('http://') || summary.url.startsWith('https://'))) {
 				throw new Error('unsupported schema included');
@@ -109,15 +93,15 @@ export class UrlPreviewService {
 				throw new Error('unsupported schema included');
 			}
 
-			summary.icon = this.wrap(summary.icon);
-			summary.thumbnail = this.wrap(summary.thumbnail);
+			summary.icon = wrap(summary.icon);
+			summary.thumbnail = wrap(summary.thumbnail);
 
 			// Cache 1day
 			reply.header('Cache-Control', 'max-age=86400, immutable');
 
 			return summary;
 		} catch (err) {
-			this.logger.warn(`Failed to get preview of ${url}: ${err}`);
+			logger.warn(`Failed to get preview of ${url}: ${err}`);
 
 			reply.code(422);
 			reply.header('Cache-Control', 'max-age=86400, immutable');
@@ -132,35 +116,39 @@ export class UrlPreviewService {
 		}
 	}
 
-	private async fetchSummary(url: string, meta: MiMeta, lang?: string): Promise<SummalyResult> {
+	async function fetchSummary(url: string, meta: MiMeta, lang?: string): Promise<SummalyResult> {
 		const { summaly } = await import('@misskey-dev/summaly');
 
 		return summaly(url, {
-			followRedirects: this.meta.urlPreviewAllowRedirect,
+			followRedirects: meta.urlPreviewAllowRedirect,
 			lang: lang ?? 'ja-JP',
 			agent: {
-				http: this.httpRequestService.httpAgent,
-				https: this.httpRequestService.httpsAgent,
+				http: httpRequestService.httpAgent,
+				https: httpRequestService.httpsAgent,
 			},
-			userAgent: meta.urlPreviewUserAgent ?? this.summalyDefaultUserAgent,
+			userAgent: meta.urlPreviewUserAgent ?? summalyDefaultUserAgent,
 			operationTimeout: meta.urlPreviewTimeout,
 			contentLengthLimit: meta.urlPreviewMaximumContentLength,
 			contentLengthRequired: meta.urlPreviewRequireContentLength,
 		});
 	}
 
-	private fetchSummaryFromProxy(url: string, meta: MiMeta, lang?: string): Promise<SummalyResult> {
+	function fetchSummaryFromProxy(url: string, meta: MiMeta, lang?: string): Promise<SummalyResult> {
 		const proxy = meta.urlPreviewSummaryProxyUrl!;
 		const queryStr = query({
 			url: url,
 			lang: lang ?? 'ja-JP',
-			followRedirects: this.meta.urlPreviewAllowRedirect,
-			userAgent: meta.urlPreviewUserAgent ?? this.summalyDefaultUserAgent,
+			followRedirects: meta.urlPreviewAllowRedirect,
+			userAgent: meta.urlPreviewUserAgent ?? summalyDefaultUserAgent,
 			operationTimeout: meta.urlPreviewTimeout,
 			contentLengthLimit: meta.urlPreviewMaximumContentLength,
 			contentLengthRequired: meta.urlPreviewRequireContentLength,
 		});
 
-		return this.httpRequestService.getJson<SummalyResult>(`${proxy}?${queryStr}`, 'application/json, */*', undefined, true);
+		return httpRequestService.getJson<SummalyResult>(`${proxy}?${queryStr}`, 'application/json, */*', undefined, true);
 	}
+
+	return { handle };
 }
+
+export type UrlPreviewService = ReturnType<typeof createUrlPreviewService>;

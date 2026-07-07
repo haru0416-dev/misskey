@@ -4,70 +4,49 @@
  */
 
 import { URL, domainToASCII } from 'node:url';
-import { Inject, Injectable } from '@nestjs/common';
 import semver from 'semver';
-import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
-import { bindThis } from '@/decorators.js';
 import { MiMeta, SoftwareSuspension } from '@/models/Meta.js';
 import { MiInstance } from '@/models/Instance.js';
 import RE2 from '@/misc/re2.js';
 
-@Injectable()
-export class UtilityService {
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
-		@Inject(DI.meta)
-		private meta: MiMeta,
-	) {
+export function createUtilityService(config: Config, meta: MiMeta) {
+	function getFullApAccount(username: string, host: string | null): string {
+		return host ? `${username}@${toPuny(host)}` : `${username}@${toPuny(config.host)}`;
 	}
 
-	@bindThis
-	public getFullApAccount(username: string, host: string | null): string {
-		return host ? `${username}@${this.toPuny(host)}` : `${username}@${this.toPuny(this.config.host)}`;
-	}
-
-	@bindThis
-	public isSelfHost(host: string | null): boolean {
+	function isSelfHost(host: string | null): boolean {
 		if (host == null) return true;
-		return this.toPuny(this.config.host) === this.toPuny(host);
+		return toPuny(config.host) === toPuny(host);
 	}
 
-	@bindThis
-	public isUriLocal(uri: string): boolean {
-		return this.punyHost(uri) === this.toPuny(this.config.host);
+	function isUriLocal(uri: string): boolean {
+		return punyHost(uri) === toPuny(config.host);
 	}
 
 	// メールアドレスのバリデーションを行う
 	// https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
-	@bindThis
-	public validateEmailFormat(email: string): boolean {
+	function validateEmailFormat(email: string): boolean {
 		const regexp = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 		return regexp.test(email);
 	}
 
-	@bindThis
-	public isBlockedHost(blockedHosts: string[], host: string | null): boolean {
+	function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 		if (host == null) return false;
 		return blockedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 	}
 
-	@bindThis
-	public isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
+	function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 		if (!silencedHosts || host == null) return false;
 		return silencedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 	}
 
-	@bindThis
-	public isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
+	function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 		if (!silencedHosts || host == null) return false;
 		return silencedHosts.some(x => host.toLowerCase() === x);
 	}
 
-	@bindThis
-	public concatNoteContentsForKeyWordCheck(content: {
+	function concatNoteContentsForKeyWordCheck(content: {
 		cw?: string | null;
 		text?: string | null;
 		pollChoices?: string[] | null;
@@ -80,8 +59,7 @@ export class UtilityService {
 		return `${content.cw ?? ''}${content.text ?? ''}\n${(content.pollChoices ?? []).join('\n')}\n${(content.others ?? []).join('\n')}`;
 	}
 
-	@bindThis
-	public isKeyWordIncluded(text: string, keyWords: string[]): boolean {
+	function isKeyWordIncluded(text: string, keyWords: string[]): boolean {
 		if (keyWords.length === 0) return false;
 		if (text === '') return false;
 
@@ -107,59 +85,73 @@ export class UtilityService {
 		return matched;
 	}
 
-	@bindThis
-	public extractDbHost(uri: string): string {
+	function extractDbHost(uri: string): string {
 		const url = new URL(uri);
-		return this.toPuny(url.host);
+		return toPuny(url.host);
 	}
 
-	@bindThis
-	public toPuny(host: string): string {
+	function toPuny(host: string): string {
 		return domainToASCII(host.toLowerCase());
 	}
 
-	@bindThis
-	public toPunyNullable(host: string | null | undefined): string | null {
+	function toPunyNullable(host: string | null | undefined): string | null {
 		if (host == null) return null;
 		return domainToASCII(host.toLowerCase());
 	}
 
-	@bindThis
-	public punyHost(url: string): string {
+	function punyHost(url: string): string {
 		const urlObj = new URL(url);
-		const host = `${this.toPuny(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
+		const host = `${toPuny(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 		return host;
 	}
 
-	@bindThis
-	public isFederationAllowedHost(host: string): boolean {
-		if (this.isSelfHost(host)) return true;
-		if (this.meta.federation === 'none') return false;
-		if (this.meta.federation === 'specified' && !this.meta.federationHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`))) return false;
-		if (this.isBlockedHost(this.meta.blockedHosts, host)) return false;
+	function isFederationAllowedHost(host: string): boolean {
+		if (isSelfHost(host)) return true;
+		if (meta.federation === 'none') return false;
+		if (meta.federation === 'specified' && !meta.federationHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`))) return false;
+		if (isBlockedHost(meta.blockedHosts, host)) return false;
 
 		return true;
 	}
 
-	@bindThis
-	public isFederationAllowedUri(uri: string): boolean {
-		const host = this.extractDbHost(uri);
-		return this.isFederationAllowedHost(host);
+	function isFederationAllowedUri(uri: string): boolean {
+		const host = extractDbHost(uri);
+		return isFederationAllowedHost(host);
 	}
 
-	@bindThis
-	public isDeliverSuspendedSoftware(software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>): SoftwareSuspension | undefined {
+	function isDeliverSuspendedSoftware(software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>): SoftwareSuspension | undefined {
 		if (software.softwareName == null) return undefined;
 		if (software.softwareVersion == null) {
 			// software version is null; suspend iff versionRange is *
-			return this.meta.deliverSuspendedSoftware.find(x =>
+			return meta.deliverSuspendedSoftware.find(x =>
 				x.software === software.softwareName
 				&& x.versionRange.trim() === '*');
 		} else {
 			const softwareVersion = software.softwareVersion;
-			return this.meta.deliverSuspendedSoftware.find(x =>
+			return meta.deliverSuspendedSoftware.find(x =>
 				x.software === software.softwareName
 				&& semver.satisfies(softwareVersion, x.versionRange, { includePrerelease: true }));
 		}
 	}
+
+	return {
+		getFullApAccount,
+		isSelfHost,
+		isUriLocal,
+		validateEmailFormat,
+		isBlockedHost,
+		isSilencedHost,
+		isMediaSilencedHost,
+		concatNoteContentsForKeyWordCheck,
+		isKeyWordIncluded,
+		extractDbHost,
+		toPuny,
+		toPunyNullable,
+		punyHost,
+		isFederationAllowedHost,
+		isFederationAllowedUri,
+		isDeliverSuspendedSoftware,
+	};
 }
+
+export type UtilityService = ReturnType<typeof createUtilityService>;

@@ -7,60 +7,44 @@ import { URLSearchParams } from 'node:url';
 import * as nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import juice from 'juice';
-import { Inject, Injectable } from '@nestjs/common';
 import { validate as validateEmail } from 'deep-email-validator';
 import { UtilityService } from '@/core/UtilityService.js';
-import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
-import type Logger from '@/logger.js';
 import type { MiMeta } from '@/models/_.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import { bindThis } from '@/decorators.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
-@Injectable()
-export class EmailService {
-	private logger: Logger;
+export function createEmailService(
+	config: Config,
+	meta: MiMeta,
+	drizzle: MiDrizzleDatabase,
+	loggerService: LoggerService,
+	utilityService: UtilityService,
+	httpRequestService: HttpRequestService,
+) {
+	const logger = loggerService.getLogger('email');
 
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
+	async function sendEmail(to: string, subject: string, html: string, text: string) {
+		if (!meta.enableEmail) return;
 
-		@Inject(DI.meta)
-		private meta: MiMeta,
+		const iconUrl = `${config.url}/static-assets/mi-white.png`;
+		const emailSettingUrl = `${config.url}/settings/email`;
 
-		@Inject(DI.drizzle)
-		private drizzle: MiDrizzleDatabase,
-
-		private loggerService: LoggerService,
-		private utilityService: UtilityService,
-		private httpRequestService: HttpRequestService,
-	) {
-		this.logger = this.loggerService.getLogger('email');
-	}
-
-	@bindThis
-	public async sendEmail(to: string, subject: string, html: string, text: string) {
-		if (!this.meta.enableEmail) return;
-
-		const iconUrl = `${this.config.url}/static-assets/mi-white.png`;
-		const emailSettingUrl = `${this.config.url}/settings/email`;
-
-		const enableAuth = this.meta.smtpUser != null && this.meta.smtpUser !== '';
+		const enableAuth = meta.smtpUser != null && meta.smtpUser !== '';
 
 		// `proxy` は @types/nodemailer の SMTPTransport.Options に無いが、実際の nodemailer は
 		// (nodemailer-proxy 経由で) サポートしている型定義側の欠落なので、ここだけ拡張して型を保つ。
 		const options: nodemailer.TransportOptions & SMTPTransport.Options & { proxy?: string } = {
-			host: this.meta.smtpHost ?? undefined,
-			port: this.meta.smtpPort ?? undefined,
-			secure: this.meta.smtpSecure,
+			host: meta.smtpHost ?? undefined,
+			port: meta.smtpPort ?? undefined,
+			secure: meta.smtpSecure,
 			ignoreTLS: !enableAuth,
-			proxy: this.config.proxySmtp,
+			proxy: config.proxySmtp,
 			auth: enableAuth ? {
-				user: this.meta.smtpUser ?? undefined,
-				pass: this.meta.smtpPass ?? undefined,
+				user: meta.smtpUser ?? undefined,
+				pass: meta.smtpPass ?? undefined,
 			} : undefined,
 		};
 		const transporter = nodemailer.createTransport(options);
@@ -130,7 +114,7 @@ export class EmailService {
 	<body>
 		<main>
 			<header>
-				<img src="${ this.meta.logoImageUrl ?? this.meta.iconUrl ?? iconUrl }"/>
+				<img src="${ meta.logoImageUrl ?? meta.iconUrl ?? iconUrl }"/>
 			</header>
 			<article>
 				<h1>${ subject }</h1>
@@ -141,7 +125,7 @@ export class EmailService {
 			</footer>
 		</main>
 		<nav>
-			<a href="${ this.config.url }">${ this.config.host }</a>
+			<a href="${ config.url }">${ config.host }</a>
 		</nav>
 	</body>
 </html>`;
@@ -151,36 +135,35 @@ export class EmailService {
 		try {
 			// TODO: htmlサニタイズ
 			const info = await transporter.sendMail({
-				from: this.meta.name ? {
-					name: this.meta.name,
-					address: this.meta.email!,
-				} : this.meta.email!,
+				from: meta.name ? {
+					name: meta.name,
+					address: meta.email!,
+				} : meta.email!,
 				to: to,
 				subject: subject,
 				text: text,
 				html: inlinedHtml,
 			});
 
-			this.logger.info(`Message sent: ${info.messageId}`);
+			logger.info(`Message sent: ${info.messageId}`);
 		} catch (err) {
-			this.logger.error(err as Error);
+			logger.error(err as Error);
 			throw err;
 		}
 	}
 
-	@bindThis
-	public async validateEmailForAccount(emailAddress: string): Promise<{
+	async function validateEmailForAccount(emailAddress: string): Promise<{
 		available: boolean;
 		reason: null | 'used' | 'format' | 'disposable' | 'mx' | 'smtp' | 'banned' | 'network' | 'blacklist';
 	}> {
-		if (!this.utilityService.validateEmailFormat(emailAddress)) {
+		if (!utilityService.validateEmailFormat(emailAddress)) {
 			return {
 				available: false,
 				reason: 'format',
 			};
 		}
 
-		const exist = await countVerifiedUserProfilesByEmailFromDatabase(this.drizzle, emailAddress);
+		const exist = await countVerifiedUserProfilesByEmailFromDatabase(drizzle, emailAddress);
 
 		if (exist !== 0) {
 			return {
@@ -194,11 +177,11 @@ export class EmailService {
 			reason?: string | null,
 		} = { valid: true, reason: null };
 
-		if (this.meta.enableActiveEmailValidation) {
-			if (this.meta.enableVerifymailApi && this.meta.verifymailAuthKey != null) {
-				validated = await this.verifyMail(emailAddress, this.meta.verifymailAuthKey);
-			} else if (this.meta.enableTruemailApi && this.meta.truemailInstance && this.meta.truemailAuthKey != null) {
-				validated = await this.trueMail(this.meta.truemailInstance, emailAddress, this.meta.truemailAuthKey);
+		if (meta.enableActiveEmailValidation) {
+			if (meta.enableVerifymailApi && meta.verifymailAuthKey != null) {
+				validated = await verifyMail(emailAddress, meta.verifymailAuthKey);
+			} else if (meta.enableTruemailApi && meta.truemailInstance && meta.truemailAuthKey != null) {
+				validated = await trueMail(meta.truemailInstance, emailAddress, meta.truemailAuthKey);
 			} else {
 				validated = await validateEmail({
 					email: emailAddress,
@@ -228,7 +211,7 @@ export class EmailService {
 		}
 
 		const emailDomain: string = emailAddress.split('@')[1];
-		const isBanned = this.utilityService.isBlockedHost(this.meta.bannedEmailDomains, emailDomain);
+		const isBanned = utilityService.isBlockedHost(meta.bannedEmailDomains, emailDomain);
 
 		if (isBanned) {
 			return {
@@ -243,12 +226,12 @@ export class EmailService {
 		};
 	}
 
-	private async verifyMail(emailAddress: string, verifymailAuthKey: string): Promise<{
+	async function verifyMail(emailAddress: string, verifymailAuthKey: string): Promise<{
 		valid: boolean;
 		reason: 'used' | 'format' | 'disposable' | 'mx' | 'smtp' | null;
 	}> {
 		const endpoint = 'https://verifymail.io/api/' + emailAddress + '?key=' + verifymailAuthKey;
-		const res = await this.httpRequestService.send(endpoint, {
+		const res = await httpRequestService.send(endpoint, {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',
@@ -312,13 +295,13 @@ export class EmailService {
 		};
 	}
 
-	private async trueMail<T>(truemailInstance: string, emailAddress: string, truemailAuthKey: string): Promise<{
+	async function trueMail<T>(truemailInstance: string, emailAddress: string, truemailAuthKey: string): Promise<{
 		valid: boolean;
 		reason: 'used' | 'format' | 'blacklist' | 'mx' | 'smtp' | 'network' | T | null;
 	}> {
 		const endpoint = truemailInstance + '?email=' + emailAddress;
 		try {
-			const res = await this.httpRequestService.send(endpoint, {
+			const res = await httpRequestService.send(endpoint, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -376,4 +359,8 @@ export class EmailService {
 			};
 		}
 	}
+
+	return { sendEmail, validateEmailForAccount };
 }
+
+export type EmailService = ReturnType<typeof createEmailService>;

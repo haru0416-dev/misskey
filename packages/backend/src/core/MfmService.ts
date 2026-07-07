@@ -4,30 +4,19 @@
  */
 
 import { URL } from 'node:url';
-import { Inject, Injectable } from '@nestjs/common';
 import * as htmlParser from 'node-html-parser';
-import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { intersperse } from '@/misc/prelude/array.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
-import { bindThis } from '@/decorators.js';
 import { mfmToHtml } from '@/core/MfmToHtml.js';
 import type * as mfm from 'mfm-js';
 
 const urlRegex = /^https?:\/\/[\w\/:%#@$&?!()\[\]~.,=+\-]+/;
 const urlRegexFull = /^https?:\/\/[\w\/:%#@$&?!()\[\]~.,=+\-]+$/;
 
-@Injectable()
-export class MfmService {
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-	) {
-	}
-
-	@bindThis
-	public fromHtml(html: string, hashtagNames?: string[]): string {
+export function createMfmService(config: Config) {
+	function fromHtml(html: string, hashtagNames?: string[]): string {
 		// some AP servers like Pixelfed use br tags as well as newlines
 		html = html.replace(/<br\s?\/?>\r?\n/gi, '\n');
 
@@ -269,8 +258,11 @@ export class MfmService {
 		}
 	}
 
-	@bindThis
-	public toHtml(nodes: mfm.MfmNode[] | null, mentionedRemoteUsers: IMentionedRemoteUsers = [], extraHtml: string | null = null) {
-		return mfmToHtml(this.config, nodes, mentionedRemoteUsers, extraHtml);
+	function toHtml(nodes: mfm.MfmNode[] | null, mentionedRemoteUsers: IMentionedRemoteUsers = [], extraHtml: string | null = null) {
+		return mfmToHtml(config, nodes, mentionedRemoteUsers, extraHtml);
 	}
+
+	return { fromHtml, toHtml };
 }
+
+export type MfmService = ReturnType<typeof createMfmService>;

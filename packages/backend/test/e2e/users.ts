@@ -11,7 +11,7 @@ import { inspect } from 'node:util';
 import { api, post, role, signup, successfulApiCall, testPaginationConsistency, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { loadConfig } from '@/config.js';
-import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

@@ -6,26 +6,12 @@
 import * as crypto from 'node:crypto';
 import { URL } from 'node:url';
 import { promisify } from 'node:util';
-import { Inject, Injectable } from '@nestjs/common';
-import * as htmlParser from 'node-html-parser';
 import { Signer } from 'slacc';
 import type { SignatureAlgorithmIdentifier } from 'slacc';
 
 // slacc の SignatureAlgorithmIdentifier は ambient const enum のため isolatedModules 下では値として import できない。
 // 値自体は enum メンバー名と同じ文字列なので、型だけ import してリテラルをそのまま渡す。
 const RSA_2048_8192 = 'Rsa2048_8192' as SignatureAlgorithmIdentifier;
-import { DI } from '@/di-symbols.js';
-import type { Config } from '@/config.js';
-import type { MiUser } from '@/models/User.js';
-import { UserKeypairService } from '@/core/UserKeypairService.js';
-import { UtilityService } from '@/core/UtilityService.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
-import { LoggerService } from '@/core/LoggerService.js';
-import { bindThis } from '@/decorators.js';
-import type Logger from '@/logger.js';
-import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import { assertActivityMatchesUrl, FetchAllowSoftFailMask as FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
-import type { IObject } from './type.js';
 
 type Request = {
 	url: string;
@@ -143,110 +129,5 @@ export class ApRequestCreator {
 
 	static #objectAssignWithLcKey(a: Record<string, string>, b: Record<string, string>): Record<string, string> {
 		return Object.assign(this.#lcObjectKey(a), this.#lcObjectKey(b));
-	}
-}
-
-@Injectable()
-export class ApRequestService {
-	private logger: Logger;
-
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
-		private userKeypairService: UserKeypairService,
-		private httpRequestService: HttpRequestService,
-		private loggerService: LoggerService,
-		private utilityService: UtilityService,
-	) {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		this.logger = this.loggerService?.getLogger('ap-request'); // なぜか TypeError: Cannot read properties of undefined (reading 'getLogger') と言われる
-	}
-
-	@bindThis
-	public async signedPost(user: { id: MiUser['id'] }, url: string, object: unknown, digest?: string): Promise<void> {
-		const body = typeof object === 'string' ? object : JSON.stringify(object);
-
-		const keypair = await this.userKeypairService.getUserKeypair(user.id);
-
-		const req = await ApRequestCreator.createSignedPost({
-			key: {
-				privateKeyPem: keypair.privateKey,
-				keyId: `${this.config.url}/users/${user.id}#main-key`,
-			},
-			url,
-			body,
-			digest,
-			additionalHeaders: {
-			},
-		});
-
-		await this.httpRequestService.send(url, {
-			method: req.request.method,
-			headers: req.request.headers,
-			body,
-		});
-	}
-
-	/**
-	 * Get AP object with http-signature
-	 * @param user http-signature user
-	 * @param url URL to fetch
-	 */
-	@bindThis
-	public async signedGet(url: string, user: { id: MiUser['id'] }, allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict, followAlternate?: boolean): Promise<unknown> {
-		const _followAlternate = followAlternate ?? true;
-		const keypair = await this.userKeypairService.getUserKeypair(user.id);
-
-		const req = await ApRequestCreator.createSignedGet({
-			key: {
-				privateKeyPem: keypair.privateKey,
-				keyId: `${this.config.url}/users/${user.id}#main-key`,
-			},
-			url,
-			additionalHeaders: {
-			},
-		});
-
-		const res = await this.httpRequestService.send(url, {
-			method: req.request.method,
-			headers: req.request.headers,
-		}, {
-			throwErrorWhenResponseNotOk: true,
-		});
-
-		//#region リクエスト先がhtmlかつactivity+jsonへのalternate linkタグがあるとき
-		const contentType = res.headers.get('content-type');
-
-		if (
-			res.ok &&
-			(contentType ?? '').split(';')[0].trimEnd().toLowerCase() === 'text/html' &&
-			_followAlternate === true
-		) {
-			const html = await res.text();
-
-			try {
-				const document = htmlParser.parse(html);
-
-				const alternate = document.querySelector('head > link[rel="alternate"][type="application/activity+json"]');
-				if (alternate) {
-					const href = alternate.getAttribute('href');
-					if (href && this.utilityService.punyHost(url) === this.utilityService.punyHost(href)) {
-						return await this.signedGet(href, user, allowSoftfail, false);
-					}
-				}
-			} catch (_) {
-				// something went wrong parsing the HTML, ignore the whole thing
-			}
-		}
-		//#endregion
-
-		validateContentTypeSetAsActivityPub(res);
-		const finalUrl = res.url; // redirects may have been involved
-		const activity = await res.json() as IObject;
-
-		assertActivityMatchesUrl(url, activity, finalUrl, allowSoftfail);
-
-		return activity;
 	}
 }

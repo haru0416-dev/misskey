@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
 import {
 	generateAuthenticationOptions,
@@ -11,10 +10,8 @@ import {
 	verifyRegistrationResponse,
 } from '@simplewebauthn/server';
 import { AttestationFormat, isoCBOR, isoUint8Array } from '@simplewebauthn/server/helpers';
-import { DI } from '@/di-symbols.js';
 import type { MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
-import { bindThis } from '@/decorators.js';
 import { MiUser } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -35,37 +32,24 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 
-@Injectable()
-export class WebAuthnService {
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
-		@Inject(DI.meta)
-		private meta: MiMeta,
-
-		@Inject(DI.redis)
-		private redisClient: Redis.Redis,
-
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-	) {
-	}
-
-	@bindThis
-	public getRelyingParty(): { origin: string; rpId: string; rpName: string; rpIcon?: string; } {
+export function createWebAuthnService(
+	config: Config,
+	meta: MiMeta,
+	redisClient: Redis.Redis,
+	db: MiDrizzleDatabase,
+) {
+	function getRelyingParty(): { origin: string; rpId: string; rpName: string; rpIcon?: string; } {
 		return {
-			origin: this.config.url,
-			rpId: this.config.hostname,
-			rpName: this.meta.name ?? this.config.host,
-			rpIcon: this.meta.iconUrl ?? undefined,
+			origin: config.url,
+			rpId: config.hostname,
+			rpName: meta.name ?? config.host,
+			rpIcon: meta.iconUrl ?? undefined,
 		};
 	}
 
-	@bindThis
-	public async initiateRegistration(userId: MiUser['id'], userName: string, userDisplayName?: string): Promise<PublicKeyCredentialCreationOptionsJSON> {
-		const relyingParty = this.getRelyingParty();
-		const keys = await listUserSecurityKeysByUserIdFromDatabase(this.db, userId);
+	async function initiateRegistration(userId: MiUser['id'], userName: string, userDisplayName?: string): Promise<PublicKeyCredentialCreationOptionsJSON> {
+		const relyingParty = getRelyingParty();
+		const keys = await listUserSecurityKeysByUserIdFromDatabase(db, userId);
 
 		const registrationOptions = await generateRegistrationOptions({
 			rpName: relyingParty.rpName,
@@ -83,13 +67,12 @@ export class WebAuthnService {
 			},
 		});
 
-		await this.redisClient.setex(`webauthn:challenge:${userId}`, 90, registrationOptions.challenge);
+		await redisClient.setex(`webauthn:challenge:${userId}`, 90, registrationOptions.challenge);
 
 		return registrationOptions;
 	}
 
-	@bindThis
-	public async verifyRegistration(userId: MiUser['id'], response: RegistrationResponseJSON): Promise<{
+	async function verifyRegistration(userId: MiUser['id'], response: RegistrationResponseJSON): Promise<{
 		credentialID: string;
 		credentialPublicKey: Uint8Array;
 		attestationObject: Uint8Array;
@@ -100,15 +83,15 @@ export class WebAuthnService {
 		credentialBackedUp: boolean;
 		transports?: AuthenticatorTransportFuture[];
 	}> {
-		const challenge = await this.redisClient.get(`webauthn:challenge:${userId}`);
+		const challenge = await redisClient.get(`webauthn:challenge:${userId}`);
 
 		if (!challenge) {
 			throw new IdentifiableError('7dbfb66c-9216-4e2b-9c27-cef2ac8efb84', 'challenge not found');
 		}
 
-		await this.redisClient.del(`webauthn:challenge:${userId}`);
+		await redisClient.del(`webauthn:challenge:${userId}`);
 
-		const relyingParty = this.getRelyingParty();
+		const relyingParty = getRelyingParty();
 
 		let verification;
 		try {
@@ -145,10 +128,9 @@ export class WebAuthnService {
 		};
 	}
 
-	@bindThis
-	public async initiateAuthentication(userId: MiUser['id']): Promise<PublicKeyCredentialRequestOptionsJSON> {
-		const relyingParty = this.getRelyingParty();
-		const keys = await listUserSecurityKeysByUserIdFromDatabase(this.db, userId);
+	async function initiateAuthentication(userId: MiUser['id']): Promise<PublicKeyCredentialRequestOptionsJSON> {
+		const relyingParty = getRelyingParty();
+		const keys = await listUserSecurityKeysByUserIdFromDatabase(db, userId);
 
 		if (keys.length === 0) {
 			throw new IdentifiableError('f27fd449-9af4-4841-9249-1f989b9fa4a4', 'no keys found');
@@ -163,7 +145,7 @@ export class WebAuthnService {
 			userVerification: 'preferred',
 		});
 
-		await this.redisClient.setex(`webauthn:challenge:${userId}`, 90, authenticationOptions.challenge);
+		await redisClient.setex(`webauthn:challenge:${userId}`, 90, authenticationOptions.challenge);
 
 		return authenticationOptions;
 	}
@@ -172,16 +154,15 @@ export class WebAuthnService {
 	 * Initiate Passkey Auth (Without specifying user)
 	 * @returns authenticationOptions
 	 */
-	@bindThis
-	public async initiateSignInWithPasskeyAuthentication(context: string): Promise<PublicKeyCredentialRequestOptionsJSON> {
-		const relyingParty = await this.getRelyingParty();
+	async function initiateSignInWithPasskeyAuthentication(context: string): Promise<PublicKeyCredentialRequestOptionsJSON> {
+		const relyingParty = await getRelyingParty();
 
 		const authenticationOptions = await generateAuthenticationOptions({
 			rpID: relyingParty.rpId,
 			userVerification: 'preferred',
 		});
 
-		await this.redisClient.setex(`webauthn:challenge:${context}`, 90, authenticationOptions.challenge);
+		await redisClient.setex(`webauthn:challenge:${context}`, 90, authenticationOptions.challenge);
 
 		return authenticationOptions;
 	}
@@ -191,21 +172,20 @@ export class WebAuthnService {
 	 * @throws IdentifiableError
 	 * @returns If the challenge is successful, return the user ID. Otherwise, return null.
 	 */
-	@bindThis
-	public async verifySignInWithPasskeyAuthentication(context: string, response: AuthenticationResponseJSON): Promise<MiUser['id'] | null> {
-		const challenge = await this.redisClient.getdel(`webauthn:challenge:${context}`);
+	async function verifySignInWithPasskeyAuthentication(context: string, response: AuthenticationResponseJSON): Promise<MiUser['id'] | null> {
+		const challenge = await redisClient.getdel(`webauthn:challenge:${context}`);
 
 		if (!challenge) {
 			throw new IdentifiableError('2d16e51c-007b-4edd-afd2-f7dd02c947f6', `challenge '${context}' not found`);
 		}
 
-		const key = await fetchUserSecurityKeyByIdFromDatabase(this.db, response.id);
+		const key = await fetchUserSecurityKeyByIdFromDatabase(db, response.id);
 
 		if (!key) {
 			throw new IdentifiableError('36b96a7d-b547-412d-aeed-2d611cdc8cdc', 'Unknown Webauthn key');
 		}
 
-		const relyingParty = await this.getRelyingParty();
+		const relyingParty = await getRelyingParty();
 
 		let verification;
 		try {
@@ -232,7 +212,7 @@ export class WebAuthnService {
 			return null;
 		}
 
-		await recordUserSecurityKeyUsageByIdInDatabase(this.db, response.id, {
+		await recordUserSecurityKeyUsageByIdInDatabase(db, response.id, {
 			lastUsed: new Date(),
 			counter: authenticationInfo.newCounter,
 			credentialDeviceType: authenticationInfo.credentialDeviceType,
@@ -242,15 +222,14 @@ export class WebAuthnService {
 		return key.userId;
 	}
 
-	@bindThis
-	public async verifyAuthentication(userId: MiUser['id'], response: AuthenticationResponseJSON): Promise<boolean> {
-		const challenge = await this.redisClient.getdel(`webauthn:challenge:${userId}`);
+	async function verifyAuthentication(userId: MiUser['id'], response: AuthenticationResponseJSON): Promise<boolean> {
+		const challenge = await redisClient.getdel(`webauthn:challenge:${userId}`);
 
 		if (!challenge) {
 			throw new IdentifiableError('2d16e51c-007b-4edd-afd2-f7dd02c947f6', 'challenge not found');
 		}
 
-		const key = await fetchUserSecurityKeyByIdAndUserIdFromDatabase(this.db, response.id, userId);
+		const key = await fetchUserSecurityKeyByIdAndUserIdFromDatabase(db, response.id, userId);
 
 		if (!key) {
 			throw new IdentifiableError('36b96a7d-b547-412d-aeed-2d611cdc8cdc', 'unknown key');
@@ -270,12 +249,12 @@ export class WebAuthnService {
 				cborMap.set(-3, cert.slice(halfLength + 1)); // y
 
 				const cborPubKey = Buffer.from(isoCBOR.encode(cborMap)).toString('base64url');
-				await updateUserSecurityKeyPublicKeyByIdAndUserIdInDatabase(this.db, response.id, userId, cborPubKey);
+				await updateUserSecurityKeyPublicKeyByIdAndUserIdInDatabase(db, response.id, userId, cborPubKey);
 				key.publicKey = cborPubKey;
 			}
 		}
 
-		const relyingParty = this.getRelyingParty();
+		const relyingParty = getRelyingParty();
 
 		let verification;
 		try {
@@ -303,7 +282,7 @@ export class WebAuthnService {
 			return false;
 		}
 
-		await recordUserSecurityKeyUsageByIdAndUserIdInDatabase(this.db, response.id, userId, {
+		await recordUserSecurityKeyUsageByIdAndUserIdInDatabase(db, response.id, userId, {
 			lastUsed: new Date(),
 			counter: authenticationInfo.newCounter,
 			credentialDeviceType: authenticationInfo.credentialDeviceType,
@@ -312,4 +291,16 @@ export class WebAuthnService {
 
 		return verified;
 	}
+
+	return {
+		getRelyingParty,
+		initiateRegistration,
+		verifyRegistration,
+		initiateAuthentication,
+		initiateSignInWithPasskeyAuthentication,
+		verifySignInWithPasskeyAuthentication,
+		verifyAuthentication,
+	};
 }
+
+export type WebAuthnService = ReturnType<typeof createWebAuthnService>;

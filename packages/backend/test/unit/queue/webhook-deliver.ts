@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { createHttpRequestService } from '@/core/HttpRequestService.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { createSystemWebhookInDatabase, fetchSystemWebhookByIdOrFailFromDatabase } from '@/core/SystemWebhookStore.js';
@@ -27,7 +27,7 @@ describe('hono-queue-webhook-deliver', () => {
 	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	const config = loadConfig();
-	const httpRequestService = new HttpRequestService(config);
+	const httpRequestService = createHttpRequestService(config);
 
 	beforeAll(() => {
 		pool = createDrizzlePool(config);

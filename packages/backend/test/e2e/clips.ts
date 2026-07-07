@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import { afterAll, describe, beforeAll, beforeEach, afterEach, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createNoteInDatabase } from '@/core/NoteStore.js';
-import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

@@ -12,14 +12,14 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { HonoApiError } from './error.js';
 import { genLocalUserUri } from './following.js';
-import { addActivityContext, deliverNoteActivityForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
+import { addActivityContext, deliverNoteActivityForHonoApi, deliverToRelaysForHonoApi, type HonoApiRelayDeliverDependencies } from './notes-ap.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAccountPinDependencies =
 	HonoApiRolePolicyDependencies &
-	HonoApiNoteApDependencies &
+	HonoApiRelayDeliverDependencies &
 	UserPackingDependencies;
 
 function iPinNoSuchNoteError(): HonoApiError {
@@ -61,8 +61,9 @@ async function deliverPinnedChangeForHonoApi(
 	const item = `${deps.config.url}/notes/${noteId}`;
 	const content = addActivityContext(deps.config, isAddition ? renderAddForHonoApi(deps.config, user, target, item) : renderRemoveForHonoApi(deps.config, user, target, item));
 
-	// リレーへの配信 (RelayService.deliverToRelays) は LD 署名基盤が hono 側未移植のため見送り。
 	await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
+	// 原典 NotePiningService#deliverPinnedChange 同様、リレー配信は await しない。
+	void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, content).catch(() => {});
 }
 
 /** NotePiningService.addPinned 相当。 */
