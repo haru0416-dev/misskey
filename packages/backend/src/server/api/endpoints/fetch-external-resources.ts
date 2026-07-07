@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { fetchExternalResourcesParamDef } from '@/server/rest/fetch-external-resources.js';
 
 export const meta = {
 	tags: ['meta'],
@@ -42,11 +43,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		url: { type: 'string' },
-		hash: { type: 'string' },
-	},
-	required: ['url', 'hash'],
-} as const;
+export const paramDef = fetchExternalResourcesParamDef;

@@ -129,7 +129,7 @@ type HonoPackedAppNotification = {
 	icon: string | null;
 };
 
-const notificationsCreateParamDef = z.object({
+export const notificationsCreateParamDef = z.object({
 	body: z.string(),
 	header: z.string().nullable().optional(),
 	icon: z.string().nullable().optional(),
@@ -141,7 +141,7 @@ type NotificationsCreateParams = {
 	icon?: string | null;
 };
 
-const claimAchievementParamDef = z.object({
+export const claimAchievementParamDef = z.object({
 	name: z.enum(ACHIEVEMENT_TYPES),
 });
 

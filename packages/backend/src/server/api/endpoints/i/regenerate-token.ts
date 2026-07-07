@@ -3,16 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { regenerateTokenParamDef } from '@/server/rest/account-security.js';
+
 export const meta = {
 	requireCredential: true,
 
 	secure: true,
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-	},
-	required: ['password'],
-} as const;
+export const paramDef = regenerateTokenParamDef;

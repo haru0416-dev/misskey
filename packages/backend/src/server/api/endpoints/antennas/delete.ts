@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { antennasDeleteParamDef } from '@/server/rest/antennas.js';
+
 export const meta = {
 	tags: ['antennas'],
 
@@ -19,10 +21,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		antennaId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['antennaId'],
-} as const;
+export const paramDef = antennasDeleteParamDef;

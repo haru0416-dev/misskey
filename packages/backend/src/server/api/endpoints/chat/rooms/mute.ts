@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { chatRoomsMuteParamDef } from '@/server/rest/chat.js';
+
 export const meta = {
 	tags: ['chat'],
 
@@ -19,11 +21,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		roomId: { type: 'string', format: 'misskey:id' },
-		mute: { type: 'boolean' },
-	},
-	required: ['roomId', 'mute'],
-} as const;
+export const paramDef = chatRoomsMuteParamDef;

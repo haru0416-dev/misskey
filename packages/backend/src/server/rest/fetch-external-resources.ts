@@ -19,7 +19,7 @@ export type HonoApiFetchExternalResourcesDependencies = {
 	httpRequestService: HttpRequestService;
 };
 
-const fetchExternalResourcesParamDef = z.object({
+export const fetchExternalResourcesParamDef = z.object({
 	url: z.string(),
 	hash: z.string(),
 });

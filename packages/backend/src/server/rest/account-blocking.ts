@@ -43,11 +43,11 @@ export type HonoApiAccountBlockingDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const userIdParamDef = z.object({
+export const userIdParamDef = z.object({
 	userId: misskeyId(),
 });
 
-const blockingListParamDef = z.object({
+export const blockingListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(30),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

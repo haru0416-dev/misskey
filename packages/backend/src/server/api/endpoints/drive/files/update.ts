@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { driveFilesUpdateParamDef } from '@/server/rest/drive-files.js';
+
 export const meta = {
 	tags: ['drive'],
 
@@ -50,14 +52,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-		folderId: { type: 'string', format: 'misskey:id', nullable: true },
-		name: { type: 'string' },
-		isSensitive: { type: 'boolean' },
-		comment: { type: 'string', nullable: true, maxLength: 512 },
-	},
-	required: ['fileId'],
-} as const;
+export const paramDef = driveFilesUpdateParamDef;

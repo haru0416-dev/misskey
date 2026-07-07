@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { federationStatsParamDef } from '@/server/rest/federation.js';
+
 export const meta = {
 	tags: ['federation'],
 
@@ -44,10 +46,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-	},
-	required: [],
-} as const;
+export const paramDef = federationStatsParamDef;

@@ -32,11 +32,11 @@ export type HonoApiEmojiDependencies = DriveFileUploadDependencies & {
 	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
 };
 
-const emojiParamDef = z.object({
+export const emojiParamDef = z.object({
 	name: z.string(),
 });
 
-const adminEmojiListParamDef = z.object({
+export const adminEmojiListParamDef = z.object({
 	query: z.string().nullable().default(null),
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
@@ -45,7 +45,7 @@ const adminEmojiListParamDef = z.object({
 	untilDate: z.number().int().optional(),
 });
 
-const adminEmojiListRemoteParamDef = z.object({
+export const adminEmojiListRemoteParamDef = z.object({
 	query: z.string().nullable().default(null),
 	/** Use `null` to represent the local host. */
 	host: z.string().nullable().default(null),
@@ -56,7 +56,7 @@ const adminEmojiListRemoteParamDef = z.object({
 	untilDate: z.number().int().optional(),
 });
 
-const adminEmojiAddParamDef = z.object({
+export const adminEmojiAddParamDef = z.object({
 	name: z.string().regex(/^[a-zA-Z0-9_]+$/),
 	fileId: misskeyId(),
 	/** Use `null` to reset the category. */
@@ -76,7 +76,7 @@ const adminEmojiAddParamDef = z.object({
  * この挙動を再現するため、id/name はここでは型を固定せず (z.unknown())、superRefine内で
  * それぞれ個別に misskeyId/name パターンとして安全にパースできるかどうかだけを判定する。
  */
-const adminEmojiUpdateParamDef = z.object({
+export const adminEmojiUpdateParamDef = z.object({
 	id: z.unknown().optional(),
 	name: z.unknown().optional(),
 	fileId: misskeyId().optional(),
@@ -98,34 +98,53 @@ const adminEmojiUpdateParamDef = z.object({
 	}
 });
 
-const adminEmojiAliasesBulkParamDef = z.object({
+// OpenAPI/misskey-js コード生成専用。上の superRefine (id/name の anyOf 判定) は
+// JSON Schema 化できないため、docs 用には元 ajv 版と同じ allOf+anyOf 構造を union+intersection で表現する。
+const adminEmojiUpdateCommonFieldsDocsSchema = z.object({
+	fileId: misskeyId().optional(),
+	category: z.string().nullable().optional(),
+	aliases: z.array(z.string()).optional(),
+	license: z.string().nullable().optional(),
+	isSensitive: z.boolean().optional(),
+	localOnly: z.boolean().optional(),
+	roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
+});
+export const adminEmojiUpdateDocsParamDef = z.intersection(
+	z.union([
+		z.object({ id: misskeyId() }),
+		z.object({ name: z.string().regex(/^[a-zA-Z0-9_]+$/) }),
+	]),
+	adminEmojiUpdateCommonFieldsDocsSchema,
+);
+
+export const adminEmojiAliasesBulkParamDef = z.object({
 	ids: z.array(misskeyId()),
 	aliases: z.array(z.string()),
 });
 
-const adminEmojiDeleteParamDef = z.object({
+export const adminEmojiDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 
-const adminEmojiDeleteBulkParamDef = z.object({
+export const adminEmojiDeleteBulkParamDef = z.object({
 	ids: z.array(misskeyId()),
 });
 
-const adminEmojiCopyParamDef = z.object({
+export const adminEmojiCopyParamDef = z.object({
 	emojiId: misskeyId(),
 });
 
-const adminEmojiImportZipParamDef = z.object({
+export const adminEmojiImportZipParamDef = z.object({
 	fileId: misskeyId(),
 });
 
-const adminEmojiSetCategoryBulkParamDef = z.object({
+export const adminEmojiSetCategoryBulkParamDef = z.object({
 	ids: z.array(misskeyId()),
 	/** Use `null` to reset the category. */
 	category: z.string().nullable().optional(),
 });
 
-const adminEmojiSetLicenseBulkParamDef = z.object({
+export const adminEmojiSetLicenseBulkParamDef = z.object({
 	ids: z.array(misskeyId()),
 	/** Use `null` to reset the license. */
 	license: z.string().nullable().optional(),
@@ -744,7 +763,7 @@ const fetchEmojisSortKeys = [
 	'+roleIdsThatCanBeUsedThisEmojiAsReaction', '-roleIdsThatCanBeUsedThisEmojiAsReaction',
 ] as const;
 
-const v2AdminEmojiListQueryParamDef = z.object({
+export const v2AdminEmojiListQueryParamDef = z.object({
 	updatedAtFrom: z.string().optional(),
 	updatedAtTo: z.string().optional(),
 	name: z.string().optional(),
@@ -762,7 +781,7 @@ const v2AdminEmojiListQueryParamDef = z.object({
 	roleIds: z.array(misskeyId()).optional(),
 }).nullable();
 
-const v2AdminEmojiListParamDef = z.object({
+export const v2AdminEmojiListParamDef = z.object({
 	query: v2AdminEmojiListQueryParamDef.optional(),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

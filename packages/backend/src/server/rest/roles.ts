@@ -30,13 +30,13 @@ export type HonoApiRoleDependencies = {
 
 export type HonoApiRoleNotesDependencies = HonoApiNoteDependencies;
 
-const rolesListParamDef = z.object({});
+export const rolesListParamDef = z.object({});
 
-const rolesShowParamDef = z.object({
+export const rolesShowParamDef = z.object({
 	roleId: misskeyId(),
 });
 
-const rolesUsersParamDef = z.object({
+export const rolesUsersParamDef = z.object({
 	roleId: misskeyId(),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -73,7 +73,7 @@ function rolesNotesNoSuchRoleError(): HonoApiError {
 	});
 }
 
-const rolesNotesParamDef = z.object({
+export const rolesNotesParamDef = z.object({
 	roleId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),

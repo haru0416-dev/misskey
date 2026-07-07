@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { systemWebhookEventTypes } from '@/models/SystemWebhook.js';
+import { adminSystemWebhookCreateParamDef } from '@/server/rest/admin-system-webhooks.js';
 
 export const meta = {
 	tags: ['admin', 'system-webhook'],
@@ -19,39 +19,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		isActive: {
-			type: 'boolean',
-		},
-		name: {
-			type: 'string',
-			minLength: 1,
-			maxLength: 255,
-		},
-		on: {
-			type: 'array',
-			items: {
-				type: 'string',
-				enum: systemWebhookEventTypes,
-			},
-		},
-		url: {
-			type: 'string',
-			minLength: 1,
-			maxLength: 1024,
-		},
-		secret: {
-			type: 'string',
-			maxLength: 1024,
-			default: '',
-		},
-	},
-	required: [
-		'isActive',
-		'name',
-		'on',
-		'url',
-	],
-} as const;
+export const paramDef = adminSystemWebhookCreateParamDef;

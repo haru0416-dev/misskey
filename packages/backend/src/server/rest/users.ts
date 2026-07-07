@@ -37,24 +37,24 @@ export type HonoApiPackedUserListShow = HonoApiPackedUserList & {
 	isLiked?: boolean;
 };
 
-const usersAchievementsParamDef = z.object({
+export const usersAchievementsParamDef = z.object({
 	userId: misskeyId(),
 });
 
-const usersListsDeleteParamDef = z.object({
+export const usersListsDeleteParamDef = z.object({
 	listId: misskeyId(),
 });
 
-const usersListsListParamDef = z.object({
+export const usersListsListParamDef = z.object({
 	userId: misskeyId().optional(),
 });
 
-const usersListsShowParamDef = z.object({
+export const usersListsShowParamDef = z.object({
 	listId: misskeyId(),
 	forPublic: z.boolean().optional().default(false),
 });
 
-const usersListsUpdateParamDef = z.object({
+export const usersListsUpdateParamDef = z.object({
 	listId: misskeyId(),
 	name: z.string().min(1).max(100).optional(),
 	isPublic: z.boolean().optional(),

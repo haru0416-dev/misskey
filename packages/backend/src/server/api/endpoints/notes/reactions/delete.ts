@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { reactionsDeleteParamDef } from '@/server/rest/notes-reactions.js';
 
 export const meta = {
 	tags: ['reactions', 'notes'],
@@ -33,10 +34,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['noteId'],
-} as const;
+export const paramDef = reactionsDeleteParamDef;

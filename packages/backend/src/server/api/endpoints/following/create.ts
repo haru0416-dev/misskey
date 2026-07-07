@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { followingCreateParamDef } from '@/server/rest/following.js';
 
 export const meta = {
 	tags: ['following', 'users'],
@@ -58,11 +59,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		withReplies: { type: 'boolean' },
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = followingCreateParamDef;

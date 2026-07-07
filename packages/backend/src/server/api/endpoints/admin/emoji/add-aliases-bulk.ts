@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminEmojiAliasesBulkParamDef } from '@/server/rest/emojis.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,15 +13,4 @@ export const meta = {
 	kind: 'write:admin:emoji',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		ids: { type: 'array', items: {
-			type: 'string', format: 'misskey:id',
-		} },
-		aliases: { type: 'array', items: {
-			type: 'string',
-		} },
-	},
-	required: ['ids', 'aliases'],
-} as const;
+export const paramDef = adminEmojiAliasesBulkParamDef;

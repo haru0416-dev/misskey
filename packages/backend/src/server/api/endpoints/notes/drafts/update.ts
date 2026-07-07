@@ -4,7 +4,7 @@
  */
 
 import ms from 'ms';
-import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
+import { notesDraftsUpdateParamDef } from '@/server/rest/note-drafts.js';
 
 export const meta = {
 	tags: ['notes', 'drafts'],
@@ -179,56 +179,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		draftId: { type: 'string', nullable: false, format: 'misskey:id' },
-		visibility: { type: 'string', enum: ['public', 'home', 'followers', 'specified'] },
-		visibleUserIds: { type: 'array', uniqueItems: true, items: {
-			type: 'string', format: 'misskey:id',
-		} },
-		cw: { type: 'string', nullable: true, minLength: 1, maxLength: 100 },
-		hashtag: { type: 'string', nullable: true, maxLength: 200 },
-		localOnly: { type: 'boolean' },
-		reactionAcceptance: { type: 'string', nullable: true, enum: [null, 'likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote'] },
-		replyId: { type: 'string', format: 'misskey:id', nullable: true },
-		renoteId: { type: 'string', format: 'misskey:id', nullable: true },
-		channelId: { type: 'string', format: 'misskey:id', nullable: true },
-
-		// anyOf内にバリデーションを書いても最初の一つしかチェックされない
-		// See https://github.com/misskey-dev/misskey/pull/10082
-		text: {
-			type: 'string',
-			minLength: 0,
-			maxLength: MAX_NOTE_TEXT_LENGTH,
-			nullable: true,
-		},
-		fileIds: {
-			type: 'array',
-			uniqueItems: true,
-			minItems: 0,
-			maxItems: 16,
-			items: { type: 'string', format: 'misskey:id' },
-		},
-		poll: {
-			type: 'object',
-			nullable: true,
-			properties: {
-				choices: {
-					type: 'array',
-					uniqueItems: true,
-					minItems: 0,
-					maxItems: 10,
-					items: { type: 'string', minLength: 1, maxLength: 50 },
-				},
-				multiple: { type: 'boolean' },
-				expiresAt: { type: 'integer', nullable: true },
-				expiredAfter: { type: 'integer', nullable: true, minimum: 1 },
-			},
-			required: ['choices'],
-		},
-		scheduledAt: { type: 'integer', nullable: true },
-		isActuallyScheduled: { type: 'boolean' },
-	},
-	required: ['draftId'],
-} as const;
+export const paramDef = notesDraftsUpdateParamDef;

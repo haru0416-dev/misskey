@@ -24,11 +24,11 @@ export type HonoApiAdminUserMaintenanceDependencies = {
 	meta: MiMeta;
 };
 
-const adminUserMaintenanceParamDef = z.object({
+export const adminUserMaintenanceParamDef = z.object({
 	userId: misskeyId(),
 });
 
-const adminUpdateUserNoteParamDef = z.object({
+export const adminUpdateUserNoteParamDef = z.object({
 	userId: misskeyId(),
 	text: z.string(),
 });

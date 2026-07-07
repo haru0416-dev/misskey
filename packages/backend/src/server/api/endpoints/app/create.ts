@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { appCreateParamDef } from '@/server/rest/app.js';
+
 export const meta = {
 	tags: ['app'],
 
@@ -15,15 +17,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string' },
-		description: { type: 'string' },
-		permission: { type: 'array', uniqueItems: true, items: {
-			type: 'string',
-		} },
-		callbackUrl: { type: 'string', nullable: true },
-	},
-	required: ['name', 'description', 'permission'],
-} as const;
+export const paramDef = appCreateParamDef;

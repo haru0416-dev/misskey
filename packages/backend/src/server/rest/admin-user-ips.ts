@@ -14,7 +14,7 @@ export type HonoApiAdminUserIpsDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const adminGetUserIpsParamDef = z.object({
+export const adminGetUserIpsParamDef = z.object({
 	userId: misskeyId(),
 });
 

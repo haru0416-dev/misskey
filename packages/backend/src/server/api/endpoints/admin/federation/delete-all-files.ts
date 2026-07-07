@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminFederationHostParamDef } from '@/server/rest/federation.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,10 +13,4 @@ export const meta = {
 	kind: 'write:admin:federation',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string' },
-	},
-	required: ['host'],
-} as const;
+export const paramDef = adminFederationHostParamDef;

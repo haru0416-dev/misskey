@@ -48,7 +48,7 @@ function accessDeniedError(id: string): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id });
 }
 
-const driveFilesParamDef = z.object({
+export const driveFilesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -98,7 +98,7 @@ export async function handleHonoApiDriveFilesList(
 	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
 }
 
-const driveStreamParamDef = z.object({
+export const driveStreamParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -142,7 +142,7 @@ export async function handleHonoApiDriveStream(
 	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
 }
 
-const driveFilesShowParamDef = z.union([
+export const driveFilesShowParamDef = z.union([
 	z.object({ fileId: misskeyId() }),
 	z.object({ url: z.string() }),
 ]);
@@ -169,7 +169,7 @@ export async function handleHonoApiDriveFilesShow(
 	return await packDriveFileOrFailForHonoApi(deps, file, { detail: true, withUser: true, self: true });
 }
 
-const driveFilesFindParamDef = z.object({
+export const driveFilesFindParamDef = z.object({
 	name: z.string(),
 	folderId: misskeyId().nullable().default(null),
 });
@@ -195,7 +195,7 @@ export async function handleHonoApiDriveFilesFind(
 	return await packDriveFileManyForHonoApi(deps, files, { self: true });
 }
 
-const driveFilesFindByHashParamDef = z.object({
+export const driveFilesFindByHashParamDef = z.object({
 	md5: z.string(),
 });
 
@@ -215,7 +215,7 @@ export async function handleHonoApiDriveFilesFindByHash(
 	return await packDriveFileManyForHonoApi(deps, files, { self: true });
 }
 
-const driveFilesAttachedNotesParamDef = z.object({
+export const driveFilesAttachedNotesParamDef = z.object({
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
 	sinceDate: z.number().int().optional(),
@@ -282,7 +282,7 @@ export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDepend
 	};
 }
 
-const driveFilesDeleteParamDef = z.object({
+export const driveFilesDeleteParamDef = z.object({
 	fileId: misskeyId(),
 });
 
@@ -307,7 +307,7 @@ export async function handleHonoApiDriveFilesDelete(
 	startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, false, me);
 }
 
-const driveFilesUpdateParamDef = z.object({
+export const driveFilesUpdateParamDef = z.object({
 	fileId: misskeyId(),
 	folderId: misskeyId().nullable().optional(),
 	name: z.string().optional(),
@@ -393,7 +393,7 @@ export async function handleHonoApiDriveFilesUpdate(
 	return packed;
 }
 
-const driveFilesMoveBulkParamDef = z.object({
+export const driveFilesMoveBulkParamDef = z.object({
 	fileIds: uniqueItems(z.array(misskeyId()).min(1).max(100)),
 	folderId: misskeyId().nullable().optional(),
 });
@@ -415,7 +415,7 @@ export async function handleHonoApiDriveFilesMoveBulk(
 	await updateDriveFilesFolderByIdsAndUserIdInDatabase(deps.db, params.fileIds, me.id, folder ? folder.id : null);
 }
 
-const driveFilesAttachedChatMessagesParamDef = z.object({
+export const driveFilesAttachedChatMessagesParamDef = z.object({
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
 	sinceDate: z.number().int().optional(),

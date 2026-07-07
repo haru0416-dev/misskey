@@ -4,6 +4,7 @@
  */
 
 import Parser from 'rss-parser';
+import { fetchRssParamDef } from '@/server/rest/fetch-rss.js';
 
 const rssParser = new Parser();
 
@@ -202,10 +203,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		url: { type: 'string' },
-	},
-	required: ['url'],
-} as const;
+export const paramDef = fetchRssParamDef;

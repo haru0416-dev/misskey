@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { updateEmailParamDef } from '@/server/rest/account-security.js';
 
 export const meta = {
 	requireCredential: true,
@@ -41,12 +42,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		password: { type: 'string' },
-		email: { type: 'string', nullable: true },
-		token: { type: 'string', nullable: true },
-	},
-	required: ['password'],
-} as const;
+export const paramDef = updateEmailParamDef;

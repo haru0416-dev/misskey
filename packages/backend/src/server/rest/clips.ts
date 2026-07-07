@@ -40,7 +40,7 @@ export type HonoApiClipNotesDependencies = HonoApiNoteDependencies & {
 	meta: MiMeta;
 };
 
-const emptyParamDef = z.object({});
+export const emptyParamDef = z.object({});
 
 function getDatabaseErrorCode(error: unknown): unknown {
 	let current: unknown = error;
@@ -59,7 +59,7 @@ function getDatabaseErrorCode(error: unknown): unknown {
 	return undefined;
 }
 
-const clipsListParamDef = z.object({
+export const clipsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -75,11 +75,11 @@ type ClipsListParams = {
 	untilDate?: number;
 };
 
-const clipIdParamDef = z.object({
+export const clipIdParamDef = z.object({
 	clipId: misskeyId(),
 });
 
-const clipNotesParamDef = z.object({
+export const clipNotesParamDef = z.object({
 	clipId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
@@ -103,7 +103,7 @@ type ClipIdParams = {
 	clipId: string;
 };
 
-const clipsCreateParamDef = z.object({
+export const clipsCreateParamDef = z.object({
 	name: z.string().min(1).max(100),
 	isPublic: z.boolean().default(false),
 	description: z.string().max(2048).nullable().optional(),
@@ -115,7 +115,7 @@ type ClipsCreateParams = {
 	description?: string | null;
 };
 
-const clipsUpdateParamDef = z.object({
+export const clipsUpdateParamDef = z.object({
 	clipId: misskeyId(),
 	name: z.string().min(1).max(100).optional(),
 	isPublic: z.boolean().optional(),
@@ -129,7 +129,7 @@ type ClipsUpdateParams = {
 	description?: string | null;
 };
 
-const clipsNoteParamDef = z.object({
+export const clipsNoteParamDef = z.object({
 	clipId: misskeyId(),
 	noteId: misskeyId(),
 });
@@ -403,7 +403,7 @@ export async function handleHonoApiClipsNotes(
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
 
-const usersClipsParamDef = z.object({
+export const usersClipsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),

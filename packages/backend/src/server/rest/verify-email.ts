@@ -17,7 +17,7 @@ export type HonoApiVerifyEmailDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const verifyEmailParamDef = z.object({
+export const verifyEmailParamDef = z.object({
 	code: z.string(),
 });
 

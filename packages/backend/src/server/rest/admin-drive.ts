@@ -33,12 +33,12 @@ export type HonoApiAdminDriveDependencies = HonoApiRolePolicyDependencies & {
 
 const adminDriveNoParamsDef = z.object({});
 
-const adminDriveUserParamDef = z.object({
+export const adminDriveUserParamDef = z.object({
 	userId: misskeyId(),
 });
 
 // Accepts either `fileId` or `url` (both may be present at once); at least one is required.
-const adminDriveShowFileParamDef = z.object({
+export const adminDriveShowFileParamDef = z.object({
 	fileId: misskeyId().optional(),
 	url: z.string().optional(),
 }).superRefine((data, ctx) => {
@@ -47,7 +47,14 @@ const adminDriveShowFileParamDef = z.object({
 	}
 });
 
-const adminDriveFilesParamDef = z.object({
+// OpenAPI/misskey-js コード生成専用。上の superRefine は JSON Schema 化できないため、
+// docs 用には「fileId 必須」または「url 必須」の anyOf として表現する。
+export const adminDriveShowFileDocsParamDef = z.union([
+	z.object({ fileId: misskeyId() }),
+	z.object({ url: z.string() }),
+]);
+
+export const adminDriveFilesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

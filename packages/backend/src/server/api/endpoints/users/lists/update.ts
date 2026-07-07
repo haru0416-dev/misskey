@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { usersListsUpdateParamDef } from '@/server/rest/users.js';
+
 export const meta = {
 	tags: ['lists'],
 
@@ -27,12 +29,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		listId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		isPublic: { type: 'boolean' },
-	},
-	required: ['listId'],
-} as const;
+export const paramDef = usersListsUpdateParamDef;

@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { flashUpdateParamDef } from '@/server/rest/flash.js';
 
 export const meta = {
 	tags: ['flash'],
@@ -34,17 +35,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		flashId: { type: 'string', format: 'misskey:id' },
-		title: { type: 'string' },
-		summary: { type: 'string' },
-		script: { type: 'string' },
-		permissions: { type: 'array', items: {
-			type: 'string',
-		} },
-		visibility: { type: 'string', enum: ['public', 'private'] },
-	},
-	required: ['flashId'],
-} as const;
+export const paramDef = flashUpdateParamDef;

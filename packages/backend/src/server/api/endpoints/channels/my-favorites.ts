@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { emptyParamDef } from '@/server/rest/channels.js';
+
 export const meta = {
 	tags: ['channels', 'account'],
 
@@ -21,9 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-	},
-	required: [],
-} as const;
+export const paramDef = emptyParamDef;

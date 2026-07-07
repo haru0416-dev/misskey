@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminInviteCreateParamDef } from '@/server/rest/invite.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -29,11 +31,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		count: { type: 'integer', minimum: 1, maximum: 100, default: 1 },
-		expiresAt: { type: 'string', nullable: true },
-	},
-	required: [],
-} as const;
+export const paramDef = adminInviteCreateParamDef;

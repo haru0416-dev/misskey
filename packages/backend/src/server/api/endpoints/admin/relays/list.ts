@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminRelaysListParamDef } from '@/server/rest/admin-relays.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -42,8 +44,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = adminRelaysListParamDef;

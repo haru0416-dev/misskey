@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { driveFoldersUpdateParamDef } from '@/server/rest/drive.js';
+
 export const meta = {
 	tags: ['drive'],
 
@@ -37,12 +39,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		folderId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', maxLength: 200 },
-		parentId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: ['folderId'],
-} as const;
+export const paramDef = driveFoldersUpdateParamDef;

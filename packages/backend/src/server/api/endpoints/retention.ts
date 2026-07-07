@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { retentionParamDef } from '@/server/rest/retention.js';
+
 export const meta = {
 	tags: ['users'],
 
@@ -41,8 +43,4 @@ export const meta = {
 	cacheSec: 60 * 60,
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = retentionParamDef;

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminAnnouncementsCreateParamDef } from '@/server/rest/admin-announcements.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -46,18 +48,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		title: { type: 'string', minLength: 1 },
-		text: { type: 'string', minLength: 1 },
-		imageUrl: { type: 'string', nullable: true, minLength: 0 },
-		icon: { type: 'string', enum: ['info', 'warning', 'error', 'success'], default: 'info' },
-		display: { type: 'string', enum: ['normal', 'banner', 'dialog'], default: 'normal' },
-		forExistingUsers: { type: 'boolean', default: false },
-		silence: { type: 'boolean', default: false },
-		needConfirmationToRead: { type: 'boolean', default: false },
-		userId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: ['title', 'text', 'imageUrl'],
-} as const;
+export const paramDef = adminAnnouncementsCreateParamDef;

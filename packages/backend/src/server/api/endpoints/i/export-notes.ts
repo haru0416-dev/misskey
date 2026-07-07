@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { z } from 'zod';
 
 export const meta = {
 	secure: true,
@@ -14,8 +15,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = z.object({});

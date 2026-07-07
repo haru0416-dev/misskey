@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { QUEUE_TYPES, QueueService } from '@/core/QueueService.js';
+import { QueueService } from '@/core/QueueService.js';
+import { adminQueueJobParamDef } from '@/server/rest/admin-queue.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -22,11 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		queue: { type: 'string', enum: QUEUE_TYPES },
-		jobId: { type: 'string' },
-	},
-	required: ['queue', 'jobId'],
-} as const;
+export const paramDef = adminQueueJobParamDef;

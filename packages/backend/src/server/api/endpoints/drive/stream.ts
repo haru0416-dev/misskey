@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { driveStreamParamDef } from '@/server/rest/drive-files.js';
+
 export const meta = {
 	tags: ['drive'],
 
@@ -21,15 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		type: { type: 'string', pattern: /^[a-zA-Z\/\-*]+$/.toString().slice(1, -1) },
-	},
-	required: [],
-} as const;
+export const paramDef = driveStreamParamDef;

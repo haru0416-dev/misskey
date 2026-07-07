@@ -29,7 +29,7 @@ export type HonoApiAdminSystemWebhookDependencies = {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-const adminSystemWebhookCreateParamDef = z.object({
+export const adminSystemWebhookCreateParamDef = z.object({
 	isActive: z.boolean(),
 	name: z.string().min(1).max(255),
 	on: z.array(z.enum(systemWebhookEventTypes)),
@@ -37,20 +37,20 @@ const adminSystemWebhookCreateParamDef = z.object({
 	secret: z.string().max(1024).default(''),
 });
 
-const adminSystemWebhookDeleteParamDef = z.object({
+export const adminSystemWebhookDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 
-const adminSystemWebhookListParamDef = z.object({
+export const adminSystemWebhookListParamDef = z.object({
 	isActive: z.boolean().optional(),
 	on: z.array(z.enum(systemWebhookEventTypes)).optional(),
 });
 
-const adminSystemWebhookShowParamDef = z.object({
+export const adminSystemWebhookShowParamDef = z.object({
 	id: misskeyId(),
 });
 
-const adminSystemWebhookTestParamDef = z.object({
+export const adminSystemWebhookTestParamDef = z.object({
 	webhookId: misskeyId(),
 	type: z.enum(systemWebhookEventTypes),
 	override: z.object({
@@ -59,7 +59,7 @@ const adminSystemWebhookTestParamDef = z.object({
 	}).optional(),
 });
 
-const adminSystemWebhookUpdateParamDef = z.object({
+export const adminSystemWebhookUpdateParamDef = z.object({
 	id: misskeyId(),
 	isActive: z.boolean(),
 	name: z.string().min(1).max(255),

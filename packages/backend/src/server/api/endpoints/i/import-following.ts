@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { importFollowingParamDef } from '@/server/rest/import-jobs.js';
 
 export const meta = {
 	secure: true,
@@ -42,11 +43,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		fileId: { type: 'string', format: 'misskey:id' },
-		withReplies: { type: 'boolean' },
-	},
-	required: ['fileId'],
-} as const;
+export const paramDef = importFollowingParamDef;
