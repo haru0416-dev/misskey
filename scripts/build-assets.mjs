@@ -23,18 +23,8 @@ async function loadConfig() {
 		.catch(() => null);
 }
 
-async function copyFrontendFonts() {
-	await fs.cp('./packages/frontend/node_modules/three/examples/fonts', './built/_frontend_dist_/fonts', {
-		dereference: true,
-		recursive: true,
-	});
-}
-
 async function build() {
-	await Promise.all([
-		copyFrontendFonts(),
-		loadConfig().then((config) => config?.publishTarballInsteadOfProvideRepositoryUrl && buildTarball()),
-	]);
+	await loadConfig().then((config) => config?.publishTarballInsteadOfProvideRepositoryUrl && buildTarball());
 }
 
 await build();
