@@ -7,6 +7,7 @@
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
+- Enhance: タイムライン等の複数ノート取得時のデータベース/Redisアクセスを一括化 (ノート毎に個別発行していた投稿者・添付ファイル・チャンネル・自分のリアクション・リアクションバッファの取得をリクエスト単位でバッチ化。20件のタイムラインで最大100クエリ超→数クエリに削減)
 - Enhance: パスワードのハッシュ化/照合を Bun ランタイムではネイティブ実装 (`Bun.password`) で行うように変更しサインイン/サインアップを高速化 (既存の bcrypt ハッシュとは互換で、Node 実行時や72バイト超のパスワードは従来どおり bcryptjs で処理)
 - Enhance: バックエンドの依存パッケージを整理し、未メンテのライブラリ16個を削除 (`got`/`fluent-ffmpeg`/`deep-email-validator`/`ratelimiter`/`probe-image-size`/`tinycolor2`/`stringz`/`tmp` 等を fetch・ffmpeg 直接起動・自前実装・`sharp`・`Intl.Segmenter` 等へ置き換え。レート制限は従来と同一の Redis キー形式・アルゴリズムを維持)
 - Change: アバター未設定ユーザーの identicon の模様が変わるように (乱数生成器の変更のため。配色パレット等は不変)
