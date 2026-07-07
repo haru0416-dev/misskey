@@ -4,10 +4,9 @@
  */
 
 import { domainToASCII } from 'node:url';
-import ms from 'ms';
+import { SECOND, HOUR, PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -387,9 +386,9 @@ export async function handleHonoApiNotesReactionsDelete(
 }
 
 export const reactionsDeleteRateLimit = {
-	duration: ms('1hour'),
+	duration: HOUR,
 	max: 60,
-	minInterval: ms('3sec'),
+	minInterval: 3 * SECOND,
 };
 
 export function convertLegacyReactionForHonoApi(reaction: string): string {

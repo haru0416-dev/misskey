@@ -87,6 +87,38 @@ function registerStaticMount(app: Hono, mount: StaticMount): void {
 	app.on('HEAD', path, handler);
 }
 
+/**
+ * frontend の vite ビルド成果物が無い開発時は、vite dev サーバーへ HTTP プロキシする
+ * (上流 Misskey の ClientServerService が dev 時に登録していた fastify-http-proxy 相当)。
+ * HMR の WebSocket は vite.config.ts の `hmr.clientPort: 5173` によりクライアントが
+ * vite サーバーへ直接張るため、ここでは HTTP のみ転送すればよい。
+ */
+function registerViteDevProxy(app: Hono, opts: { prefix: string; upstream: string }): void {
+	const path = `${opts.prefix}*`;
+	const handler = async (c: Context) => {
+		const reqUrl = new URL(c.req.url);
+		const target = new URL(reqUrl.pathname + reqUrl.search, opts.upstream);
+		const res = await fetch(target, {
+			method: c.req.method,
+			headers: {
+				accept: c.req.header('accept') ?? '*/*',
+			},
+			redirect: 'manual',
+		}).catch(() => null);
+		if (res == null) return c.body(null, 502);
+
+		const headers = new Headers(res.headers);
+		// fetch がボディを展開済みのため、エンコーディング/長さ系ヘッダは付け直さない
+		headers.delete('content-encoding');
+		headers.delete('content-length');
+		headers.delete('transfer-encoding');
+		return new Response(res.body, { status: res.status, headers });
+	};
+
+	app.get(path, handler);
+	app.on('HEAD', path, handler);
+}
+
 function emojiPath(c: Context, prefix: string): string {
 	return pathAfter(c.req.url, prefix);
 }
@@ -120,16 +152,24 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 		root: resolve(deps.config.rootDir, 'built/_frontend_dist_'),
 		cacheControl: 'public, max-age=604800',
 	});
-	registerStaticMount(app, {
-		prefix: '/vite/',
-		root: resolve(deps.config.rootDir, 'built/_frontend_vite_'),
-		cacheControl: 'public, max-age=2592000, immutable',
-	});
-	registerStaticMount(app, {
-		prefix: '/embed_vite/',
-		root: resolve(deps.config.rootDir, 'built/_frontend_embed_vite_'),
-		cacheControl: 'public, max-age=2592000, immutable',
-	});
+	if (deps.config.frontendManifestExists) {
+		registerStaticMount(app, {
+			prefix: '/vite/',
+			root: resolve(deps.config.rootDir, 'built/_frontend_vite_'),
+			cacheControl: 'public, max-age=2592000, immutable',
+		});
+	} else {
+		registerViteDevProxy(app, { prefix: '/vite/', upstream: 'http://localhost:5173' });
+	}
+	if (deps.config.frontendEmbedManifestExists) {
+		registerStaticMount(app, {
+			prefix: '/embed_vite/',
+			root: resolve(deps.config.rootDir, 'built/_frontend_embed_vite_'),
+			cacheControl: 'public, max-age=2592000, immutable',
+		});
+	} else {
+		registerViteDevProxy(app, { prefix: '/embed_vite/', upstream: 'http://localhost:5174' });
+	}
 	registerStaticMount(app, {
 		prefix: '/tarball/',
 		root: resolve(deps.config.rootDir, 'built/tarball'),

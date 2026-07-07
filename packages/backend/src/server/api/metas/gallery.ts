@@ -4,7 +4,7 @@
  */
 
 import { galleryFeaturedParamDef, galleryPopularParamDef, galleryPostsCreateParamDef, galleryPostsParamDef, galleryPostsPostIdParamDef, galleryPostsUpdateParamDef } from '@/server/rest/gallery.js';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'gallery/featured': {
@@ -70,7 +70,7 @@ export const endpointMetas = {
 			kind: 'write:gallery',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 20,
 			},
 
@@ -201,7 +201,7 @@ export const endpointMetas = {
 			kind: 'write:gallery',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
 			},
 

@@ -5,7 +5,7 @@
 
 import { chatHistoryParamDef, chatMessagesCreateToRoomParamDef, chatMessagesCreateToUserParamDef, chatMessagesDeleteParamDef, chatMessagesReactParamDef, chatMessagesRoomTimelineParamDef, chatMessagesSearchParamDef, chatMessagesShowParamDef, chatMessagesUnreactParamDef, chatMessagesUserTimelineParamDef, chatRoomsCreateParamDef, chatRoomsDeleteParamDef, chatRoomsInvitationsCreateParamDef, chatRoomsInvitationsIgnoreParamDef, chatRoomsInvitationsInboxParamDef, chatRoomsInvitationsOutboxParamDef, chatRoomsJoinParamDef, chatRoomsJoiningParamDef, chatRoomsLeaveParamDef, chatRoomsMembersParamDef, chatRoomsMuteParamDef, chatRoomsOwnedParamDef, chatRoomsShowParamDef, chatRoomsUpdateParamDef } from '@/server/rest/chat.js';
 import { z } from 'zod';
-import ms from 'ms';
+import { HOUR, DAY } from '@/const.js';
 
 export const endpointMetas = {
 	'chat/messages/create-to-user': {
@@ -19,7 +19,7 @@ export const endpointMetas = {
 			kind: 'write:chat',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 500,
 			},
 
@@ -74,7 +74,7 @@ export const endpointMetas = {
 			kind: 'write:chat',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 500,
 			},
 
@@ -279,7 +279,7 @@ export const endpointMetas = {
 			kind: 'write:chat',
 
 			limit: {
-				duration: ms('1day'),
+				duration: DAY,
 				max: 10,
 			},
 
@@ -499,7 +499,7 @@ export const endpointMetas = {
 			kind: 'write:chat',
 
 			limit: {
-				duration: ms('1day'),
+				duration: DAY,
 				max: 50,
 			},
 

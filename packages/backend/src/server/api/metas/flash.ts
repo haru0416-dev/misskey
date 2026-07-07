@@ -5,7 +5,7 @@
 
 import { flashParamDef } from '@/server/rest/favorites.js';
 import { flashCreateParamDef, flashDeleteParamDef, flashFeaturedParamDef, flashMyLikesParamDef, flashMyParamDef, flashSearchParamDef, flashShowParamDef, flashUpdateParamDef } from '@/server/rest/flash.js';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'flash/create': {
@@ -19,7 +19,7 @@ export const endpointMetas = {
 			kind: 'write:flash',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 10,
 			},
 
@@ -217,7 +217,7 @@ export const endpointMetas = {
 			kind: 'write:flash',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
 			},
 

@@ -9,7 +9,6 @@
  * Tests located in test/chart
  */
 
-import * as nestedProperty from 'nested-property';
 import { createHash } from 'node:crypto';
 import { sql, type SQL } from 'drizzle-orm';
 import { dateUTC, isTimeSame, isTimeBefore, subtractTime, addTime } from '@/misc/prelude/time.js';
@@ -776,9 +775,14 @@ export default abstract class Chart<T extends Schema> {
 	@bindThis
 	public async getChart(span: 'hour' | 'day', amount: number, cursor: Date | null, group: string | null = null): Promise<Unflatten<ChartResult<T>>> {
 		const result = await this.getChartRaw(span, amount, cursor, group);
-		const object = {};
+		const object: Record<string, unknown> = {};
 		for (const [k, v] of Object.entries(result)) {
-			nestedProperty.set(object, k, v);
+			const keys = k.split('.');
+			let cursor = object;
+			for (const key of keys.slice(0, -1)) {
+				cursor = (cursor[key] ??= {}) as Record<string, unknown>;
+			}
+			cursor[keys.at(-1)!] = v;
 		}
 		return object as Unflatten<ChartResult<T>>;
 	}

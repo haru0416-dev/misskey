@@ -4,7 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/misc/password.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { createOrFetchSystemAccountInDatabase, fetchSystemAccountUserFromDatabase } from '@/core/SystemAccountStore.js';
 import type { MiMeta } from '@/models/_.js';
@@ -30,8 +30,7 @@ export async function fetchOrCreateSystemAccountInDatabase(
 
 	const username = `system.${type}`;
 	const password = randomUUID();
-	const salt = await bcrypt.genSalt(8);
-	const hash = await bcrypt.hash(password, salt);
+	const hash = await hashPassword(password);
 	const keyPair = await genRsaKeyPair();
 
 	return await createOrFetchSystemAccountInDatabase(deps.db, {

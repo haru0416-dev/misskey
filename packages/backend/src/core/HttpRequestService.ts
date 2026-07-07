@@ -519,6 +519,7 @@ export function createHttpRequestService(config: Config) {
 		getAgentForHttp,
 		getAgentForHttps,
 		assertUrlAllowed,
+		fetchFollowingRedirects,
 		getActivityJson,
 		getJson,
 		getHtml,

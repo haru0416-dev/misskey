@@ -3,27 +3,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as tmp from 'tmp';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-export function createTemp(): Promise<[string, () => void]> {
-	return new Promise<[string, () => void]>((res, rej) => {
-		tmp.file((e, path, fd, cleanup) => {
-			if (e) return rej(e);
-			res([path, process.env.NODE_ENV === 'production' ? cleanup : () => {}]);
-		});
-	});
+function makeCleanup(dir: string): () => void {
+	// in non-production environments, temp files are kept for debugging
+	if (process.env.NODE_ENV !== 'production') return () => {};
+	return () => {
+		rm(dir, { recursive: true, force: true }).catch(() => {});
+	};
 }
 
-export function createTempDir(): Promise<[string, () => void]> {
-	return new Promise<[string, () => void]>((res, rej) => {
-		tmp.dir(
-			{
-				unsafeCleanup: true,
-			},
-			(e, path, cleanup) => {
-				if (e) return rej(e);
-				res([path, process.env.NODE_ENV === 'production' ? cleanup : () => {}]);
-			},
-		);
-	});
+export async function createTemp(): Promise<[string, () => void]> {
+	const dir = await mkdtemp(join(tmpdir(), 'tmp-'));
+	const path = join(dir, 'file');
+	await writeFile(path, '');
+	return [path, makeCleanup(dir)];
+}
+
+export async function createTempDir(): Promise<[string, () => void]> {
+	const dir = await mkdtemp(join(tmpdir(), 'tmp-'));
+	return [dir, makeCleanup(dir)];
 }

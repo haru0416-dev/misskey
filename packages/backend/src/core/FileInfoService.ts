@@ -9,12 +9,11 @@ import { join } from 'node:path';
 import * as stream from 'node:stream/promises';
 import { FSWatcher } from 'chokidar';
 import * as fileType from 'file-type';
-import FFmpeg from 'fluent-ffmpeg';
 import isSvg from 'is-svg';
-import probeImageSize from 'probe-image-size';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import * as blurhash from 'blurhash';
 import { createTempDir } from '@/misc/create-temp.js';
+import { ffprobe, spawnFfmpeg } from '@/misc/ffmpeg.js';
 import { AiService } from '@/core/AiService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
@@ -106,7 +105,7 @@ export function createFileInfoService(
 			'image/svg+xml',
 			'image/vnd.adobe.photoshop',
 		].includes(type.mime)) {
-			const imageSize = await detectImageSize(path).catch(e => {
+			const imageSize = await detectImageSize(path, type.mime).catch(e => {
 				warnings.push(`detectImageSize failed: ${e}`);
 				return undefined;
 			});
@@ -198,52 +197,30 @@ export function createFileInfoService(
 		if (analyzeVideo && (mime === 'image/apng' || mime.startsWith('video/'))) {
 			const [outDir, disposeOutDir] = await createTempDir();
 			try {
-				const command = FFmpeg()
-					.input(source)
-					.inputOptions([
-						'-skip_frame', 'nokey', // 可能ならキーフレームのみを取得してほしいとする（そうなるとは限らない）
-						'-lowres', '3', // 元の画質でデコードする必要はないので 1/8 画質でデコードしてもよいとする（そうなるとは限らない）
-					])
-					.noAudio()
-					.videoFilters([
-						{
-							filter: 'select', // フレームのフィルタリング
-							options: {
-								e: 'eq(pict_type,PICT_TYPE_I)', // I-Frame のみをフィルタする（VP9 とかはデコードしてみないとわからないっぽい）
-							},
-						},
-						{
-							filter: 'blackframe', // 暗いフレームの検出
-							options: {
-								amount: '0', // 暗さに関わらず全てのフレームで測定値を取る
-							},
-						},
-						{
-							filter: 'metadata',
-							options: {
-								mode: 'select', // フレーム選択モード
-								key: 'lavfi.blackframe.pblack', // フレームにおける暗部の百分率（前のフィルタからのメタデータを参照する）
-								value: '50',
-								function: 'less', // 50% 未満のフレームを選択する（50% 以上暗部があるフレームだと誤検知を招くかもしれないので）
-							},
-						},
-						{
-							filter: 'scale',
-							options: {
-								w: 299,
-								h: 299,
-							},
-						},
-					])
-					.format('image2')
-					.output(join(outDir, '%d.png'))
-					.outputOptions(['-vsync', '0']); // 可変フレームレートにすることで穴埋めをさせない
+				const videoFilters = [
+					'select=e=eq(pict_type\\,PICT_TYPE_I)', // I-Frame のみをフィルタする（VP9 とかはデコードしてみないとわからないっぽい）
+					'blackframe=amount=0', // 暗いフレームの検出（暗さに関わらず全てのフレームで測定値を取る）
+					// フレームにおける暗部の百分率（前のフィルタからのメタデータを参照し、
+					// 50% 未満のフレームを選択する。50% 以上暗部があるフレームだと誤検知を招くかもしれないので）
+					'metadata=mode=select:key=lavfi.blackframe.pblack:value=50:function=less',
+					'scale=w=299:h=299',
+				].join(',');
+				const args = [
+					'-skip_frame', 'nokey', // 可能ならキーフレームのみを取得してほしいとする（そうなるとは限らない）
+					'-lowres', '3', // 元の画質でデコードする必要はないので 1/8 画質でデコードしてもよいとする（そうなるとは限らない）
+					'-i', source,
+					'-an',
+					'-vf', videoFilters,
+					'-f', 'image2',
+					'-vsync', '0', // 可変フレームレートにすることで穴埋めをさせない
+					join(outDir, '%d.png'),
+				];
 				// 判定対象フレームを選定して正規化済みバッファとして集め、外部サービスへまとめて送る。
 				const frameBuffers: Buffer[] = [];
 				let frameIndex = 0;
 				let targetIndex = 0;
 				let nextIndex = 1;
-				for await (const path of asyncIterateFrames(outDir, command)) {
+				for await (const path of asyncIterateFrames(outDir, args)) {
 					try {
 						const index = frameIndex++;
 						if (index !== targetIndex) {
@@ -290,16 +267,26 @@ export function createFileInfoService(
 		return [sensitive, porn];
 	}
 
-	async function* asyncIterateFrames(cwd: string, command: FFmpeg.FfmpegCommand): AsyncGenerator<string, void> {
+	async function* asyncIterateFrames(cwd: string, ffmpegArgs: string[]): AsyncGenerator<string, void> {
 		const watcher = new FSWatcher({
 			cwd,
 		});
 		let finished = false;
-		command.once('end', () => {
+		const proc = spawnFfmpeg(ffmpegArgs);
+		const procDone = new Promise<void>((resolve, reject) => {
+			proc.on('error', reject);
+			proc.on('close', code => {
+				if (code === 0) {
+					resolve();
+				} else {
+					reject(new Error(`ffmpeg exited with code ${code}`));
+				}
+			});
+		});
+		procDone.catch(() => {}).finally(() => {
 			finished = true;
 			watcher.close();
 		});
-		command.run();
 		for (let i = 1; true; i++) { // eslint-disable-line @typescript-eslint/no-unnecessary-condition
 			const current = `${i}.png`;
 			const next = `${i + 1}.png`;
@@ -316,8 +303,8 @@ export function createFileInfoService(
 							resolve();
 						}
 					});
-					command.once('end', resolve); // 全てのフレームを処理し終わったなら、最終フレームである現在フレームの書き出しは終わっている
-					command.once('error', reject);
+					// 全てのフレームを処理し終わったなら、最終フレームである現在フレームの書き出しは終わっている
+					procDone.then(resolve, reject);
 				});
 				yield framePath;
 			} else if (await exists(framePath)) {
@@ -351,24 +338,16 @@ export function createFileInfoService(
 	 * @param path ファイルパス
 	 * @returns ビデオトラックがあるかどうか（エラー発生時は常に`true`を返す）
 	 */
-	function hasVideoTrackOnVideoFile(path: string): Promise<boolean> {
+	async function hasVideoTrackOnVideoFile(path: string): Promise<boolean> {
 		const sublogger = logger.createSubLogger('ffprobe');
 		sublogger.info(`Checking the video file. File path: ${path}`);
-		return new Promise((resolve) => {
-			try {
-				FFmpeg.ffprobe(path, (err, metadata) => {
-					if (err) {
-						sublogger.warn(`Could not check the video file. Returns true. File path: ${path}`, err);
-						resolve(true);
-						return;
-					}
-					resolve(metadata.streams.some((stream) => stream.codec_type === 'video'));
-				});
-			} catch (err) {
-				sublogger.warn(`Could not check the video file. Returns true. File path: ${path}`, err as Error);
-				resolve(true);
-			}
-		});
+		try {
+			const metadata = await ffprobe(path);
+			return metadata.streams.some((stream) => stream.codec_type === 'video');
+		} catch (err) {
+			sublogger.warn(`Could not check the video file. Returns true. File path: ${path}`, err as Error);
+			return true;
+		}
 	}
 
 	/**
@@ -454,17 +433,41 @@ export function createFileInfoService(
 	/**
 	 * Detect dimensions of image
 	 */
-	async function detectImageSize(path: string): Promise<{
+	async function detectImageSize(path: string, mime: string): Promise<{
 		width: number;
 		height: number;
 		wUnits: string;
 		hUnits: string;
 		orientation?: number;
 	}> {
-		const readable = fs.createReadStream(path);
-		const imageSize = await probeImageSize(readable);
-		readable.destroy();
-		return imageSize;
+		// sharp は PSD を読めないため、ヘッダ (26 bytes, big-endian) を直接パースする
+		if (mime === 'image/vnd.adobe.photoshop') {
+			const fd = await fs.promises.open(path, 'r');
+			try {
+				const header = Buffer.alloc(26);
+				await fd.read(header, 0, 26, 0);
+				if (header.toString('latin1', 0, 4) !== '8BPS') throw new Error('invalid PSD header');
+				return {
+					width: header.readUInt32BE(18),
+					height: header.readUInt32BE(14),
+					wUnits: 'px',
+					hUnits: 'px',
+				};
+			} finally {
+				await fd.close();
+			}
+		}
+
+		// 寸法はヘッダから読むだけでデコードしないため、pixel 上限は外す (上限判定は呼び出し側で行う)
+		const metadata = await (await sharpBmp(path, mime, { limitInputPixels: false })).metadata();
+		if (metadata.width == null || metadata.height == null) throw new Error('cannot detect image dimensions');
+		return {
+			width: metadata.width,
+			height: metadata.height,
+			wUnits: 'px',
+			hUnits: 'px',
+			orientation: metadata.orientation,
+		};
 	}
 
 	/**

@@ -5,7 +5,7 @@
 
 import { pageParamDef } from '@/server/rest/favorites.js';
 import { pagesCreateParamDef, pagesDeleteParamDef, pagesFeaturedParamDef, pagesShowParamDef, pagesUpdateParamDef } from '@/server/rest/pages.js';
-import ms from 'ms';
+import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'pages/create': {
@@ -19,7 +19,7 @@ export const endpointMetas = {
 			kind: 'write:pages',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 10,
 			},
 
@@ -177,7 +177,7 @@ export const endpointMetas = {
 			kind: 'write:pages',
 
 			limit: {
-				duration: ms('1hour'),
+				duration: HOUR,
 				max: 300,
 			},
 

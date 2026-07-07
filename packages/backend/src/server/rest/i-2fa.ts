@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import bcrypt from 'bcryptjs';
+import { comparePassword } from '@/misc/password.js';
 import * as OTPAuth from 'otpauth';
 import * as QRCode from 'qrcode';
 import { z } from 'zod';
@@ -51,7 +51,7 @@ function incorrectPasswordError(id: string): HonoApiError {
 }
 
 async function assertPasswordMatchedForHonoApi(profile: MiUserProfile, password: string, errorId: string): Promise<void> {
-	const passwordMatched = await bcrypt.compare(password, profile.password ?? '');
+	const passwordMatched = await comparePassword(password, profile.password ?? '');
 	if (!passwordMatched) throw incorrectPasswordError(errorId);
 }
 

@@ -59,20 +59,11 @@ export default defineConfig((args) => {
 	// 通常のビルド時にexternalとするモジュール
 	const externalModules: ExternalOption = [
 		/^slacc-.*/,
-		'class-transformer',
-		'class-validator',
 		/^@sentry\/.*/,
 		/^@sentry-internal\/.*/,
-		'@nestjs/websockets/socket-module',
-		'@nestjs/microservices/microservices-module',
-		'@nestjs/microservices',
 		/^@napi-rs\/.*/,
-		'mock-aws-s3',
-		'aws-sdk',
-		'nock',
 		'sharp',
 		'jsdom',
-		're2',
 		'ipaddr.js',
 		'file-type',
 	];

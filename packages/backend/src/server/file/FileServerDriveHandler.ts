@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import rename from 'rename';
+import { basename, extname } from 'node:path';
 import type { Config } from '@/config.js';
 import type { IImageStreamable } from '@/core/ImageProcessingService.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
@@ -96,10 +96,9 @@ export class FileServerDriveHandler {
 			}
 
 			if (file.fileRole !== 'original') {
-				const filename = rename(file.filename, {
-					suffix: file.fileRole === 'thumbnail' ? '-thumb' : '-web',
-					extname: file.ext ? `.${file.ext}` : '.unknown',
-				}).toString();
+				const suffix = file.fileRole === 'thumbnail' ? '-thumb' : '-web';
+				const ext = file.ext ? `.${file.ext}` : '.unknown';
+				const filename = basename(file.filename, extname(file.filename)) + suffix + ext;
 
 				setFileResponseHeaders(reply, { mime: file.mime, filename });
 				return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);

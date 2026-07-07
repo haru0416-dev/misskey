@@ -10,8 +10,6 @@ import { basename, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { inspect } from 'node:util';
 import WebSocket, { ClientOptions } from 'ws';
-import fetch, { Blob, FormData } from 'node-fetch';
-import type { RequestInit, Headers, Response } from 'node-fetch';
 import * as htmlParser from 'node-html-parser';
 import { loadConfig } from '@/config.js';
 import { createDrizzlePool } from '@/drizzle.js';

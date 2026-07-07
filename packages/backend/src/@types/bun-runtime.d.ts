@@ -47,4 +47,9 @@ declare namespace Bun {
 
 declare const Bun: {
 	serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
+	password: {
+		hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
+		hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;
+		verify(password: string, hash: string, algorithm?: 'bcrypt'): Promise<boolean>;
+	};
 } | undefined;

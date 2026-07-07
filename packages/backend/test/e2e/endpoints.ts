@@ -12,9 +12,6 @@ import * as assert from 'assert';
 import bcrypt from 'bcryptjs';
 import * as Bull from 'bullmq';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
-// node-fetch only supports it's own Blob yet
-// https://github.com/node-fetch/node-fetch/pull/1664
-import { Blob } from 'node-fetch';
 import { loadConfig } from '@/config.js';
 import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
