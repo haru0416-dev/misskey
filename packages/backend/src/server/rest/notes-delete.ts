@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import ms from 'ms';
+import { SECOND, HOUR } from '@/const.js';
 import { z } from 'zod';
 import { adjustInstanceNotesCountFromDatabase } from '@/core/InstanceStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
@@ -131,9 +131,9 @@ export async function handleHonoApiNotesDelete(
 }
 
 export const notesDeleteRateLimit = {
-	duration: ms('1hour'),
+	duration: HOUR,
 	max: 300,
-	minInterval: ms('1sec'),
+	minInterval: SECOND,
 };
 
 function notesUnrenoteNoSuchNoteError(): HonoApiError {
@@ -167,7 +167,7 @@ export async function handleHonoApiNotesUnrenote(
 }
 
 export const notesUnrenoteRateLimit = {
-	duration: ms('1hour'),
+	duration: HOUR,
 	max: 300,
-	minInterval: ms('1sec'),
+	minInterval: SECOND,
 };

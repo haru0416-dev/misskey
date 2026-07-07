@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import bcrypt from 'bcryptjs';
+import { hashPasswordSync } from '@/misc/password.js';
 import { z } from 'zod';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
@@ -68,7 +68,7 @@ export async function handleHonoApiAdminResetPassword(
 
 	const passwd = secureRndstr(8);
 	await updateUserProfileInDatabase(deps.db, user.id, {
-		password: bcrypt.hashSync(passwd),
+		password: hashPasswordSync(passwd),
 	});
 
 	await logModerationEventInDatabase(deps, me, 'resetPassword', {

@@ -9,7 +9,22 @@
  */
 
 import { createCanvas } from '@napi-rs/canvas';
-import gen from 'random-seed';
+
+// deterministic PRNG (xmur3 hash + mulberry32), replaces the unmaintained random-seed package
+function createSeededRandom(seed: string): (max: number) => number {
+	let h = 1779033703 ^ seed.length;
+	for (let i = 0; i < seed.length; i++) {
+		h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+		h = (h << 13) | (h >>> 19);
+	}
+	let a = h;
+	return (max: number) => {
+		a = (a + 0x6D2B79F5) | 0;
+		let t = Math.imul(a ^ (a >>> 15), 1 | a);
+		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+		return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * max);
+	};
+}
 
 const size = 128; // px
 const n = 5; // resolution
@@ -45,7 +60,7 @@ const sideN = Math.floor(n / 2);
  * Generate buffer of an identicon by seed
  */
 export async function genIdenticon(seed: string): Promise<Buffer> {
-	const rand = gen.create(seed);
+	const rand = createSeededRandom(seed);
 	const canvas = createCanvas(size, size);
 	const ctx = canvas.getContext('2d');
 

@@ -4,7 +4,7 @@
  */
 
 import { adminSystemWebhookCreateParamDef, adminSystemWebhookDeleteParamDef, adminSystemWebhookListParamDef, adminSystemWebhookShowParamDef, adminSystemWebhookTestParamDef, adminSystemWebhookUpdateParamDef } from '@/server/rest/admin-system-webhooks.js';
-import ms from 'ms';
+import { MINUTE } from '@/const.js';
 
 export const endpointMetas = {
 	'admin/system-webhook/create': {
@@ -89,7 +89,7 @@ export const endpointMetas = {
 			kind: 'read:admin:system-webhook',
 
 			limit: {
-				duration: ms('15min'),
+				duration: 15 * MINUTE,
 				max: 60,
 			},
 
