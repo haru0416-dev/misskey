@@ -11,7 +11,7 @@ import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlocking
 import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
 import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
-import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/QueueModule.js';
+import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
 import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { deleteUserListMembershipInDatabase } from '@/core/UserListMembershipStore.js';
 import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';

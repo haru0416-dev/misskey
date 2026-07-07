@@ -20,7 +20,7 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
+import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { handleHonoQueueInbox, flushHonoQueueInboxUpdateInstanceQueue, type HonoQueueInboxDependencies } from '@/queue/handlers/inbox.js';
 import type { InboxJobData } from '@/queue/types.js';
 import type { IActivity } from '@/core/activitypub/type.js';

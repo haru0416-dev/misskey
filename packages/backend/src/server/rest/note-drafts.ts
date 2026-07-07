@@ -17,7 +17,7 @@ import {
 	updateNoteDraftInDatabase,
 } from '@/core/NoteDraftStore.js';
 import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import type { PostScheduledNoteQueue } from '@/core/QueueModule.js';
+import type { PostScheduledNoteQueue } from '@/core/queues.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { genId } from '@/misc/id/gen-id.js';

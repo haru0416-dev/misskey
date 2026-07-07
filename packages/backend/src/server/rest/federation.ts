@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { RelationshipQueue } from '@/core/QueueModule.js';
+import type { RelationshipQueue } from '@/core/queues.js';
 import {
 	createInstanceInDatabase,
 	fetchInstanceByHostFromDatabase,

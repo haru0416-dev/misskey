@@ -16,7 +16,7 @@ import type {
 	SystemQueue,
 	SystemWebhookDeliverQueue,
 	UserWebhookDeliverQueue,
-} from '@/core/QueueModule.js';
+} from '@/core/queues.js';
 import type * as Bull from 'bullmq';
 
 export const QUEUE_TYPES = [

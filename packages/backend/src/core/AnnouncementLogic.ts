@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { BroadcastTypes, MainEventTypes } from '@/core/GlobalEventService.js';
+import type { BroadcastTypes, MainEventTypes } from '@/core/global-events.js';
 import type { ModerationLogPayloads } from '@/types.js';
 import {
 	createAnnouncementInDatabase,

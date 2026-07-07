@@ -248,15 +248,3 @@ export class JsonLd {
 		return hash.digest('hex');
 	}
 }
-
-export class JsonLdService {
-	constructor(
-		private httpRequestService: HttpRequestService,
-	) {
-	}
-
-	@bindThis
-	public use(): JsonLd {
-		return new JsonLd(this.httpRequestService);
-	}
-}

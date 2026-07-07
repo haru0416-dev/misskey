@@ -36,7 +36,7 @@ import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import type { DbQueue, RelationshipQueue } from '@/core/QueueModule.js';
+import type { DbQueue, RelationshipQueue } from '@/core/queues.js';
 import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '../../server/rest/drive-file-upload.js';
 import { packDriveFileManyByIdsForHonoApi } from '../../server/rest/drive-file.js';

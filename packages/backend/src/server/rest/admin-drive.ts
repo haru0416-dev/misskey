@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, listAllDriveFilesByUserIdFromDatabase, listDriveFilesForAdminFromDatabase, listOrphanDriveFilesFromDatabase } from '@/core/DriveFileStore.js';
 import { startDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import type { ObjectStorageQueue } from '@/core/QueueModule.js';
+import type { ObjectStorageQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
