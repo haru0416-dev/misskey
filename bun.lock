@@ -41,7 +41,6 @@
         "@sentry/node": "10.59.0",
         "@sentry/profiling-node": "10.59.0",
         "@simplewebauthn/server": "13.3.1",
-        "@sinonjs/fake-timers": "15.4.0",
         "@smithy/node-http-handler": "4.8.1",
         "archiver": "8.0.0",
         "bcryptjs": "3.0.3",
@@ -92,7 +91,6 @@
         "rename": "1.0.4",
         "rss-parser": "3.13.0",
         "sanitize-html": "2.17.5",
-        "secure-json-parse": "4.1.0",
         "semver": "7.8.5",
         "sharp": "0.35.2",
         "slacc": "0.2.0",
@@ -111,6 +109,7 @@
         "@kitajs/ts-html-plugin": "4.1.4",
         "@rollup/plugin-esm-shim": "0.1.8",
         "@sentry/vue": "10.59.0",
+        "@sinonjs/fake-timers": "15.4.0",
         "@types/archiver": "8.0.0",
         "@types/fluent-ffmpeg": "2.1.28",
         "@types/http-link-header": "1.0.7",
@@ -216,7 +215,6 @@
         "sanitize-html": "2.17.5",
         "shiki": "4.2.0",
         "textarea-caret": "3.1.0",
-        "three": "0.184.0",
         "throttle-debounce": "5.0.2",
         "tinycolor2": "1.6.0",
         "v-code-diff": "1.13.1",
@@ -3243,8 +3241,6 @@
     "thenify-all": ["thenify-all@1.6.0", "", { "dependencies": { "thenify": ">= 3.1.0 < 4" } }, "sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA=="],
 
     "thread-stream": ["thread-stream@4.0.0", "", { "dependencies": { "real-require": "0.2.0" } }, "sha512-4iMVL6HAINXWf1ZKZjIPcz5wYaOdPhtO8ATvZ+Xqp3BTdaqtAwQkNmKORqcIo5YkQqGXq5cwfswDwMqqQNrpJA=="],
-
-    "three": ["three@0.184.0", "", {}, "sha512-wtTRjG92pM5eUg/KuUnHsqSAlPM296brTOcLgMRqEeylYTh/CdtvKUvCyyCQTzFuStieWxvZb8mVTMvdPyUpxg=="],
 
     "throttle-debounce": ["throttle-debounce@5.0.2", "", {}, "sha512-B71/4oyj61iNH0KeCamLuE2rmKuTO5byTOSVwECM5FA7TiAiAW+UqTKZ9ERueC4qvgSttUhdmq1mXC3kJqGX7A=="],
 
