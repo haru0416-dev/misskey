@@ -18,7 +18,6 @@ WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
 COPY --link ["scripts", "./scripts"]
-COPY --link ["patches", "./patches"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend-shared/package.json", "./packages/frontend-shared/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
@@ -54,7 +53,6 @@ WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
 COPY --link ["scripts", "./scripts"]
-COPY --link ["patches", "./patches"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend-shared/package.json", "./packages/frontend-shared/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]

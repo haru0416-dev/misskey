@@ -6,6 +6,7 @@
 import { createWriteStream, promises as fsp } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { finished } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import walk from 'ignore-walk';
 import { Pack } from 'tar/pack';
@@ -31,5 +32,7 @@ export async function buildTarball() {
 
 	await mkdirPromise;
 
-	pack.pipe(createWriteStream(resolve(cwd, 'built', 'tarball', `misskey-${meta.version}.tar.gz`)));
+	const out = createWriteStream(resolve(cwd, 'built', 'tarball', `misskey-${meta.version}.tar.gz`));
+	pack.pipe(out);
+	await finished(out);
 }
