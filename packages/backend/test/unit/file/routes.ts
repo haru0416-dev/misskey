@@ -16,7 +16,7 @@ import { FileInfoService } from '@/core/FileInfoService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { ImageProcessingService } from '@/core/ImageProcessingService.js';
 import { InternalStorageService } from '@/core/InternalStorageService.js';
-import { IdService } from '@/core/IdService.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { loadConfig, type Config } from '@/config.js';
@@ -130,7 +130,6 @@ describe('createFileServerApp', () => {
 	let app: Hono;
 	let externalApp: Hono;
 	let internalStorageService: InternalStorageService;
-	let idService: IdService;
 	let config: Config;
 	let remoteServer: Server;
 	let remotePngUrl: string;
@@ -162,7 +161,7 @@ describe('createFileServerApp', () => {
 		const accessKey = params.accessKey;
 		const url = params.uri ?? `${config.url}/files/${accessKey}`;
 		await createDriveFileInDatabase(drizzle, {
-			id: idService.gen(),
+			id: genId(config),
 			userId: null,
 			userHost: null,
 			md5: '00000000000000000000000000000000',
@@ -209,7 +208,6 @@ describe('createFileServerApp', () => {
 		const imageProcessingService = new ImageProcessingService();
 		const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
 		internalStorageService = new InternalStorageService(config);
-		idService = new IdService(config);
 		app = createFileServerApp({
 			config,
 			db: drizzle,
