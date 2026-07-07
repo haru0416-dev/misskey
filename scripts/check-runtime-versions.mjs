@@ -61,8 +61,8 @@ const checks = [
 		backendPackageJson.scripts?.revert ===
 			'bun run compile-config && bun ./node_modules/typeorm/cli.js migration:revert -d ormconfig.js',
 	],
-	['workspace list must include the Bun-compatible re2 stub', packageJson.workspaces?.includes('packages/re2-stub')],
-	['backend must use the Bun-compatible re2 workspace stub', backendPackageJson.dependencies?.re2 === 'workspace:*'],
+	['backend must use the Bun-compatible re2js package instead of native re2', Boolean(backendPackageJson.dependencies?.re2js)],
+	['backend must not depend on the native re2 package (unusable under Bun)', !backendPackageJson.dependencies?.re2],
 	['native re2 must not be trusted for lifecycle builds', !packageJson.trustedDependencies?.includes('re2')],
 	['bunfig.toml must use isolated installs', versions.linker === 'isolated'],
 	[
