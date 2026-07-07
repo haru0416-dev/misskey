@@ -52,14 +52,12 @@ const checks = [
 	['changelog-checker package.json must not declare a Node.js engine', !changelogCheckerPackageJson.engines?.node],
 	['package.json must not depend on pnpm', !packageJson.devDependencies?.pnpm && !packageJson.dependencies?.pnpm],
 	[
-		'backend migrations must invoke TypeORM through Bun',
-		backendPackageJson.scripts?.migrate ===
-			'bun run compile-config && bun ./node_modules/typeorm/cli.js migration:run -d ormconfig.js',
+		'backend migrations must run through the Bun migration runner',
+		backendPackageJson.scripts?.migrate === 'bun run compile-config && bun ./built/migration-runner.js up',
 	],
 	[
-		'backend migration revert must invoke TypeORM through Bun',
-		backendPackageJson.scripts?.revert ===
-			'bun run compile-config && bun ./node_modules/typeorm/cli.js migration:revert -d ormconfig.js',
+		'backend migration revert must run through the Bun migration runner',
+		backendPackageJson.scripts?.revert === 'bun run compile-config && bun ./built/migration-runner.js down',
 	],
 	[
 		'backend must use the Bun-compatible re2js package instead of native re2',

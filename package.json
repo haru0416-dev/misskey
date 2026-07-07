@@ -83,10 +83,8 @@
 		"typescript": "6.0.3"
 	},
 	"trustedDependencies": [
-		"@nestjs/core",
 		"@parcel/watcher",
 		"bufferutil",
-		"core-js",
 		"esbuild",
 		"msgpackr-extract",
 		"msw",
