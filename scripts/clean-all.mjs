@@ -19,9 +19,9 @@ execSync('bun run clean', {
 	stdio: 'inherit',
 });
 
-await Promise.all([...workspaces, '.'].map(dir =>
-	fs.rm(`${__dirname}/../${dir}/node_modules`, { recursive: true, force: true }),
-));
+await Promise.all(
+	[...workspaces, '.'].map((dir) => fs.rm(`${__dirname}/../${dir}/node_modules`, { recursive: true, force: true })),
+);
 
 execSync('bun pm cache rm', {
 	cwd: `${__dirname}/../`,

@@ -20,6 +20,4 @@ const buildOutputs = [
 	'built',
 ];
 
-await Promise.all(buildOutputs.map(dir =>
-	fs.rm(`${__dirname}/../${dir}`, { recursive: true, force: true }),
-));
+await Promise.all(buildOutputs.map((dir) => fs.rm(`${__dirname}/../${dir}`, { recursive: true, force: true })));
