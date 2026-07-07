@@ -7,14 +7,14 @@ import * as assert from 'assert';
 import { describe, test, beforeAll } from 'vitest';
 
 import { loadConfig } from '@/config.js';
-import { ApMfmService } from '@/core/activitypub/ApMfmService.js';
-import { MfmService } from '@/core/MfmService.js';
+import { createApMfmService, type ApMfmService } from '@/core/activitypub/ApMfmService.js';
+import { createMfmService } from '@/core/MfmService.js';
 
 describe('ApMfmService', () => {
 	let apMfmService: ApMfmService;
 
 	beforeAll(() => {
-		apMfmService = new ApMfmService(new MfmService(loadConfig()));
+		apMfmService = createApMfmService(createMfmService(loadConfig()));
 	});
 
 	describe('getNoteHtml', () => {

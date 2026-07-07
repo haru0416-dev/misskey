@@ -12,18 +12,18 @@ import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
-import { AiService } from '@/core/AiService.js';
-import { DownloadService } from '@/core/DownloadService.js';
-import { FileInfoService } from '@/core/FileInfoService.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
-import { ImageProcessingService } from '@/core/ImageProcessingService.js';
-import { InternalStorageService } from '@/core/InternalStorageService.js';
-import { LoggerService } from '@/core/LoggerService.js';
-import { S3Service } from '@/core/S3Service.js';
-import { EmailService } from '@/core/EmailService.js';
-import { UserAuthService } from '@/core/UserAuthService.js';
-import { UtilityService } from '@/core/UtilityService.js';
-import { WebAuthnService } from '@/core/WebAuthnService.js';
+import { createAiService, type AiService } from '@/core/AiService.js';
+import { createDownloadService, type DownloadService } from '@/core/DownloadService.js';
+import { createFileInfoService, type FileInfoService } from '@/core/FileInfoService.js';
+import { createHttpRequestService, type HttpRequestService } from '@/core/HttpRequestService.js';
+import { createImageProcessingService, type ImageProcessingService } from '@/core/ImageProcessingService.js';
+import { createInternalStorageService, type InternalStorageService } from '@/core/InternalStorageService.js';
+import { createLoggerService, type LoggerService } from '@/core/LoggerService.js';
+import { createS3Service, type S3Service } from '@/core/S3Service.js';
+import { createEmailService, type EmailService } from '@/core/EmailService.js';
+import { createUserAuthService, type UserAuthService } from '@/core/UserAuthService.js';
+import { createUtilityService, type UtilityService } from '@/core/UtilityService.js';
+import { createWebAuthnService, type WebAuthnService } from '@/core/WebAuthnService.js';
 import {
 	createDbQueue,
 	createDeliverQueue,
@@ -46,8 +46,8 @@ import {
 	type SystemWebhookDeliverQueue,
 	type UserWebhookDeliverQueue,
 } from '@/core/QueueModule.js';
-import { VideoProcessingService } from '@/core/VideoProcessingService.js';
-import { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
+import { createVideoProcessingService, type VideoProcessingService } from '@/core/VideoProcessingService.js';
+import { createUrlPreviewService, type UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import { createHonoChartWriters, saveHonoChartWriters, startHonoChartWriterSaveInterval, type HonoChartWriters } from '@/server/chart-runtime.js';
 
 export type RuntimeDependencies = {
@@ -222,20 +222,20 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 	const systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config);
 	const meilisearch = createMeilisearchClient(config);
 	const meta = await fetchReactiveMeta(db, redisForSub);
-	const loggerService = new LoggerService();
-	const httpRequestService = new HttpRequestService(config);
-	const aiService = new AiService(meta, httpRequestService, loggerService);
-	const fileInfoService = new FileInfoService(aiService, loggerService);
-	const downloadService = new DownloadService(config, httpRequestService, loggerService);
-	const urlPreviewService = new UrlPreviewService(config, meta, httpRequestService, loggerService);
-	const imageProcessingService = new ImageProcessingService();
-	const videoProcessingService = new VideoProcessingService(config, imageProcessingService);
-	const internalStorageService = new InternalStorageService(config);
-	const s3Service = new S3Service(httpRequestService);
-	const utilityService = new UtilityService(config, meta);
-	const emailService = new EmailService(config, meta, db, loggerService, utilityService, httpRequestService);
-	const userAuthService = new UserAuthService(redis, db);
-	const webAuthnService = new WebAuthnService(config, meta, redis, db);
+	const loggerService = createLoggerService();
+	const httpRequestService = createHttpRequestService(config);
+	const aiService = createAiService(meta, httpRequestService, loggerService);
+	const fileInfoService = createFileInfoService(aiService, loggerService);
+	const downloadService = createDownloadService(config, httpRequestService, loggerService);
+	const urlPreviewService = createUrlPreviewService(config, meta, httpRequestService, loggerService);
+	const imageProcessingService = createImageProcessingService();
+	const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
+	const internalStorageService = createInternalStorageService(config);
+	const s3Service = createS3Service(httpRequestService);
+	const utilityService = createUtilityService(config, meta);
+	const emailService = createEmailService(config, meta, db, loggerService, utilityService, httpRequestService);
+	const userAuthService = createUserAuthService(redis, db);
+	const webAuthnService = createWebAuthnService(config, meta, redis, db);
 	const chartWriters = createHonoChartWriters({ db, redis, config, meta, logger: loggerService.getLogger('chart', 'white') });
 	const chartWriterSaveIntervalId = startHonoChartWriterSaveInterval(chartWriters);
 

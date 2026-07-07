@@ -3,41 +3,30 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
 import * as OTPAuth from 'otpauth';
 import { createHash } from 'node:crypto';
-import { DI } from '@/di-symbols.js';
 import type { MiUserProfile } from '@/models/_.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import { bindThis } from '@/decorators.js';
 
-@Injectable()
-export class UserAuthService {
-	constructor(
-		@Inject(DI.redis)
-		private redisClient: Redis.Redis,
-
-		@Inject(DI.drizzle)
-		private db: MiDrizzleDatabase,
-	) {
-	}
-
-	@bindThis
-	public async twoFactorAuthenticate(profile: MiUserProfile, token: string): Promise<void> {
+export function createUserAuthService(
+	redisClient: Redis.Redis,
+	db: MiDrizzleDatabase,
+) {
+	async function twoFactorAuthenticate(profile: MiUserProfile, token: string): Promise<void> {
 		if (profile.twoFactorBackupSecret?.includes(token)) {
-			await updateUserProfileInDatabase(this.db, profile.userId, {
+			await updateUserProfileInDatabase(db, profile.userId, {
 				twoFactorBackupSecret: profile.twoFactorBackupSecret.filter((secret) => secret !== token),
 			});
 		} else {
-			if (!await this.validateOtp(profile.userId, profile.twoFactorSecret!, token)) {
+			if (!await validateOtp(profile.userId, profile.twoFactorSecret!, token)) {
 				throw new Error('authentication failed');
 			}
 		}
 	}
 
-	public async validateOtp(
+	async function validateOtp(
 		userId: MiUserProfile['userId'],
 		twoFactorSecret: string,
 		token: string,
@@ -81,8 +70,12 @@ export class UserAuthService {
 
 		// 5. TTL（有効期限）を設定いてredis set
 		const ttl = timeStep * (validationWindow * 2 + 1);
-		const setResult = await this.redisClient.set(usedTokenRedisKey, normalizedToken, 'EX', ttl, 'NX');
+		const setResult = await redisClient.set(usedTokenRedisKey, normalizedToken, 'EX', ttl, 'NX');
 
 		return setResult === 'OK';
 	}
+
+	return { twoFactorAuthenticate, validateOtp };
 }
+
+export type UserAuthService = ReturnType<typeof createUserAuthService>;

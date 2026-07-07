@@ -5,48 +5,36 @@
 
 import * as fs from 'node:fs';
 import * as Path from 'node:path';
-import { Inject, Injectable } from '@nestjs/common';
-import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
-import { bindThis } from '@/decorators.js';
 
-@Injectable()
-export class InternalStorageService {
-	private readonly path: string;
+export function createInternalStorageService(config: Config) {
+	const path = Path.resolve(config.rootDir, 'files');
 
-	constructor(
-		@Inject(DI.config)
-		private config: Config,
-	) {
-		this.path = Path.resolve(this.config.rootDir, 'files');
+	function resolvePath(key: string) {
+		return Path.resolve(path, key);
 	}
 
-	@bindThis
-	public resolvePath(key: string) {
-		return Path.resolve(this.path, key);
+	function read(key: string) {
+		return fs.createReadStream(resolvePath(key));
 	}
 
-	@bindThis
-	public read(key: string) {
-		return fs.createReadStream(this.resolvePath(key));
+	function saveFromPath(key: string, srcPath: string) {
+		fs.mkdirSync(path, { recursive: true });
+		fs.copyFileSync(srcPath, resolvePath(key));
+		return `${config.url}/files/${key}`;
 	}
 
-	@bindThis
-	public saveFromPath(key: string, srcPath: string) {
-		fs.mkdirSync(this.path, { recursive: true });
-		fs.copyFileSync(srcPath, this.resolvePath(key));
-		return `${this.config.url}/files/${key}`;
+	function saveFromBuffer(key: string, data: Buffer) {
+		fs.mkdirSync(path, { recursive: true });
+		fs.writeFileSync(resolvePath(key), data);
+		return `${config.url}/files/${key}`;
 	}
 
-	@bindThis
-	public saveFromBuffer(key: string, data: Buffer) {
-		fs.mkdirSync(this.path, { recursive: true });
-		fs.writeFileSync(this.resolvePath(key), data);
-		return `${this.config.url}/files/${key}`;
+	function del(key: string) {
+		fs.unlink(resolvePath(key), () => {});
 	}
 
-	@bindThis
-	public del(key: string) {
-		fs.unlink(this.resolvePath(key), () => {});
-	}
+	return { resolvePath, read, saveFromPath, saveFromBuffer, del };
 }
+
+export type InternalStorageService = ReturnType<typeof createInternalStorageService>;

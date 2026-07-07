@@ -21,7 +21,7 @@ import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase, listUsersByUrisO
 import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
 import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import { MfmService } from '@/core/MfmService.js';
+import { createMfmService } from '@/core/MfmService.js';
 import type { Config } from '@/config.js';
 import { deepClone } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -144,7 +144,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 
 	const summary = note.cw === '' ? '​' : (note.cw ?? undefined);
 
-	const mfmService = new MfmService(deps.config as Config);
+	const mfmService = createMfmService(deps.config as Config);
 	const parsed = note.text ? mfm.parse(note.text) : [];
 	const extraHtml = quote != null
 		? `<br><br><span class="quote-inline">RE: <a href="${quote}">${quote}</a></span>`

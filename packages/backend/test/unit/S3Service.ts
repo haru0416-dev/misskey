@@ -16,8 +16,8 @@ import {
 	UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
-import { S3Service } from '@/core/S3Service.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { createS3Service, type S3Service } from '@/core/S3Service.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { MiMeta } from '@/models/_.js';
 
 describe('S3Service', () => {
@@ -38,7 +38,7 @@ describe('S3Service', () => {
 		const httpRequestService = {
 			getAgentByUrl: (url: URL) => url.protocol === 'https:' ? new https.Agent() : new http.Agent(),
 		} as HttpRequestService;
-		s3Service = new S3Service(httpRequestService);
+		s3Service = createS3Service(httpRequestService);
 	});
 
 	beforeEach(async () => {

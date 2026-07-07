@@ -16,7 +16,7 @@ import { fetchDriveFileByIdAndUserIdFromDatabase, fetchDriveFileByIdFromDatabase
 import { listLocalEmojisFromDatabase } from '@/core/EmojiStore.js';
 import { recordHashtagUsageInDatabase } from '@/core/HashtagStore.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import { MfmService } from '@/core/MfmService.js';
+import { createMfmService } from '@/core/MfmService.js';
 import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { appendVerifiedLinkToUserProfileInDatabase, fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase, type UserProfileUpdate } from '@/core/UserProfileStore.js';
@@ -267,7 +267,7 @@ export async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependenc
 		url: `${deps.config.url}/@${user.username}`,
 		preferredUsername: user.username,
 		name: user.name,
-		summary: profile.description ? new MfmService(deps.config as Config).toHtml(mfm.parse(profile.description)) : null,
+		summary: profile.description ? createMfmService(deps.config as Config).toHtml(mfm.parse(profile.description)) : null,
 		_misskey_summary: profile.description,
 		_misskey_followedMessage: profile.followedMessage,
 		_misskey_requireSigninToViewContents: user.requireSigninToViewContents,
