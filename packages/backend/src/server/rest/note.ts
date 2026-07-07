@@ -6,12 +6,12 @@
 import { domainToASCII, URLSearchParams } from 'node:url';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
-import { fetchNoteReactionByUserAndNoteFromDatabase } from '@/core/NoteReactionStore.js';
+import { fetchNoteReactionByUserAndNoteFromDatabase, listNoteReactionsByUserAndNoteIdsFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
@@ -33,7 +33,7 @@ import type { MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
 import { HonoApiError } from './error.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
-import { packUserLiteForHonoApi, type UserPackingDependencies } from './user.js';
+import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from './user.js';
 import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -130,6 +130,40 @@ async function getBufferedReactions(
 	const pairs = resultPairs.map(x => x.split('/') as [MiUser['id'], string]);
 
 	return { deltas, pairs };
+}
+
+async function getBufferedReactionsMany(
+	deps: HonoApiNoteDependencies,
+	noteIds: MiNote['id'][],
+): Promise<Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>> {
+	const result = new Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>(
+		noteIds.map(id => [id, { deltas: {}, pairs: [] }]),
+	);
+	if (!deps.meta.enableReactionsBuffering || noteIds.length === 0) return result;
+
+	const pipeline = deps.redis.pipeline();
+	for (const noteId of noteIds) {
+		pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
+		pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, -1);
+	}
+	const results = await pipeline.exec();
+
+	for (let i = 0; i < noteIds.length; i++) {
+		const resultDeltas = (results?.[i * 2]?.[1] ?? {}) as Record<string, string>;
+		const resultPairs = (results?.[i * 2 + 1]?.[1] ?? []) as string[];
+
+		const deltas: Record<string, number> = {};
+		for (const [name, count] of Object.entries(resultDeltas)) {
+			deltas[name] = parseInt(count, 10);
+		}
+
+		result.set(noteIds[i]!, {
+			deltas,
+			pairs: resultPairs.map(x => x.split('/') as [MiUser['id'], string]),
+		});
+	}
+
+	return result;
 }
 
 function toPuny(host: string): string {
@@ -375,6 +409,21 @@ export async function isVisibleForMeForHonoApi(
 	return true;
 }
 
+type PackNoteChannel = NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFromDatabase>>>;
+
+/**
+ * packNoteManyForHonoApi が事前一括取得した結果。`noteIds` に含まれるノートについてのみ
+ * 各 Map の内容を信頼してよい (含まれないノートは従来どおり個別取得にフォールバックする)。
+ */
+type PackNoteBatchHint = {
+	noteIds: Set<MiNote['id']>;
+	bufferedReactions: Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>;
+	myReactions: Map<MiNote['id'], string | undefined>;
+	packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
+	packedFiles: Map<string, Packed<'DriveFile'>>;
+	channels: Map<string, PackNoteChannel>;
+};
+
 export async function packNoteForHonoApi(
 	deps: HonoApiNoteDependencies,
 	src: MiNote['id'] | MiNote,
@@ -383,6 +432,7 @@ export async function packNoteForHonoApi(
 		detail?: boolean;
 		skipHide?: boolean;
 		withReactionAndUserPairCache?: boolean;
+		hint?: PackNoteBatchHint;
 	},
 ): Promise<Packed<'Note'>> {
 	const opts = Object.assign({
@@ -395,7 +445,10 @@ export async function packNoteForHonoApi(
 	const note = typeof src === 'object' ? src : await fetchNoteByIdOrFailFromDatabase(deps.db, src);
 	const host = note.userHost;
 
-	const bufferedReactions = await getBufferedReactions(deps, note.id);
+	// hint は事前一括取得の対象だったノートに対してのみ信頼できる
+	const hint = opts.hint != null && opts.hint.noteIds.has(note.id) ? opts.hint : undefined;
+
+	const bufferedReactions = hint?.bufferedReactions.get(note.id) ?? await getBufferedReactions(deps, note.id);
 	const reactions = convertLegacyReactions(mergeReactions(note.reactions, bufferedReactions.deltas));
 	const reactionAndUserPairCache = note.reactionAndUserPairCache.concat(bufferedReactions.pairs.map(x => x.join('/')));
 
@@ -409,27 +462,37 @@ export async function packNoteForHonoApi(
 		.map(x => decodeReaction(x).reaction.replaceAll(':', ''));
 
 	const [user, files, reactionEmojis, emojis, channel, reply, renote, poll, myReaction] = await Promise.all([
-		packUserLiteForHonoApi(deps, note.user ?? note.userId),
-		packDriveFileManyByIdsForHonoApi(deps, note.fileIds),
+		hint?.packedUsers.get(note.userId) ?? packUserLiteForHonoApi(deps, note.user ?? note.userId),
+		hint != null
+			? note.fileIds.map(id => hint.packedFiles.get(id)).filter((f): f is Packed<'DriveFile'> => f != null)
+			: packDriveFileManyByIdsForHonoApi(deps, note.fileIds),
 		populateEmojis(deps, reactionEmojiNames, host),
 		host != null ? populateEmojis(deps, note.emojis, host) : Promise.resolve(undefined),
-		note.channelId ? fetchChannelByIdFromDatabase(deps.db, note.channelId) : Promise.resolve(null),
+		note.channelId
+			? (hint != null ? (hint.channels.get(note.channelId) ?? null) : fetchChannelByIdFromDatabase(deps.db, note.channelId))
+			: Promise.resolve(null),
 		(opts.detail && note.replyId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.reply ?? note.replyId, me, {
 			detail: false,
 			skipHide: opts.skipHide,
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
+			hint: opts.hint,
 		})) : Promise.resolve(undefined),
 		(opts.detail && note.renoteId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.renote ?? note.renoteId, me, {
 			detail: true,
 			skipHide: opts.skipHide,
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
+			hint: opts.hint,
 		})) : Promise.resolve(undefined),
 		(opts.detail && note.hasPoll) ? populatePoll(deps, note, meId) : Promise.resolve(undefined),
-		(opts.detail && meId && Object.keys(reactions).length > 0) ? populateMyReactionForHonoApi(deps, {
-			id: note.id,
-			reactions,
-			reactionAndUserPairCache,
-		}, meId) : Promise.resolve(undefined),
+		(opts.detail && meId && Object.keys(reactions).length > 0)
+			? (hint?.myReactions.has(note.id)
+				? hint.myReactions.get(note.id)
+				: populateMyReactionForHonoApi(deps, {
+					id: note.id,
+					reactions,
+					reactionAndUserPairCache,
+				}, meId))
+			: Promise.resolve(undefined),
 	]);
 
 	const packed = {
@@ -497,7 +560,93 @@ export async function packNoteManyForHonoApi(
 ): Promise<Packed<'Note'>[]> {
 	if (notes.length === 0) return [];
 
-	return await Promise.all(notes.map(n => packNoteForHonoApi(deps, n, me, options)));
+	const detail = options?.detail ?? true;
+	const meId = me ? me.id : null;
+
+	// 本体 + relation ロード済みの reply/renote を事前一括取得の対象にする
+	// (relation 未ロードのノートは packNoteForHonoApi 内の個別取得にフォールバックする)
+	const targetById = new Map<MiNote['id'], MiNote>();
+	const myReactionTargetIds = new Set<MiNote['id']>();
+	for (const note of notes) {
+		targetById.set(note.id, note);
+		myReactionTargetIds.add(note.id);
+		if (detail) {
+			if (note.reply) targetById.set(note.reply.id, note.reply);
+			if (note.renote) {
+				targetById.set(note.renote.id, note.renote);
+				// renote は detail:true で pack されるので myReaction も必要 (reply は detail:false なので不要)
+				myReactionTargetIds.add(note.renote.id);
+			}
+		}
+	}
+	const targets = [...targetById.values()];
+
+	const bufferedReactions = await getBufferedReactionsMany(deps, targets.map(t => t.id));
+
+	// myReaction: populateMyReactionForHonoApi と同じ判定で pair cache から解決し、
+	// DB 参照が必要なノートだけ IN 句 1 クエリでまとめて引く
+	const myReactions = new Map<MiNote['id'], string | undefined>();
+	if (meId != null && detail) {
+		const idsNeedingDbLookup: MiNote['id'][] = [];
+		for (const target of targets) {
+			if (!myReactionTargetIds.has(target.id)) continue;
+			const buffered = bufferedReactions.get(target.id)!;
+			const reactions = convertLegacyReactions(mergeReactions(target.reactions, buffered.deltas));
+			const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
+			if (reactionsCount === 0) {
+				myReactions.set(target.id, undefined);
+				continue;
+			}
+			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(x => x.join('/')));
+			if (reactionsCount <= pairCache.length) {
+				const pair = pairCache.find(p => p.startsWith(meId));
+				myReactions.set(target.id, pair ? convertLegacyReaction(pair.split('/')[1]!) : undefined);
+				continue;
+			}
+			if (parseId(deps.config, target.id).date.getTime() + 2000 > Date.now()) {
+				myReactions.set(target.id, undefined);
+				continue;
+			}
+			idsNeedingDbLookup.push(target.id);
+		}
+		if (idsNeedingDbLookup.length > 0) {
+			const rows = await listNoteReactionsByUserAndNoteIdsFromDatabase(deps.db, meId, idsNeedingDbLookup);
+			const reactionByNoteId = new Map(rows.map(row => [row.noteId, row.reaction]));
+			for (const id of idsNeedingDbLookup) {
+				const reaction = reactionByNoteId.get(id);
+				myReactions.set(id, reaction != null ? convertLegacyReaction(reaction) : undefined);
+			}
+		}
+	}
+
+	const userSrcById = new Map<MiUser['id'], MiUser['id'] | MiUser>();
+	const fileIds = new Set<string>();
+	const channelIds = new Set<string>();
+	for (const target of targets) {
+		const existing = userSrcById.get(target.userId);
+		if (existing == null || typeof existing === 'string') {
+			userSrcById.set(target.userId, target.user ?? target.userId);
+		}
+		for (const fileId of target.fileIds) fileIds.add(fileId);
+		if (target.channelId) channelIds.add(target.channelId);
+	}
+
+	const [packedUserArray, packedFileArray, channelArray] = await Promise.all([
+		packUserLiteManyForHonoApi(deps, [...userSrcById.values()]),
+		packDriveFileManyByIdsForHonoApi(deps, [...fileIds]),
+		channelIds.size > 0 ? listChannelsByIdsFromDatabase(deps.db, [...channelIds]) : Promise.resolve([]),
+	]);
+
+	const hint: PackNoteBatchHint = {
+		noteIds: new Set(targetById.keys()),
+		bufferedReactions,
+		myReactions,
+		packedUsers: new Map(packedUserArray.map(u => [u.id, u])),
+		packedFiles: new Map(packedFileArray.map(f => [f.id, f])),
+		channels: new Map(channelArray.map(c => [c.id, c])),
+	};
+
+	return await Promise.all(notes.map(n => packNoteForHonoApi(deps, n, me, { ...options, hint })));
 }
 
 export async function fetchNoteDiffsForHonoApi(

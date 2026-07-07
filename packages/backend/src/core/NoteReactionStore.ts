@@ -109,6 +109,22 @@ export async function fetchNoteReactionByUserAndNoteFromDatabase(
 	return row ?? null;
 }
 
+export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	noteIds: MiNote['id'][],
+): Promise<NoteReactionRow[]> {
+	if (noteIds.length === 0) return [];
+
+	return await db
+		.select()
+		.from(noteReaction)
+		.where(and(
+			eq(noteReaction.userId, userId),
+			inArray(noteReaction.noteId, noteIds),
+		));
+}
+
 export async function fetchNoteReactionByUserAndNoteOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
