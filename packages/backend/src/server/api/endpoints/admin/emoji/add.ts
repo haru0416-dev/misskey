@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminEmojiAddParamDef } from '@/server/rest/emojis.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -34,33 +36,6 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' },
-		fileId: { type: 'string', format: 'misskey:id' },
-		category: {
-			type: 'string',
-			nullable: true,
-			description: 'Use `null` to reset the category.',
-		},
-		aliases: {
-			type: 'array',
-			items: {
-				type: 'string',
-			},
-		},
-		license: { type: 'string', nullable: true },
-		isSensitive: { type: 'boolean' },
-		localOnly: { type: 'boolean' },
-		roleIdsThatCanBeUsedThisEmojiAsReaction: {
-			type: 'array',
-			items: {
-				type: 'string',
-			},
-		},
-	},
-	required: ['name', 'fileId'],
-} as const;
+export const paramDef = adminEmojiAddParamDef;
 
 // TODO: ロジックをサービスに切り出す

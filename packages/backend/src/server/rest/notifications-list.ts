@@ -216,7 +216,7 @@ export async function packNotificationsForHonoApi<T extends MiNotification | MiG
 
 const notificationTypeEnumValues = [...notificationTypes, ...obsoleteNotificationTypes] as const;
 
-const notificationsParamDef = z.object({
+export const notificationsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

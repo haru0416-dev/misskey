@@ -20,11 +20,11 @@ export type HonoApiPromoDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const promoReadParamDef = z.object({
+export const promoReadParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-const adminPromoCreateParamDef = z.object({
+export const adminPromoCreateParamDef = z.object({
 	noteId: misskeyId(),
 	expiresAt: z.number().int(),
 });

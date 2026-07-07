@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { emojiParamDef } from '@/server/rest/emojis.js';
+
 export const meta = {
 	tags: ['meta'],
 
@@ -17,12 +19,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: {
-			type: 'string',
-		},
-	},
-	required: ['name'],
-} as const;
+export const paramDef = emojiParamDef;

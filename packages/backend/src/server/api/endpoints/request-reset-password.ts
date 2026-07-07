@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { requestResetPasswordParamDef } from '@/server/rest/password-reset.js';
 
 export const meta = {
 	tags: ['reset password'],
@@ -22,11 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		username: { type: 'string' },
-		email: { type: 'string' },
-	},
-	required: ['username', 'email'],
-} as const;
+export const paramDef = requestResetPasswordParamDef;

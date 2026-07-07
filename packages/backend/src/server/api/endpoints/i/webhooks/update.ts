@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { webhookEventTypes } from '@/models/Webhook.js';
+import { webhooksUpdateParamDef } from '@/server/rest/webhooks.js';
 
 export const meta = {
 	tags: ['webhooks'],
@@ -22,19 +22,6 @@ export const meta = {
 
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		url: { type: 'string', minLength: 1, maxLength: 1024 },
-		secret: { type: 'string', nullable: true, maxLength: 1024 },
-		on: { type: 'array', items: {
-			type: 'string', enum: webhookEventTypes,
-		} },
-		active: { type: 'boolean' },
-	},
-	required: ['webhookId'],
-} as const;
+export const paramDef = webhooksUpdateParamDef;
 
 // TODO: ロジックをサービスに切り出す

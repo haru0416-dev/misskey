@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminUpdateUserNoteParamDef } from '@/server/rest/admin-user-maintenance.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,11 +13,4 @@ export const meta = {
 	kind: 'write:admin:user-note',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		text: { type: 'string' },
-	},
-	required: ['userId', 'text'],
-} as const;
+export const paramDef = adminUpdateUserNoteParamDef;

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { createFromPublicParamDef } from '@/server/rest/users-lists.js';
+
 export const meta = {
 	requireCredential: true,
 	prohibitMoved: true,
@@ -50,11 +52,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		listId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['name', 'listId'],
-} as const;
+export const paramDef = createFromPublicParamDef;

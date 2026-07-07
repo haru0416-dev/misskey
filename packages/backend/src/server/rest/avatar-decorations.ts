@@ -13,7 +13,7 @@ export type HonoApiAvatarDecorationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const getAvatarDecorationsParamDef = z.object({});
+export const getAvatarDecorationsParamDef = z.object({});
 
 export async function handleHonoApiGetAvatarDecorations(
 	deps: HonoApiAvatarDecorationDependencies,

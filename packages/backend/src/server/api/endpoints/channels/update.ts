@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { channelUpdateParamDef } from '@/server/rest/channels.js';
+
 export const meta = {
 	tags: ['channels'],
 
@@ -37,23 +39,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 128 },
-		description: { type: 'string', nullable: true, maxLength: 2048 },
-		bannerId: { type: 'string', format: 'misskey:id', nullable: true },
-		isArchived: { type: 'boolean', nullable: true },
-		pinnedNoteIds: {
-			type: 'array',
-			items: {
-				type: 'string', format: 'misskey:id',
-			},
-		},
-		color: { type: 'string', minLength: 1, maxLength: 16 },
-		isSensitive: { type: 'boolean', nullable: true },
-		allowRenoteToExternal: { type: 'boolean', nullable: true },
-	},
-	required: ['channelId'],
-} as const;
+export const paramDef = channelUpdateParamDef;

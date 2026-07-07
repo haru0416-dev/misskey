@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminPromoCreateParamDef } from '@/server/rest/promo.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -25,11 +27,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		expiresAt: { type: 'integer' },
-	},
-	required: ['noteId', 'expiresAt'],
-} as const;
+export const paramDef = adminPromoCreateParamDef;

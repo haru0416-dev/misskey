@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { chatMessagesRoomTimelineParamDef } from '@/server/rest/chat.js';
+
 export const meta = {
 	tags: ['chat'],
 
@@ -29,15 +31,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		roomId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['roomId'],
-} as const;
+export const paramDef = chatMessagesRoomTimelineParamDef;

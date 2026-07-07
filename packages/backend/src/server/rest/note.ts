@@ -573,7 +573,7 @@ export function normalizeHonoApiUsersFeaturedNotesQuery(query: Record<string, st
 	return body;
 }
 
-const usersFeaturedNotesParamDef = z.object({
+export const usersFeaturedNotesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	untilId: misskeyId().optional(),
 	userId: misskeyId(),
@@ -651,7 +651,7 @@ function notesTranslateCannotTranslateInvisibleNoteError(): HonoApiError {
 	});
 }
 
-const notesTranslateParamDef = z.object({
+export const notesTranslateParamDef = z.object({
 	noteId: misskeyId(),
 	targetLang: z.string(),
 });
@@ -724,7 +724,7 @@ export async function handleHonoApiNotesTranslate(
 	};
 }
 
-const usersNotesParamDef = z.object({
+export const usersNotesParamDef = z.object({
 	userId: misskeyId(),
 	withReplies: z.boolean().default(false),
 	withRenotes: z.boolean().default(true),

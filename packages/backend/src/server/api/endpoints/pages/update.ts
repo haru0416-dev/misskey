@@ -4,7 +4,7 @@
  */
 
 import ms from 'ms';
-import { pageNameSchema } from '@/models/Page.js';
+import { pagesUpdateParamDef } from '@/server/rest/pages.js';
 
 export const meta = {
 	tags: ['pages'],
@@ -44,24 +44,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		pageId: { type: 'string', format: 'misskey:id' },
-		title: { type: 'string' },
-		name: { ...pageNameSchema, minLength: 1 },
-		summary: { type: 'string', nullable: true },
-		content: { type: 'array', items: {
-			type: 'object', additionalProperties: true,
-		} },
-		variables: { type: 'array', items: {
-			type: 'object', additionalProperties: true,
-		} },
-		script: { type: 'string' },
-		eyeCatchingImageId: { type: 'string', format: 'misskey:id', nullable: true },
-		font: { type: 'string', enum: ['serif', 'sans-serif'] },
-		alignCenter: { type: 'boolean' },
-		hideTitleWhenPinned: { type: 'boolean' },
-	},
-	required: ['pageId'],
-} as const;
+export const paramDef = pagesUpdateParamDef;

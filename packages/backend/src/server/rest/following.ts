@@ -55,27 +55,27 @@ export type HonoApiFollowingDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const followingCreateParamDef = z.object({
+export const followingCreateParamDef = z.object({
 	userId: misskeyId(),
 	withReplies: z.boolean().optional(),
 });
 
-const followingUserIdParamDef = z.object({
+export const followingUserIdParamDef = z.object({
 	userId: misskeyId(),
 });
 
-const followingUpdateParamDef = z.object({
+export const followingUpdateParamDef = z.object({
 	userId: misskeyId(),
 	notify: z.enum(['normal', 'none']).optional(),
 	withReplies: z.boolean().optional(),
 });
 
-const followingUpdateAllParamDef = z.object({
+export const followingUpdateAllParamDef = z.object({
 	notify: z.enum(['normal', 'none']).optional(),
 	withReplies: z.boolean().optional(),
 });
 
-const followingRequestsListParamDef = z.object({
+export const followingRequestsListParamDef = z.object({
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
 	sinceDate: z.number().int().optional(),
@@ -83,7 +83,7 @@ const followingRequestsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
-const followingListParamDef = z.object({
+export const followingListParamDef = z.object({
 	notification: z.boolean().default(false),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -1032,23 +1032,23 @@ const usersPaginationShape = {
 // `.passthrough()` は元 ajv 版が `additionalProperties: false` を指定しておらず、
 // anyOf のもう一方の枝にしか属さないプロパティ (例: userId 枝に対する username/host) も
 // 素通りさせていた挙動を再現するために必要 (等価性検証スクリプトで確認済み)。
-const usersByUserIdBaseParamDef = z.object({
+export const usersByUserIdBaseParamDef = z.object({
 	userId: misskeyId(),
 	...usersPaginationShape,
 }).passthrough();
 
-const usersByUsernameHostBaseParamDef = z.object({
+export const usersByUsernameHostBaseParamDef = z.object({
 	username: z.string(),
 	host: z.string().nullable(),
 	...usersPaginationShape,
 }).passthrough();
 
-const usersFollowersOrFollowingParamDef = z.union([
+export const usersFollowersOrFollowingParamDef = z.union([
 	usersByUserIdBaseParamDef,
 	usersByUsernameHostBaseParamDef,
 ]);
 
-const usersFollowingParamDef = z.union([
+export const usersFollowingParamDef = z.union([
 	usersByUserIdBaseParamDef.extend({ birthday: birthdayZodSchema.nullable().optional() }),
 	usersByUsernameHostBaseParamDef.extend({ birthday: birthdayZodSchema.nullable().optional() }),
 ]);
@@ -1198,10 +1198,19 @@ const birthdayOneOfSchema = z.custom<
 	return matches === 1;
 }, { message: 'must match exactly one schema in oneOf' });
 
-const usersGetFollowingUsersByBirthdayParamDef = z.object({
+export const usersGetFollowingUsersByBirthdayParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	offset: z.number().int().default(0),
 	birthday: birthdayOneOfSchema,
+});
+
+// OpenAPI/misskey-js コード生成 (endpoints/*.ts) 専用。上の `birthdayOneOfSchema` は
+// `z.custom` を使っており JSON Schema 化できないため、docs 用にはこちらの anyOf 相当
+// (どちらか一方の形に一致すれば可、両方一致する入力の拒否は docs には反映されない) を使う。
+export const usersGetFollowingUsersByBirthdayDocsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).default(10),
+	offset: z.number().int().default(0),
+	birthday: z.union([birthdayMonthDaySchema, birthdayRangeSchema]),
 });
 
 export async function handleHonoApiUsersGetFollowingUsersByBirthday(

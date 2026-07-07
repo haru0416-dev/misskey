@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { chatMessagesUnreactParamDef } from '@/server/rest/chat.js';
+
 export const meta = {
 	tags: ['chat'],
 
@@ -19,11 +21,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		messageId: { type: 'string', format: 'misskey:id' },
-		reaction: { type: 'string' },
-	},
-	required: ['messageId', 'reaction'],
-} as const;
+export const paramDef = chatMessagesUnreactParamDef;

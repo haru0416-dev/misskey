@@ -30,7 +30,12 @@ async function main() {
 	writeFileSync('./built/api.json', JSON.stringify(spec), 'utf-8');
 }
 
-main().catch((e) => {
+main().then(() => {
+	// zod 等が ESM 経由で `node:process` を import すると、facade 生成の副作用で
+	// process.stdin が実体化され open socket として残り、プロセスが自然終了しない
+	// (Node の既知の挙動)。明示的に exit してハングを防ぐ。
+	process.exit(0);
+}).catch((e) => {
 	console.error(e);
 	process.exit(1);
 });

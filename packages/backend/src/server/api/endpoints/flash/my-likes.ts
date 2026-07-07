@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { flashMyLikesParamDef } from '@/server/rest/flash.js';
+
 export const meta = {
 	tags: ['account', 'flash'],
 
@@ -31,15 +33,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		search: { type: 'string', minLength: 1, maxLength: 100, nullable: true },
-	},
-	required: [],
-} as const;
+export const paramDef = flashMyLikesParamDef;

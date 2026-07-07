@@ -35,23 +35,23 @@ export type HonoApiFavoriteDependencies = {
 
 export type HonoApiIFavoritesDependencies = HonoApiNoteDependencies;
 
-const userListParamDef = z.object({
+export const userListParamDef = z.object({
 	listId: misskeyId(),
 });
 
-const clipParamDef = z.object({
+export const clipParamDef = z.object({
 	clipId: misskeyId(),
 });
 
-const channelParamDef = z.object({
+export const channelParamDef = z.object({
 	channelId: misskeyId(),
 });
 
-const pageParamDef = z.object({
+export const pageParamDef = z.object({
 	pageId: misskeyId(),
 });
 
-const flashParamDef = z.object({
+export const flashParamDef = z.object({
 	flashId: misskeyId(),
 });
 
@@ -283,7 +283,7 @@ export async function handleHonoApiFlashUnlike(
 	void decrementFlashLikedCountInDatabase(deps.db, flash.id);
 }
 
-const iFavoritesParamDef = z.object({
+export const iFavoritesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

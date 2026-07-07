@@ -6715,10 +6715,7 @@ export interface operations {
                     silence?: boolean;
                     /** @default false */
                     needConfirmationToRead?: boolean;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     userId?: string | null;
                 };
             };
@@ -6868,7 +6865,6 @@ export interface operations {
                     untilId?: string;
                     sinceDate?: number;
                     untilDate?: number;
-                    /** Format: misskey:id */
                     userId?: string | null;
                     /**
                      * @default active
@@ -7188,7 +7184,6 @@ export interface operations {
                     untilId?: string;
                     sinceDate?: number;
                     untilDate?: number;
-                    /** Format: misskey:id */
                     userId?: string | null;
                 };
             };
@@ -7726,7 +7721,6 @@ export interface operations {
                     untilId?: string;
                     sinceDate?: number;
                     untilDate?: number;
-                    /** Format: misskey:id */
                     userId?: string | null;
                     type?: string | null;
                     /**
@@ -7734,10 +7728,7 @@ export interface operations {
                      * @enum {string}
                      */
                     origin?: 'combined' | 'local' | 'remote';
-                    /**
-                     * @description The local host is represented with `null`.
-                     * @default null
-                     */
+                    /** @default null */
                     hostname?: string | null;
                 };
             };
@@ -7934,7 +7925,6 @@ export interface operations {
                     name: string;
                     /** Format: misskey:id */
                     fileId: string;
-                    /** @description Use `null` to reset the category. */
                     category?: string | null;
                     aliases?: string[];
                     license?: string | null;
@@ -8401,10 +8391,7 @@ export interface operations {
                 'application/json': {
                     /** @default null */
                     query?: string | null;
-                    /**
-                     * @description Use `null` to represent the local host.
-                     * @default null
-                     */
+                    /** @default null */
                     host?: string | null;
                     /** @default 10 */
                     limit?: number;
@@ -8605,7 +8592,6 @@ export interface operations {
             content: {
                 'application/json': {
                     ids: string[];
-                    /** @description Use `null` to reset the category. */
                     category?: string | null;
                 };
             };
@@ -8669,7 +8655,6 @@ export interface operations {
             content: {
                 'application/json': {
                     ids: string[];
-                    /** @description Use `null` to reset the license. */
                     license?: string | null;
                 };
             };
@@ -8742,7 +8727,6 @@ export interface operations {
                 ) & {
                     /** Format: misskey:id */
                     fileId?: string;
-                    /** @description Use `null` to reset the category. */
                     category?: string | null;
                     aliases?: string[];
                     license?: string | null;
@@ -11052,8 +11036,7 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     reportId: string;
-                    /** @enum {string|null} */
-                    resolvedAs?: 'accept' | 'reject' | null;
+                    resolvedAs?: ('accept' | 'reject') | null;
                 };
             };
         };
@@ -11187,7 +11170,9 @@ export interface operations {
                     iconUrl: string | null;
                     /** @enum {string} */
                     target: 'manual' | 'conditional';
-                    condFormula: Record<string, never>;
+                    condFormula: {
+                        [key: string]: unknown;
+                    };
                     isPublic: boolean;
                     isModerator: boolean;
                     isAdministrator: boolean;
@@ -11197,7 +11182,9 @@ export interface operations {
                     preserveAssignmentOnMoveAccount?: boolean;
                     canEditMembersByModerator: boolean;
                     displayOrder: number;
-                    policies: Record<string, never>;
+                    policies: {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -11522,7 +11509,9 @@ export interface operations {
                     iconUrl?: string | null;
                     /** @enum {string} */
                     target?: 'manual' | 'conditional';
-                    condFormula?: Record<string, never>;
+                    condFormula?: {
+                        [key: string]: unknown;
+                    };
                     isPublic?: boolean;
                     isModerator?: boolean;
                     isAdministrator?: boolean;
@@ -11531,7 +11520,9 @@ export interface operations {
                     preserveAssignmentOnMoveAccount?: boolean;
                     canEditMembersByModerator?: boolean;
                     displayOrder?: number;
-                    policies?: Record<string, never>;
+                    policies?: {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -11593,7 +11584,9 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
-                    policies: Record<string, never>;
+                    policies: {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -11892,7 +11885,6 @@ export interface operations {
                     sinceDate?: number;
                     untilDate?: number;
                     type?: string | null;
-                    /** Format: misskey:id */
                     userId?: string | null;
                     search?: string | null;
                 };
@@ -12380,10 +12372,7 @@ export interface operations {
                     origin?: 'combined' | 'local' | 'remote';
                     /** @default null */
                     username?: string | null;
-                    /**
-                     * @description The local host is represented with `null`.
-                     * @default null
-                     */
+                    /** @default null */
                     hostname?: string | null;
                 };
             };
@@ -13742,7 +13731,6 @@ export interface operations {
                     name: string;
                     /** @enum {string} */
                     src: 'home' | 'all' | 'users' | 'list' | 'users_blacklist';
-                    /** Format: misskey:id */
                     userListId?: string | null;
                     keywords: string[][];
                     excludeKeywords: string[][];
@@ -14148,7 +14136,6 @@ export interface operations {
                     name?: string;
                     /** @enum {string} */
                     src?: 'home' | 'all' | 'users' | 'list' | 'users_blacklist';
-                    /** Format: misskey:id */
                     userListId?: string | null;
                     keywords?: string[][];
                     excludeKeywords?: string[][];
@@ -15009,7 +14996,6 @@ export interface operations {
                 'application/json': {
                     name: string;
                     description?: string | null;
-                    /** Format: misskey:id */
                     bannerId?: string | null;
                     color?: string;
                     isSensitive?: boolean | null;
@@ -15345,7 +15331,6 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     channelId: string;
-                    /** @description A Unix Epoch timestamp that must lie in the future. `null` means an indefinite mute. */
                     expiresAt?: number | null;
                 };
             };
@@ -16009,7 +15994,6 @@ export interface operations {
                     channelId: string;
                     name?: string;
                     description?: string | null;
-                    /** Format: misskey:id */
                     bannerId?: string | null;
                     isArchived?: boolean | null;
                     pinnedNoteIds?: string[];
@@ -17526,9 +17510,7 @@ export interface operations {
                     query: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
                     userId?: string | null;
-                    /** Format: misskey:id */
                     roomId?: string | null;
                 };
             };
@@ -19624,14 +19606,10 @@ export interface operations {
                     untilId?: string;
                     sinceDate?: number;
                     untilDate?: number;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     folderId?: string | null;
                     type?: string | null;
-                    /** @enum {string|null} */
-                    sort?: '+createdAt' | '-createdAt' | '+name' | '-name' | '+size' | '-size' | null;
+                    sort?: ('+createdAt' | '-createdAt' | '+name' | '-name' | '+size' | '-size') | null;
                 };
             };
         };
@@ -19909,10 +19887,7 @@ export interface operations {
         requestBody: {
             content: {
                 'multipart/form-data': {
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     folderId?: string | null;
                     /** @default null */
                     name?: string | null;
@@ -20064,10 +20039,7 @@ export interface operations {
             content: {
                 'application/json': {
                     name: string;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     folderId?: string | null;
                 };
             };
@@ -20199,7 +20171,6 @@ export interface operations {
             content: {
                 'application/json': {
                     fileIds: string[];
-                    /** Format: misskey:id */
                     folderId?: string | null;
                 };
             };
@@ -20334,7 +20305,6 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     fileId: string;
-                    /** Format: misskey:id */
                     folderId?: string | null;
                     name?: string;
                     isSensitive?: boolean;
@@ -20404,10 +20374,7 @@ export interface operations {
             content: {
                 'application/json': {
                     url: string;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     folderId?: string | null;
                     /** @default false */
                     isSensitive?: boolean;
@@ -20495,10 +20462,7 @@ export interface operations {
                     untilId?: string;
                     sinceDate?: number;
                     untilDate?: number;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     folderId?: string | null;
                 };
             };
@@ -20566,7 +20530,6 @@ export interface operations {
                 'application/json': {
                     /** @default Untitled */
                     name?: string;
-                    /** Format: misskey:id */
                     parentId?: string | null;
                 };
             };
@@ -20705,10 +20668,7 @@ export interface operations {
             content: {
                 'application/json': {
                     name: string;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     parentId?: string | null;
                 };
             };
@@ -20843,7 +20803,6 @@ export interface operations {
                     /** Format: misskey:id */
                     folderId: string;
                     name?: string;
-                    /** Format: misskey:id */
                     parentId?: string | null;
                 };
             };
@@ -21519,7 +21478,6 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
-                    /** @description Omit or use `null` to not filter by host. */
                     host?: string | null;
                     blocked?: boolean | null;
                     notResponding?: boolean | null;
@@ -21532,22 +21490,23 @@ export interface operations {
                     limit?: number;
                     /** @default 0 */
                     offset?: number;
-                    /** @enum {string|null} */
                     sort?:
-                        | '+pubSub'
-                        | '-pubSub'
-                        | '+notes'
-                        | '-notes'
-                        | '+users'
-                        | '-users'
-                        | '+following'
-                        | '-following'
-                        | '+followers'
-                        | '-followers'
-                        | '+firstRetrievedAt'
-                        | '-firstRetrievedAt'
-                        | '+latestRequestReceivedAt'
-                        | '-latestRequestReceivedAt'
+                        | (
+                              | '+pubSub'
+                              | '-pubSub'
+                              | '+notes'
+                              | '-notes'
+                              | '+users'
+                              | '-users'
+                              | '+following'
+                              | '-following'
+                              | '+followers'
+                              | '-followers'
+                              | '+firstRetrievedAt'
+                              | '-firstRetrievedAt'
+                              | '+latestRequestReceivedAt'
+                              | '-latestRequestReceivedAt'
+                          )
                         | null;
                 };
             };
@@ -24815,7 +24774,9 @@ export interface operations {
                     password: string;
                     token?: string | null;
                     name: string;
-                    credential: Record<string, never>;
+                    credential: {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -27475,7 +27436,7 @@ export interface operations {
                 'application/json': {
                     key: string;
                     /** @default [] */
-                    scope: string[];
+                    scope?: string[];
                     domain?: string | null;
                 };
             };
@@ -27542,7 +27503,7 @@ export interface operations {
             content: {
                 'application/json': {
                     /** @default [] */
-                    scope: string[];
+                    scope?: string[];
                     domain?: string | null;
                 };
             };
@@ -27610,7 +27571,7 @@ export interface operations {
                 'application/json': {
                     key: string;
                     /** @default [] */
-                    scope: string[];
+                    scope?: string[];
                     domain?: string | null;
                 };
             };
@@ -27680,7 +27641,7 @@ export interface operations {
             content: {
                 'application/json': {
                     /** @default [] */
-                    scope: string[];
+                    scope?: string[];
                     domain?: string | null;
                 };
             };
@@ -27747,7 +27708,7 @@ export interface operations {
             content: {
                 'application/json': {
                     /** @default [] */
-                    scope: string[];
+                    scope?: string[];
                     domain?: string | null;
                 };
             };
@@ -27817,7 +27778,7 @@ export interface operations {
                 'application/json': {
                     key: string;
                     /** @default [] */
-                    scope: string[];
+                    scope?: string[];
                     domain?: string | null;
                 };
             };
@@ -27944,7 +27905,7 @@ export interface operations {
                     key: string;
                     value: unknown;
                     /** @default [] */
-                    scope: string[];
+                    scope?: string[];
                     domain?: string | null;
                 };
             };
@@ -28217,231 +28178,231 @@ export interface operations {
                     followedMessage?: string | null;
                     location?: string | null;
                     birthday?: string | null;
-                    /** @enum {string|null} */
                     lang?:
-                        | null
-                        | 'ach'
-                        | 'ady'
-                        | 'af'
-                        | 'af-NA'
-                        | 'af-ZA'
-                        | 'ak'
-                        | 'ar'
-                        | 'ar-AR'
-                        | 'ar-MA'
-                        | 'ar-SA'
-                        | 'ay-BO'
-                        | 'az'
-                        | 'az-AZ'
-                        | 'be-BY'
-                        | 'bg'
-                        | 'bg-BG'
-                        | 'bn'
-                        | 'bn-IN'
-                        | 'bn-BD'
-                        | 'br'
-                        | 'bs-BA'
-                        | 'ca'
-                        | 'ca-ES'
-                        | 'cak'
-                        | 'ck-US'
-                        | 'cs'
-                        | 'cs-CZ'
-                        | 'cy'
-                        | 'cy-GB'
-                        | 'da'
-                        | 'da-DK'
-                        | 'de'
-                        | 'de-AT'
-                        | 'de-DE'
-                        | 'de-CH'
-                        | 'dsb'
-                        | 'el'
-                        | 'el-GR'
-                        | 'en'
-                        | 'en-GB'
-                        | 'en-AU'
-                        | 'en-CA'
-                        | 'en-IE'
-                        | 'en-IN'
-                        | 'en-PI'
-                        | 'en-SG'
-                        | 'en-UD'
-                        | 'en-US'
-                        | 'en-ZA'
-                        | 'en@pirate'
-                        | 'eo'
-                        | 'eo-EO'
-                        | 'es'
-                        | 'es-AR'
-                        | 'es-419'
-                        | 'es-CL'
-                        | 'es-CO'
-                        | 'es-EC'
-                        | 'es-ES'
-                        | 'es-LA'
-                        | 'es-NI'
-                        | 'es-MX'
-                        | 'es-US'
-                        | 'es-VE'
-                        | 'et'
-                        | 'et-EE'
-                        | 'eu'
-                        | 'eu-ES'
-                        | 'fa'
-                        | 'fa-IR'
-                        | 'fb-LT'
-                        | 'ff'
-                        | 'fi'
-                        | 'fi-FI'
-                        | 'fo'
-                        | 'fo-FO'
-                        | 'fr'
-                        | 'fr-CA'
-                        | 'fr-FR'
-                        | 'fr-BE'
-                        | 'fr-CH'
-                        | 'fy-NL'
-                        | 'ga'
-                        | 'ga-IE'
-                        | 'gd'
-                        | 'gl'
-                        | 'gl-ES'
-                        | 'gn-PY'
-                        | 'gu-IN'
-                        | 'gv'
-                        | 'gx-GR'
-                        | 'he'
-                        | 'he-IL'
-                        | 'hi'
-                        | 'hi-IN'
-                        | 'hr'
-                        | 'hr-HR'
-                        | 'hsb'
-                        | 'ht'
-                        | 'hu'
-                        | 'hu-HU'
-                        | 'hy'
-                        | 'hy-AM'
-                        | 'id'
-                        | 'id-ID'
-                        | 'is'
-                        | 'is-IS'
-                        | 'it'
-                        | 'it-IT'
-                        | 'ja'
-                        | 'ja-JP'
-                        | 'jv-ID'
-                        | 'ka-GE'
-                        | 'kk-KZ'
-                        | 'km'
-                        | 'kl'
-                        | 'km-KH'
-                        | 'kab'
-                        | 'kn'
-                        | 'kn-IN'
-                        | 'ko'
-                        | 'ko-KR'
-                        | 'ku-TR'
-                        | 'kw'
-                        | 'la'
-                        | 'la-VA'
-                        | 'lb'
-                        | 'li-NL'
-                        | 'lt'
-                        | 'lt-LT'
-                        | 'lv'
-                        | 'lv-LV'
-                        | 'mai'
-                        | 'mg-MG'
-                        | 'mk'
-                        | 'mk-MK'
-                        | 'ml'
-                        | 'ml-IN'
-                        | 'mn-MN'
-                        | 'mr'
-                        | 'mr-IN'
-                        | 'ms'
-                        | 'ms-MY'
-                        | 'mt'
-                        | 'mt-MT'
-                        | 'my'
-                        | 'no'
-                        | 'nb'
-                        | 'nb-NO'
-                        | 'ne'
-                        | 'ne-NP'
-                        | 'nl'
-                        | 'nl-BE'
-                        | 'nl-NL'
-                        | 'nn-NO'
-                        | 'oc'
-                        | 'or-IN'
-                        | 'pa'
-                        | 'pa-IN'
-                        | 'pl'
-                        | 'pl-PL'
-                        | 'ps-AF'
-                        | 'pt'
-                        | 'pt-BR'
-                        | 'pt-PT'
-                        | 'qu-PE'
-                        | 'rm-CH'
-                        | 'ro'
-                        | 'ro-RO'
-                        | 'ru'
-                        | 'ru-RU'
-                        | 'sa-IN'
-                        | 'se-NO'
-                        | 'sh'
-                        | 'si-LK'
-                        | 'sk'
-                        | 'sk-SK'
-                        | 'sl'
-                        | 'sl-SI'
-                        | 'so-SO'
-                        | 'sq'
-                        | 'sq-AL'
-                        | 'sr'
-                        | 'sr-RS'
-                        | 'su'
-                        | 'sv'
-                        | 'sv-SE'
-                        | 'sw'
-                        | 'sw-KE'
-                        | 'ta'
-                        | 'ta-IN'
-                        | 'te'
-                        | 'te-IN'
-                        | 'tg'
-                        | 'tg-TJ'
-                        | 'th'
-                        | 'th-TH'
-                        | 'fil'
-                        | 'tlh'
-                        | 'tr'
-                        | 'tr-TR'
-                        | 'tt-RU'
-                        | 'uk'
-                        | 'uk-UA'
-                        | 'ur'
-                        | 'ur-PK'
-                        | 'uz'
-                        | 'uz-UZ'
-                        | 'vi'
-                        | 'vi-VN'
-                        | 'xh-ZA'
-                        | 'yi'
-                        | 'yi-DE'
-                        | 'zh'
-                        | 'zh-Hans'
-                        | 'zh-Hant'
-                        | 'zh-CN'
-                        | 'zh-HK'
-                        | 'zh-SG'
-                        | 'zh-TW'
-                        | 'zu-ZA';
-                    /** Format: misskey:id */
+                        | (
+                              | 'ach'
+                              | 'ady'
+                              | 'af'
+                              | 'af-NA'
+                              | 'af-ZA'
+                              | 'ak'
+                              | 'ar'
+                              | 'ar-AR'
+                              | 'ar-MA'
+                              | 'ar-SA'
+                              | 'ay-BO'
+                              | 'az'
+                              | 'az-AZ'
+                              | 'be-BY'
+                              | 'bg'
+                              | 'bg-BG'
+                              | 'bn'
+                              | 'bn-IN'
+                              | 'bn-BD'
+                              | 'br'
+                              | 'bs-BA'
+                              | 'ca'
+                              | 'ca-ES'
+                              | 'cak'
+                              | 'ck-US'
+                              | 'cs'
+                              | 'cs-CZ'
+                              | 'cy'
+                              | 'cy-GB'
+                              | 'da'
+                              | 'da-DK'
+                              | 'de'
+                              | 'de-AT'
+                              | 'de-DE'
+                              | 'de-CH'
+                              | 'dsb'
+                              | 'el'
+                              | 'el-GR'
+                              | 'en'
+                              | 'en-GB'
+                              | 'en-AU'
+                              | 'en-CA'
+                              | 'en-IE'
+                              | 'en-IN'
+                              | 'en-PI'
+                              | 'en-SG'
+                              | 'en-UD'
+                              | 'en-US'
+                              | 'en-ZA'
+                              | 'en@pirate'
+                              | 'eo'
+                              | 'eo-EO'
+                              | 'es'
+                              | 'es-AR'
+                              | 'es-419'
+                              | 'es-CL'
+                              | 'es-CO'
+                              | 'es-EC'
+                              | 'es-ES'
+                              | 'es-LA'
+                              | 'es-NI'
+                              | 'es-MX'
+                              | 'es-US'
+                              | 'es-VE'
+                              | 'et'
+                              | 'et-EE'
+                              | 'eu'
+                              | 'eu-ES'
+                              | 'fa'
+                              | 'fa-IR'
+                              | 'fb-LT'
+                              | 'ff'
+                              | 'fi'
+                              | 'fi-FI'
+                              | 'fo'
+                              | 'fo-FO'
+                              | 'fr'
+                              | 'fr-CA'
+                              | 'fr-FR'
+                              | 'fr-BE'
+                              | 'fr-CH'
+                              | 'fy-NL'
+                              | 'ga'
+                              | 'ga-IE'
+                              | 'gd'
+                              | 'gl'
+                              | 'gl-ES'
+                              | 'gn-PY'
+                              | 'gu-IN'
+                              | 'gv'
+                              | 'gx-GR'
+                              | 'he'
+                              | 'he-IL'
+                              | 'hi'
+                              | 'hi-IN'
+                              | 'hr'
+                              | 'hr-HR'
+                              | 'hsb'
+                              | 'ht'
+                              | 'hu'
+                              | 'hu-HU'
+                              | 'hy'
+                              | 'hy-AM'
+                              | 'id'
+                              | 'id-ID'
+                              | 'is'
+                              | 'is-IS'
+                              | 'it'
+                              | 'it-IT'
+                              | 'ja'
+                              | 'ja-JP'
+                              | 'jv-ID'
+                              | 'ka-GE'
+                              | 'kk-KZ'
+                              | 'km'
+                              | 'kl'
+                              | 'km-KH'
+                              | 'kab'
+                              | 'kn'
+                              | 'kn-IN'
+                              | 'ko'
+                              | 'ko-KR'
+                              | 'ku-TR'
+                              | 'kw'
+                              | 'la'
+                              | 'la-VA'
+                              | 'lb'
+                              | 'li-NL'
+                              | 'lt'
+                              | 'lt-LT'
+                              | 'lv'
+                              | 'lv-LV'
+                              | 'mai'
+                              | 'mg-MG'
+                              | 'mk'
+                              | 'mk-MK'
+                              | 'ml'
+                              | 'ml-IN'
+                              | 'mn-MN'
+                              | 'mr'
+                              | 'mr-IN'
+                              | 'ms'
+                              | 'ms-MY'
+                              | 'mt'
+                              | 'mt-MT'
+                              | 'my'
+                              | 'no'
+                              | 'nb'
+                              | 'nb-NO'
+                              | 'ne'
+                              | 'ne-NP'
+                              | 'nl'
+                              | 'nl-BE'
+                              | 'nl-NL'
+                              | 'nn-NO'
+                              | 'oc'
+                              | 'or-IN'
+                              | 'pa'
+                              | 'pa-IN'
+                              | 'pl'
+                              | 'pl-PL'
+                              | 'ps-AF'
+                              | 'pt'
+                              | 'pt-BR'
+                              | 'pt-PT'
+                              | 'qu-PE'
+                              | 'rm-CH'
+                              | 'ro'
+                              | 'ro-RO'
+                              | 'ru'
+                              | 'ru-RU'
+                              | 'sa-IN'
+                              | 'se-NO'
+                              | 'sh'
+                              | 'si-LK'
+                              | 'sk'
+                              | 'sk-SK'
+                              | 'sl'
+                              | 'sl-SI'
+                              | 'so-SO'
+                              | 'sq'
+                              | 'sq-AL'
+                              | 'sr'
+                              | 'sr-RS'
+                              | 'su'
+                              | 'sv'
+                              | 'sv-SE'
+                              | 'sw'
+                              | 'sw-KE'
+                              | 'ta'
+                              | 'ta-IN'
+                              | 'te'
+                              | 'te-IN'
+                              | 'tg'
+                              | 'tg-TJ'
+                              | 'th'
+                              | 'th-TH'
+                              | 'fil'
+                              | 'tlh'
+                              | 'tr'
+                              | 'tr-TR'
+                              | 'tt-RU'
+                              | 'uk'
+                              | 'uk-UA'
+                              | 'ur'
+                              | 'ur-PK'
+                              | 'uz'
+                              | 'uz-UZ'
+                              | 'vi'
+                              | 'vi-VN'
+                              | 'xh-ZA'
+                              | 'yi'
+                              | 'yi-DE'
+                              | 'zh'
+                              | 'zh-Hans'
+                              | 'zh-Hant'
+                              | 'zh-CN'
+                              | 'zh-HK'
+                              | 'zh-SG'
+                              | 'zh-TW'
+                              | 'zu-ZA'
+                          )
+                        | null;
                     avatarId?: string | null;
                     avatarDecorations?: {
                         /** Format: misskey:id */
@@ -28451,7 +28412,6 @@ export interface operations {
                         offsetX?: number | null;
                         offsetY?: number | null;
                     }[];
-                    /** Format: misskey:id */
                     bannerId?: string | null;
                     fields?: {
                         name: string;
@@ -28480,7 +28440,6 @@ export interface operations {
                     followersVisibility?: 'public' | 'followers' | 'private';
                     /** @enum {string} */
                     chatScope?: 'everyone' | 'followers' | 'following' | 'mutual' | 'none';
-                    /** Format: misskey:id */
                     pinnedPageId?: string | null;
                     mutedWords?: (string[] | string)[];
                     hardMutedWords?: (string[] | string)[];
@@ -28498,7 +28457,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28515,7 +28474,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28532,7 +28491,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28549,7 +28508,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28566,7 +28525,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28583,7 +28542,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28600,7 +28559,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28617,7 +28576,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28634,7 +28593,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28651,7 +28610,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28668,7 +28627,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28685,7 +28644,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28702,7 +28661,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28719,7 +28678,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28736,7 +28695,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28753,7 +28712,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -28770,7 +28729,7 @@ export interface operations {
                                       | 'never';
                               }
                             | {
-                                  /** @enum {string} */
+                                  /** @constant */
                                   type: 'list';
                                   /** Format: misskey:id */
                                   userListId: string;
@@ -29743,7 +29702,6 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     userId: string;
-                    /** @description A Unix Epoch timestamp that must lie in the future. `null` means an indefinite mute. */
                     expiresAt?: number | null;
                 };
             };
@@ -30557,21 +30515,17 @@ export interface operations {
                     hashtag?: string | null;
                     /** @default false */
                     localOnly?: boolean;
-                    /**
-                     * @default null
-                     * @enum {string|null}
-                     */
+                    /** @default null */
                     reactionAcceptance?:
-                        | null
-                        | 'likeOnly'
-                        | 'likeOnlyForRemote'
-                        | 'nonSensitiveOnly'
-                        | 'nonSensitiveOnlyForLocalLikeOnlyForRemote';
-                    /** Format: misskey:id */
+                        | (
+                              | 'likeOnly'
+                              | 'likeOnlyForRemote'
+                              | 'nonSensitiveOnly'
+                              | 'nonSensitiveOnlyForLocalLikeOnlyForRemote'
+                          )
+                        | null;
                     replyId?: string | null;
-                    /** Format: misskey:id */
                     renoteId?: string | null;
-                    /** Format: misskey:id */
                     channelId?: string | null;
                     text?: string | null;
                     fileIds?: string[];
@@ -30803,18 +30757,16 @@ export interface operations {
                     cw?: string | null;
                     hashtag?: string | null;
                     localOnly?: boolean;
-                    /** @enum {string|null} */
                     reactionAcceptance?:
-                        | null
-                        | 'likeOnly'
-                        | 'likeOnlyForRemote'
-                        | 'nonSensitiveOnly'
-                        | 'nonSensitiveOnlyForLocalLikeOnlyForRemote';
-                    /** Format: misskey:id */
+                        | (
+                              | 'likeOnly'
+                              | 'likeOnlyForRemote'
+                              | 'nonSensitiveOnly'
+                              | 'nonSensitiveOnlyForLocalLikeOnlyForRemote'
+                          )
+                        | null;
                     replyId?: string | null;
-                    /** Format: misskey:id */
                     renoteId?: string | null;
-                    /** Format: misskey:id */
                     channelId?: string | null;
                     text?: string | null;
                     fileIds?: string[];
@@ -31040,7 +30992,6 @@ export interface operations {
                     limit?: number;
                     /** Format: misskey:id */
                     untilId?: string;
-                    /** Format: misskey:id */
                     channelId?: string | null;
                 };
             };
@@ -31844,14 +31795,14 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     noteId: string;
+                    /** @default 10 */
+                    limit?: number;
                     /** Format: misskey:id */
                     sinceId?: string;
                     /** Format: misskey:id */
                     untilId?: string;
                     sinceDate?: number;
                     untilDate?: number;
-                    /** @default 10 */
-                    limit?: number;
                 };
             };
         };
@@ -31929,17 +31880,10 @@ export interface operations {
                     limit?: number;
                     /** @default 0 */
                     offset?: number;
-                    /** @description The local host is represented with `.`. */
                     host?: string;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     userId?: string | null;
-                    /**
-                     * Format: misskey:id
-                     * @default null
-                     */
+                    /** @default null */
                     channelId?: string | null;
                 };
             };
@@ -32009,7 +31953,6 @@ export interface operations {
                           tag: string;
                       }
                     | {
-                          /** @description The outer arrays are chained with OR, the inner arrays are chained with AND. */
                           query: string[][];
                       }
                 ) & {
@@ -32017,10 +31960,7 @@ export interface operations {
                     reply?: boolean | null;
                     /** @default null */
                     renote?: boolean | null;
-                    /**
-                     * @description Only show notes that have attached files.
-                     * @default false
-                     */
+                    /** @default false */
                     withFiles?: boolean;
                     /** @default null */
                     poll?: boolean | null;
@@ -32691,10 +32631,7 @@ export interface operations {
                     includeLocalRenotes?: boolean;
                     /** @default true */
                     withRenotes?: boolean;
-                    /**
-                     * @description Only show notes that have attached files.
-                     * @default false
-                     */
+                    /** @default false */
                     withFiles?: boolean;
                 };
             };
@@ -33082,7 +33019,6 @@ export interface operations {
                         [key: string]: unknown;
                     }[];
                     script: string;
-                    /** Format: misskey:id */
                     eyeCatchingImageId?: string | null;
                     /**
                      * @default sans-serif
@@ -33496,7 +33432,6 @@ export interface operations {
                         [key: string]: unknown;
                     }[];
                     script?: string;
-                    /** Format: misskey:id */
                     eyeCatchingImageId?: string | null;
                     /** @enum {string} */
                     font?: 'serif' | 'sans-serif';
@@ -35075,10 +35010,7 @@ export interface operations {
                      * @enum {string}
                      */
                     origin?: 'combined' | 'local' | 'remote';
-                    /**
-                     * @description The local host is represented with `null`.
-                     * @default null
-                     */
+                    /** @default null */
                     hostname?: string | null;
                 };
             };
@@ -35427,26 +35359,35 @@ export interface operations {
     users___followers: {
         requestBody: {
             content: {
-                'application/json': (
-                    | {
+                'application/json':
+                    | ({
                           /** Format: misskey:id */
                           userId: string;
-                      }
-                    | {
+                          /** Format: misskey:id */
+                          sinceId?: string;
+                          /** Format: misskey:id */
+                          untilId?: string;
+                          sinceDate?: number;
+                          untilDate?: number;
+                          /** @default 10 */
+                          limit?: number;
+                      } & {
+                          [key: string]: unknown;
+                      })
+                    | ({
                           username: string;
-                          /** @description The local host is represented with `null`. */
                           host: string | null;
-                      }
-                ) & {
-                    /** Format: misskey:id */
-                    sinceId?: string;
-                    /** Format: misskey:id */
-                    untilId?: string;
-                    sinceDate?: number;
-                    untilDate?: number;
-                    /** @default 10 */
-                    limit?: number;
-                };
+                          /** Format: misskey:id */
+                          sinceId?: string;
+                          /** Format: misskey:id */
+                          untilId?: string;
+                          sinceDate?: number;
+                          untilDate?: number;
+                          /** @default 10 */
+                          limit?: number;
+                      } & {
+                          [key: string]: unknown;
+                      });
             };
         };
         responses: {
@@ -35509,28 +35450,37 @@ export interface operations {
     users___following: {
         requestBody: {
             content: {
-                'application/json': (
-                    | {
+                'application/json':
+                    | ({
                           /** Format: misskey:id */
                           userId: string;
-                      }
-                    | {
+                          /** Format: misskey:id */
+                          sinceId?: string;
+                          /** Format: misskey:id */
+                          untilId?: string;
+                          sinceDate?: number;
+                          untilDate?: number;
+                          /** @default 10 */
+                          limit?: number;
+                          birthday?: string | null;
+                      } & {
+                          [key: string]: unknown;
+                      })
+                    | ({
                           username: string;
-                          /** @description The local host is represented with `null`. */
                           host: string | null;
-                      }
-                ) & {
-                    /** Format: misskey:id */
-                    sinceId?: string;
-                    /** Format: misskey:id */
-                    untilId?: string;
-                    sinceDate?: number;
-                    untilDate?: number;
-                    /** @default 10 */
-                    limit?: number;
-                    /** @description @deprecated use get-following-users-by-birthday instead. */
-                    birthday?: string | null;
-                };
+                          /** Format: misskey:id */
+                          sinceId?: string;
+                          /** Format: misskey:id */
+                          untilId?: string;
+                          sinceDate?: number;
+                          untilDate?: number;
+                          /** @default 10 */
+                          limit?: number;
+                          birthday?: string | null;
+                      } & {
+                          [key: string]: unknown;
+                      });
             };
         };
         responses: {
@@ -37171,19 +37121,21 @@ export interface operations {
     'users___search-by-username-and-host': {
         requestBody: {
             content: {
-                'application/json': (
+                'application/json':
                     | {
                           username: string | null;
+                          /** @default 10 */
+                          limit?: number;
+                          /** @default true */
+                          detail?: boolean;
                       }
                     | {
                           host: string | null;
-                      }
-                ) & {
-                    /** @default 10 */
-                    limit?: number;
-                    /** @default true */
-                    detail?: boolean;
-                };
+                          /** @default 10 */
+                          limit?: number;
+                          /** @default true */
+                          detail?: boolean;
+                      };
             };
         };
         responses: {
@@ -37328,7 +37280,6 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     userId: string;
-                    /** @description A personal memo for the target user. If null or empty, delete the memo. */
                     memo: string | null;
                 };
             };

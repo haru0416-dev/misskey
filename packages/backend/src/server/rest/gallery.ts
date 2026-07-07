@@ -82,7 +82,7 @@ async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshol
 let galleryPostsRankingCache: string[] = [];
 let galleryPostsRankingCacheLastFetchedAt = 0;
 
-const galleryFeaturedParamDef = z.object({
+export const galleryFeaturedParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	untilId: misskeyId().optional(),
 });
@@ -92,9 +92,9 @@ type GalleryFeaturedParams = {
 	untilId?: string;
 };
 
-const galleryPopularParamDef = z.object({});
+export const galleryPopularParamDef = z.object({});
 
-const galleryPostsParamDef = z.object({
+export const galleryPostsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -110,7 +110,7 @@ type GalleryPostsParams = {
 	untilDate?: number;
 };
 
-const galleryPostsCreateParamDef = z.object({
+export const galleryPostsCreateParamDef = z.object({
 	title: z.string().min(1),
 	description: z.string().nullable().optional(),
 	fileIds: uniqueItems(z.array(misskeyId()).min(1).max(32)),
@@ -124,7 +124,7 @@ type GalleryPostsCreateParams = {
 	isSensitive: boolean;
 };
 
-const galleryPostsUpdateParamDef = z.object({
+export const galleryPostsUpdateParamDef = z.object({
 	postId: misskeyId(),
 	title: z.string().min(1).optional(),
 	description: z.string().nullable().optional(),
@@ -140,7 +140,7 @@ type GalleryPostsUpdateParams = {
 	isSensitive: boolean;
 };
 
-const galleryPostsPostIdParamDef = z.object({
+export const galleryPostsPostIdParamDef = z.object({
 	postId: misskeyId(),
 });
 
@@ -453,7 +453,7 @@ export async function handleHonoApiGalleryPostsUnlike(
 	await decrementGalleryPostLikedCountInDatabase(deps.db, post.id);
 }
 
-const iGalleryPostsParamDef = z.object({
+export const iGalleryPostsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -487,7 +487,7 @@ export async function handleHonoApiIGalleryPosts(
 	return await packGalleryPostsManyForHonoApi(deps, posts, me);
 }
 
-const iGalleryLikesParamDef = z.object({
+export const iGalleryLikesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -530,7 +530,7 @@ export async function handleHonoApiIGalleryLikes(
 	})));
 }
 
-const usersGalleryPostsParamDef = z.object({
+export const usersGalleryPostsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),

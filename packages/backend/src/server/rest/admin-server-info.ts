@@ -37,7 +37,7 @@ type AdminServerInfoResponse = {
 	};
 };
 
-const adminServerInfoParamDef = z.object({});
+export const adminServerInfoParamDef = z.object({});
 
 export async function handleHonoApiAdminServerInfo(
 	deps: HonoApiAdminServerInfoDependencies,

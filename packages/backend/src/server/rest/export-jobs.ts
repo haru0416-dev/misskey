@@ -24,7 +24,7 @@ const EXPORT_JOB_OPTIONS = {
 	},
 } as const;
 
-const exportFollowingParamDef = z.object({
+export const exportFollowingParamDef = z.object({
 	excludeMuting: z.boolean().optional().default(false),
 	excludeInactive: z.boolean().optional().default(false),
 });

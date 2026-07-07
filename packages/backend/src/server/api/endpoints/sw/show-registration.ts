@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { swShowRegistrationParamDef } from '@/server/rest/sw.js';
+
 export const meta = {
 	tags: ['account'],
 
@@ -31,10 +33,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		endpoint: { type: 'string' },
-	},
-	required: ['endpoint'],
-} as const;
+export const paramDef = swShowRegistrationParamDef;

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminAdListParamDef } from '@/server/rest/admin-ad.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -22,18 +24,7 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		publishing: { type: 'boolean', default: null, nullable: true },
-	},
-	required: [],
-} as const;
+export const paramDef = adminAdListParamDef;
 
 type AdListParams = {
 	limit: number;

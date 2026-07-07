@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { driveFilesCheckExistenceParamDef } from '@/server/rest/drive.js';
+
 export const meta = {
 	tags: ['drive'],
 
@@ -18,10 +20,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		md5: { type: 'string' },
-	},
-	required: ['md5'],
-} as const;
+export const paramDef = driveFilesCheckExistenceParamDef;

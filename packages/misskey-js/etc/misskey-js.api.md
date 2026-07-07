@@ -554,7 +554,7 @@ type APIError = {
     code: string;
     message: string;
     kind: 'client' | 'server';
-    info: Record<string, any>;
+    info: Record<string, unknown>;
 };
 
 // @public (undocumented)
@@ -675,7 +675,7 @@ export type Channels = {
             registryUpdated: (payload: {
                 scope?: string[];
                 key: string;
-                value: any | null;
+                value: unknown;
             }) => void;
             driveFileCreated: (payload: DriveFile) => void;
             readAntenna: (payload: Antenna) => void;
@@ -2254,7 +2254,7 @@ type FetchLike = (input: string, init?: {
     };
 }) => Promise<{
     status: number;
-    json(): Promise<any>;
+    json(): Promise<unknown>;
 }>;
 
 // @public (undocumented)
@@ -3227,7 +3227,7 @@ type PageBlock = components['schemas']['PageBlock'];
 type PageEvent = {
     pageId: Page['id'];
     event: string;
-    var: any;
+    var: unknown;
     userId: User['id'];
     user: User;
 };
@@ -3799,7 +3799,7 @@ type VerifyEmailRequest = operations['verify-email']['requestBody']['content']['
 
 // Warnings were encountered during analysis:
 //
-// src/entities.ts:60:2 - (ae-forgotten-export) The symbol "ModerationLogPayloads" needs to be exported by the entry point index.d.ts
+// src/entities.ts:59:2 - (ae-forgotten-export) The symbol "ModerationLogPayloads" needs to be exported by the entry point index.d.ts
 // src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)

@@ -35,7 +35,7 @@ function iUnpinNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '454170ce-9d63-4a43-9da1-ea10afe81e21' });
 }
 
-const iPinOrUnpinParamDef = z.object({
+export const iPinOrUnpinParamDef = z.object({
 	noteId: misskeyId(),
 });
 

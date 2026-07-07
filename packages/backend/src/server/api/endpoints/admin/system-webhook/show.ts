@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminSystemWebhookShowParamDef } from '@/server/rest/admin-system-webhooks.js';
+
 export const meta = {
 	tags: ['admin', 'system-webhook'],
 
@@ -27,13 +29,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		id: {
-			type: 'string',
-			format: 'misskey:id',
-		},
-	},
-	required: ['id'],
-} as const;
+export const paramDef = adminSystemWebhookShowParamDef;

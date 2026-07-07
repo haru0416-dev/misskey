@@ -95,7 +95,7 @@ function iUpdateYourAccountMovedError(): HonoApiError {
 
 const muteWordsZodSchema = z.array(z.union([z.array(z.string()), z.string()]));
 
-const iUpdateParamDef = z.object({
+export const iUpdateParamDef = z.object({
 	name: nameZodSchema.nullable().optional(),
 	description: descriptionZodSchema.nullable().optional(),
 	followedMessage: followedMessageZodSchema.nullable().optional(),

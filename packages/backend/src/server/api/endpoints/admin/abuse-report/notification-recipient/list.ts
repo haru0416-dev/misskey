@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminAbuseReportNotificationRecipientListParamDef } from '@/server/rest/admin-abuse-report-notification-recipient.js';
+
 export const meta = {
 	tags: ['admin', 'abuse-report', 'notification-recipient'],
 
@@ -20,16 +22,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		method: {
-			type: 'array',
-			items: {
-				type: 'string',
-				enum: ['email', 'webhook'],
-			},
-		},
-	},
-	required: [],
-} as const;
+export const paramDef = adminAbuseReportNotificationRecipientListParamDef;

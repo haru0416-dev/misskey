@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminUserMaintenanceParamDef } from '@/server/rest/admin-user-maintenance.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,12 +13,6 @@ export const meta = {
 	kind: 'write:admin:unset-user-avatar',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = adminUserMaintenanceParamDef;
 
 // eslint-disable-next-line import/no-default-export

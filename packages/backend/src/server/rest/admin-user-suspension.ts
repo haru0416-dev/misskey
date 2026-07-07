@@ -31,7 +31,7 @@ export type HonoApiAdminUserSuspensionDependencies = {
 	publishInternalEvent?: <K extends 'userChangeSuspendedState'>(type: K, value: { id: MiUser['id']; isSuspended: MiUser['isSuspended'] }) => void;
 };
 
-const adminUserSuspensionParamDef = z.object({
+export const adminUserSuspensionParamDef = z.object({
 	userId: misskeyId(),
 });
 

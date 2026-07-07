@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { clipsUpdateParamDef } from '@/server/rest/clips.js';
+
 export const meta = {
 	tags: ['clips'],
 
@@ -27,13 +29,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		clipId: { type: 'string', format: 'misskey:id' },
-		name: { type: 'string', minLength: 1, maxLength: 100 },
-		isPublic: { type: 'boolean' },
-		description: { type: 'string', nullable: true, maxLength: 2048 },
-	},
-	required: ['clipId'],
-} as const;
+export const paramDef = clipsUpdateParamDef;

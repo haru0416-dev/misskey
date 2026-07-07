@@ -41,7 +41,7 @@ type AdminAvatarDecoration = {
 	category: string | null;
 };
 
-const adminAvatarDecorationsCreateParamDef = z.object({
+export const adminAvatarDecorationsCreateParamDef = z.object({
 	name: z.string().min(1),
 	description: z.string(),
 	url: z.string().min(1),
@@ -49,11 +49,11 @@ const adminAvatarDecorationsCreateParamDef = z.object({
 	category: z.string().nullable().optional(),
 });
 
-const adminAvatarDecorationsDeleteParamDef = z.object({
+export const adminAvatarDecorationsDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 
-const adminAvatarDecorationsListParamDef = z.object({
+export const adminAvatarDecorationsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -62,7 +62,7 @@ const adminAvatarDecorationsListParamDef = z.object({
 	userId: misskeyId().nullable().optional(),
 });
 
-const adminAvatarDecorationsUpdateParamDef = z.object({
+export const adminAvatarDecorationsUpdateParamDef = z.object({
 	id: misskeyId(),
 	name: z.string().min(1).optional(),
 	description: z.string().optional(),

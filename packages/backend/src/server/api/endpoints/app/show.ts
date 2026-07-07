@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { appShowParamDef } from '@/server/rest/app.js';
+
 export const meta = {
 	tags: ['app'],
 
@@ -21,10 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		appId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['appId'],
-} as const;
+export const paramDef = appShowParamDef;

@@ -23,7 +23,7 @@ export type HonoApiResetDbDependencies = {
 	publishInternalEvent?: SignupInternalEventPublisher;
 };
 
-const resetDbParamDef = z.object({});
+export const resetDbParamDef = z.object({});
 
 export async function handleHonoApiResetDb(
 	deps: HonoApiResetDbDependencies,

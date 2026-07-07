@@ -12,7 +12,7 @@ export type HonoApiRetentionDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const retentionParamDef = z.object({});
+export const retentionParamDef = z.object({});
 
 export async function handleHonoApiRetention(
 	deps: HonoApiRetentionDependencies,

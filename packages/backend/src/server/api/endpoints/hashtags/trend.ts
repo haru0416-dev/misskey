@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { hashtagsTrendParamDef } from '@/server/rest/hashtags.js';
+
 export const meta = {
 	tags: ['hashtags'],
 
@@ -38,8 +40,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = hashtagsTrendParamDef;

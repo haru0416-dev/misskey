@@ -30,7 +30,7 @@ import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiFlashDependencies = HonoApiRolePolicyDependencies & UserPackingDependencies;
 
-const flashUpdateParamDef = z.object({
+export const flashUpdateParamDef = z.object({
 	flashId: misskeyId(),
 	title: z.string().optional(),
 	summary: z.string().optional(),
@@ -121,7 +121,7 @@ export async function packFlashManyForHonoApi(
 	})));
 }
 
-const flashCreateParamDef = z.object({
+export const flashCreateParamDef = z.object({
 	title: z.string(),
 	summary: z.string(),
 	script: z.string(),
@@ -157,7 +157,7 @@ export async function handleHonoApiFlashCreate(
 	return await packFlashForHonoApi(deps, flash);
 }
 
-const flashDeleteParamDef = z.object({
+export const flashDeleteParamDef = z.object({
 	flashId: misskeyId(),
 });
 
@@ -193,7 +193,7 @@ export async function handleHonoApiFlashDelete(
 	}
 }
 
-const flashFeaturedParamDef = z.object({
+export const flashFeaturedParamDef = z.object({
 	offset: z.number().int().min(0).optional().default(0),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 });
@@ -217,7 +217,7 @@ export async function handleHonoApiFlashFeatured(
 	return await packFlashManyForHonoApi(deps, result, me);
 }
 
-const flashMyParamDef = z.object({
+export const flashMyParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -251,7 +251,7 @@ export async function handleHonoApiFlashMy(
 	return await packFlashManyForHonoApi(deps, flashes);
 }
 
-const flashMyLikesParamDef = z.object({
+export const flashMyLikesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -312,7 +312,7 @@ export async function handleHonoApiFlashMyLikes(
 	})));
 }
 
-const flashSearchParamDef = z.object({
+export const flashSearchParamDef = z.object({
 	query: z.string().min(1).max(100),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -349,7 +349,7 @@ export async function handleHonoApiFlashSearch(
 	return await packFlashManyForHonoApi(deps, result, me);
 }
 
-const flashShowParamDef = z.object({
+export const flashShowParamDef = z.object({
 	flashId: misskeyId(),
 });
 
@@ -371,7 +371,7 @@ export async function handleHonoApiFlashShow(
 	return await packFlashForHonoApi(deps, flash, me);
 }
 
-const usersFlashsParamDef = z.object({
+export const usersFlashsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),

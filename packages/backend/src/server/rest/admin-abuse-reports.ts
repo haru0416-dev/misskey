@@ -48,21 +48,21 @@ export type HonoApiUsersReportAbuseDependencies = HonoApiAdminAbuseReportsDepend
 	publishAdminStream?: HonoApiAdminStreamPublisher;
 };
 
-const adminResolveAbuseUserReportParamDef = z.object({
+export const adminResolveAbuseUserReportParamDef = z.object({
 	reportId: misskeyId(),
-	resolvedAs: z.union([z.enum(['accept', 'reject']), z.null()]).nullable().optional(),
+	resolvedAs: z.union([z.enum(['accept', 'reject']), z.null()]).optional(),
 });
 
-const adminUpdateAbuseUserReportParamDef = z.object({
+export const adminUpdateAbuseUserReportParamDef = z.object({
 	reportId: misskeyId(),
 	moderationNote: z.string().optional(),
 });
 
-const adminForwardAbuseUserReportParamDef = z.object({
+export const adminForwardAbuseUserReportParamDef = z.object({
 	reportId: misskeyId(),
 });
 
-const adminAbuseUserReportsParamDef = z.object({
+export const adminAbuseUserReportsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -461,7 +461,7 @@ function usersReportAbuseCannotReportAdminError(): HonoApiError {
 	});
 }
 
-const usersReportAbuseParamDef = z.object({
+export const usersReportAbuseParamDef = z.object({
 	userId: misskeyId(),
 	comment: z.string().min(1).max(2048),
 });

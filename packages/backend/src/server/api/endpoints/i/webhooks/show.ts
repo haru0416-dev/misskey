@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { webhooksShowParamDef } from '@/server/rest/webhooks.js';
+
 // TODO: UserWebhook schemaの適用
 export const meta = {
 	tags: ['webhooks'],
@@ -25,10 +27,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		webhookId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['webhookId'],
-} as const;
+export const paramDef = webhooksShowParamDef;

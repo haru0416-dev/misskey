@@ -40,7 +40,7 @@ export type HonoApiNoteDraftDependencies = HonoApiNoteDependencies & HonoApiRole
 	postScheduledNoteQueue: PostScheduledNoteQueue;
 };
 
-const countNoteDraftsParamDef = z.object({});
+export const countNoteDraftsParamDef = z.object({});
 
 export async function handleHonoApiNotesDraftsCount(
 	deps: HonoApiNoteDraftDependencies,
@@ -51,14 +51,14 @@ export async function handleHonoApiNotesDraftsCount(
 	return await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 }
 
-const notePollParamDef = z.object({
+export const notePollParamDef = z.object({
 	choices: uniqueItems(z.array(z.string().min(1).max(50)).min(0).max(10)),
 	multiple: z.boolean().optional(),
 	expiresAt: z.number().int().nullable().optional(),
 	expiredAfter: z.number().int().min(1).nullable().optional(),
 }).nullable();
 
-const notesDraftsCreateParamDef = z.object({
+export const notesDraftsCreateParamDef = z.object({
 	visibility: z.enum(['public', 'home', 'followers', 'specified']).default('public'),
 	visibleUserIds: uniqueItems(z.array(misskeyId())).optional(),
 	cw: z.string().min(1).max(100).nullable().optional(),
@@ -100,7 +100,7 @@ type NotesDraftsCreateParams = {
 	isActuallyScheduled: boolean;
 };
 
-const notesDraftsUpdateParamDef = z.object({
+export const notesDraftsUpdateParamDef = z.object({
 	draftId: misskeyId(),
 	visibility: z.enum(['public', 'home', 'followers', 'specified']).optional(),
 	visibleUserIds: uniqueItems(z.array(misskeyId())).optional(),
@@ -144,7 +144,7 @@ type NotesDraftsUpdateParams = {
 	isActuallyScheduled?: boolean;
 };
 
-const notesDraftsDeleteParamDef = z.object({
+export const notesDraftsDeleteParamDef = z.object({
 	draftId: misskeyId(),
 });
 
@@ -152,7 +152,7 @@ type NotesDraftsDeleteParams = {
 	draftId: string;
 };
 
-const notesDraftsListParamDef = z.object({
+export const notesDraftsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(30),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

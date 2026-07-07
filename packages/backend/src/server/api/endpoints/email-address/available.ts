@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { emailAddressAvailableParamDef } from '@/server/rest/availability.js';
+
 export const meta = {
 	tags: ['users'],
 
@@ -24,10 +26,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		emailAddress: { type: 'string' },
-	},
-	required: ['emailAddress'],
-} as const;
+export const paramDef = emailAddressAvailableParamDef;

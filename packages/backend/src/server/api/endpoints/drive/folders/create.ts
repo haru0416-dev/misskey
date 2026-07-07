@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { driveFoldersCreateParamDef } from '@/server/rest/drive.js';
 
 export const meta = {
 	tags: ['drive'],
@@ -32,11 +33,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', default: 'Untitled', maxLength: 200 },
-		parentId: { type: 'string', format: 'misskey:id', nullable: true },
-	},
-	required: [],
-} as const;
+export const paramDef = driveFoldersCreateParamDef;

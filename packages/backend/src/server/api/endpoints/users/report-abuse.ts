@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { usersReportAbuseParamDef } from '@/server/rest/admin-abuse-reports.js';
+
 export const meta = {
 	tags: ['users'],
 
@@ -32,11 +34,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-		comment: { type: 'string', minLength: 1, maxLength: 2048 },
-	},
-	required: ['userId', 'comment'],
-} as const;
+export const paramDef = usersReportAbuseParamDef;

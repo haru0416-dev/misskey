@@ -44,7 +44,7 @@ function usersReactionsNotPublicError(): HonoApiError {
 	});
 }
 
-const usersReactionsParamDef = z.object({
+export const usersReactionsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),

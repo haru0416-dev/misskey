@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminAvatarDecorationsCreateParamDef } from '@/server/rest/admin-avatar-decorations.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -58,16 +60,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', minLength: 1 },
-		description: { type: 'string' },
-		url: { type: 'string', minLength: 1 },
-		roleIdsThatCanBeUsedThisDecoration: { type: 'array', items: {
-			type: 'string',
-		} },
-		category: { type: 'string', nullable: true },
-	},
-	required: ['name', 'description', 'url'],
-} as const;
+export const paramDef = adminAvatarDecorationsCreateParamDef;

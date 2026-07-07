@@ -4,6 +4,7 @@
  */
 
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
+import { adminShowUserParamDef } from '@/server/rest/admin-users.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -176,10 +177,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['userId'],
-} as const;
+export const paramDef = adminShowUserParamDef;

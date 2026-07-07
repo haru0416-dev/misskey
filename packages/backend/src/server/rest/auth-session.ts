@@ -28,15 +28,15 @@ export type HonoApiAuthSessionDependencies = HonoApiAppDependencies & {
 	meta: MiMeta;
 };
 
-const authSessionGenerateParamDef = z.object({
+export const authSessionGenerateParamDef = z.object({
 	appSecret: z.string(),
 });
 
-const authSessionShowParamDef = z.object({
+export const authSessionShowParamDef = z.object({
 	token: z.string(),
 });
 
-const authSessionUserkeyParamDef = z.object({
+export const authSessionUserkeyParamDef = z.object({
 	appSecret: z.string(),
 	token: z.string(),
 });

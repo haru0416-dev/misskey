@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { federationInstancesParamDef } from '@/server/rest/federation.js';
+
 export const meta = {
 	tags: ['federation'],
 
@@ -21,40 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		host: { type: 'string', nullable: true, description: 'Omit or use `null` to not filter by host.' },
-		blocked: { type: 'boolean', nullable: true },
-		notResponding: { type: 'boolean', nullable: true },
-		suspended: { type: 'boolean', nullable: true },
-		silenced: { type: 'boolean', nullable: true },
-		federating: { type: 'boolean', nullable: true },
-		subscribing: { type: 'boolean', nullable: true },
-		publishing: { type: 'boolean', nullable: true },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
-		offset: { type: 'integer', default: 0 },
-		sort: {
-			type: 'string',
-			nullable: true,
-			enum: [
-				'+pubSub',
-				'-pubSub',
-				'+notes',
-				'-notes',
-				'+users',
-				'-users',
-				'+following',
-				'-following',
-				'+followers',
-				'-followers',
-				'+firstRetrievedAt',
-				'-firstRetrievedAt',
-				'+latestRequestReceivedAt',
-				'-latestRequestReceivedAt',
-				null,
-			],
-		},
-	},
-	required: [],
-} as const;
+export const paramDef = federationInstancesParamDef;

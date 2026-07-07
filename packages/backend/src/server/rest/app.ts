@@ -33,27 +33,27 @@ export type HonoApiAppDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const appCreateParamDef = z.object({
+export const appCreateParamDef = z.object({
 	name: z.string(),
 	description: z.string(),
 	permission: uniqueItems(z.array(z.string())),
 	callbackUrl: z.string().nullable().optional(),
 });
 
-const appShowParamDef = z.object({
+export const appShowParamDef = z.object({
 	appId: misskeyId(),
 });
 
-const myAppsParamDef = z.object({
+export const myAppsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	offset: z.number().int().default(0),
 });
 
-const iAppsParamDef = z.object({
+export const iAppsParamDef = z.object({
 	sort: z.enum(['+createdAt', '-createdAt', '+lastUsedAt', '-lastUsedAt']).optional(),
 });
 
-const iAuthorizedAppsParamDef = z.object({
+export const iAuthorizedAppsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	offset: z.number().int().default(0),
 	sort: z.enum(['desc', 'asc']).default('desc'),
@@ -62,7 +62,7 @@ const iAuthorizedAppsParamDef = z.object({
 // 元は anyOf([{ required: ['tokenId'] }, { required: ['token'] }]) の2択。
 // tokenId/token は互いに素なプロパティなので、共通プロパティ optional + superRefine ではなく
 // z.union() で各枝をそのまま表現する (枝ごとの型チェックを他方に影響させないため。詳細は報告参照)。
-const iRevokeTokenParamDef = z.union([
+export const iRevokeTokenParamDef = z.union([
 	z.object({ tokenId: misskeyId() }),
 	z.object({ token: z.string().nullable() }),
 ]);

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { notesReactionsParamDef } from '@/server/rest/notes-reactions.js';
+
 export const meta = {
 	tags: ['notes', 'reactions'],
 
@@ -30,16 +32,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		type: { type: 'string', nullable: true },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-	},
-	required: ['noteId'],
-} as const;
+export const paramDef = notesReactionsParamDef;

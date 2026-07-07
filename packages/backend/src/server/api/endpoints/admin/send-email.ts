@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminSendEmailParamDef } from '@/server/rest/admin-email.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,12 +13,4 @@ export const meta = {
 	kind: 'write:admin:send-email',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		to: { type: 'string' },
-		subject: { type: 'string' },
-		text: { type: 'string' },
-	},
-	required: ['to', 'subject', 'text'],
-} as const;
+export const paramDef = adminSendEmailParamDef;

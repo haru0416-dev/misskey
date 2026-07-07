@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminEmojiDeleteBulkParamDef } from '@/server/rest/emojis.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -11,12 +13,4 @@ export const meta = {
 	kind: 'write:admin:emoji',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		ids: { type: 'array', items: {
-			type: 'string', format: 'misskey:id',
-		} },
-	},
-	required: ['ids'],
-} as const;
+export const paramDef = adminEmojiDeleteBulkParamDef;

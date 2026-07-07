@@ -4,7 +4,7 @@
  */
 
 import ms from 'ms';
-import { systemWebhookEventTypes } from '@/models/SystemWebhook.js';
+import { adminSystemWebhookTestParamDef } from '@/server/rest/admin-system-webhooks.js';
 
 export const meta = {
 	tags: ['webhooks'],
@@ -28,24 +28,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		webhookId: {
-			type: 'string',
-			format: 'misskey:id',
-		},
-		type: {
-			type: 'string',
-			enum: systemWebhookEventTypes,
-		},
-		override: {
-			type: 'object',
-			properties: {
-				url: { type: 'string', nullable: false },
-				secret: { type: 'string', nullable: false },
-			},
-		},
-	},
-	required: ['webhookId', 'type'],
-} as const;
+export const paramDef = adminSystemWebhookTestParamDef;

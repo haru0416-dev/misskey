@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { notificationsCreateParamDef } from '@/server/rest/notification.js';
+
 export const meta = {
 	tags: ['notifications'],
 
@@ -19,12 +21,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		body: { type: 'string' },
-		header: { type: 'string', nullable: true },
-		icon: { type: 'string', nullable: true },
-	},
-	required: ['body'],
-} as const;
+export const paramDef = notificationsCreateParamDef;

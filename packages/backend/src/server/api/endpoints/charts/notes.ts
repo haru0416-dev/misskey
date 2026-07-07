@@ -5,6 +5,7 @@
 
 import { getJsonSchema } from '@/core/chart/core.js';
 import { schema } from '@/core/chart/charts/entities/notes.js';
+import { chartParamDef } from '@/server/rest/charts.js';
 
 export const meta = {
 	tags: ['charts', 'notes'],
@@ -15,12 +16,4 @@ export const meta = {
 	cacheSec: 60 * 60,
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		span: { type: 'string', enum: ['day', 'hour'] },
-		limit: { type: 'integer', minimum: 1, maximum: 500, default: 30 },
-		offset: { type: 'integer', nullable: true, default: null },
-	},
-	required: ['span'],
-} as const;
+export const paramDef = chartParamDef;

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminRolesUpdateDefaultPoliciesParamDef } from '@/server/rest/admin-roles.js';
+
 export const meta = {
 	tags: ['admin', 'role'],
 
@@ -11,14 +13,4 @@ export const meta = {
 	kind: 'write:admin:roles',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		policies: {
-			type: 'object',
-		},
-	},
-	required: [
-		'policies',
-	],
-} as const;
+export const paramDef = adminRolesUpdateDefaultPoliciesParamDef;

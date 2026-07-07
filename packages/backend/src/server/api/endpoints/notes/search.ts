@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { notesSearchParamDef } from '@/server/rest/notes.js';
+
 export const meta = {
 	tags: ['notes'],
 
@@ -27,26 +29,6 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		query: { type: 'string' },
-		rangeStartAt: { type: 'integer', nullable: true },
-		rangeEndAt: { type: 'integer', nullable: true },
-		sinceId: { type: 'string', format: 'misskey:id' },
-		untilId: { type: 'string', format: 'misskey:id' },
-		sinceDate: { type: 'integer' },
-		untilDate: { type: 'integer' },
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		offset: { type: 'integer', default: 0 },
-		host: {
-			type: 'string',
-			description: 'The local host is represented with `.`.',
-		},
-		userId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-		channelId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-	},
-	required: ['query'],
-} as const;
+export const paramDef = notesSearchParamDef;
 
 // TODO: ロジックをサービスに切り出す

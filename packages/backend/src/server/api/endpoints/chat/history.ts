@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { chatHistoryParamDef } from '@/server/rest/chat.js';
+
 export const meta = {
 	tags: ['chat'],
 
@@ -24,10 +26,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-		room: { type: 'boolean', default: false },
-	},
-} as const;
+export const paramDef = chatHistoryParamDef;

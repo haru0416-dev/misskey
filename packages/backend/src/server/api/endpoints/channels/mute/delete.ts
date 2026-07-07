@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { channelMuteDeleteParamDef } from '@/server/rest/channels.js';
+
 export const meta = {
 	tags: ['channels', 'mute'],
 
@@ -26,10 +28,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['channelId'],
-} as const;
+export const paramDef = channelMuteDeleteParamDef;

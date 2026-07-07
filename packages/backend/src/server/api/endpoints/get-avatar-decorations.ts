@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { getAvatarDecorationsParamDef } from '@/server/rest/avatar-decorations.js';
+
 export const meta = {
 	tags: ['users'],
 
@@ -51,8 +53,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {},
-	required: [],
-} as const;
+export const paramDef = getAvatarDecorationsParamDef;

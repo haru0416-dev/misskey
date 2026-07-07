@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { verifyEmailParamDef } from '@/server/rest/verify-email.js';
+
 export const meta = {
 	requireCredential: false,
 
@@ -17,10 +19,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		code: { type: 'string' },
-	},
-	required: ['code'],
-} as const;
+export const paramDef = verifyEmailParamDef;

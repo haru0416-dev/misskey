@@ -54,7 +54,7 @@ type AdminAnnouncement = {
 	reads: number;
 };
 
-const adminAnnouncementsCreateParamDef = z.object({
+export const adminAnnouncementsCreateParamDef = z.object({
 	title: z.string().min(1),
 	text: z.string().min(1),
 	imageUrl: z.string().min(0).nullable(),
@@ -66,11 +66,11 @@ const adminAnnouncementsCreateParamDef = z.object({
 	userId: misskeyId().nullable().default(null),
 });
 
-const adminAnnouncementsDeleteParamDef = z.object({
+export const adminAnnouncementsDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 
-const adminAnnouncementsListParamDef = z.object({
+export const adminAnnouncementsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -80,7 +80,7 @@ const adminAnnouncementsListParamDef = z.object({
 	status: z.enum(['all', 'active', 'archived']).default('active'),
 });
 
-const adminAnnouncementsUpdateParamDef = z.object({
+export const adminAnnouncementsUpdateParamDef = z.object({
 	id: misskeyId(),
 	title: z.string().min(1).optional(),
 	text: z.string().min(1).optional(),

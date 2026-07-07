@@ -28,7 +28,7 @@ export type HonoApiAdminAdDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-const adminAdCreateParamDef = z.object({
+export const adminAdCreateParamDef = z.object({
 	url: z.string().min(1),
 	memo: z.string(),
 	place: z.string(),
@@ -41,11 +41,11 @@ const adminAdCreateParamDef = z.object({
 	isSensitive: z.boolean().optional(),
 });
 
-const adminAdDeleteParamDef = z.object({
+export const adminAdDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 
-const adminAdListParamDef = z.object({
+export const adminAdListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
@@ -54,7 +54,7 @@ const adminAdListParamDef = z.object({
 	publishing: z.boolean().nullable().default(null),
 });
 
-const adminAdUpdateParamDef = z.object({
+export const adminAdUpdateParamDef = z.object({
 	id: misskeyId(),
 	memo: z.string().optional(),
 	url: z.string().min(1).optional(),

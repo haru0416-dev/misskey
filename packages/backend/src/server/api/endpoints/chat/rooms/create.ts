@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { chatRoomsCreateParamDef } from '@/server/rest/chat.js';
 
 export const meta = {
 	tags: ['chat'],
@@ -29,11 +30,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		name: { type: 'string', maxLength: 256 },
-		description: { type: 'string', maxLength: 1024 },
-	},
-	required: ['name'],
-} as const;
+export const paramDef = chatRoomsCreateParamDef;

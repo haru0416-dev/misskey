@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { channelFollowParamDef } from '@/server/rest/channels.js';
+
 export const meta = {
 	tags: ['channels'],
 
@@ -21,10 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		channelId: { type: 'string', format: 'misskey:id' },
-	},
-	required: ['channelId'],
-} as const;
+export const paramDef = channelFollowParamDef;

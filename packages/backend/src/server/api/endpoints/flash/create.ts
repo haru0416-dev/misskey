@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { flashCreateParamDef } from '@/server/rest/flash.js';
 
 export const meta = {
 	tags: ['flash'],
@@ -29,16 +30,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		title: { type: 'string' },
-		summary: { type: 'string' },
-		script: { type: 'string' },
-		permissions: { type: 'array', items: {
-			type: 'string',
-		} },
-		visibility: { type: 'string', enum: ['public', 'private'], default: 'public' },
-	},
-	required: ['title', 'summary', 'script', 'permissions'],
-} as const;
+export const paramDef = flashCreateParamDef;

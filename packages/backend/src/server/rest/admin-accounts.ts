@@ -30,21 +30,21 @@ export type HonoApiAdminAccountsDependencies = UserPackingDependencies & SignupD
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-const adminAccountCreateParamDef = z.object({
+export const adminAccountCreateParamDef = z.object({
 	username: localUsernameZodSchema,
 	password: passwordZodSchema,
 	setupPassword: z.string().nullable().optional(),
 });
 
-const adminAccountsFindByEmailParamDef = z.object({
+export const adminAccountsFindByEmailParamDef = z.object({
 	email: z.string(),
 });
 
-const adminAccountDeleteParamDef = z.object({
+export const adminAccountDeleteParamDef = z.object({
 	userId: misskeyId(),
 });
 
-const adminUpdateProxyAccountParamDef = z.object({
+export const adminUpdateProxyAccountParamDef = z.object({
 	description: descriptionZodSchema.nullable().optional(),
 });
 

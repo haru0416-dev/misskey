@@ -25,7 +25,7 @@ import { packUserDetailedNotMeForHonoApi, type UserPackingDependencies } from '.
 import { packNoteForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 
-const apGetParamDef = z.object({
+export const apGetParamDef = z.object({
 	uri: z.string(),
 });
 
@@ -40,7 +40,7 @@ export async function handleHonoApiApGet(deps: HonoApiApResolveDependencies, bod
 
 export type HonoApiApShowDependencies = HonoApiApNoteDependencies & HonoApiApPersonDependencies & UserPackingDependencies & HonoApiNoteDependencies;
 
-const apShowParamDef = z.object({
+export const apShowParamDef = z.object({
 	uri: z.string(),
 });
 

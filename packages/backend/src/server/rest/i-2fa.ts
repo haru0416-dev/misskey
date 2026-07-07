@@ -59,7 +59,7 @@ async function publishMeUpdatedForHonoApi(deps: HonoApiI2faDependencies, me: MiL
 	deps.publishMainStream?.(me.id, 'meUpdated', await packMeDetailedForHonoApi(deps, me, { includeSecrets: true }));
 }
 
-const i2faRegisterParamDef = z.object({
+export const i2faRegisterParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 });
@@ -104,7 +104,7 @@ export async function handleHonoApiI2faRegister(
 	};
 }
 
-const i2faDoneParamDef = z.object({
+export const i2faDoneParamDef = z.object({
 	token: z.string(),
 });
 
@@ -143,7 +143,7 @@ export async function handleHonoApiI2faDone(
 	return { backupCodes };
 }
 
-const i2faRegisterKeyParamDef = z.object({
+export const i2faRegisterKeyParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 });
@@ -183,7 +183,7 @@ export async function handleHonoApiI2faRegisterKey(
 	);
 }
 
-const i2faKeyDoneParamDef = z.object({
+export const i2faKeyDoneParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 	name: z.string().min(1).max(30),
@@ -232,7 +232,7 @@ export async function handleHonoApiI2faKeyDone(
 	};
 }
 
-const i2faUpdateKeyParamDef = z.object({
+export const i2faUpdateKeyParamDef = z.object({
 	name: z.string().min(1).max(30),
 	credentialId: z.string(),
 });
@@ -264,7 +264,7 @@ export async function handleHonoApiI2faUpdateKey(
 	return {};
 }
 
-const i2faRemoveKeyParamDef = z.object({
+export const i2faRemoveKeyParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 	credentialId: z.string(),
@@ -301,7 +301,7 @@ export async function handleHonoApiI2faRemoveKey(
 	return {};
 }
 
-const i2faUnregisterParamDef = z.object({
+export const i2faUnregisterParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 });
@@ -332,7 +332,7 @@ export async function handleHonoApiI2faUnregister(
 	await publishMeUpdatedForHonoApi(deps, me);
 }
 
-const i2faPasswordLessParamDef = z.object({
+export const i2faPasswordLessParamDef = z.object({
 	value: z.boolean(),
 });
 

@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { apShowParamDef } from '@/server/rest/ap.js';
 
 export const meta = {
 	tags: ['federation'],
@@ -81,10 +82,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		uri: { type: 'string' },
-	},
-	required: ['uri'],
-} as const;
+export const paramDef = apShowParamDef;

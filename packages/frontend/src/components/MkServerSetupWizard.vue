@@ -360,7 +360,6 @@ function applySettings() {
 			maintainerEmail: q_adminEmail.value === '' ? undefined : q_adminEmail.value,
 		}, props.token),
 		misskeyApi('admin/roles/update-default-policies', {
-			// @ts-expect-error バックエンド側の型
 			policies: defaultPolicies.value,
 		}, props.token),
 	]).then(() => {

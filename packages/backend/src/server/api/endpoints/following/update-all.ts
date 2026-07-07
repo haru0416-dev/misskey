@@ -4,6 +4,7 @@
  */
 
 import ms from 'ms';
+import { followingUpdateAllParamDef } from '@/server/rest/following.js';
 
 export const meta = {
 	tags: ['following', 'users'],
@@ -18,10 +19,4 @@ export const meta = {
 	kind: 'write:following',
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		notify: { type: 'string', enum: ['normal', 'none'] },
-		withReplies: { type: 'boolean' },
-	},
-} as const;
+export const paramDef = followingUpdateAllParamDef;

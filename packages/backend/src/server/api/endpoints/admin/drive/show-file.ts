@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { adminDriveShowFileDocsParamDef } from '@/server/rest/admin-drive.js';
+
 export const meta = {
 	tags: ['admin'],
 
@@ -169,21 +171,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	anyOf: [
-		{
-			type: 'object',
-			properties: {
-				fileId: { type: 'string', format: 'misskey:id' },
-			},
-			required: ['fileId'],
-		},
-		{
-			type: 'object',
-			properties: {
-				url: { type: 'string' },
-			},
-			required: ['url'],
-		},
-	],
-} as const;
+export const paramDef = adminDriveShowFileDocsParamDef;

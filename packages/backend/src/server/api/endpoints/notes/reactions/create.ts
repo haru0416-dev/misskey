@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { reactionsCreateParamDef } from '@/server/rest/notes-reactions.js';
+
 export const meta = {
 	tags: ['reactions', 'notes'],
 
@@ -39,11 +41,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		noteId: { type: 'string', format: 'misskey:id' },
-		reaction: { type: 'string' },
-	},
-	required: ['noteId', 'reaction'],
-} as const;
+export const paramDef = reactionsCreateParamDef;

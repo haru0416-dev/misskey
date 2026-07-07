@@ -31,7 +31,7 @@ type MiauthGenTokenBody = {
 	permission: string[];
 };
 
-const miauthGenTokenParamDef = z.object({
+export const miauthGenTokenParamDef = z.object({
 	session: z.string().nullable(),
 	name: z.string().nullable().optional(),
 	description: z.string().nullable().optional(),

@@ -4,6 +4,7 @@
  */
 
 import { localUsernameSchema } from '@/models/User.js';
+import { usernameAvailableParamDef } from '@/server/rest/availability.js';
 
 export const meta = {
 	tags: ['users'],
@@ -22,10 +23,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		username: localUsernameSchema,
-	},
-	required: ['username'],
-} as const;
+export const paramDef = usernameAvailableParamDef;

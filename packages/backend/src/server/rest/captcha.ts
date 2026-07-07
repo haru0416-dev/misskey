@@ -21,9 +21,9 @@ export type HonoApiCaptchaDependencies = {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-const captchaCurrentParamDef = z.object({});
+export const captchaCurrentParamDef = z.object({});
 
-const captchaSaveParamDef = z.object({
+export const captchaSaveParamDef = z.object({
 	provider: z.enum(supportedCaptchaProviders),
 	captchaResult: z.string().nullable().optional(),
 	sitekey: z.string().nullable().optional(),

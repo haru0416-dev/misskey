@@ -30,3 +30,4 @@ fluent-emojis/
 .idea/
 packages/*/.vscode/
 packages/backend/test/compose.yml
+packages/backend/test-federation/volumes/

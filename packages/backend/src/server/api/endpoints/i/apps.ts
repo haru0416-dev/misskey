@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { iAppsParamDef } from '@/server/rest/app.js';
+
 export const meta = {
 	requireCredential: true,
 
@@ -53,10 +55,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		sort: { type: 'string', enum: ['+createdAt', '-createdAt', '+lastUsedAt', '-lastUsedAt'] },
-	},
-	required: [],
-} as const;
+export const paramDef = iAppsParamDef;

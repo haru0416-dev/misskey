@@ -4,6 +4,7 @@
  */
 
 import { URL } from 'node:url';
+import { adminRelaysWriteParamDef } from '@/server/rest/admin-relays.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -48,10 +49,4 @@ export const meta = {
 	},
 } as const;
 
-export const paramDef = {
-	type: 'object',
-	properties: {
-		inbox: { type: 'string' },
-	},
-	required: ['inbox'],
-} as const;
+export const paramDef = adminRelaysWriteParamDef;

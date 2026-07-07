@@ -16,7 +16,7 @@ export type HonoApiPagePushDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
-const pagePushParamDef = z.object({
+export const pagePushParamDef = z.object({
 	pageId: misskeyId(),
 	event: z.string(),
 	var: z.unknown().optional(),
