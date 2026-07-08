@@ -141,7 +141,7 @@ export function parseThemeCode(code: string): Theme {
 	try {
 		theme = JSON5.parse(code);
 	} catch (_) {
-		throw new Error('Failed to parse theme json');
+		throw new Error('Failed to parse theme json', { cause: _ });
 	}
 	if (!validateTheme(theme)) {
 		throw new Error('This theme is invaild');

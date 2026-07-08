@@ -17,10 +17,6 @@ import { prefer } from '@/preferences.js';
 class EmojiPicker {
 	private emojisRef = ref<string[]>([]);
 
-	constructor() {
-		// nop
-	}
-
 	public init() {
 		watch(
 			[prefer.r.emojiPaletteForMain, prefer.r.emojiPalettes],

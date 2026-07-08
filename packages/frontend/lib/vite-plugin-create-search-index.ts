@@ -159,9 +159,7 @@ function findEndOfStartTagAttributes(node: ElementNode): number {
  * TypeScriptコード生成
  */
 function generateJavaScriptCode(resolvedRootMarkers: SearchIndexItem[]): string {
-	return (
-		`import { i18n } from '@/i18n.js';\n` + `export const searchIndexes = ${customStringify(resolvedRootMarkers)};\n`
-	);
+	return `import { i18n } from '@/i18n.js';\nexport const searchIndexes = ${customStringify(resolvedRootMarkers)};\n`;
 }
 
 /**

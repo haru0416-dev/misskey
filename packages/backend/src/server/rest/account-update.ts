@@ -190,7 +190,7 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 		if (!regexp) throw iUpdateInvalidRegexpError();
 
 		try {
-			new RE2(regexp[1], regexp[2]);
+			const parsedRegexp = new RE2(regexp[1], regexp[2]);
 		} catch {
 			throw iUpdateInvalidRegexpError();
 		}

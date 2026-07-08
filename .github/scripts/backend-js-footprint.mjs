@@ -99,6 +99,7 @@ async function waitForServerReady(serverProcess) {
 	});
 
 	const startupStartTime = Date.now();
+	// eslint-disable-next-line no-unmodified-loop-condition -- serverReady is set by the 'message' event handler registered above
 	while (!serverReady) {
 		if (Date.now() - startupStartTime > STARTUP_TIMEOUT) {
 			serverProcess.kill('SIGTERM');

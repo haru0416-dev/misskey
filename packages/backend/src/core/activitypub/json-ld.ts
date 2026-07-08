@@ -21,11 +21,7 @@ import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.
 
 // RsaSignature2017 implementation is based on https://github.com/transmute-industries/RsaSignature2017
 
-export class JsonLdError extends IdentifiableError {
-	constructor(id: string, message?: string) {
-		super(id, message);
-	}
-}
+export class JsonLdError extends IdentifiableError {}
 
 export class JsonLdCacheOverflowError extends JsonLdError {
 	constructor() {

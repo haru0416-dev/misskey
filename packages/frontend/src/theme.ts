@@ -62,10 +62,6 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		}
 	}
 
-	constructor() {
-		super();
-	}
-
 	/** テーマを更新し、同時に適用します。 */
 	public updateTheme(newTheme: Theme) {
 		if (newTheme.id === this.theme?.id && version === miLocalStorage.getItem('themeCachedVersion')) return; // 変更なし

@@ -12,10 +12,6 @@ import { prefer } from '@/preferences.js';
 class ReactionPicker {
 	private reactionsRef = ref<string[]>([]);
 
-	constructor() {
-		// nop
-	}
-
 	public init() {
 		watch(
 			[prefer.r.emojiPaletteForReaction, prefer.r.emojiPalettes],

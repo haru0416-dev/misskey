@@ -147,7 +147,7 @@ async function processResult(result: QrScanner.ScanResult) {
 	results.value.add(trimmed);
 
 	try {
-		new URL(trimmed);
+		const parsedUrl = new URL(trimmed);
 	} catch {
 		if (!haveExisted) {
 			tab.value = 'all';
