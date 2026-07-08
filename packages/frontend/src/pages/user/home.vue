@@ -203,9 +203,9 @@ function calcAge(birthdate: string): number {
 	return yearDiff;
 }
 
-const XFiles = defineAsyncComponent(() => import('./index.files.vue'));
-const XActivity = defineAsyncComponent(() => import('./index.activity.vue'));
-const XTimeline = defineAsyncComponent(() => import('./index.timeline.vue'));
+const XFiles = defineAsyncComponent(() => import('./index/files.vue'));
+const XActivity = defineAsyncComponent(() => import('./index/activity.vue'));
+const XTimeline = defineAsyncComponent(() => import('./index/timeline.vue'));
 
 const props = withDefaults(defineProps<{
 	user: Misskey.entities.UserDetailed;
