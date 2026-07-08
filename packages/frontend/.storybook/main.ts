@@ -12,9 +12,8 @@ import turbosnap from 'vite-plugin-turbosnap';
 const require = createRequire(import.meta.url);
 
 const config = {
-	stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
+	stories: ['../src/**/*.stories.@(js|jsx|ts|tsx)'],
 	staticDirs: [{ from: '../assets', to: '/client-assets' }],
-	addons: [getAbsolutePath('@storybook/addon-docs'), getAbsolutePath('@storybook/addon-links')],
 	framework: {
 		name: getAbsolutePath('@storybook/vue3-vite') as '@storybook/vue3-vite',
 		options: {},
