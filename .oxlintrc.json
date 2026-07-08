@@ -15,6 +15,7 @@
 		"no-useless-escape": "off",
 		"no-unused-expressions": "off",
 		"no-useless-rename": "off",
+		"no-underscore-dangle": "off",
 		"oxc/bad-min-max-func": "off",
 		"preserve-caught-error": "error",
 		"no-new": "error",
