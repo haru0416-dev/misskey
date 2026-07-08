@@ -41,6 +41,7 @@ import { onScrollTop, getBodyScrollHeight, getScrollContainer, onScrollBottom, s
 import type { ComputedRef } from 'vue';
 import { misskeyApi } from '@/misskey-api.js';
 import { i18n } from '@/i18n.js';
+import type { MisskeyEntity as MisskeyEntityBase } from '@@/js/misskey-entity.js';
 
 const SECOND_FETCH_LIMIT = 30;
 const TOLERANCE = 16;
@@ -65,10 +66,7 @@ export type Paging<E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints> 
 	offsetMode?: boolean;
 };
 
-type MisskeyEntity = {
-	id: string;
-	createdAt: string;
-	_shouldInsertAd_?: boolean;
+type MisskeyEntity = MisskeyEntityBase & {
 	[x: string]: any;
 };
 

@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import * as Misskey from 'misskey-js';
+import { readServerContext } from '@@/js/server-context.js';
 
-const providedContextEl = window.document.getElementById('misskey_embedCtx');
+export { assertServerContext } from '@@/js/server-context.js';
 
 export type ServerContext = {
 	clip?: Misskey.entities.Clip;
@@ -13,9 +14,4 @@ export type ServerContext = {
 } | null;
 
 // NOTE: devモードのときしか embedCtx が null になることは無い
-export const serverContext: ServerContext = (providedContextEl && providedContextEl.textContent) ? JSON.parse(providedContextEl.textContent) : null;
-
-export function assertServerContext<K extends keyof NonNullable<ServerContext>>(ctx: ServerContext, entity: K): ctx is Required<Pick<NonNullable<ServerContext>, K>> {
-	if (ctx == null) return false;
-	return entity in ctx;
-}
+export const serverContext: ServerContext = readServerContext<NonNullable<ServerContext>>('misskey_embedCtx');

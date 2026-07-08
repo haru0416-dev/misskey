@@ -7,9 +7,10 @@
 
 import { markRaw, ref, defineAsyncComponent, nextTick } from 'vue';
 import * as Misskey from 'misskey-js';
-import type { Component, MaybeRef } from 'vue';
-import type { ComponentEmit, ComponentProps as CP } from 'vue-component-type-helpers';
+import type { Component } from 'vue';
+import type { ComponentEmit } from 'vue-component-type-helpers';
 import type { Form, GetFormResultType } from '@/utility/form.js';
+import type { ComponentProps } from '@/utility/component-props.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { PostFormProps } from '@/types/post-form.js';
 import type { UploaderFeatures } from '@/composables/useUploader.js';
@@ -171,10 +172,6 @@ export function claimZIndex(priority: keyof typeof zIndexes = 'low'): number {
 	zIndexes[priority] += 100;
 	return zIndexes[priority];
 }
-
-// props に ref を許可するようにする
-type PropsWithRefs<P> = { [K in keyof P]: MaybeRef<P[K]> };
-type ComponentProps<T extends Component> = PropsWithRefs<CP<T>>;
 
 // 関数の引数が any[] (もっとも広義なもの) かどうかを判定し、any[] の場合は排除 (never) するヘルパー
 type FilterSpecificFunc<T> = T extends (...args: any[]) => void ? (any[] extends Parameters<T> ? never : T) : T;

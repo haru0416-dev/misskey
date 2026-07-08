@@ -110,7 +110,7 @@ import { instance } from '@/instance.js';
 import { deepClone } from '@/utility/clone.js';
 import type { PolicyMeta } from './policy-editor/index.vue';
 
-type RoleLike = Pick<Misskey.entities.Role, 'name' | 'description' | 'isAdministrator' | 'isModerator' | 'color' | 'iconUrl' | 'target' | 'isPublic' | 'isExplorable' | 'asBadge' | 'canEditMembersByModerator' | 'displayOrder' | 'preserveAssignmentOnMoveAccount'> & {
+export type RoleLike = Pick<Misskey.entities.Role, 'name' | 'description' | 'isAdministrator' | 'isModerator' | 'color' | 'iconUrl' | 'target' | 'isPublic' | 'isExplorable' | 'asBadge' | 'canEditMembersByModerator' | 'displayOrder' | 'preserveAssignmentOnMoveAccount'> & {
 	id?: Misskey.entities.Role['id'] | null;
 	condFormula: any;
 	policies: any;

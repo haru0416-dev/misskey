@@ -15,9 +15,8 @@ import { unisonReload, reloadChannel } from '@/utility/unison-reload.js';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
+import type { AccountWithToken } from '@/i.js';
 import { signout } from '@/signout.js';
-
-type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
 
 export async function getAccounts(): Promise<
 	{

@@ -6,13 +6,15 @@
 import { computed, reactive, watch } from 'vue';
 import type { Reactive } from 'vue';
 import { deepEqual } from '@/utility/deep-equal';
+import { deepClone } from '@/utility/clone.js';
+import type { Cloneable } from '@/utility/clone.js';
 
 function copy<T>(v: T): T {
-	return JSON.parse(JSON.stringify(v));
+	return deepClone(v as Cloneable) as T;
 }
 
 function unwrapReactive<T>(v: Reactive<T>): T {
-	return JSON.parse(JSON.stringify(v));
+	return deepClone(v as unknown as Cloneable) as T;
 }
 
 export function useForm<T extends Record<string, any>>(initialState: T, save: (newState: T) => Promise<void>) {

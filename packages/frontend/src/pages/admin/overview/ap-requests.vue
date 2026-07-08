@@ -30,6 +30,7 @@ import { chartVLine } from '@/utility/chart-vline.js';
 import { store } from '@/store.js';
 import { alpha } from '@/utility/color.js';
 import { initChart } from '@/utility/init-chart.js';
+import { getDateDaysAgo, toChartSeries } from '@/utility/chart-helpers.js';
 
 initChart();
 
@@ -47,27 +48,9 @@ onMounted(async () => {
 
 	const now = isChromatic() ? new Date('2024-08-31T10:00:00Z') : new Date();
 
-	const getDate = (ago: number) => {
-		const y = now.getFullYear();
-		const m = now.getMonth();
-		const d = now.getDate();
+	const format = (arr: number[]) => toChartSeries(now, arr);
 
-		return new Date(y, m, d - ago);
-	};
-
-	const format = (arr: number[]) => {
-		return arr.map((v, i) => ({
-			x: getDate(i).getTime(),
-			y: v,
-		}));
-	};
-
-	const formatMinus = (arr: number[]) => {
-		return arr.map((v, i) => ({
-			x: getDate(i).getTime(),
-			y: -v,
-		}));
-	};
+	const formatMinus = (arr: number[]) => toChartSeries(now, arr.map(v => -v));
 
 	const raw = await misskeyApi('charts/ap-request', { limit: chartLimit, span: 'day' });
 
@@ -135,7 +118,7 @@ onMounted(async () => {
 						maxRotation: 0,
 						autoSkipPadding: 16,
 					},
-					min: getDate(chartLimit).getTime(),
+					min: getDateDaysAgo(now, chartLimit).getTime(),
 				},
 				y: {
 					position: 'left',
@@ -231,7 +214,7 @@ onMounted(async () => {
 						maxRotation: 0,
 						autoSkipPadding: 16,
 					},
-					min: getDate(chartLimit).getTime(),
+					min: getDateDaysAgo(now, chartLimit).getTime(),
 				},
 				y: {
 					position: 'left',

@@ -22,6 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XEditor from './editor.vue';
+import type { RoleLike } from './editor.vue';
 import { genId } from '@/utility/id.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -36,11 +37,6 @@ const router = useRouter();
 const props = defineProps<{
 	id?: string;
 }>();
-
-type RoleLike = Pick<Misskey.entities.Role, 'name' | 'description' | 'isAdministrator' | 'isModerator' | 'color' | 'iconUrl' | 'target' | 'isPublic' | 'isExplorable' | 'asBadge' | 'canEditMembersByModerator' | 'displayOrder' | 'preserveAssignmentOnMoveAccount'> & {
-	condFormula: any;
-	policies: any;
-};
 
 const role = ref<Misskey.entities.Role | null>(null);
 const data = ref<RoleLike | null>(null);
