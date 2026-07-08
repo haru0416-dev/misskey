@@ -11,6 +11,8 @@
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
+- Fix: 通常の通知 (リアクション・フォロー・メンション・返信・引用等) が Service Worker push で配信されず、ブラウザを閉じている間のプッシュ通知が一切届かなかった問題を修正 (NestJS→Hono 移行時の移植漏れ。チャットのみ移植されていた。通知の既読同期 `readAllNotifications` push も復元)
+- Enhance: 未メンテの依存パッケージ2個を内製実装で置き換え (`xev` → クラスタ横断イベントバス、`http-link-header` → OAuth 用 Link ヘッダパーサ)
 - Enhance: タイムラインのDBフォールバッククエリを軽量化 (全タイムラインで note テーブルへの冗長なセルフJOINを削除し非正規化カラム参照に統一、投票有無チェックを `COUNT(*)` から `EXISTS` に変更、フォロー先IDリストを数万個のプレースホルダ展開から配列1パラメータに変更)
 - Enhance: 連合チャートの集計クエリを改善 (`COUNT(DISTINCT ...)` による following 全表ソートを recursive CTE のインデックス走査に変更)
 - Fix: ブロック済みホストを設定しているサーバーで連合チャートの集計 (sub/pub/pubsub) が SQL エラーで毎回失敗していた問題を修正 (配列パラメータの渡し方の誤り)
