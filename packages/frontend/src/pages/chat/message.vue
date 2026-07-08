@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkLoading/>
 		</div>
 		<div v-else>
-			<XMessage :message="message" :isSearchResult="true"/>
+			<MessageItem :message="message" :isSearchResult="true"/>
 		</div>
 	</div>
 </PageWithHeader>
@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
 import * as Misskey from 'misskey-js';
-import XMessage from './XMessage.vue';
+import MessageItem from './message-item.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';

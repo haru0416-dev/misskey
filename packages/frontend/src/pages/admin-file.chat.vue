@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<MkPagination :paginator="paginator">
 		<template #default="{ items }">
-			<XMessage v-for="item in items" :key="item.id" :message="item" :isSearchResult="true"/>
+			<MessageItem v-for="item in items" :key="item.id" :message="item" :isSearchResult="true"/>
 		</template>
 	</MkPagination>
 </div>
@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref, computed, markRaw } from 'vue';
-import XMessage from './chat/XMessage.vue';
+import MessageItem from './chat/message-item.vue';
 import { i18n } from '@/i18n.js';
 import MkInfo from '@/components/MkInfo.vue';
 import { Paginator } from '@/utility/paginator.js';

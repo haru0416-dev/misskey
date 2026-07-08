@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div class="_gaps">
 	<div v-if="memberships.length > 0" class="_gaps_s">
-		<XRoom v-for="membership in memberships" :key="membership.id" :room="membership.room!"/>
+		<RoomItem v-for="membership in memberships" :key="membership.id" :room="membership.room!"/>
 	</div>
 	<MkResult v-if="!fetching && memberships.length == 0" type="empty" :text="i18n.ts._chat.noRooms"/>
 	<MkLoading v-if="fetching"/>
@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import XRoom from './XRoom.vue';
+import RoomItem from './room-item.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 

@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div v-if="searchResults.length > 0" class="_gaps_s">
 			<div v-for="message in searchResults" :key="message.id" :class="$style.searchResultItem">
-				<XMessage :message="message" :user="message.fromUser" :isSearchResult="true"/>
+				<MessageItem :message="message" :user="message.fromUser" :isSearchResult="true"/>
 			</div>
 		</div>
 		<MkResult v-else type="notFound"/>
@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import XMessage from './XMessage.vue';
+import MessageItem from './message-item.vue';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

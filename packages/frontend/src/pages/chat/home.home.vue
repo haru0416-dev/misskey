@@ -26,7 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div class="_gaps_s">
 			<div v-for="message in searchResults" :key="message.id" :class="$style.searchResultItem">
-				<XMessage :message="message" :isSearchResult="true"/>
+				<MessageItem :message="message" :isSearchResult="true"/>
 			</div>
 		</div>
 	</MkFoldableSection>
@@ -43,7 +43,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onActivated, onDeactivated, onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@@/js/use-interval.js';
-import XMessage from './XMessage.vue';
+import MessageItem from './message-item.vue';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
