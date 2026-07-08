@@ -213,20 +213,19 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		deps.imageProcessingService,
 	);
 
-	app.get('/files/app-default.jpg', async (c) => {
-		const reply = new HonoFileReply();
-		const redirect = createRedirectToOmitSearch(c, reply);
-		if (redirect) return redirect;
-
-		reply.header('Content-Type', 'image/jpeg');
-		reply.header('Cache-Control', 'max-age=31536000, immutable');
-		return await toResponse(createReadStream(resolve(assetsPath, 'dummy.png')), reply, c.req.method);
-	});
-
 	app.get('/files/:key', async (c) => {
 		const reply = new HonoFileReply();
 		const redirect = createRedirectToOmitSearch(c, reply);
 		if (redirect) return redirect;
+
+		// app-default.jpg は元々独立した静的ルートだったが、同一セグメント位置での
+		// static ルートと :param ルートの共存は RegExpRouter 非対応で、その1ルートの
+		// せいでアプリ全体が TrieRouter へフォールバックするため、ここに統合した。
+		if (c.req.param('key') === 'app-default.jpg') {
+			reply.header('Content-Type', 'image/jpeg');
+			reply.header('Cache-Control', 'max-age=31536000, immutable');
+			return await toResponse(createReadStream(resolve(assetsPath, 'dummy.png')), reply, c.req.method);
+		}
 
 		const request = createFileServerRequest(c, { key: c.req.param('key') });
 		const body = await driveHandler.handle(request, reply)
@@ -243,9 +242,20 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		return await toResponse(null, reply, c.req.method);
 	});
 
-	app.get('/proxy/:url{.*}', async (c) => {
+	// NOTE: 以前は `/proxy/:url{.*}` だったが、複数セグメントを跨ぐ正規表現パラメータは
+	// RegExpRouter 非対応で、SmartRouter がこの1ルートのためにアプリ全体 (500超ルート) を
+	// TrieRouter へフォールバックさせていた。ワイルドカードで受けてパスから自前で切り出す
+	// (percent-decode はパラメータ抽出と同じ挙動になるよう自前で行う)。
+	app.get('/proxy/*', async (c) => {
 		const reply = new HonoFileReply();
-		const request = createFileServerRequest(c, { url: c.req.param('url') });
+		const rawUrl = c.req.path.slice('/proxy/'.length);
+		let url = rawUrl;
+		try {
+			url = decodeURIComponent(rawUrl);
+		} catch {
+			// 不正なpercent-encodingはデコードせずそのまま扱う (旧パラメータ抽出と同じ寛容さ)
+		}
+		const request = createFileServerRequest(c, { url });
 		const body = await proxyHandler.handle(request, reply)
 			.catch(err => errorHandler(request, reply, assetsPath, deps.logger, err));
 		return await toResponse(body, reply, c.req.method);

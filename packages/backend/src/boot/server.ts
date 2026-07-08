@@ -81,6 +81,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		http: {
 			config,
 			meta: deps.meta,
+			logger,
 		},
 		apiShell: {
 			config,
@@ -233,6 +234,10 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
 		const bunServer = Bun.serve({
 			...(config.socket ? { unix: config.socket } : { port: config.port, hostname: '0.0.0.0' }),
+			// Bun のデフォルト上限は 128 MiB で、maxFileSize がそれを超える設定だとアップロードが
+			// アプリ層に届く前に拒否される。ファイル本体 + multipart オーバーヘッドぶんを許容する
+			// (エンドポイント毎の細かい上限は body-limit.ts が実バイト数で守る)。
+			maxRequestBodySize: config.maxFileSize + 1024 * 1024,
 			fetch: async (request, bunServerInstance) => {
 				const url = new URL(request.url);
 				if (url.pathname === streamRuntime.streamingPath && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {

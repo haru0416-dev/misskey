@@ -63,6 +63,15 @@ export function clientErrorWithStatus(status: number, message: string, code: str
 	return new HonoApiError({ status, message, code, id });
 }
 
+export function payloadTooLargeError(): HonoApiError {
+	return new HonoApiError({
+		status: 413,
+		message: 'Payload too large.',
+		code: 'PAYLOAD_TOO_LARGE',
+		id: '3fe0c3a2-88b0-46f0-ac94-ea2cc25a79b6',
+	});
+}
+
 export function invalidJsonBody(): HonoApiError {
 	return new HonoApiError({
 		status: 400,

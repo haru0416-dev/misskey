@@ -40,6 +40,7 @@ declare namespace Bun {
 		port?: number;
 		hostname?: string;
 		unix?: string;
+		maxRequestBodySize?: number;
 		fetch(this: Server, request: Request, server: Server): Response | Promise<Response> | undefined | Promise<Response | undefined>;
 		websocket?: WebSocketHandler<T>;
 	}

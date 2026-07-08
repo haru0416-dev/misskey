@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { preferredMediaType } from '@/misc/content-negotiation.js';
 import { domainToASCII } from 'node:url';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
@@ -31,15 +32,21 @@ export type ApObjectRoutesDependencies = HonoApiAccountUpdateDependencies & {
 const ACTIVITY_JSON = 'application/activity+json; charset=utf-8';
 const LD_JSON = 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"; charset=utf-8';
 
-const apAcceptRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
+const HTML_TYPE = 'text/html';
 
+/**
+ * upstream (ActivityPubServerService) の `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])`
+ * によるルート分岐を再現する。以前の正規表現判定は q 値 (q=0 の明示拒否含む) と優先順位を無視して
+ * おり、`Accept: text/html, application/activity+json` のような複合ヘッダで upstream (HTML) と
+ * 逆の結果 (AP JSON) を返していた。
+ */
 function wantsAp(c: Context): boolean {
-	return apAcceptRegex.test(c.req.header('accept') ?? '');
+	const preferred = preferredMediaType(c.req.header('accept'), [HTML_TYPE, ACTIVITY_JSON, LD_JSON]);
+	return preferred != null && preferred !== HTML_TYPE;
 }
 
 function apContentType(c: Context): string {
-	const accept = c.req.header('accept') ?? '';
-	return /application\/ld\+json/i.test(accept) ? LD_JSON : ACTIVITY_JSON;
+	return preferredMediaType(c.req.header('accept'), [ACTIVITY_JSON, LD_JSON]) ?? ACTIVITY_JSON;
 }
 
 function apHeaders(c: Context, cacheControl: string): Record<string, string> {

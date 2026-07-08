@@ -11,6 +11,13 @@
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
+- Enhance: 1秒を超えたHTTPリクエストをエンドポイント・所要時間つきで警告ログに出力するように (チューニング対象の発見用)
+- Fix: リクエストボディのサイズ制限を復元 (NestJS→Hono 移行で Fastify の bodyLimit が失われ、JSON API のボディが Node ランタイムで無制限になっていた。JSON/OAuth は upstream と同じ 1 MiB、multipart は maxFileSize+1MiB を実バイト数で強制し超過は 413。chunked 転送による content-length 回避も防止)
+- Fix: ファイルアップロードのサイズ超過判定を「全体をメモリに読み切った後」から「読みながら打ち切り」に変更 (メモリ保護の復元)。あわせて Bun ランタイムで maxFileSize が 128MiB を超える設定でもアップロードできるように `maxRequestBodySize` を設定
+- Fix: ActivityPub のコンテンツネゴシエーションが Accept ヘッダの q 値・優先順位を無視していた問題を修正 (upstream の `accepts` ライブラリ相当の RFC 7231 準拠ネゴシエータを内製。`q=0` の明示拒否や `text/html, application/activity+json` のような複合ヘッダで upstream と逆の表現を返すことがあった)
+- Enhance: HTTPルーティングを高速化 (2ルートのパターン形状が原因で Hono の SmartRouter が全500超ルートを TrieRouter にフォールバックさせていたのを解消し、RegExpRouter (1回の正規表現マッチ) で動作するように。ルーティング処理が約2.2倍高速化)
+- Enhance: API 以外のルート (Web/ファイル/OAuth等) の未捕捉例外をサーバーログに記録するように (従来は Hono デフォルトのログ無し 500)
+- Enhance: Node ランタイムの HTTP レスポンス書き込みに backpressure 対応を追加 (遅いクライアントへの大きなレスポンスで書き込みバッファが無制限に膨らむのを防止)
 - Fix: 通常の通知 (リアクション・フォロー・メンション・返信・引用等) が Service Worker push で配信されず、ブラウザを閉じている間のプッシュ通知が一切届かなかった問題を修正 (NestJS→Hono 移行時の移植漏れ。チャットのみ移植されていた。通知の既読同期 `readAllNotifications` push も復元)
 - Enhance: 未メンテの依存パッケージ2個を内製実装で置き換え (`xev` → クラスタ横断イベントバス、`http-link-header` → OAuth 用 Link ヘッダパーサ)
 - Enhance: タイムラインのDBフォールバッククエリを軽量化 (全タイムラインで note テーブルへの冗長なセルフJOINを削除し非正規化カラム参照に統一、投票有無チェックを `COUNT(*)` から `EXISTS` に変更、フォロー先IDリストを数万個のプレースホルダ展開から配列1パラメータに変更)
