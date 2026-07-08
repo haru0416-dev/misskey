@@ -73,16 +73,16 @@ function evaluateRoleCondition(
 	}
 }
 
-export async function getHonoApiUserRoles(
+/**
+ * 取得済みの role 全件 + そのユーザーの assignment 群からユーザーの保持ロールを計算する純粋部分。
+ * ユーザー一覧のpackで assignments をIN句一括取得した上でユーザー毎に呼べるよう分離してある。
+ */
+export function computeHonoApiUserRoles(
 	deps: HonoApiRolePolicyDependencies,
-	user: MiUser | null,
-): Promise<MiRole[]> {
-	if (user == null) return [];
-
-	const [roles, assignments] = await Promise.all([
-		listRolesFromDatabase(deps.db),
-		listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id),
-	]);
+	user: MiUser,
+	roles: MiRole[],
+	assignments: { roleId: MiRole['id']; expiresAt: Date | null }[],
+): MiRole[] {
 	const now = Date.now();
 	const activeAssignedRoleIds = new Set(assignments
 		.filter(assignment => assignment.expiresAt == null || assignment.expiresAt.getTime() > now)
@@ -95,6 +95,20 @@ export async function getHonoApiUserRoles(
 			role.target === 'conditional' &&
 			evaluateRoleCondition(deps, user, assignedRoles, role.condFormula)),
 	];
+}
+
+export async function getHonoApiUserRoles(
+	deps: HonoApiRolePolicyDependencies,
+	user: MiUser | null,
+): Promise<MiRole[]> {
+	if (user == null) return [];
+
+	const [roles, assignments] = await Promise.all([
+		listRolesFromDatabase(deps.db),
+		listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id),
+	]);
+
+	return computeHonoApiUserRoles(deps, user, roles, assignments);
 }
 
 function aggregateChatAvailability(values: RolePolicies['chatAvailability'][]): RolePolicies['chatAvailability'] {
