@@ -10,7 +10,7 @@ import type * as Redis from 'ioredis';
 import { listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByIdFromDatabase, listActivityPubOutboxNotesByUserIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
@@ -307,7 +307,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, c.req.param('user'));
 		if (user == null) return apError(404);
 
-		const keypair = await fetchUserKeypairFromDatabase(deps.db, user.id);
+		const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
 		return apJson(c, withApContext(renderKeyForHonoApi(deps.config, user, keypair)));
 	});

@@ -314,33 +314,30 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 
 		const [sub, pub, pubsub, subActive, pubActive] = await Promise.all([
 			this.countQuery(sql`
-				SELECT COUNT(DISTINCT "following"."followeeHost") AS "count"
-				FROM "following"
-				WHERE "following"."followeeHost" IS NOT NULL
-					AND ${this.notBlockedHost(sql`"following"."followeeHost"`, blocked)}
-					AND "following"."followeeHost" NOT IN (
+				SELECT COUNT(*) AS "count"
+				FROM (${this.distinctFollowingHosts('followeeHost')}) AS "sub"("host")
+				WHERE ${this.notBlockedHost(sql`"sub"."host"`, blocked)}
+					AND "sub"."host" NOT IN (
 						SELECT "instance"."host" FROM "instance" WHERE "instance"."suspensionState" != 'none'
 					)
 			`),
 			this.countQuery(sql`
-				SELECT COUNT(DISTINCT "following"."followerHost") AS "count"
-				FROM "following"
-				WHERE "following"."followerHost" IS NOT NULL
-					AND ${this.notBlockedHost(sql`"following"."followerHost"`, blocked)}
-					AND "following"."followerHost" NOT IN (
+				SELECT COUNT(*) AS "count"
+				FROM (${this.distinctFollowingHosts('followerHost')}) AS "pub"("host")
+				WHERE ${this.notBlockedHost(sql`"pub"."host"`, blocked)}
+					AND "pub"."host" NOT IN (
 						SELECT "instance"."host" FROM "instance" WHERE "instance"."suspensionState" != 'none'
 					)
 			`),
 			this.countQuery(sql`
-				SELECT COUNT(DISTINCT "following"."followeeHost") AS "count"
-				FROM "following"
-				WHERE "following"."followeeHost" IS NOT NULL
-					AND ${this.notBlockedHost(sql`"following"."followeeHost"`, blocked)}
-					AND "following"."followeeHost" NOT IN (
+				SELECT COUNT(*) AS "count"
+				FROM (${this.distinctFollowingHosts('followeeHost')}) AS "pubsub"("host")
+				WHERE ${this.notBlockedHost(sql`"pubsub"."host"`, blocked)}
+					AND "pubsub"."host" NOT IN (
 						SELECT "instance"."host" FROM "instance" WHERE "instance"."suspensionState" != 'none'
 					)
-					AND "following"."followeeHost" IN (
-						SELECT "f"."followerHost" FROM "following" AS "f" WHERE "f"."followerHost" IS NOT NULL
+					AND EXISTS (
+						SELECT 1 FROM "following" AS "f" WHERE "f"."followerHost" = "pubsub"."host"
 					)
 			`),
 			this.countQuery(sql`
@@ -374,8 +371,36 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 		};
 	}
 
+	/**
+	 * following テーブルの host カラムの distinct 値集合を recursive CTE の
+	 * loose index scan (インデックス端を1ホストずつ辿る) で列挙する。
+	 * 元の COUNT(DISTINCT ...) は following 全行のソートを毎 tick 走らせていたが、
+	 * この形は O(distinct host 数 × log(following 行数)) で済み、既存の
+	 * followeeHost / followerHost 単列インデックスにそのまま乗る。
+	 * COUNT(DISTINCT) と同じく「instance 行が存在しない host」も数えるため意味は同一。
+	 */
+	private distinctFollowingHosts(column: 'followeeHost' | 'followerHost'): SQL {
+		const col = sql.raw(`"${column}"`);
+		return sql`
+			WITH RECURSIVE "hosts"("host") AS (
+				(SELECT ${col} FROM "following" WHERE ${col} IS NOT NULL ORDER BY ${col} LIMIT 1)
+				UNION ALL
+				SELECT (
+					SELECT "f".${col} FROM "following" AS "f"
+					WHERE "f".${col} > "hosts"."host"
+					ORDER BY "f".${col} LIMIT 1
+				)
+				FROM "hosts" WHERE "hosts"."host" IS NOT NULL
+			)
+			SELECT "host" FROM "hosts" WHERE "host" IS NOT NULL
+		`;
+	}
+
 	private notBlockedHost(column: SQL, blocked: string[]): SQL {
-		return blocked.length === 0 ? sql`TRUE` : sql`${column} NOT ILIKE ALL(${blocked})`;
+		// 生のJS配列を ${blocked} で渡すと drizzle が ($1, $2, ...) の record に展開してしまい
+		// `op ANY/ALL (array) requires array on right side` の実行時エラーになる (blockedHosts
+		// 非空のインスタンスで tickMinor が毎回失敗していた)。sql.param で単一の配列パラメータにする。
+		return blocked.length === 0 ? sql`TRUE` : sql`${column} NOT ILIKE ALL(${sql.param(blocked)})`;
 	}
 
 	private async countQuery(query: SQL): Promise<number> {

@@ -331,12 +331,12 @@ export async function createNoteFromApForHonoApi(
 		}
 	}
 
-	const files = [];
-	for (const attach of toArray(note.attachment)) {
+	const attachments = toArray(note.attachment);
+	for (const attach of attachments) {
 		(attach as { sensitive?: boolean }).sensitive ??= (note as { sensitive?: boolean }).sensitive;
-		const file = await resolveImageForHonoApi(deps, actor, attach);
-		if (file) files.push(file);
 	}
+	const resolvedFiles = await Promise.all(attachments.map(attach => resolveImageForHonoApi(deps, actor, attach)));
+	const files = resolvedFiles.filter(file => file != null);
 
 	const reply = note.inReplyTo
 		? await resolveNoteForHonoApi(deps, note.inReplyTo as string | IObject, { resolver: history }).then(x => {

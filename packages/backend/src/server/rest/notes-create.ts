@@ -71,6 +71,7 @@ import { packNoteForHonoApi, isVisibleForMeForHonoApi, type HonoApiNoteDependenc
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiNotification } from '@/models/Notification.js';
 import { getHonoApiRolePolicies, getHonoApiUserRoles, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import { pushSwNotificationForHonoApi } from './push-notification.js';
 import { packNotificationsForHonoApi, type HonoApiNotificationsListDependencies } from './notifications-list.js';
 import { xaddHonoApiNotification, type HonoApiNotificationDependencies } from './notification.js';
 import type { HonoApiAntennaStreamPublisher, HonoApiMainStreamPublisher, HonoApiNotesStreamPublisher, HonoApiRoleTimelineStreamPublisher } from './events.js';
@@ -310,6 +311,7 @@ export async function createNoteNotificationForHonoApi(
 	const [packed] = await packNotificationsForHonoApi(deps, [notification as unknown as MiNotification], notifieeId);
 	if (packed != null) {
 		deps.publishMainStream?.(notifieeId, 'notification', packed);
+		void pushSwNotificationForHonoApi(deps, notifieeId, 'notification', packed);
 	}
 }
 

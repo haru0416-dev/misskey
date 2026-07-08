@@ -31,6 +31,27 @@ type PrivateKey = {
 	keyId: string;
 };
 
+// PEM の ASN.1 パースは配送先ホスト毎に発生する deliver ジョブの数だけ繰り返されるとCPUコストが無視できないため、
+// 鍵素材 (privateKeyPem) をキーにパース済み Signer をキャッシュする。Signer 自体は鍵の保持のみで署名対象文字列に
+// 依存しないため使い回して問題ない。ローカルユーザー数程度のカーディナリティを想定し上限付きMapで運用する。
+const MAX_SIGNER_CACHE_SIZE = 1000;
+const signerCache = new Map<string, Signer>();
+
+function getCachedSigner(privateKeyPem: string): Signer {
+	const cached = signerCache.get(privateKeyPem);
+	if (cached) return cached;
+
+	const signer = Signer.fromPkcs8Pem(RSA_2048_8192, privateKeyPem);
+
+	if (signerCache.size >= MAX_SIGNER_CACHE_SIZE) {
+		const oldestKey = signerCache.keys().next().value;
+		if (oldestKey !== undefined) signerCache.delete(oldestKey);
+	}
+	signerCache.set(privateKeyPem, signer);
+
+	return signer;
+}
+
 export class ApRequestCreator {
 	static async createSignedPost(args: { key: PrivateKey, url: string, body: string, digest?: string, additionalHeaders: Record<string, string> }): Promise<Signed> {
 		const u = new URL(args.url);
@@ -86,7 +107,7 @@ export class ApRequestCreator {
 
 	static async #signToRequest(request: Request, key: PrivateKey, includeHeaders: string[]): Promise<Signed> {
 		const signingString = this.#genSigningString(request, includeHeaders);
-		const signer = Signer.fromPkcs8Pem(RSA_2048_8192, key.privateKeyPem);
+		const signer = getCachedSigner(key.privateKeyPem);
 		const sign = promisify(signer.signRaw).bind(signer);
 		const signature = (await sign(Buffer.from(signingString))).toString('base64');
 		const signatureHeader = `keyId="${key.keyId}",algorithm="rsa-sha256",headers="${includeHeaders.join(' ')}",signature="${signature}"`;

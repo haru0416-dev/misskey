@@ -10,7 +10,7 @@ import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollow
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/ClipNoteStore.js';
 import { listClipsByIdsFromDatabase } from '@/core/ClipStore.js';
-import { listAllFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
+import { listFolloweeIdsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteFavoriteInDatabase, deleteNoteFavoriteByIdFromDatabase, fetchNoteFavoriteFromDatabase, noteFavoriteExistsInDatabase } from '@/core/NoteFavoriteStore.js';
 import {
@@ -674,14 +674,15 @@ export async function handleHonoApiNotesHybridTimeline(
 
 	if (params.withReplies && params.withFiles) throw notesHybridTimelineBothWithRepliesAndWithFilesError();
 
-	const followees = await listAllFollowingsByFollowerIdFromDatabase(deps.db, me.id);
+	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
+	const followeeIdSet = new Set(followeeIds);
 	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
 		.filter(id => !mutingChannelIds.includes(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHybridTimelineNotesFromDatabase(deps.db, {
 		me,
-		followeeIds: followees.map(f => f.followeeId),
+		followeeIds,
 		followingChannelIds,
 		mutingChannelIds,
 		limit,
@@ -705,7 +706,6 @@ export async function handleHonoApiNotesHybridTimeline(
 			timelineConfig = [`homeTimeline:${me.id}`, 'localTimeline', `localTimelineWithReplyTo:${me.id}`];
 		}
 
-		const followeeIdSet = new Set(followees.map(f => f.followeeId));
 		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
 			untilId,
 			sinceId,
@@ -726,12 +726,12 @@ export async function handleHonoApiNotesHybridTimeline(
 			dbFallback: getFromDb,
 		});
 
-		return await packNoteManyForHonoApi(deps, notes, me);
+		return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
 const GLOBAL_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
@@ -1107,14 +1107,15 @@ export async function handleHonoApiNotesTimeline(
 	const params = parseHonoApiParams(notesTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const followees = await listAllFollowingsByFollowerIdFromDatabase(deps.db, me.id);
+	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
+	const followeeIdSet = new Set(followeeIds);
 	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
 		.filter(id => !mutingChannelIds.includes(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHomeTimelineNotesFromDatabase(deps.db, {
 		me,
-		followeeIds: followees.map(f => f.followeeId),
+		followeeIds,
 		followingChannelIds,
 		mutingChannelIds,
 		limit,
@@ -1129,7 +1130,6 @@ export async function handleHonoApiNotesTimeline(
 	});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
-		const followeeIdSet = new Set(followees.map(f => f.followeeId));
 		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
 			untilId,
 			sinceId,
@@ -1150,12 +1150,12 @@ export async function handleHonoApiNotesTimeline(
 			dbFallback: getFromDb,
 		});
 
-		return await packNoteManyForHonoApi(deps, notes, me);
+		return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
 function notesUserListTimelineNoSuchListError(): HonoApiError {

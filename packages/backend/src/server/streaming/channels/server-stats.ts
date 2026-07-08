@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Xev from 'xev';
+import { globalEventBus } from '@/misc/global-event-bus.js';
 import { isJsonObject } from '@/misc/json-value.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
-const ev = new Xev();
+const ev = globalEventBus;
 
-/** ServerStatsChannel 相当。hono-daemon-server-stats.ts が発行する Xev イベントを購読する。 */
+/** ServerStatsChannel 相当。hono-daemon-server-stats.ts が発行する globalEventBus イベントを購読する。 */
 export const honoStreamChannelServerStats: HonoStreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: false,

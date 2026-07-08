@@ -21,7 +21,7 @@ import {
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
+import { listUserListIdsContainingUserFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import * as Acct from '@/misc/acct.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -61,6 +61,7 @@ export async function checkHitAntennaForHonoApi(
 	antenna: MiAntenna,
 	note: MiNote,
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
+	hint?: { listMembershipUserListIds: Set<string> },
 ): Promise<boolean> {
 	if (antenna.excludeNotesInSensitiveChannel && note.channel?.isSensitive) return false;
 
@@ -84,7 +85,9 @@ export async function checkHitAntennaForHonoApi(
 
 	if (antenna.src === 'list') {
 		if (antenna.userListId == null) return false;
-		const exists = await userListMembershipExistsInDatabase(deps.db, note.userId, antenna.userListId);
+		const exists = hint
+			? hint.listMembershipUserListIds.has(antenna.userListId)
+			: await userListMembershipExistsInDatabase(deps.db, note.userId, antenna.userListId);
 		if (!exists) return false;
 	} else if (antenna.src === 'users') {
 		const accts = antenna.users.map(x => {
@@ -191,7 +194,16 @@ export async function addNoteToAntennasForHonoApi(
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
 ): Promise<void> {
 	const antennas = await listActiveAntennasFromDatabase(deps.db);
-	const antennasWithMatchResult = await Promise.all(antennas.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser).then(hit => [antenna, hit] as const)));
+
+	// src === 'list' なアンテナの userListId をまとめて1クエリで所属判定する (アンテナ毎の exists クエリを回避)。
+	const listAntennaUserListIds = [...new Set(
+		antennas
+			.filter((antenna): antenna is MiAntenna & { userListId: string } => antenna.src === 'list' && antenna.userListId != null)
+			.map(antenna => antenna.userListId),
+	)];
+	const listMembershipUserListIds = await listUserListIdsContainingUserFromDatabase(deps.db, note.userId, listAntennaUserListIds);
+
+	const antennasWithMatchResult = await Promise.all(antennas.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser, { listMembershipUserListIds }).then(hit => [antenna, hit] as const)));
 	const matchedAntennas = antennasWithMatchResult.filter(([, hit]) => hit).map(([antenna]) => antenna);
 
 	const redisPipeline = deps.redisForTimelines.pipeline();

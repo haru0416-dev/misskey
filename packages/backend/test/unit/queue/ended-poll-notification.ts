@@ -36,6 +36,7 @@ describe('hono-queue-ended-poll-notification', () => {
 			config,
 			db,
 			redis: { xadd: async () => '0-1', get: async () => null } as unknown as HonoQueueEndedPollNotificationDependencies['redis'],
+			meta: { enableServiceWorker: false, swPublicKey: null, swPrivateKey: null },
 			publishMainStream: (userId, type) => { publishedNotifications.push({ userId, type }); },
 		};
 	});

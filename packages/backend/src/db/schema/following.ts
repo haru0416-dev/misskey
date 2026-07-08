@@ -28,6 +28,8 @@ export const following = pgTable('following', {
 	index('IDX_fcdafee716dfe9c3b5fde90f30').on(table.followeeHost),
 	index('IDX_ce62b50d882d4e9dee10ad0d2f').on(table.followeeId, table.followerHost, table.isFollowerHibernated),
 	uniqueIndex('IDX_307be5f1d1252e0388662acb96').on(table.followerId, table.followeeId),
+	index('IDX_FOLLOWING_FOLLOWEE_ID_ID').on(table.followeeId, table.id),
+	index('IDX_FOLLOWING_FOLLOWER_ID_ID').on(table.followerId, table.id),
 ]);
 
 export type FollowingRow = typeof following.$inferSelect;
