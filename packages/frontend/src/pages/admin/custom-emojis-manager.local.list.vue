@@ -90,7 +90,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import MkPagingButtons from '@/components/MkPagingButtons.vue';
 import { selectFile } from '@/utility/drive.js';
 import { copyGridDataToClipboard, removeDataFromGrid } from '@/components/grid/grid-utils.js';
-import { useLoading } from '@/composables/use-loading.js';
+import { useLoading } from '@/composables/useLoading.js';
 
 type GridItem = {
 	checked: boolean;

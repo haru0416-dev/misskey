@@ -91,7 +91,7 @@ import { deepClone } from '@/utility/clone.js';
 import * as os from '@/os.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
-import { useLeaveGuard } from '@/composables/use-leave-guard.js';
+import { useLeaveGuard } from '@/composables/useLeaveGuard.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
 

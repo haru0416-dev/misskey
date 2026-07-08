@@ -56,7 +56,7 @@ import * as os from '@/os.js';
 import { lookupUser } from '@/utility/admin-lookup.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';
 import { dateString } from '@/filters/date.js';
 import { Paginator } from '@/utility/paginator.js';

@@ -48,7 +48,7 @@ import MkButton from '@/components/MkButton.vue';
 import * as os from '@/os.js';
 import MkDivider from '@/components/MkDivider.vue';
 import { i18n } from '@/i18n.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 
 const recipients = ref<entities.AbuseReportNotificationRecipient[]>([]);
 

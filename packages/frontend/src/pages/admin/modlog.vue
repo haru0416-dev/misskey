@@ -52,7 +52,7 @@ import MkTl from '@/components/MkTl.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 import MkPullToRefresh from '@/components/MkPullToRefresh.vue';
 import MkButton from '@/components/MkButton.vue';
 import MkPaginationControl from '@/components/MkPaginationControl.vue';

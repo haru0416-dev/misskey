@@ -15,7 +15,7 @@ import * as Misskey from 'misskey-js';
 import MkDrive from '@/components/MkDrive.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { useScrollPositionKeeper } from '@/composables/use-scroll-position-keeper.js';
+import { useScrollPositionKeeper } from '@/composables/useScrollPositionKeeper.js';
 
 const scrollContainer = useTemplateRef('scrollContainer');
 useScrollPositionKeeper(scrollContainer);

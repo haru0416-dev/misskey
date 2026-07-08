@@ -19,7 +19,7 @@ import tinycolor from 'tinycolor2';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { themeManager } from '@/theme.js';
 import { store } from '@/store.js';
-import { useChartTooltip } from '@/composables/use-chart-tooltip.js';
+import { useChartTooltip } from '@/composables/useChartTooltip.js';
 import { chartVLine } from '@/utility/chart-vline.js';
 import { initChart } from '@/utility/init-chart.js';
 

@@ -53,13 +53,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import type { UploaderFeatures, UploaderItem } from '@/composables/use-uploader.js';
+import type { UploaderFeatures, UploaderItem } from '@/composables/useUploader.js';
 import MkModalWindow from '@/components/MkModalWindow.vue';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/MkButton.vue';
 import * as os from '@/os.js';
 import { ensureSignin } from '@/i.js';
-import { useUploader } from '@/composables/use-uploader.js';
+import { useUploader } from '@/composables/useUploader.js';
 import MkUploaderItems from '@/components/MkUploaderItems.vue';
 
 const $i = ensureSignin();

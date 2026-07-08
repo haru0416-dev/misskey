@@ -14,7 +14,7 @@ import type { ScatterDataPoint } from 'chart.js';
 import tinycolor from 'tinycolor2';
 import { store } from '@/store.js';
 import { themeManager } from '@/theme.js';
-import { useChartTooltip } from '@/composables/use-chart-tooltip.js';
+import { useChartTooltip } from '@/composables/useChartTooltip.js';
 import { chartVLine } from '@/utility/chart-vline.js';
 import { alpha } from '@/utility/color.js';
 import { initChart } from '@/utility/init-chart.js';

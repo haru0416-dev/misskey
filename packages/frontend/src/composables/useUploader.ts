@@ -14,7 +14,7 @@ import type { ImageFrameParams, ImageFramePreset } from '@/utility/image-frame-r
 import { genId } from '@/utility/id.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
-import { isWebpSupported } from '@/utility/isWebpSupported.js';
+import { isWebpSupported } from '@/utility/is-webp-supported.js';
 import { uploadFile, UploadAbortedError } from '@/utility/drive.js';
 import * as os from '@/os.js';
 import { ensureSignin } from '@/i.js';

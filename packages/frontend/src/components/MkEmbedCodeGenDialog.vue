@@ -98,7 +98,7 @@ import MkButton from '@/components/MkButton.vue';
 import MkCode from '@/components/MkCode.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import { i18n } from '@/i18n.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { normalizeEmbedParams, getEmbedCode } from '@/utility/get-embed-code.js';
 

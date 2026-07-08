@@ -12,7 +12,7 @@ import type { ComponentEmit, ComponentProps as CP } from 'vue-component-type-hel
 import type { Form, GetFormResultType } from '@/utility/form.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { PostFormProps } from '@/types/post-form.js';
-import type { UploaderFeatures } from '@/composables/use-uploader.js';
+import type { UploaderFeatures } from '@/composables/useUploader.js';
 import type { MkSelectItem } from '@/components/MkSelect.vue';
 import type { OptionValue } from '@/types/option-value.js';
 import type { MkDialogReturnType } from '@/components/MkDialog.vue';
