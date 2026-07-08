@@ -11,6 +11,9 @@
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
+- Enhance: ユーザー一覧系エンドポイント (フォロワー/フォロー/ユーザー検索等) を高速化 (1ユーザー毎に発行していたロール・アサイン・ピン留めのクエリをリスト単位の3クエリに集約。負荷計測でp50 122→78ms、DBラウンドトリップ 68k→20k回/3分)
+- Enhance: 全文検索・ユーザー検索を pg_trgm でインデックス化 (ノート本文の LIKE フォールバック・ユーザー名/自己紹介の中間一致が行数線形の全表走査だったのを GIN trgm 4本でビットマップスキャン化。検索クエリ mean 4.26→0.55ms)
+- Enhance: DB接続プールのデフォルトを10→30接続に変更 (投稿集中時にプール待ちで最大3秒超のtailが発生していたのを解消。`db.extra.max` で上書き可能)
 - Enhance: ノート投稿のレイテンシスパイクを解消 (note テーブルの GIN インデックス4本の fastupdate pending list フラッシュが原因で、投稿の一部が1秒超かかることがあった。`fastupdate = off` に変更し、51万ノート環境の負荷計測で INSERT 最大 1,427ms→8ms を確認)
 - Enhance: 1秒を超えたHTTPリクエストをエンドポイント・所要時間つきで警告ログに出力するように (チューニング対象の発見用)
 - Fix: リクエストボディのサイズ制限を復元 (NestJS→Hono 移行で Fastify の bodyLimit が失われ、JSON API のボディが Node ランタイムで無制限になっていた。JSON/OAuth は upstream と同じ 1 MiB、multipart は maxFileSize+1MiB を実バイト数で強制し超過は 413。chunked 転送による content-length 回避も防止)
