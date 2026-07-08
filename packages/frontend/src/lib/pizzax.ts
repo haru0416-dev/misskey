@@ -17,13 +17,16 @@ import { store } from '@/store.js';
 import { deepClone } from '@/utility/clone.js';
 import { deepMerge } from '@/utility/merge.js';
 
-type StateDef = Record<string, {
-	where: 'account' | 'device' | 'deviceAccount';
-	default: any;
-}>;
+type StateDef = Record<
+	string,
+	{
+		where: 'account' | 'device' | 'deviceAccount';
+		default: any;
+	}
+>;
 
-type State<T extends StateDef> = { [K in keyof T]: T[K]['default']; };
-type ReactiveState<T extends StateDef> = { [K in keyof T]: Ref<T[K]['default']>; };
+type State<T extends StateDef> = { [K in keyof T]: T[K]['default'] };
+type ReactiveState<T extends StateDef> = { [K in keyof T]: Ref<T[K]['default']> };
 
 type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
 
@@ -61,7 +64,7 @@ export class Pizzax<T extends StateDef> {
 	// 簡易的にキューイングして占有ロックとする
 	private currentIdbJob: Promise<unknown> = Promise.resolve();
 	private addIdbSetJob<T>(job: () => Promise<T>) {
-		const promise = this.currentIdbJob.then(job, err => {
+		const promise = this.currentIdbJob.then(job, (err) => {
 			console.error('Pizzax failed to save data to idb!', err);
 			return job();
 		});
@@ -110,9 +113,9 @@ export class Pizzax<T extends StateDef> {
 	private async init(): Promise<void> {
 		await this.migrate();
 
-		const deviceState: State<T> = await get(this.deviceStateKeyName) || {};
-		const deviceAccountState = $i ? await get(this.deviceAccountStateKeyName) || {} : {};
-		const registryCache = $i ? await get(this.registryCacheKeyName) || {} : {};
+		const deviceState: State<T> = (await get(this.deviceStateKeyName)) || {};
+		const deviceAccountState = $i ? (await get(this.deviceAccountStateKeyName)) || {} : {};
+		const registryCache = $i ? (await get(this.registryCacheKeyName)) || {} : {};
 
 		for (const [k, v] of Object.entries(this.def) as [keyof T, T[keyof T]['default']][]) {
 			if (v.where === 'device' && Object.prototype.hasOwnProperty.call(deviceState, k)) {
@@ -143,7 +146,7 @@ export class Pizzax<T extends StateDef> {
 					await store.ready;
 
 					misskeyApi('i/registry/get-all', { scope: ['client', this.key] })
-						.then(kvs => {
+						.then((kvs) => {
 							const cache: Partial<T> = {};
 							for (const [k, v] of Object.entries(this.def) as [keyof T, T[keyof T]['default']][]) {
 								if (v.where === 'account') {
@@ -182,7 +185,7 @@ export class Pizzax<T extends StateDef> {
 						key,
 						value: rawValue,
 					});
-					const deviceState = await get(this.deviceStateKeyName) || {};
+					const deviceState = (await get(this.deviceStateKeyName)) || {};
 					deviceState[key] = rawValue;
 					await set(this.deviceStateKeyName, deviceState);
 					break;
@@ -195,14 +198,14 @@ export class Pizzax<T extends StateDef> {
 						value: rawValue,
 						userId: $i.id,
 					});
-					const deviceAccountState = await get(this.deviceAccountStateKeyName) || {};
+					const deviceAccountState = (await get(this.deviceAccountStateKeyName)) || {};
 					deviceAccountState[key] = rawValue;
 					await set(this.deviceAccountStateKeyName, deviceAccountState);
 					break;
 				}
 				case 'account': {
 					if ($i == null) break;
-					const cache = await get(this.registryCacheKeyName) || {};
+					const cache = (await get(this.registryCacheKeyName)) || {};
 					cache[key] = rawValue;
 					await set(this.registryCacheKeyName, cache);
 					await misskeyApi('i/registry/set', {
@@ -232,9 +235,7 @@ export class Pizzax<T extends StateDef> {
 	 * 特定のキーの、簡易的なcomputed refを作ります
 	 * 主にvue上で設定コントロールのmodelとして使う用
 	 */
-	public model<K extends keyof T, R = T[K]['default']>(
-		key: K,
-	): Ref<R>;
+	public model<K extends keyof T, R = T[K]['default']>(key: K): Ref<R>;
 	public model<K extends keyof T, R extends Exclude<any, T[K]['default']>>(
 		key: K,
 		getter: (v: T[K]['default']) => R,

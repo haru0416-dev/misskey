@@ -18,46 +18,51 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 	let savedScrollTop = 0;
 	let ready = true;
 
-	watch(scrollContainerRef, (el) => {
-		if (!el) return;
-
-		const captureAnchor = () => {
+	watch(
+		scrollContainerRef,
+		(el) => {
 			if (!el) return;
-			if (!ready) return;
 
-			if (el.scrollTop < 100) {
-				// 上部にいるときはanchorを参照するとズレの原因になるし位置復元するメリットも乏しいため設定しない
-				anchorId = null;
-				return;
-			}
+			const captureAnchor = () => {
+				if (!el) return;
+				if (!ready) return;
 
-			const scrollContainerRect = el.getBoundingClientRect();
-			const viewPosition = scrollContainerRect.top + scrollContainerRect.height / 2;
-
-			const anchorEls = el.querySelectorAll<HTMLElement>('[data-scroll-anchor]');
-			for (let i = anchorEls.length - 1; i > -1; i--) { // 下から見た方が速い
-				const anchorEl = anchorEls[i];
-				const anchorTop = anchorEl.getBoundingClientRect().top;
-				// 上端が viewPosition 以下の最初の要素（＝中央を跨ぐか、中央より上にある中で最も近いもの）を選択する
-				// 最下部スクロール時に min-height による空白に viewPosition が入った場合も最後のアイテムをキャプチャできる
-				if (anchorTop <= viewPosition) {
-					anchorId = anchorEl.getAttribute('data-scroll-anchor');
-					anchorContainerLocalY = anchorTop - scrollContainerRect.top;
-					break;
+				if (el.scrollTop < 100) {
+					// 上部にいるときはanchorを参照するとズレの原因になるし位置復元するメリットも乏しいため設定しない
+					anchorId = null;
+					return;
 				}
-			}
-		};
 
-		// ほんとはscrollイベントじゃなくてonBeforeDeactivatedでやりたい
-		// https://github.com/vuejs/vue/issues/9454
-		// https://github.com/vuejs/rfcs/pull/284
-		el.addEventListener('scroll', throttle(1000, captureAnchor), { passive: true });
-		// スクロール後すぐにクリックするとthrottleによりanchorIdが古いまま残るため、
-		// pointerdownで遷移直前のアンカーを同期的に取得する
-		el.addEventListener('pointerdown', captureAnchor, { passive: true });
-	}, {
-		immediate: true,
-	});
+				const scrollContainerRect = el.getBoundingClientRect();
+				const viewPosition = scrollContainerRect.top + scrollContainerRect.height / 2;
+
+				const anchorEls = el.querySelectorAll<HTMLElement>('[data-scroll-anchor]');
+				for (let i = anchorEls.length - 1; i > -1; i--) {
+					// 下から見た方が速い
+					const anchorEl = anchorEls[i];
+					const anchorTop = anchorEl.getBoundingClientRect().top;
+					// 上端が viewPosition 以下の最初の要素（＝中央を跨ぐか、中央より上にある中で最も近いもの）を選択する
+					// 最下部スクロール時に min-height による空白に viewPosition が入った場合も最後のアイテムをキャプチャできる
+					if (anchorTop <= viewPosition) {
+						anchorId = anchorEl.getAttribute('data-scroll-anchor');
+						anchorContainerLocalY = anchorTop - scrollContainerRect.top;
+						break;
+					}
+				}
+			};
+
+			// ほんとはscrollイベントじゃなくてonBeforeDeactivatedでやりたい
+			// https://github.com/vuejs/vue/issues/9454
+			// https://github.com/vuejs/rfcs/pull/284
+			el.addEventListener('scroll', throttle(1000, captureAnchor), { passive: true });
+			// スクロール後すぐにクリックするとthrottleによりanchorIdが古いまま残るため、
+			// pointerdownで遷移直前のアンカーを同期的に取得する
+			el.addEventListener('pointerdown', captureAnchor, { passive: true });
+		},
+		{
+			immediate: true,
+		},
+	);
 
 	const restore = () => {
 		if (!anchorId) return;

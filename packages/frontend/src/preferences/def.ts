@@ -20,20 +20,22 @@ import { DEFAULT_DEVICE_KIND } from '@/utility/device-kind.js';
 import { deepEqual } from '@/utility/deep-equal.js';
 
 /** サウンド設定 */
-export type SoundStore = {
-	type: Exclude<SoundType, '_driveFile_'>;
-	volume: number;
-} | {
-	type: '_driveFile_';
+export type SoundStore =
+	| {
+			type: Exclude<SoundType, '_driveFile_'>;
+			volume: number;
+	  }
+	| {
+			type: '_driveFile_';
 
-	/** ドライブのファイルID */
-	fileId: string;
+			/** ドライブのファイルID */
+			fileId: string;
 
-	/** ファイルURL（こちらが優先される） */
-	fileUrl: string;
+			/** ファイルURL（こちらが優先される） */
+			fileUrl: string;
 
-	volume: number;
-};
+			volume: number;
+	  };
 
 export type StatusbarStore = {
 	name: string | null;
@@ -61,10 +63,13 @@ type OmitStrict<T, K extends keyof T> = T extends unknown ? Pick<T, Exclude<keyo
 
 export const PREF_DEF = definePreferences({
 	accounts: {
-		default: [] as [host: string, user: {
-			id: string;
-			username: string;
-		}][],
+		default: [] as [
+			host: string,
+			user: {
+				id: string;
+				username: string;
+			},
+		][],
 	},
 
 	pinnedUserLists: {
@@ -77,24 +82,35 @@ export const PREF_DEF = definePreferences({
 	},
 	widgets: {
 		accountDependent: true,
-		default: () => [{
-			name: 'calendar',
-			id: genId(), place: 'right', data: {},
-		}, {
-			name: 'notifications',
-			id: genId(), place: 'right', data: {},
-		}, {
-			name: 'trends',
-			id: genId(), place: 'right', data: {},
-		}] as {
-			name: string;
-			id: string;
-			place: string | null;
-			// NOTE: ウィジェットの種類ごとに実際のデータ形状が異なる。deepEqual (JsonLike前提) や
-			// widgets/widget.ts でのフォーム値との相互変換を通じて他の設定値のunion型にも波及するため、
-			// あえて緩い型のままにしている。
-			data: Record<string, any>;
-		}[],
+		default: () =>
+			[
+				{
+					name: 'calendar',
+					id: genId(),
+					place: 'right',
+					data: {},
+				},
+				{
+					name: 'notifications',
+					id: genId(),
+					place: 'right',
+					data: {},
+				},
+				{
+					name: 'trends',
+					id: genId(),
+					place: 'right',
+					data: {},
+				},
+			] as {
+				name: string;
+				id: string;
+				place: string | null;
+				// NOTE: ウィジェットの種類ごとに実際のデータ形状が異なる。deepEqual (JsonLike前提) や
+				// widgets/widget.ts でのフォーム値との相互変換を通じて他の設定値のunion型にも波及するため、
+				// あえて緩い型のままにしている。
+				data: Record<string, any>;
+			}[],
 	},
 	'deck.profile': {
 		accountDependent: true,
@@ -107,23 +123,28 @@ export const PREF_DEF = definePreferences({
 
 	emojiPalettes: {
 		serverDependent: true,
-		default: () => [{
-			id: genId(),
-			name: '',
-			emojis: DEFAULT_EMOJIS,
-		}] as {
-			id: string;
-			name: string;
-			emojis: string[];
-		}[],
+		default: () =>
+			[
+				{
+					id: genId(),
+					name: '',
+					emojis: DEFAULT_EMOJIS,
+				},
+			] as {
+				id: string;
+				name: string;
+				emojis: string[];
+			}[],
 		mergeStrategy: (a, b) => {
 			const mergedItems = [] as typeof a;
 			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find(y => y.id === x.id);
+				const sameIdItem = mergedItems.find((y) => y.id === x.id);
 				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) { // 完全な重複は無視
+					if (deepEqual(x, sameIdItem)) {
+						// 完全な重複は無視
 						continue;
-					} else { // IDは同じなのに内容が違う場合はマージ不可とする
+					} else {
+						// IDは同じなのに内容が違う場合はマージ不可とする
 						throw new Error();
 					}
 				} else {
@@ -150,11 +171,13 @@ export const PREF_DEF = definePreferences({
 		mergeStrategy: (a, b) => {
 			const mergedItems = [] as typeof a;
 			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find(y => y.id === x.id);
+				const sameIdItem = mergedItems.find((y) => y.id === x.id);
 				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) { // 完全な重複は無視
+					if (deepEqual(x, sameIdItem)) {
+						// 完全な重複は無視
 						continue;
-					} else { // IDは同じなのに内容が違う場合はマージ不可とする
+					} else {
+						// IDは同じなのに内容が違う場合はマージ不可とする
 						throw new Error();
 					}
 				} else {
@@ -413,9 +436,9 @@ export const PREF_DEF = definePreferences({
 		// Plugin['config'] (FormWithDefault) の形として直接扱うため、あえて緩い型のままにしている。
 		default: [] as (OmitStrict<Plugin, 'config'> & { config: Record<string, any> })[],
 		mergeStrategy: (a, b) => {
-			const sameIdExists = a.some(x => b.some(y => x.installId === y.installId));
+			const sameIdExists = a.some((x) => b.some((y) => x.installId === y.installId));
 			if (sameIdExists) throw new Error();
-			const sameNameExists = a.some(x => b.some(y => x.name === y.name));
+			const sameNameExists = a.some((x) => b.some((y) => x.name === y.name));
 			if (sameNameExists) throw new Error();
 			return a.concat(b);
 		},
@@ -432,11 +455,13 @@ export const PREF_DEF = definePreferences({
 		mergeStrategy: (a, b) => {
 			const mergedItems = [] as typeof a;
 			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find(y => y.id === x.id);
+				const sameIdItem = mergedItems.find((y) => y.id === x.id);
 				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) { // 完全な重複は無視
+					if (deepEqual(x, sameIdItem)) {
+						// 完全な重複は無視
 						continue;
-					} else { // IDは同じなのに内容が違う場合はマージ不可とする
+					} else {
+						// IDは同じなのに内容が違う場合はマージ不可とする
 						throw new Error();
 					}
 				} else {
@@ -456,11 +481,13 @@ export const PREF_DEF = definePreferences({
 		mergeStrategy: (a, b) => {
 			const mergedItems = [] as typeof a;
 			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find(y => y.id === x.id);
+				const sameIdItem = mergedItems.find((y) => y.id === x.id);
 				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) { // 完全な重複は無視
+					if (deepEqual(x, sameIdItem)) {
+						// 完全な重複は無視
 						continue;
-					} else { // IDは同じなのに内容が違う場合はマージ不可とする
+					} else {
+						// IDは同じなのに内容が違う場合はマージ不可とする
 						throw new Error();
 					}
 				} else {

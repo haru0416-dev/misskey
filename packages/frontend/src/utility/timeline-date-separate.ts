@@ -13,10 +13,7 @@ export function getDateText(dateInstance: Date) {
 }
 
 // TODO: いちいちDateインスタンス作成するのは無駄感あるから文字列のまま解析したい
-export function isSeparatorNeeded(
-	prev: string | null,
-	next: string | null,
-) {
+export function isSeparatorNeeded(prev: string | null, next: string | null) {
 	if (prev == null || next == null) return false;
 	const prevDate = new Date(prev);
 	const nextDate = new Date(next);
@@ -28,10 +25,7 @@ export function isSeparatorNeeded(
 }
 
 // TODO: いちいちDateインスタンス作成するのは無駄感あるから文字列のまま解析したい
-export function getSeparatorInfo(
-	prev: string | null,
-	next: string | null,
-) {
+export function getSeparatorInfo(prev: string | null, next: string | null) {
 	if (prev == null || next == null) return null;
 	const prevDate = new Date(prev);
 	const nextDate = new Date(next);
@@ -43,20 +37,24 @@ export function getSeparatorInfo(
 	};
 }
 
-export type DateSeparetedTimelineItem<T> = {
-	id: string;
-	type: 'item';
-	data: T;
-} | {
-	id: string;
-	type: 'date';
-	prev: Date;
-	prevText: string;
-	next: Date;
-	nextText: string;
-};
+export type DateSeparetedTimelineItem<T> =
+	| {
+			id: string;
+			type: 'item';
+			data: T;
+	  }
+	| {
+			id: string;
+			type: 'date';
+			prev: Date;
+			prevText: string;
+			next: Date;
+			nextText: string;
+	  };
 
-export function makeDateSeparatedTimelineComputedRef<T extends { id: string; createdAt: string; }>(items: Ref<T[]> | ShallowRef<T[]>) {
+export function makeDateSeparatedTimelineComputedRef<T extends { id: string; createdAt: string }>(
+	items: Ref<T[]> | ShallowRef<T[]>,
+) {
 	return computed<DateSeparetedTimelineItem<T>[]>(() => {
 		const tl: DateSeparetedTimelineItem<T>[] = [];
 		for (let i = 0; i < items.value.length; i++) {
@@ -73,11 +71,10 @@ export function makeDateSeparatedTimelineComputedRef<T extends { id: string; cre
 
 			if (
 				i !== items.value.length - 1 &&
-					nextDate != null && (
-					date.getFullYear() !== nextDate.getFullYear() ||
-						date.getMonth() !== nextDate.getMonth() ||
-						date.getDate() !== nextDate.getDate()
-				)
+				nextDate != null &&
+				(date.getFullYear() !== nextDate.getFullYear() ||
+					date.getMonth() !== nextDate.getMonth() ||
+					date.getDate() !== nextDate.getDate())
 			) {
 				tl.push({
 					id: `date-${item.id}`,
@@ -98,7 +95,10 @@ export type DateGroupedTimelineItem<T> = {
 	items: T[];
 };
 
-export function makeDateGroupedTimelineComputedRef<T extends { id: string; createdAt: string; }>(items: Ref<T[]> | ShallowRef<T[]>, span: 'day' | 'month' = 'day') {
+export function makeDateGroupedTimelineComputedRef<T extends { id: string; createdAt: string }>(
+	items: Ref<T[]> | ShallowRef<T[]>,
+	span: 'day' | 'month' = 'day',
+) {
 	return computed<DateGroupedTimelineItem<T>[]>(() => {
 		const tl: DateGroupedTimelineItem<T>[] = [];
 		for (let i = 0; i < items.value.length; i++) {
@@ -106,14 +106,13 @@ export function makeDateGroupedTimelineComputedRef<T extends { id: string; creat
 			const date = new Date(item.createdAt);
 			const _nextDate = items.value[i + 1] ? new Date(items.value[i + 1].createdAt) : null;
 
-			if (tl.length === 0 || (
-				span === 'day' && tl[tl.length - 1].date.getTime() !== date.getTime()
-			) || (
-				span === 'month' && (
-					tl[tl.length - 1].date.getFullYear() !== date.getFullYear() ||
-					tl[tl.length - 1].date.getMonth() !== date.getMonth()
-				)
-			)) {
+			if (
+				tl.length === 0 ||
+				(span === 'day' && tl[tl.length - 1].date.getTime() !== date.getTime()) ||
+				(span === 'month' &&
+					(tl[tl.length - 1].date.getFullYear() !== date.getFullYear() ||
+						tl[tl.length - 1].date.getMonth() !== date.getMonth()))
+			) {
 				tl.push({
 					date,
 					items: [],

@@ -277,11 +277,6 @@ async function loadLogs() {
 	logs.value = await os.apiWithDialog('admin/queue/show-job-logs', { queue: props.queueType, jobId: props.job.id });
 }
 
-// TODO
-// function moveJob() {
-//
-// }
-
 function refresh() {
 	emit('needRefresh');
 }

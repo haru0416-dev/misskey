@@ -358,7 +358,7 @@ function tryCreateUrl(url: string) {
 	try {
 		return new URL(url);
 	} catch (_) {
-		throw new Error(`url="${url}" is not a valid URL.`);
+		throw new Error(`url="${url}" is not a valid URL.`, { cause: _ });
 	}
 }
 

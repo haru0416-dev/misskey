@@ -5,11 +5,14 @@
 
 import { i18n } from '@/i18n.js';
 
-export function hms(ms: number, options?: {
-	textFormat?: 'colon' | 'locale';
-	enableSeconds?: boolean;
-	enableMs?: boolean;
-}) {
+export function hms(
+	ms: number,
+	options?: {
+		textFormat?: 'colon' | 'locale';
+		enableSeconds?: boolean;
+		enableMs?: boolean;
+	},
+) {
 	const _options = {
 		textFormat: 'colon',
 		enableSeconds: true,
@@ -53,11 +56,12 @@ export function hms(ms: number, options?: {
 		res.m += i18n.ts._time.minute;
 		res.s += i18n.ts._time.second;
 	}
-	return [
-		res.h.startsWith('00') ? undefined : res.h,
-		res.m,
-		(_options.enableSeconds ? res.s : undefined),
-	].filter(v => v !== undefined).join(_options.textFormat === 'colon' ? ':' : ' ') + (_options.enableMs ? _options.textFormat === 'colon' ? `.${res.ms}` : ` ${res.ms}` : '');
+	return (
+		[res.h.startsWith('00') ? undefined : res.h, res.m, _options.enableSeconds ? res.s : undefined]
+			.filter((v) => v !== undefined)
+			.join(_options.textFormat === 'colon' ? ':' : ' ') +
+		(_options.enableMs ? (_options.textFormat === 'colon' ? `.${res.ms}` : ` ${res.ms}`) : '')
+	);
 }
 
 function format(n: number) {

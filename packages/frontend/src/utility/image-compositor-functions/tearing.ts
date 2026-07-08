@@ -28,7 +28,7 @@ export const fn = defineImageCompositorFunction<{
 			gl.uniform1f(o, rnd());
 
 			const s = gl.getUniformLocation(program, `u_shiftStrengths[${i.toString()}]`);
-			gl.uniform1f(s, (1 - (rnd() * 2)) * params.strength);
+			gl.uniform1f(s, (1 - rnd() * 2) * params.strength);
 
 			const h = gl.getUniformLocation(program, `u_shiftHeights[${i.toString()}]`);
 			gl.uniform1f(h, rnd() * params.size);
@@ -54,7 +54,7 @@ export const uiDefinition = {
 			min: -1,
 			max: 1,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 		size: {
 			label: i18n.ts._imageEffector._fxProps.size,
@@ -63,7 +63,7 @@ export const uiDefinition = {
 			min: 0,
 			max: 1,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 		channelShift: {
 			label: i18n.ts._imageEffector._fxProps.glitchChannelShift,
@@ -72,7 +72,7 @@ export const uiDefinition = {
 			min: 0,
 			max: 10,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 		seed: {
 			label: i18n.ts._imageEffector._fxProps.seed,

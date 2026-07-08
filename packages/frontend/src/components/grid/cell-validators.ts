@@ -49,7 +49,7 @@ export function cellValidation(allCells: GridCell[], cell: GridCell, newValue: C
 		allCells,
 	};
 
-	const violations: ValidateViolationItem[] = validators.map(validator => {
+	const violations: ValidateViolationItem[] = validators.map((validator) => {
 		const result = validator.validate(params);
 		return {
 			valid: result.valid,
@@ -59,7 +59,7 @@ export function cellValidation(allCells: GridCell[], cell: GridCell, newValue: C
 	});
 
 	return {
-		valid: violations.every(v => v.result.valid),
+		valid: violations.every((v) => v.result.valid),
 		params,
 		violations,
 	};
@@ -83,7 +83,7 @@ class ValidatorPreset {
 			name: 'regex',
 			validate: ({ value }): ValidatorResult => {
 				return {
-					valid: (typeof value !== 'string') || pattern.test(value.toString() ?? ''),
+					valid: typeof value !== 'string' || pattern.test(value.toString() ?? ''),
 					message: i18n.tsx._gridComponent._error.patternNotMatch({ pattern: pattern.source }),
 				};
 			},
@@ -96,8 +96,8 @@ class ValidatorPreset {
 			validate: ({ column, row, value, allCells }): ValidatorResult => {
 				const bindTo = column.setting.bindTo;
 				const isUnique = allCells
-					.filter(it => it.column.setting.bindTo === bindTo && it.row.index !== row.index)
-					.every(cell => cell.value !== value);
+					.filter((it) => it.column.setting.bindTo === bindTo && it.row.index !== row.index)
+					.every((cell) => cell.value !== value);
 				return {
 					valid: isUnique,
 					message: i18n.ts._gridComponent._error.notUnique,

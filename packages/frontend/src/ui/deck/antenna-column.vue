@@ -123,14 +123,4 @@ const menu: MenuItem[] = [
 		action: () => soundSettingsButton(soundSetting),
 	},
 ];
-
-/*
-function focus() {
-	timeline.focus();
-}
-
-defineExpose({
-	focus,
-});
-*/
 </script>

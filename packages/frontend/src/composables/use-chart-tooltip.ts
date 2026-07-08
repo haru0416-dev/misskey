@@ -13,18 +13,25 @@ export function useChartTooltip(opts: { position: 'top' | 'middle' } = { positio
 	const tooltipX = ref(0);
 	const tooltipY = ref(0);
 	const tooltipTitle = ref<string | null>(null);
-	const tooltipSeries = ref<{
-		backgroundColor: string;
-		borderColor: string;
-		text: string;
-	}[] | null>(null);
-	const { dispose: disposeTooltipComponent } = os.popup(MkChartTooltip, {
-		showing: tooltipShowing,
-		x: tooltipX,
-		y: tooltipY,
-		title: tooltipTitle,
-		series: tooltipSeries,
-	}, {});
+	const tooltipSeries = ref<
+		| {
+				backgroundColor: string;
+				borderColor: string;
+				text: string;
+		  }[]
+		| null
+	>(null);
+	const { dispose: disposeTooltipComponent } = os.popup(
+		MkChartTooltip,
+		{
+			showing: tooltipShowing,
+			x: tooltipX,
+			y: tooltipY,
+			title: tooltipTitle,
+			series: tooltipSeries,
+		},
+		{},
+	);
 
 	function windowTouchendHandler() {
 		tooltipShowing.value = false;

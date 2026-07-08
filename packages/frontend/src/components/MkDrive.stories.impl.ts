@@ -58,7 +58,7 @@ export const Default = {
 					return HttpResponse.json([folder(crypto.randomUUID())]);
 				}),
 				http.post('/api/drive/folders/create', async ({ request }) => {
-					const req = await request.json() as Misskey.entities.DriveFoldersCreateRequest;
+					const req = (await request.json()) as Misskey.entities.DriveFoldersCreateRequest;
 					action('POST /api/drive/folders/create')(req);
 					return HttpResponse.json(folder(crypto.randomUUID(), req.name, req.parentId));
 				}),
@@ -67,7 +67,7 @@ export const Default = {
 					return HttpResponse.json(undefined, { status: 204 });
 				}),
 				http.post('/api/drive/folders/update', async ({ request }) => {
-					const req = await request.json() as Misskey.entities.DriveFoldersUpdateRequest;
+					const req = (await request.json()) as Misskey.entities.DriveFoldersUpdateRequest;
 					action('POST /api/drive/folders/update')(req);
 					return HttpResponse.json({
 						...folder(),
@@ -76,7 +76,7 @@ export const Default = {
 						parentId: req.parentId ?? folder().parentId,
 					});
 				}),
-			]
+			],
 		},
 	},
 } satisfies StoryObj<typeof MkDrive>;

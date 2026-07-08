@@ -28,7 +28,6 @@ export function physics(container: HTMLElement) {
 	// create renderer
 	const render = Matter.Render.create({
 		engine: engine,
-		//element: window.document.getElementById('debug'),
 		options: {
 			width: containerWidth,
 			height: containerHeight,
@@ -45,20 +44,19 @@ export function physics(container: HTMLElement) {
 	Matter.Runner.run(runner, engine);
 
 	const groundThickness = 1024;
-	const ground = Matter.Bodies.rectangle(containerCenterX, containerHeight + (groundThickness / 2), containerWidth, groundThickness, {
-		isStatic: true,
-		restitution: 0.1,
-		friction: 2,
-	});
+	const ground = Matter.Bodies.rectangle(
+		containerCenterX,
+		containerHeight + groundThickness / 2,
+		containerWidth,
+		groundThickness,
+		{
+			isStatic: true,
+			restitution: 0.1,
+			friction: 2,
+		},
+	);
 
-	//const wallRight = Matter.Bodies.rectangle(window.innerWidth+50, window.innerHeight/2, 100, window.innerHeight, wallopts);
-	//const wallLeft = Matter.Bodies.rectangle(-50, window.innerHeight/2, 100, window.innerHeight, wallopts);
-
-	Matter.World.add(world, [
-		ground,
-		//wallRight,
-		//wallLeft,
-	]);
+	Matter.World.add(world, [ground]);
 
 	const objEls = Array.from(container.children) as HTMLElement[];
 	const objs: Matter.Body[] = [];
@@ -69,8 +67,8 @@ export function physics(container: HTMLElement) {
 		let obj: Matter.Body;
 		if (objEl.classList.contains('_physics_circle_')) {
 			obj = Matter.Bodies.circle(
-				left + (objEl.offsetWidth / 2),
-				top + (objEl.offsetHeight / 2),
+				left + objEl.offsetWidth / 2,
+				top + objEl.offsetHeight / 2,
 				Math.max(objEl.offsetWidth, objEl.offsetHeight) / 2,
 				{
 					restitution: 0.5,
@@ -79,8 +77,8 @@ export function physics(container: HTMLElement) {
 		} else {
 			const style = window.getComputedStyle(objEl);
 			obj = Matter.Bodies.rectangle(
-				left + (objEl.offsetWidth / 2),
-				top + (objEl.offsetHeight / 2),
+				left + objEl.offsetWidth / 2,
+				top + objEl.offsetHeight / 2,
 				objEl.offsetWidth,
 				objEl.offsetHeight,
 				{
@@ -126,11 +124,11 @@ export function physics(container: HTMLElement) {
 
 	function update() {
 		for (const objEl of objEls) {
-			const obj = objs.find(obj => obj.id.toString() === objEl.id.toString());
+			const obj = objs.find((obj) => obj.id.toString() === objEl.id.toString());
 			if (obj == null) continue;
 
-			const x = (obj.position.x - objEl.offsetWidth / 2);
-			const y = (obj.position.y - objEl.offsetHeight / 2);
+			const x = obj.position.x - objEl.offsetWidth / 2;
+			const y = obj.position.y - objEl.offsetHeight / 2;
 			const angle = obj.angle;
 			objEl.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad)`;
 		}
@@ -143,7 +141,7 @@ export function physics(container: HTMLElement) {
 	// 奈落に落ちたオブジェクトは消す
 	const intervalId = window.setInterval(() => {
 		for (const obj of objs) {
-			if (obj.position.y > (containerHeight + 1024)) Matter.World.remove(world, obj);
+			if (obj.position.y > containerHeight + 1024) Matter.World.remove(world, obj);
 		}
 	}, 1000 * 10);
 

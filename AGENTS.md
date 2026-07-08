@@ -48,7 +48,7 @@
    - 対象: `packages/backend/migration/{unixMs}-{name}.js` のうち、既に `develop` / `master` にマージされたもの
    - 本番環境で履歴改変が起きると深刻なデータ不整合を引き起こす
    - スキーマ変更が必要な場合は **新しいタイムスタンプで新規ファイル** を作成する (`bun -e "console.log(Date.now())"` でタイムスタンプ取得)
-   - 新規 migration は `up()` と `down()` の両方を実装し、`bun run --bun --filter backend check-migrations` を通すこと (TypeORM schema builder で pending DDL を検出)
+   - 新規 migration は `up()` と `down()` の両方を実装し、`bun run --bun --filter backend check-migrations` を通すこと (`migration-runner.ts` が設定先 DB に対して未適用の migration ファイルが無いことを検査する)
 
 ### Git / リポジトリ操作
 
@@ -82,7 +82,7 @@
 
 1. **lint**: `bun run lint` が通る (oxlint + typecheck, 全パッケージ)
 2. **backend API 変更時**: `bun run build-misskey-js-with-types` を実行し `packages/misskey-js/src/autogen/` の差分も commit に含めた
-3. **entity / migration 変更時**: `bun run --bun --filter backend check-migrations` が pending DDL 0 件で通る / 新規 migration は `up()` と `down()` 両方実装済
+3. **migration 変更時**: `bun run --bun --filter backend check-migrations` が未適用 migration 0 件で通る / 新規 migration は `up()` と `down()` 両方実装済
 4. **新規ファイル**: SPDX ヘッダーを付けた (`.vue` / `.html` は HTML コメント形式、それ以外は TS コメント形式)
 5. **ユーザー影響のある変更**: `CHANGELOG.md` の `## Unreleased` 配下の該当サブセクション (`### General` / `### Client` / `### Server`) に `- <Feat|Enhance|Fix>: <概要>` を 1 行追記
 6. **locale safety**: `locales/` を編集した場合、`git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'` が空 (ja-JP.yml 以外に差分が無い) ことを確認
@@ -98,7 +98,7 @@
 | Backend e2e test | `bun run --bun --filter backend test:e2e` |
 | Backend federation test | `bun run --bun --filter backend test:fed` |
 | Frontend unit test | `bun run --bun --filter frontend test` |
-| Migration 差分検査 (pending DDL) | `bun run --bun --filter backend check-migrations` |
+| Migration 未適用チェック | `bun run --bun --filter backend check-migrations` |
 | `misskey-js` 再生成 (API 変更後必須) | `bun run build-misskey-js-with-types` |
 | 全体ビルド | `bun run build` |
 | 開発サーバー (backend + frontend watch) | `bun run dev` |

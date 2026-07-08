@@ -97,9 +97,9 @@ export async function readDataTransferItems(itemList: DataTransferItemList): Pro
 
 	return Promise.all(
 		items
-			.map(it => it.webkitGetAsEntry())
-			.filter(it => it)
-			.map(it => readEntry(it!)),
+			.map((it) => it.webkitGetAsEntry())
+			.filter((it) => it)
+			.map((it) => readEntry(it!)),
 	);
 }
 

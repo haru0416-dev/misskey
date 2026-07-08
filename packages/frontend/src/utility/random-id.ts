@@ -8,7 +8,7 @@ const CHARS = 'abcdefghijklmnopqrstuvwxyz'; // CSSの<custom-ident>などで使�
 export function randomId(length = 32, characters = CHARS) {
 	let result = '';
 	const charactersLength = characters.length;
-	for ( let i = 0; i < length; i++ ) {
+	for (let i = 0; i < length; i++) {
 		result += characters.charAt(Math.floor(Math.random() * charactersLength));
 	}
 	return result;

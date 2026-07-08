@@ -17,7 +17,10 @@ type CompleteProps<T extends keyof CompleteInfo> = {
 	value: CompleteInfo[T]['payload'];
 };
 
-function isCompleteType<T extends keyof CompleteInfo>(expectedType: T, props: CompleteProps<keyof CompleteInfo>): props is CompleteProps<T> {
+function isCompleteType<T extends keyof CompleteInfo>(
+	expectedType: T,
+	props: CompleteProps<keyof CompleteInfo>,
+): props is CompleteProps<T> {
 	return props.type === expectedType;
 }
 
@@ -49,7 +52,11 @@ export class Autocomplete {
 	/**
 	 * 対象のテキストエリアを与えてインスタンスを初期化します。
 	 */
-	constructor(textarea: HTMLInputElement | HTMLTextAreaElement, textRef: Ref<string | number | null>, onlyType?: SuggestionType[]) {
+	constructor(
+		textarea: HTMLInputElement | HTMLTextAreaElement,
+		textRef: Ref<string | number | null>,
+		onlyType?: SuggestionType[],
+	) {
 		//#region BIND
 		this.onInput = this.onInput.bind(this);
 		this.complete = this.complete.bind(this);
@@ -96,11 +103,7 @@ export class Autocomplete {
 		const mfmTagIndex = text.lastIndexOf('$');
 		const mfmParamIndex = text.lastIndexOf('.');
 
-		const max = Math.max(
-			mentionIndex,
-			hashtagIndex,
-			emojiIndex,
-			mfmTagIndex);
+		const max = Math.max(mentionIndex, hashtagIndex, emojiIndex, mfmTagIndex);
 
 		if (max === -1) {
 			this.close();
@@ -113,7 +116,12 @@ export class Autocomplete {
 		const isHashtag = hashtagIndex !== -1;
 		const isMfmParam = mfmParamIndex !== -1 && afterLastMfmParam?.includes('.') && !afterLastMfmParam.includes(' ');
 		const isMfmTag = mfmTagIndex !== -1 && !isMfmParam;
-		const isEmoji = emojiIndex !== -1 && text.split(/:[a-z0-9_+\-]+:/).pop()!.includes(':');
+		const isEmoji =
+			emojiIndex !== -1 &&
+			text
+				.split(/:[a-z0-9_+\-]+:/)
+				.pop()!
+				.includes(':');
 		// :ok:などを🆗にするたいおぷ
 		const isEmojiCompleteToUnicode = !isEmoji && emojiIndex === text.length - 1;
 
@@ -126,7 +134,8 @@ export class Autocomplete {
 			const mentionIndexAlt = mentionCandidate.lastIndexOf('@', mentionIndex - 1);
 
 			// @が連続している場合、1つ目を無視する
-			const mentionIndexLeft = (mentionIndexAlt !== -1 && mentionIndexAlt !== mentionIndex - 1) ? mentionIndexAlt : mentionIndex;
+			const mentionIndexLeft =
+				mentionIndexAlt !== -1 && mentionIndexAlt !== mentionIndex - 1 ? mentionIndexAlt : mentionIndex;
 
 			// メンションを構成する条件を満たしているか確認する
 			const isMention = mentionIndexLeft === 0 || '_@.-'.includes(mentionCandidate[mentionIndexLeft - 1]);
@@ -222,19 +231,23 @@ export class Autocomplete {
 			const _y = ref(y);
 			const _q = ref(q);
 
-			const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkAutocomplete.vue')), {
-				textarea: this.textarea,
-				close: this.close,
-				type: type,
-				//@ts-expect-error popupは今のところジェネリック型のコンポーネントに対応していない
-				q: _q,
-				x: _x,
-				y: _y,
-			}, {
-				done: (res) => {
-					this.complete(res);
+			const { dispose } = popup(
+				defineAsyncComponent(() => import('@/components/MkAutocomplete.vue')),
+				{
+					textarea: this.textarea,
+					close: this.close,
+					type: type,
+					//@ts-expect-error popupは今のところジェネリック型のコンポーネントに対応していない
+					q: _q,
+					x: _x,
+					y: _y,
 				},
-			});
+				{
+					done: (res) => {
+						this.complete(res);
+					},
+				},
+			);
 
 			this.suggestion = {
 				q: _q,
@@ -274,7 +287,8 @@ export class Autocomplete {
 			const trimmedBefore = before.substring(0, before.lastIndexOf('@'));
 			const after = source.substring(caret);
 
-			const acct = props.value.host === null ? props.value.username : `${props.value.username}@${toASCII(props.value.host)}`;
+			const acct =
+				props.value.host === null ? props.value.username : `${props.value.username}@${toASCII(props.value.host)}`;
 
 			// 挿入
 			this.text = `${trimmedBefore}@${acct} ${after}`;

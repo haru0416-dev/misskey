@@ -19,9 +19,9 @@ export const defaultGridRowSetting: Required<GridRowSetting> = {
 };
 
 export type GridRowStyleRuleConditionParams = {
-	row: GridRow,
-	targetCols: GridColumn[],
-	cells: GridCell[]
+	row: GridRow;
+	targetCols: GridColumn[];
+	cells: GridCell[];
 };
 
 export type GridRowStyleRule = {
@@ -39,7 +39,7 @@ export type GridRowSetting = {
 	contextMenuFactory?: GridRowContextMenuFactory;
 	events?: {
 		delete?: (rows: GridRow[]) => void;
-	}
+	};
 };
 
 export type GridRow = {
@@ -65,4 +65,3 @@ export function resetRow(row: GridRow): void {
 	row.using = false;
 	row.additionalStyles = [];
 }
-

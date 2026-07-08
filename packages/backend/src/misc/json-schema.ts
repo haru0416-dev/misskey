@@ -244,7 +244,6 @@ type ArrayToIntersection<T extends ReadonlyArray<Schema>> =
 // to `unknown[]` breaks that constraint check. Kept as `any[]` deliberately.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown ? SchemaType<X> : never;
-//type UnionObjectSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown ? ObjectSchemaType<X> : never;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type UnionObjType<s extends Obj, a extends readonly any[], X extends ReadonlyArray<keyof s> = a[number]> = X extends unknown ? ObjType<s, X> : never;
 type ArrayUnion<T> = T extends unknown ? Array<T> : never;

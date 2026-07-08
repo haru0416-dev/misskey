@@ -70,8 +70,6 @@
 		"@misskey-dev/summaly": "5.5.1",
 		"@rollup/plugin-json": "6.1.0",
 		"@rollup/pluginutils": "5.4.0",
-		"@storybook/addon-docs": "10.4.6",
-		"@storybook/addon-links": "10.4.6",
 		"@storybook/vue3": "10.4.6",
 		"@storybook/vue3-vite": "10.4.6",
 		"@tabler/icons-webfont": "3.44.0",

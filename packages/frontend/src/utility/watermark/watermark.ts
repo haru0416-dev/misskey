@@ -6,16 +6,18 @@
 import shader from './watermark.glsl';
 import { defineImageCompositorFunction } from '@/lib/ImageCompositor.js';
 
-export const fn = defineImageCompositorFunction<Partial<{
-	cover: boolean;
-	repeat: boolean;
-	scale: number;
-	angle: number;
-	align: { x: 'left' | 'center' | 'right'; y: 'top' | 'center' | 'bottom'; margin?: number; };
-	opacity: number;
-	noBoundingBoxExpansion: boolean;
-	watermark: string | null;
-}>>({
+export const fn = defineImageCompositorFunction<
+	Partial<{
+		cover: boolean;
+		repeat: boolean;
+		scale: number;
+		angle: number;
+		align: { x: 'left' | 'center' | 'right'; y: 'top' | 'center' | 'bottom'; margin?: number };
+		opacity: number;
+		noBoundingBoxExpansion: boolean;
+		watermark: string | null;
+	}>
+>({
 	shader,
 	main: ({ gl, u, params, textures }) => {
 		// 基本パラメータ
@@ -28,8 +30,8 @@ export const fn = defineImageCompositorFunction<Partial<{
 		const ay = params.align?.y === 'top' ? 0 : params.align?.y === 'center' ? 1 : 2;
 		gl.uniform1i(u.alignX, ax);
 		gl.uniform1i(u.alignY, ay);
-		gl.uniform1f(u.margin, (params.align?.margin ?? 0));
-		gl.uniform1f(u.repeatMargin, (params.align?.margin ?? 0));
+		gl.uniform1f(u.margin, params.align?.margin ?? 0);
+		gl.uniform1f(u.repeatMargin, params.align?.margin ?? 0);
 		gl.uniform1i(u.noBBoxExpansion, params.noBoundingBoxExpansion ? 1 : 0);
 
 		// ウォーターマークテクスチャ

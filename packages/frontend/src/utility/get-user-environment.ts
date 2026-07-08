@@ -3,27 +3,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type UserEnvironment = {
-	os: string;
-	browser: string;
-	userAgent: string;
-	screenWidth: number;
-	screenHeight: number;
-	viaGetHighEntropyValues: true;
-} | {
-	userAgent: string;
-	screenWidth: number;
-	screenHeight: number;
-	viaGetHighEntropyValues: false;
-};
+export type UserEnvironment =
+	| {
+			os: string;
+			browser: string;
+			userAgent: string;
+			screenWidth: number;
+			screenHeight: number;
+			viaGetHighEntropyValues: true;
+	  }
+	| {
+			userAgent: string;
+			screenWidth: number;
+			screenHeight: number;
+			viaGetHighEntropyValues: false;
+	  };
 
 export async function getUserEnvironment(): Promise<UserEnvironment> {
 	if ('userAgentData' in navigator && navigator.userAgentData != null) {
 		try {
-			const uaData: any = await navigator.userAgentData.getHighEntropyValues([
-				'fullVersionList',
-				'platformVersion',
-			]);
+			const uaData: any = await navigator.userAgentData.getHighEntropyValues(['fullVersionList', 'platformVersion']);
 
 			let osVersion = 'v' + uaData.platformVersion;
 

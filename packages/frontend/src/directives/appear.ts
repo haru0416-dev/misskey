@@ -17,7 +17,7 @@ export const appearDirective = {
 		if (fn == null) return;
 
 		const check = throttle<IntersectionObserverCallback>(500, (entries) => {
-			if (entries.some(entry => entry.isIntersecting)) {
+			if (entries.some((entry) => entry.isIntersecting)) {
 				fn();
 			}
 		});

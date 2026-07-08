@@ -5,17 +5,13 @@
 
 // FirefoxのプライベートモードなどではindexedDBが使用不可能なので、
 // indexedDBが使えない環境ではlocalStorageを使う
-import {
-	get as iget,
-	set as iset,
-	del as idel,
-	clear as iclear,
-} from 'idb-keyval';
+import { get as iget, set as iset, del as idel, clear as iclear } from 'idb-keyval';
 import { miLocalStorage } from '@/local-storage.js';
 
 const PREFIX = 'idbfallback::';
 
-let idbAvailable = typeof window !== 'undefined' ? !!(window.indexedDB && typeof window.indexedDB.open === 'function') : true;
+let idbAvailable =
+	typeof window !== 'undefined' ? !!(window.indexedDB && typeof window.indexedDB.open === 'function') : true;
 
 // iframe.contentWindow.indexedDB.deleteDatabase() がchromeのバグで使用できないため、E2E ではindexedDBを無効化している。
 // see https://github.com/misskey-dev/misskey/issues/13605#issuecomment-2053652123
@@ -25,12 +21,11 @@ if (window.localStorage.getItem('__MISSKEY_E2E_TEST__') === 'true') {
 }
 
 if (idbAvailable) {
-	await iset('idb-test', 'test')
-		.catch(err => {
-			console.error('idb error', err);
-			console.error('indexedDB is unavailable. It will use localStorage.');
-			idbAvailable = false;
-		});
+	await iset('idb-test', 'test').catch((err) => {
+		console.error('idb error', err);
+		console.error('indexedDB is unavailable. It will use localStorage.');
+		idbAvailable = false;
+	});
 } else {
 	console.error('indexedDB is unavailable. It will use localStorage.');
 }

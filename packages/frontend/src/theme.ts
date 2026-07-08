@@ -20,38 +20,46 @@ import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
 
 type ThemeManagerEvents = {
-	'themeChanging': () => void;
-	'themeChanged': () => void;
-	'previewStateChanged': (isPreview: boolean) => void;
-	'requestUpdateThemeCache': (theme: Theme, compiled: CompiledTheme) => void;
+	themeChanging: () => void;
+	themeChanged: () => void;
+	previewStateChanged: (isPreview: boolean) => void;
+	requestUpdateThemeCache: (theme: Theme, compiled: CompiledTheme) => void;
 };
 
 class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 	/** 現在常用しているテーマ */
 	private _theme: Theme | null = null;
-	get theme() { return this._theme; }
+	get theme() {
+		return this._theme;
+	}
 	private _compiledTheme: CompiledTheme | null = null;
-	get compiledTheme() { return this._compiledTheme; }
+	get compiledTheme() {
+		return this._compiledTheme;
+	}
 
 	/** 現在適用中のテーマ */
 	private _currentTheme: Theme | null = null;
-	get currentTheme() { return this._currentTheme; }
-	get currentThemeId() { return this._currentTheme?.id; }
+	get currentTheme() {
+		return this._currentTheme;
+	}
+	get currentThemeId() {
+		return this._currentTheme?.id;
+	}
 	private _currentCompiledTheme: CompiledTheme | null = null;
-	get currentCompiledTheme() { return this._currentCompiledTheme; }
+	get currentCompiledTheme() {
+		return this._currentCompiledTheme;
+	}
 
 	/** プレビュー中かどうか */
 	private _isPreviewMode = false;
-	get isPreviewMode() { return this._isPreviewMode; }
+	get isPreviewMode() {
+		return this._isPreviewMode;
+	}
 	set isPreviewMode(value: boolean) {
 		if (this._isPreviewMode !== value) {
 			this._isPreviewMode = value;
 			this.emit('previewStateChanged', value);
 		}
-	}
-
-	constructor() {
-		super();
 	}
 
 	/** テーマを更新し、同時に適用します。 */
@@ -99,7 +107,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		const _theme = deepClone(theme);
 
 		if (_theme.base != null) {
-			const base = [lightTheme, darkTheme].find(x => x.id === _theme.base);
+			const base = [lightTheme, darkTheme].find((x) => x.id === _theme.base);
 			if (base) _theme.props = Object.assign({}, base.props, _theme.props);
 		}
 
@@ -115,13 +123,15 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		if (window.document.startViewTransition != null && window.document.visibilityState === 'visible') {
 			window.document.documentElement.classList.add('_themeChanging_');
 			try {
-				window.document.startViewTransition(async () => {
-					this.updateAttributes();
-					await nextTick();
-				}).finished.then(() => {
-					window.document.documentElement.classList.remove('_themeChanging_');
-					this.emit('themeChanged');
-				});
+				window.document
+					.startViewTransition(async () => {
+						this.updateAttributes();
+						await nextTick();
+					})
+					.finished.then(() => {
+						window.document.documentElement.classList.remove('_themeChanging_');
+						this.emit('themeChanged');
+					});
 			} catch (err) {
 				// 様々な理由により startViewTransition は失敗することがある
 				// ref. https://github.com/misskey-dev/misskey/issues/16562
@@ -187,11 +197,11 @@ themeManager.on('previewStateChanged', (preview) => {
 export async function addTheme(theme: Theme): Promise<void> {
 	if ($i == null) return;
 	const builtinThemes = await getBuiltinThemes();
-	if (builtinThemes.some(t => t.id === theme.id)) {
+	if (builtinThemes.some((t) => t.id === theme.id)) {
 		throw new Error('builtin theme');
 	}
 	const themes = prefer.s.themes;
-	if (themes.some(t => t.id === theme.id)) {
+	if (themes.some((t) => t.id === theme.id)) {
 		throw new Error('already exists');
 	}
 	prefer.commit('themes', [...themes, theme]);
@@ -199,7 +209,7 @@ export async function addTheme(theme: Theme): Promise<void> {
 
 export async function removeTheme(theme: Theme): Promise<void> {
 	if ($i == null) return;
-	const themes = prefer.s.themes.filter(t => t.id !== theme.id);
+	const themes = prefer.s.themes.filter((t) => t.id !== theme.id);
 	prefer.commit('themes', themes);
 }
 

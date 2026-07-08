@@ -3,22 +3,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-const requestIdleCallback: typeof globalThis.requestIdleCallback = globalThis.requestIdleCallback ?? ((callback) => {
-	const start = performance.now();
-	const timeoutId = window.setTimeout(() => {
-		callback({
-			didTimeout: false, // polyfill でタイムアウト発火することはない
-			timeRemaining() {
-				const diff = performance.now() - start;
-				return Math.max(0, 50 - diff); // <https://www.w3.org/TR/requestidlecallback/#idle-periods>
-			},
+const requestIdleCallback: typeof globalThis.requestIdleCallback =
+	globalThis.requestIdleCallback ??
+	((callback) => {
+		const start = performance.now();
+		const timeoutId = window.setTimeout(() => {
+			callback({
+				didTimeout: false, // polyfill でタイムアウト発火することはない
+				timeRemaining() {
+					const diff = performance.now() - start;
+					return Math.max(0, 50 - diff); // <https://www.w3.org/TR/requestidlecallback/#idle-periods>
+				},
+			});
 		});
+		return timeoutId;
 	});
-	return timeoutId;
-});
-const cancelIdleCallback: typeof globalThis.cancelIdleCallback = globalThis.cancelIdleCallback ?? ((timeoutId) => {
-	window.clearTimeout(timeoutId);
-});
+const cancelIdleCallback: typeof globalThis.cancelIdleCallback =
+	globalThis.cancelIdleCallback ??
+	((timeoutId) => {
+		window.clearTimeout(timeoutId);
+	});
 
 class IdlingRenderScheduler {
 	#renderers: Set<FrameRequestCallback>;

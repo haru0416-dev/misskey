@@ -45,7 +45,8 @@ export function initChart() {
 		Tooltip,
 		SubTitle,
 		Filler,
-		MatrixController, MatrixElement,
+		MatrixController,
+		MatrixElement,
 		zoomPlugin,
 		gradient,
 	);

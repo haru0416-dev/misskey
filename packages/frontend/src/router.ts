@@ -14,7 +14,12 @@ import { DI } from '@/di.js';
 export type Router = Nirax<typeof ROUTE_DEF>;
 
 export function createRouter(fullPath: string): Router {
-	return new Nirax(ROUTE_DEF, fullPath, !!$i, page(() => import('@/pages/not-found.vue')));
+	return new Nirax(
+		ROUTE_DEF,
+		fullPath,
+		!!$i,
+		page(() => import('@/pages/not-found.vue')),
+	);
 }
 
 export const mainRouter = createRouter(window.location.pathname + window.location.search + window.location.hash);
@@ -23,23 +28,23 @@ window.addEventListener('popstate', (event) => {
 	mainRouter.replaceByPath(window.location.pathname + window.location.search + window.location.hash);
 });
 
-mainRouter.addListener('push', ctx => {
-	window.history.pushState({ }, '', ctx.fullPath);
+mainRouter.addListener('push', (ctx) => {
+	window.history.pushState({}, '', ctx.fullPath);
 });
 
-mainRouter.addListener('replace', ctx => {
-	window.history.replaceState({ }, '', ctx.fullPath);
+mainRouter.addListener('replace', (ctx) => {
+	window.history.replaceState({}, '', ctx.fullPath);
 });
 
-mainRouter.addListener('forceReplace', ctx => {
+mainRouter.addListener('forceReplace', (ctx) => {
 	window.location.replace(ctx.fullPath);
 });
 
-mainRouter.addListener('forcePush', ctx => {
+mainRouter.addListener('forcePush', (ctx) => {
 	window.location.href = ctx.fullPath;
 });
 
-mainRouter.addListener('change', ctx => {
+mainRouter.addListener('change', (ctx) => {
 	if (_DEV_) console.log('mainRouter: change', ctx.fullPath);
 	analytics.page({
 		path: ctx.fullPath,

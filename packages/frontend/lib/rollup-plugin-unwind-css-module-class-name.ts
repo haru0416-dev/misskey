@@ -23,9 +23,13 @@ function normalizeClassWalker(tree: ESTree.Node, stack: string | undefined): str
 		return `${left}${right}`;
 	}
 	if (tree.type === 'TemplateLiteral') {
-		if (tree.expressions.some((x) => x.type !== 'Literal' && (x.type !== 'Identifier' || !isFalsyIdentifier(x)))) return null;
+		if (tree.expressions.some((x) => x.type !== 'Literal' && (x.type !== 'Identifier' || !isFalsyIdentifier(x))))
+			return null;
 		return tree.quasis.reduce((a, c, i) => {
-			const v = i === tree.quasis.length - 1 ? '' : (tree.expressions[i] as Partial<Extract<ESTree.Node, { type: 'Literal' }>>).value;
+			const v =
+				i === tree.quasis.length - 1
+					? ''
+					: (tree.expressions[i] as Partial<Extract<ESTree.Node, { type: 'Literal' }>>).value;
 			return a + c.value.raw + (typeof v === 'string' ? v : '');
 		}, '');
 	}
@@ -49,7 +53,13 @@ function normalizeClassWalker(tree: ESTree.Node, stack: string | undefined): str
 			}
 			if (x.type === 'Literal') {
 				if (inveted === !x.value) {
-					return treeNode.key.type === 'Identifier' ? treeNode.computed ? null : treeNode.key.name : treeNode.key.type === 'Literal' ? treeNode.key.value : '';
+					return treeNode.key.type === 'Identifier'
+						? treeNode.computed
+							? null
+							: treeNode.key.name
+						: treeNode.key.type === 'Literal'
+							? treeNode.key.value
+							: '';
 				} else {
 					return '';
 				}
@@ -113,9 +123,8 @@ function resolveObjectExpression(program: ESTree.Program, tree: ESTree.Expressio
 }
 
 function resolveComponentOptions(program: ESTree.Program, tree: ESTree.Expression): ESTree.ObjectExpression | null {
-	const target = tree.type === 'Identifier'
-		? findVariableDeclaration(program, tree.name)?.declarations[0].init ?? null
-		: tree;
+	const target =
+		tree.type === 'Identifier' ? (findVariableDeclaration(program, tree.name)?.declarations[0].init ?? null) : tree;
 	if (target?.type === 'ObjectExpression') return target;
 	if (target?.type !== 'CallExpression') return null;
 	if (target.arguments.length !== 1) return null;
@@ -126,35 +135,46 @@ function resolveComponentOptions(program: ESTree.Program, tree: ESTree.Expressio
 function resolveModuleTree(program: ESTree.Program, tree: ESTree.Expression): Map<string, string> | null {
 	const objectExpression = resolveObjectExpression(program, tree);
 	if (objectExpression === null) return null;
-	return new Map(objectExpression.properties.flatMap((property) => {
-		if (property.type !== 'Property') return [];
-		const actualKey = getPropertyName(property.key, property.computed);
-		if (actualKey === null) return [];
-		if (property.value.type === 'Literal') {
-			return typeof property.value.value === 'string' ? [[actualKey, property.value.value]] : [];
-		}
-		if (property.value.type === 'Identifier') {
-			const actualValue = findVariableDeclaration(program, property.value.name);
-			if (actualValue?.declarations[0].init?.type !== 'Literal') return [];
-			return typeof actualValue.declarations[0].init.value === 'string' ? [[actualKey, actualValue.declarations[0].init.value]] : [];
-		}
-		return [];
-	}));
+	return new Map(
+		objectExpression.properties.flatMap((property) => {
+			if (property.type !== 'Property') return [];
+			const actualKey = getPropertyName(property.key, property.computed);
+			if (actualKey === null) return [];
+			if (property.value.type === 'Literal') {
+				return typeof property.value.value === 'string' ? [[actualKey, property.value.value]] : [];
+			}
+			if (property.value.type === 'Identifier') {
+				const actualValue = findVariableDeclaration(program, property.value.name);
+				if (actualValue?.declarations[0].init?.type !== 'Literal') return [];
+				return typeof actualValue.declarations[0].init.value === 'string'
+					? [[actualKey, actualValue.declarations[0].init.value]]
+					: [];
+			}
+			return [];
+		}),
+	);
 }
 
-function resolveModuleForest(program: ESTree.Program, tree: ESTree.Expression): Map<string, Map<string, string>> | null {
+function resolveModuleForest(
+	program: ESTree.Program,
+	tree: ESTree.Expression,
+): Map<string, Map<string, string>> | null {
 	const objectExpression = resolveObjectExpression(program, tree);
 	if (objectExpression === null) return null;
-	return new Map(objectExpression.properties.flatMap((property) => {
-		if (property.type !== 'Property') return [];
-		const actualKey = getPropertyName(property.key, property.computed);
-		if (actualKey === null) return [];
-		const moduleTree = resolveModuleTree(program, property.value);
-		return moduleTree === null ? [] : [[actualKey, moduleTree]];
-	}));
+	return new Map(
+		objectExpression.properties.flatMap((property) => {
+			if (property.type !== 'Property') return [];
+			const actualKey = getPropertyName(property.key, property.computed);
+			if (actualKey === null) return [];
+			const moduleTree = resolveModuleTree(program, property.value);
+			return moduleTree === null ? [] : [[actualKey, moduleTree]];
+		}),
+	);
 }
 
-function findRenderArrow(options: ESTree.ObjectExpression): Extract<ESTree.Node, { type: 'ArrowFunctionExpression' }> | null {
+function findRenderArrow(
+	options: ESTree.ObjectExpression,
+): Extract<ESTree.Node, { type: 'ArrowFunctionExpression' }> | null {
 	const setup = options.properties.find((x) => {
 		if (x.type !== 'Property') return false;
 		return getPropertyName(x.key, x.computed) === 'setup';
@@ -167,15 +187,23 @@ function findRenderArrow(options: ESTree.ObjectExpression): Extract<ESTree.Node,
 	return render.argument?.type === 'ArrowFunctionExpression' ? render.argument : null;
 }
 
-function isCssModuleAccess(node: ESTree.Node, ctxName: string, key: string): node is Extract<ESTree.Node, { type: 'MemberExpression' }> {
+function isCssModuleAccess(
+	node: ESTree.Node,
+	ctxName: string,
+	key: string,
+): node is Extract<ESTree.Node, { type: 'MemberExpression' }> {
 	if (node.type !== 'MemberExpression') return false;
 	if (node.object.type !== 'MemberExpression') return false;
 	if (node.object.object.type !== 'Identifier') return false;
 	if (node.object.object.name !== ctxName) return false;
 	return getMemberPropertyName(node.object.property, node.object.computed) === key;
-	}
+}
 
-function isCssModuleReference(node: ESTree.Node, ctxName: string, key: string): node is Extract<ESTree.Node, { type: 'MemberExpression' }> {
+function isCssModuleReference(
+	node: ESTree.Node,
+	ctxName: string,
+	key: string,
+): node is Extract<ESTree.Node, { type: 'MemberExpression' }> {
 	if (!isCssModuleAccess(node, ctxName, key)) return false;
 	return getMemberPropertyName(node.property, node.computed) !== null;
 }
@@ -197,7 +225,12 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 			if (node.declarations[0].init?.type !== 'CallExpression') return;
 			if (node.declarations[0].init.arguments.length !== 2) return;
 			const componentNode = node.declarations[0].init.arguments[0];
-			if (componentNode.type !== 'Identifier' && componentNode.type !== 'CallExpression' && componentNode.type !== 'ObjectExpression') return;
+			if (
+				componentNode.type !== 'Identifier' &&
+				componentNode.type !== 'CallExpression' &&
+				componentNode.type !== 'ObjectExpression'
+			)
+				return;
 			if (node.declarations[0].init.arguments[1].type !== 'ArrayExpression') return;
 			if (node.declarations[0].init.arguments[1].elements.length === 0) return;
 			const cssModulesEntry = node.declarations[0].init.arguments[1].elements.find((x) => {
@@ -364,7 +397,12 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 					enter(childNode: ESTree.Node, childParent: ESTree.Node | null) {
 						if (childNode.type !== 'CallExpression') return;
 						if (childNode.arguments.length !== 1) return;
-						if (childNode.callee.type === 'Identifier' && childNode.callee.name !== 'normalizeClass' && !isClassProperty(childParent)) return;
+						if (
+							childNode.callee.type === 'Identifier' &&
+							childNode.callee.name !== 'normalizeClass' &&
+							!isClassProperty(childParent)
+						)
+							return;
 						if (childNode.callee.type !== 'Identifier' && !isClassProperty(childParent)) return;
 						const normalized = normalizeClass(childNode.arguments[0], name);
 						if (normalized === null) return;
@@ -500,7 +538,7 @@ export default function pluginUnwindCssModuleClassName(): Plugin {
 	return {
 		name: 'UnwindCssModuleClassName',
 		renderChunk(code, _chunk, _options, meta) {
-			const ast = ('ast' in meta ? meta.ast ?? this.parse(code) : this.parse(code)) as ESTree.Program;
+			const ast = ('ast' in meta ? (meta.ast ?? this.parse(code)) : this.parse(code)) as ESTree.Program;
 			const magicString = meta.magicString ?? new RolldownMagicString(code);
 			unwindCssModuleClassName(ast, magicString);
 			return magicString;

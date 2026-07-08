@@ -613,7 +613,7 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 		if (isDuplicateKeyValueError(e)) {
 			// /users/@a => /users/:id のように入力がaliasなときにエラーになることがあるのを対応
 			const u = await fetchUserByUriFromDatabase(deps.db, person.id);
-			if (u == null) throw new Error('already registered');
+			if (u == null) throw new Error('already registered', { cause: e });
 			user = u as MiRemoteUser;
 		} else {
 			throw e;

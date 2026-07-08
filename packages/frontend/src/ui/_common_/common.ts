@@ -12,17 +12,20 @@ import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 
 function toolsMenuItems(): MenuItem[] {
-	const items: MenuItem[] = [{
-		type: 'link',
-		to: '/scratchpad',
-		text: i18n.ts.scratchpad,
-		icon: 'ti ti-terminal-2',
-	}, {
-		type: 'link',
-		to: '/api-console',
-		text: 'API Console',
-		icon: 'ti ti-terminal-2',
-	}];
+	const items: MenuItem[] = [
+		{
+			type: 'link',
+			to: '/scratchpad',
+			text: i18n.ts.scratchpad,
+			icon: 'ti ti-terminal-2',
+		},
+		{
+			type: 'link',
+			to: '/api-console',
+			text: 'API Console',
+			icon: 'ti ti-terminal-2',
+		},
+	];
 
 	if ($i && ($i.isAdmin || $i.policies.canManageCustomEmojis)) {
 		items.push({
@@ -48,20 +51,24 @@ function toolsMenuItems(): MenuItem[] {
 export function openInstanceMenu(ev: PointerEvent) {
 	const menuItems: MenuItem[] = [];
 
-	menuItems.push({
-		text: instance.name ?? host,
-		type: 'label',
-	}, {
-		type: 'link',
-		text: i18n.ts.instanceInfo,
-		icon: 'ti ti-info-circle',
-		to: '/about',
-	}, {
-		type: 'link',
-		text: i18n.ts.customEmojis,
-		icon: 'ti ti-icons',
-		to: '/about#emojis',
-	});
+	menuItems.push(
+		{
+			text: instance.name ?? host,
+			type: 'label',
+		},
+		{
+			type: 'link',
+			text: i18n.ts.instanceInfo,
+			icon: 'ti ti-info-circle',
+			to: '/about',
+		},
+		{
+			type: 'link',
+			text: i18n.ts.customEmojis,
+			icon: 'ti ti-icons',
+			to: '/about#emojis',
+		},
+	);
 
 	if (instance.federation !== 'none') {
 		menuItems.push({
@@ -72,17 +79,21 @@ export function openInstanceMenu(ev: PointerEvent) {
 		});
 	}
 
-	menuItems.push({
-		type: 'link',
-		text: i18n.ts.charts,
-		icon: 'ti ti-chart-line',
-		to: '/about#charts',
-	}, { type: 'divider' }, {
-		type: 'link',
-		text: i18n.ts.ads,
-		icon: 'ti ti-ad',
-		to: '/ads',
-	});
+	menuItems.push(
+		{
+			type: 'link',
+			text: i18n.ts.charts,
+			icon: 'ti ti-chart-line',
+			to: '/about#charts',
+		},
+		{ type: 'divider' },
+		{
+			type: 'link',
+			text: i18n.ts.ads,
+			icon: 'ti ti-ad',
+			to: '/ads',
+		},
+	);
 
 	if ($i && ($i.isAdmin || $i.policies.canInvite) && instance.disableRegistration) {
 		menuItems.push({
@@ -93,17 +104,21 @@ export function openInstanceMenu(ev: PointerEvent) {
 		});
 	}
 
-	menuItems.push({
-		type: 'parent',
-		text: i18n.ts.tools,
-		icon: 'ti ti-tool',
-		children: toolsMenuItems(),
-	}, { type: 'divider' }, {
-		type: 'link',
-		text: i18n.ts.inquiry,
-		icon: 'ti ti-help-circle',
-		to: '/contact',
-	});
+	menuItems.push(
+		{
+			type: 'parent',
+			text: i18n.ts.tools,
+			icon: 'ti ti-tool',
+			children: toolsMenuItems(),
+		},
+		{ type: 'divider' },
+		{
+			type: 'link',
+			text: i18n.ts.inquiry,
+			icon: 'ti ti-help-circle',
+			to: '/contact',
+		},
+	);
 
 	if (instance.impressumUrl) {
 		menuItems.push({
@@ -152,9 +167,13 @@ export function openInstanceMenu(ev: PointerEvent) {
 			text: i18n.ts._initialTutorial.launchTutorial,
 			icon: 'ti ti-presentation',
 			action: async () => {
-				const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkTutorialDialog.vue').then(x => x.default), {}, {
-					closed: () => dispose(),
-				});
+				const { dispose } = await os.popupAsyncWithDialog(
+					import('@/components/MkTutorialDialog.vue').then((x) => x.default),
+					{},
+					{
+						closed: () => dispose(),
+					},
+				);
 			},
 		});
 	}

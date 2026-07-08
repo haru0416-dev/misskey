@@ -4,22 +4,26 @@
  */
 import * as Misskey from 'misskey-js';
 
-export function checkWordMute(note: Misskey.entities.Note, me: Misskey.entities.UserLite | null | undefined, mutedWords: Array<string | string[]>): Array<string | string[]> | false {
+export function checkWordMute(
+	note: Misskey.entities.Note,
+	me: Misskey.entities.UserLite | null | undefined,
+	mutedWords: Array<string | string[]>,
+): Array<string | string[]> | false {
 	// 自分自身
-	if (me && (note.userId === me.id)) return false;
+	if (me && note.userId === me.id) return false;
 
 	if (mutedWords.length > 0) {
 		const text = ((note.cw ?? '') + '\n' + (note.text ?? '')).trim();
 
 		if (text === '') return false;
 
-		const matched = mutedWords.filter(filter => {
+		const matched = mutedWords.filter((filter) => {
 			if (Array.isArray(filter)) {
 				// Clean up
-				const filteredFilter = filter.filter(keyword => keyword !== '');
+				const filteredFilter = filter.filter((keyword) => keyword !== '');
 				if (filteredFilter.length === 0) return false;
 
-				return filteredFilter.every(keyword => text.includes(keyword));
+				return filteredFilter.every((keyword) => text.includes(keyword));
 			} else {
 				// represents RegExp
 				const regexp = filter.match(/^\/(.+)\/(.*)$/);

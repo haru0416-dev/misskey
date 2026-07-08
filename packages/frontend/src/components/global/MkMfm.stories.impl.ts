@@ -41,7 +41,7 @@ export const Default = {
 			await expect(hello.style.fontStyle).toBe('oblique');
 			const miskist = canvas.getByText('#Miskist');
 			await expect(miskist).toBeInTheDocument();
-			await expect(miskist).toHaveAttribute('href', args.isNote ?? true ? '/tags/Miskist' : '/user-tags/Miskist');
+			await expect(miskist).toHaveAttribute('href', (args.isNote ?? true) ? '/tags/Miskist' : '/user-tags/Miskist');
 		}
 		const heart = canvas.getByAltText('❤');
 		await expect(heart).toBeInTheDocument();

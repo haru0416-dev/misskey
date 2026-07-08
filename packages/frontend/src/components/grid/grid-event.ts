@@ -26,10 +26,7 @@ export type GridContext = {
 	columns: GridColumn[];
 };
 
-export type GridEvent =
-	GridCellValueChangeEvent |
-	GridCellValidationEvent
-	;
+export type GridEvent = GridCellValueChangeEvent | GridCellValidationEvent;
 
 export type GridCellValueChangeEvent = {
 	type: 'cell-value-change';

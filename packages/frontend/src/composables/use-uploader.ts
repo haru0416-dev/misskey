@@ -24,33 +24,20 @@ export type UploaderFeatures = {
 	watermark?: boolean;
 };
 
-const THUMBNAIL_SUPPORTED_TYPES = [
-	'image/jpeg',
-	'image/png',
-	'image/webp',
-	'image/svg+xml',
-	'image/gif',
-];
+const THUMBNAIL_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif'];
 
-const IMAGE_EDITING_SUPPORTED_TYPES = [
-	'image/jpeg',
-	'image/png',
-	'image/webp',
-];
+const IMAGE_EDITING_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-const VIDEO_COMPRESSION_SUPPORTED_TYPES = [ // TODO
+const VIDEO_COMPRESSION_SUPPORTED_TYPES = [
+	// TODO
 	'video/mp4',
 	'video/quicktime',
 	'video/x-matroska',
 ];
 
-const IMAGE_PREPROCESS_NEEDED_TYPES = [
-	...IMAGE_EDITING_SUPPORTED_TYPES,
-];
+const IMAGE_PREPROCESS_NEEDED_TYPES = [...IMAGE_EDITING_SUPPORTED_TYPES];
 
-const VIDEO_PREPROCESS_NEEDED_TYPES = [
-	...VIDEO_COMPRESSION_SUPPORTED_TYPES,
-];
+const VIDEO_PREPROCESS_NEEDED_TYPES = [...VIDEO_COMPRESSION_SUPPORTED_TYPES];
 
 const mimeTypeMap = {
 	'image/webp': 'webp',
@@ -108,15 +95,17 @@ function getCompressionSettings(level: 0 | 1 | 2 | 3) {
 	}
 }
 
-export function useUploader(options: {
-	folderId?: string | null;
-	multiple?: boolean;
-	features?: UploaderFeatures;
-} = {}) {
+export function useUploader(
+	options: {
+		folderId?: string | null;
+		multiple?: boolean;
+		features?: UploaderFeatures;
+	} = {},
+) {
 	const $i = ensureSignin();
 
 	const events = new EventEmitter<{
-		'itemUploaded': (ctx: { item: UploaderItem; }) => void;
+		itemUploaded: (ctx: { item: UploaderItem }) => void;
 	}>();
 
 	const uploaderFeatures = computed<Required<UploaderFeatures>>(() => {
@@ -132,7 +121,10 @@ export function useUploader(options: {
 		const id = genId();
 		const filename = file.name ?? 'untitled';
 		const extension = filename.split('.').length > 1 ? '.' + filename.split('.').pop() : '';
-		const watermarkPreset = uploaderFeatures.value.watermark && $i.policies.watermarkAvailable ? (prefer.s.watermarkPresets.find(p => p.id === prefer.s.defaultWatermarkPresetId) ?? null) : null;
+		const watermarkPreset =
+			uploaderFeatures.value.watermark && $i.policies.watermarkAvailable
+				? (prefer.s.watermarkPresets.find((p) => p.id === prefer.s.defaultWatermarkPresetId) ?? null)
+				: null;
 		items.value.push({
 			id,
 			name: prefer.s.keepOriginalFilename ? filename : id + extension,
@@ -145,7 +137,11 @@ export function useUploader(options: {
 			aborted: false,
 			uploaded: null,
 			uploadFailed: false,
-			compressionLevel: IMAGE_EDITING_SUPPORTED_TYPES.includes(file.type) ? prefer.s.defaultImageCompressionLevel : VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(file.type) ? prefer.s.defaultVideoCompressionLevel : 0,
+			compressionLevel: IMAGE_EDITING_SUPPORTED_TYPES.includes(file.type)
+				? prefer.s.defaultImageCompressionLevel
+				: VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(file.type)
+					? prefer.s.defaultVideoCompressionLevel
+					: 0,
 			watermarkPreset,
 			watermarkLayers: watermarkPreset?.layers ?? null,
 			imageFrameParams: null,
@@ -171,52 +167,57 @@ export function useUploader(options: {
 	function getMenu(item: UploaderItem): MenuItem[] {
 		const menu: MenuItem[] = [];
 
-		if (
-			!item.preprocessing &&
-			!item.uploading &&
-			!item.uploaded
-		) {
-			menu.push({
-				icon: 'ti ti-forms',
-				text: i18n.ts.rename,
-				action: async () => {
-					const { result, canceled } = await os.inputText({
-						type: 'text',
-						title: i18n.ts.rename,
-						placeholder: item.name,
-						default: item.name,
-					});
-					if (canceled) return;
-					if (result.trim() === '') return;
+		if (!item.preprocessing && !item.uploading && !item.uploaded) {
+			menu.push(
+				{
+					icon: 'ti ti-forms',
+					text: i18n.ts.rename,
+					action: async () => {
+						const { result, canceled } = await os.inputText({
+							type: 'text',
+							title: i18n.ts.rename,
+							placeholder: item.name,
+							default: item.name,
+						});
+						if (canceled) return;
+						if (result.trim() === '') return;
 
-					item.name = result;
+						item.name = result;
+					},
 				},
-			}, {
-				type: 'switch',
-				text: i18n.ts.sensitive,
-				icon: 'ti ti-eye-exclamation',
-				ref: computed({
-					get: () => item.isSensitive ?? false,
-					set: (value) => item.isSensitive = value,
-				}),
-			}, {
-				text: i18n.ts.describeFile,
-				icon: 'ti ti-text-caption',
-				action: async () => {
-					const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
-						default: item.caption ?? null,
-					}, {
-						done: caption => {
-							if (caption != null) {
-								item.caption = caption.trim().length === 0 ? null : caption;
-							}
-						},
-						closed: () => dispose(),
-					});
+				{
+					type: 'switch',
+					text: i18n.ts.sensitive,
+					icon: 'ti ti-eye-exclamation',
+					ref: computed({
+						get: () => item.isSensitive ?? false,
+						set: (value) => (item.isSensitive = value),
+					}),
 				},
-			}, {
-				type: 'divider',
-			});
+				{
+					text: i18n.ts.describeFile,
+					icon: 'ti ti-text-caption',
+					action: async () => {
+						const { dispose } = await os.popupAsyncWithDialog(
+							import('@/components/MkFileCaptionEditWindow.vue').then((x) => x.default),
+							{
+								default: item.caption ?? null,
+							},
+							{
+								done: (caption) => {
+									if (caption != null) {
+										item.caption = caption.trim().length === 0 ? null : caption;
+									}
+								},
+								closed: () => dispose(),
+							},
+						);
+					},
+				},
+				{
+					type: 'divider',
+				},
+			);
 		}
 
 		if (
@@ -230,51 +231,58 @@ export function useUploader(options: {
 				type: 'parent',
 				icon: 'ti ti-photo-edit',
 				text: i18n.ts._uploader.editImage,
-				children: [{
-					icon: 'ti ti-crop',
-					text: i18n.ts.cropImage,
-					action: async () => {
-						const cropped = await os.cropImageFile(item.file, { aspectRatio: null });
-						if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
-						items.value.splice(items.value.indexOf(item), 1, {
-							...item,
-							file: markRaw(cropped),
-							thumbnail: window.URL.createObjectURL(cropped),
-						});
-						const reactiveItem = items.value.find(x => x.id === item.id)!;
-						preprocess(reactiveItem).then(() => {
-							triggerRef(items);
-						});
+				children: [
+					{
+						icon: 'ti ti-crop',
+						text: i18n.ts.cropImage,
+						action: async () => {
+							const cropped = await os.cropImageFile(item.file, { aspectRatio: null });
+							if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
+							items.value.splice(items.value.indexOf(item), 1, {
+								...item,
+								file: markRaw(cropped),
+								thumbnail: window.URL.createObjectURL(cropped),
+							});
+							const reactiveItem = items.value.find((x) => x.id === item.id)!;
+							preprocess(reactiveItem).then(() => {
+								triggerRef(items);
+							});
+						},
 					},
-				}, /*{
+					/*{
 					icon: 'ti ti-resize',
 					text: i18n.ts.resize,
 					action: async () => {
 						// TODO
 					},
 				},*/ {
-					icon: 'ti ti-sparkles',
-					text: i18n.ts._imageEffector.title,
-					action: async () => {
-						const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkImageEffectorDialog.vue').then(x => x.default), {
-							image: item.file,
-						}, {
-							ok: (file) => {
-								if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
-								items.value.splice(items.value.indexOf(item), 1, {
-									...item,
-									file: markRaw(file),
-									thumbnail: window.URL.createObjectURL(file),
-								});
-								const reactiveItem = items.value.find(x => x.id === item.id)!;
-								preprocess(reactiveItem).then(() => {
-									triggerRef(items);
-								});
-							},
-							closed: () => dispose(),
-						});
+						icon: 'ti ti-sparkles',
+						text: i18n.ts._imageEffector.title,
+						action: async () => {
+							const { dispose } = await os.popupAsyncWithDialog(
+								import('@/components/MkImageEffectorDialog.vue').then((x) => x.default),
+								{
+									image: item.file,
+								},
+								{
+									ok: (file) => {
+										if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
+										items.value.splice(items.value.indexOf(item), 1, {
+											...item,
+											file: markRaw(file),
+											thumbnail: window.URL.createObjectURL(file),
+										});
+										const reactiveItem = items.value.find((x) => x.id === item.id)!;
+										preprocess(reactiveItem).then(() => {
+											triggerRef(items);
+										});
+									},
+									closed: () => dispose(),
+								},
+							);
+						},
 					},
-				}],
+				],
 			});
 		}
 
@@ -297,39 +305,55 @@ export function useUploader(options: {
 			menu.push({
 				icon: 'ti ti-copyright',
 				text: i18n.ts.watermark,
-				caption: computed(() => item.watermarkPreset != null ? item.watermarkPreset.name : item.watermarkLayers != null ? i18n.ts.custom : null),
+				caption: computed(() =>
+					item.watermarkPreset != null
+						? item.watermarkPreset.name
+						: item.watermarkLayers != null
+							? i18n.ts.custom
+							: null,
+				),
 				type: 'parent',
-				children: [{
-					type: 'button' as const,
-					icon: 'ti ti-pencil',
-					text: i18n.ts.edit,
-					action: async () => {
-						const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkWatermarkEditorDialog.vue').then(x => x.default), {
-							layers: item.watermarkLayers,
-							image: item.file,
-						}, {
-							ok: (layers) => {
-								change(layers);
-							},
-							closed: () => dispose(),
-						});
+				children: [
+					{
+						type: 'button' as const,
+						icon: 'ti ti-pencil',
+						text: i18n.ts.edit,
+						action: async () => {
+							const { dispose } = await os.popupAsyncWithDialog(
+								import('@/components/MkWatermarkEditorDialog.vue').then((x) => x.default),
+								{
+									layers: item.watermarkLayers,
+									image: item.file,
+								},
+								{
+									ok: (layers) => {
+										change(layers);
+									},
+									closed: () => dispose(),
+								},
+							);
+						},
 					},
-				}, {
-					type: 'button' as const,
-					icon: 'ti ti-x',
-					text: i18n.ts.remove,
-					action: () => change(null),
-				}, {
-					type: 'divider',
-				}, {
-					type: 'label',
-					text: i18n.ts.presets,
-				}, ...prefer.s.watermarkPresets.map(preset => ({
-					type: 'radioOption' as const,
-					text: preset.name,
-					active: computed(() => item.watermarkPreset?.id === preset.id),
-					action: () => change(preset.layers, preset),
-				}))],
+					{
+						type: 'button' as const,
+						icon: 'ti ti-x',
+						text: i18n.ts.remove,
+						action: () => change(null),
+					},
+					{
+						type: 'divider',
+					},
+					{
+						type: 'label',
+						text: i18n.ts.presets,
+					},
+					...prefer.s.watermarkPresets.map((preset) => ({
+						type: 'radioOption' as const,
+						text: preset.name,
+						active: computed(() => item.watermarkPreset?.id === preset.id),
+						action: () => change(preset.layers, preset),
+					})),
+				],
 			});
 		}
 
@@ -351,55 +375,74 @@ export function useUploader(options: {
 				icon: 'ti ti-device-ipad-horizontal',
 				text: i18n.ts.frame,
 				type: 'parent' as const,
-				children: [{
-					type: 'button' as const,
-					icon: 'ti ti-pencil',
-					text: i18n.ts.edit,
-					action: async () => {
-						const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkImageFrameEditorDialog.vue').then(x => x.default), {
-							params: item.imageFrameParams,
-							image: item.file,
-							imageCaption: item.caption ?? null,
-							imageFilename: item.name,
-						}, {
-							ok: (params) => {
-								change(params);
-							},
-							closed: () => dispose(),
-						});
+				children: [
+					{
+						type: 'button' as const,
+						icon: 'ti ti-pencil',
+						text: i18n.ts.edit,
+						action: async () => {
+							const { dispose } = await os.popupAsyncWithDialog(
+								import('@/components/MkImageFrameEditorDialog.vue').then((x) => x.default),
+								{
+									params: item.imageFrameParams,
+									image: item.file,
+									imageCaption: item.caption ?? null,
+									imageFilename: item.name,
+								},
+								{
+									ok: (params) => {
+										change(params);
+									},
+									closed: () => dispose(),
+								},
+							);
+						},
 					},
-				}, ...(item.imageFrameParams != null ? [{
-					type: 'button' as const,
-					icon: 'ti ti-x',
-					text: i18n.ts.remove,
-					action: () => change(null),
-				}] : []), {
-					type: 'divider' as const,
-				}, {
-					type: 'label' as const,
-					text: i18n.ts.presets,
-				}, ...prefer.s.imageFramePresets.map(preset => ({
-					type: 'button' as const,
-					text: preset.name,
-					action: async () => {
-						const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkImageFrameEditorDialog.vue').then(x => x.default), {
-							params: preset.params,
-							image: item.file,
-							imageCaption: item.caption ?? null,
-							imageFilename: item.name,
-						}, {
-							ok: (params) => {
-								change(params);
-							},
-							closed: () => dispose(),
-						});
+					...(item.imageFrameParams != null
+						? [
+								{
+									type: 'button' as const,
+									icon: 'ti ti-x',
+									text: i18n.ts.remove,
+									action: () => change(null),
+								},
+							]
+						: []),
+					{
+						type: 'divider' as const,
 					},
-				}))],
+					{
+						type: 'label' as const,
+						text: i18n.ts.presets,
+					},
+					...prefer.s.imageFramePresets.map((preset) => ({
+						type: 'button' as const,
+						text: preset.name,
+						action: async () => {
+							const { dispose } = await os.popupAsyncWithDialog(
+								import('@/components/MkImageFrameEditorDialog.vue').then((x) => x.default),
+								{
+									params: preset.params,
+									image: item.file,
+									imageCaption: item.caption ?? null,
+									imageFilename: item.name,
+								},
+								{
+									ok: (params) => {
+										change(params);
+									},
+									closed: () => dispose(),
+								},
+							);
+						},
+					})),
+				],
 			});
 		}
 
 		if (
-			(IMAGE_EDITING_SUPPORTED_TYPES.includes(item.file.type) || VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(item.file.type)) &&
+			(IMAGE_EDITING_SUPPORTED_TYPES.includes(item.file.type) ||
+				VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(item.file.type)) &&
 			!item.preprocessing &&
 			!item.uploading &&
 			!item.uploaded
@@ -429,75 +472,91 @@ export function useUploader(options: {
 					return text;
 				}),
 				type: 'parent',
-				children: [{
-					type: 'radioOption',
-					text: i18n.ts.none,
-					active: computed(() => item.compressionLevel === 0 || item.compressionLevel == null),
-					action: () => changeCompressionLevel(0),
-				}, {
-					type: 'divider',
-				}, {
-					type: 'radioOption',
-					text: i18n.ts.low,
-					active: computed(() => item.compressionLevel === 1),
-					action: () => changeCompressionLevel(1),
-				}, {
-					type: 'radioOption',
-					text: i18n.ts.medium,
-					active: computed(() => item.compressionLevel === 2),
-					action: () => changeCompressionLevel(2),
-				}, {
-					type: 'radioOption',
-					text: i18n.ts.high,
-					active: computed(() => item.compressionLevel === 3),
-					action: () => changeCompressionLevel(3),
-				}],
+				children: [
+					{
+						type: 'radioOption',
+						text: i18n.ts.none,
+						active: computed(() => item.compressionLevel === 0 || item.compressionLevel == null),
+						action: () => changeCompressionLevel(0),
+					},
+					{
+						type: 'divider',
+					},
+					{
+						type: 'radioOption',
+						text: i18n.ts.low,
+						active: computed(() => item.compressionLevel === 1),
+						action: () => changeCompressionLevel(1),
+					},
+					{
+						type: 'radioOption',
+						text: i18n.ts.medium,
+						active: computed(() => item.compressionLevel === 2),
+						action: () => changeCompressionLevel(2),
+					},
+					{
+						type: 'radioOption',
+						text: i18n.ts.high,
+						active: computed(() => item.compressionLevel === 3),
+						action: () => changeCompressionLevel(3),
+					},
+				],
 			});
 		}
 
 		if (!item.preprocessing && !item.uploading && !item.uploaded) {
-			menu.push({
-				type: 'divider',
-			}, {
-				icon: 'ti ti-upload',
-				text: i18n.ts.upload,
-				action: () => {
-					uploadOne(item);
+			menu.push(
+				{
+					type: 'divider',
 				},
-			}, {
-				icon: 'ti ti-x',
-				text: i18n.ts.remove,
-				danger: true,
-				action: () => {
-					removeItem(item);
+				{
+					icon: 'ti ti-upload',
+					text: i18n.ts.upload,
+					action: () => {
+						uploadOne(item);
+					},
 				},
-			});
+				{
+					icon: 'ti ti-x',
+					text: i18n.ts.remove,
+					danger: true,
+					action: () => {
+						removeItem(item);
+					},
+				},
+			);
 		} else if (item.preprocessing && item.abortPreprocess != null) {
-			menu.push({
-				type: 'divider',
-			}, {
-				icon: 'ti ti-player-stop',
-				text: i18n.ts.abort,
-				danger: true,
-				action: () => {
-					if (item.abortPreprocess != null) {
-						item.abortPreprocess();
-					}
+			menu.push(
+				{
+					type: 'divider',
 				},
-			});
+				{
+					icon: 'ti ti-player-stop',
+					text: i18n.ts.abort,
+					danger: true,
+					action: () => {
+						if (item.abortPreprocess != null) {
+							item.abortPreprocess();
+						}
+					},
+				},
+			);
 		} else if (item.uploading) {
-			menu.push({
-				type: 'divider',
-			}, {
-				icon: 'ti ti-cloud-pause',
-				text: i18n.ts.abort,
-				danger: true,
-				action: () => {
-					if (item.abort != null) {
-						item.abort();
-					}
+			menu.push(
+				{
+					type: 'divider',
 				},
-			});
+				{
+					icon: 'ti ti-cloud-pause',
+					text: i18n.ts.abort,
+					danger: true,
+					action: () => {
+						if (item.abort != null) {
+							item.abort();
+						}
+					},
+				},
+			);
 		}
 
 		return menu;
@@ -529,30 +588,34 @@ export function useUploader(options: {
 			item.uploadFailed = true;
 		};
 
-		await filePromise.then((file) => {
-			item.uploaded = file;
-			item.abort = null;
-			events.emit('itemUploaded', { item });
-		}).catch(err => {
-			item.uploadFailed = true;
-			item.progress = null;
-			if (!(err instanceof UploadAbortedError)) {
-				throw err;
-			}
-		}).finally(() => {
-			item.uploading = false;
-		});
+		await filePromise
+			.then((file) => {
+				item.uploaded = file;
+				item.abort = null;
+				events.emit('itemUploaded', { item });
+			})
+			.catch((err) => {
+				item.uploadFailed = true;
+				item.progress = null;
+				if (!(err instanceof UploadAbortedError)) {
+					throw err;
+				}
+			})
+			.finally(() => {
+				item.uploading = false;
+			});
 	}
 
-	async function upload() { // エラーハンドリングなどを考慮してシーケンシャルにやる
-		items.value = items.value.map(item => ({
+	async function upload() {
+		// エラーハンドリングなどを考慮してシーケンシャルにやる
+		items.value = items.value.map((item) => ({
 			...item,
 			aborted: false,
 			uploadFailed: false,
 			uploading: false,
 		}));
 
-		for (const item of items.value.filter(item => item.uploaded == null)) {
+		for (const item of items.value.filter((item) => item.uploaded == null)) {
 			// アップロード処理途中で値が変わる場合（途中で全キャンセルされたりなど）もあるので、Array filterではなくここでチェック
 			if (item.aborted) {
 				continue;
@@ -590,7 +653,7 @@ export function useUploader(options: {
 			} catch (err) {
 				console.error('Failed to preprocess image', err);
 
-			// nop
+				// nop
 			}
 		}
 
@@ -613,10 +676,15 @@ export function useUploader(options: {
 
 		let preprocessedFile: Blob | File = item.file;
 
-		const needsWatermark = item.watermarkLayers != null && IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type) && $i.policies.watermarkAvailable;
+		const needsWatermark =
+			item.watermarkLayers != null &&
+			IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type) &&
+			$i.policies.watermarkAvailable;
 		if (needsWatermark && item.watermarkLayers != null) {
 			const canvas = window.document.createElement('canvas');
-			const WatermarkRenderer = await import('@/utility/watermark/WatermarkRenderer.js').then(x => x.WatermarkRenderer);
+			const WatermarkRenderer = await import('@/utility/watermark/WatermarkRenderer.js').then(
+				(x) => x.WatermarkRenderer,
+			);
 			const renderer = new WatermarkRenderer({
 				canvas: canvas,
 				renderWidth: imageBitmap.width,
@@ -637,12 +705,15 @@ export function useUploader(options: {
 			});
 		}
 
-		const needsImageFrame = item.imageFrameParams != null && IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type);
+		const needsImageFrame =
+			item.imageFrameParams != null && IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type);
 		if (needsImageFrame && item.imageFrameParams != null) {
 			const canvas = window.document.createElement('canvas');
 			const ExifReader = await import('exifreader');
 			const exif = await ExifReader.load(await item.file.arrayBuffer());
-			const ImageFrameRenderer = await import('@/utility/image-frame-renderer/ImageFrameRenderer.js').then(x => x.ImageFrameRenderer);
+			const ImageFrameRenderer = await import('@/utility/image-frame-renderer/ImageFrameRenderer.js').then(
+				(x) => x.ImageFrameRenderer,
+			);
 			const frameRenderer = new ImageFrameRenderer({
 				canvas: canvas,
 				image: await window.createImageBitmap(preprocessedFile),
@@ -665,7 +736,11 @@ export function useUploader(options: {
 		}
 
 		const compressionSettings = getCompressionSettings(item.compressionLevel);
-		const needsCompress = item.compressionLevel !== 0 && compressionSettings && IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type) && !(await isAnimated(preprocessedFile));
+		const needsCompress =
+			item.compressionLevel !== 0 &&
+			compressionSettings &&
+			IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type) &&
+			!(await isAnimated(preprocessedFile));
 
 		if (needsCompress) {
 			const config = {
@@ -695,14 +770,17 @@ export function useUploader(options: {
 		imageBitmap.close();
 
 		if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
-		item.thumbnail = THUMBNAIL_SUPPORTED_TYPES.includes(preprocessedFile.type) ? window.URL.createObjectURL(preprocessedFile) : null;
+		item.thumbnail = THUMBNAIL_SUPPORTED_TYPES.includes(preprocessedFile.type)
+			? window.URL.createObjectURL(preprocessedFile)
+			: null;
 		item.preprocessedFile = markRaw(preprocessedFile);
 	}
 
 	async function preprocessForVideo(item: UploaderItem): Promise<void> {
 		let preprocessedFile: Blob | File = item.file;
 
-		const needsCompress = item.compressionLevel !== 0 && VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(preprocessedFile.type);
+		const needsCompress =
+			item.compressionLevel !== 0 && VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(preprocessedFile.type);
 
 		if (needsCompress) {
 			const mediabunny = await import('mediabunny');
@@ -724,7 +802,12 @@ export function useUploader(options: {
 				output,
 				video: {
 					//width: 320, // Height will be deduced automatically to retain aspect ratio
-					bitrate: item.compressionLevel === 1 ? mediabunny.QUALITY_VERY_HIGH : item.compressionLevel === 2 ? mediabunny.QUALITY_MEDIUM : mediabunny.QUALITY_VERY_LOW,
+					bitrate:
+						item.compressionLevel === 1
+							? mediabunny.QUALITY_VERY_HIGH
+							: item.compressionLevel === 2
+								? mediabunny.QUALITY_MEDIUM
+								: mediabunny.QUALITY_VERY_LOW,
 				},
 				audio: {
 					// Explicitly keep audio (don't discard) and copy it if possible
@@ -733,7 +816,7 @@ export function useUploader(options: {
 				},
 			});
 
-			currentConversion.onProgress = newProgress => item.preprocessProgress = newProgress;
+			currentConversion.onProgress = (newProgress) => (item.preprocessProgress = newProgress);
 
 			item.abortPreprocess = () => {
 				item.abortPreprocess = null;
@@ -755,7 +838,9 @@ export function useUploader(options: {
 		}
 
 		if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
-		item.thumbnail = THUMBNAIL_SUPPORTED_TYPES.includes(preprocessedFile.type) ? window.URL.createObjectURL(preprocessedFile) : null;
+		item.thumbnail = THUMBNAIL_SUPPORTED_TYPES.includes(preprocessedFile.type)
+			? window.URL.createObjectURL(preprocessedFile)
+			: null;
 		item.preprocessedFile = markRaw(preprocessedFile);
 	}
 
@@ -785,10 +870,14 @@ export function useUploader(options: {
 		dispose,
 		upload,
 		getMenu,
-		uploading: computed(() => items.value.some(item => item.uploading)),
-		readyForUpload: computed(() => items.value.length > 0 && items.value.some(item => item.uploaded == null) && !items.value.some(item => item.uploading || item.preprocessing)),
-		allItemsUploaded: computed(() => items.value.every(item => item.uploaded != null)),
+		uploading: computed(() => items.value.some((item) => item.uploading)),
+		readyForUpload: computed(
+			() =>
+				items.value.length > 0 &&
+				items.value.some((item) => item.uploaded == null) &&
+				!items.value.some((item) => item.uploading || item.preprocessing),
+		),
+		allItemsUploaded: computed(() => items.value.every((item) => item.uploaded != null)),
 		events,
 	};
 }
-

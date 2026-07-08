@@ -26,19 +26,10 @@
 			"@/*": ["../src/*"],
 			"@@/*": ["../../frontend-shared/*"]
 		},
-		"typeRoots": [
-			"../node_modules/@types"
-		],
-		"lib": [
-			"esnext",
-			"dom"
-		],
+		"typeRoots": ["../node_modules/@types"],
+		"lib": ["esnext", "dom"],
 		"types": ["node"]
 	},
 	"compileOnSave": false,
-	"include": [
-		"./**/*.ts",
-		"../src/**/*.vue",
-		"../@types/**/*.d.ts"
-	]
+	"include": ["./**/*.ts", "../src/**/*.vue", "../@types/**/*.d.ts"]
 }

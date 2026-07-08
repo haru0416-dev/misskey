@@ -16,11 +16,13 @@ export type ImageCompositorFunction<PS extends ImageCompositorFunctionParams = I
 		u: Record<string, WebGLUniformLocation>;
 		width: number;
 		height: number;
-		textures: Map<string, { texture: WebGLTexture; width: number; height: number; }>;
+		textures: Map<string, { texture: WebGLTexture; width: number; height: number }>;
 	}) => void;
 };
 
-export type ImageCompositorLayer<FNS extends Record<string, ImageCompositorFunction> = Record<string, ImageCompositorFunction>> = {
+export type ImageCompositorLayer<
+	FNS extends Record<string, ImageCompositorFunction> = Record<string, ImageCompositorFunction>,
+> = {
 	[K in keyof FNS]: {
 		id: string;
 		functionId: K;
@@ -28,7 +30,9 @@ export type ImageCompositorLayer<FNS extends Record<string, ImageCompositorFunct
 	};
 }[keyof FNS];
 
-export function defineImageCompositorFunction<PS extends ImageCompositorFunctionParams>(fn: ImageCompositorFunction<PS>) {
+export function defineImageCompositorFunction<PS extends ImageCompositorFunctionParams>(
+	fn: ImageCompositorFunction<PS>,
+) {
 	return fn;
 }
 
@@ -44,7 +48,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 	private perLayerResultTextures: Map<string, WebGLTexture> = new Map();
 	private perLayerResultFrameBuffers: Map<string, WebGLFramebuffer> = new Map();
 	private nopProgram: WebGLProgram;
-	private registeredTextures: Map<string, { texture: WebGLTexture; width: number; height: number; }> = new Map();
+	private registeredTextures: Map<string, { texture: WebGLTexture; width: number; height: number }> = new Map();
 	private registeredFunctions: Map<string, ImageCompositorFunction & { id: string; uniforms: string[] }> = new Map();
 
 	constructor(options: {
@@ -82,14 +86,26 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			this.baseTexture = createTexture(gl);
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, this.baseTexture);
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.image.width, options.image.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, options.image);
+			gl.texImage2D(
+				gl.TEXTURE_2D,
+				0,
+				gl.RGBA,
+				options.image.width,
+				options.image.height,
+				0,
+				gl.RGBA,
+				gl.UNSIGNED_BYTE,
+				options.image,
+			);
 			gl.bindTexture(gl.TEXTURE_2D, null);
 		} else {
 			this.baseTexture = createTexture(gl);
 			gl.activeTexture(gl.TEXTURE0);
 		}
 
-		this.nopProgram = initShaderProgram(this.gl, `#version 300 es
+		this.nopProgram = initShaderProgram(
+			this.gl,
+			`#version 300 es
 			in vec2 position;
 			out vec2 in_uv;
 
@@ -97,7 +113,8 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 				in_uv = (position + 1.0) / 2.0;
 				gl_Position = vec4(position * vec2(1.0, -1.0), 0.0, 1.0);
 			}
-		`, `#version 300 es
+		`,
+			`#version 300 es
 			precision mediump float;
 
 			in vec2 in_uv;
@@ -107,7 +124,8 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			void main() {
 				out_color = texture(u_texture, in_uv);
 			}
-		`);
+		`,
+		);
 
 		// レジスタ番号はシェーダープログラムに属しているわけではなく、独立の存在なので、とりあえず nopProgram を使って設定する(その後は効果が持続する)
 		// ref. https://qiita.com/emadurandal/items/5966c8374f03d4de3266
@@ -138,7 +156,11 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		if (fn == null) return;
 
 		const cachedShader = this.shaderCache.get(fn.id);
-		const shaderProgram = cachedShader ?? initShaderProgram(this.gl, `#version 300 es
+		const shaderProgram =
+			cachedShader ??
+			initShaderProgram(
+				this.gl,
+				`#version 300 es
 			in vec2 position;
 			uniform bool u_invert;
 			out vec2 in_uv;
@@ -147,7 +169,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 				in_uv = (position + 1.0) / 2.0;
 				gl_Position = u_invert ? vec4(position * vec2(1.0, -1.0), 0.0, 1.0) : vec4(position, 0.0, 1.0);
 			}
-		`, fn.shader);
+		`,
+				fn.shader,
+			);
 		if (cachedShader == null) {
 			this.shaderCache.set(fn.id, shaderProgram);
 		}
@@ -169,7 +193,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			gl: gl,
 			program: shaderProgram,
 			params: layer.params,
-			u: Object.fromEntries(fn.uniforms.map(u => [u, gl.getUniformLocation(shaderProgram, 'u_' + u)!])),
+			u: Object.fromEntries(fn.uniforms.map((u) => [u, gl.getUniformLocation(shaderProgram, 'u_' + u)!])),
 			width: this.renderWidth,
 			height: this.renderHeight,
 			textures: this.registeredTextures,
@@ -178,7 +202,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	}
 
-	public render(layers: (ImageCompositorLayer<FNS>)[]) {
+	public render(layers: ImageCompositorLayer<FNS>[]) {
 		const gl = this.gl;
 
 		// 入力をそのまま出力

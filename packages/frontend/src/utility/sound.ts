@@ -73,26 +73,20 @@ export const soundsTypes = [
 	'noizenecio/kick_gaba7',
 ] as const;
 
-export const operationTypes = [
-	'noteMy',
-	'note',
-	'notification',
-	'reaction',
-	'chatMessage',
-] as const;
+export const operationTypes = ['noteMy', 'note', 'notification', 'reaction', 'chatMessage'] as const;
 
 /** サウンドの種類 */
-export type SoundType = typeof soundsTypes[number];
+export type SoundType = (typeof soundsTypes)[number];
 
 /** スプライトの種類 */
-export type OperationType = typeof operationTypes[number];
+export type OperationType = (typeof operationTypes)[number];
 
 /**
  * 音声を読み込む
  * @param url url
  * @param options `useCache`: デフォルトは`true` 一度再生した音声はキャッシュする
  */
-export async function loadAudio(url: string, options?: { useCache?: boolean; }) {
+export async function loadAudio(url: string, options?: { useCache?: boolean }) {
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (ctx == null) {
 		ctx = new AudioContext();
@@ -155,7 +149,7 @@ export async function playMisskeySfxFile(soundStore: SoundStore): Promise<boolea
 	// ユーザーアクティベーションが必要な場合はそれがない場合は再生しない
 	if ('userActivation' in navigator && !navigator.userActivation.hasBeenActive) return false;
 	// サウンドがない場合は再生しない
-	if (soundStore.type === null || soundStore.type === '_driveFile_' && !soundStore.fileUrl) return false;
+	if (soundStore.type === null || (soundStore.type === '_driveFile_' && !soundStore.fileUrl)) return false;
 
 	canPlay = false;
 	return await playMisskeySfxFileInternal(soundStore).finally(() => {
@@ -184,11 +178,14 @@ async function playMisskeySfxFileInternal(soundStore: SoundStore): Promise<boole
 	return true;
 }
 
-export async function playUrl(url: string, opts: {
-	volume?: number;
-	pan?: number;
-	playbackRate?: number;
-}) {
+export async function playUrl(
+	url: string,
+	opts: {
+		volume?: number;
+		pan?: number;
+		playbackRate?: number;
+	},
+) {
 	if (opts.volume === 0) {
 		return;
 	}
@@ -197,15 +194,18 @@ export async function playUrl(url: string, opts: {
 	createSourceNode(buffer, opts).soundSource.start();
 }
 
-export function createSourceNode(buffer: AudioBuffer, opts: {
-	volume?: number;
-	pan?: number;
-	playbackRate?: number;
-}): {
-		soundSource: AudioBufferSourceNode;
-		panNode: StereoPannerNode;
-		gainNode: GainNode;
-	} {
+export function createSourceNode(
+	buffer: AudioBuffer,
+	opts: {
+		volume?: number;
+		pan?: number;
+		playbackRate?: number;
+	},
+): {
+	soundSource: AudioBufferSourceNode;
+	panNode: StereoPannerNode;
+	gainNode: GainNode;
+} {
 	const panNode = ctx.createStereoPanner();
 	panNode.pan.value = opts.pan ?? 0;
 
@@ -216,10 +216,7 @@ export function createSourceNode(buffer: AudioBuffer, opts: {
 	const soundSource = ctx.createBufferSource();
 	soundSource.buffer = buffer;
 	soundSource.playbackRate.value = opts.playbackRate ?? 1;
-	soundSource
-		.connect(panNode)
-		.connect(gainNode)
-		.connect(ctx.destination);
+	soundSource.connect(panNode).connect(gainNode).connect(ctx.destination);
 
 	return { soundSource, panNode, gainNode };
 }

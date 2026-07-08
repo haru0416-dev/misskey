@@ -144,21 +144,27 @@ export const navbarItemDef = reactive<{
 		title: i18n.ts.switchUi,
 		icon: 'ti ti-devices',
 		action: (ev) => {
-			os.popupMenu([{
-				text: i18n.ts.default,
-				active: ui === 'default' || ui === null,
-				action: () => {
-					miLocalStorage.setItem('ui', 'default');
-					unisonReload();
-				},
-			}, {
-				text: i18n.ts.deck,
-				active: ui === 'deck',
-				action: () => {
-					miLocalStorage.setItem('ui', 'deck');
-					unisonReload();
-				},
-			}], ev.currentTarget ?? ev.target);
+			os.popupMenu(
+				[
+					{
+						text: i18n.ts.default,
+						active: ui === 'default' || ui === null,
+						action: () => {
+							miLocalStorage.setItem('ui', 'default');
+							unisonReload();
+						},
+					},
+					{
+						text: i18n.ts.deck,
+						active: ui === 'deck',
+						action: () => {
+							miLocalStorage.setItem('ui', 'deck');
+							unisonReload();
+						},
+					},
+				],
+				ev.currentTarget ?? ev.target,
+			);
 		},
 	},
 	about: {

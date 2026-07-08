@@ -411,7 +411,7 @@ export async function createNoteFromApForHonoApi(
 	} catch (err) {
 		if (err instanceof Error && err.name === 'duplicated') {
 			const duplicate = await getNoteFromApIdForHonoApi(deps, value);
-			if (!duplicate) throw new Error('The note creation failed with duplication error even when there is no duplication');
+			if (!duplicate) throw new Error('The note creation failed with duplication error even when there is no duplication', { cause: err });
 			return duplicate;
 		}
 		throw err;

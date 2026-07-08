@@ -73,14 +73,4 @@ const menu: MenuItem[] = [{
 	text: i18n.ts._deck.newNoteNotificationSettings,
 	action: () => soundSettingsButton(soundSetting),
 }];
-
-/*
-function focus() {
-	timeline.focus();
-}
-
-defineExpose({
-	focus,
-});
-*/
 </script>

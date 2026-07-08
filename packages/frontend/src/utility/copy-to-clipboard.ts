@@ -14,4 +14,4 @@ export function copyToClipboard(input: string | null) {
 		navigator.clipboard.writeText(input);
 		os.toast(i18n.ts.copiedToClipboard);
 	}
-};
+}

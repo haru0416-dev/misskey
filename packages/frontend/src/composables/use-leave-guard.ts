@@ -33,7 +33,6 @@ export function useLeaveGuard(enabled: Ref<boolean>) {
 		});
 	}
 	*/
-
 	/*
 	function onBeforeLeave(ev: BeforeUnloadEvent) {
 		if (enabled.value) {

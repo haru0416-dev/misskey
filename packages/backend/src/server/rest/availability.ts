@@ -9,7 +9,7 @@ import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import { countUsersActiveAfterFromDatabase, isLocalUsernameTaken } from '@/core/UserStore.js';
 import { USER_ONLINE_THRESHOLD } from '@/const.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { localUsernameZodSchema } from '@/models/User.js';
+import { localUsernameSchema } from '@/models/User.js';
 import type { MiMeta } from '@/models/_.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -20,7 +20,7 @@ export type HonoApiAvailabilityDependencies = {
 };
 
 export const usernameAvailableParamDef = z.object({
-	username: localUsernameZodSchema,
+	username: localUsernameSchema,
 });
 
 export const emailAddressAvailableParamDef = z.object({

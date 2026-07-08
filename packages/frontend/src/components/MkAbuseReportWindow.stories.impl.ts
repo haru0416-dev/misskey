@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
- 
+
 import { action } from 'storybook/actions';
 import { HttpResponse, http } from 'msw';
 import { userDetailed } from '../../.storybook/fakes.js';
@@ -28,7 +28,7 @@ export const Default = {
 				},
 				events() {
 					return {
-						'closed': action('closed'),
+						closed: action('closed'),
 					};
 				},
 			},

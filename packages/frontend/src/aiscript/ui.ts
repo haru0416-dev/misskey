@@ -146,13 +146,31 @@ export type AsUiPostForm = AsUiComponentBase & {
 	form?: PostFormPropsForAsUi;
 };
 
-export type AsUiComponent = AsUiRoot | AsUiContainer | AsUiText | AsUiMfm | AsUiButton | AsUiButtons | AsUiSwitch | AsUiTextarea | AsUiTextInput | AsUiNumberInput | AsUiSelect | AsUiFolder | AsUiPostFormButton | AsUiPostForm;
+export type AsUiComponent =
+	| AsUiRoot
+	| AsUiContainer
+	| AsUiText
+	| AsUiMfm
+	| AsUiButton
+	| AsUiButtons
+	| AsUiSwitch
+	| AsUiTextarea
+	| AsUiTextInput
+	| AsUiNumberInput
+	| AsUiSelect
+	| AsUiFolder
+	| AsUiPostFormButton
+	| AsUiPostForm;
 
 type Options<T extends AsUiComponent> = T extends AsUiButtons
-	? Omit<T, 'id' | 'type' | 'buttons'> & { 'buttons'?: Options<AsUiButton>[] }
+	? Omit<T, 'id' | 'type' | 'buttons'> & { buttons?: Options<AsUiButton>[] }
 	: Omit<T, 'id' | 'type'>;
 
-export function patch(id: string, def: values.Value, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>) {
+export function patch(
+	id: string,
+	def: values.Value,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+) {
 	// TODO
 }
 
@@ -163,7 +181,7 @@ function getRootOptions(def: values.Value | undefined): Options<AsUiRoot> {
 	utils.assertArray(children);
 
 	return {
-		children: children.value.map(v => {
+		children: children.value.map((v) => {
 			utils.assertObject(v);
 			const id = v.value.get('id');
 			utils.assertString(id);
@@ -201,12 +219,14 @@ function getContainerOptions(def: values.Value | undefined): Options<AsUiContain
 	if (hidden) utils.assertBoolean(hidden);
 
 	return {
-		children: children ? children.value.map(v => {
-			utils.assertObject(v);
-			const id = v.value.get('id');
-			utils.assertString(id);
-			return id.value;
-		}) : [],
+		children: children
+			? children.value.map((v) => {
+					utils.assertObject(v);
+					const id = v.value.get('id');
+					utils.assertString(id);
+					return id.value;
+				})
+			: [],
 		align: align?.value,
 		fgColor: fgColor?.value,
 		bgColor: bgColor?.value,
@@ -244,7 +264,10 @@ function getTextOptions(def: values.Value | undefined): Options<AsUiText> {
 	};
 }
 
-function getMfmOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiMfm> {
+function getMfmOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiMfm> {
 	utils.assertObject(def);
 
 	const text = def.value.get('text');
@@ -272,7 +295,10 @@ function getMfmOptions(def: values.Value | undefined, call: (fn: values.VFn, arg
 	};
 }
 
-function getTextInputOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiTextInput> {
+function getTextInputOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiTextInput> {
 	utils.assertObject(def);
 
 	const onInput = def.value.get('onInput');
@@ -294,7 +320,10 @@ function getTextInputOptions(def: values.Value | undefined, call: (fn: values.VF
 	};
 }
 
-function getTextareaOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiTextarea> {
+function getTextareaOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiTextarea> {
 	utils.assertObject(def);
 
 	const onInput = def.value.get('onInput');
@@ -316,7 +345,10 @@ function getTextareaOptions(def: values.Value | undefined, call: (fn: values.VFn
 	};
 }
 
-function getNumberInputOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiNumberInput> {
+function getNumberInputOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiNumberInput> {
 	utils.assertObject(def);
 
 	const onInput = def.value.get('onInput');
@@ -338,7 +370,10 @@ function getNumberInputOptions(def: values.Value | undefined, call: (fn: values.
 	};
 }
 
-function getButtonOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiButton> {
+function getButtonOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiButton> {
 	utils.assertObject(def);
 
 	const text = def.value.get('text');
@@ -363,40 +398,48 @@ function getButtonOptions(def: values.Value | undefined, call: (fn: values.VFn, 
 	};
 }
 
-function getButtonsOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiButtons> {
+function getButtonsOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiButtons> {
 	utils.assertObject(def);
 
 	const buttons = def.value.get('buttons');
 	if (buttons) utils.assertArray(buttons);
 
 	return {
-		buttons: buttons ? buttons.value.map(button => {
-			utils.assertObject(button);
-			const text = button.value.get('text');
-			utils.assertString(text);
-			const onClick = button.value.get('onClick');
-			utils.assertFunction(onClick);
-			const primary = button.value.get('primary');
-			if (primary) utils.assertBoolean(primary);
-			const rounded = button.value.get('rounded');
-			if (rounded) utils.assertBoolean(rounded);
-			const disabled = button.value.get('disabled');
-			if (disabled) utils.assertBoolean(disabled);
+		buttons: buttons
+			? buttons.value.map((button) => {
+					utils.assertObject(button);
+					const text = button.value.get('text');
+					utils.assertString(text);
+					const onClick = button.value.get('onClick');
+					utils.assertFunction(onClick);
+					const primary = button.value.get('primary');
+					if (primary) utils.assertBoolean(primary);
+					const rounded = button.value.get('rounded');
+					if (rounded) utils.assertBoolean(rounded);
+					const disabled = button.value.get('disabled');
+					if (disabled) utils.assertBoolean(disabled);
 
-			return {
-				text: text.value,
-				onClick: async () => {
-					await call(onClick, []);
-				},
-				primary: primary?.value,
-				rounded: rounded?.value,
-				disabled: disabled?.value,
-			};
-		}) : [],
+					return {
+						text: text.value,
+						onClick: async () => {
+							await call(onClick, []);
+						},
+						primary: primary?.value,
+						rounded: rounded?.value,
+						disabled: disabled?.value,
+					};
+				})
+			: [],
 	};
 }
 
-function getSwitchOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiSwitch> {
+function getSwitchOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiSwitch> {
 	utils.assertObject(def);
 
 	const onChange = def.value.get('onChange');
@@ -418,7 +461,10 @@ function getSwitchOptions(def: values.Value | undefined, call: (fn: values.VFn, 
 	};
 }
 
-function getSelectOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiSelect> {
+function getSelectOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiSelect> {
 	utils.assertObject(def);
 
 	const items = def.value.get('items');
@@ -433,17 +479,19 @@ function getSelectOptions(def: values.Value | undefined, call: (fn: values.VFn, 
 	if (caption) utils.assertString(caption);
 
 	return {
-		items: items ? items.value.map(item => {
-			utils.assertObject(item);
-			const text = item.value.get('text');
-			utils.assertString(text);
-			const value = item.value.get('value');
-			if (value) utils.assertString(value);
-			return {
-				text: text.value,
-				value: value ? value.value : text.value,
-			};
-		}) : [],
+		items: items
+			? items.value.map((item) => {
+					utils.assertObject(item);
+					const text = item.value.get('text');
+					utils.assertString(text);
+					const value = item.value.get('value');
+					if (value) utils.assertString(value);
+					return {
+						text: text.value,
+						value: value ? value.value : text.value,
+					};
+				})
+			: [],
 		onChange: async (v) => {
 			if (onChange) await call(onChange, [utils.jsToVal(v)]);
 		},
@@ -464,12 +512,14 @@ function getFolderOptions(def: values.Value | undefined): Options<AsUiFolder> {
 	if (opened) utils.assertBoolean(opened);
 
 	return {
-		children: children ? children.value.map(v => {
-			utils.assertObject(v);
-			const id = v.value.get('id');
-			utils.assertString(id);
-			return id.value;
-		}) : [],
+		children: children
+			? children.value.map((v) => {
+					utils.assertObject(v);
+					const id = v.value.get('id');
+					utils.assertString(id);
+					return id.value;
+				})
+			: [],
 		title: title?.value ?? '',
 		opened: opened?.value ?? true,
 	};
@@ -488,12 +538,18 @@ function getPostFormProps(form: values.VObj): PostFormPropsForAsUi {
 	return {
 		text: text.value,
 		cw: cw?.value,
-		visibility: (visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)) ? visibility.value as typeof Misskey.noteVisibilities[number] : undefined,
+		visibility:
+			visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
+				? (visibility.value as (typeof Misskey.noteVisibilities)[number])
+				: undefined,
 		localOnly: localOnly?.value,
 	};
 }
 
-function getPostFormButtonOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiPostFormButton> {
+function getPostFormButtonOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiPostFormButton> {
 	utils.assertObject(def);
 
 	const text = def.value.get('text');
@@ -509,22 +565,29 @@ function getPostFormButtonOptions(def: values.Value | undefined, call: (fn: valu
 		text: text?.value,
 		primary: primary?.value,
 		rounded: rounded?.value,
-		form: form ? getPostFormProps(form) : {
-			text: '',
-		},
+		form: form
+			? getPostFormProps(form)
+			: {
+					text: '',
+				},
 	};
 }
 
-function getPostFormOptions(def: values.Value | undefined, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>): Options<AsUiPostForm> {
+function getPostFormOptions(
+	def: values.Value | undefined,
+	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
+): Options<AsUiPostForm> {
 	utils.assertObject(def);
 
 	const form = def.value.get('form');
 	if (form) utils.assertObject(form);
 
 	return {
-		form: form ? getPostFormProps(form) : {
-			text: '',
-		},
+		form: form
+			? getPostFormProps(form)
+			: {
+					text: '',
+				},
 	};
 }
 
@@ -548,22 +611,33 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 			id: _id,
 		} as T);
 		components.push(component);
-		const instance = values.OBJ(new Map<string, values.Value>([
-			['id', values.STR(_id)],
-			['update', values.FN_NATIVE(([def], opts) => {
-				utils.assertObject(def);
-				const updates = getOptions(def, call);
-				for (const update of def.value.keys()) {
-					if (!Object.hasOwn(updates, update)) continue;
-					component.value[update] = updates[update as keyof Options<T>];
-				}
-			})],
-		]));
+		const instance = values.OBJ(
+			new Map<string, values.Value>([
+				['id', values.STR(_id)],
+				[
+					'update',
+					values.FN_NATIVE(([def], opts) => {
+						utils.assertObject(def);
+						const updates = getOptions(def, call);
+						for (const update of def.value.keys()) {
+							if (!Object.hasOwn(updates, update)) continue;
+							component.value[update] = updates[update as keyof Options<T>];
+						}
+					}),
+				],
+			]),
+		);
 		instances[_id] = instance;
 		return instance;
 	}
 
-	const rootInstance = createComponentInstance('root', utils.jsToVal({ children: [] }), utils.jsToVal('___root___'), getRootOptions, () => {});
+	const rootInstance = createComponentInstance(
+		'root',
+		utils.jsToVal({ children: [] }),
+		utils.jsToVal('___root___'),
+		getRootOptions,
+		() => {},
+	);
 	const rootComponent = components[0] as Ref<AsUiRoot>;
 	done(rootComponent);
 
@@ -590,7 +664,7 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 		'Ui:render': values.FN_NATIVE(([children], opts) => {
 			utils.assertArray(children);
 
-			rootComponent.value.children = children.value.map(v => {
+			rootComponent.value.children = children.value.map((v) => {
 				utils.assertObject(v);
 				const id = v.value.get('id');
 				utils.assertString(id);

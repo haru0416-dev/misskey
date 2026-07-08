@@ -38,7 +38,6 @@ watch(available, () => {
 			initial: [-0.030, -0.010],
 			frontSelect: true,
 			imageRadius: 8,
-			//dragControl: true,
 			dragThreshold: 3,
 			wheelZoom: false,
 			reverse: true,

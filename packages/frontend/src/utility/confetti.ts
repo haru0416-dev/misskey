@@ -7,7 +7,7 @@ import _confetti from 'canvas-confetti';
 import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
 
-export function confetti(options: { duration?: number; } = {}) {
+export function confetti(options: { duration?: number } = {}) {
 	if (!prefer.s.animation) return;
 
 	const duration = options.duration ?? 1000 * 4;
@@ -32,7 +32,11 @@ export function confetti(options: { duration?: number; } = {}) {
 
 		const particleCount = 50 * (timeLeft / duration);
 		// since particles fall down, start a bit higher than random
-		_confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-		_confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+		_confetti(
+			Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }),
+		);
+		_confetti(
+			Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }),
+		);
 	}, 250);
 }

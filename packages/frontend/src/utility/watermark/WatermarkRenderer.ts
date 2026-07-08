@@ -13,65 +13,72 @@ import { fn as fn_checker } from '@/utility/image-compositor-functions/checker.j
 import { ImageCompositor } from '@/lib/ImageCompositor.js';
 import { ensureSignin } from '@/i.js';
 
-type Align = { x: 'left' | 'center' | 'right'; y: 'top' | 'center' | 'bottom'; margin?: number; };
+type Align = { x: 'left' | 'center' | 'right'; y: 'top' | 'center' | 'bottom'; margin?: number };
 
-export type WatermarkLayers = ({
-	id: string;
-	type: 'text';
-	text: string;
-	repeat: boolean;
-	noBoundingBoxExpansion: boolean;
-	scale: number;
-	angle: number;
-	align: Align;
-	opacity: number;
-} | {
-	id: string;
-	type: 'image';
-	imageUrl: string | null;
-	imageId: string | null;
-	cover: boolean;
-	repeat: boolean;
-	noBoundingBoxExpansion: boolean;
-	scale: number;
-	angle: number;
-	align: Align;
-	opacity: number;
-} | {
-	id: string;
-	type: 'qr';
-	data: string;
-	scale: number;
-	align: Align;
-	opacity: number;
-} | {
-	id: string;
-	type: 'stripe';
-	angle: number;
-	frequency: number;
-	threshold: number;
-	color: [r: number, g: number, b: number];
-	opacity: number;
-} | {
-	id: string;
-	type: 'polkadot';
-	angle: number;
-	scale: number;
-	majorRadius: number;
-	majorOpacity: number;
-	minorDivisions: number;
-	minorRadius: number;
-	minorOpacity: number;
-	color: [r: number, g: number, b: number];
-	opacity: number;
-} | {
-	id: string;
-	type: 'checker';
-	angle: number;
-	scale: number;
-	color: [r: number, g: number, b: number];
-	opacity: number;
-})[];
+export type WatermarkLayers = (
+	| {
+			id: string;
+			type: 'text';
+			text: string;
+			repeat: boolean;
+			noBoundingBoxExpansion: boolean;
+			scale: number;
+			angle: number;
+			align: Align;
+			opacity: number;
+	  }
+	| {
+			id: string;
+			type: 'image';
+			imageUrl: string | null;
+			imageId: string | null;
+			cover: boolean;
+			repeat: boolean;
+			noBoundingBoxExpansion: boolean;
+			scale: number;
+			angle: number;
+			align: Align;
+			opacity: number;
+	  }
+	| {
+			id: string;
+			type: 'qr';
+			data: string;
+			scale: number;
+			align: Align;
+			opacity: number;
+	  }
+	| {
+			id: string;
+			type: 'stripe';
+			angle: number;
+			frequency: number;
+			threshold: number;
+			color: [r: number, g: number, b: number];
+			opacity: number;
+	  }
+	| {
+			id: string;
+			type: 'polkadot';
+			angle: number;
+			scale: number;
+			majorRadius: number;
+			majorOpacity: number;
+			minorDivisions: number;
+			minorRadius: number;
+			minorOpacity: number;
+			color: [r: number, g: number, b: number];
+			opacity: number;
+	  }
+	| {
+			id: string;
+			type: 'checker';
+			angle: number;
+			scale: number;
+			color: [r: number, g: number, b: number];
+			opacity: number;
+	  }
+)[];
 
 export type WatermarkPreset = {
 	id: string;
@@ -90,10 +97,10 @@ export class WatermarkRenderer {
 	private compositor: WatermarkRendererImageCompositor;
 
 	constructor(options: {
-		canvas: HTMLCanvasElement,
-		renderWidth: number,
-		renderHeight: number,
-		image: HTMLImageElement | ImageBitmap,
+		canvas: HTMLCanvasElement;
+		renderWidth: number;
+		renderHeight: number;
+		image: HTMLImageElement | ImageBitmap;
 	}) {
 		this.compositor = new ImageCompositor({
 			canvas: options.canvas,
@@ -273,9 +280,6 @@ async function createTextureFromText(text: string | null, resolution = 2048) {
 	ctx.shadowColor = '#000000';
 	ctx.shadowBlur = fontSize / 4;
 
-	//ctx.fillStyle = '#00ff00';
-	//ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
 	ctx.fillStyle = '#ffffff';
 	ctx.font = `bold ${fontSize}px sans-serif`;
 	ctx.textBaseline = 'middle';
@@ -283,9 +287,10 @@ async function createTextureFromText(text: string | null, resolution = 2048) {
 	ctx.fillText(text, margin, ctx.canvas.height / 2);
 
 	const textMetrics = ctx.measureText(text);
-	const cropWidth = (Math.ceil(textMetrics.actualBoundingBoxRight + textMetrics.actualBoundingBoxLeft) + margin + margin);
-	const cropHeight = (Math.ceil(textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent) + margin + margin);
-	const data = ctx.getImageData(0, (ctx.canvas.height / 2) - (cropHeight / 2), cropWidth, cropHeight);
+	const cropWidth = Math.ceil(textMetrics.actualBoundingBoxRight + textMetrics.actualBoundingBoxLeft) + margin + margin;
+	const cropHeight =
+		Math.ceil(textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent) + margin + margin;
+	const data = ctx.getImageData(0, ctx.canvas.height / 2 - cropHeight / 2, cropWidth, cropHeight);
 
 	ctx.canvas.remove();
 
@@ -324,7 +329,7 @@ async function createTextureFromQr(options: { data: string | null }, resolution 
 		},
 	});
 
-	const blob = await qrCodeInstance.getRawData('png') as Blob | null;
+	const blob = (await qrCodeInstance.getRawData('png')) as Blob | null;
 	if (blob == null) return null;
 
 	const image = await window.createImageBitmap(blob);

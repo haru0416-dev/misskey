@@ -14,7 +14,7 @@ export const TIME_UPDATE_INTERVAL = 10000; // 10秒
  * tickを各コンポーネントで行うのではなく、ここで一括して行うことでパフォーマンスを改善する。
  *
  * ※ マウント前の時刻を返す可能性があるため、通常は`useLowresTime`を使用する
-*/
+ */
 export const lowresTime = readonly(time);
 
 /**

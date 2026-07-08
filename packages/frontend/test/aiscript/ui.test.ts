@@ -25,7 +25,7 @@ type ExeResult = {
 	root: AsUiRoot;
 	get: (id: string) => AsUiComponent;
 	outputs: values.Value[];
-}
+};
 async function exe(script: string): Promise<ExeResult> {
 	const rootRef = ref<AsUiRoot>();
 	const componentRefs = ref<Ref<AsUiComponent>[]>([]);
@@ -38,8 +38,8 @@ async function exe(script: string): Promise<ExeResult> {
 		{
 			out: (value) => {
 				outputs.push(value);
-			}
-		}
+			},
+		},
 	);
 	const ast = Parser.parse(script);
 	await interpreter.exec(ast);
@@ -48,15 +48,11 @@ async function exe(script: string): Promise<ExeResult> {
 	if (root === undefined) {
 		expect.unreachable('root must not be undefined');
 	}
-	const components = componentRefs.value.map(
-		(componentRef) => componentRef.value,
-	);
+	const components = componentRefs.value.map((componentRef) => componentRef.value);
 	expect(root).toBe(components[0]);
 	expect(root.type).toBe('root');
 	const get = (id: string) => {
-		const component = componentRefs.value.find(
-			(componentRef) => componentRef.value.id === id,
-		);
+		const component = componentRefs.value.find((componentRef) => componentRef.value.id === id);
 		if (component === undefined) {
 			expect.unreachable(`component "${id}" is not defined`);
 		}
@@ -180,35 +176,43 @@ describe('AiScript UI API', () => {
 		});
 
 		test.concurrent('invalid children', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Ui:C:container({
 					children: 0
 				})
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 		});
 
 		test.concurrent('invalid align', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Ui:C:container({
 					align: 'invalid'
 				})
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 		});
 
 		test.concurrent('invalid font', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Ui:C:container({
 					font: 'invalid'
 				})
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 		});
 
 		test.concurrent('invalid borderStyle', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Ui:C:container({
 					borderStyle: 'invalid'
 				})
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 		});
 	});
 
@@ -252,11 +256,13 @@ describe('AiScript UI API', () => {
 		});
 
 		test.concurrent('invalid font', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Ui:C:text({
 					font: 'invalid'
 				})
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 		});
 	});
 
@@ -306,11 +312,13 @@ describe('AiScript UI API', () => {
 		});
 
 		test.concurrent('invalid font', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Ui:C:mfm({
 					font: 'invalid'
 				})
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 		});
 	});
 
@@ -549,9 +557,7 @@ describe('AiScript UI API', () => {
 			});
 			await onClickA!();
 			await onClickB!();
-			expect(outputs).toStrictEqual(
-				[values.STR('clicked a'), values.STR('clicked b')]
-			);
+			expect(outputs).toStrictEqual([values.STR('clicked a'), values.STR('clicked b')]);
 		});
 	});
 

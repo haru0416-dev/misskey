@@ -28,9 +28,9 @@ export const Default = {
 				},
 				events() {
 					return {
-						'ok': action('ok'),
-						'cancel': action('cancel'),
-						'closed': action('closed'),
+						ok: action('ok'),
+						cancel: action('cancel'),
+						closed: action('closed'),
 					};
 				},
 			},

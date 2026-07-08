@@ -4,8 +4,8 @@
  */
 
 import { AISCRIPT_VERSION } from '@syuilo/aiscript';
-import type { entities } from 'misskey-js'
-import { date, imageDataUrl, text } from "./fake-utils.js";
+import type { entities } from 'misskey-js';
+import { date, imageDataUrl, text } from './fake-utils.js';
 
 export function abuseUserReport() {
 	return {
@@ -24,7 +24,13 @@ export function abuseUserReport() {
 	};
 }
 
-export function channel(id = 'somechannelid', name = 'Some Channel', bannerUrl: string | null = 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true'): entities.Channel {
+export function channel(
+	id = 'somechannelid',
+	name = 'Some Channel',
+	bannerUrl:
+		| string
+		| null = 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true',
+): entities.Channel {
 	return {
 		id,
 		createdAt: '2016-12-28T22:49:51.000Z',
@@ -56,13 +62,15 @@ export function chatMessage(room = false, id = 'somechatmessageid', text = 'Hell
 		text,
 		isRead: false,
 		reactions: [],
-		...room ? {
-			toRoomId: toRoom.id,
-			toRoom,
-		} : {
-			toUserId: toUser.id,
-			toUser,
-		},
+		...(room
+			? {
+					toRoomId: toRoom.id,
+					toRoom,
+				}
+			: {
+					toUserId: toUser.id,
+					toUser,
+				}),
 	};
 }
 
@@ -119,13 +127,11 @@ export function galleryPost(isSensitive = false) {
 		title: 'Some post title',
 		description: 'Some post description',
 		fileIds: ['somefileid'],
-		files: [
-			file(isSensitive),
-		],
+		files: [file(isSensitive)],
 		isSensitive,
 		likedCount: 0,
 		isLiked: false,
-	}
+	};
 }
 
 export function file(isSensitive = false): entities.DriveFile {
@@ -140,7 +146,7 @@ export function file(isSensitive = false): entities.DriveFile {
 		blurhash: 'eQAmoa^-MH8w9ZIvNLSvo^$*MwRPbwtSxutRozjEiwR.RjWBoeozog',
 		properties: {
 			width: 1024,
-			height: 270
+			height: 270,
 		},
 		url: 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true',
 		thumbnailUrl: 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true',
@@ -186,7 +192,11 @@ export function flash(): entities.Flash {
 	};
 }
 
-export function folder(id = 'somefolderid', name = 'Some Folder', parentId: string | null = null): entities.DriveFolder {
+export function folder(
+	id = 'somefolderid',
+	name = 'Some Folder',
+	parentId: string | null = null,
+): entities.DriveFolder {
 	return {
 		id,
 		createdAt: '2016-12-28T22:49:51.000Z',
@@ -245,7 +255,12 @@ export function note(id = 'somenoteid'): entities.Note {
 	};
 }
 
-export function userLite(id = 'someuserid', username = 'miskist', host: entities.UserDetailed['host'] = 'misskey-hub.net', name: entities.UserDetailed['name'] = 'Misskey User'): entities.UserLite {
+export function userLite(
+	id = 'someuserid',
+	username = 'miskist',
+	host: entities.UserDetailed['host'] = 'misskey-hub.net',
+	name: entities.UserDetailed['name'] = 'Misskey User',
+): entities.UserLite {
 	return {
 		id,
 		username,
@@ -259,7 +274,12 @@ export function userLite(id = 'someuserid', username = 'miskist', host: entities
 	};
 }
 
-export function userDetailed(id = 'someuserid', username = 'miskist', host: entities.UserDetailed['host'] = 'misskey-hub.net', name: entities.UserDetailed['name'] = 'Misskey User'): entities.UserDetailed {
+export function userDetailed(
+	id = 'someuserid',
+	username = 'miskist',
+	host: entities.UserDetailed['host'] = 'misskey-hub.net',
+	name: entities.UserDetailed['name'] = 'Misskey User',
+): entities.UserDetailed {
 	return {
 		...userLite(id, username, host, name),
 		bannerBlurhash: 'eQA^IW^-MH8w9tE8I=S^o{$*R4RikXtSxutRozjEnNR.RQadoyozog',
@@ -321,45 +341,48 @@ export function userDetailed(id = 'someuserid', username = 'miskist', host: enti
 export function inviteCode(isUsed = false, hasExpiration = false, isExpired = false, isCreatedBySystem = false) {
 	const date = new Date();
 	const createdAt = new Date();
-	createdAt.setDate(date.getDate() - 1)
+	createdAt.setDate(date.getDate() - 1);
 	const expiresAt = new Date();
 
 	if (isExpired) {
-		expiresAt.setHours(date.getHours() - 1)
+		expiresAt.setHours(date.getHours() - 1);
 	} else {
-		expiresAt.setHours(date.getHours() + 1)
+		expiresAt.setHours(date.getHours() + 1);
 	}
 
 	return {
-		id: "9gyqzizw77",
-		code: "SLF3JKF7UV2H9",
+		id: '9gyqzizw77',
+		code: 'SLF3JKF7UV2H9',
 		expiresAt: hasExpiration ? expiresAt.toISOString() : null,
 		createdAt: createdAt.toISOString(),
 		createdBy: isCreatedBySystem ? null : userDetailed('8i3rvznx32'),
 		usedBy: isUsed ? userDetailed('3i3r2znx1v') : null,
 		usedAt: isUsed ? date.toISOString() : null,
 		used: isUsed,
-	}
+	};
 }
 
-export function role(params: {
-	id?: string,
-	name?: string,
-	color?: string | null,
-	iconUrl?: string | null,
-	description?: string,
-	isModerator?: boolean,
-	isAdministrator?: boolean,
-	displayOrder?: number,
-	createdAt?: string,
-	updatedAt?: string,
-	target?: 'manual' | 'conditional',
-	isPublic?: boolean,
-	isExplorable?: boolean,
-	asBadge?: boolean,
-	canEditMembersByModerator?: boolean,
-	usersCount?: number,
-}, seed?: string): entities.Role {
+export function role(
+	params: {
+		id?: string;
+		name?: string;
+		color?: string | null;
+		iconUrl?: string | null;
+		description?: string;
+		isModerator?: boolean;
+		isAdministrator?: boolean;
+		displayOrder?: number;
+		createdAt?: string;
+		updatedAt?: string;
+		target?: 'manual' | 'conditional';
+		isPublic?: boolean;
+		isExplorable?: boolean;
+		asBadge?: boolean;
+		canEditMembersByModerator?: boolean;
+		usersCount?: number;
+	},
+	seed?: string,
+): entities.Role {
 	const prefix = params.displayOrder ? params.displayOrder.toString().padStart(3, '0') + '-' : '';
 	const genId = text(36, seed);
 	const createdAt = params.createdAt ?? date({}, seed).toISOString();
@@ -386,34 +409,37 @@ export function role(params: {
 		condFormula: {
 			id: '',
 			type: 'or',
-			values: []
+			values: [],
 		},
 		policies: {},
-	}
+	};
 }
 
-export function emoji(params?: {
-	id?: string,
-	name?: string,
-	host?: string,
-	uri?: string,
-	publicUrl?: string,
-	originalUrl?: string,
-	type?: string,
-	aliases?: string[],
-	category?: string,
-	license?: string,
-	isSensitive?: boolean,
-	localOnly?: boolean,
-	roleIdsThatCanBeUsedThisEmojiAsReaction?: {id:string, name:string}[],
-	updatedAt?: string,
-}, seed?: string): entities.EmojiDetailedAdmin {
-	const _seed = seed ?? (params?.id ?? "DEFAULT_SEED");
+export function emoji(
+	params?: {
+		id?: string;
+		name?: string;
+		host?: string;
+		uri?: string;
+		publicUrl?: string;
+		originalUrl?: string;
+		type?: string;
+		aliases?: string[];
+		category?: string;
+		license?: string;
+		isSensitive?: boolean;
+		localOnly?: boolean;
+		roleIdsThatCanBeUsedThisEmojiAsReaction?: { id: string; name: string }[];
+		updatedAt?: string;
+	},
+	seed?: string,
+): entities.EmojiDetailedAdmin {
+	const _seed = seed ?? params?.id ?? 'DEFAULT_SEED';
 	const id = params?.id ?? text(32, _seed);
 	const name = params?.name ?? text(8, _seed);
 	const updatedAt = params?.updatedAt ?? date({}, _seed).toISOString();
 
-	const image = imageDataUrl({}, _seed)
+	const image = imageDataUrl({}, _seed);
 
 	return {
 		id: id,
@@ -430,5 +456,5 @@ export function emoji(params?: {
 		localOnly: params?.localOnly ?? false,
 		roleIdsThatCanBeUsedThisEmojiAsReaction: params?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [],
 		updatedAt: updatedAt,
-	}
+	};
 }

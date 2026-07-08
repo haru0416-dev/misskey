@@ -31,7 +31,7 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import { z } from 'zod';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
-import { birthdayZodSchema, descriptionZodSchema, followedMessageZodSchema, locationZodSchema, nameZodSchema } from '@/models/User.js';
+import { birthdaySchema, descriptionSchema, followedMessageSchema, locationSchema, nameSchema } from '@/models/User.js';
 import { notificationRecieveConfigZodSchema } from '@/models/json-schema/user.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
@@ -99,11 +99,11 @@ function iUpdateYourAccountMovedError(): HonoApiError {
 const muteWordsZodSchema = z.array(z.union([z.array(z.string()), z.string()]));
 
 export const iUpdateParamDef = z.object({
-	name: nameZodSchema.nullable().optional(),
-	description: descriptionZodSchema.nullable().optional(),
-	followedMessage: followedMessageZodSchema.nullable().optional(),
-	location: locationZodSchema.nullable().optional(),
-	birthday: birthdayZodSchema.nullable().optional(),
+	name: nameSchema.nullable().optional(),
+	description: descriptionSchema.nullable().optional(),
+	followedMessage: followedMessageSchema.nullable().optional(),
+	location: locationSchema.nullable().optional(),
+	birthday: birthdaySchema.nullable().optional(),
 	lang: z.union([z.enum(Object.keys(langmap) as [string, ...string[]]), z.null()]).optional(),
 	avatarId: misskeyId().nullable().optional(),
 	avatarDecorations: z.array(z.object({
@@ -190,7 +190,7 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 		if (!regexp) throw iUpdateInvalidRegexpError();
 
 		try {
-			new RE2(regexp[1], regexp[2]);
+			const parsedRegexp = new RE2(regexp[1], regexp[2]);
 		} catch {
 			throw iUpdateInvalidRegexpError();
 		}

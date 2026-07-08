@@ -22,22 +22,25 @@ describe('MkUrlPreview', () => {
 			};
 		}
 
-		fetchMock.mockOnceIf((req) => {
-			const url = new URL(req.url);
-			return url.pathname === '/url';
-		}, () => {
-			return {
-				status: 200,
-				body: JSON.stringify(summary),
-			};
-		});
+		fetchMock.mockOnceIf(
+			(req) => {
+				const url = new URL(req.url);
+				return url.pathname === '/url';
+			},
+			() => {
+				return {
+					status: 200,
+					body: JSON.stringify(summary),
+				};
+			},
+		);
 
 		const result = render(MkUrlPreview, {
 			props: { url: summary.url! },
 			global: { directives, components },
 		});
 
-		await new Promise<void>(resolve => {
+		await new Promise<void>((resolve) => {
 			const observer = new MutationObserver(() => {
 				resolve();
 				observer.disconnect();
@@ -179,7 +182,10 @@ describe('MkUrlPreview', () => {
 		});
 		assert.exists(iframe, 'iframe should exist');
 		assert.strictEqual(iframe?.getAttribute('allow'), 'fullscreen;web-share');
-		assert.strictEqual(iframe?.getAttribute('sandbox'), 'allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin');
+		assert.strictEqual(
+			iframe?.getAttribute('sandbox'),
+			'allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin',
+		);
 	});
 
 	test('Loading a post in iframe', async () => {
@@ -188,6 +194,9 @@ describe('MkUrlPreview', () => {
 		});
 		assert.exists(iframe, 'iframe should exist');
 		assert.strictEqual(iframe?.getAttribute('allow'), 'fullscreen;web-share');
-		assert.strictEqual(iframe?.getAttribute('sandbox'), 'allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin');
+		assert.strictEqual(
+			iframe?.getAttribute('sandbox'),
+			'allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin',
+		);
 	});
 });

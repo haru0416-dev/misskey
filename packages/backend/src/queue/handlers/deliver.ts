@@ -147,7 +147,7 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 			}
 
 			// 5xx etc.
-			throw new Error(`${res.statusCode} ${res.statusMessage}`);
+			throw new Error(`${res.statusCode} ${res.statusMessage}`, { cause: res });
 		} else {
 			// DNS error, socket error, timeout ...
 			throw res;

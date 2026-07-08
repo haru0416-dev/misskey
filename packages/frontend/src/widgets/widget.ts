@@ -41,23 +41,29 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 	save: () => void;
 	configure: () => void;
 } => {
-	const widgetProps = reactive((() => {
-		const np = getDefaultFormValues(propsDef);
-		if (props.widget?.data != null) {
-			for (const key of Object.keys(props.widget.data) as (keyof F)[]) {
-				np[key] = props.widget.data[key] as GetFormResultType<F>[typeof key];
+	const widgetProps = reactive(
+		(() => {
+			const np = getDefaultFormValues(propsDef);
+			if (props.widget?.data != null) {
+				for (const key of Object.keys(props.widget.data) as (keyof F)[]) {
+					np[key] = props.widget.data[key] as GetFormResultType<F>[typeof key];
+				}
 			}
-		}
-		return np;
-	})());
+			return np;
+		})(),
+	);
 
-	watch(() => props.widget?.data, (to) => {
-		if (to != null) {
-			for (const key of Object.keys(propsDef)) {
-				(widgetProps as any)[key] = to[key];
+	watch(
+		() => props.widget?.data,
+		(to) => {
+			if (to != null) {
+				for (const key of Object.keys(propsDef)) {
+					(widgetProps as any)[key] = to[key];
+				}
 			}
-		}
-	}, { deep: true });
+		},
+		{ deep: true },
+	);
 
 	const save = throttle(3000, () => {
 		emit('updateProps', widgetProps as GetFormResultType<F>);
@@ -69,27 +75,34 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 			form[item].default = (widgetProps as any)[item];
 		}
 
-		const res = await new Promise<{
-			canceled: false;
-			result: GetFormResultType<F>;
-		} | {
-			canceled: true;
-		}>((resolve) => {
-			const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkWidgetSettingsDialog.vue')), {
-				widgetName: name,
-				form: form,
-				currentSettings: widgetProps,
-			}, {
-				saved: (newProps) => {
-					resolve({ canceled: false, result: newProps as GetFormResultType<F> });
+		const res = await new Promise<
+			| {
+					canceled: false;
+					result: GetFormResultType<F>;
+			  }
+			| {
+					canceled: true;
+			  }
+		>((resolve) => {
+			const { dispose } = os.popup(
+				defineAsyncComponent(() => import('@/components/MkWidgetSettingsDialog.vue')),
+				{
+					widgetName: name,
+					form: form,
+					currentSettings: widgetProps,
 				},
-				canceled: () => {
-					resolve({ canceled: true });
+				{
+					saved: (newProps) => {
+						resolve({ canceled: false, result: newProps as GetFormResultType<F> });
+					},
+					canceled: () => {
+						resolve({ canceled: true });
+					},
+					closed: () => {
+						dispose();
+					},
 				},
-				closed: () => {
-					dispose();
-				},
-			});
+			);
 		});
 
 		if (res.canceled) {

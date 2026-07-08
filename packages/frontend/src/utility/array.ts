@@ -18,7 +18,7 @@ export function countIf<T>(f: Predicate<T>, xs: T[]): number {
  * Count the number of elements that is equal to the element
  */
 export function count<T>(a: T, xs: T[]): number {
-	return countIf(x => x === a, xs);
+	return countIf((x) => x === a, xs);
 }
 
 /**
@@ -33,14 +33,14 @@ export function concat<T>(xss: T[][]): T[] {
  * @param sep The element to be interspersed
  */
 export function intersperse<T>(sep: T, xs: T[]): T[] {
-	return concat(xs.map(x => [sep, x])).slice(1);
+	return concat(xs.map((x) => [sep, x])).slice(1);
 }
 
 /**
  * Returns the array of elements that is not equal to the element
  */
 export function erase<T>(a: T, xs: T[]): T[] {
-	return xs.filter(x => x !== a);
+	return xs.filter((x) => x !== a);
 }
 
 /**
@@ -48,7 +48,7 @@ export function erase<T>(a: T, xs: T[]): T[] {
  * The order of result values are determined by the first array.
  */
 export function difference<T>(xs: T[], ys: T[]): T[] {
-	return xs.filter(x => !ys.includes(x));
+	return xs.filter((x) => !ys.includes(x));
 }
 
 /**

@@ -1595,10 +1595,6 @@ export const endpointMetas = {
 						type: 'number',
 						optional: false, nullable: false,
 					},
-					//originalReactionsCount: {
-					//	type: 'number',
-					//	optional: false, nullable: false,
-					//},
 					instances: {
 						type: 'number',
 						optional: false, nullable: false,

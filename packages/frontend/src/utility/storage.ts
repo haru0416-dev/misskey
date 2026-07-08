@@ -31,7 +31,7 @@ export async function enableStoragePersistence() {
 				text: i18n.ts.somethingHappened,
 			});
 		}
-	}	catch (err) {
+	} catch (err) {
 		os.alert({
 			type: 'error',
 			text: i18n.ts.somethingHappened,

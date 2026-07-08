@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type Awaitable <T> = T | Promise<T>;
+export type Awaitable<T> = T | Promise<T>;
