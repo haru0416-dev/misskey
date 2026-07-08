@@ -30,14 +30,14 @@ type Action = {
 
 //#region consts
 const KEY_ALIASES = {
-	'esc': 'Escape',
-	'enter': 'Enter',
-	'space': ' ',
-	'up': 'ArrowUp',
-	'down': 'ArrowDown',
-	'left': 'ArrowLeft',
-	'right': 'ArrowRight',
-	'plus': ['+', ';'],
+	esc: 'Escape',
+	enter: 'Enter',
+	space: ' ',
+	up: 'ArrowUp',
+	down: 'ArrowDown',
+	left: 'ArrowLeft',
+	right: 'ArrowRight',
+	plus: ['+', ';'],
 };
 
 const MODIFIER_KEYS = ['ctrl', 'alt', 'shift'];
@@ -46,7 +46,7 @@ const IGNORE_ELEMENTS = ['input', 'textarea'];
 //#endregion
 
 //#region store
-let latestHotkey: Pattern & { callback: CallbackFunction } | null = null;
+let latestHotkey: (Pattern & { callback: CallbackFunction }) | null = null;
 //#endregion
 
 //#region impl
@@ -79,9 +79,9 @@ const parseKeymap = (keymap: Keymap) => {
 };
 
 const parsePatterns = (rawPatterns: keyof Keymap) => {
-	return rawPatterns.split('|').map(part => {
+	return rawPatterns.split('|').map((part) => {
 		const keys = part.split('+').map(trimLower);
-		const which = parseKeyCode(keys.findLast(x => !MODIFIER_KEYS.includes(x)));
+		const which = parseKeyCode(keys.findLast((x) => !MODIFIER_KEYS.includes(x)));
 		const ctrl = keys.includes('ctrl');
 		const alt = keys.includes('alt');
 		const shift = keys.includes('shift');
@@ -164,7 +164,10 @@ const getValueByKey = <
 	T extends Record<keyof any, unknown>,
 	K extends keyof T | keyof any,
 	R extends K extends keyof T ? T[K] : T[keyof T] | undefined,
->(obj: T, key: K) => {
+>(
+	obj: T,
+	key: K,
+) => {
 	return obj[key] as R;
 };
 

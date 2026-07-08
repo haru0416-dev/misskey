@@ -6,7 +6,10 @@
 import { errors, utils } from '@syuilo/aiscript';
 import type { values } from '@syuilo/aiscript';
 
-export function assertStringAndIsIn<A extends readonly string[]>(value: values.Value | undefined, expects: A): asserts value is values.VStr & { value: A[number] } {
+export function assertStringAndIsIn<A extends readonly string[]>(
+	value: values.Value | undefined,
+	expects: A,
+): asserts value is values.VStr & { value: A[number] } {
 	utils.assertString(value);
 	const str = value.value;
 	if (!expects.includes(str)) {

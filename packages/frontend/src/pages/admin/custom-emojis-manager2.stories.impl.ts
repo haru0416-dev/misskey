@@ -11,9 +11,7 @@ import { emoji } from '../../../.storybook/fakes.js';
 import { fakeId } from '../../../.storybook/fake-utils.js';
 import custom_emojis_manager2 from './custom-emojis-manager2.vue';
 
-function createRender(params: {
-	emojis: entities.EmojiDetailedAdmin[];
-}) {
+function createRender(params: { emojis: entities.EmojiDetailedAdmin[] }) {
 	const storedEmojis: entities.EmojiDetailedAdmin[] = [...params.emojis];
 	const storedDriveFiles: entities.DriveFile[] = [];
 
@@ -38,9 +36,7 @@ function createRender(params: {
 				template: '<custom_emojis_manager2 v-bind="props" />',
 			};
 		},
-		args: {
-
-		},
+		args: {},
 		parameters: {
 			layout: 'fullscreen',
 			msw: {
@@ -50,7 +46,7 @@ function createRender(params: {
 						await delay(100);
 
 						const bodyStream = request.body as ReadableStream;
-						const body = await new Response(bodyStream).json() as entities.V2AdminEmojiListRequest;
+						const body = (await new Response(bodyStream).json()) as entities.V2AdminEmojiListRequest;
 
 						const emojis = storedEmojis;
 						const limit = body.limit ?? 10;
@@ -74,9 +70,12 @@ function createRender(params: {
 						const data = await request.formData();
 						const file = data.get('file');
 						if (!file || !(file instanceof File)) {
-							return HttpResponse.json({ error: 'file is required' }, {
-								status: 400,
-							});
+							return HttpResponse.json(
+								{ error: 'file is required' },
+								{
+									status: 400,
+								},
+							);
 						}
 
 						// FIXME: ファイルのバイナリに0xEF 0xBF 0xBDが混入してしまい、うまく画像ファイルとして表示できない問題がある
@@ -115,11 +114,11 @@ function createRender(params: {
 						await delay(100);
 
 						const bodyStream = request.body as ReadableStream;
-						const body = await new Response(bodyStream).json() as entities.AdminEmojiAddRequest;
+						const body = (await new Response(bodyStream).json()) as entities.AdminEmojiAddRequest;
 
 						const fileId = body.fileId;
 						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-						const file = storedDriveFiles.find(f => f.id === fileId)!;
+						const file = storedDriveFiles.find((f) => f.id === fileId)!;
 
 						const em = emoji({
 							id: fakeId(file.name),

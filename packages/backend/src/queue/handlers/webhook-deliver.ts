@@ -55,7 +55,7 @@ async function deliverWebhookForHonoQueue(
 				throw new Bull.UnrecoverableError(`${res.statusCode} ${res.statusMessage}`);
 			}
 
-			throw new Error(`${res.statusCode} ${res.statusMessage}`);
+			throw new Error(`${res.statusCode} ${res.statusMessage}`, { cause: res });
 		} else {
 			throw res;
 		}

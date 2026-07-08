@@ -12,10 +12,10 @@ describe('[NIRAX] ナビゲーションイベント', () => {
 		const changes: string[] = [];
 		const replacements: string[] = [];
 
-		router.addListener('change', ctx => {
+		router.addListener('change', (ctx) => {
 			changes.push(ctx.fullPath);
 		});
-		router.addListener('replace', ctx => {
+		router.addListener('replace', (ctx) => {
 			replacements.push(ctx.fullPath);
 		});
 
@@ -32,12 +32,12 @@ describe('[NIRAX] ナビゲーションイベント', () => {
 		const pushed: string[] = [];
 		const changed: string[] = [];
 
-		router.addListener('push', ctx => {
+		router.addListener('push', (ctx) => {
 			pushed.push(ctx.fullPath);
 			assert.strictEqual(ctx.route?.path, '/posts/:postId');
 			assert.strictEqual(ctx.props?.get('postId'), 'abc123');
 		});
-		router.addListener('change', ctx => {
+		router.addListener('change', (ctx) => {
 			changed.push(ctx.fullPath);
 		});
 
@@ -89,7 +89,7 @@ describe('[NIRAX] ナビゲーションイベント', () => {
 		router.addListener('push', () => {
 			pushCount++;
 		});
-		router.navHook = fullPath => {
+		router.navHook = (fullPath) => {
 			navHookCalls.push(fullPath);
 			return true;
 		};

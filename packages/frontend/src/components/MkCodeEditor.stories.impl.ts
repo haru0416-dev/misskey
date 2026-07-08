@@ -38,9 +38,9 @@ export const Default = {
 				},
 				events() {
 					return {
-						'change': action('change'),
-						'keydown': action('keydown'),
-						'enter': action('enter'),
+						change: action('change'),
+						keydown: action('keydown'),
+						enter: action('enter'),
 						'update:modelValue': action('update:modelValue'),
 					};
 				},
@@ -56,7 +56,8 @@ export const Default = {
 	},
 	decorators: [
 		() => ({
-			template: '<div style="display: flex; align-items: center; justify-content: center; height: 100vh"><div style="max-width: 800px; width: 100%; margin: 3rem"><Suspense><story/></Suspense></div></div>',
+			template:
+				'<div style="display: flex; align-items: center; justify-content: center; height: 100vh"><div style="max-width: 800px; width: 100%; margin: 3rem"><Suspense><story/></Suspense></div></div>',
 		}),
 	],
 } satisfies StoryObj<typeof MkCodeEditor>;

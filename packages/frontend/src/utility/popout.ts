@@ -16,14 +16,12 @@ export function popout(path: string, w?: HTMLElement) {
 		const height = parseInt(computedStyle.height, 10);
 		const x = window.screenX + position.left;
 		const y = window.screenY + position.top;
-		window.open(url, url,
-			`width=${width}, height=${height}, top=${y}, left=${x}`);
+		window.open(url, url, `width=${width}, height=${height}, top=${y}, left=${x}`);
 	} else {
 		const width = 400;
 		const height = 500;
-		const x = window.top == null ? 0 : window.top.outerHeight / 2 + window.top.screenY - (height / 2);
-		const y = window.top == null ? 0 : window.top.outerWidth / 2 + window.top.screenX - (width / 2);
-		window.open(url, url,
-			`width=${width}, height=${height}, top=${x}, left=${y}`);
+		const x = window.top == null ? 0 : window.top.outerHeight / 2 + window.top.screenY - height / 2;
+		const y = window.top == null ? 0 : window.top.outerWidth / 2 + window.top.screenX - width / 2;
+		window.open(url, url, `width=${width}, height=${height}, top=${x}, left=${y}`);
 	}
 }

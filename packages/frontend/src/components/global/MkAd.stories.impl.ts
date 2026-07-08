@@ -89,8 +89,7 @@ export const Square = {
 		specify: {
 			...common.args.specify,
 			place: 'square',
-			imageUrl:
-				'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/about-icon.png?raw=true',
+			imageUrl: 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/about-icon.png?raw=true',
 		},
 	},
 } satisfies StoryObj<typeof MkAd>;
@@ -101,8 +100,7 @@ export const Horizontal = {
 		specify: {
 			...common.args.specify,
 			place: 'horizontal',
-			imageUrl:
-				'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true',
+			imageUrl: 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true',
 		},
 	},
 } satisfies StoryObj<typeof MkAd>;
@@ -113,8 +111,7 @@ export const HorizontalBig = {
 		specify: {
 			...common.args.specify,
 			place: 'horizontal-big',
-			imageUrl:
-				'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true',
+			imageUrl: 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/fedi.jpg?raw=true',
 		},
 	},
 } satisfies StoryObj<typeof MkAd>;

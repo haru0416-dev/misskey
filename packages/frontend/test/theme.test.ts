@@ -27,13 +27,16 @@ vi.mock('@/os.js', () => ({
 
 const cloneTheme = <T>(value: T): T => structuredClone(value);
 
-const createTheme = (base: 'light' | 'dark', options: {
-	id: string;
-	name: string;
-	accent: string;
-	bg: string;
-	fg: string;
-}): Theme => {
+const createTheme = (
+	base: 'light' | 'dark',
+	options: {
+		id: string;
+		name: string;
+		accent: string;
+		bg: string;
+		fg: string;
+	},
+): Theme => {
 	const builtin = base === 'dark' ? darkTheme : lightTheme;
 
 	return {
@@ -116,7 +119,10 @@ describe('ThemeManager', () => {
 		assert.strictEqual(themeManager.isPreviewMode, true);
 		assert.strictEqual(isPreviewMode.value, true);
 		assert.strictEqual(document.documentElement.dataset.colorScheme, 'dark');
-		assert.strictEqual(document.documentElement.style.getPropertyValue('--MI_THEME-accent'), themeManager.currentCompiledTheme?.accent);
+		assert.strictEqual(
+			document.documentElement.style.getPropertyValue('--MI_THEME-accent'),
+			themeManager.currentCompiledTheme?.accent,
+		);
 		assert.strictEqual(window.localStorage.getItem('theme'), cachedTheme);
 		assert.strictEqual(window.localStorage.getItem('themeId'), cachedThemeId);
 	});
@@ -140,8 +146,14 @@ describe('ThemeManager', () => {
 		assert.strictEqual(themeManager.isPreviewMode, false);
 		assert.strictEqual(isPreviewMode.value, false);
 		assert.strictEqual(document.documentElement.dataset.colorScheme, 'light');
-		assert.strictEqual(document.documentElement.style.getPropertyValue('--MI_THEME-accent'), themeManager.currentCompiledTheme?.accent);
-		assert.strictEqual(document.head.querySelector('meta[name="theme-color"]')?.getAttribute('content'), originalCompiledThemeColor);
+		assert.strictEqual(
+			document.documentElement.style.getPropertyValue('--MI_THEME-accent'),
+			themeManager.currentCompiledTheme?.accent,
+		);
+		assert.strictEqual(
+			document.head.querySelector('meta[name="theme-color"]')?.getAttribute('content'),
+			originalCompiledThemeColor,
+		);
 		assert.strictEqual(window.localStorage.getItem('themeId'), primaryTheme.id);
 	});
 
@@ -157,7 +169,10 @@ describe('ThemeManager', () => {
 		assert.strictEqual(themeManager.isPreviewMode, false);
 		assert.strictEqual(isPreviewMode.value, false);
 		assert.strictEqual(document.documentElement.dataset.colorScheme, 'dark');
-		assert.strictEqual(document.documentElement.style.getPropertyValue('--MI_THEME-accent'), themeManager.currentCompiledTheme?.accent);
+		assert.strictEqual(
+			document.documentElement.style.getPropertyValue('--MI_THEME-accent'),
+			themeManager.currentCompiledTheme?.accent,
+		);
 		assert.strictEqual(window.localStorage.getItem('themeId'), replacementTheme.id);
 	});
 

@@ -17,12 +17,16 @@ export const rippleDirective = {
 		el.addEventListener('click', () => {
 			const rect = el.getBoundingClientRect();
 
-			const x = rect.left + (el.offsetWidth / 2);
-			const y = rect.top + (el.offsetHeight / 2);
+			const x = rect.left + el.offsetWidth / 2;
+			const y = rect.top + el.offsetHeight / 2;
 
-			const { dispose } = popup(MkRippleEffect, { x, y }, {
-				end: () => dispose(),
-			});
+			const { dispose } = popup(
+				MkRippleEffect,
+				{ x, y },
+				{
+					end: () => dispose(),
+				},
+			);
 		});
 	},
 } as Directive<HTMLElement, boolean | undefined>;

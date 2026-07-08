@@ -80,9 +80,7 @@ export const ServerRulesOnly = {
 	args: {
 		...Empty.args,
 		// @ts-expect-error serverRules is for test
-		serverRules: [
-			'ルール',
-		],
+		serverRules: ['ルール'],
 	},
 } satisfies StoryObj<typeof MkSignupServerRules>;
 export const TOSOnly = {

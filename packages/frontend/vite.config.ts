@@ -20,8 +20,11 @@ import pluginWatchLocales from './lib/vite-plugin-watch-locales.js';
 import { pluginRemoveUnrefI18n } from '../frontend-builder/rollup-plugin-remove-unref-i18n.js';
 import { Features } from 'lightningcss';
 
-const url = process.env.NODE_ENV === 'development' ? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).url : null;
-const host = url ? (new URL(url)).hostname : undefined;
+const url =
+	process.env.NODE_ENV === 'development'
+		? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).url
+		: null;
+const host = url ? new URL(url).hostname : undefined;
 
 const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.json5', '.svg', '.sass', '.scss', '.css', '.vue'];
 
@@ -43,11 +46,13 @@ function getBundleVisualizerPlugin(): PluginOption[] {
 	];
 
 	if (process.env.FRONTEND_BUNDLE_VISUALIZER_HTML_FILE != null) {
-		plugins.push(visualizer({
-			...visualizerOptions,
-			filename: process.env.FRONTEND_BUNDLE_VISUALIZER_HTML_FILE,
-			template: 'treemap',
-		}) as PluginOption);
+		plugins.push(
+			visualizer({
+				...visualizerOptions,
+				filename: process.env.FRONTEND_BUNDLE_VISUALIZER_HTML_FILE,
+				template: 'treemap',
+			}) as PluginOption,
+		);
 	}
 
 	return plugins;
@@ -56,17 +61,20 @@ function getBundleVisualizerPlugin(): PluginOption[] {
 /**
  * 検索インデックスの生成設定
  */
-export const searchIndexes = [{
-	targetFilePaths: ['src/pages/settings/*.vue'],
-	mainVirtualModule: 'search-index:settings',
-	modulesToHmrOnUpdate: ['src/pages/settings/index.vue'],
-	verbose: process.env.FRONTEND_SEARCH_INDEX_VERBOSE === 'true',
-}, {
-	targetFilePaths: ['src/pages/admin/*.vue'],
-	mainVirtualModule: 'search-index:admin',
-	modulesToHmrOnUpdate: ['src/pages/admin/index.vue'],
-	verbose: process.env.FRONTEND_SEARCH_INDEX_VERBOSE === 'true',
-}] satisfies SearchIndexOptions[];
+export const searchIndexes = [
+	{
+		targetFilePaths: ['src/pages/settings/*.vue'],
+		mainVirtualModule: 'search-index:settings',
+		modulesToHmrOnUpdate: ['src/pages/settings/index.vue'],
+		verbose: process.env.FRONTEND_SEARCH_INDEX_VERBOSE === 'true',
+	},
+	{
+		targetFilePaths: ['src/pages/admin/*.vue'],
+		mainVirtualModule: 'search-index:admin',
+		modulesToHmrOnUpdate: ['src/pages/admin/index.vue'],
+		verbose: process.env.FRONTEND_SEARCH_INDEX_VERBOSE === 'true',
+	},
+] satisfies SearchIndexOptions[];
 
 /**
  * Misskeyのフロントエンドにバンドルせず、CDNなどから別途読み込むリソースを記述する。
@@ -79,9 +87,7 @@ const externalPackages = [
 		match: /^shiki\/(?<subPkg>(langs|themes))$/,
 		path(id: string, pattern: RegExp): string {
 			const match = pattern.exec(id)?.groups;
-			return match
-				? `https://esm.sh/shiki@${packageInfo.dependencies.shiki}/${match['subPkg']}`
-				: id;
+			return match ? `https://esm.sh/shiki@${packageInfo.dependencies.shiki}/${match['subPkg']}` : id;
 		},
 	},
 ];
@@ -137,28 +143,32 @@ export function getConfig(): UserConfig {
 				// クライアント側のWSポートをViteサーバーのポートに強制させることで、正しくHMRが機能するようになる
 				clientPort: 5173,
 			},
-			headers: { // なんか効かない
+			headers: {
+				// なんか効かない
 				'X-Frame-Options': 'DENY',
 			},
 		},
 
 		plugins: [
 			pluginWatchLocales(),
-			...searchIndexes.map(options => pluginCreateSearchIndex(options)),
+			...searchIndexes.map((options) => pluginCreateSearchIndex(options)),
 			pluginVue(),
 			pluginRemoveUnrefI18n(),
 			pluginUnwindCssModuleClassName(),
 			pluginJson5(),
 			pluginGlsl({ minify: true }),
-			...process.env.NODE_ENV === 'production'
+			...(process.env.NODE_ENV === 'production'
 				? [
-					replacePlugin({
-						'isChromatic()': JSON.stringify(false),
-					}, {
-						preventAssignment: true,
-					}),
-				]
-				: [],
+						replacePlugin(
+							{
+								'isChromatic()': JSON.stringify(false),
+							},
+							{
+								preventAssignment: true,
+							},
+						),
+					]
+				: []),
 			...getBundleVisualizerPlugin(),
 		],
 
@@ -179,7 +189,9 @@ export function getConfig(): UserConfig {
 			},
 			modules: {
 				generateScopedName(name, filename, _css): string {
-					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name).replace(/[\\\/\.\?&=]/g, '-').replace(/(src-|vue-)/g, '');
+					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name)
+						.replace(/[\\\/\.\?&=]/g, '-')
+						.replace(/(src-|vue-)/g, '');
 					if (process.env.NODE_ENV === 'production') {
 						return 'x' + toBase62(hash(id)).substring(0, 4);
 					} else {
@@ -200,11 +212,7 @@ export function getConfig(): UserConfig {
 		},
 
 		build: {
-			target: [
-				'chrome130',
-				'firefox132',
-				'safari18.2',
-			],
+			target: ['chrome130', 'firefox132', 'safari18.2'],
 			manifest: 'manifest.json',
 			rolldownOptions: {
 				experimental: {
@@ -214,22 +222,26 @@ export function getConfig(): UserConfig {
 					i18n: './src/i18n.ts',
 					entry: './src/_boot_.ts',
 				},
-				external: externalPackages.map(p => p.match),
+				external: externalPackages.map((p) => p.match),
 				preserveEntrySignatures: 'allow-extension',
 				output: {
 					codeSplitting: {
-						groups: [{
-							name: 'vue',
-							test: /node_modules[\\/]vue/,
-						}, {
-							name: 'photoswipe',
-							test: /node_modules[\\/]photoswipe/,
-						}, {
-							// split i18n related module to distinct module
-							name: 'i18n',
-							includeDependenciesRecursively: false,
-							test: /i18n\.ts|locale\.ts/,
-						}],
+						groups: [
+							{
+								name: 'vue',
+								test: /node_modules[\\/]vue/,
+							},
+							{
+								name: 'photoswipe',
+								test: /node_modules[\\/]photoswipe/,
+							},
+							{
+								// split i18n related module to distinct module
+								name: 'i18n',
+								includeDependenciesRecursively: false,
+								test: /i18n\.ts|locale\.ts/,
+							},
+						],
 					},
 					entryFileNames: `scripts/${localesHash}-[hash:8].js`,
 					chunkFileNames: `scripts/${localesHash}-[hash:8].js`,

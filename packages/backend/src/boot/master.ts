@@ -55,7 +55,6 @@ export async function masterMain() {
 		showEnvironment();
 		await showMachineInfo(bootLogger);
 		showNodejsVersion();
-		//await connectDb();
 		if (config.pidFile) fs.writeFileSync(config.pidFile, process.pid.toString());
 	} catch (e) {
 		bootLogger.error('Fatal error occurred during initialization: ' + e, null, true);
@@ -164,24 +163,6 @@ function loadConfigBoot(): Config {
 
 	return config;
 }
-
-/*
-async function connectDb(): Promise<void> {
-	const dbLogger = bootLogger.createSubLogger('db');
-
-	// Try to connect to DB
-	try {
-		dbLogger.info('Connecting...');
-		await initDb();
-		const v = await db.query('SHOW server_version').then(x => x[0].server_version);
-		dbLogger.succ(`Connected: v${v}`);
-	} catch (err) {
-		dbLogger.error('Cannot connect', null, true);
-		dbLogger.error(err);
-		process.exit(1);
-	}
-}
-*/
 
 async function spawnWorkers(limit = 1) {
 	const workers = Math.min(limit, os.cpus().length);

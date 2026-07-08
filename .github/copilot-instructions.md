@@ -2,7 +2,7 @@
 
 このファイルは GitHub Copilot の repository-wide instructions として使われる。Copilot code review では `AGENTS.md` が読まれない環境があるため、レビューや軽微な実装判断に必要な規約はこのファイル単体で満たすこと。
 
-リポジトリは Misskey の Bun workspace モノレポ。主要な実装は `packages/backend` (NestJS / TypeORM) と `packages/frontend` (Vue 3) にある。より詳しいガイドはリポジトリルートの `AGENTS.md` を参照してよいが、このファイルの要件を省略してそちらへの参照だけで済ませないこと。
+リポジトリは Misskey の Bun workspace モノレポ。主要な実装は `packages/backend` (Hono + drizzle-orm、DI コンテナ無し) と `packages/frontend` (Vue 3) にある。より詳しいガイドはリポジトリルートの `AGENTS.md` を参照してよいが、このファイルの要件を省略してそちらへの参照だけで済ませないこと。
 
 ## 絶対にやってはいけない事
 
@@ -73,7 +73,7 @@
 
 ## Editing hints
 
-- Backend の API / migration / TypeORM 変更は `packages/backend` を見る
+- Backend の API / migration / drizzle-orm 変更は `packages/backend` を見る
 - Frontend の Vue コンポーネントやページ変更は `packages/frontend` を見る
 - `AGENTS.md` 内の相対リンクはリポジトリルート起点で解決する想定
 

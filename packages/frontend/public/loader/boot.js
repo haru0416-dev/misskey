@@ -30,7 +30,7 @@
 		if (supportedLangs.includes(navigator.language)) {
 			lang = navigator.language;
 		} else {
-			lang = supportedLangs.find(x => x.split('-')[0] === navigator.language);
+			lang = supportedLangs.find((x) => x.split('-')[0] === navigator.language);
 
 			// Fallback
 			if (lang == null) lang = 'en-US';
@@ -48,11 +48,12 @@
 
 	//#region Script
 	async function importAppScript() {
-		await import(CLIENT_ENTRY ? `/vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/vite/src/_boot_.ts')
-			.catch(async e => {
+		await import(CLIENT_ENTRY ? `/vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/vite/src/_boot_.ts').catch(
+			async (e) => {
 				console.error(e);
 				renderError('APP_IMPORT', e);
-			});
+			},
+		);
 	}
 
 	// タイミングによっては、この時点でDOMの構築が済んでいる場合とそうでない場合とがある
@@ -65,7 +66,7 @@
 	}
 	//#endregion
 
-	let isSafeMode = (localStorage.getItem('isSafeMode') === 'true');
+	let isSafeMode = localStorage.getItem('isSafeMode') === 'true';
 
 	if (!isSafeMode) {
 		const urlParams = new URLSearchParams(window.location.search);
@@ -130,7 +131,7 @@
 	async function renderError(code, details) {
 		// Cannot set property 'innerHTML' of null を回避
 		if (document.readyState === 'loading') {
-			await new Promise(resolve => window.addEventListener('DOMContentLoaded', resolve));
+			await new Promise((resolve) => window.addEventListener('DOMContentLoaded', resolve));
 		}
 
 		let messages = null;
@@ -151,20 +152,23 @@
 		}
 		if (!messages) messages = {};
 
-		messages = Object.assign({
-			title: 'Failed to initialize Misskey',
-			solution: 'The following actions may solve the problem.',
-			solution1: 'Update your os and browser',
-			solution2: 'Disable an adblocker',
-			solution3: 'Clear the browser cache',
-			solution4: '(Tor Browser) Set dom.webaudio.enabled to true',
-			otherOption: 'Other options',
-			otherOption1: 'Clear preferences and cache',
-			otherOption2: 'Start the simple client',
-			otherOption3: 'Start the repair tool',
-			otherOption4: 'Start Misskey in safe mode',
-			reload: 'Reload',
-		}, messages);
+		messages = Object.assign(
+			{
+				title: 'Failed to initialize Misskey',
+				solution: 'The following actions may solve the problem.',
+				solution1: 'Update your os and browser',
+				solution2: 'Disable an adblocker',
+				solution3: 'Clear the browser cache',
+				solution4: '(Tor Browser) Set dom.webaudio.enabled to true',
+				otherOption: 'Other options',
+				otherOption1: 'Clear preferences and cache',
+				otherOption2: 'Start the simple client',
+				otherOption3: 'Start the repair tool',
+				otherOption4: 'Start Misskey in safe mode',
+				reload: 'Reload',
+			},
+			messages,
+		);
 
 		const safeModeUrl = new URL(window.location.href);
 		safeModeUrl.searchParams.set('safemode', 'true');

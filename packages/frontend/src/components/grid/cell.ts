@@ -34,21 +34,20 @@ export type GridCell = {
 	violation: ValidateViolation;
 };
 
-export type GridCellContextMenuFactory = (col: GridColumn, row: GridRow, value: CellValue, context: GridContext) => MenuItem[];
+export type GridCellContextMenuFactory = (
+	col: GridColumn,
+	row: GridRow,
+	value: CellValue,
+	context: GridContext,
+) => MenuItem[];
 
 export type GridCellSetting = {
 	contextMenuFactory?: GridCellContextMenuFactory;
 };
 
-export function createCell(
-	column: GridColumn,
-	row: GridRow,
-	value: CellValue,
-	setting: GridCellSetting,
-): GridCell {
-	const newValue = (row.using && column.setting.valueTransformer)
-		? column.setting.valueTransformer(row, column, value)
-		: value;
+export function createCell(column: GridColumn, row: GridRow, value: CellValue, setting: GridCellSetting): GridCell {
+	const newValue =
+		row.using && column.setting.valueTransformer ? column.setting.valueTransformer(row, column, value) : value;
 
 	return {
 		address: { row: row.index, col: column.index },

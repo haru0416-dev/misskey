@@ -78,7 +78,7 @@ onMounted(async () => {
 	const succMax = Math.max(...raw.deliverSucceeded);
 	const failMax = Math.max(...raw.deliverFailed);
 
-	new Chart(chartEl.value, {
+	const chartInstance = new Chart(chartEl.value, {
 		type: 'line',
 		data: {
 			datasets: [{
@@ -183,7 +183,7 @@ onMounted(async () => {
 		plugins: [chartVLine(vLineColor)],
 	});
 
-	new Chart(chartEl2.value, {
+	const chartInstance2 = new Chart(chartEl2.value, {
 		type: 'bar',
 		data: {
 			datasets: [{

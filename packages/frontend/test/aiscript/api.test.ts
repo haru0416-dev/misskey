@@ -6,41 +6,24 @@
 import { miLocalStorage } from '@/local-storage.js';
 import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
 import { errors, Interpreter, Parser, values } from '@syuilo/aiscript';
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	test,
-	vi
-} from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 async function exe(script: string): Promise<values.Value[]> {
 	const outputs: values.Value[] = [];
-	const interpreter = new Interpreter(
-		createAiScriptEnv({ storageKey: 'widget' }),
-		{
-			in: aiScriptReadline,
-			out: (value) => {
-				outputs.push(value);
-			}
-		}
-	);
+	const interpreter = new Interpreter(createAiScriptEnv({ storageKey: 'widget' }), {
+		in: aiScriptReadline,
+		out: (value) => {
+			outputs.push(value);
+		},
+	});
 	const ast = Parser.parse(script);
 	await interpreter.exec(ast);
 	return outputs;
 }
 
-let $iMock = vi.hoisted<Partial<typeof import('@/i.js').$i> | null >(
-	() => null
-);
+let $iMock = vi.hoisted<Partial<typeof import('@/i.js').$i> | null>(() => null);
 
-function errorWithPos<T extends errors.AiScriptError>(
-	error: T,
-	line: number,
-	column: number,
-): T {
+function errorWithPos<T extends errors.AiScriptError>(error: T, line: number, column: number): T {
 	const pos = { line, column };
 	error.pos = pos;
 	error.message = error.message + `\n  at <root> (Line ${pos.line}, Column ${pos.column})`;
@@ -183,10 +166,10 @@ describe('AiScript common API', () => {
 
 		test.sequential('ok', async () => {
 			osMock.alert.mockImplementationOnce(async ({ type, title, text }) => {
-					expect(type).toBe('success');
-					expect(title).toBe('Hello');
-					expect(text).toBe('world');
-				});
+				expect(type).toBe('success');
+				expect(title).toBe('Hello');
+				expect(text).toBe('world');
+			});
 			const [res] = await exe(`
 				<: Mk:dialog('Hello', 'world', 'success')
 			`);
@@ -196,10 +179,10 @@ describe('AiScript common API', () => {
 
 		test.sequential('omit type', async () => {
 			osMock.alert.mockImplementationOnce(async ({ type, title, text }) => {
-					expect(type).toBe('info');
-					expect(title).toBe('Hello');
-					expect(text).toBe('world');
-				});
+				expect(type).toBe('info');
+				expect(title).toBe('Hello');
+				expect(text).toBe('world');
+			});
 			const [res] = await exe(`
 				<: Mk:dialog('Hello', 'world')
 			`);
@@ -208,9 +191,11 @@ describe('AiScript common API', () => {
 		});
 
 		test.sequential('invalid type', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				<: Mk:dialog('Hello', 'world', 'invalid')
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 			expect(osMock.alert).not.toHaveBeenCalled();
 		});
 	});
@@ -223,11 +208,11 @@ describe('AiScript common API', () => {
 
 		test.sequential('ok', async () => {
 			osMock.confirm.mockImplementationOnce(async ({ type, title, text }) => {
-					expect(type).toBe('success');
-					expect(title).toBe('Hello');
-					expect(text).toBe('world');
-					return { canceled: false };
-				});
+				expect(type).toBe('success');
+				expect(title).toBe('Hello');
+				expect(text).toBe('world');
+				return { canceled: false };
+			});
 			const [res] = await exe(`
 				<: Mk:confirm('Hello', 'world', 'success')
 			`);
@@ -236,13 +221,12 @@ describe('AiScript common API', () => {
 		});
 
 		test.sequential('omit type', async () => {
-			osMock.confirm
-				.mockImplementationOnce(async ({ type, title, text }) => {
-					expect(type).toBe('question');
-					expect(title).toBe('Hello');
-					expect(text).toBe('world');
-					return { canceled: false };
-				});
+			osMock.confirm.mockImplementationOnce(async ({ type, title, text }) => {
+				expect(type).toBe('question');
+				expect(title).toBe('Hello');
+				expect(text).toBe('world');
+				return { canceled: false };
+			});
 			const [res] = await exe(`
 				<: Mk:confirm('Hello', 'world')
 			`);
@@ -252,11 +236,11 @@ describe('AiScript common API', () => {
 
 		test.sequential('canceled', async () => {
 			osMock.confirm.mockImplementationOnce(async ({ type, title, text }) => {
-					expect(type).toBe('question');
-					expect(title).toBe('Hello');
-					expect(text).toBe('world');
-					return { canceled: true };
-				});
+				expect(type).toBe('question');
+				expect(title).toBe('Hello');
+				expect(text).toBe('world');
+				return { canceled: true };
+			});
 			const [res] = await exe(`
 				<: Mk:confirm('Hello', 'world')
 			`);
@@ -266,9 +250,11 @@ describe('AiScript common API', () => {
 
 		test.sequential('invalid type', async () => {
 			const confirm = osMock.confirm;
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				<: Mk:confirm('Hello', 'world', 'invalid')
-			`)).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
+			`),
+			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 			expect(confirm).not.toHaveBeenCalled();
 		});
 	});
@@ -280,38 +266,30 @@ describe('AiScript common API', () => {
 		});
 
 		test.sequential('successful', async () => {
-			misskeyApiMock.mockImplementationOnce(
-				async (endpoint, data, token) => {
-					expect(endpoint).toBe('ping');
-					expect(data).toStrictEqual({});
-					expect(token).toBeNull();
-					return { pong: 1735657200000 };
-				}
-			);
+			misskeyApiMock.mockImplementationOnce(async (endpoint, data, token) => {
+				expect(endpoint).toBe('ping');
+				expect(data).toStrictEqual({});
+				expect(token).toBeNull();
+				return { pong: 1735657200000 };
+			});
 			const [res] = await exe(`
 				<: Mk:api('ping', {})
 			`);
-			expect(res).toStrictEqual(values.OBJ(new Map([
-				['pong', values.NUM(1735657200000)],
-			])));
+			expect(res).toStrictEqual(values.OBJ(new Map([['pong', values.NUM(1735657200000)]])));
 			expect(misskeyApiMock).toHaveBeenCalledOnce();
 		});
 
 		test.sequential('with token', async () => {
-			misskeyApiMock.mockImplementationOnce(
-				async (endpoint, data, token) => {
-					expect(endpoint).toBe('ping');
-					expect(data).toStrictEqual({});
-					expect(token).toStrictEqual('xxxxxxxx');
-					return { pong: 1735657200000 };
-				}
-			);
+			misskeyApiMock.mockImplementationOnce(async (endpoint, data, token) => {
+				expect(endpoint).toBe('ping');
+				expect(data).toStrictEqual({});
+				expect(token).toStrictEqual('xxxxxxxx');
+				return { pong: 1735657200000 };
+			});
 			const [res] = await exe(`
 				<: Mk:api('ping', {}, 'xxxxxxxx')
 			`);
-			expect(res).toStrictEqual(values.OBJ(new Map([
-				['pong', values.NUM(1735657200000 )],
-			])));
+			expect(res).toStrictEqual(values.OBJ(new Map([['pong', values.NUM(1735657200000)]])));
 			expect(misskeyApiMock).toHaveBeenCalledOnce();
 		});
 
@@ -320,27 +298,25 @@ describe('AiScript common API', () => {
 			const [res] = await exe(`
 				<: Mk:api('this/endpoint/should/not/be/found', {})
 			`);
-			expect(res).toStrictEqual(
-				values.ERROR('request_failed', values.STR('Not Found'))
-			);
+			expect(res).toStrictEqual(values.ERROR('request_failed', values.STR('Not Found')));
 			expect(misskeyApiMock).toHaveBeenCalledOnce();
 		});
 
 		test.sequential('invalid endpoint', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Mk:api('https://example.com/api/ping', {})
-			`)).rejects.toStrictEqual(
-				errorWithPos(new errors.AiScriptRuntimeError('invalid endpoint'), 2, 11),
-			);
+			`),
+			).rejects.toStrictEqual(errorWithPos(new errors.AiScriptRuntimeError('invalid endpoint'), 2, 11));
 			expect(misskeyApiMock).not.toHaveBeenCalled();
 		});
 
 		test.sequential('missing param', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Mk:api('ping')
-			`)).rejects.toStrictEqual(
-				errorWithPos(new errors.AiScriptRuntimeError('expected param'), 2, 11),
-			);
+			`),
+			).rejects.toStrictEqual(errorWithPos(new errors.AiScriptRuntimeError('expected param'), 2, 11));
 			expect(misskeyApiMock).not.toHaveBeenCalled();
 		});
 	});
@@ -364,9 +340,11 @@ describe('AiScript common API', () => {
 		});
 
 		test.sequential('missing value to save', async () => {
-			await expect(() => exe(`
+			await expect(() =>
+				exe(`
 				Mk:save('key')
-			`)).rejects.toStrictEqual(
+			`),
+			).rejects.toStrictEqual(
 				errorWithPos(new errors.AiScriptRuntimeError('Expect anything, but got nothing.'), 2, 12),
 			);
 		});

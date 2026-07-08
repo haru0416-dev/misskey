@@ -43,7 +43,7 @@ export const Default = {
 			setup() {
 				// @ts-expect-error name is used for mocking instance
 				instance.name = args.name;
-				onBeforeUnmount(() => instance.name = null);
+				onBeforeUnmount(() => (instance.name = null));
 			},
 			template: '<story/>',
 		}),

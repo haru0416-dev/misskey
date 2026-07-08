@@ -7,7 +7,7 @@ import path from 'node:path';
 import locales from 'i18n';
 import type { Plugin } from 'vite';
 
-const localesDir = path.resolve(__dirname, '../../../locales')
+const localesDir = path.resolve(__dirname, '../../../locales');
 
 /**
  * 外部ファイルを監視し、必要に応じてwebSocketでメッセージを送るViteプラグイン
@@ -17,7 +17,7 @@ export default function pluginWatchLocales(): Plugin {
 		name: 'watch-locales',
 
 		configureServer(server) {
-			const localeYmlPaths = Object.keys(locales).map(locale => path.join(localesDir, `${locale}.yml`));
+			const localeYmlPaths = Object.keys(locales).map((locale) => path.join(localesDir, `${locale}.yml`));
 
 			// watcherにパスを追加
 			server.watcher.add(localeYmlPaths);
@@ -28,7 +28,7 @@ export default function pluginWatchLocales(): Plugin {
 						type: 'custom',
 						event: 'locale-update',
 						data: filePath.match(/([^\/]+)\.yml$/)?.[1] || null,
-					})
+					});
 				}
 			});
 		},

@@ -6,8 +6,8 @@
 import { z } from 'zod';
 import { misskeyId } from '@/misc/zod-params.js';
 
-// TODO(ajv->zod移行): endpoints/i/update.ts・endpoints/admin/show-user.ts (res/misskey-js生成専用) が
-// 下記 notificationRecieveConfig をまだ参照しているため残す。Phase B でそちらを移行し終えたら
+// TODO: server/api/metas/admin.ts (admin/show-user の res: 定義、OpenAPI/misskey-js生成専用) が
+// 下記 notificationRecieveConfig をまだ参照しているため残す。res側もZod由来の型で表現できるようになったら
 // notificationRecieveConfig は削除して notificationRecieveConfigZodSchema にリネームする。
 export const notificationRecieveConfigZodSchema = z.union([
 	z.object({

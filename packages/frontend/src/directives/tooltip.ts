@@ -35,7 +35,7 @@ export const tooltipDirective = {
 	mounted(el, binding) {
 		const delay = binding.modifiers.noDelay ? 0 : 100;
 
-		const self = el._tooltipDirective_ = {} as TooltipDirectiveState;
+		const self = (el._tooltipDirective_ = {} as TooltipDirectiveState);
 
 		self.text = binding.value;
 		self._close = null;
@@ -70,44 +70,64 @@ export const tooltipDirective = {
 			if (self.text == null) return;
 
 			const showing = ref(true);
-			const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkTooltip.vue')), {
-				showing,
-				text: self.text,
-				asMfm: binding.modifiers.mfm,
-				direction: binding.modifiers.left ? 'left' : binding.modifiers.right ? 'right' : binding.modifiers.top ? 'top' : binding.modifiers.bottom ? 'bottom' : 'top',
-				anchorElement: el,
-			}, {
-				closed: () => dispose(),
-			});
+			const { dispose } = popup(
+				defineAsyncComponent(() => import('@/components/MkTooltip.vue')),
+				{
+					showing,
+					text: self.text,
+					asMfm: binding.modifiers.mfm,
+					direction: binding.modifiers.left
+						? 'left'
+						: binding.modifiers.right
+							? 'right'
+							: binding.modifiers.top
+								? 'top'
+								: binding.modifiers.bottom
+									? 'bottom'
+									: 'top',
+					anchorElement: el,
+				},
+				{
+					closed: () => dispose(),
+				},
+			);
 
 			self._close = () => {
 				showing.value = false;
 			};
 		};
 
-		el.addEventListener('selectstart', ev => {
+		el.addEventListener('selectstart', (ev) => {
 			ev.preventDefault();
 		});
 
-		el.addEventListener(start, (ev) => {
-			if (self.showTimer) window.clearTimeout(self.showTimer);
-			if (self.hideTimer) window.clearTimeout(self.hideTimer);
-			if (delay === 0) {
-				self.show();
-			} else {
-				self.showTimer = window.setTimeout(self.show, delay);
-			}
-		}, { passive: true });
+		el.addEventListener(
+			start,
+			(ev) => {
+				if (self.showTimer) window.clearTimeout(self.showTimer);
+				if (self.hideTimer) window.clearTimeout(self.hideTimer);
+				if (delay === 0) {
+					self.show();
+				} else {
+					self.showTimer = window.setTimeout(self.show, delay);
+				}
+			},
+			{ passive: true },
+		);
 
-		el.addEventListener(end, () => {
-			if (self.showTimer) window.clearTimeout(self.showTimer);
-			if (self.hideTimer) window.clearTimeout(self.hideTimer);
-			if (delay === 0) {
-				self.close();
-			} else {
-				self.hideTimer = window.setTimeout(self.close, delay);
-			}
-		}, { passive: true });
+		el.addEventListener(
+			end,
+			() => {
+				if (self.showTimer) window.clearTimeout(self.showTimer);
+				if (self.hideTimer) window.clearTimeout(self.hideTimer);
+				if (delay === 0) {
+					self.close();
+				} else {
+					self.hideTimer = window.setTimeout(self.close, delay);
+				}
+			},
+			{ passive: true },
+		);
 
 		el.addEventListener('click', () => {
 			if (self.showTimer) window.clearTimeout(self.showTimer);

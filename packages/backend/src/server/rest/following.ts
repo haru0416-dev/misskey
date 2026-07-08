@@ -33,7 +33,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiMeta } from '@/models/_.js';
-import { birthdayZodSchema } from '@/models/User.js';
+import { birthdaySchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
@@ -1049,8 +1049,8 @@ export const usersFollowersOrFollowingParamDef = z.union([
 ]);
 
 export const usersFollowingParamDef = z.union([
-	usersByUserIdBaseParamDef.extend({ birthday: birthdayZodSchema.nullable().optional() }),
-	usersByUsernameHostBaseParamDef.extend({ birthday: birthdayZodSchema.nullable().optional() }),
+	usersByUserIdBaseParamDef.extend({ birthday: birthdaySchema.nullable().optional() }),
+	usersByUsernameHostBaseParamDef.extend({ birthday: birthdaySchema.nullable().optional() }),
 ]);
 
 // z.union の各枝は互いに素なプロパティ集合を持つため、推論される型では userId 版に username/host が

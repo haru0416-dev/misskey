@@ -36,10 +36,11 @@ export const Default = {
 	},
 	async play({ canvasElement }) {
 		await expect(canvasElement.firstElementChild).not.toBeNull();
-		await waitFor(async () => expect(canvasElement.firstElementChild?.classList).not.toContain('_transition_zoom-enter-active'));
+		await waitFor(async () =>
+			expect(canvasElement.firstElementChild?.classList).not.toContain('_transition_zoom-enter-active'),
+		);
 	},
-	args: {
-	},
+	args: {},
 	parameters: {
 		layout: 'centered',
 	},

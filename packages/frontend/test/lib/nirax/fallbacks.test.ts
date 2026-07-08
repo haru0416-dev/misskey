@@ -11,7 +11,7 @@ describe('[NIRAX] フォールバック', () => {
 		const router = createRouter('/');
 		const forcePushes: string[] = [];
 
-		router.addListener('forcePush', ctx => {
+		router.addListener('forcePush', (ctx) => {
 			forcePushes.push(ctx.fullPath);
 			assert.strictEqual(ctx.onInit, false);
 		});
@@ -29,7 +29,7 @@ describe('[NIRAX] フォールバック', () => {
 		const router = createRouter('/');
 		const forceReplacements: string[] = [];
 
-		router.addListener('forceReplace', ctx => {
+		router.addListener('forceReplace', (ctx) => {
 			forceReplacements.push(ctx.fullPath);
 			assert.strictEqual(ctx.onInit, false);
 		});
@@ -47,7 +47,7 @@ describe('[NIRAX] フォールバック', () => {
 		const router = createRouter('/missing');
 		const forceReplacements: string[] = [];
 
-		router.addListener('forceReplace', ctx => {
+		router.addListener('forceReplace', (ctx) => {
 			forceReplacements.push(ctx.fullPath);
 			assert.strictEqual(ctx.onInit, true);
 		});
@@ -63,7 +63,7 @@ describe('[NIRAX] フォールバック', () => {
 		const router = createRouter('/missing');
 		const forceReplacements: string[] = [];
 
-		router.addListener('forceReplace', ctx => {
+		router.addListener('forceReplace', (ctx) => {
 			forceReplacements.push(ctx.fullPath);
 			assert.strictEqual(ctx.onInit, true);
 		});

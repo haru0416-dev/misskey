@@ -9,31 +9,112 @@ import seedrandom from 'seedrandom';
  * AIで生成した無作為なファーストネーム
  */
 export const firstNameDict = [
-	'Ethan', 'Olivia', 'Jackson', 'Emma', 'Liam', 'Ava', 'Aiden', 'Sophia', 'Mason', 'Isabella',
-	'Noah', 'Mia', 'Lucas', 'Harper', 'Caleb', 'Abigail', 'Samuel', 'Emily', 'Logan',
-	'Madison', 'Benjamin', 'Chloe', 'Elijah', 'Grace', 'Alexander', 'Scarlett', 'William', 'Zoey', 'James', 'Lily',
-]
+	'Ethan',
+	'Olivia',
+	'Jackson',
+	'Emma',
+	'Liam',
+	'Ava',
+	'Aiden',
+	'Sophia',
+	'Mason',
+	'Isabella',
+	'Noah',
+	'Mia',
+	'Lucas',
+	'Harper',
+	'Caleb',
+	'Abigail',
+	'Samuel',
+	'Emily',
+	'Logan',
+	'Madison',
+	'Benjamin',
+	'Chloe',
+	'Elijah',
+	'Grace',
+	'Alexander',
+	'Scarlett',
+	'William',
+	'Zoey',
+	'James',
+	'Lily',
+];
 
 /**
  * AIで生成した無作為なラストネーム
  */
 export const lastNameDict = [
-	'Anderson', 'Johnson', 'Thompson', 'Davis', 'Rodriguez', 'Smith', 'Patel', 'Williams', 'Lee', 'Brown',
-	'Garcia', 'Jackson', 'Martinez', 'Taylor', 'Harris', 'Nguyen', 'Miller', 'Jones', 'Wilson',
-	'White', 'Thomas', 'Garcia', 'Martinez', 'Robinson', 'Turner', 'Lewis', 'Hall', 'King', 'Baker', 'Cooper',
-]
+	'Anderson',
+	'Johnson',
+	'Thompson',
+	'Davis',
+	'Rodriguez',
+	'Smith',
+	'Patel',
+	'Williams',
+	'Lee',
+	'Brown',
+	'Garcia',
+	'Jackson',
+	'Martinez',
+	'Taylor',
+	'Harris',
+	'Nguyen',
+	'Miller',
+	'Jones',
+	'Wilson',
+	'White',
+	'Thomas',
+	'Garcia',
+	'Martinez',
+	'Robinson',
+	'Turner',
+	'Lewis',
+	'Hall',
+	'King',
+	'Baker',
+	'Cooper',
+];
 
 /**
  * AIで生成した無作為な国名
  */
 export const countryDict = [
-	'Japan', 'Canada', 'Brazil', 'Australia', 'Italy', 'SouthAfrica', 'Mexico', 'Sweden', 'Russia', 'India',
-	'Germany', 'Argentina', 'South Korea', 'France', 'Nigeria', 'Turkey', 'Spain', 'Egypt', 'Thailand',
-	'Vietnam', 'Kenya', 'Saudi Arabia', 'Netherlands', 'Colombia', 'Poland', 'Chile', 'Malaysia', 'Ukraine', 'New Zealand', 'Peru',
-]
+	'Japan',
+	'Canada',
+	'Brazil',
+	'Australia',
+	'Italy',
+	'SouthAfrica',
+	'Mexico',
+	'Sweden',
+	'Russia',
+	'India',
+	'Germany',
+	'Argentina',
+	'South Korea',
+	'France',
+	'Nigeria',
+	'Turkey',
+	'Spain',
+	'Egypt',
+	'Thailand',
+	'Vietnam',
+	'Kenya',
+	'Saudi Arabia',
+	'Netherlands',
+	'Colombia',
+	'Poland',
+	'Chile',
+	'Malaysia',
+	'Ukraine',
+	'New Zealand',
+	'Peru',
+];
 
 export function text(length: number = 10, seed?: string): string {
-	let result = "";
+	let result = '';
 
 	// シード値を使う場合、同じ数値が羅列されるが、ランダム文字列という意味では満たせていると思うのでこのまま使っておく
 	const rand = seed ? seedrandom(seed)() : Math.random();
@@ -49,23 +130,26 @@ export function integer(min: number = 0, max: number = 9999, seed?: string): num
 	return Math.floor(rand * (max - min)) + min;
 }
 
-export function date(params?: {
-	yearMin?: number,
-	yearMax?: number,
-	monthMin?: number,
-	monthMax?: number,
-	dayMin?: number,
-	dayMax?: number,
-	hourMin?: number,
-	hourMax?: number,
-	minuteMin?: number,
-	minuteMax?: number,
-	secondMin?: number,
-	secondMax?: number,
-	millisecondMin?: number,
-	millisecondMax?: number,
-}, seed?: string): Date {
-	const year = integer(params?.yearMin ?? 1970, params?.yearMax ?? (new Date()).getFullYear(), seed);
+export function date(
+	params?: {
+		yearMin?: number;
+		yearMax?: number;
+		monthMin?: number;
+		monthMax?: number;
+		dayMin?: number;
+		dayMax?: number;
+		hourMin?: number;
+		hourMax?: number;
+		minuteMin?: number;
+		minuteMax?: number;
+		secondMin?: number;
+		secondMax?: number;
+		millisecondMin?: number;
+		millisecondMax?: number;
+	},
+	seed?: string,
+): Date {
+	const year = integer(params?.yearMin ?? 1970, params?.yearMax ?? new Date().getFullYear(), seed);
 	const month = integer(params?.monthMin ?? 1, params?.monthMax ?? 12, seed);
 	let day = integer(params?.dayMin ?? 1, params?.dayMax ?? 31, seed);
 	if (month === 2) {
@@ -119,18 +203,21 @@ export function fakeId(seed?: string): string {
 	return timeStr + noiseStr;
 }
 
-export function imageDataUrl(options?: {
-	size?: {
-		width?: number,
-		height?: number,
+export function imageDataUrl(
+	options?: {
+		size?: {
+			width?: number;
+			height?: number;
+		};
+		color?: {
+			red?: number;
+			green?: number;
+			blue?: number;
+			alpha?: number;
+		};
 	},
-	color?: {
-		red?: number,
-		green?: number,
-		blue?: number,
-		alpha?: number,
-	}
-}, seed?: string): string {
+	seed?: string,
+): string {
 	const canvas = window.document.createElement('canvas');
 	canvas.width = options?.size?.width ?? 100;
 	canvas.height = options?.size?.height ?? 100;
@@ -140,7 +227,7 @@ export function imageDataUrl(options?: {
 		throw new Error('Failed to get 2d context');
 	}
 
-	ctx.beginPath()
+	ctx.beginPath();
 
 	const red = options?.color?.red ?? integer(0, 255, seed);
 	const green = options?.color?.green ?? integer(0, 255, seed);

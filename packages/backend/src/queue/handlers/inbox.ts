@@ -108,7 +108,7 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 				if (!err.isRetryable) {
 					throw new Bull.UnrecoverableError(`skip: Ignored deleted actors on both ends ${getApId(activity.actor)} - ${err.statusCode}`);
 				}
-				throw new Error(`Error in actor ${getApId(activity.actor)} - ${err.statusCode}`);
+				throw new Error(`Error in actor ${getApId(activity.actor)} - ${err.statusCode}`, { cause: err });
 			}
 			throw err;
 		}

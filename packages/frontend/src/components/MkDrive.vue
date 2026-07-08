@@ -520,9 +520,7 @@ function onFileClick(ev: PointerEvent, file: Misskey.entities.DriveFile) {
 				selectedFiles.value.push(file);
 			}
 		} else {
-			if (isAlreadySelected) {
-				//emit('selected', file);
-			} else {
+			if (!isAlreadySelected) {
 				selectedFiles.value = [file];
 			}
 		}
@@ -540,9 +538,7 @@ function chooseFolder(folderToChoose: Misskey.entities.DriveFolder) {
 			selectedFolders.value.push(folderToChoose);
 		}
 	} else {
-		if (isAlreadySelected) {
-			//emit('selected', folderToChoose);
-		} else {
+		if (!isAlreadySelected) {
 			selectedFolders.value = [folderToChoose];
 		}
 	}

@@ -93,10 +93,7 @@ export function equalCellAddress(a: CellAddress, b: CellAddress): boolean {
 /**
  * グリッドの選択範囲の内容をタブ区切り形式テキストに変換してクリップボードにコピーする。
  */
-export function copyGridDataToClipboard(
-	gridItems: Ref<DataSource[]> | DataSource[],
-	context: GridContext,
-) {
+export function copyGridDataToClipboard(gridItems: Ref<DataSource[]> | DataSource[], context: GridContext) {
 	const items = isRef(gridItems) ? gridItems.value : gridItems;
 	const lines = Array.of<string>();
 	const bounds = context.randedBounds;
@@ -110,7 +107,7 @@ export function copyGridDataToClipboard(
 				? events.copy(value)
 				: typeof value === 'object' || Array.isArray(value)
 					? JSON.stringify(value)
-					: value?.toString() ?? '';
+					: (value?.toString() ?? '');
 			rowItems.push(transformValue);
 		}
 		lines.push(rowItems.join('\t'));
@@ -156,9 +153,10 @@ export async function pasteToGridFromClipboard(
 	}
 
 	const bounds = context.randedBounds;
-	const lines = clipBoardText.replace(/\r/g, '')
+	const lines = clipBoardText
+		.replace(/\r/g, '')
 		.split('\n')
-		.map(it => it.split('\t'));
+		.map((it) => it.split('\t'));
 
 	if (lines.length === 1 && lines[0].length === 1) {
 		// 単独文字列の場合は選択範囲全体に同じテキストを貼り付ける
@@ -200,10 +198,7 @@ export async function pasteToGridFromClipboard(
  * グリッドの選択範囲にあるデータを削除するためのユーティリティ関数。
  * …と言いつつも、使用箇所により反映方法に差があるため更新操作はコールバック関数に任せている。
  */
-export function removeDataFromGrid(
-	context: GridContext,
-	callback: (cell: GridCell) => void,
-) {
+export function removeDataFromGrid(context: GridContext, callback: (cell: GridCell) => void) {
 	for (const cell of context.rangedCells) {
 		const { editable, events } = cell.column.setting;
 		if (editable) {

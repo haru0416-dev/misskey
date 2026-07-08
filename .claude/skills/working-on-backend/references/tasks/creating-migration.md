@@ -1,6 +1,6 @@
 # DB migration を作成する
 
-`packages/backend/migration/` に新規 TypeORM マイグレーションを追加するための手順。
+`packages/backend/migration/` に新規 migration を追加するための手順。**TypeORM は全廃済み (2026-07-07) で CLI ツールは存在しない** — `packages/backend/node_modules/typeorm/` も `ormconfig.js` も無い。migration は **常に手書き**。
 
 ## 大前提 (絶対 NG)
 
@@ -10,14 +10,17 @@
 
 ---
 
-## どの方式を使うか決める
+## 手順: 新規ファイルを手で作る
 
-| 状況 | 方式 |
-|---|---|
-| エンティティ (`packages/backend/src/models/*.ts`) を `@Column` / `@Index` / `@Entity` 等で先に変更し、差分から自動生成したい | `typeorm migration:generate` (本ファイルの "A. 差分から自動生成") |
-| 手書き SQL / データ移行 / `CREATE INDEX CONCURRENTLY` など、エンティティ差分では表現できない変更 | `typeorm migration:create` で空雛形を作る (本ファイルの "B. 空雛形を作る") |
+自動生成ツールは無いので、**近いパターンの既存ファイルをコピーして書き換える** のが最短路 (下記「既存ファイル参照テンプレ」参照)。
 
-迷ったら **まずエンティティを変更 → `migration:generate`** が原則。既存 migration (`packages/backend/migration/*.js`) のほぼすべてが `queryRunner.query(\`SQL...\`)` の raw SQL なので、CLI 出力でも手書きでもスタイルは揃う。
+1. タイムスタンプを取得: `bun -e "console.log(Date.now())"`
+2. `packages/backend/migration/{unixMs}-{descriptive-name}.js` を新規作成 (拡張子 `.js`)
+3. 下記の最小テンプレートに沿って `up()` / `down()` を書く
+4. SPDX ヘッダーを付ける
+5. 「検証」セクションのコマンドで確認する
+
+`db/schema/*.ts` (drizzle-orm のテーブル定義) や `models/*.ts` を変更したときも、対応する DDL を **この migration ファイルに手で書く**。drizzle-kit のようなスキーマ差分の自動生成は導入されていない。
 
 ---
 
@@ -47,62 +50,13 @@ export class PascalCaseName1234567890123 {
 }
 ```
 
----
-
-## A. エンティティ差分から自動生成
-
-```bash
-# TypeORM CLI は packages/backend 基準で解決されるため、先に移動する
-# 出力パス migration/<PascalName> と -d ormconfig.js も packages/backend/ 基準
-cd packages/backend
-bun ./node_modules/typeorm/cli.js migration:generate -d ormconfig.js -o --esm migration/<PascalName>
-```
-
-**外部CLIを使わない**: `bunx` / `npx` / `dlx` で TypeORM を一時取得しない。backend の依存としてインストール済みの `packages/backend/node_modules/typeorm/cli.js` を Bun で直接実行し、リポジトリの TypeORM 版と揃える。
-
-**`-o --esm` について**: `-o` (`--outputJs`) は「TS ではなく JS を出力する」オプション、`--esm` は「ESM 形式 (`export class ...`) で出力する」オプション。Misskey の既存 migration はすべて ESM JS であるため **両方が必須**。`--esm` を省略すると CommonJS 形式の JS が生成されスタイルが揃わない。
-
-### 事前準備 (一括スクリプト)
-
-`migration:generate` には backend ビルド + ローカル DB が必要。一括で揃えるスクリプトを同梱している (node 製。pure Windows でも動く)。リポジトリルートから:
-
-```bash
-bun .claude/skills/working-on-backend/scripts/prepare-generate.mjs
-```
-
-スクリプトがやること:
-
-- `bun run build-pre` → `built/meta.json` を生成 (`loadConfig()` が要求)
-- `bun run --bun --filter backend compile-config` → `built/.config.json` を生成 (`ormconfig.js` の `loadConfig()` が要求するのはこれ。ソースの `.config/default.yml` はその入力なので、無ければ `.config/example.yml` から作っておく)
-- `bun run --bun --filter backend build` → エンティティを `built/` に反映 (CLI は `built/` を読む)
-- `docker compose -f compose.local-db.yml up -d --wait db` → ローカル DB (postgres) を起動。`--wait` は Docker Compose v2.1.1 (2021-11) 以降が必要 (v2 の `docker compose` 前提。EOL の `docker-compose` v1 は対象外)
-
-`migration:create` (空雛形) しか使わないなら DB もビルドも不要なので、このスクリプトは不要。
-
----
-
-## B. 空雛形を作る (手書き SQL / データ移行用)
-
-```bash
-cd packages/backend
-bun ./node_modules/typeorm/cli.js migration:create -o --esm migration/<PascalName>
-```
-
-ローカル DB の起動とビルドは不要。空の `up` / `down` だけが生成される。
-
-**注意:** `-o --esm` を **必ず付ける**。これが無いと `<UnixMs>-<PascalName>.ts` (CommonJS / TS 出力) が生成されるが、Misskey の `ormconfig.js` は `migration/*.js` だけを読み、既存の他 migration も全て `export class ... { async up(queryRunner) {...} }` の ESM JS 形式なので、後で手作業で変換が必要になる。`-o --esm` を付ければそのまま `.js` ESM で出る。
-
-ただし `migration:create` の雛形は **`name = '...'` プロパティを出力しない**ので、後段の SPDX 付与に加えて `name = '<PascalName><ms>'` を手で足し、`up`/`down` を埋める必要がある。雛形冒頭の `@typedef` / `@implements MigrationInterface` JSDoc は既存ファイルに無いので消して house style に揃える。
-
-### B の補助: 引数だけで全部を済ませたい場合
-
-引数で `<PascalCaseName>` を渡すだけで「空雛形生成 + SPDX 付与 + check-migrations 実行」までやる薄いラッパー (旧 `.claude/commands/migrate-new.md` 由来) は廃止された。同等の流れを手で踏みたい場合、上記の `typeorm migration:create` + SPDX 付与 + `name` プロパティ追加 + `check-migrations` の順で実行する。
+`queryRunner` は [migration-runner.ts](../../../../../packages/backend/src/migration-runner.ts) の `PgMigrationQueryRunner` が渡すラッパーで、`query(sql, params?)` メソッドのみを持つ (TypeORM の `QueryRunner` 由来の API 互換だが実体は薄いラッパー)。生の SQL 文字列をそのまま渡す。
 
 ---
 
 ## SPDX ヘッダー付与
 
-CLI 出力には SPDX ヘッダーが含まれない。**必ず冒頭に追加する** (CI の `spdx` ジョブが失敗するため)。
+**必ず冒頭に追加する** (CI の `spdx` ジョブが失敗するため)。
 
 ```js
 /*
@@ -119,13 +73,13 @@ CLI 出力には SPDX ヘッダーが含まれない。**必ず冒頭に追加�
 - 列追加 (`ADD COLUMN`) ↔ 列削除 (`DROP COLUMN`)、テーブル作成 ↔ テーブル削除、FK 追加 ↔ FK 削除、インデックス作成 ↔ インデックス削除 を必ずペアで書く
 - `down()` を空のまま残さない。本番ロールバック時に詰む
 
-**単純な逆 SQL では戻らない難ケース** (enum 値の追加・変更 / NOT NULL 列追加 / データ移行 UPDATE / JSONB・配列デフォルト / 列リネーム / 安全な DROP・COMMENT) は [knowledge/typeorm-patterns.md §migration 難ケース](../knowledge/typeorm-patterns.md) を必ず参照。特に **enum 変更** と **列リネーム** は `migration:generate` の出力をそのまま使うと巻き戻せない / データが消えるので要注意。
+**単純な逆 SQL では戻らない難ケース** (enum 値の追加・変更 / NOT NULL 列追加 / データ移行 UPDATE / JSONB・配列デフォルト / 列リネーム / 安全な DROP・COMMENT) は [knowledge/db-models-and-migrations.md §migration 難ケース](../knowledge/db-models-and-migrations.md) を必ず参照。特に **enum 変更** と **列リネーム** は要注意 (単純な逆操作では巻き戻せない / データが消える)。
 
 ### インデックス追加時 (CREATE INDEX CONCURRENTLY)
 
-大規模テーブルへの `CREATE INDEX` は本番で長時間ロックする恐れがある。`CONCURRENTLY` で発行するときは migration class に `transaction = false` 等の対応が必要。詳細は [knowledge/typeorm-patterns.md §CONCURRENTLY](../knowledge/typeorm-patterns.md) を参照。
+大規模テーブルへの `CREATE INDEX` は本番で長時間ロックする恐れがある。`CONCURRENTLY` で発行するときは migration class に `transaction = false` 等の対応が必要。詳細は [knowledge/db-models-and-migrations.md §CONCURRENTLY](../knowledge/db-models-and-migrations.md) を参照。
 
-参照実装: [packages/backend/migration/1745378064470-composite-note-index.js](../../../../../packages/backend/migration/1745378064470-composite-note-index.js)。
+参照実装: [packages/backend/migration/1783491564196-AddTrgmSearchIndexes.js](../../../../../packages/backend/migration/1783491564196-AddTrgmSearchIndexes.js)。
 
 ---
 
@@ -134,7 +88,7 @@ CLI 出力には SPDX ヘッダーが含まれない。**必ず冒頭に追加�
 ルートから実行:
 
 ```bash
-# 未反映の差分が無いか (新規 migration が生成すべき DDL を取り逃していないか)
+# 未適用の migration ファイルが無いか (実行し忘れの検出)
 bun run --bun --filter backend check-migrations
 
 # ローカル DB に適用
@@ -147,7 +101,7 @@ bun run revert
 bun run migrate
 ```
 
-`check-migrations` の実体は [scripts/check_migrations_clean.js](../../../../../packages/backend/scripts/check_migrations_clean.js)。TypeORM の `dataSource.driver.createSchemaBuilder().log()` で pending DDL を取得し、`upQueries` / `downQueries` のいずれかが残っていれば非ゼロ終了する。**順序検査ではなく**「エンティティと migration が同期しているか」の検査。
+`check-migrations` の実体は [migration-runner.ts](../../../../../packages/backend/src/migration-runner.ts) の `check` コマンド (`bun run compile-config && bun ./built/migration-runner.js check`)。設定先 DB の `migrations` テーブルと `packages/backend/migration/*.js` を突き合わせ、**まだ適用されていない migration ファイルが無いか**を検査する。**TypeORM 時代のような「エンティティと migration の DDL が同期しているか」の検査ではない** — 純粋に「migration ファイルを書いたのに `bun run migrate` し忘れていないか」のチェックである点に注意 (CI は新規 migration に対して `migrate` → `check` の順で走らせて検証する)。
 
 ---
 
@@ -157,9 +111,10 @@ bun run migrate
 
 | パターン | 参照ファイル |
 |---|---|
-| インデックス追加 + 関数定義 | [migration/1767169026317-birthday-index.js](../../../../../packages/backend/migration/1767169026317-birthday-index.js) |
-| 列追加のみ | [migration/1766652173085-add-category-to-avatar-decorations.js](../../../../../packages/backend/migration/1766652173085-add-category-to-avatar-decorations.js) |
-| テーブル新規作成 + FK | [migration/1761569941833-add-channel-muting.js](../../../../../packages/backend/migration/1761569941833-add-channel-muting.js) |
+| インデックス追加 + 関数定義 (`CREATE OR REPLACE FUNCTION` + それを使う式インデックス) | [migration/1783108921646-RestoreBirthdayDateFunction.js](../../../../../packages/backend/migration/1783108921646-RestoreBirthdayDateFunction.js) |
+| 複数インデックスをまとめて安全に追加 (存在チェック + 旧インデックス削除) | [migration/1782863440578-AddDatabaseTuningIndexes.js](../../../../../packages/backend/migration/1782863440578-AddDatabaseTuningIndexes.js) |
+| CONCURRENTLY 付きインデックス + `pg_trgm` 拡張の有効化 | [migration/1783491564196-AddTrgmSearchIndexes.js](../../../../../packages/backend/migration/1783491564196-AddTrgmSearchIndexes.js) |
+| 列追加 / テーブル新規作成 + FK | **squash 後の実例が無い** ([knowledge/db-models-and-migrations.md §migration 難ケース](../knowledge/db-models-and-migrations.md) の SQL パターンを参考に、[InitialSchema.js](../../../../../packages/backend/migration/0000000000001-InitialSchema.js) 内の類似テーブル定義とスタイルを揃える) |
 
 ---
 
@@ -176,7 +131,8 @@ bun run migrate
 - [ ] **新規タイムスタンプ**で作成し、既にマージ済みの migration ファイルは一切編集していない (大前提)
 - [ ] ファイル冒頭に **SPDX ヘッダー**がある
 - [ ] `export class <PascalName><ms>` と `name = '<PascalName><ms>'` の **文字列が完全一致** している (PascalCase + 13 桁タイムスタンプ)
-- [ ] `up()` の各文に対応する巻き戻しが `down()` にあり、**`down()` が空でない** (難ケースは [knowledge/typeorm-patterns.md](../knowledge/typeorm-patterns.md) を確認済み)
-- [ ] `bun run --bun --filter backend check-migrations` が **0 件 (pending DDL なし)** で通る
+- [ ] `db/schema/*.ts` / `models/*.ts` を変更したなら、対応する DDL がこの migration に手で書かれている
+- [ ] `up()` の各文に対応する巻き戻しが `down()` にあり、**`down()` が空でない** (難ケースは [knowledge/db-models-and-migrations.md](../knowledge/db-models-and-migrations.md) を確認済み)
+- [ ] `bun run --bun --filter backend check-migrations` が **0 件 (未適用 migration なし)** で通る (事前に `bun run migrate` を実行しておくこと)
 - [ ] (可能なら) `bun run migrate` → `bun run revert` → `bun run migrate` が通る
 - [ ] ユーザーに見える変更なら CHANGELOG 追記 → [shipping-misskey-change](../../../shipping-misskey-change/SKILL.md)

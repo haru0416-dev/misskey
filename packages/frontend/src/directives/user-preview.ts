@@ -38,20 +38,24 @@ export class UserPreview {
 
 		const showing = ref(true);
 
-		const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkUserPopup.vue')), {
-			showing,
-			q: this.user,
-			source: this.el,
-		}, {
-			mouseover: () => {
-				if (this.hideTimer) window.clearTimeout(this.hideTimer);
+		const { dispose } = popup(
+			defineAsyncComponent(() => import('@/components/MkUserPopup.vue')),
+			{
+				showing,
+				q: this.user,
+				source: this.el,
 			},
-			mouseleave: () => {
-				if (this.showTimer) window.clearTimeout(this.showTimer);
-				this.hideTimer = window.setTimeout(this.close, 500);
+			{
+				mouseover: () => {
+					if (this.hideTimer) window.clearTimeout(this.hideTimer);
+				},
+				mouseleave: () => {
+					if (this.showTimer) window.clearTimeout(this.showTimer);
+					this.hideTimer = window.setTimeout(this.close, 500);
+				},
+				closed: () => dispose(),
 			},
-			closed: () => dispose(),
-		});
+		);
 
 		this.promise = {
 			cancel: () => {

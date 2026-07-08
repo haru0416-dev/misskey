@@ -23,7 +23,7 @@ export class Cache<T> {
 
 	private get(): T | undefined {
 		if (this.cachedAt == null) return undefined;
-		if ((Date.now() - this.cachedAt) > this.lifetime) {
+		if (Date.now() - this.cachedAt > this.lifetime) {
 			this.value.value = undefined;
 			this.cachedAt = null;
 			return undefined;

@@ -298,10 +298,6 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 			id: message.id,
 		});
 	}
-
-	if (message.fromUserId !== $i.id) {
-		//notifyNewMessage();
-	}
 }
 
 function onDeleted(id: string) {

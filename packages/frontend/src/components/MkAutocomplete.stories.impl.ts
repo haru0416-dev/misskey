@@ -60,7 +60,8 @@ const common = {
 					this.textarea = this.$refs.input.$refs.inputEl;
 				},
 			},
-			template: '<MkInput v-model="q" ref="input" @vue:mounted="inputMounted"/><story v-if="textarea" :q="q" :textarea="textarea"/>',
+			template:
+				'<MkInput v-model="q" ref="input" @vue:mounted="inputMounted"/><story v-if="textarea" :q="q" :textarea="textarea"/>',
 		}),
 	],
 	parameters: {
@@ -86,11 +87,14 @@ export const User = {
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(() => userEvent.type(input, 'm'));
-		await waitFor(async () => {
-			await userEvent.type(input, ' ', { delay: 256 });
-			await tick();
-			return await expect(canvas.getByRole('list')).toBeInTheDocument();
-		}, { timeout: 16384 });
+		await waitFor(
+			async () => {
+				await userEvent.type(input, ' ', { delay: 256 });
+				await tick();
+				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+			},
+			{ timeout: 16384 },
+		);
 	},
 	parameters: {
 		...common.parameters,
@@ -119,11 +123,14 @@ export const Hashtag = {
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(() => userEvent.type(input, '気象'));
-		await waitFor(async () => {
-			await userEvent.type(input, ' ', { delay: 256 });
-			await tick();
-			return await expect(canvas.getByRole('list')).toBeInTheDocument();
-		}, { interval: 256, timeout: 16384 });
+		await waitFor(
+			async () => {
+				await userEvent.type(input, ' ', { delay: 256 });
+				await tick();
+				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+			},
+			{ interval: 256, timeout: 16384 },
+		);
 	},
 	parameters: {
 		...common.parameters,
@@ -131,11 +138,7 @@ export const Hashtag = {
 			handlers: [
 				...commonHandlers,
 				http.post('/api/hashtags/search', () => {
-					return HttpResponse.json([
-						'気象警報注意報',
-						'気象警報',
-						'気象情報',
-					]);
+					return HttpResponse.json(['気象警報注意報', '気象警報', '気象情報']);
 				}),
 			],
 		},
@@ -153,11 +156,14 @@ export const Emoji = {
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(() => userEvent.type(input, 'smile'));
-		await waitFor(async () => {
-			await userEvent.type(input, ' ', { delay: 256 });
-			await tick();
-			return await expect(canvas.getByRole('list')).toBeInTheDocument();
-		}, { interval: 256, timeout: 16384 });
+		await waitFor(
+			async () => {
+				await userEvent.type(input, ' ', { delay: 256 });
+				await tick();
+				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+			},
+			{ interval: 256, timeout: 16384 },
+		);
 	},
 } satisfies StoryObj<typeof MkAutocomplete>;
 export const MfmTag = {
@@ -171,9 +177,12 @@ export const MfmTag = {
 		const input = canvas.getByRole('combobox');
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
-		await waitFor(async () => {
-			await tick();
-			return await expect(canvas.getByRole('list')).toBeInTheDocument();
-		}, { interval: 256, timeout: 16384 });
+		await waitFor(
+			async () => {
+				await tick();
+				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+			},
+			{ interval: 256, timeout: 16384 },
+		);
 	},
 } satisfies StoryObj<typeof MkAutocomplete>;

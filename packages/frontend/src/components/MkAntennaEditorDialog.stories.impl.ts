@@ -38,8 +38,7 @@ export const Default = {
 			template: '<MkAntennaEditorDialog v-bind="props" v-on="events" />',
 		};
 	},
-	args: {
-	},
+	args: {},
 	parameters: {
 		layout: 'centered',
 		msw: {

@@ -18,9 +18,16 @@ let lastHeartbeatCall = 0;
 export function useStream(): Misskey.IStream {
 	if (stream) return stream;
 
-	stream = markRaw(new Misskey.Stream(wsOrigin, $i ? {
-		token: $i.token,
-	} : null));
+	stream = markRaw(
+		new Misskey.Stream(
+			wsOrigin,
+			$i
+				? {
+						token: $i.token,
+					}
+				: null,
+		),
+	);
 
 	if (timeoutHeartBeat) window.clearTimeout(timeoutHeartBeat);
 	timeoutHeartBeat = window.setTimeout(heartbeat, HEART_BEAT_INTERVAL);
@@ -28,10 +35,11 @@ export function useStream(): Misskey.IStream {
 	// send heartbeat right now when last send time is over HEART_BEAT_INTERVAL
 	window.document.addEventListener('visibilitychange', () => {
 		if (
-			!stream
-			|| window.document.visibilityState !== 'visible'
-			|| Date.now() - lastHeartbeatCall < HEART_BEAT_INTERVAL
-		) return;
+			!stream ||
+			window.document.visibilityState !== 'visible' ||
+			Date.now() - lastHeartbeatCall < HEART_BEAT_INTERVAL
+		)
+			return;
 		heartbeat();
 	});
 

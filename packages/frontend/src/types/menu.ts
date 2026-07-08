@@ -108,7 +108,32 @@ export interface MenuPending extends MenuBase {
 	type: 'pending';
 }
 
-type OuterMenuItem = MenuDivider | MenuLabel | MenuLink | MenuA | MenuUser | MenuSwitch | MenuButton | MenuRadio | MenuRadioOption | MenuComponent | MenuParent;
-type OuterPromiseMenuItem = Promise<MenuLabel | MenuLink | MenuA | MenuUser | MenuSwitch | MenuButton | MenuComponent | MenuParent>;
+type OuterMenuItem =
+	| MenuDivider
+	| MenuLabel
+	| MenuLink
+	| MenuA
+	| MenuUser
+	| MenuSwitch
+	| MenuButton
+	| MenuRadio
+	| MenuRadioOption
+	| MenuComponent
+	| MenuParent;
+type OuterPromiseMenuItem = Promise<
+	MenuLabel | MenuLink | MenuA | MenuUser | MenuSwitch | MenuButton | MenuComponent | MenuParent
+>;
 export type MenuItem = OuterMenuItem | OuterPromiseMenuItem;
-export type InnerMenuItem = MenuDivider | MenuPending | MenuLabel | MenuLink | MenuA | MenuUser | MenuSwitch | MenuButton | MenuRadio | MenuRadioOption | MenuComponent | MenuParent;
+export type InnerMenuItem =
+	| MenuDivider
+	| MenuPending
+	| MenuLabel
+	| MenuLink
+	| MenuA
+	| MenuUser
+	| MenuSwitch
+	| MenuButton
+	| MenuRadio
+	| MenuRadioOption
+	| MenuComponent
+	| MenuParent;

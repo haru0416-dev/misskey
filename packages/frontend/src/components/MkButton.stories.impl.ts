@@ -34,8 +34,7 @@ export const Default = {
 			template: '<MkButton v-bind="props" v-on="events">Text</MkButton>',
 		};
 	},
-	args: {
-	},
+	args: {},
 	parameters: {
 		layout: 'centered',
 	},

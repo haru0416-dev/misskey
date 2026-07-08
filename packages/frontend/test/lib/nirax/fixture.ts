@@ -44,7 +44,7 @@ export const routes = [
 	},
 	{
 		path: '/legacy/:postId',
-		redirect: props => `/posts/${props.get('postId')}`,
+		redirect: (props) => `/posts/${props.get('postId')}`,
 	},
 	{
 		path: '/loop-a',

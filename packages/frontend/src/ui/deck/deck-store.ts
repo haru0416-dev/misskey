@@ -8,17 +8,19 @@ import type { Column } from '@/deck.js';
 import { Pizzax } from '@/lib/pizzax.js';
 
 // TODO: 消す(移行済みのため)
-export const deckStore = markRaw(new Pizzax('deck', {
-	profile: {
-		where: 'deviceAccount',
-		default: 'default',
-	},
-	columns: {
-		where: 'deviceAccount',
-		default: [] as Column[],
-	},
-	layout: {
-		where: 'deviceAccount',
-		default: [] as Column['id'][][],
-	},
-}));
+export const deckStore = markRaw(
+	new Pizzax('deck', {
+		profile: {
+			where: 'deviceAccount',
+			default: 'default',
+		},
+		columns: {
+			where: 'deviceAccount',
+			default: [] as Column[],
+		},
+		layout: {
+			where: 'deviceAccount',
+			default: [] as Column['id'][][],
+		},
+	}),
+);

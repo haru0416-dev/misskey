@@ -43,7 +43,10 @@ export const FXS = {
 	fill,
 	blur,
 	pixelate,
-} as const satisfies Record<string, {
-	readonly fn: ImageCompositorFunction<any>;
-	readonly uiDefinition: ImageEffectorUiDefinition<any>;
-}>;
+} as const satisfies Record<
+	string,
+	{
+		readonly fn: ImageCompositorFunction<any>;
+		readonly uiDefinition: ImageEffectorUiDefinition<any>;
+	}
+>;

@@ -42,7 +42,7 @@ async function assertTwoFactorAuthenticatedForHonoApi(
 	try {
 		await deps.userAuthService.twoFactorAuthenticate(profile, token);
 	} catch (_) {
-		throw new Error('authentication failed');
+		throw new Error('authentication failed', { cause: _ });
 	}
 }
 

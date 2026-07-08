@@ -36,27 +36,44 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 		} else {
 			const { canceled, result: period } = await os.select({
 				title: i18n.ts.mutePeriod,
-				items: [{
-					value: 'indefinitely', label: i18n.ts.indefinitely,
-				}, {
-					value: 'tenMinutes', label: i18n.ts.tenMinutes,
-				}, {
-					value: 'oneHour', label: i18n.ts.oneHour,
-				}, {
-					value: 'oneDay', label: i18n.ts.oneDay,
-				}, {
-					value: 'oneWeek', label: i18n.ts.oneWeek,
-				}],
+				items: [
+					{
+						value: 'indefinitely',
+						label: i18n.ts.indefinitely,
+					},
+					{
+						value: 'tenMinutes',
+						label: i18n.ts.tenMinutes,
+					},
+					{
+						value: 'oneHour',
+						label: i18n.ts.oneHour,
+					},
+					{
+						value: 'oneDay',
+						label: i18n.ts.oneDay,
+					},
+					{
+						value: 'oneWeek',
+						label: i18n.ts.oneWeek,
+					},
+				],
 				default: 'indefinitely',
 			});
 			if (canceled) return;
 
-			const expiresAt = period === 'indefinitely' ? null
-				: period === 'tenMinutes' ? Date.now() + (1000 * 60 * 10)
-				: period === 'oneHour' ? Date.now() + (1000 * 60 * 60)
-				: period === 'oneDay' ? Date.now() + (1000 * 60 * 60 * 24)
-				: period === 'oneWeek' ? Date.now() + (1000 * 60 * 60 * 24 * 7)
-				: null;
+			const expiresAt =
+				period === 'indefinitely'
+					? null
+					: period === 'tenMinutes'
+						? Date.now() + 1000 * 60 * 10
+						: period === 'oneHour'
+							? Date.now() + 1000 * 60 * 60
+							: period === 'oneDay'
+								? Date.now() + 1000 * 60 * 60 * 24
+								: period === 'oneWeek'
+									? Date.now() + 1000 * 60 * 60 * 24 * 7
+									: null;
 
 			os.apiWithDialog('mute/create', {
 				userId: user.id,
@@ -76,7 +93,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 	}
 
 	async function toggleBlock() {
-		if (!await getConfirmed(user.isBlocking ? i18n.ts.unblockConfirm : i18n.ts.blockConfirm)) return;
+		if (!(await getConfirmed(user.isBlocking ? i18n.ts.unblockConfirm : i18n.ts.blockConfirm))) return;
 
 		os.apiWithDialog(user.isBlocking ? 'blocking/delete' : 'blocking/create', {
 			userId: user.id,
@@ -95,11 +112,15 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 	}
 
 	async function reportAbuse() {
-		const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkAbuseReportWindow.vue').then(x => x.default), {
-			user: user,
-		}, {
-			closed: () => dispose(),
-		});
+		const { dispose } = await os.popupAsyncWithDialog(
+			import('@/components/MkAbuseReportWindow.vue').then((x) => x.default),
+			{
+				user: user,
+			},
+			{
+				closed: () => dispose(),
+			},
+		);
 	}
 
 	async function getConfirmed(text: string): Promise<boolean> {
@@ -119,7 +140,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 	}
 
 	async function invalidateFollow() {
-		if (!await getConfirmed(i18n.ts.breakFollowConfirm)) return;
+		if (!(await getConfirmed(i18n.ts.breakFollowConfirm))) return;
 
 		os.apiWithDialog('following/invalidate', {
 			userId: user.id,
@@ -154,17 +175,20 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 	const menuItems: MenuItem[] = [];
 
 	if (iAmModerator) {
-		menuItems.push({
-			icon: 'ti ti-user-exclamation',
-			text: i18n.ts.moderation,
-			action: () => {
-				router.push('/admin/user/:userId', {
-					params: {
-						userId: user.id,
-					},
-				});
+		menuItems.push(
+			{
+				icon: 'ti ti-user-exclamation',
+				text: i18n.ts.moderation,
+				action: () => {
+					router.push('/admin/user/:userId', {
+						params: {
+							userId: user.id,
+						},
+					});
+				},
 			},
-		}, { type: 'divider' });
+			{ type: 'divider' },
+		);
 	}
 
 	menuItems.push({
@@ -206,12 +230,14 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 			icon: 'ti ti-code',
 			text: i18n.ts.embed,
 			type: 'parent',
-			children: [{
-				text: i18n.ts.noteOfThisUser,
-				action: () => {
-					genEmbedCode('user-timeline', user.id);
+			children: [
+				{
+					text: i18n.ts.noteOfThisUser,
+					action: () => {
+						genEmbedCode('user-timeline', user.id);
+					},
 				},
-			}], // TODO: ユーザーカードの埋め込みなど
+			], // TODO: ユーザーカードの埋め込みなど
 		});
 	}
 
@@ -231,85 +257,94 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 			text: i18n.ts.searchThisUsersNotes,
 			action: () => {
 				const query = {
-						username: user.username,
-					} as { username: string, host?: string };
+					username: user.username,
+				} as { username: string; host?: string };
 
 				if (user.host !== null) {
 					query.host = user.host;
 				}
 
 				router.push('/search', {
-					query
+					query,
 				});
 			},
 		});
 	}
 
 	if ($i) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-pencil',
-			text: i18n.ts.editMemo,
-			action: editMemo,
-		}, {
-			type: 'parent',
-			icon: 'ti ti-list',
-			text: i18n.ts.addToList,
-			children: async () => {
-				const lists = await userListsCache.fetch();
-				return lists.map(list => {
-					const isListed = ref(list.userIds?.includes(user.id) ?? false);
-					cleanups.push(watch(isListed, () => {
-						if (isListed.value) {
-							os.apiWithDialog('users/lists/push', {
-								listId: list.id,
-								userId: user.id,
-							}).then(() => {
-								list.userIds?.push(user.id);
-							});
-						} else {
-							os.apiWithDialog('users/lists/pull', {
-								listId: list.id,
-								userId: user.id,
-							}).then(() => {
-								list.userIds?.splice(list.userIds.indexOf(user.id), 1);
-							});
-						}
-					}));
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-pencil',
+				text: i18n.ts.editMemo,
+				action: editMemo,
+			},
+			{
+				type: 'parent',
+				icon: 'ti ti-list',
+				text: i18n.ts.addToList,
+				children: async () => {
+					const lists = await userListsCache.fetch();
+					return lists.map((list) => {
+						const isListed = ref(list.userIds?.includes(user.id) ?? false);
+						cleanups.push(
+							watch(isListed, () => {
+								if (isListed.value) {
+									os.apiWithDialog('users/lists/push', {
+										listId: list.id,
+										userId: user.id,
+									}).then(() => {
+										list.userIds?.push(user.id);
+									});
+								} else {
+									os.apiWithDialog('users/lists/pull', {
+										listId: list.id,
+										userId: user.id,
+									}).then(() => {
+										list.userIds?.splice(list.userIds.indexOf(user.id), 1);
+									});
+								}
+							}),
+						);
 
-					return {
-						type: 'switch',
-						text: list.name,
-						ref: isListed,
-					};
-				});
+						return {
+							type: 'switch',
+							text: list.name,
+							ref: isListed,
+						};
+					});
+				},
 			},
-		}, {
-			type: 'parent',
-			icon: 'ti ti-antenna',
-			text: i18n.ts.addToAntenna,
-			children: async () => {
-				const antennas = await antennasCache.fetch();
-				const canonical = user.host === null ? `@${user.username}` : `@${user.username}@${toUnicode(user.host)}`;
-				return antennas.filter((a) => a.src === 'users').map(antenna => ({
-					text: antenna.name,
-					action: async () => {
-						await os.apiWithDialog('antennas/update', {
-							antennaId: antenna.id,
-							name: antenna.name,
-							keywords: antenna.keywords,
-							excludeKeywords: antenna.excludeKeywords,
-							src: antenna.src,
-							userListId: antenna.userListId,
-							users: [...antenna.users, canonical],
-							caseSensitive: antenna.caseSensitive,
-							withReplies: antenna.withReplies,
-							withFile: antenna.withFile,
-						});
-						antennasCache.delete();
-					},
-				}));
+			{
+				type: 'parent',
+				icon: 'ti ti-antenna',
+				text: i18n.ts.addToAntenna,
+				children: async () => {
+					const antennas = await antennasCache.fetch();
+					const canonical = user.host === null ? `@${user.username}` : `@${user.username}@${toUnicode(user.host)}`;
+					return antennas
+						.filter((a) => a.src === 'users')
+						.map((antenna) => ({
+							text: antenna.name,
+							action: async () => {
+								await os.apiWithDialog('antennas/update', {
+									antennaId: antenna.id,
+									name: antenna.name,
+									keywords: antenna.keywords,
+									excludeKeywords: antenna.excludeKeywords,
+									src: antenna.src,
+									userListId: antenna.userListId,
+									users: [...antenna.users, canonical],
+									caseSensitive: antenna.caseSensitive,
+									withReplies: antenna.withReplies,
+									withFile: antenna.withFile,
+								});
+								antennasCache.delete();
+							},
+						}));
+				},
 			},
-		});
+		);
 	}
 
 	if ($i && meId !== user.id) {
@@ -321,54 +356,75 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 				children: async () => {
 					const roles = await rolesCache.fetch();
 
-					return roles.filter(r => r.target === 'manual').map(r => ({
-						text: r.name,
-						action: async () => {
-							const { canceled, result: period } = await os.select({
-								title: i18n.ts.period + ': ' + r.name,
-								items: [{
-									value: 'indefinitely', label: i18n.ts.indefinitely,
-								}, {
-									value: 'oneHour', label: i18n.ts.oneHour,
-								}, {
-									value: 'oneDay', label: i18n.ts.oneDay,
-								}, {
-									value: 'oneWeek', label: i18n.ts.oneWeek,
-								}, {
-									value: 'oneMonth', label: i18n.ts.oneMonth,
-								}],
-								default: 'indefinitely',
-							});
-							if (canceled) return;
+					return roles
+						.filter((r) => r.target === 'manual')
+						.map((r) => ({
+							text: r.name,
+							action: async () => {
+								const { canceled, result: period } = await os.select({
+									title: i18n.ts.period + ': ' + r.name,
+									items: [
+										{
+											value: 'indefinitely',
+											label: i18n.ts.indefinitely,
+										},
+										{
+											value: 'oneHour',
+											label: i18n.ts.oneHour,
+										},
+										{
+											value: 'oneDay',
+											label: i18n.ts.oneDay,
+										},
+										{
+											value: 'oneWeek',
+											label: i18n.ts.oneWeek,
+										},
+										{
+											value: 'oneMonth',
+											label: i18n.ts.oneMonth,
+										},
+									],
+									default: 'indefinitely',
+								});
+								if (canceled) return;
 
-							const expiresAt = period === 'indefinitely' ? null
-								: period === 'oneHour' ? Date.now() + (1000 * 60 * 60)
-								: period === 'oneDay' ? Date.now() + (1000 * 60 * 60 * 24)
-								: period === 'oneWeek' ? Date.now() + (1000 * 60 * 60 * 24 * 7)
-								: period === 'oneMonth' ? Date.now() + (1000 * 60 * 60 * 24 * 30)
-								: null;
+								const expiresAt =
+									period === 'indefinitely'
+										? null
+										: period === 'oneHour'
+											? Date.now() + 1000 * 60 * 60
+											: period === 'oneDay'
+												? Date.now() + 1000 * 60 * 60 * 24
+												: period === 'oneWeek'
+													? Date.now() + 1000 * 60 * 60 * 24 * 7
+													: period === 'oneMonth'
+														? Date.now() + 1000 * 60 * 60 * 24 * 30
+														: null;
 
-							os.apiWithDialog('admin/roles/assign', { roleId: r.id, userId: user.id, expiresAt });
-						},
-					}));
+								os.apiWithDialog('admin/roles/assign', { roleId: r.id, userId: user.id, expiresAt });
+							},
+						}));
 				},
 			});
 		}
 
 		// フォローしたとしても user.isFollowing はリアルタイム更新されないので不便なため
-		//if (user.isFollowing) {
 		const withRepliesRef = ref(user.withReplies ?? false);
 
-		menuItems.push({
-			type: 'switch',
-			icon: 'ti ti-messages',
-			text: i18n.ts.showRepliesToOthersInTimeline,
-			ref: withRepliesRef,
-		}, {
-			icon: user.notify === 'none' ? 'ti ti-bell' : 'ti ti-bell-off',
-			text: user.notify === 'none' ? i18n.ts.notifyNotes : i18n.ts.unnotifyNotes,
-			action: toggleNotify,
-		});
+		menuItems.push(
+			{
+				type: 'switch',
+				icon: 'ti ti-messages',
+				text: i18n.ts.showRepliesToOthersInTimeline,
+				ref: withRepliesRef,
+			},
+			{
+				icon: user.notify === 'none' ? 'ti ti-bell' : 'ti ti-bell-off',
+				text: user.notify === 'none' ? i18n.ts.notifyNotes : i18n.ts.unnotifyNotes,
+				action: toggleNotify,
+			},
+		);
 
 		watch(withRepliesRef, (withReplies) => {
 			misskeyApi('following/update', {
@@ -378,16 +434,18 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 				user.withReplies = withReplies;
 			});
 		});
-		//}
 
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-pencil-heart',
-			text: i18n.ts.createUserSpecifiedNote,
-			action: () => {
-				const canonical = user.host === null ? `@${user.username}` : `@${user.username}@${user.host}`;
-				os.post({ specified: user, initialText: `${canonical} ` });
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-pencil-heart',
+				text: i18n.ts.createUserSpecifiedNote,
+				action: () => {
+					const canonical = user.host === null ? `@${user.username}` : `@${user.username}@${user.host}`;
+					os.post({ specified: user, initialText: `${canonical} ` });
+				},
 			},
-		});
+		);
 
 		if ($i.policies.chatAvailability === 'available' && user.canChat && user.host == null) {
 			menuItems.push({
@@ -398,19 +456,24 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 			});
 		}
 
-		menuItems.push({ type: 'divider' }, {
-			icon: user.isMuted ? 'ti ti-eye' : 'ti ti-eye-off',
-			text: user.isMuted ? i18n.ts.unmute : i18n.ts.mute,
-			action: toggleMute,
-		}, {
-			icon: user.isRenoteMuted ? 'ti ti-repeat' : 'ti ti-repeat-off',
-			text: user.isRenoteMuted ? i18n.ts.renoteUnmute : i18n.ts.renoteMute,
-			action: toggleRenoteMute,
-		}, {
-			icon: 'ti ti-ban',
-			text: user.isBlocking ? i18n.ts.unblock : i18n.ts.block,
-			action: toggleBlock,
-		});
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: user.isMuted ? 'ti ti-eye' : 'ti ti-eye-off',
+				text: user.isMuted ? i18n.ts.unmute : i18n.ts.mute,
+				action: toggleMute,
+			},
+			{
+				icon: user.isRenoteMuted ? 'ti ti-repeat' : 'ti ti-repeat-off',
+				text: user.isRenoteMuted ? i18n.ts.renoteUnmute : i18n.ts.renoteMute,
+				action: toggleRenoteMute,
+			},
+			{
+				icon: 'ti ti-ban',
+				text: user.isBlocking ? i18n.ts.unblock : i18n.ts.block,
+				action: toggleBlock,
+			},
+		);
 
 		if (user.isFollowed) {
 			menuItems.push({
@@ -420,50 +483,65 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 			});
 		}
 
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-exclamation-circle',
-			text: i18n.ts.reportAbuse,
-			action: reportAbuse,
-		});
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-exclamation-circle',
+				text: i18n.ts.reportAbuse,
+				action: reportAbuse,
+			},
+		);
 	}
 
 	if (user.host !== null) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-refresh',
-			text: i18n.ts.updateRemoteUser,
-			action: userInfoUpdate,
-		});
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-refresh',
+				text: i18n.ts.updateRemoteUser,
+				action: userInfoUpdate,
+			},
+		);
 	}
 
 	if (prefer.s.devMode) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-hash',
-			text: i18n.ts.copyUserId,
-			action: () => {
-				copyToClipboard(user.id);
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-hash',
+				text: i18n.ts.copyUserId,
+				action: () => {
+					copyToClipboard(user.id);
+				},
 			},
-		});
+		);
 	}
 
 	if ($i && meId === user.id) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-pencil',
-			text: i18n.ts.editProfile,
-			action: () => {
-				router.push('/settings/profile');
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-pencil',
+				text: i18n.ts.editProfile,
+				action: () => {
+					router.push('/settings/profile');
+				},
 			},
-		});
+		);
 	}
 
 	const userActions = getPluginHandlers('user_action');
 	if (userActions.length > 0) {
-		menuItems.push({ type: 'divider' }, ...userActions.map(action => ({
-			icon: 'ti ti-plug',
-			text: action.title,
-			action: () => {
-				action.handler(user);
-			},
-		})));
+		menuItems.push(
+			{ type: 'divider' },
+			...userActions.map((action) => ({
+				icon: 'ti ti-plug',
+				text: action.title,
+				action: () => {
+					action.handler(user);
+				},
+			})),
+		);
 	}
 
 	return {

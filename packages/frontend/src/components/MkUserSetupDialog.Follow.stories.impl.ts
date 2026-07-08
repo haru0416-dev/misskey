@@ -30,25 +30,17 @@ export const Default = {
 			template: '<MkUserSetupDialog_Follow v-bind="props" />',
 		};
 	},
-	args: {
-
-	},
+	args: {},
 	parameters: {
 		layout: 'centered',
 		msw: {
 			handlers: [
 				...commonHandlers,
 				http.post('/api/users', () => {
-					return HttpResponse.json([
-						userDetailed('44'),
-						userDetailed('49'),
-					]);
+					return HttpResponse.json([userDetailed('44'), userDetailed('49')]);
 				}),
 				http.post('/api/pinned-users', () => {
-					return HttpResponse.json([
-						userDetailed('44'),
-						userDetailed('49'),
-					]);
+					return HttpResponse.json([userDetailed('44'), userDetailed('49')]);
 				}),
 			],
 		},
