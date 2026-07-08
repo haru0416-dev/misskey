@@ -7,7 +7,8 @@ import { randomUUID } from 'node:crypto';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
 import { assertOptionalCredential, authenticateHonoApiToken, type HonoApiAuthenticated } from './auth.js';
-import { HonoApiError, invalidJsonBody, rolePermissionDeniedError } from './error.js';
+import { HonoApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
+import { readRequestBodyWithLimit } from '../body-limit.js';
 import { hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerator } from './role-policy.js';
 import type { HonoApiSigninFlowResult } from './signin.js';
 import type { HonoApiSigninWithPasskeyResult } from './signin-with-passkey.js';
@@ -116,9 +117,15 @@ export function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	});
 }
 
+// upstream (Fastify) はJSONエンドポイントに 1 MiB の bodyLimit を設定していた。同じ上限で
+// 実バイト数を数えながら読む (超過は 413)。
+const JSON_BODY_LIMIT = 1024 * 1024;
+const textDecoder = new TextDecoder();
+
 export async function jsonBody(c: Context): Promise<Record<string, unknown>> {
+	const raw = await readRequestBodyWithLimit(c, JSON_BODY_LIMIT, payloadTooLargeError);
 	try {
-		const body = await c.req.json();
+		const body = JSON.parse(textDecoder.decode(raw)) as unknown;
 		return body != null && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
 	} catch {
 		throw invalidJsonBody();
