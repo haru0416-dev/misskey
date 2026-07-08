@@ -69,6 +69,24 @@ function blockedHostCondition(alias: string, blockedHosts: string[]): SQL {
 	)`;
 }
 
+/**
+ * blockedHostCondition の reply/renote 版。reply/renote 行へのセルフJOINの代わりに、
+ * note 行へ非正規化済みの replyUserId/replyUserHost (renote も同様) を参照する。
+ * fanout-timeline.ts の blockedHost 判定と同じデータソースで、JOIN 1つ分軽くなる。
+ */
+function blockedRelatedHostCondition(idColumn: keyof NoteRow, hostColumn: keyof NoteRow, blockedHosts: string[]): SQL {
+	if (blockedHosts.length === 0) {
+		return sql`TRUE`;
+	}
+
+	const patterns = blockedHosts.flatMap(host => [host, `%.${host}`]);
+	return sql`(
+		${noteColumn('note', idColumn)} IS NULL
+		OR ${noteColumn('note', hostColumn)} IS NULL
+		OR ${noteColumn('note', hostColumn)} NOT ILIKE ALL(ARRAY[${sql.join(patterns.map(pattern => sql`${pattern}`), sql`, `)}])
+	)`;
+}
+
 function suspendedUserCondition(): SQL {
 	return sql`
 		"user"."isSuspended" = FALSE
@@ -158,8 +176,8 @@ function baseNoteFilteringCondition(
 function noteHostAndSuspensionFilteringCondition(blockedHosts: string[]): SQL {
 	return sql.join([
 		blockedHostCondition('note', blockedHosts),
-		blockedHostCondition('reply', blockedHosts),
-		blockedHostCondition('renote', blockedHosts),
+		blockedRelatedHostCondition('replyUserId', 'replyUserHost', blockedHosts),
+		blockedRelatedHostCondition('renoteUserId', 'renoteUserHost', blockedHosts),
 		suspendedUserCondition(),
 	].map(condition => sql`(${condition})`), sql` AND `);
 }
@@ -258,8 +276,8 @@ function clipNoteFilteringCondition(
 ): SQL {
 	const conditions: SQL[] = [
 		blockedHostCondition('note', blockedHosts),
-		blockedHostCondition('reply', blockedHosts),
-		blockedHostCondition('renote', blockedHosts),
+		blockedRelatedHostCondition('replyUserId', 'replyUserHost', blockedHosts),
+		blockedRelatedHostCondition('renoteUserId', 'renoteUserHost', blockedHosts),
 	];
 
 	if (me != null) {
@@ -725,7 +743,6 @@ export async function listChildNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -788,7 +805,6 @@ export async function listMentionNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -815,7 +831,6 @@ export async function listReplyNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -845,7 +860,6 @@ export async function listRenoteNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -942,7 +956,6 @@ export async function listFeaturedNotesByIdsFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -967,7 +980,6 @@ export async function listVisibleNotesByIdsFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1105,7 +1117,6 @@ export async function searchNotesByTextFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1149,7 +1160,6 @@ export async function listFilteredTimelineNotesByIdsFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1205,7 +1215,6 @@ export async function listNotesByTagSearchFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1245,7 +1254,6 @@ export async function listClipNotesFromDatabase(
 		FROM "note" AS "note"
 		INNER JOIN "clip_note" AS "clipNote" ON "clipNote"."noteId" = "note"."id"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1290,7 +1298,7 @@ export async function listGlobalTimelineNotesFromDatabase(
 			OR (
 				"note"."text" IS NOT NULL
 				OR "note"."fileIds" != '{}'
-				OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+				OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 			)
 		)`);
 	}
@@ -1299,7 +1307,6 @@ export async function listGlobalTimelineNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1362,7 +1369,6 @@ export async function listLocalTimelineNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1405,7 +1411,6 @@ export async function listChannelTimelineNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1475,7 +1480,7 @@ export async function listUserTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1483,7 +1488,6 @@ export async function listUserTimelineNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "channel" AS "channel" ON "channel"."id" = "note"."channelId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
@@ -1528,12 +1532,14 @@ export async function listHomeTimelineNotesFromDatabase(
 		mutedUserRenotesCondition(options.me),
 	];
 
+	// フォロー数が多いユーザーで IN ($1,...,$N) のプレースホルダ展開が数万個に膨らむのを避けるため、
+	// 配列1パラメータの = ANY() で渡す (node-postgres がJS配列をPostgreSQL配列にシリアライズする)。
 	const meOrFolloweeIds = [options.me.id, ...options.followeeIds];
 
 	if (options.followeeIds.length > 0 && options.followingChannelIds.length > 0) {
 		conditions.push(sql`(
 			(
-				"note"."userId" IN (${sql.join(meOrFolloweeIds.map(id => sql`${id}`), sql`, `)})
+				"note"."userId" = ANY(${sql.param(meOrFolloweeIds)})
 				AND "note"."channelId" IS NULL
 			)
 			OR "note"."channelId" IN (${sql.join(options.followingChannelIds.map(id => sql`${id}`), sql`, `)})
@@ -1541,7 +1547,7 @@ export async function listHomeTimelineNotesFromDatabase(
 	} else if (options.followeeIds.length > 0) {
 		conditions.push(sql`
 			"note"."channelId" IS NULL
-			AND "note"."userId" IN (${sql.join(meOrFolloweeIds.map(id => sql`${id}`), sql`, `)})
+			AND "note"."userId" = ANY(${sql.param(meOrFolloweeIds)})
 		`);
 
 		if (options.mutingChannelIds.length > 0) {
@@ -1568,7 +1574,7 @@ export async function listHomeTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1578,7 +1584,7 @@ export async function listHomeTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1588,7 +1594,7 @@ export async function listHomeTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1602,7 +1608,7 @@ export async function listHomeTimelineNotesFromDatabase(
 			OR (
 				"note"."text" IS NOT NULL
 				OR "note"."fileIds" != '{}'
-				OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+				OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 			)
 		)`);
 	}
@@ -1611,7 +1617,6 @@ export async function listHomeTimelineNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1641,12 +1646,13 @@ export async function listHybridTimelineNotesFromDatabase(
 		blockedHosts: string[];
 	},
 ): Promise<MiNote[]> {
+	// followeeIds の渡し方は listHomeTimelineNotesFromDatabase と同じ理由で = ANY(配列1パラメータ)。
 	const meOrFolloweeIds = [options.me.id, ...options.followeeIds];
 	const conditions: SQL[] = [
 		notePaginationCondition(options),
 		options.followeeIds.length > 0
 			? sql`(
-				"note"."userId" IN (${sql.join(meOrFolloweeIds.map(id => sql`${id}`), sql`, `)})
+				"note"."userId" = ANY(${sql.param(meOrFolloweeIds)})
 				OR (
 					"note"."visibility" = 'public'
 					AND "note"."userHost" IS NULL
@@ -1696,7 +1702,7 @@ export async function listHybridTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1706,7 +1712,7 @@ export async function listHybridTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1716,7 +1722,7 @@ export async function listHybridTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1728,7 +1734,6 @@ export async function listHybridTimelineNotesFromDatabase(
 		SELECT "note".*
 		FROM "note" AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
@@ -1794,7 +1799,7 @@ export async function listUserListTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1804,7 +1809,7 @@ export async function listUserListTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1814,7 +1819,7 @@ export async function listUserListTimelineNotesFromDatabase(
 			OR "note"."renoteId" IS NULL
 			OR "note"."text" IS NOT NULL
 			OR "note"."fileIds" != '{}'
-			OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 		)`);
 	}
 
@@ -1824,7 +1829,7 @@ export async function listUserListTimelineNotesFromDatabase(
 			OR (
 				"note"."text" IS NOT NULL
 				OR "note"."fileIds" != '{}'
-				OR 0 < (SELECT COUNT(*) FROM "poll" WHERE "poll"."noteId" = "note"."id")
+				OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
 			)
 		)`);
 	}
@@ -1838,7 +1843,6 @@ export async function listUserListTimelineNotesFromDatabase(
 		FROM "note" AS "note"
 		INNER JOIN "user_list_membership" AS "userListMemberships" ON "userListMemberships"."userId" = "note"."userId"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "reply" ON "reply"."id" = "note"."replyId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"

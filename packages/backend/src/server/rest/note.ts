@@ -304,6 +304,7 @@ export async function shouldHideNoteForHonoApi(
 	deps: HonoApiNoteDependencies,
 	packedNote: Packed<'Note'>,
 	meId: MiUser['id'] | null,
+	followeeIds?: Set<MiUser['id']>,
 ): Promise<boolean> {
 	if (meId === packedNote.userId) return false;
 
@@ -323,7 +324,9 @@ export async function shouldHideNoteForHonoApi(
 		if (packedNote.reply && meId === packedNote.reply.userId) return false;
 		if (packedNote.mentions?.some(id => meId === id)) return false;
 
-		const isFollowing = await followingExistsInDatabase(deps.db, meId, packedNote.userId);
+		// home/hybrid タイムライン等、呼び出し元が既に me の全フォロー先を取得済みの場合は
+		// followeeIds を hint として渡すことで pack 対象ノート毎の followingExists クエリを避ける。
+		const isFollowing = followeeIds ? followeeIds.has(packedNote.userId) : await followingExistsInDatabase(deps.db, meId, packedNote.userId);
 		if (!isFollowing) return true;
 	}
 
@@ -422,6 +425,11 @@ type PackNoteBatchHint = {
 	packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
 	packedFiles: Map<string, Packed<'DriveFile'>>;
 	channels: Map<string, PackNoteChannel>;
+	/**
+	 * me の全フォロー先ID集合。noteIds による対象ノート制限とは独立 (誰をフォローしているかは
+	 * どのノートを pack しているかに関わらず有効なので、hint内の他フィールドと違い無条件で使える)。
+	 */
+	followeeIds?: Set<MiUser['id']>;
 };
 
 export async function packNoteForHonoApi(
@@ -542,7 +550,7 @@ export async function packNoteForHonoApi(
 
 	treatVisibility(packed);
 
-	if (!opts.skipHide && await shouldHideNoteForHonoApi(deps, packed, meId)) {
+	if (!opts.skipHide && await shouldHideNoteForHonoApi(deps, packed, meId, opts.hint?.followeeIds)) {
 		hideNoteForHonoApi(packed);
 	}
 
@@ -556,6 +564,7 @@ export async function packNoteManyForHonoApi(
 	options?: {
 		detail?: boolean;
 		skipHide?: boolean;
+		followeeIds?: Set<MiUser['id']>;
 	},
 ): Promise<Packed<'Note'>[]> {
 	if (notes.length === 0) return [];
@@ -644,6 +653,7 @@ export async function packNoteManyForHonoApi(
 		packedUsers: new Map(packedUserArray.map(u => [u.id, u])),
 		packedFiles: new Map(packedFileArray.map(f => [f.id, f])),
 		channels: new Map(channelArray.map(c => [c.id, c])),
+		followeeIds: options?.followeeIds,
 	};
 
 	return await Promise.all(notes.map(n => packNoteForHonoApi(deps, n, me, { ...options, hint })));

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
 import { userListMembership, type UserListMembershipInsert, type UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UpdateValuesMissingError } from '@/misc/db-errors.js';
@@ -91,6 +91,28 @@ export async function userListMembershipExistsInDatabase(
 		.limit(1);
 
 	return row != null;
+}
+
+/**
+ * 複数リストへの所属有無を1クエリで判定する (アンテナ判定でのper-antenna existsクエリ回避用)。
+ * 戻り値は userId が実際に所属している userListId の Set (candidateUserListIds の部分集合)。
+ */
+export async function listUserListIdsContainingUserFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	candidateUserListIds: MiUserList['id'][],
+): Promise<Set<MiUserList['id']>> {
+	if (candidateUserListIds.length === 0) return new Set();
+
+	const rows = await db
+		.select({ userListId: userListMembership.userListId })
+		.from(userListMembership)
+		.where(and(
+			eq(userListMembership.userId, userId),
+			inArray(userListMembership.userListId, candidateUserListIds),
+		));
+
+	return new Set(rows.map(row => row.userListId));
 }
 
 export async function fetchUserListMembershipByUserIdAndUserListIdFromDatabase(

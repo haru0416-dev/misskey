@@ -11,7 +11,7 @@ import cluster from 'node:cluster';
 import { EventEmitter } from 'node:events';
 import { writeHeapSnapshot } from 'node:v8';
 import chalk from 'chalk';
-import Xev from 'xev';
+import { globalEventBus } from '@/misc/global-event-bus.js';
 import Logger from '@/logger.js';
 import { envOption } from '../env.js';
 import { readyRef } from './ready.js';
@@ -23,8 +23,6 @@ EventEmitter.defaultMaxListeners = 128;
 
 const logger = new Logger('core', 'cyan');
 const clusterLogger = logger.createSubLogger('cluster', 'orange');
-const ev = new Xev();
-
 //#region Events
 
 // Listen new workers
@@ -70,7 +68,7 @@ if (!envOption.disableClustering) {
 		logger.info(`Start main process... pid: ${process.pid}`);
 		const { masterMain } = await import('./master.js');
 		await masterMain();
-		ev.mount();
+		globalEventBus.mount();
 	} else if (cluster.isWorker) {
 		logger.info(`Start worker process... pid: ${process.pid}`);
 		const { workerMain } = await import('./worker.js');
@@ -83,7 +81,7 @@ if (!envOption.disableClustering) {
 	logger.info(`Start main process... pid: ${process.pid}`);
 	const { masterMain } = await import('./master.js');
 	await masterMain();
-	ev.mount();
+	globalEventBus.mount();
 }
 
 process.on('message', msg => {

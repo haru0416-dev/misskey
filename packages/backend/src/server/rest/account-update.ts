@@ -21,7 +21,7 @@ import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { appendVerifiedLinkToUserProfileInDatabase, fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase, type UserProfileUpdate } from '@/core/UserProfileStore.js';
 import { fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import * as Acct from '@/misc/acct.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
@@ -230,7 +230,7 @@ export async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependenc
 		user.avatarId ? fetchDriveFileByIdFromDatabase(deps.db, user.avatarId) : Promise.resolve(undefined),
 		user.bannerId ? fetchDriveFileByIdFromDatabase(deps.db, user.bannerId) : Promise.resolve(undefined),
 		fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id),
-		fetchUserKeypairFromDatabase(deps.db, user.id),
+		fetchUserKeypairFromDatabaseCached(deps.db, user.id),
 	]);
 
 	const attachment = profile.fields.map(field => ({

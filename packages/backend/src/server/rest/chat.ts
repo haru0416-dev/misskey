@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import push from 'web-push';
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/ChatApprovalStore.js';
@@ -58,7 +57,6 @@ import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js'
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { countMutualFollowingsBetweenUsersFromDatabase } from '@/core/FollowingStore.js';
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { deleteSwSubscriptionForPushEndpointFromDatabase, listSwSubscriptionsByUserIdFromDatabase } from '@/core/SwSubscriptionStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
@@ -79,6 +77,7 @@ import { packDriveFileForHonoApi, packDriveFileManyByIdsForHonoApi, type HonoApi
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { getHonoApiRolePolicies, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
+import { pushSwNotificationForHonoApi } from './push-notification.js';
 
 export type HonoApiChatDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies & HonoApiNotificationDependencies & {
 	publishChatUserStream?: HonoApiChatUserStreamPublisher;
@@ -443,39 +442,7 @@ export async function checkChatAvailabilityForHonoApi(deps: HonoApiChatDependenc
 }
 
 async function pushChatNotificationForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], body: Packed<'ChatMessage'>): Promise<void> {
-	if (!deps.meta.enableServiceWorker || deps.meta.swPublicKey == null || deps.meta.swPrivateKey == null) return;
-
-	push.setVapidDetails(deps.config.url, deps.meta.swPublicKey, deps.meta.swPrivateKey);
-
-	const subscriptions = await listSwSubscriptionsByUserIdFromDatabase(deps.db, userId);
-
-	for (const subscription of subscriptions) {
-		const pushSubscription = {
-			endpoint: subscription.endpoint,
-			keys: {
-				auth: subscription.auth,
-				p256dh: subscription.publickey,
-			},
-		};
-
-		push.sendNotification(pushSubscription, JSON.stringify({
-			type: 'newChatMessage',
-			body,
-			userId,
-			dateTime: Date.now(),
-		}), {
-			proxy: deps.config.proxy,
-		}).catch((err: push.WebPushError) => {
-			if (err.statusCode === 410) {
-				void deleteSwSubscriptionForPushEndpointFromDatabase(deps.db, {
-					userId,
-					endpoint: subscription.endpoint,
-					auth: subscription.auth,
-					publickey: subscription.publickey,
-				});
-			}
-		});
-	}
+	await pushSwNotificationForHonoApi(deps, userId, 'newChatMessage', body);
 }
 
 // Ports the notifierId-aware filtering from NotificationService#createNotificationInternal
@@ -522,6 +489,7 @@ async function createChatRoomInvitationNotificationForHonoApi(
 	await xaddHonoApiNotification(deps, notifieeId, notification);
 
 	deps.publishMainStream?.(notifieeId, 'notification', notification);
+	void pushSwNotificationForHonoApi(deps, notifieeId, 'notification', notification);
 }
 
 export async function createChatMessageToUserForHonoApi(

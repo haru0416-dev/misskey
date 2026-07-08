@@ -22,10 +22,12 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
+import type { MiMeta } from '@/models/_.js';
 import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { userExportableEntities } from '@/types.js';
 import { packHonoApiRole } from './roles.js';
+import { pushSwNotificationForHonoApi } from './push-notification.js';
 import type { HonoApiMainStreamPublisher } from './events.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -35,6 +37,7 @@ export type HonoApiNotificationDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redis: Redis;
+	meta: Pick<MiMeta, 'enableServiceWorker' | 'swPublicKey' | 'swPrivateKey'>;
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
@@ -212,6 +215,7 @@ function createSimpleNotification(
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -253,6 +257,7 @@ export function createRoleAssignedNotification(
 		} satisfies HonoPackedRoleAssignedNotification;
 
 		deps.publishMainStream?.(userId, 'notification', packed);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -276,6 +281,7 @@ export function createScheduledNotePostedNotification(deps: HonoApiNotificationD
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -299,6 +305,7 @@ export function createScheduledNotePostFailedNotification(deps: HonoApiNotificat
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -322,6 +329,7 @@ export function createPollEndedNotification(deps: HonoApiNotificationDependencie
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -351,6 +359,7 @@ export function createExportCompletedNotification(
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -394,6 +403,7 @@ export function createAppNotification(
 		} satisfies HonoPackedAppNotification;
 
 		deps.publishMainStream?.(userId, 'notification', packed);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -416,6 +426,7 @@ export function createTestNotification(deps: HonoApiNotificationDependencies, us
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
 		const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
@@ -441,6 +452,7 @@ function createAchievementEarnedNotification(
 		const redisId = await xaddNotification(deps, userId, notification);
 
 		deps.publishMainStream?.(userId, 'notification', notification);
+		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
 		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
@@ -500,6 +512,7 @@ export async function markAllHonoApiNotificationsAsRead(deps: HonoApiNotificatio
 
 	if (force || latestReadNotificationId == null || latestReadNotificationId < latestNotificationId) {
 		deps.publishMainStream?.(userId, 'readAllNotifications');
+		void pushSwNotificationForHonoApi(deps, userId, 'readAllNotifications', undefined);
 	}
 }
 

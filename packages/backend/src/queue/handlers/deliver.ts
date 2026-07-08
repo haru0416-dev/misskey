@@ -11,7 +11,6 @@ import { MemorySingleCache } from '@/misc/cache.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiInstance } from '@/models/Instance.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import { isFederationAllowedUri, signedPostForHonoApi } from '../../server/rest/ap-resolve.js';
@@ -39,7 +38,8 @@ export type HonoQueueDeliverDependencies = {
 // suspendedHostsCache をインスタンスフィールドとして保持していた。Hono側では
 // キュー処理関数自体がプロセスごとに1つしか生成されないため、モジュールスコープの
 // シングルトンとして同じ役割を持たせる。
-const suspendedHostsCache = new MemorySingleCache<MiInstance[]>(1000 * 60 * 60); // 1h
+// Set<string> で保持し、ジョブ毎の .map().includes() (配列再構築+線形探索) を避けてO(1)判定にする。
+const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60); // 1h
 
 /** DeliverProcessorService.process 相当。 */
 export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies, job: Bull.Job<DeliverJobData>): Promise<string> {
@@ -52,10 +52,10 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 	// isSuspendedなら中断
 	let suspendedHosts = suspendedHostsCache.get();
 	if (suspendedHosts == null) {
-		suspendedHosts = await listSuspendedInstancesFromDatabase(deps.db);
+		suspendedHosts = new Set((await listSuspendedInstancesFromDatabase(deps.db)).map(x => x.host));
 		suspendedHostsCache.set(suspendedHosts);
 	}
-	if (suspendedHosts.map(x => x.host).includes(toPuny(host))) {
+	if (suspendedHosts.has(toPuny(host))) {
 		return 'skip (suspended)';
 	}
 

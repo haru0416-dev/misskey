@@ -10,8 +10,8 @@ process.env.NODE_ENV = 'test';
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { EventEmitter } from 'node:events';
-import Xev from 'xev';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { globalEventBus } from '@/misc/global-event-bus.js';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
@@ -25,11 +25,10 @@ function channelMessages(raw: string[]): { id: string; type: string; body: unkno
 	return raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel').map(m => m.body);
 }
 
-// Xev.emit は process.emit('message', ...) 経由で配信されるため、同一プロセス内では
-// new Xev() のインスタンスが違っても (namespace が同じであれば) イベントを共有できる。
-// これを利用し、実際のデーモン (hono-daemon-queue-stats.ts 等) を起動せずに
+// globalEventBus はプロセス内シングルトンなので、チャンネル側と同じインスタンスを
+// 直接importして発行できる。実際のデーモン (queue-stats.ts 等) を起動せずに
 // チャンネル側の購読・転送ロジックだけを検証する。
-const testEv = new Xev();
+const testEv = globalEventBus;
 
 async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs = 20): Promise<void> {
 	const start = Date.now();

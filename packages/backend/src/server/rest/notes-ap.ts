@@ -18,7 +18,7 @@ import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import { listRelaysByStatusFromDatabaseCached } from '@/core/RelayStore.js';
 import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase, listUsersByUrisOrIdsFromDatabase } from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { createMfmService } from '@/core/MfmService.js';
@@ -480,7 +480,7 @@ export async function attachLdSignatureForHonoApi(
 	activity: Record<string, unknown>,
 	user: { id: MiUser['id']; host: null },
 ): Promise<Record<string, unknown>> {
-	const keypair = await fetchUserKeypairFromDatabase(deps.db, user.id);
+	const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
 	const jsonLd = new JsonLd(deps.httpRequestService);
 	jsonLd.debug = false;

@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Xev from 'xev';
+import { globalEventBus } from '@/misc/global-event-bus.js';
 import * as Bull from 'bullmq';
 import { QUEUE, baseQueueOptions } from '@/queue/const.js';
 import type { DeliverQueue, InboxQueue } from '@/core/queues.js';
 import type { Config } from '@/config.js';
 
-const ev = new Xev();
+const ev = globalEventBus;
 
 const INTERVAL_MS = 10000;
 
@@ -19,7 +19,7 @@ export type HonoDaemonQueueStatsDependencies = {
 	inboxQueue: InboxQueue;
 };
 
-/** QueueStatsService.start 相当。deliver/inbox キューの稼働状況を定期的にXev経由でブロードキャストする。 */
+/** QueueStatsService.start 相当。deliver/inbox キューの稼働状況を定期的にglobalEventBus経由でブロードキャストする。 */
 export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies): { dispose: () => void } {
 	const log: unknown[] = [];
 
