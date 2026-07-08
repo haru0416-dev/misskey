@@ -119,11 +119,12 @@ onMounted(async () => {
 					enabled: false,
 					callbacks: {
 						title(context) {
-							const v = context[0].dataset.data[context[0].dataIndex] as RetentionPoint;
-							return `${v.x} days later`;
+							const v = context[0].dataset.data[context[0].dataIndex] as RetentionPoint | undefined;
+							return v == null ? '' : `${v.x} days later`;
 						},
 						label(context) {
-							const v = context.dataset.data[context.dataIndex] as RetentionPoint;
+							const v = context.dataset.data[context.dataIndex] as RetentionPoint | undefined;
+							if (v == null) return '';
 							const p = Math.round(v.y) + '%';
 							return `${v.d} ${p}`;
 						},
