@@ -11,6 +11,9 @@
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
+- Enhance: HTTPルーティングを高速化 (2ルートのパターン形状が原因で Hono の SmartRouter が全500超ルートを TrieRouter にフォールバックさせていたのを解消し、RegExpRouter (1回の正規表現マッチ) で動作するように。ルーティング処理が約2.2倍高速化)
+- Enhance: API 以外のルート (Web/ファイル/OAuth等) の未捕捉例外をサーバーログに記録するように (従来は Hono デフォルトのログ無し 500)
+- Enhance: Node ランタイムの HTTP レスポンス書き込みに backpressure 対応を追加 (遅いクライアントへの大きなレスポンスで書き込みバッファが無制限に膨らむのを防止)
 - Fix: 通常の通知 (リアクション・フォロー・メンション・返信・引用等) が Service Worker push で配信されず、ブラウザを閉じている間のプッシュ通知が一切届かなかった問題を修正 (NestJS→Hono 移行時の移植漏れ。チャットのみ移植されていた。通知の既読同期 `readAllNotifications` push も復元)
 - Enhance: 未メンテの依存パッケージ2個を内製実装で置き換え (`xev` → クラスタ横断イベントバス、`http-link-header` → OAuth 用 Link ヘッダパーサ)
 - Enhance: タイムラインのDBフォールバッククエリを軽量化 (全タイムラインで note テーブルへの冗長なセルフJOINを削除し非正規化カラム参照に統一、投票有無チェックを `COUNT(*)` から `EXISTS` に変更、フォロー先IDリストを数万個のプレースホルダ展開から配列1パラメータに変更)

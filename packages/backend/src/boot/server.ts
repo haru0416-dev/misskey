@@ -81,6 +81,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		http: {
 			config,
 			meta: deps.meta,
+			logger,
 		},
 		apiShell: {
 			config,
