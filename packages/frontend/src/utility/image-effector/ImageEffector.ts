@@ -23,7 +23,7 @@ interface NumberParamDef extends CommonParamDef {
 	max: number;
 	step?: number;
 	toViewValue?: (v: number) => string;
-};
+}
 
 interface NumberEnumParamDef extends CommonParamDef {
 	type: 'number:enum';
@@ -33,12 +33,12 @@ interface NumberEnumParamDef extends CommonParamDef {
 		icon?: string;
 	}[];
 	default: number;
-};
+}
 
 interface BooleanParamDef extends CommonParamDef {
 	type: 'boolean';
 	default: boolean;
-};
+}
 
 interface AlignParamDef extends CommonParamDef {
 	type: 'align';
@@ -47,19 +47,25 @@ interface AlignParamDef extends CommonParamDef {
 		y: 'top' | 'center' | 'bottom';
 		margin?: number;
 	};
-};
+}
 
 interface SeedParamDef extends CommonParamDef {
 	type: 'seed';
 	default: number;
-};
+}
 
 interface ColorParamDef extends CommonParamDef {
 	type: 'color';
 	default: ImageEffectorRGB;
-};
+}
 
-type ImageEffectorFxParamDef = NumberParamDef | NumberEnumParamDef | BooleanParamDef | AlignParamDef | SeedParamDef | ColorParamDef;
+type ImageEffectorFxParamDef =
+	| NumberParamDef
+	| NumberEnumParamDef
+	| BooleanParamDef
+	| AlignParamDef
+	| SeedParamDef
+	| ColorParamDef;
 
 export type ImageEffectorFxParamDefs = Record<string, ImageEffectorFxParamDef>;
 
@@ -73,13 +79,15 @@ export type ImageEffectorLayer = {
 
 export type ImageEffectorUiDefinition<Fn extends ImageCompositorFunction<any> = ImageCompositorFunction> = {
 	name: string;
-	params: Fn extends ImageCompositorFunction<infer P> ? {
-		[K in keyof P]: ImageEffectorFxParamDef;
-	} : never;
+	params: Fn extends ImageCompositorFunction<infer P>
+		? {
+				[K in keyof P]: ImageEffectorFxParamDef;
+			}
+		: never;
 };
 
 type ImageEffectorImageCompositor = ImageCompositor<{
-	[K in keyof typeof FXS]: typeof FXS[K]['fn'];
+	[K in keyof typeof FXS]: (typeof FXS)[K]['fn'];
 }>;
 
 export class ImageEffector {

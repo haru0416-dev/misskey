@@ -12,7 +12,7 @@ import { mainRouter } from '@/router.js';
 import { login } from '@/accounts.js';
 
 export function swInject() {
-	navigator.serviceWorker.addEventListener('message', async ev => {
+	navigator.serviceWorker.addEventListener('message', async (ev) => {
 		if (_DEV_) {
 			console.log('sw msg', ev.data);
 		}
@@ -20,7 +20,7 @@ export function swInject() {
 		if (ev.data.type !== 'order') return;
 
 		if (ev.data.loginId && ev.data.loginId !== $i?.id) {
-			return getAccountFromId(ev.data.loginId).then(account => {
+			return getAccountFromId(ev.data.loginId).then((account) => {
 				if (!account) return;
 				return login(account.token, ev.data.url);
 			});

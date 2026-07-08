@@ -20,7 +20,7 @@ let moduleInitialized = false;
 let unobserve = () => {};
 let misskeyOS = null;
 
-function loadTheme(themeMaganer: typeof import('../src/theme')['themeManager']) {
+function loadTheme(themeMaganer: (typeof import('../src/theme'))['themeManager']) {
 	unobserve();
 	const theme = themes[window.document.documentElement.dataset.misskeyTheme];
 	if (theme) {
@@ -50,10 +50,13 @@ function loadTheme(themeMaganer: typeof import('../src/theme')['themeManager']) 
 
 function initLocalStorage() {
 	localStorage.clear();
-	localStorage.setItem('account', JSON.stringify({
-		...userDetailed(),
-		policies: {},
-	}));
+	localStorage.setItem(
+		'account',
+		JSON.stringify({
+			...userDetailed(),
+			policies: {},
+		}),
+	);
 }
 
 initialize({
@@ -68,23 +71,25 @@ queueMicrotask(() => {
 		import('../src/theme.js'),
 		import('../src/preferences.js'),
 		import('../src/os.js'),
-	]).then(([{ default: components }, { default: directives }, { default: widgets }, { applyTheme }, { prefer }, os]) => {
-		setup((app) => {
-			moduleInitialized = true;
-			if (app[appInitialized]) {
-				return;
-			}
-			app[appInitialized] = true;
-			loadTheme(applyTheme);
-			components(app);
-			directives(app);
-			widgets(app);
-			misskeyOS = os;
-			if (isChromatic()) {
-				prefer.commit('animation', false);
-			}
-		});
-	});
+	]).then(
+		([{ default: components }, { default: directives }, { default: widgets }, { applyTheme }, { prefer }, os]) => {
+			setup((app) => {
+				moduleInitialized = true;
+				if (app[appInitialized]) {
+					return;
+				}
+				app[appInitialized] = true;
+				loadTheme(applyTheme);
+				components(app);
+				directives(app);
+				widgets(app);
+				misskeyOS = os;
+				if (isChromatic()) {
+					prefer.commit('animation', false);
+				}
+			});
+		},
+	);
 });
 
 const preview = {
@@ -96,16 +101,21 @@ const preview = {
 				lastStory = context.id;
 				const channel = addons.getChannel();
 				const resetIndexedDBPromise = globalThis.indexedDB?.databases
-					? indexedDB.databases().then((r) => {
-							for (var i = 0; i < r.length; i++) {
-								indexedDB.deleteDatabase(r[i].name!);
-							}
-						}).catch(() => {})
+					? indexedDB
+							.databases()
+							.then((r) => {
+								for (var i = 0; i < r.length; i++) {
+									indexedDB.deleteDatabase(r[i].name!);
+								}
+							})
+							.catch(() => {})
 					: Promise.resolve();
-				const resetDefaultStorePromise = import('../src/store').then(({ store }) => {
-					// @ts-expect-error
-					store.init();
-				}).catch(() => {});
+				const resetDefaultStorePromise = import('../src/store')
+					.then(({ store }) => {
+						// @ts-expect-error
+						store.init();
+					})
+					.catch(() => {});
 				Promise.all([resetIndexedDBPromise, resetDefaultStorePromise]).then(() => {
 					initLocalStorage();
 					channel.emit(FORCE_RE_RENDER, { storyId: context.id });

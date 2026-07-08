@@ -10,5 +10,12 @@ export default (v: number | null, digits = 0) => {
 	const isMinus = v < 0;
 	if (isMinus) v = -v;
 	const i = Math.floor(Math.log(v) / Math.log(1024));
-	return (isMinus ? '-' : '') + (v / Math.pow(1024, i)).toFixed(digits).replace(/(\.[1-9]*)0+$/, '$1').replace(/\.$/, '') + (sizes[i] ?? `e+${ i * 3 }B`);
+	return (
+		(isMinus ? '-' : '') +
+		(v / Math.pow(1024, i))
+			.toFixed(digits)
+			.replace(/(\.[1-9]*)0+$/, '$1')
+			.replace(/\.$/, '') +
+		(sizes[i] ?? `e+${i * 3}B`)
+	);
 };

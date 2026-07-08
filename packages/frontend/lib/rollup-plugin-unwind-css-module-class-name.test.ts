@@ -640,7 +640,8 @@ const cssModules = {
 const MkDateSeparatedList = /* @__PURE__ */ _export_sfc(_sfc_main, [["__cssModules", cssModules]]);
 
 export { MkDateSeparatedList as M };
-`.slice(1));
+`.slice(1),
+	);
 });
 
 it('Composition API (inlined output)', () => {
@@ -673,7 +674,7 @@ export { CurrentComponent as default };
 });
 
 it('should keep cssModules when unresolved references remain', () => {
-  const code = `
+	const code = `
 import { a as normalizeClass, b as defineComponent, c as _export_sfc } from './runtime.js';
 
 const CurrentComponent = /* @__PURE__ */ _export_sfc(defineComponent({
@@ -691,13 +692,13 @@ const CurrentComponent = /* @__PURE__ */ _export_sfc(defineComponent({
 
 export { CurrentComponent as default };
 `.slice(1);
-  const ast = parseAst(code, { sourceType: 'module' });
-  const magicString = new RolldownMagicString(code);
-  unwindCssModuleClassName(ast, magicString);
-  const output = magicString.toString();
-  expect(output).toContain('e.$style[side]');
-  expect(output).toContain('__cssModules');
-  expect(output).not.toContain('}), []);');
+	const ast = parseAst(code, { sourceType: 'module' });
+	const magicString = new RolldownMagicString(code);
+	unwindCssModuleClassName(ast, magicString);
+	const output = magicString.toString();
+	expect(output).toContain('e.$style[side]');
+	expect(output).toContain('__cssModules');
+	expect(output).not.toContain('}), []);');
 });
 
 it('should inline cssModules references used inside class expressions', () => {

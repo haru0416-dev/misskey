@@ -24,27 +24,31 @@ function rename(file: Misskey.entities.DriveFile) {
 		misskeyApi('drive/files/update', {
 			fileId: file.id,
 			name: name,
-		}).then(updated => {
+		}).then((updated) => {
 			globalEvents.emit('driveFilesUpdated', [updated]);
 		});
 	});
 }
 
 async function describe(file: Misskey.entities.DriveFile) {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
-		default: file.comment ?? '',
-		file: file,
-	}, {
-		done: caption => {
-			misskeyApi('drive/files/update', {
-				fileId: file.id,
-				comment: caption.length === 0 ? null : caption,
-			}).then(updated => {
-				globalEvents.emit('driveFilesUpdated', [updated]);
-			});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/components/MkFileCaptionEditWindow.vue').then((x) => x.default),
+		{
+			default: file.comment ?? '',
+			file: file,
 		},
-		closed: () => dispose(),
-	});
+		{
+			done: (caption) => {
+				misskeyApi('drive/files/update', {
+					fileId: file.id,
+					comment: caption.length === 0 ? null : caption,
+				}).then((updated) => {
+					globalEvents.emit('driveFilesUpdated', [updated]);
+				});
+			},
+			closed: () => dispose(),
+		},
+	);
 }
 
 function move(file: Misskey.entities.DriveFile) {
@@ -53,7 +57,7 @@ function move(file: Misskey.entities.DriveFile) {
 		misskeyApi('drive/files/update', {
 			fileId: file.id,
 			folderId: folders[0] ? folders[0].id : null,
-		}).then(updated => {
+		}).then((updated) => {
 			globalEvents.emit('driveFilesUpdated', [updated]);
 		});
 	});
@@ -63,15 +67,17 @@ function toggleSensitive(file: Misskey.entities.DriveFile) {
 	misskeyApi('drive/files/update', {
 		fileId: file.id,
 		isSensitive: !file.isSensitive,
-	}).then(updated => {
-		globalEvents.emit('driveFilesUpdated', [updated]);
-	}).catch(err => {
-		os.alert({
-			type: 'error',
-			title: i18n.ts.error,
-			text: err.message,
+	})
+		.then((updated) => {
+			globalEvents.emit('driveFilesUpdated', [updated]);
+		})
+		.catch((err) => {
+			os.alert({
+				type: 'error',
+				title: i18n.ts.error,
+				text: err.message,
+			});
 		});
-	});
 }
 
 function copyUrl(file: Misskey.entities.DriveFile) {
@@ -92,66 +98,87 @@ async function deleteFile(file: Misskey.entities.DriveFile) {
 	globalEvents.emit('driveFilesDeleted', [file]);
 }
 
-export function getDriveFileMenu(file: Misskey.entities.DriveFile, folder?: Misskey.entities.DriveFolder | null): MenuItem[] {
+export function getDriveFileMenu(
+	file: Misskey.entities.DriveFile,
+	folder?: Misskey.entities.DriveFolder | null,
+): MenuItem[] {
 	const _isImage = file.type.startsWith('image/');
 
 	const menuItems: MenuItem[] = [];
 
-	menuItems.push({
-		type: 'link',
-		to: `/my/drive/file/${file.id}`,
-		text: i18n.ts._fileViewer.title,
-		icon: 'ti ti-info-circle',
-	}, { type: 'divider' }, {
-		text: i18n.ts.rename,
-		icon: 'ti ti-forms',
-		action: () => rename(file),
-	}, {
-		text: i18n.ts.move,
-		icon: 'ti ti-folder-symlink',
-		action: () => move(file),
-	}, {
-		text: file.isSensitive ? i18n.ts.unmarkAsSensitive : i18n.ts.markAsSensitive,
-		icon: file.isSensitive ? 'ti ti-eye' : 'ti ti-eye-exclamation',
-		action: () => toggleSensitive(file),
-	}, {
-		text: i18n.ts.describeFile,
-		icon: 'ti ti-text-caption',
-		action: () => describe(file),
-	});
+	menuItems.push(
+		{
+			type: 'link',
+			to: `/my/drive/file/${file.id}`,
+			text: i18n.ts._fileViewer.title,
+			icon: 'ti ti-info-circle',
+		},
+		{ type: 'divider' },
+		{
+			text: i18n.ts.rename,
+			icon: 'ti ti-forms',
+			action: () => rename(file),
+		},
+		{
+			text: i18n.ts.move,
+			icon: 'ti ti-folder-symlink',
+			action: () => move(file),
+		},
+		{
+			text: file.isSensitive ? i18n.ts.unmarkAsSensitive : i18n.ts.markAsSensitive,
+			icon: file.isSensitive ? 'ti ti-eye' : 'ti ti-eye-exclamation',
+			action: () => toggleSensitive(file),
+		},
+		{
+			text: i18n.ts.describeFile,
+			icon: 'ti ti-text-caption',
+			action: () => describe(file),
+		},
+	);
 
-	menuItems.push({ type: 'divider' }, {
-		text: i18n.ts.createNoteFromTheFile,
-		icon: 'ti ti-pencil',
-		action: () => os.post({
-			initialFiles: [file],
-		}),
-	}, {
-		text: i18n.ts.copyUrl,
-		icon: 'ti ti-link',
-		action: () => copyUrl(file),
-	}, {
-		type: 'a',
-		href: file.url,
-		target: '_blank',
-		text: i18n.ts.download,
-		icon: 'ti ti-download',
-		download: file.name,
-	}, { type: 'divider' }, {
-		text: i18n.ts.delete,
-		icon: 'ti ti-trash',
-		danger: true,
-		action: () => deleteFile(file),
-	});
+	menuItems.push(
+		{ type: 'divider' },
+		{
+			text: i18n.ts.createNoteFromTheFile,
+			icon: 'ti ti-pencil',
+			action: () =>
+				os.post({
+					initialFiles: [file],
+				}),
+		},
+		{
+			text: i18n.ts.copyUrl,
+			icon: 'ti ti-link',
+			action: () => copyUrl(file),
+		},
+		{
+			type: 'a',
+			href: file.url,
+			target: '_blank',
+			text: i18n.ts.download,
+			icon: 'ti ti-download',
+			download: file.name,
+		},
+		{ type: 'divider' },
+		{
+			text: i18n.ts.delete,
+			icon: 'ti ti-trash',
+			danger: true,
+			action: () => deleteFile(file),
+		},
+	);
 
 	if (prefer.s.devMode) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-hash',
-			text: i18n.ts.copyFileId,
-			action: () => {
-				copyToClipboard(file.id);
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-hash',
+				text: i18n.ts.copyFileId,
+				action: () => {
+					copyToClipboard(file.id);
+				},
 			},
-		});
+		);
 	}
 
 	return menuItems;

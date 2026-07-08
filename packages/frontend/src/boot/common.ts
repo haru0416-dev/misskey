@@ -39,11 +39,11 @@ export async function common(createVue: () => Promise<App<Element>>) {
 
 		console.info(`vue ${vueVersion}`);
 
-		window.addEventListener('error', event => {
+		window.addEventListener('error', (event) => {
 			console.error(event);
 		});
 
-		window.addEventListener('unhandledrejection', event => {
+		window.addEventListener('unhandledrejection', (event) => {
 			console.error(event);
 		});
 	}
@@ -55,11 +55,14 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	if (lastVersion !== version) {
 		miLocalStorage.setItem('lastVersion', version);
 
-		try { // 変なバージョン文字列来るとcompareVersionsでエラーになるため
+		try {
+			// 変なバージョン文字列来るとcompareVersionsでエラーになるため
 			if (lastVersion != null && compareVersions(version, lastVersion) === 1) {
 				isClientUpdated = true;
 			}
-		} catch (err) { /* empty */ }
+		} catch (err) {
+			/* empty */
+		}
 	}
 	//#endregion
 
@@ -70,11 +73,13 @@ export async function common(createVue: () => Promise<App<Element>>) {
 		import.meta.hot.on('locale-update', async (updatedLang: string) => {
 			console.info(`Locale updated: ${updatedLang}`);
 			if (updatedLang === lang) {
-				await new Promise(resolve => {
+				await new Promise((resolve) => {
 					window.setTimeout(resolve, 500);
 				});
 				// fetch with cache: 'no-store' to ensure the latest locale is fetched
-				await window.fetch(`/assets/locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
+				await window
+					.fetch(`/assets/locales/${lang}.${version}.json`, { cache: 'no-store' })
+					.then(async (res) => res.status === 200 && (await res.text()));
 				window.location.reload();
 			}
 		});
@@ -90,7 +95,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	}
 
 	// 一斉リロード
-	reloadChannel.addEventListener('message', path => {
+	reloadChannel.addEventListener('message', (path) => {
 		if (path !== null) window.location.href = path;
 		else window.location.reload();
 	});
@@ -141,25 +146,31 @@ export async function common(createVue: () => Promise<App<Element>>) {
 
 	if (!isSafeMode) {
 		// TODO: instance.defaultLightTheme/instance.defaultDarkThemeが不正な形式だった場合のケア
-		if (prefer.s.lightTheme == null && instance.defaultLightTheme != null) prefer.commit('lightTheme', JSON.parse(instance.defaultLightTheme));
-		if (prefer.s.darkTheme == null && instance.defaultDarkTheme != null) prefer.commit('darkTheme', JSON.parse(instance.defaultDarkTheme));
+		if (prefer.s.lightTheme == null && instance.defaultLightTheme != null)
+			prefer.commit('lightTheme', JSON.parse(instance.defaultLightTheme));
+		if (prefer.s.darkTheme == null && instance.defaultDarkTheme != null)
+			prefer.commit('darkTheme', JSON.parse(instance.defaultDarkTheme));
 	}
 
 	// NOTE: この処理は必ずクライアント更新チェック処理より後に来ること(テーマ再構築のため)
 	// NOTE: この処理は必ずダークモード判定処理より後に来ること(初回のテーマ適用のため)
 	// NOTE: この処理は必ずサーバーテーマ適用処理より後に来ること(二重発火を防ぐため)
 	// see: https://github.com/misskey-dev/misskey/issues/16562
-	watch(store.r.darkMode, (darkMode) => {
-		const theme = (() => {
-			if (darkMode) {
-				return isSafeMode ? defaultDarkTheme : (prefer.s.darkTheme ?? defaultDarkTheme);
-			} else {
-				return isSafeMode ? defaultLightTheme : (prefer.s.lightTheme ?? defaultLightTheme);
-			}
-		})();
+	watch(
+		store.r.darkMode,
+		(darkMode) => {
+			const theme = (() => {
+				if (darkMode) {
+					return isSafeMode ? defaultDarkTheme : (prefer.s.darkTheme ?? defaultDarkTheme);
+				} else {
+					return isSafeMode ? defaultLightTheme : (prefer.s.lightTheme ?? defaultLightTheme);
+				}
+			})();
 
-		themeManager.updateTheme(theme);
-	}, { immediate: true });
+			themeManager.updateTheme(theme);
+		},
+		{ immediate: true },
+	);
 
 	window.document.documentElement.dataset.colorScheme = store.s.darkMode ? 'dark' : 'light';
 
@@ -177,39 +188,51 @@ export async function common(createVue: () => Promise<App<Element>>) {
 		});
 	}
 
-	watch(prefer.r.overridedDeviceKind, (kind) => {
-		updateDeviceKind(kind);
-	}, { immediate: true });
+	watch(
+		prefer.r.overridedDeviceKind,
+		(kind) => {
+			updateDeviceKind(kind);
+		},
+		{ immediate: true },
+	);
 
-	watch(prefer.r.useBlurEffectForModal, v => {
-		window.document.documentElement.style.setProperty('--MI-modalBgFilter', v ? 'blur(4px)' : 'none');
-	}, { immediate: true });
+	watch(
+		prefer.r.useBlurEffectForModal,
+		(v) => {
+			window.document.documentElement.style.setProperty('--MI-modalBgFilter', v ? 'blur(4px)' : 'none');
+		},
+		{ immediate: true },
+	);
 
-	watch(prefer.r.useBlurEffect, v => {
-		if (v) {
-			window.document.documentElement.style.removeProperty('--MI-blur');
-		} else {
-			window.document.documentElement.style.setProperty('--MI-blur', 'none');
-		}
-	}, { immediate: true });
+	watch(
+		prefer.r.useBlurEffect,
+		(v) => {
+			if (v) {
+				window.document.documentElement.style.removeProperty('--MI-blur');
+			} else {
+				window.document.documentElement.style.setProperty('--MI-blur', 'none');
+			}
+		},
+		{ immediate: true },
+	);
 
 	// Keep screen on
-	const onVisibilityChange = () => window.document.addEventListener('visibilitychange', () => {
-		if (window.document.visibilityState === 'visible') {
-			navigator.wakeLock.request('screen');
-		}
-	});
+	const onVisibilityChange = () =>
+		window.document.addEventListener('visibilitychange', () => {
+			if (window.document.visibilityState === 'visible') {
+				navigator.wakeLock.request('screen');
+			}
+		});
 	if (prefer.s.keepScreenOn && 'wakeLock' in navigator) {
-		navigator.wakeLock.request('screen')
+		navigator.wakeLock
+			.request('screen')
 			.then(onVisibilityChange)
 			.catch(() => {
 				// On WebKit-based browsers, user activation is required to send wake lock request
 				// https://webkit.org/blog/13862/the-user-activation-api/
-				window.document.addEventListener(
-					'click',
-					() => navigator.wakeLock.request('screen').then(onVisibilityChange),
-					{ once: true },
-				);
+				window.document.addEventListener('click', () => navigator.wakeLock.request('screen').then(onVisibilityChange), {
+					once: true,
+				});
 			});
 	}
 
@@ -229,7 +252,9 @@ export async function common(createVue: () => Promise<App<Element>>) {
 
 	try {
 		await fetchCustomEmojis();
-	} catch (err) { /* empty */ }
+	} catch (err) {
+		/* empty */
+	}
 
 	// analytics
 	fetchInstanceMetaPromise.then(async () => {
@@ -277,31 +302,35 @@ export async function common(createVue: () => Promise<App<Element>>) {
 		Sentry.init({
 			app,
 			integrations: [
-				...(instance.sentryForFrontend.vueIntegration !== undefined ? [
-					Sentry.vueIntegration(instance.sentryForFrontend.vueIntegration ?? undefined),
-				] : []),
-				...(instance.sentryForFrontend.browserTracingIntegration !== undefined ? [
-					Sentry.browserTracingIntegration(instance.sentryForFrontend.browserTracingIntegration ?? undefined),
-				] : []),
-				...(instance.sentryForFrontend.replayIntegration !== undefined ? [
-					Sentry.replayIntegration(instance.sentryForFrontend.replayIntegration ?? undefined),
-				] : []),
+				...(instance.sentryForFrontend.vueIntegration !== undefined
+					? [Sentry.vueIntegration(instance.sentryForFrontend.vueIntegration ?? undefined)]
+					: []),
+				...(instance.sentryForFrontend.browserTracingIntegration !== undefined
+					? [Sentry.browserTracingIntegration(instance.sentryForFrontend.browserTracingIntegration ?? undefined)]
+					: []),
+				...(instance.sentryForFrontend.replayIntegration !== undefined
+					? [Sentry.replayIntegration(instance.sentryForFrontend.replayIntegration ?? undefined)]
+					: []),
 			],
 
 			// Set tracesSampleRate to 1.0 to capture 100%
 			tracesSampleRate: 1.0,
 
 			// Set `tracePropagationTargets` to control for which URLs distributed tracing should be enabled
-			...(instance.sentryForFrontend.browserTracingIntegration !== undefined ? {
-				tracePropagationTargets: [apiUrl],
-			} : {}),
+			...(instance.sentryForFrontend.browserTracingIntegration !== undefined
+				? {
+						tracePropagationTargets: [apiUrl],
+					}
+				: {}),
 
 			// Capture Replay for 10% of all sessions,
 			// plus for 100% of sessions with an error
-			...(instance.sentryForFrontend.replayIntegration !== undefined ? {
-				replaysSessionSampleRate: 0.1,
-				replaysOnErrorSampleRate: 1.0,
-			} : {}),
+			...(instance.sentryForFrontend.replayIntegration !== undefined
+				? {
+						replaysSessionSampleRate: 0.1,
+						replaysOnErrorSampleRate: 1.0,
+					}
+				: {}),
 
 			...instance.sentryForFrontend.options,
 		});
@@ -331,16 +360,15 @@ export async function common(createVue: () => Promise<App<Element>>) {
 			`%c${i18n.ts._selfXssPrevention.title}`,
 			'color: #f00; font-weight: 900; font-family: "Hiragino Sans W9", "Hiragino Kaku Gothic ProN", sans-serif; font-size: 24px;',
 		);
-		console.log(
-			`%c${i18n.ts._selfXssPrevention.description1}`,
-			'font-size: 16px; font-weight: 700;',
-		);
+		console.log(`%c${i18n.ts._selfXssPrevention.description1}`, 'font-size: 16px; font-weight: 700;');
 		console.log(
 			`%c${i18n.ts._selfXssPrevention.description2}`,
 			'font-size: 16px;',
 			'font-size: 20px; font-weight: 700; color: #f00;',
 		);
-		console.log(i18n.tsx._selfXssPrevention.description3({ link: 'https://misskey-hub.net/docs/for-users/resources/self-xss/' }));
+		console.log(
+			i18n.tsx._selfXssPrevention.description3({ link: 'https://misskey-hub.net/docs/for-users/resources/self-xss/' }),
+		);
 	}
 	//#endregion
 

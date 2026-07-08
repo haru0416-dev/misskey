@@ -6,6 +6,6 @@
 import { get } from '@/utility/idb-proxy.js';
 
 export async function getAccountFromId(id: string) {
-	const accounts = await get('accounts') as { token: string; id: string; }[];
-	return accounts.find(account => account.id === id);
+	const accounts = (await get('accounts')) as { token: string; id: string }[];
+	return accounts.find((account) => account.id === id);
 }

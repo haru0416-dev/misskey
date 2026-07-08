@@ -55,7 +55,7 @@ export const Default = {
 					return HttpResponse.json(undefined, { status: 204 });
 				}),
 				http.post('/api/drive/folders/update', async ({ request }) => {
-					const req = await request.json() as Misskey.entities.DriveFoldersUpdateRequest;
+					const req = (await request.json()) as Misskey.entities.DriveFoldersUpdateRequest;
 					action('POST /api/drive/folders/update')(req);
 					return HttpResponse.json({
 						...folder(),

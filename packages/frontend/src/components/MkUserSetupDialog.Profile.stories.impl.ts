@@ -27,9 +27,7 @@ export const Default = {
 			template: '<MkUserSetupDialog_Profile v-bind="props" />',
 		};
 	},
-	args: {
-
-	},
+	args: {},
 	parameters: {
 		layout: 'centered',
 	},

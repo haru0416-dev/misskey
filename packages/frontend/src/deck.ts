@@ -49,7 +49,7 @@ export const columnTypes = [
 	'chat',
 ] as const;
 
-export type ColumnType = typeof columnTypes[number];
+export type ColumnType = (typeof columnTypes)[number];
 
 export type Column = {
 	id: string;
@@ -63,7 +63,7 @@ export type Column = {
 	listId?: string;
 	channelId?: string;
 	roleId?: string;
-	excludeTypes?: typeof notificationTypes[number][];
+	excludeTypes?: (typeof notificationTypes)[number][];
 	tl?: BasicTimelineType;
 	withRenotes?: boolean;
 	withReplies?: boolean;
@@ -74,7 +74,7 @@ export type Column = {
 	timelineNameCache?: string;
 };
 
-const _currentProfile = prefer.s['deck.profiles'].find(p => p.name === prefer.s['deck.profile']);
+const _currentProfile = prefer.s['deck.profiles'].find((p) => p.name === prefer.s['deck.profile']);
 const __currentProfile = _currentProfile ? deepClone(_currentProfile) : null;
 export const columns = ref(__currentProfile ? __currentProfile.columns : []);
 export const layout = ref(__currentProfile ? __currentProfile.layout : []);
@@ -84,14 +84,14 @@ if (prefer.s['deck.profile'] == null) {
 }
 
 export function forceSaveCurrentDeckProfile() {
-	const currentProfile = prefer.s['deck.profiles'].find(p => p.name === prefer.s['deck.profile']);
+	const currentProfile = prefer.s['deck.profiles'].find((p) => p.name === prefer.s['deck.profile']);
 	if (currentProfile == null) return;
 
 	const newProfile = deepClone(currentProfile);
 	newProfile.columns = columns.value;
 	newProfile.layout = layout.value;
 
-	const newProfiles = prefer.s['deck.profiles'].filter(p => p.name !== prefer.s['deck.profile']);
+	const newProfiles = prefer.s['deck.profiles'].filter((p) => p.name !== prefer.s['deck.profile']);
 	newProfiles.push(newProfile);
 	prefer.commit('deck.profiles', newProfiles);
 }
@@ -110,7 +110,7 @@ function switchProfile(profile: DeckProfile) {
 
 function addProfile(name: string) {
 	if (name.trim() === '') return;
-	if (prefer.s['deck.profiles'].find(p => p.name === name)) return;
+	if (prefer.s['deck.profiles'].find((p) => p.name === name)) return;
 
 	const newProfile: DeckProfile = {
 		id: genId(),
@@ -127,7 +127,7 @@ function createFirstProfile() {
 }
 
 export function deleteProfile(name: string): void {
-	const newProfiles = prefer.s['deck.profiles'].filter(p => p.name !== name);
+	const newProfiles = prefer.s['deck.profiles'].filter((p) => p.name !== name);
 	prefer.commit('deck.profiles', newProfiles);
 
 	if (prefer.s['deck.profiles'].length === 0) {
@@ -145,16 +145,16 @@ export function addColumn(column: Column) {
 }
 
 export function removeColumn(id: Column['id']) {
-	columns.value = columns.value.filter(c => c.id !== id);
-	layout.value = layout.value.map(ids => ids.filter(_id => _id !== id)).filter(ids => ids.length > 0);
+	columns.value = columns.value.filter((c) => c.id !== id);
+	layout.value = layout.value.map((ids) => ids.filter((_id) => _id !== id)).filter((ids) => ids.length > 0);
 	saveCurrentDeckProfile();
 }
 
 export function swapColumn(a: Column['id'], b: Column['id']) {
-	const aX = layout.value.findIndex(ids => ids.indexOf(a) !== -1);
-	const aY = layout.value[aX].findIndex(id => id === a);
-	const bX = layout.value.findIndex(ids => ids.indexOf(b) !== -1);
-	const bY = layout.value[bX].findIndex(id => id === b);
+	const aX = layout.value.findIndex((ids) => ids.indexOf(a) !== -1);
+	const aY = layout.value[aX].findIndex((id) => id === a);
+	const bX = layout.value.findIndex((ids) => ids.indexOf(b) !== -1);
+	const bY = layout.value[bX].findIndex((id) => id === b);
 	const newLayout = deepClone(layout.value);
 	newLayout[aX][aY] = b;
 	newLayout[bX][bY] = a;
@@ -198,7 +198,7 @@ export function swapRightColumn(id: Column['id']) {
 
 export function swapUpColumn(id: Column['id']) {
 	const newLayout = deepClone(layout.value);
-	const idsIndex = layout.value.findIndex(ids => ids.includes(id));
+	const idsIndex = layout.value.findIndex((ids) => ids.includes(id));
 	const ids = deepClone(layout.value[idsIndex]);
 	ids.some((x, i) => {
 		if (x === id) {
@@ -219,7 +219,7 @@ export function swapUpColumn(id: Column['id']) {
 
 export function swapDownColumn(id: Column['id']) {
 	const newLayout = deepClone(layout.value);
-	const idsIndex = layout.value.findIndex(ids => ids.includes(id));
+	const idsIndex = layout.value.findIndex((ids) => ids.includes(id));
 	const ids = deepClone(layout.value[idsIndex]);
 	ids.some((x, i) => {
 		if (x === id) {
@@ -240,21 +240,21 @@ export function swapDownColumn(id: Column['id']) {
 
 export function stackLeftColumn(id: Column['id']) {
 	let newLayout = deepClone(layout.value);
-	const i = layout.value.findIndex(ids => ids.includes(id));
-	newLayout = newLayout.map(ids => ids.filter(_id => _id !== id));
+	const i = layout.value.findIndex((ids) => ids.includes(id));
+	newLayout = newLayout.map((ids) => ids.filter((_id) => _id !== id));
 	newLayout[i - 1].push(id);
-	newLayout = newLayout.filter(ids => ids.length > 0);
+	newLayout = newLayout.filter((ids) => ids.length > 0);
 	layout.value = newLayout;
 	saveCurrentDeckProfile();
 }
 
 export function popRightColumn(id: Column['id']) {
 	let newLayout = deepClone(layout.value);
-	const i = layout.value.findIndex(ids => ids.includes(id));
+	const i = layout.value.findIndex((ids) => ids.includes(id));
 	const affected = newLayout[i];
-	newLayout = newLayout.map(ids => ids.filter(_id => _id !== id));
+	newLayout = newLayout.map((ids) => ids.filter((_id) => _id !== id));
 	newLayout.splice(i + 1, 0, [id]);
-	newLayout = newLayout.filter(ids => ids.length > 0);
+	newLayout = newLayout.filter((ids) => ids.length > 0);
 	layout.value = newLayout;
 
 	const newColumns = deepClone(columns.value);
@@ -270,7 +270,7 @@ export function popRightColumn(id: Column['id']) {
 
 export function addColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	const newColumns = deepClone(columns.value);
-	const columnIndex = columns.value.findIndex(c => c.id === id);
+	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = deepClone(columns.value[columnIndex]);
 	if (column == null) return;
 	if (column.widgets == null) column.widgets = [];
@@ -282,11 +282,11 @@ export function addColumnWidget(id: Column['id'], widget: ColumnWidget) {
 
 export function removeColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	const newColumns = deepClone(columns.value);
-	const columnIndex = columns.value.findIndex(c => c.id === id);
+	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = deepClone(columns.value[columnIndex]);
 	if (column == null) return;
 	if (column.widgets == null) column.widgets = [];
-	column.widgets = column.widgets.filter(w => w.id !== widget.id);
+	column.widgets = column.widgets.filter((w) => w.id !== widget.id);
 	newColumns[columnIndex] = column;
 	columns.value = newColumns;
 	saveCurrentDeckProfile();
@@ -294,7 +294,7 @@ export function removeColumnWidget(id: Column['id'], widget: ColumnWidget) {
 
 export function setColumnWidgets(id: Column['id'], widgets: ColumnWidget[]) {
 	const newColumns = deepClone(columns.value);
-	const columnIndex = columns.value.findIndex(c => c.id === id);
+	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = deepClone(columns.value[columnIndex]);
 	if (column == null) return;
 	column.widgets = widgets;
@@ -305,14 +305,18 @@ export function setColumnWidgets(id: Column['id'], widgets: ColumnWidget[]) {
 
 export function updateColumnWidget(id: Column['id'], widgetId: string, widgetData: any) {
 	const newColumns = deepClone(columns.value);
-	const columnIndex = columns.value.findIndex(c => c.id === id);
+	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = deepClone(columns.value[columnIndex]);
 	if (column == null) return;
 	if (column.widgets == null) column.widgets = [];
-	column.widgets = column.widgets.map(w => w.id === widgetId ? {
-		...w,
-		data: widgetData,
-	} : w);
+	column.widgets = column.widgets.map((w) =>
+		w.id === widgetId
+			? {
+					...w,
+					data: widgetData,
+				}
+			: w,
+	);
 	newColumns[columnIndex] = column;
 	columns.value = newColumns;
 	saveCurrentDeckProfile();
@@ -320,7 +324,7 @@ export function updateColumnWidget(id: Column['id'], widgetId: string, widgetDat
 
 export function updateColumn(id: Column['id'], column: Partial<Column>) {
 	const newColumns = deepClone(columns.value);
-	const columnIndex = columns.value.findIndex(c => c.id === id);
+	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const currentColumn = deepClone(columns.value[columnIndex]);
 	if (currentColumn == null) return;
 	for (const [k, v] of Object.entries(column)) {
@@ -332,33 +336,43 @@ export function updateColumn(id: Column['id'], column: Partial<Column>) {
 }
 
 export function switchProfileMenu(ev: PointerEvent) {
-	const items: MenuItem[] = prefer.s['deck.profile'] ? [{
-		text: prefer.s['deck.profile'],
-		active: true,
-		action: () => {},
-	}] : [];
+	const items: MenuItem[] = prefer.s['deck.profile']
+		? [
+				{
+					text: prefer.s['deck.profile'],
+					active: true,
+					action: () => {},
+				},
+			]
+		: [];
 
 	const profiles = prefer.s['deck.profiles'];
 
-	items.push(...(profiles.filter(p => p.name !== prefer.s['deck.profile']).map(p => ({
-		text: p.name,
-		action: () => {
-			switchProfile(p);
-		},
-	}))), { type: 'divider' as const }, {
-		text: i18n.ts._deck.newProfile,
-		icon: 'ti ti-plus',
-		action: async () => {
-			const { canceled, result: name } = await os.inputText({
-				title: i18n.ts._deck.profile,
-				minLength: 1,
-			});
+	items.push(
+		...profiles
+			.filter((p) => p.name !== prefer.s['deck.profile'])
+			.map((p) => ({
+				text: p.name,
+				action: () => {
+					switchProfile(p);
+				},
+			})),
+		{ type: 'divider' as const },
+		{
+			text: i18n.ts._deck.newProfile,
+			icon: 'ti ti-plus',
+			action: async () => {
+				const { canceled, result: name } = await os.inputText({
+					title: i18n.ts._deck.profile,
+					minLength: 1,
+				});
 
-			if (canceled || name == null || name.trim() === '') return;
+				if (canceled || name == null || name.trim() === '') return;
 
-			addProfile(name);
+				addProfile(name);
+			},
 		},
-	});
+	);
 
 	os.popupMenu(items, ev.currentTarget ?? ev.target);
 }

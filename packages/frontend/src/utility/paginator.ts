@@ -25,7 +25,7 @@ type AbsEndpointType = {
 };
 
 type FilterByEpRes<E extends Record<string, AbsEndpointType>> = {
-	[K in keyof E]: E[K]['res'] extends Array<{ id: string }> ? K : never
+	[K in keyof E]: E[K]['res'] extends Array<{ id: string }> ? K : never;
 }[keyof E];
 export type PaginatorCompatibleEndpointPaths = FilterByEpRes<Misskey.Endpoints>;
 export type PaginatorCompatibleEndpoints = {
@@ -60,8 +60,8 @@ export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
 	fetchOlder(): Promise<void>;
 	fetchNewer(options?: { toQueue?: boolean }): Promise<void>;
 	trim(trigger?: boolean): void;
-	unshiftItems(newItems: (_T)[]): void;
-	pushItems(oldItems: (_T)[]): void;
+	unshiftItems(newItems: _T[]): void;
+	pushItems(oldItems: _T[]): void;
 	prepend(item: _T): void;
 	enqueue(item: _T): void;
 	releaseQueue(): void;
@@ -114,33 +114,36 @@ export class Paginator<
 	// NOTE: このようなプロパティを用意してこっち側で並びを管理せずに、Setで持っておき参照者側が好きに並び変えるような設計の方がすっきりしそうなものの、Vueのレンダリングのたびに並び替え処理が発生することになったりしそうでパフォーマンス上の懸念がある
 	public order: Ref<'newest' | 'oldest'>;
 
-	constructor(endpoint: Endpoint, props: {
-		limit?: number;
-		params?: E['req'] | (() => E['req']);
-		computedParams?: ComputedRef<E['req'] | null | undefined>;
+	constructor(
+		endpoint: Endpoint,
+		props: {
+			limit?: number;
+			params?: E['req'] | (() => E['req']);
+			computedParams?: ComputedRef<E['req'] | null | undefined>;
 
-		/**
-		 * 検索APIのような、ページング不可なエンドポイントを利用する場合
-		 * (そのようなAPIをこの関数で使うのは若干矛盾してるけど)
-		 */
-		noPaging?: boolean;
+			/**
+			 * 検索APIのような、ページング不可なエンドポイントを利用する場合
+			 * (そのようなAPIをこの関数で使うのは若干矛盾してるけど)
+			 */
+			noPaging?: boolean;
 
-		offsetMode?: boolean;
+			offsetMode?: boolean;
 
-		initialId?: MisskeyEntity['id'];
-		initialDate?: number | null;
-		initialDirection?: 'newer' | 'older';
+			initialId?: MisskeyEntity['id'];
+			initialDate?: number | null;
+			initialDirection?: 'newer' | 'older';
 
-		order?: 'newest' | 'oldest';
+			order?: 'newest' | 'oldest';
 
-		// 一部のAPIはさらに遡れる場合でもパフォーマンス上の理由でlimit以下の結果を返す場合があり、その場合はsafe、それ以外はlimitにすることを推奨
-		canFetchDetection?: 'safe' | 'limit';
+			// 一部のAPIはさらに遡れる場合でもパフォーマンス上の理由でlimit以下の結果を返す場合があり、その場合はsafe、それ以外はlimitにすることを推奨
+			canFetchDetection?: 'safe' | 'limit';
 
-		useShallowRef?: SRef;
+			useShallowRef?: SRef;
 
-		canSearch?: boolean;
-		searchParamName?: keyof E['req'];
-	}) {
+			canSearch?: boolean;
+			searchParamName?: keyof E['req'];
+		},
+	) {
 		this.endpoint = endpoint;
 		this.useShallowRef = (props.useShallowRef ?? false) as SRef;
 		if (this.useShallowRef) {
@@ -180,14 +183,23 @@ export class Paginator<
 	private getNewestId(): string | null | undefined {
 		// 様々な要因により並び順は保証されないのでソートが必要
 		if (this.aheadQueue.length > 0) {
-			return this.aheadQueue.map(x => x.id).sort().at(-1);
+			return this.aheadQueue
+				.map((x) => x.id)
+				.sort()
+				.at(-1);
 		}
-		return this.items.value.map(x => x.id).sort().at(-1);
+		return this.items.value
+			.map((x) => x.id)
+			.sort()
+			.at(-1);
 	}
 
 	private getOldestId(): string | null | undefined {
 		// 様々な要因により並び順は保証されないのでソートが必要
-		return this.items.value.map(x => x.id).sort().at(0);
+		return this.items.value
+			.map((x) => x.id)
+			.sort()
+			.at(0);
 	}
 
 	public async init(): Promise<void> {
@@ -199,21 +211,29 @@ export class Paginator<
 		const data: E['req'] = {
 			...(typeof this.params === 'function' ? this.params() : this.params),
 			...(this.computedParams ? this.computedParams.value : {}),
-			...(this.searchQuery.value != null && this.searchQuery.value.trim() !== '' ? { [this.searchParamName]: this.searchQuery.value } : {}),
+			...(this.searchQuery.value != null && this.searchQuery.value.trim() !== ''
+				? { [this.searchParamName]: this.searchQuery.value }
+				: {}),
 			limit: this.limit ?? FIRST_FETCH_LIMIT,
 			allowPartial: true,
-			...((this.initialId == null && this.initialDate == null) && this.initialDirection === 'newer' ? {
-				sinceId: '0',
-			} : this.initialDirection === 'newer' ? {
-				sinceId: this.initialId ?? undefined,
-				sinceDate: this.initialDate ?? undefined,
-			} : (this.initialId || this.initialDate) && this.initialDirection === 'older' ? {
-				untilId: this.initialId ?? undefined,
-				untilDate: this.initialDate ?? undefined,
-			} : {}),
+			...(this.initialId == null && this.initialDate == null && this.initialDirection === 'newer'
+				? {
+						sinceId: '0',
+					}
+				: this.initialDirection === 'newer'
+					? {
+							sinceId: this.initialId ?? undefined,
+							sinceDate: this.initialDate ?? undefined,
+						}
+					: (this.initialId || this.initialDate) && this.initialDirection === 'older'
+						? {
+								untilId: this.initialId ?? undefined,
+								untilDate: this.initialDate ?? undefined,
+							}
+						: {}),
 		};
 
-		const apiRes = (await misskeyApi(this.endpoint, data).catch(_ => {
+		const apiRes = (await misskeyApi(this.endpoint, data).catch((_) => {
 			this.error.value = true;
 			this.fetching.value = false;
 			return null;
@@ -258,22 +278,27 @@ export class Paginator<
 	}
 
 	public async fetchOlder(): Promise<void> {
-		if (!this.canFetchOlder.value || this.fetching.value || this.fetchingOlder.value || this.items.value.length === 0) return;
+		if (!this.canFetchOlder.value || this.fetching.value || this.fetchingOlder.value || this.items.value.length === 0)
+			return;
 		this.fetchingOlder.value = true;
 
 		const data: E['req'] = {
 			...(typeof this.params === 'function' ? this.params() : this.params),
 			...(this.computedParams ? this.computedParams.value : {}),
-			...(this.searchQuery.value != null && this.searchQuery.value.trim() !== '' ? { [this.searchParamName]: this.searchQuery.value } : {}),
+			...(this.searchQuery.value != null && this.searchQuery.value.trim() !== ''
+				? { [this.searchParamName]: this.searchQuery.value }
+				: {}),
 			limit: SECOND_FETCH_LIMIT,
-			...(this.offsetMode ? {
-				offset: this.items.value.length,
-			} : {
-				untilId: this.getOldestId(),
-			}),
+			...(this.offsetMode
+				? {
+						offset: this.items.value.length,
+					}
+				: {
+						untilId: this.getOldestId(),
+					}),
 		};
 
-		const apiRes = (await misskeyApi<T[]>(this.endpoint, data).catch(_ => {
+		const apiRes = (await misskeyApi<T[]>(this.endpoint, data).catch((_) => {
 			return null;
 		})) as T[] | null;
 
@@ -309,24 +334,30 @@ export class Paginator<
 		}
 	}
 
-	public async fetchNewer(options: {
-		toQueue?: boolean;
-	} = {}): Promise<void> {
+	public async fetchNewer(
+		options: {
+			toQueue?: boolean;
+		} = {},
+	): Promise<void> {
 		this.fetchingNewer.value = true;
 
 		const data: E['req'] = {
 			...(typeof this.params === 'function' ? this.params() : this.params),
 			...(this.computedParams ? this.computedParams.value : {}),
-			...(this.searchQuery.value != null && this.searchQuery.value.trim() !== '' ? { [this.searchParamName]: this.searchQuery.value } : {}),
+			...(this.searchQuery.value != null && this.searchQuery.value.trim() !== ''
+				? { [this.searchParamName]: this.searchQuery.value }
+				: {}),
 			limit: SECOND_FETCH_LIMIT,
-			...(this.offsetMode ? {
-				offset: this.items.value.length,
-			} : {
-				sinceId: this.getNewestId(),
-			}),
+			...(this.offsetMode
+				? {
+						offset: this.items.value.length,
+					}
+				: {
+						sinceId: this.getNewestId(),
+					}),
 		};
 
-		const apiRes = (await misskeyApi<T[]>(this.endpoint, data).catch(_ => {
+		const apiRes = (await misskeyApi<T[]>(this.endpoint, data).catch((_) => {
 			return null;
 		})) as T[] | null;
 
@@ -371,7 +402,7 @@ export class Paginator<
 
 	public unshiftItems(newItems: T[], trim = true): void {
 		if (newItems.length === 0) return; // これやらないと余計なre-renderが走る
-		this.items.value.unshift(...newItems.filter(x => !this.items.value.some(y => y.id === x.id))); // ストリーミングやポーリングのタイミングによっては重複することがあるため
+		this.items.value.unshift(...newItems.filter((x) => !this.items.value.some((y) => y.id === x.id))); // ストリーミングやポーリングのタイミングによっては重複することがあるため
 		if (trim) this.trim(true);
 		if (this.useShallowRef) triggerRef(this.items);
 	}
@@ -383,7 +414,7 @@ export class Paginator<
 	}
 
 	public prepend(item: T): void {
-		if (this.items.value.some(x => x.id === item.id)) return;
+		if (this.items.value.some((x) => x.id === item.id)) return;
 		this.items.value.unshift(item);
 		this.trim(false);
 		if (this.useShallowRef) triggerRef(this.items);
@@ -407,7 +438,7 @@ export class Paginator<
 	public removeItem(id: string): void {
 		// TODO: queueからも消す
 
-		const index = this.items.value.findIndex(x => x.id === id);
+		const index = this.items.value.findIndex((x) => x.id === id);
 		if (index !== -1) {
 			this.items.value.splice(index, 1);
 			if (this.useShallowRef) triggerRef(this.items);
@@ -417,7 +448,7 @@ export class Paginator<
 	public updateItem(id: string, updater: (item: T) => T): void {
 		// TODO: queueのも更新
 
-		const index = this.items.value.findIndex(x => x.id === id);
+		const index = this.items.value.findIndex((x) => x.id === id);
 		if (index !== -1) {
 			const item = this.items.value[index]!;
 			this.items.value[index] = updater(item);

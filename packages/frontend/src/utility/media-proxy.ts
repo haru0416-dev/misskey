@@ -17,7 +17,9 @@ export function getProxiedImageUrl(...args: Parameters<MediaProxy['getProxiedIma
 	return _mediaProxy.getProxiedImageUrl(...args);
 }
 
-export function getProxiedImageUrlNullable(...args: Parameters<MediaProxy['getProxiedImageUrlNullable']>): string | null {
+export function getProxiedImageUrlNullable(
+	...args: Parameters<MediaProxy['getProxiedImageUrlNullable']>
+): string | null {
 	if (_mediaProxy == null) {
 		_mediaProxy = new MediaProxy(instance, url);
 	}

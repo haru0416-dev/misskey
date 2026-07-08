@@ -47,12 +47,12 @@ export class ImageFrameRenderer {
 	private renderAsPreview = false;
 
 	constructor(options: {
-		canvas: HTMLCanvasElement,
-		image: HTMLImageElement | ImageBitmap,
-		exif: ExifReader.Tags | null,
-		filename: string | null,
-		caption: string | null,
-		renderAsPreview?: boolean,
+		canvas: HTMLCanvasElement;
+		image: HTMLImageElement | ImageBitmap;
+		exif: ExifReader.Tags | null;
+		filename: string | null;
+		caption: string | null;
+		renderAsPreview?: boolean;
 	}) {
 		this.image = options.image;
 		this.exif = options.exif;
@@ -84,7 +84,8 @@ export class ImageFrameRenderer {
 		const GPSLongitude = this.exif == null ? '456.000000000000123' : this.exif.GPSLongitude?.description;
 		return text.replaceAll(/\{(\w+)\}/g, (_: string, key: string) => {
 			let meta_date = DateTimeOriginal ?? '????:??:?? ??:??:??';
-			if (meta_date.includes('T') || meta_date.includes('Z')) { // ISO 8601
+			if (meta_date.includes('T') || meta_date.includes('Z')) {
+				// ISO 8601
 				const parsed = new Date(meta_date);
 				const yyyy = parsed.getFullYear().toString().padStart(4, '0');
 				const mm = (parsed.getMonth() + 1).toString().padStart(2, '0');
@@ -96,35 +97,68 @@ export class ImageFrameRenderer {
 			}
 			const date = meta_date.split(' ')[0].replaceAll(':', '/');
 			switch (key) {
-				case 'caption': return this.caption ?? '?';
-				case 'filename': return this.filename ?? '?';
-				case 'filename_without_ext': return this.filename?.replace(/\.[^/.]+$/, '') ?? '?';
-				case 'year': return date.split('/')[0];
-				case 'month': return date.split('/')[1].replace(/^0/, '');
-				case 'day': return date.split('/')[2].replace(/^0/, '');
-				case 'hour': return meta_date.split(' ')[1].split(':')[0].replace(/^0/, '');
-				case 'minute': return meta_date.split(' ')[1].split(':')[1].replace(/^0/, '');
-				case 'second': return meta_date.split(' ')[1].split(':')[2].replace(/^0/, '');
-				case '0month': return date.split('/')[1];
-				case '0day': return date.split('/')[2];
-				case '0hour': return meta_date.split(' ')[1].split(':')[0];
-				case '0minute': return meta_date.split(' ')[1].split(':')[1];
-				case '0second': return meta_date.split(' ')[1].split(':')[2];
-				case 'camera_model': return Model ?? '?';
-				case 'camera_lens_model': return LensModel ?? '?';
-				case 'camera_mm': return FocalLength?.replace(' mm', '').replace('mm', '') ?? '?';
-				case 'camera_mm_35': return FocalLengthIn35mmFilm?.replace(' mm', '').replace('mm', '') ?? '?';
-				case 'camera_f': return FNumber?.replace('f/', '') ?? '?';
-				case 'camera_s': return ExposureTime ?? '?';
-				case 'camera_iso': return ISOSpeedRatings ?? '?';
-				case 'gps_lat': return GPSLatitude ?? '?';
-				case 'gps_long': return GPSLongitude ?? '?';
-				default: return '?';
+				case 'caption':
+					return this.caption ?? '?';
+				case 'filename':
+					return this.filename ?? '?';
+				case 'filename_without_ext':
+					return this.filename?.replace(/\.[^/.]+$/, '') ?? '?';
+				case 'year':
+					return date.split('/')[0];
+				case 'month':
+					return date.split('/')[1].replace(/^0/, '');
+				case 'day':
+					return date.split('/')[2].replace(/^0/, '');
+				case 'hour':
+					return meta_date.split(' ')[1].split(':')[0].replace(/^0/, '');
+				case 'minute':
+					return meta_date.split(' ')[1].split(':')[1].replace(/^0/, '');
+				case 'second':
+					return meta_date.split(' ')[1].split(':')[2].replace(/^0/, '');
+				case '0month':
+					return date.split('/')[1];
+				case '0day':
+					return date.split('/')[2];
+				case '0hour':
+					return meta_date.split(' ')[1].split(':')[0];
+				case '0minute':
+					return meta_date.split(' ')[1].split(':')[1];
+				case '0second':
+					return meta_date.split(' ')[1].split(':')[2];
+				case 'camera_model':
+					return Model ?? '?';
+				case 'camera_lens_model':
+					return LensModel ?? '?';
+				case 'camera_mm':
+					return FocalLength?.replace(' mm', '').replace('mm', '') ?? '?';
+				case 'camera_mm_35':
+					return FocalLengthIn35mmFilm?.replace(' mm', '').replace('mm', '') ?? '?';
+				case 'camera_f':
+					return FNumber?.replace('f/', '') ?? '?';
+				case 'camera_s':
+					return ExposureTime ?? '?';
+				case 'camera_iso':
+					return ISOSpeedRatings ?? '?';
+				case 'gps_lat':
+					return GPSLatitude ?? '?';
+				case 'gps_long':
+					return GPSLongitude ?? '?';
+				default:
+					return '?';
 			}
 		});
 	}
 
-	private async renderLabel(renderWidth: number, renderHeight: number, paddingLeft: number, paddingRight: number, imageAreaH: number, fgColor: [number, number, number], font: string, params: LabelParams) {
+	private async renderLabel(
+		renderWidth: number,
+		renderHeight: number,
+		paddingLeft: number,
+		paddingRight: number,
+		imageAreaH: number,
+		fgColor: [number, number, number],
+		font: string,
+		params: LabelParams,
+	) {
 		const scaleBase = imageAreaH * params.scale;
 		const labelCanvasCtx = window.document.createElement('canvas').getContext('2d')!;
 		labelCanvasCtx.canvas.width = renderWidth;
@@ -140,26 +174,52 @@ export class ImageFrameRenderer {
 		labelCanvasCtx.font = `bold ${fontSize}px ${font}`;
 		labelCanvasCtx.textBaseline = 'middle';
 
-		const titleY = params.textSmall === '' ? (labelCanvasCtx.canvas.height / 2) : (labelCanvasCtx.canvas.height / 2) - (fontSize * 0.9);
+		const titleY =
+			params.textSmall === '' ? labelCanvasCtx.canvas.height / 2 : labelCanvasCtx.canvas.height / 2 - fontSize * 0.9;
 		if (params.centered) {
 			labelCanvasCtx.textAlign = 'center';
-			labelCanvasCtx.fillText(this.interpolateTemplateText(params.textBig), labelCanvasCtx.canvas.width / 2, titleY, labelCanvasCtx.canvas.width - textsMarginLeft - textsMarginRight);
+			labelCanvasCtx.fillText(
+				this.interpolateTemplateText(params.textBig),
+				labelCanvasCtx.canvas.width / 2,
+				titleY,
+				labelCanvasCtx.canvas.width - textsMarginLeft - textsMarginRight,
+			);
 		} else {
 			labelCanvasCtx.textAlign = 'left';
-			labelCanvasCtx.fillText(this.interpolateTemplateText(params.textBig), textsMarginLeft, titleY, labelCanvasCtx.canvas.width - textsMarginLeft - (withQrCode ? (qrSize + qrMarginRight + (fontSize * 1)) : textsMarginRight));
+			labelCanvasCtx.fillText(
+				this.interpolateTemplateText(params.textBig),
+				textsMarginLeft,
+				titleY,
+				labelCanvasCtx.canvas.width -
+					textsMarginLeft -
+					(withQrCode ? qrSize + qrMarginRight + fontSize * 1 : textsMarginRight),
+			);
 		}
 
 		labelCanvasCtx.fillStyle = `rgba(${Math.floor(fgColor[0] * 255)}, ${Math.floor(fgColor[1] * 255)}, ${Math.floor(fgColor[2] * 255)}, 0.5)`;
 		labelCanvasCtx.font = `${fontSize * 0.85}px ${font}`;
 		labelCanvasCtx.textBaseline = 'middle';
 
-		const textY = params.textBig === '' ? (labelCanvasCtx.canvas.height / 2) : (labelCanvasCtx.canvas.height / 2) + (fontSize * 0.9);
+		const textY =
+			params.textBig === '' ? labelCanvasCtx.canvas.height / 2 : labelCanvasCtx.canvas.height / 2 + fontSize * 0.9;
 		if (params.centered) {
 			labelCanvasCtx.textAlign = 'center';
-			labelCanvasCtx.fillText(this.interpolateTemplateText(params.textSmall), labelCanvasCtx.canvas.width / 2, textY, labelCanvasCtx.canvas.width - textsMarginLeft - textsMarginRight);
+			labelCanvasCtx.fillText(
+				this.interpolateTemplateText(params.textSmall),
+				labelCanvasCtx.canvas.width / 2,
+				textY,
+				labelCanvasCtx.canvas.width - textsMarginLeft - textsMarginRight,
+			);
 		} else {
 			labelCanvasCtx.textAlign = 'left';
-			labelCanvasCtx.fillText(this.interpolateTemplateText(params.textSmall), textsMarginLeft, textY, labelCanvasCtx.canvas.width - textsMarginLeft - (withQrCode ? (qrSize + qrMarginRight + (fontSize * 1)) : textsMarginRight));
+			labelCanvasCtx.fillText(
+				this.interpolateTemplateText(params.textSmall),
+				textsMarginLeft,
+				textY,
+				labelCanvasCtx.canvas.width -
+					textsMarginLeft -
+					(withQrCode ? qrSize + qrMarginRight + fontSize * 1 : textsMarginRight),
+			);
 		}
 
 		if (withQrCode) {
@@ -197,7 +257,7 @@ export class ImageFrameRenderer {
 					},
 				});
 
-				const blob = await qrCodeInstance.getRawData('png') as Blob | null;
+				const blob = (await qrCodeInstance.getRawData('png')) as Blob | null;
 				if (blob == null) throw new Error('Failed to generate QR code');
 
 				const qrImageBitmap = await window.createImageBitmap(blob);
@@ -215,7 +275,7 @@ export class ImageFrameRenderer {
 			}
 		}
 
-		return labelCanvasCtx.getImageData(0, 0, labelCanvasCtx.canvas.width, labelCanvasCtx.canvas.height); ;
+		return labelCanvasCtx.getImageData(0, 0, labelCanvasCtx.canvas.width, labelCanvasCtx.canvas.height);
 	}
 
 	public async render(params: ImageFrameParams): Promise<void> {
@@ -235,39 +295,63 @@ export class ImageFrameRenderer {
 
 		const paddingLeft = Math.floor(imageAreaH * params.borderThickness);
 		const paddingRight = Math.floor(imageAreaH * params.borderThickness);
-		const paddingTop = params.labelTop.enabled ? Math.floor(imageAreaH * params.labelTop.padding) : Math.floor(imageAreaH * params.borderThickness);
-		const paddingBottom = params.labelBottom.enabled ? Math.floor(imageAreaH * params.labelBottom.padding) : Math.floor(imageAreaH * params.borderThickness);
+		const paddingTop = params.labelTop.enabled
+			? Math.floor(imageAreaH * params.labelTop.padding)
+			: Math.floor(imageAreaH * params.borderThickness);
+		const paddingBottom = params.labelBottom.enabled
+			? Math.floor(imageAreaH * params.labelBottom.padding)
+			: Math.floor(imageAreaH * params.borderThickness);
 		const renderWidth = imageAreaW + paddingLeft + paddingRight;
 		const renderHeight = imageAreaH + paddingTop + paddingBottom;
 
 		if (params.labelTop.enabled) {
-			const topLabelImage = await this.renderLabel(renderWidth, paddingTop, paddingLeft, paddingRight, imageAreaH, params.fgColor, params.font, params.labelTop);
+			const topLabelImage = await this.renderLabel(
+				renderWidth,
+				paddingTop,
+				paddingLeft,
+				paddingRight,
+				imageAreaH,
+				params.fgColor,
+				params.font,
+				params.labelTop,
+			);
 			this.compositor.registerTexture('topLabel', topLabelImage);
 		}
 
 		if (params.labelBottom.enabled) {
-			const bottomLabelImage = await this.renderLabel(renderWidth, paddingBottom, paddingLeft, paddingRight, imageAreaH, params.fgColor, params.font, params.labelBottom);
+			const bottomLabelImage = await this.renderLabel(
+				renderWidth,
+				paddingBottom,
+				paddingLeft,
+				paddingRight,
+				imageAreaH,
+				params.fgColor,
+				params.font,
+				params.labelBottom,
+			);
 			this.compositor.registerTexture('bottomLabel', bottomLabelImage);
 		}
 
 		this.compositor.changeResolution(renderWidth, renderHeight);
 
-		this.compositor.render([{
-			functionId: 'frame',
-			id: 'a',
-			params: {
-				image: 'image',
-				topLabel: 'topLabel',
-				bottomLabel: 'bottomLabel',
-				topLabelEnabled: params.labelTop.enabled,
-				bottomLabelEnabled: params.labelBottom.enabled,
-				paddingLeft: paddingLeft / renderWidth,
-				paddingRight: paddingRight / renderWidth,
-				paddingTop: paddingTop / renderHeight,
-				paddingBottom: paddingBottom / renderHeight,
-				bg: params.bgColor,
+		this.compositor.render([
+			{
+				functionId: 'frame',
+				id: 'a',
+				params: {
+					image: 'image',
+					topLabel: 'topLabel',
+					bottomLabel: 'bottomLabel',
+					topLabelEnabled: params.labelTop.enabled,
+					bottomLabelEnabled: params.labelBottom.enabled,
+					paddingLeft: paddingLeft / renderWidth,
+					paddingRight: paddingRight / renderWidth,
+					paddingTop: paddingTop / renderHeight,
+					paddingBottom: paddingBottom / renderHeight,
+					bg: params.bgColor,
+				},
 			},
-		}]);
+		]);
 	}
 
 	/*

@@ -14,10 +14,7 @@ const require = createRequire(import.meta.url);
 const config = {
 	stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
 	staticDirs: [{ from: '../assets', to: '/client-assets' }],
-	addons: [
-		getAbsolutePath('@storybook/addon-docs'),
-		getAbsolutePath('@storybook/addon-links'),
-	],
+	addons: [getAbsolutePath('@storybook/addon-docs'), getAbsolutePath('@storybook/addon-links')],
 	framework: {
 		name: getAbsolutePath('@storybook/vue3-vite') as '@storybook/vue3-vite',
 		options: {},
@@ -26,21 +23,29 @@ const config = {
 		disableTelemetry: true,
 	},
 	async viteFinal(config) {
-		const isNamedPlugin = (plugin: Plugin | false | null | undefined, name: string): plugin is Plugin => !!plugin && plugin.name === name;
+		const isNamedPlugin = (plugin: Plugin | false | null | undefined, name: string): plugin is Plugin =>
+			!!plugin && plugin.name === name;
 
-		const replacePluginForIsChromatic = config.plugins?.findIndex((plugin) => !Array.isArray(plugin) && !(plugin instanceof Promise) && isNamedPlugin(plugin, 'replace')) ?? -1;
+		const replacePluginForIsChromatic =
+			config.plugins?.findIndex(
+				(plugin) => !Array.isArray(plugin) && !(plugin instanceof Promise) && isNamedPlugin(plugin, 'replace'),
+			) ?? -1;
 		if (~replacePluginForIsChromatic) {
 			config.plugins?.splice(replacePluginForIsChromatic, 1);
 		}
 
 		//pluginsからcreateSearchIndexを削除、複数あるかもしれないので全て削除
-		config.plugins = config.plugins?.filter((plugin) => !(!Array.isArray(plugin) && !(plugin instanceof Promise) && isNamedPlugin(plugin, 'createSearchIndex'))) ?? [];
+		config.plugins =
+			config.plugins?.filter(
+				(plugin) =>
+					!(!Array.isArray(plugin) && !(plugin instanceof Promise) && isNamedPlugin(plugin, 'createSearchIndex')),
+			) ?? [];
 
 		return mergeConfig(config, {
 			plugins: [
 				{
 					// XXX: https://github.com/IanVS/vite-plugin-turbosnap/issues/8
-					...(turbosnap as any as typeof turbosnap['default'])({
+					...(turbosnap as any as (typeof turbosnap)['default'])({
 						rootDir: config.root ?? process.cwd(),
 					}),
 					name: 'fake-turbosnap',

@@ -38,23 +38,24 @@ export async function mainBoot() {
 		if (!$i) uiStyle = 'visitor';
 
 		if (searchParams.has('zen')) uiStyle = 'zen';
-		if (uiStyle === 'deck' && prefer.s['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/') uiStyle = 'zen';
+		if (uiStyle === 'deck' && prefer.s['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/')
+			uiStyle = 'zen';
 
 		if (searchParams.has('ui')) uiStyle = searchParams.get('ui');
 
 		let rootComponent: Component;
 		switch (uiStyle) {
 			case 'zen':
-				rootComponent = await import('@/ui/zen.vue').then(x => x.default);
+				rootComponent = await import('@/ui/zen.vue').then((x) => x.default);
 				break;
 			case 'deck':
-				rootComponent = await import('@/ui/deck.vue').then(x => x.default);
+				rootComponent = await import('@/ui/deck.vue').then((x) => x.default);
 				break;
 			case 'visitor':
-				rootComponent = await import('@/ui/visitor.vue').then(x => x.default);
+				rootComponent = await import('@/ui/visitor.vue').then((x) => x.default);
 				break;
 			default:
-				rootComponent = await import('@/ui/universal.vue').then(x => x.default);
+				rootComponent = await import('@/ui/universal.vue').then((x) => x.default);
 				break;
 		}
 
@@ -65,9 +66,13 @@ export async function mainBoot() {
 	emojiPicker.init();
 
 	if (isClientUpdated && $i) {
-		const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkUpdated.vue')), {}, {
-			closed: () => dispose(),
-		});
+		const { dispose } = popup(
+			defineAsyncComponent(() => import('@/components/MkUpdated.vue')),
+			{},
+			{
+				closed: () => dispose(),
+			},
+		);
 	}
 
 	try {
@@ -100,28 +105,40 @@ export async function mainBoot() {
 	if ($i) {
 		store.loaded.then(async () => {
 			if (store.s.accountSetupWizard !== -1) {
-				const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkUserSetupDialog.vue')), {}, {
-					closed: () => dispose(),
-				});
+				const { dispose } = popup(
+					defineAsyncComponent(() => import('@/components/MkUserSetupDialog.vue')),
+					{},
+					{
+						closed: () => dispose(),
+					},
+				);
 			}
 		});
 
-		for (const announcement of ($i.unreadAnnouncements ?? []).filter(x => x.display === 'dialog')) {
-			const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue')), {
-				announcement,
-			}, {
-				closed: () => dispose(),
-			});
+		for (const announcement of ($i.unreadAnnouncements ?? []).filter((x) => x.display === 'dialog')) {
+			const { dispose } = popup(
+				defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue')),
+				{
+					announcement,
+				},
+				{
+					closed: () => dispose(),
+				},
+			);
 		}
 
 		function onAnnouncementCreated(ev: { announcement: Misskey.entities.Announcement }) {
 			const announcement = ev.announcement;
 			if (announcement.display === 'dialog') {
-				const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue')), {
-					announcement,
-				}, {
-					closed: () => dispose(),
-				});
+				const { dispose } = popup(
+					defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue')),
+					{
+						announcement,
+					},
+					{
+						closed: () => dispose(),
+					},
+				);
 			}
 		}
 
@@ -228,54 +245,84 @@ export async function mainBoot() {
 				}
 			}
 
-			window.addEventListener('visibilitychange', () => {
-				const now = Date.now();
+			window.addEventListener(
+				'visibilitychange',
+				() => {
+					const now = Date.now();
 
-				if (window.document.visibilityState === 'visible') {
-					// タブを高速で切り替えたら取得処理が何度も走るのを防ぐ
-					if ((now - lastVisibilityChangedAt) < 1000 * 10) {
-						justPlainLuckyTimer = window.setTimeout(claimPlainLucky, 1000 * 10);
-					} else {
-						claimPlainLucky();
+					if (window.document.visibilityState === 'visible') {
+						// タブを高速で切り替えたら取得処理が何度も走るのを防ぐ
+						if (now - lastVisibilityChangedAt < 1000 * 10) {
+							justPlainLuckyTimer = window.setTimeout(claimPlainLucky, 1000 * 10);
+						} else {
+							claimPlainLucky();
+						}
+					} else if (justPlainLuckyTimer != null) {
+						window.clearTimeout(justPlainLuckyTimer);
+						justPlainLuckyTimer = null;
 					}
-				} else if (justPlainLuckyTimer != null) {
-					window.clearTimeout(justPlainLuckyTimer);
-					justPlainLuckyTimer = null;
-				}
 
-				lastVisibilityChangedAt = now;
-			}, { passive: true });
+					lastVisibilityChangedAt = now;
+				},
+				{ passive: true },
+			);
 
 			claimPlainLucky();
 		}
 
 		if (!claimedAchievements.includes('client30min')) {
-			window.setTimeout(() => {
-				claimAchievement('client30min');
-			}, 1000 * 60 * 30);
+			window.setTimeout(
+				() => {
+					claimAchievement('client30min');
+				},
+				1000 * 60 * 30,
+			);
 		}
 
 		if (!claimedAchievements.includes('client60min')) {
-			window.setTimeout(() => {
-				claimAchievement('client60min');
-			}, 1000 * 60 * 60);
+			window.setTimeout(
+				() => {
+					claimAchievement('client60min');
+				},
+				1000 * 60 * 60,
+			);
 		}
 
 		const latestDonationInfoShownAt = miLocalStorage.getItem('latestDonationInfoShownAt');
 		const neverShowDonationInfo = miLocalStorage.getItem('neverShowDonationInfo');
-		if (neverShowDonationInfo !== 'true' && (createdAt.getTime() < (Date.now() - (1000 * 60 * 60 * 24 * 3))) && !window.location.pathname.startsWith('/miauth')) {
-			if (latestDonationInfoShownAt == null || (new Date(latestDonationInfoShownAt).getTime() < (Date.now() - (1000 * 60 * 60 * 24 * 30)))) {
-				const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkDonation.vue')), {}, {
-					closed: () => dispose(),
-				});
+		if (
+			neverShowDonationInfo !== 'true' &&
+			createdAt.getTime() < Date.now() - 1000 * 60 * 60 * 24 * 3 &&
+			!window.location.pathname.startsWith('/miauth')
+		) {
+			if (
+				latestDonationInfoShownAt == null ||
+				new Date(latestDonationInfoShownAt).getTime() < Date.now() - 1000 * 60 * 60 * 24 * 30
+			) {
+				const { dispose } = popup(
+					defineAsyncComponent(() => import('@/components/MkDonation.vue')),
+					{},
+					{
+						closed: () => dispose(),
+					},
+				);
 			}
 		}
 
-		const modifiedVersionMustProminentlyOfferInAgplV3Section13Read = miLocalStorage.getItem('modifiedVersionMustProminentlyOfferInAgplV3Section13Read');
-		if (modifiedVersionMustProminentlyOfferInAgplV3Section13Read !== 'true' && instance.repositoryUrl !== 'https://github.com/misskey-dev/misskey') {
-			const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkSourceCodeAvailablePopup.vue')), {}, {
-				closed: () => dispose(),
-			});
+		const modifiedVersionMustProminentlyOfferInAgplV3Section13Read = miLocalStorage.getItem(
+			'modifiedVersionMustProminentlyOfferInAgplV3Section13Read',
+		);
+		if (
+			modifiedVersionMustProminentlyOfferInAgplV3Section13Read !== 'true' &&
+			instance.repositoryUrl !== 'https://github.com/misskey-dev/misskey'
+		) {
+			const { dispose } = popup(
+				defineAsyncComponent(() => import('@/components/MkSourceCodeAvailablePopup.vue')),
+				{},
+				{
+					closed: () => dispose(),
+				},
+			);
 		}
 
 		if (store.s.realtimeMode) {
@@ -300,15 +347,15 @@ export async function mainBoot() {
 				}
 			});
 
-			stream.on('emojiAdded', emojiData => {
+			stream.on('emojiAdded', (emojiData) => {
 				addCustomEmoji(emojiData.emoji);
 			});
 
-			stream.on('emojiUpdated', emojiData => {
+			stream.on('emojiUpdated', (emojiData) => {
 				updateCustomEmojis(emojiData.emojis);
 			});
 
-			stream.on('emojiDeleted', emojiData => {
+			stream.on('emojiDeleted', (emojiData) => {
 				removeCustomEmojis(emojiData.emojis);
 			});
 
@@ -317,7 +364,7 @@ export async function mainBoot() {
 			const main = markRaw(stream.useChannel('main', null, 'System'));
 
 			// 自分の情報が更新されたとき
-			main.on('meUpdated', i => {
+			main.on('meUpdated', (i) => {
 				updateCurrentAccountPartial(i);
 			});
 
@@ -358,7 +405,7 @@ export async function mainBoot() {
 			if ($i == null) return;
 			post();
 		},
-		'd': async () => {
+		d: async () => {
 			const value = !store.s.darkMode;
 			if (prefer.s.syncDeviceDarkMode) {
 				const { canceled } = await confirm({
@@ -373,10 +420,10 @@ export async function mainBoot() {
 				store.set('darkMode', value);
 			}
 		},
-		's': () => {
+		s: () => {
 			mainRouter.push('/search');
 		},
-		'g': {
+		g: {
 			callback: () => {
 				// mを5回押すとセーフモードに入る
 				safemodeRequestCount++;

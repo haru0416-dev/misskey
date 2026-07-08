@@ -14,17 +14,20 @@ import type { GridContext, GridEvent } from '@/components/grid/grid-event.js';
 import type { DataSource, GridSetting } from '@/components/grid/grid.js';
 import type { GridColumnSetting } from '@/components/grid/column.js';
 
-function d(p: {
-	check?: boolean,
-	name?: string,
-	email?: string,
-	age?: number,
-	birthday?: string,
-	gender?: string,
-	country?: string,
-	reportCount?: number,
-	createdAt?: string,
-}, seed: string) {
+function d(
+	p: {
+		check?: boolean;
+		name?: string;
+		email?: string;
+		age?: number;
+		birthday?: string;
+		gender?: string;
+		country?: string;
+		reportCount?: number;
+		createdAt?: string;
+	},
+	seed: string,
+) {
 	const prefix = text(10, seed);
 
 	return {
@@ -52,7 +55,7 @@ const defaultCols: GridColumnSetting[] = [
 	{ bindTo: 'createdAt', title: 'CreatedAt', type: 'date', width: 'auto' },
 ];
 
-function createArgs(overrides?: { settings?: Partial<GridSetting>, data?: DataSource[] }) {
+function createArgs(overrides?: { settings?: Partial<GridSetting>; data?: DataSource[] }) {
 	const refData = ref<ReturnType<typeof d>[]>([]);
 	for (let i = 0; i < 100; i++) {
 		refData.value.push(d({}, i.toString()));
@@ -62,8 +65,8 @@ function createArgs(overrides?: { settings?: Partial<GridSetting>, data?: DataSo
 		settings: {
 			row: overrides?.settings?.row,
 			cols: [
-				...defaultCols.filter(col => overrides?.settings?.cols?.every(c => c.bindTo !== col.bindTo) ?? true),
-				...overrides?.settings?.cols ?? [],
+				...defaultCols.filter((col) => overrides?.settings?.cols?.every((c) => c.bindTo !== col.bindTo) ?? true),
+				...(overrides?.settings?.cols ?? []),
 			],
 			cells: overrides?.settings?.cells,
 		},
@@ -71,7 +74,7 @@ function createArgs(overrides?: { settings?: Partial<GridSetting>, data?: DataSo
 	};
 }
 
-function createRender(params: { settings: GridSetting, data: DataSource[] }) {
+function createRender(params: { settings: GridSetting; data: DataSource[] }) {
 	return {
 		render(args) {
 			return {
@@ -115,9 +118,7 @@ function createRender(params: { settings: GridSetting, data: DataSource[] }) {
 		parameters: {
 			layout: 'fullscreen',
 			msw: {
-				handlers: [
-					...commonHandlers,
-				],
+				handlers: [...commonHandlers],
 			},
 		},
 	} satisfies StoryObj<typeof MkGrid>;
@@ -125,99 +126,113 @@ function createRender(params: { settings: GridSetting, data: DataSource[] }) {
 
 export const Default = createRender(createArgs());
 
-export const NoNumber = createRender(createArgs({
-	settings: {
-		row: {
-			showNumber: false,
+export const NoNumber = createRender(
+	createArgs({
+		settings: {
+			row: {
+				showNumber: false,
+			},
 		},
-	},
-}));
+	}),
+);
 
-export const NoSelectable = createRender(createArgs({
-	settings: {
-		row: {
-			selectable: false,
+export const NoSelectable = createRender(
+	createArgs({
+		settings: {
+			row: {
+				selectable: false,
+			},
 		},
-	},
-}));
+	}),
+);
 
-export const Editable = createRender(createArgs({
-	settings: {
-		cols: defaultCols.map(col => ({ ...col, editable: true })),
-	},
-}));
+export const Editable = createRender(
+	createArgs({
+		settings: {
+			cols: defaultCols.map((col) => ({ ...col, editable: true })),
+		},
+	}),
+);
 
-export const AdditionalRowStyle = createRender(createArgs({
-	settings: {
-		cols: defaultCols.map(col => ({ ...col, editable: true })),
-		row: {
-			styleRules: [
-				{
-					condition: ({ row }) => AdditionalRowStyle.args.data[row.index].check as boolean,
-					applyStyle: {
-						style: {
-							backgroundColor: 'lightgray',
+export const AdditionalRowStyle = createRender(
+	createArgs({
+		settings: {
+			cols: defaultCols.map((col) => ({ ...col, editable: true })),
+			row: {
+				styleRules: [
+					{
+						condition: ({ row }) => AdditionalRowStyle.args.data[row.index].check as boolean,
+						applyStyle: {
+							style: {
+								backgroundColor: 'lightgray',
+							},
 						},
 					},
+				],
+			},
+		},
+	}),
+);
+
+export const ContextMenu = createRender(
+	createArgs({
+		settings: {
+			cols: [
+				{
+					bindTo: 'check',
+					icon: 'ti-check',
+					type: 'boolean',
+					width: 50,
+					contextMenuFactory: (col, context) => [
+						{
+							type: 'button',
+							text: 'Check All',
+							action: () => {
+								for (const d of ContextMenu.args.data) {
+									d.check = true;
+								}
+							},
+						},
+						{
+							type: 'button',
+							text: 'Uncheck All',
+							action: () => {
+								for (const d of ContextMenu.args.data) {
+									d.check = false;
+								}
+							},
+						},
+					],
 				},
 			],
-		},
-	},
-}));
-
-export const ContextMenu = createRender(createArgs({
-	settings: {
-		cols: [
-			{
-				bindTo: 'check', icon: 'ti-check', type: 'boolean', width: 50, contextMenuFactory: (col, context) => [
+			row: {
+				contextMenuFactory: (row, context) => [
 					{
 						type: 'button',
-						text: 'Check All',
+						text: 'Delete',
 						action: () => {
-							for (const d of ContextMenu.args.data) {
-								d.check = true;
-							}
+							const idxes = context.rangedRows.map((r) => r.index);
+							const newData = ContextMenu.args.data.filter((d, i) => !idxes.includes(i));
+
+							ContextMenu.args.data.splice(0);
+							ContextMenu.args.data.push(...newData);
 						},
 					},
+				],
+			},
+			cells: {
+				contextMenuFactory: (col, row, value, context) => [
 					{
 						type: 'button',
-						text: 'Uncheck All',
+						text: 'Delete',
 						action: () => {
-							for (const d of ContextMenu.args.data) {
-								d.check = false;
+							for (const cell of context.rangedCells) {
+								ContextMenu.args.data[cell.row.index][cell.column.setting.bindTo] = undefined;
 							}
 						},
 					},
 				],
 			},
-		],
-		row: {
-			contextMenuFactory: (row, context) => [
-				{
-					type: 'button',
-					text: 'Delete',
-					action: () => {
-						const idxes = context.rangedRows.map(r => r.index);
-						const newData = ContextMenu.args.data.filter((d, i) => !idxes.includes(i));
-
-						ContextMenu.args.data.splice(0);
-						ContextMenu.args.data.push(...newData);
-					},
-				},
-			],
 		},
-		cells: {
-			contextMenuFactory: (col, row, value, context) => [
-				{
-					type: 'button',
-					text: 'Delete',
-					action: () => {
-						for (const cell of context.rangedCells) {
-							ContextMenu.args.data[cell.row.index][cell.column.setting.bindTo] = undefined;
-						}
-					},
-				},
-			],
-		},
-	},
-}));
+	}),
+);

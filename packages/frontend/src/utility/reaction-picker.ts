@@ -17,11 +17,16 @@ class ReactionPicker {
 	}
 
 	public init() {
-		watch([prefer.r.emojiPaletteForReaction, prefer.r.emojiPalettes], ([newId, newPalettes]) => {
-			this.reactionsRef.value = newId == null ? newPalettes[0].emojis : newPalettes.find(palette => palette.id === newId)?.emojis ?? [];
-		}, {
-			immediate: true,
-		});
+		watch(
+			[prefer.r.emojiPaletteForReaction, prefer.r.emojiPalettes],
+			([newId, newPalettes]) => {
+				this.reactionsRef.value =
+					newId == null ? newPalettes[0].emojis : (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);
+			},
+			{
+				immediate: true,
+			},
+		);
 	}
 
 	public show(
@@ -34,20 +39,24 @@ class ReactionPicker {
 		const targetNoteRef = ref(targetNote);
 
 		// defineAsyncComponentはiOS等でユーザーアクティベーションが失われてfocusが効かなくなるため使用不可
-		const { dispose } = popup(MkEmojiPickerDialog, {
-			anchorElement: anchorRef,
-			pinnedEmojis: this.reactionsRef,
-			asReactionPicker: true,
-			targetNote: targetNoteRef,
-		}, {
-			done: (reaction: string) => {
-				if (onChosen) onChosen(reaction);
+		const { dispose } = popup(
+			MkEmojiPickerDialog,
+			{
+				anchorElement: anchorRef,
+				pinnedEmojis: this.reactionsRef,
+				asReactionPicker: true,
+				targetNote: targetNoteRef,
 			},
-			closed: () => {
-				if (onClosed) onClosed();
-				dispose();
+			{
+				done: (reaction: string) => {
+					if (onChosen) onChosen(reaction);
+				},
+				closed: () => {
+					if (onClosed) onClosed();
+					dispose();
+				},
 			},
-		});
+		);
 	}
 }
 

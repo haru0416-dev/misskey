@@ -17,23 +17,23 @@ import { panelDirective } from './panel.js';
 import { adaptiveBorderDirective } from './adaptive-border.js';
 import { adaptiveBgDirective } from './adaptive-bg.js';
 
-export default function(app: App) {
+export default function (app: App) {
 	for (const [key, value] of Object.entries(directives)) {
 		app.directive(key, value);
 	}
 }
 
 export const directives = {
-	'userPreview': userPreviewDirective,
+	userPreview: userPreviewDirective,
 	'user-preview': userPreviewDirective,
 	'get-size': getSizeDirective,
-	'ripple': rippleDirective,
-	'tooltip': tooltipDirective,
-	'hotkey': hotkeyDirective,
-	'appear': appearDirective,
-	'anim': animDirective,
+	ripple: rippleDirective,
+	tooltip: tooltipDirective,
+	hotkey: hotkeyDirective,
+	appear: appearDirective,
+	anim: animDirective,
 	'click-anime': clickAnimeDirective,
-	'panel': panelDirective,
+	panel: panelDirective,
 	'adaptive-border': adaptiveBorderDirective,
 	'adaptive-bg': adaptiveBgDirective,
 } as Record<string, Directive>;

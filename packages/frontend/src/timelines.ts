@@ -6,14 +6,9 @@
 import { $i } from '@/i.js';
 import { instance } from '@/instance.js';
 
-export const basicTimelineTypes = [
-	'home',
-	'local',
-	'social',
-	'global',
-] as const;
+export const basicTimelineTypes = ['home', 'local', 'social', 'global'] as const;
 
-export type BasicTimelineType = typeof basicTimelineTypes[number];
+export type BasicTimelineType = (typeof basicTimelineTypes)[number];
 
 export function isBasicTimeline(timeline: string): timeline is BasicTimelineType {
 	return basicTimelineTypes.includes(timeline as BasicTimelineType);

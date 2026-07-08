@@ -13,17 +13,10 @@ import { $i } from '@/i.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { customEmojis } from '@/custom-emojis.js';
 
-const DIALOG_TYPES = [
-	'error',
-	'info',
-	'success',
-	'warning',
-	'waiting',
-	'question',
-] as const;
+const DIALOG_TYPES = ['error', 'info', 'success', 'warning', 'waiting', 'question'] as const;
 
 export function aiScriptReadline(q: string): Promise<string> {
-	return new Promise(ok => {
+	return new Promise((ok) => {
 		os.inputText({
 			title: q,
 		}).then(({ result: a }) => {
@@ -32,7 +25,7 @@ export function aiScriptReadline(q: string): Promise<string> {
 	});
 }
 
-export function createAiScriptEnv(opts: { storageKey: string, token?: string }) {
+export function createAiScriptEnv(opts: { storageKey: string; token?: string }) {
 	return {
 		USER_ID: $i ? values.STR($i.id) : values.NULL,
 		USER_NAME: $i?.name ? values.STR($i.name) : values.NULL,
@@ -43,7 +36,7 @@ export function createAiScriptEnv(opts: { storageKey: string, token?: string }) 
 		'Mk:dialog': values.FN_NATIVE(async ([_title, _text, _type]) => {
 			let title: string | undefined = undefined;
 			let text: string | undefined = undefined;
-			let type: typeof DIALOG_TYPES[number] = 'info';
+			let type: (typeof DIALOG_TYPES)[number] = 'info';
 
 			if (_title != null) {
 				if (utils.isString(_title)) {
@@ -80,7 +73,7 @@ export function createAiScriptEnv(opts: { storageKey: string, token?: string }) 
 		'Mk:confirm': values.FN_NATIVE(async ([_title, _text, _type]) => {
 			let title: string | undefined = undefined;
 			let text: string | undefined = undefined;
-			let type: typeof DIALOG_TYPES[number] = 'question';
+			let type: (typeof DIALOG_TYPES)[number] = 'question';
 
 			if (_title != null) {
 				if (utils.isString(_title)) {
@@ -142,11 +135,14 @@ export function createAiScriptEnv(opts: { storageKey: string, token?: string }) 
 			}
 
 			utils.assertObject(param);
-			return misskeyApi(ep.value as keyof Misskey.Endpoints, utils.valToJs(param) as object, actualToken).then(res => {
-				return utils.jsToVal(res);
-			}, err => {
-				return values.ERROR('request_failed', utils.jsToVal(err));
-			});
+			return misskeyApi(ep.value as keyof Misskey.Endpoints, utils.valToJs(param) as object, actualToken).then(
+				(res) => {
+					return utils.jsToVal(res);
+				},
+				(err) => {
+					return values.ERROR('request_failed', utils.jsToVal(err));
+				},
+			);
 		}),
 		'Mk:save': values.FN_NATIVE(([key, value]) => {
 			utils.assertString(key);

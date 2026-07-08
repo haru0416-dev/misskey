@@ -10,12 +10,10 @@ import { i18n } from '@/i18n.js';
 
 export const fn = defineImageCompositorFunction({
 	shader,
-	main: ({ gl, u, params }) => {
-	},
+	main: ({ gl, u, params }) => {},
 });
 
 export const uiDefinition = {
 	name: i18n.ts._imageEffector._fxs.grayscale,
-	params: {
-	},
+	params: {},
 } satisfies ImageEffectorUiDefinition<typeof fn>;

@@ -25,12 +25,15 @@ export async function signout() {
 	const idbAbortController = new AbortController();
 	const timeout = window.setTimeout(() => idbAbortController.abort(), 5000);
 
-	const idbPromises = ['MisskeyClient'].map((name, i, arr) => new Promise<void>((res, rej) => {
-		const delidb = indexedDB.deleteDatabase(name);
-		delidb.onsuccess = () => res();
-		delidb.onerror = e => rej(e);
-		delidb.onblocked = () => idbAbortController.signal.aborted && rej(new Error('Operation aborted'));
-	}));
+	const idbPromises = ['MisskeyClient'].map(
+		(name, i, arr) =>
+			new Promise<void>((res, rej) => {
+				const delidb = indexedDB.deleteDatabase(name);
+				delidb.onsuccess = () => res();
+				delidb.onerror = (e) => rej(e);
+				delidb.onblocked = () => idbAbortController.signal.aborted && rej(new Error('Operation aborted'));
+			}),
+	);
 
 	try {
 		await Promise.race([
@@ -39,7 +42,9 @@ export async function signout() {
 				// idb keyval-storeはidb-keyvalライブラリによる別管理
 				clear(),
 			]),
-			new Promise((_, rej) => idbAbortController.signal.addEventListener('abort', () => rej(new Error('Operation timed out')))),
+			new Promise((_, rej) =>
+				idbAbortController.signal.addEventListener('abort', () => rej(new Error('Operation timed out'))),
+			),
 		]);
 	} catch {
 		// nothing
@@ -66,10 +71,9 @@ export async function signout() {
 			}
 		}
 
-		await navigator.serviceWorker.getRegistrations()
-			.then(registrations => {
-				return Promise.all(registrations.map(registration => registration.unregister()));
-			});
+		await navigator.serviceWorker.getRegistrations().then((registrations) => {
+			return Promise.all(registrations.map((registration) => registration.unregister()));
+		});
 	} catch {
 		// nothing
 	}
