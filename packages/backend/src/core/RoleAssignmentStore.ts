@@ -118,6 +118,21 @@ export async function listRoleAssignmentsByUserIdFromDatabase(
 	return rows.map(row => deserializeRoleAssignment(row));
 }
 
+/** ユーザー一覧のpack用: 複数ユーザーのロールアサインを1クエリで取得する。 */
+export async function listRoleAssignmentsByUserIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userIds: MiUser['id'][],
+): Promise<MiRoleAssignment[]> {
+	if (userIds.length === 0) return [];
+
+	const rows = await db
+		.select()
+		.from(roleAssignment)
+		.where(inArray(roleAssignment.userId, userIds));
+
+	return rows.map(row => deserializeRoleAssignment(row));
+}
+
 export async function listRoleAssignmentsByRoleIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	roleIds: MiRole['id'][],

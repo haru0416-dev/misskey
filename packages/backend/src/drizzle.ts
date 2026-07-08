@@ -69,6 +69,11 @@ export function createDrizzlePool(config: Config): MiDrizzlePool {
 		password: config.db.pass,
 		database: config.db.db,
 		statement_timeout: 1000 * 10,
+		// pgのデフォルト(10接続)は、notes/createのように1リクエストで多数の直列クエリ+
+		// バックグラウンド処理(アンテナ判定・fanout等)を発行するワークロードでは飽和し、
+		// プール待ちがテールレイテンシに直結する(負荷計測で毎秒110投稿時にmax 3.1秒 →
+		// 30接続で351msに解消)。config.db.extra.max で上書き可能。
+		max: 30,
 		...config.db.extra,
 	};
 
