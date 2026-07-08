@@ -42,48 +42,58 @@ export function getPreferencesProfileMenu(): MenuItem[] {
 		}
 	});
 
-	const menu: MenuItem[] = [{
-		type: 'label',
-		text: prefer.profile.name || `(${i18n.ts.noName})`,
-	}, {
-		text: i18n.ts.rename,
-		icon: 'ti ti-pencil',
-		action: () => {
-			renameProfile();
+	const menu: MenuItem[] = [
+		{
+			type: 'label',
+			text: prefer.profile.name || `(${i18n.ts.noName})`,
 		},
-	}, {
-		type: 'switch',
-		icon: 'ti ti-cloud-up',
-		text: i18n.ts._preferencesBackup.autoBackup,
-		ref: autoBackupEnabled,
-	}, {
-		text: i18n.ts.export,
-		icon: 'ti ti-download',
-		action: () => {
-			exportCurrentProfile();
+		{
+			text: i18n.ts.rename,
+			icon: 'ti ti-pencil',
+			action: () => {
+				renameProfile();
+			},
 		},
-	}, {
-		type: 'divider',
-	}, {
-		text: i18n.ts._preferencesBackup.restoreFromBackup,
-		icon: 'ti ti-cloud-down',
-		action: () => {
-			restoreFromCloudBackup();
+		{
+			type: 'switch',
+			icon: 'ti ti-cloud-up',
+			text: i18n.ts._preferencesBackup.autoBackup,
+			ref: autoBackupEnabled,
 		},
-	}, {
-		text: i18n.ts.import,
-		icon: 'ti ti-upload',
-		action: () => {
-			importProfile();
+		{
+			text: i18n.ts.export,
+			icon: 'ti ti-download',
+			action: () => {
+				exportCurrentProfile();
+			},
 		},
-	}, {
-		type: 'divider',
-	}, {
-		type: 'link',
-		text: i18n.ts._preferencesProfile.manageProfiles + '...',
-		icon: 'ti ti-settings-cog',
-		to: '/settings/profiles',
-	}];
+		{
+			type: 'divider',
+		},
+		{
+			text: i18n.ts._preferencesBackup.restoreFromBackup,
+			icon: 'ti ti-cloud-down',
+			action: () => {
+				restoreFromCloudBackup();
+			},
+		},
+		{
+			text: i18n.ts.import,
+			icon: 'ti ti-upload',
+			action: () => {
+				importProfile();
+			},
+		},
+		{
+			type: 'divider',
+		},
+		{
+			type: 'link',
+			text: i18n.ts._preferencesProfile.manageProfiles + '...',
+			icon: 'ti ti-settings-cog',
+			to: '/settings/profiles',
+		},
+	];
 
 	if (prefer.s.devMode) {
 		menu.push({
@@ -101,7 +111,8 @@ export function getPreferencesProfileMenu(): MenuItem[] {
 async function renameProfile() {
 	const { canceled, result: name } = await os.inputText({
 		title: i18n.ts._preferencesProfile.profileName,
-		text: i18n.ts._preferencesProfile.profileNameDescription + '\n' + i18n.ts._preferencesProfile.profileNameDescription2,
+		text:
+			i18n.ts._preferencesProfile.profileNameDescription + '\n' + i18n.ts._preferencesProfile.profileNameDescription2,
 		placeholder: prefer.profile.name || null,
 		default: prefer.profile.name || null,
 	});
@@ -157,7 +168,7 @@ export async function listCloudBackups() {
 		scope: ['client', 'preferences', 'backups'],
 	});
 
-	return keys.map(k => ({
+	return keys.map((k) => ({
 		name: k,
 	}));
 }
@@ -186,8 +197,12 @@ export async function restoreFromCloudBackup() {
 
 	const select = await os.select({
 		title: i18n.ts._preferencesBackup.selectBackupToRestore,
-		text: 'ℹ️ ' + i18n.ts._preferencesProfile.shareSameProfileBetweenDevicesIsNotRecommended + ' ' + i18n.ts._preferencesProfile.useSyncBetweenDevicesOptionIfYouWantToSyncSetting,
-		items: backups.map(backup => ({
+		text:
+			'ℹ️ ' +
+			i18n.ts._preferencesProfile.shareSameProfileBetweenDevicesIsNotRecommended +
+			' ' +
+			i18n.ts._preferencesProfile.useSyncBetweenDevicesOptionIfYouWantToSyncSetting,
+		items: backups.map((backup) => ({
 			label: backup.name,
 			value: backup.name,
 		})),
@@ -224,13 +239,14 @@ export async function enableAutoBackup() {
 export const shouldSuggestRestoreBackup = ref(false);
 
 if ($i != null) {
-	if (new Date($i.createdAt).getTime() > (Date.now() - 1000 * 60 * 30)) { // アカウント作成直後は意味ないので除外
+	if (new Date($i.createdAt).getTime() > Date.now() - 1000 * 60 * 30) {
+		// アカウント作成直後は意味ないので除外
 		miLocalStorage.setItem('hidePreferencesRestoreSuggestion', 'true');
 	} else {
 		if (miLocalStorage.getItem('hidePreferencesRestoreSuggestion') !== 'true') {
 			misskeyApi('i/registry/keys', {
 				scope: ['client', 'preferences', 'backups'],
-			}).then(keys => {
+			}).then((keys) => {
 				if (keys.length === 0) {
 					miLocalStorage.setItem('hidePreferencesRestoreSuggestion', 'true');
 				} else {

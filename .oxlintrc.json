@@ -15,7 +15,13 @@
 		"no-useless-escape": "off",
 		"no-unused-expressions": "off",
 		"no-useless-rename": "off",
-		"oxc/bad-min-max-func": "off"
+		"no-underscore-dangle": "off",
+		"oxc/bad-min-max-func": "off",
+		"preserve-caught-error": "error",
+		"no-new": "error",
+		"no-useless-constructor": "error",
+		"no-unmodified-loop-condition": "error",
+		"no-useless-concat": "error"
 	},
 	"env": {
 		"builtin": true,

@@ -31,12 +31,12 @@ export async function lookupUser() {
 			_notFound = true;
 		}
 	};
-	usernamePromise.then(show).catch(err => {
+	usernamePromise.then(show).catch((err) => {
 		if (err.code === 'NO_SUCH_USER') {
 			notFound();
 		}
 	});
-	idPromise.then(show).catch(_ => {
+	idPromise.then(show).catch((_) => {
 		notFound();
 	});
 }
@@ -71,14 +71,19 @@ export async function lookupFile() {
 	});
 	if (canceled) return;
 
-	misskeyApi('admin/drive/show-file', q.startsWith('http://') || q.startsWith('https://') ? { url: q.trim() } : { fileId: q.trim() }).then(file => {
-		os.pageWindow(`/admin/file/${file.id}`);
-	}).catch(err => {
-		if (err.code === 'NO_SUCH_FILE') {
-			os.alert({
-				type: 'error',
-				text: i18n.ts.notFound,
-			});
-		}
-	});
+	misskeyApi(
+		'admin/drive/show-file',
+		q.startsWith('http://') || q.startsWith('https://') ? { url: q.trim() } : { fileId: q.trim() },
+	)
+		.then((file) => {
+			os.pageWindow(`/admin/file/${file.id}`);
+		})
+		.catch((err) => {
+			if (err.code === 'NO_SUCH_FILE') {
+				os.alert({
+					type: 'error',
+					text: i18n.ts.notFound,
+				});
+			}
+		});
 }

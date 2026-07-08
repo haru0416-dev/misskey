@@ -3,15 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export function calcPopupPosition(el: HTMLElement, props: {
-	anchorElement?: HTMLElement | null;
-	innerMargin: number;
-	direction: 'top' | 'bottom' | 'left' | 'right';
-	align: 'top' | 'bottom' | 'left' | 'right' | 'center';
-	alignOffset?: number;
-	x?: number;
-	y?: number;
-}): { top: number; left: number; transformOrigin: string; } {
+export function calcPopupPosition(
+	el: HTMLElement,
+	props: {
+		anchorElement?: HTMLElement | null;
+		innerMargin: number;
+		direction: 'top' | 'bottom' | 'left' | 'right';
+		align: 'top' | 'bottom' | 'left' | 'right' | 'center';
+		alignOffset?: number;
+		x?: number;
+		y?: number;
+	},
+): { top: number; left: number; transformOrigin: string } {
 	const contentWidth = el.offsetWidth;
 	const contentHeight = el.offsetHeight;
 
@@ -26,14 +29,14 @@ export function calcPopupPosition(el: HTMLElement, props: {
 		let top: number;
 
 		if (props.anchorElement) {
-			left = rect.left + window.scrollX + (props.anchorElement.offsetWidth / 2);
-			top = (rect.top + window.scrollY - contentHeight) - props.innerMargin;
+			left = rect.left + window.scrollX + props.anchorElement.offsetWidth / 2;
+			top = rect.top + window.scrollY - contentHeight - props.innerMargin;
 		} else {
 			left = props.x!;
-			top = (props.y! - contentHeight) - props.innerMargin;
+			top = props.y! - contentHeight - props.innerMargin;
 		}
 
-		left -= (el.offsetWidth / 2);
+		left -= el.offsetWidth / 2;
 
 		if (left + contentWidth - window.scrollX > window.innerWidth) {
 			left = window.innerWidth - contentWidth + window.scrollX - 1;
@@ -51,14 +54,14 @@ export function calcPopupPosition(el: HTMLElement, props: {
 		let top: number;
 
 		if (props.anchorElement) {
-			left = rect.left + window.scrollX + (props.anchorElement.offsetWidth / 2);
-			top = (rect.top + window.scrollY + props.anchorElement.offsetHeight) + props.innerMargin;
+			left = rect.left + window.scrollX + props.anchorElement.offsetWidth / 2;
+			top = rect.top + window.scrollY + props.anchorElement.offsetHeight + props.innerMargin;
 		} else {
 			left = props.x!;
-			top = (props.y!) + props.innerMargin;
+			top = props.y! + props.innerMargin;
 		}
 
-		left -= (el.offsetWidth / 2);
+		left -= el.offsetWidth / 2;
 
 		if (left + contentWidth - window.scrollX > window.innerWidth) {
 			left = window.innerWidth - contentWidth + window.scrollX - 1;
@@ -76,14 +79,14 @@ export function calcPopupPosition(el: HTMLElement, props: {
 		let top: number;
 
 		if (props.anchorElement) {
-			left = (rect.left + window.scrollX - contentWidth) - props.innerMargin;
-			top = rect.top + window.scrollY + (props.anchorElement.offsetHeight / 2);
+			left = rect.left + window.scrollX - contentWidth - props.innerMargin;
+			top = rect.top + window.scrollY + props.anchorElement.offsetHeight / 2;
 		} else {
-			left = (props.x! - contentWidth) - props.innerMargin;
+			left = props.x! - contentWidth - props.innerMargin;
 			top = props.y!;
 		}
 
-		top -= (el.offsetHeight / 2);
+		top -= el.offsetHeight / 2;
 
 		if (top + contentHeight - window.scrollY > window.innerHeight) {
 			top = window.innerHeight - contentHeight + window.scrollY - 1;
@@ -101,21 +104,22 @@ export function calcPopupPosition(el: HTMLElement, props: {
 		let top = 0; // TSを黙らすためとりあえず初期値を0に
 
 		if (props.anchorElement) {
-			left = (rect.left + props.anchorElement.offsetWidth + window.scrollX) + props.innerMargin;
+			left = rect.left + props.anchorElement.offsetWidth + window.scrollX + props.innerMargin;
 
 			if (props.align === 'top') {
 				top = rect.top + window.scrollY;
 				if (props.alignOffset != null) top += props.alignOffset;
 			} else if (props.align === 'bottom') {
 				// TODO
-			} else { // center
-				top = rect.top + window.scrollY + (props.anchorElement.offsetHeight / 2);
-				top -= (el.offsetHeight / 2);
+			} else {
+				// center
+				top = rect.top + window.scrollY + props.anchorElement.offsetHeight / 2;
+				top -= el.offsetHeight / 2;
 			}
 		} else {
 			left = props.x! + props.innerMargin;
 			top = props.y!;
-			top -= (el.offsetHeight / 2);
+			top -= el.offsetHeight / 2;
 		}
 
 		if (top + contentHeight - window.scrollY > window.innerHeight) {

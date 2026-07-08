@@ -14,7 +14,7 @@ import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/co
 import type { SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiUser } from '@/models/_.js';
-import { descriptionZodSchema, localUsernameZodSchema, passwordZodSchema } from '@/models/User.js';
+import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { hashPassword } from '@/misc/password.js';
 import { HonoApiError } from './error.js';
@@ -31,8 +31,8 @@ export type HonoApiAdminAccountsDependencies = UserPackingDependencies & SignupD
 };
 
 export const adminAccountCreateParamDef = z.object({
-	username: localUsernameZodSchema,
-	password: passwordZodSchema,
+	username: localUsernameSchema,
+	password: passwordSchema,
 	setupPassword: z.string().nullable().optional(),
 });
 
@@ -45,7 +45,7 @@ export const adminAccountDeleteParamDef = z.object({
 });
 
 export const adminUpdateProxyAccountParamDef = z.object({
-	description: descriptionZodSchema.nullable().optional(),
+	description: descriptionSchema.nullable().optional(),
 });
 
 

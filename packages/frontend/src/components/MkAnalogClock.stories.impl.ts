@@ -33,7 +33,8 @@ export const Default = {
 	},
 	decorators: [
 		() => ({
-			template: '<div style="container-type:inline-size;height:100%"><div style="height:100cqmin;margin:auto;width:100cqmin"><story/></div></div>',
+			template:
+				'<div style="container-type:inline-size;height:100%"><div style="height:100cqmin;margin:auto;width:100cqmin"><story/></div></div>',
 		}),
 	],
 	parameters: {

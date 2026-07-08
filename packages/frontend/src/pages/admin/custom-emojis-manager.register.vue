@@ -306,8 +306,6 @@ async function onFileSelectClicked() {
 	const driveFiles = await chooseFileFromPcAndUpload({
 		multiple: true,
 		folderId: selectedFolderId.value,
-		// // 拡張子は消す
-		// nameConverter: (file) => file.name.replace(/\.[a-zA-Z0-9]+$/, ''),
 	});
 
 	gridItems.value.push(...driveFiles.map(fromDriveFile));

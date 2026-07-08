@@ -18,10 +18,6 @@ import { deepClone } from '@/utility/clone.js';
 
 // NOTE: 明示的な設定値のひとつとして null もあり得るため、設定が存在しないかどうかを判定する目的で null で比較したり ?? を使ってはいけない
 
-//type DottedToNested<T extends Record<string, any>> = {
-//	[K in keyof T as K extends string ? K extends `${infer A}.${infer B}` ? A : K : K]: K extends `${infer A}.${infer B}` ? DottedToNested<{ [key in B]: T[K] }> : T[K];
-//};
-
 export type PREF = typeof PREF_DEF;
 type DefaultValues = {
 	[K in keyof PREF]: PREF[K]['default'] extends () => infer R ? R : PREF[K]['default'];
@@ -52,11 +48,13 @@ function parseScope(scope: Scope): {
 	};
 }
 
-function makeScope(scope: Partial<{
-	server: string | null;
-	account: string | null;
-	device: string | null;
-}>): Scope {
+function makeScope(
+	scope: Partial<{
+		server: string | null;
+		account: string | null;
+		device: string | null;
+	}>,
+): Scope {
 	const c = {} as Scope;
 	if (scope.server != null) c.server = scope.server;
 	if (scope.account != null) c.account = scope.account;
@@ -87,10 +85,12 @@ export type PossiblyNonNormalizedPreferencesProfile = Omit<PreferencesProfile, '
 
 export type StorageProvider = {
 	load: () => PossiblyNonNormalizedPreferencesProfile | null;
-	save: (ctx: { profile: PreferencesProfile; }) => void;
-	cloudGetBulk: <K extends keyof PREF>(ctx: { needs: { key: K; scope: Scope; }[] }) => Promise<Partial<Record<K, ValueOf<K>>>>;
-	cloudGet: <K extends keyof PREF>(ctx: { key: K; scope: Scope; }) => Promise<{ value: ValueOf<K>; } | null>;
-	cloudSet: <K extends keyof PREF>(ctx: { key: K; scope: Scope; value: ValueOf<K>; }) => Promise<void>;
+	save: (ctx: { profile: PreferencesProfile }) => void;
+	cloudGetBulk: <K extends keyof PREF>(ctx: {
+		needs: { key: K; scope: Scope }[];
+	}) => Promise<Partial<Record<K, ValueOf<K>>>>;
+	cloudGet: <K extends keyof PREF>(ctx: { key: K; scope: Scope }) => Promise<{ value: ValueOf<K> } | null>;
+	cloudSet: <K extends keyof PREF>(ctx: { key: K; scope: Scope; value: ValueOf<K> }) => Promise<void>;
 };
 
 type PreferencesDefinitionRecord<Default, T = Default extends () => infer R ? R : Default> = {
@@ -103,24 +103,21 @@ type PreferencesDefinitionRecord<Default, T = Default extends () => infer R ? R 
 export type PreferencesDefinition = Record<string, PreferencesDefinitionRecord<unknown>>;
 
 type PreferencesManagerEvents = {
-	'committed': <K extends keyof PREF>(ctx: {
-		key: K;
-		value: ValueOf<K>;
-		oldValue: ValueOf<K>;
-	}) => void;
+	committed: <K extends keyof PREF>(ctx: { key: K; value: ValueOf<K>; oldValue: ValueOf<K> }) => void;
 };
 
 export function definePreferences<T extends Record<string, unknown>>(x: {
-	[K in keyof T]: PreferencesDefinitionRecord<T[K]>
+	[K in keyof T]: PreferencesDefinitionRecord<T[K]>;
 }): {
-	[K in keyof T]: PreferencesDefinitionRecord<T[K]>
+	[K in keyof T]: PreferencesDefinitionRecord<T[K]>;
 } {
 	return x;
 }
 
 export function getInitialPrefValue<K extends keyof PREF>(k: K): ValueOf<K> {
 	const _default = PREF_DEF[k].default;
-	if (typeof _default === 'function') { // factory
+	if (typeof _default === 'function') {
+		// factory
 		return _default() as ValueOf<K>;
 	} else {
 		// 参照渡しになるのを防ぐためclone
@@ -147,37 +144,75 @@ function createEmptyProfile(): PossiblyNonNormalizedPreferencesProfile {
 	};
 }
 
-function normalizePreferences(preferences: PossiblyNonNormalizedPreferencesProfile['preferences'], account: { id: string } | null): PreferencesProfile['preferences'] {
+function normalizePreferences(
+	preferences: PossiblyNonNormalizedPreferencesProfile['preferences'],
+	account: { id: string } | null,
+): PreferencesProfile['preferences'] {
 	const data = {} as Record<string, [scope: Scope, value: unknown, meta: ValueMeta][]>;
 	for (const key in PREF_DEF) {
 		const records = preferences[key];
 		if (records == null || records.length === 0) {
 			const v = getInitialPrefValue(key as keyof typeof PREF_DEF);
 			if (isAccountDependentKey(key as keyof typeof PREF_DEF)) {
-				data[key] = account ? [[makeScope({}), v, {}], [makeScope({
-					server: host,
-					account: account.id,
-				}), v, {}]] : [[makeScope({}), v, {}]];
+				data[key] = account
+					? [
+							[makeScope({}), v, {}],
+							[
+								makeScope({
+									server: host,
+									account: account.id,
+								}),
+								v,
+								{},
+							],
+						]
+					: [[makeScope({}), v, {}]];
 			} else if (isServerDependentKey(key as keyof typeof PREF_DEF)) {
-				data[key] = [[makeScope({
-					server: host,
-				}), v, {}]];
+				data[key] = [
+					[
+						makeScope({
+							server: host,
+						}),
+						v,
+						{},
+					],
+				];
 			} else {
 				data[key] = [[makeScope({}), v, {}]];
 			}
 			continue;
 		} else {
-			if (account && isAccountDependentKey(key as keyof typeof PREF_DEF) && !records.some(([scope]) => parseScope(scope).server === host && parseScope(scope).account === account.id)) {
-				data[key] = records.concat([[makeScope({
-					server: host,
-					account: account.id,
-				}), getInitialPrefValue(key as keyof typeof PREF_DEF), {}]]);
+			if (
+				account &&
+				isAccountDependentKey(key as keyof typeof PREF_DEF) &&
+				!records.some(([scope]) => parseScope(scope).server === host && parseScope(scope).account === account.id)
+			) {
+				data[key] = records.concat([
+					[
+						makeScope({
+							server: host,
+							account: account.id,
+						}),
+						getInitialPrefValue(key as keyof typeof PREF_DEF),
+						{},
+					],
+				]);
 				continue;
 			}
-			if (account && isServerDependentKey(key as keyof typeof PREF_DEF) && !records.some(([scope]) => parseScope(scope).server === host)) {
-				data[key] = records.concat([[makeScope({
-					server: host,
-				}), getInitialPrefValue(key as keyof typeof PREF_DEF), {}]]);
+			if (
+				account &&
+				isServerDependentKey(key as keyof typeof PREF_DEF) &&
+				!records.some(([scope]) => parseScope(scope).server === host)
+			) {
+				data[key] = records.concat([
+					[
+						makeScope({
+							server: host,
+						}),
+						getInitialPrefValue(key as keyof typeof PREF_DEF),
+						{},
+					],
+				]);
 				continue;
 			}
 
@@ -274,18 +309,26 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 		};
 
 		if (parseScope(record[0]).account == null && isAccountDependentKey(key) && currentAccount != null) {
-			this.profile.preferences[key].push([makeScope({
-				server: host,
-				account: currentAccount.id,
-			}), v, {}]);
+			this.profile.preferences[key].push([
+				makeScope({
+					server: host,
+					account: currentAccount.id,
+				}),
+				v,
+				{},
+			]);
 			_save();
 			return;
 		}
 
 		if (parseScope(record[0]).server == null && isServerDependentKey(key)) {
-			this.profile.preferences[key].push([makeScope({
-				server: host,
-			}), v, {}]);
+			this.profile.preferences[key].push([
+				makeScope({
+					server: host,
+				}),
+				v,
+				{},
+			]);
 			_save();
 			return;
 		}
@@ -304,20 +347,14 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 	 * 特定のキーの、簡易的なcomputed refを作ります
 	 * 主にvue上で設定コントロールのmodelとして使う用
 	 */
-	public model<K extends keyof PREF, V = ValueOf<K>>(
-		key: K,
-	): Ref<V>;
+	public model<K extends keyof PREF, V = ValueOf<K>>(key: K): Ref<V>;
 	public model<K extends keyof PREF, V extends Exclude<unknown, ValueOf<K>>>(
 		key: K,
 		getter: (v: ValueOf<K>) => V,
 		setter: (v: V) => ValueOf<K>,
 	): Ref<V>;
 
-	public model<K extends keyof PREF, V>(
-		key: K,
-		getter?: (v: ValueOf<K>) => V,
-		setter?: (v: V) => ValueOf<K>,
-	): Ref<V> {
+	public model<K extends keyof PREF, V>(key: K, getter?: (v: ValueOf<K>) => V, setter?: (v: V) => ValueOf<K>): Ref<V> {
 		return customRef<V>((track, trigger) => {
 			const watchStop = watch(this.r[key], () => {
 				trigger();
@@ -352,7 +389,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 	}
 
 	private async fetchCloudValues() {
-		const needs = [] as { key: keyof PREF; scope: Scope; }[];
+		const needs = [] as { key: keyof PREF; scope: Scope }[];
 		for (const _key in PREF_DEF) {
 			const key = _key as keyof PREF;
 			const record = this.getMatchedRecordOf(key);
@@ -403,10 +440,14 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 			return record;
 		}
 
-		const accountOverrideRecord = records.find(([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id);
+		const accountOverrideRecord = records.find(
+			([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id,
+		);
 		if (accountOverrideRecord) return accountOverrideRecord;
 
-		const serverOverrideRecord = records.find(([scope, v]) => parseScope(scope).server === host && parseScope(scope).account == null);
+		const serverOverrideRecord = records.find(
+			([scope, v]) => parseScope(scope).server === host && parseScope(scope).account == null,
+		);
 		if (serverOverrideRecord) return serverOverrideRecord;
 
 		const record = records.find(([scope, v]) => parseScope(scope).account == null);
@@ -420,7 +461,9 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 	public isAccountOverrided<K extends keyof PREF>(key: K): boolean {
 		const currentAccount = this.currentAccount; // TSを黙らせるため
 		if (currentAccount == null) return false;
-		return this.profile.preferences[key].some(([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id);
+		return this.profile.preferences[key].some(
+			([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id,
+		);
 	}
 
 	public setAccountOverride<K extends keyof PREF>(key: K) {
@@ -430,10 +473,14 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 		if (this.isAccountOverrided(key)) return;
 
 		const records = this.profile.preferences[key];
-		records.push([makeScope({
-			server: host,
-			account: currentAccount.id,
-		}), this.s[key], {}]);
+		records.push([
+			makeScope({
+				server: host,
+				account: currentAccount.id,
+			}),
+			this.s[key],
+			{},
+		]);
 
 		this.save();
 	}
@@ -445,7 +492,9 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 
 		const records = this.profile.preferences[key];
 
-		const index = records.findIndex(([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id);
+		const index = records.findIndex(
+			([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id,
+		);
 		if (index === -1) return;
 
 		records.splice(index, 1);
@@ -459,7 +508,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 		return this.getMatchedRecordOf(key)[2].sync ?? false;
 	}
 
-	public async enableSync<K extends keyof PREF>(key: K): Promise<{ enabled: boolean; } | null> {
+	public async enableSync<K extends keyof PREF>(key: K): Promise<{ enabled: boolean } | null> {
 		if (this.isSyncEnabled(key)) return Promise.resolve(null);
 
 		// undefined ... cancel
@@ -474,19 +523,28 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 			const { canceled, result: choice } = await os.select({
 				title: i18n.ts.preferenceSyncConflictTitle,
 				text: i18n.ts.preferenceSyncConflictText,
-				items: [...(mergedValue !== undefined ? [{
-					label: i18n.ts.preferenceSyncConflictChoiceMerge,
-					value: 'merge' as const,
-				}] : []), {
-					label: i18n.ts.preferenceSyncConflictChoiceServer,
-					value: 'remote' as const,
-				}, {
-					label: i18n.ts.preferenceSyncConflictChoiceDevice,
-					value: 'local' as const,
-				}, {
-					label: i18n.ts.preferenceSyncConflictChoiceCancel,
-					value: null,
-				}],
+				items: [
+					...(mergedValue !== undefined
+						? [
+								{
+									label: i18n.ts.preferenceSyncConflictChoiceMerge,
+									value: 'merge' as const,
+								},
+							]
+						: []),
+					{
+						label: i18n.ts.preferenceSyncConflictChoiceServer,
+						value: 'remote' as const,
+					},
+					{
+						label: i18n.ts.preferenceSyncConflictChoiceDevice,
+						value: 'local' as const,
+					},
+					{
+						label: i18n.ts.preferenceSyncConflictChoiceCancel,
+						value: null,
+					},
+				],
 				default: mergedValue !== undefined ? 'merge' : 'remote',
 			});
 			if (canceled || choice == null) return undefined;
@@ -497,7 +555,8 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 				return local;
 			} else if (choice === 'merge') {
 				return mergedValue!;
-			} else { // TSを黙らすため
+			} else {
+				// TSを黙らすため
 				return undefined;
 			}
 		}
@@ -592,31 +651,37 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 			}
 		});
 
-		return [{
-			icon: 'ti ti-copy',
-			text: i18n.ts.copyPreferenceId,
-			action: () => {
-				copyToClipboard(key);
+		return [
+			{
+				icon: 'ti ti-copy',
+				text: i18n.ts.copyPreferenceId,
+				action: () => {
+					copyToClipboard(key);
+				},
 			},
-		}, {
-			icon: 'ti ti-refresh',
-			text: i18n.ts.resetToDefaultValue,
-			danger: true,
-			action: () => {
-				this.commit(key, getInitialPrefValue(key));
+			{
+				icon: 'ti ti-refresh',
+				text: i18n.ts.resetToDefaultValue,
+				danger: true,
+				action: () => {
+					this.commit(key, getInitialPrefValue(key));
+				},
 			},
-		}, {
-			type: 'divider',
-		}, {
-			type: 'switch',
-			icon: 'ti ti-user-cog',
-			text: i18n.ts.overrideByAccount,
-			ref: overrideByAccount,
-		}, {
-			type: 'switch',
-			icon: 'ti ti-cloud-cog',
-			text: i18n.ts.syncBetweenDevices,
-			ref: sync,
-		}];
+			{
+				type: 'divider',
+			},
+			{
+				type: 'switch',
+				icon: 'ti ti-user-cog',
+				text: i18n.ts.overrideByAccount,
+				ref: overrideByAccount,
+			},
+			{
+				type: 'switch',
+				icon: 'ti ti-cloud-cog',
+				text: i18n.ts.syncBetweenDevices,
+				ref: sync,
+			},
+		];
 	}
 }

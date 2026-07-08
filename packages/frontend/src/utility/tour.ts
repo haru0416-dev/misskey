@@ -26,24 +26,28 @@ export function startTour(steps: TourStep[]) {
 			anchorElementRef.value = step.element;
 		});
 
-		const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkSpot.vue')), {
-			title: titleRef,
-			description: descriptionRef,
-			anchorElement: anchorElementRef,
-			hasPrev: computed(() => currentStepIndex.value > 0),
-			hasNext: computed(() => currentStepIndex.value < steps.length - 1),
-		}, {
-			next: () => {
-				if (currentStepIndex.value >= steps.length - 1) {
-					dispose();
-					resolve();
-					return;
-				}
-				currentStepIndex.value++;
+		const { dispose } = os.popup(
+			defineAsyncComponent(() => import('@/components/MkSpot.vue')),
+			{
+				title: titleRef,
+				description: descriptionRef,
+				anchorElement: anchorElementRef,
+				hasPrev: computed(() => currentStepIndex.value > 0),
+				hasNext: computed(() => currentStepIndex.value < steps.length - 1),
 			},
-			prev: () => {
-				currentStepIndex.value--;
+			{
+				next: () => {
+					if (currentStepIndex.value >= steps.length - 1) {
+						dispose();
+						resolve();
+						return;
+					}
+					currentStepIndex.value++;
+				},
+				prev: () => {
+					currentStepIndex.value--;
+				},
 			},
-		});
+		);
 	});
 }

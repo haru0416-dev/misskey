@@ -17,7 +17,7 @@ describe('MkMediaImage', () => {
 			props: {
 				image: {
 					id: 'xxxxxxxx',
-					createdAt: (new Date()).toJSON(),
+					createdAt: new Date().toJSON(),
 					isSensitive: false,
 					name: 'example.png',
 					thumbnailUrl: null,
@@ -43,10 +43,7 @@ describe('MkMediaImage', () => {
 		const mkMediaImage = renderMediaImage({
 			type: 'image/jpeg',
 		});
-		const [gif, alt] = await Promise.all([
-			mkMediaImage.queryByText('GIF'),
-			mkMediaImage.queryByText('ALT'),
-		]);
+		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
 		assert.ok(!gif);
 		assert.ok(!alt);
 	});
@@ -55,10 +52,7 @@ describe('MkMediaImage', () => {
 		const mkMediaImage = renderMediaImage({
 			type: 'image/gif',
 		});
-		const [gif, alt] = await Promise.all([
-			mkMediaImage.queryByText('GIF'),
-			mkMediaImage.queryByText('ALT'),
-		]);
+		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
 		assert.ok(gif);
 		assert.ok(!alt);
 	});
@@ -67,10 +61,7 @@ describe('MkMediaImage', () => {
 		const mkMediaImage = renderMediaImage({
 			type: 'image/apng',
 		});
-		const [gif, alt] = await Promise.all([
-			mkMediaImage.queryByText('GIF'),
-			mkMediaImage.queryByText('ALT'),
-		]);
+		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
 		assert.ok(gif);
 		assert.ok(!alt);
 	});
@@ -80,10 +71,7 @@ describe('MkMediaImage', () => {
 			type: 'image/png',
 			comment: 'Misskeyのロゴです',
 		});
-		const [gif, alt] = await Promise.all([
-			mkMediaImage.queryByText('GIF'),
-			mkMediaImage.queryByText('ALT'),
-		]);
+		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
 		assert.ok(!gif);
 		assert.ok(alt);
 	});
@@ -93,10 +81,7 @@ describe('MkMediaImage', () => {
 			type: 'image/gif',
 			comment: 'Misskeyのロゴです',
 		});
-		const [gif, alt] = await Promise.all([
-			mkMediaImage.queryByText('GIF'),
-			mkMediaImage.queryByText('ALT'),
-		]);
+		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
 		assert.ok(gif);
 		assert.ok(alt);
 	});

@@ -39,7 +39,7 @@ export const uiDefinition = {
 			min: -1.0,
 			max: 1.0,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 		offsetY: {
 			label: i18n.ts._imageEffector._fxProps.offset + ' Y',
@@ -48,7 +48,7 @@ export const uiDefinition = {
 			min: -1.0,
 			max: 1.0,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 		scaleX: {
 			label: i18n.ts._imageEffector._fxProps.scale + ' W',
@@ -57,7 +57,7 @@ export const uiDefinition = {
 			min: 0.0,
 			max: 1.0,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 		scaleY: {
 			label: i18n.ts._imageEffector._fxProps.scale + ' H',
@@ -66,7 +66,7 @@ export const uiDefinition = {
 			min: 0.0,
 			max: 1.0,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 		ellipse: {
 			label: i18n.ts._imageEffector._fxProps.circle,
@@ -80,7 +80,7 @@ export const uiDefinition = {
 			min: -1.0,
 			max: 1.0,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 90) + '°',
+			toViewValue: (v) => Math.round(v * 90) + '°',
 		},
 		color: {
 			label: i18n.ts._imageEffector._fxProps.color,
@@ -94,7 +94,7 @@ export const uiDefinition = {
 			min: 0.0,
 			max: 1.0,
 			step: 0.01,
-			toViewValue: v => Math.round(v * 100) + '%',
+			toViewValue: (v) => Math.round(v * 100) + '%',
 		},
 	},
 } satisfies ImageEffectorUiDefinition<typeof fn>;

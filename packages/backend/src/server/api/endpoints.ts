@@ -128,8 +128,9 @@ export type IEndpointMeta = (Omit<IEndpointMetaBase, 'requireCrential' | 'requir
 export interface IEndpoint {
 	name: string;
 	meta: IEndpointMeta;
-	// TODO(ajv->zod移行 Phase B): 現状 z.ZodType は users/show・notes/create の2エンドポイントのみ。
-	// 移行が進むにつれて増える想定。
+	// 429件中428件の paramDef が z.ZodType 化済み。残り1件 (admin/update-meta の
+	// adminUpdateMetaJsonSchema, AdminUpdateMetaLogic.ts) のみ旧 JSON Schema 形式で、
+	// それが解消されるまで Schema 側の型を残す。
 	params: Schema | z.ZodType;
 }
 

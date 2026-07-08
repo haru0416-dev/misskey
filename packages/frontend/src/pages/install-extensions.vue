@@ -157,7 +157,6 @@ async function _fetch_() {
 				data.value = {
 					type: 'theme',
 					meta: {
-						// description, // 使用されていない
 						...meta,
 					},
 					raw: res.data,

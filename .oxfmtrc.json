@@ -23,11 +23,18 @@
 		"idea/**",
 		"locales/**",
 		"node_modules/**",
-		"packages/**",
-		"packages/backend/built/**",
-		"packages/backend/migration/**",
+		"packages/aiscript-languageserver-stub/**",
+		"packages/backend/**",
+		"packages/frontend-builder/**",
+		"packages/frontend-embed/**",
+		"packages/frontend-shared/**",
+		"packages/i18n/**",
+		"packages/icons-subsetter/**",
+		"packages/misskey-js/**",
+		"packages/sw/**",
 		"packages/frontend/**/*.vue",
-		"packages/frontend-embed/**/*.vue",
-		"packages/frontend/js-built/**"
+		"packages/frontend/js-built/**",
+		"packages/frontend/assets/**",
+		"packages/frontend/public/mockServiceWorker.js"
 	]
 }

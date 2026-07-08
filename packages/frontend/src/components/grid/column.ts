@@ -13,7 +13,12 @@ import type { GridContext } from '@/components/grid/grid-event.js';
 
 export type ColumnType = 'text' | 'number' | 'date' | 'boolean' | 'image' | 'hidden';
 
-export type CustomValueEditor = (row: GridRow, col: GridColumn, value: CellValue, cellElement: HTMLElement) => Promise<CellValue>;
+export type CustomValueEditor = (
+	row: GridRow,
+	col: GridColumn,
+	value: CellValue,
+	cellElement: HTMLElement,
+) => Promise<CellValue>;
 export type CellValueTransformer = (row: GridRow, col: GridColumn, value: CellValue) => CellValue;
 export type GridColumnContextMenuFactory = (col: GridColumn, context: GridContext) => MenuItem[];
 
@@ -32,7 +37,7 @@ export type GridColumnSetting = {
 		copy?: (value: CellValue) => string;
 		paste?: (text: string) => CellValue;
 		delete?: (cell: GridCell, context: GridContext) => void;
-	}
+	};
 };
 
 export type GridColumn = {
@@ -50,4 +55,3 @@ export function createColumn(setting: GridColumnSetting, index: number): GridCol
 		contentSize: { width: 0, height: 0 },
 	};
 }
-

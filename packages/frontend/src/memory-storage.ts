@@ -24,7 +24,7 @@ class MemoryStorageImpl implements MemoryStorage {
 	}
 
 	getItem<T>(key: string): T | null {
-		return this.storage.has(key) ? this.storage.get(key) as T : null;
+		return this.storage.has(key) ? (this.storage.get(key) as T) : null;
 	}
 
 	setItem(key: string, value: unknown): void {

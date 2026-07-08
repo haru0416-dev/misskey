@@ -31,7 +31,11 @@ export async function initIntlString(forceWanakana = false) {
  */
 export function normalizeString(str: string) {
 	const segmenter = new Intl.Segmenter(versatileLang, { granularity: 'grapheme' });
-	return [...segmenter.segment(str)].map(({ segment }) => segment.normalize('NFKC')).join('').toLowerCase().trim();
+	return [...segmenter.segment(str)]
+		.map(({ segment }) => segment.normalize('NFKC'))
+		.join('')
+		.toLowerCase()
+		.trim();
 }
 
 // https://qiita.com/non-caffeine/items/77360dda05c8ce510084
@@ -64,7 +68,7 @@ const hyphens = [
 	0x10191, // roman uncia sign
 ];
 
-const hyphensCodePoints = hyphens.map(code => `\\u{${code.toString(16).padStart(4, '0')}}`);
+const hyphensCodePoints = hyphens.map((code) => `\\u{${code.toString(16).padStart(4, '0')}}`);
 const hyphensRegex = new RegExp(`[${hyphensCodePoints.join('')}]`, 'ug');
 
 /** ハイフンを統一（ローマ字半角入力時に`ー`と`-`が判定できない問題の調整） */

@@ -28,8 +28,8 @@ export async function soundSettingsButton(soundSetting: Ref<SoundStore>): Promis
 			type: 'enum',
 			label: i18n.ts.sound,
 			default: soundSetting.value.type ?? 'none',
-			enum: soundsTypes.map(f => ({
-				value: f ?? 'none' as Exclude<SoundType, null> | 'none',
+			enum: soundsTypes.map((f) => ({
+				value: f ?? ('none' as Exclude<SoundType, null> | 'none'),
 				label: getSoundTypeName(f),
 			})),
 		},
@@ -37,7 +37,7 @@ export async function soundSettingsButton(soundSetting: Ref<SoundStore>): Promis
 			type: 'drive-file',
 			label: i18n.ts.file,
 			defaultFileId: soundSetting.value.type === '_driveFile_' ? soundSetting.value.fileId : null,
-			hidden: v => v.type !== '_driveFile_',
+			hidden: (v) => v.type !== '_driveFile_',
 			validate: async (file: Misskey.entities.DriveFile) => {
 				if (!file.type.startsWith('audio')) {
 					os.alert({
@@ -89,10 +89,12 @@ export async function soundSettingsButton(soundSetting: Ref<SoundStore>): Promis
 	if (res) soundSetting.value = res;
 
 	function buildSoundStore(r: NonNullable<typeof result>): SoundStore | null {
-		const type = (r.type === 'none' ? null : r.type);
+		const type = r.type === 'none' ? null : r.type;
 		const volume = r.volume;
-		const fileId = r.soundFile?.id ?? (soundSetting.value.type === '_driveFile_' ? soundSetting.value.fileId : undefined);
-		const fileUrl = r.soundFile?.url ?? (soundSetting.value.type === '_driveFile_' ? soundSetting.value.fileUrl : undefined);
+		const fileId =
+			r.soundFile?.id ?? (soundSetting.value.type === '_driveFile_' ? soundSetting.value.fileId : undefined);
+		const fileUrl =
+			r.soundFile?.url ?? (soundSetting.value.type === '_driveFile_' ? soundSetting.value.fileUrl : undefined);
 
 		if (type === '_driveFile_') {
 			if (!fileUrl || !fileId) {

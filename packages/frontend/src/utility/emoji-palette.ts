@@ -41,31 +41,38 @@ export async function addToEmojiPalette(emoji: string) {
 
 	if (!emojis.includes(emoji)) {
 		emojis.push(emoji);
-		prefer.commit('emojiPalettes', prefer.s.emojiPalettes.map((p) => {
-			if (p.id === palette.id) {
-				return {
-					...p,
-					emojis,
-				};
-			} else {
-				return p;
-			}
-		}));
+		prefer.commit(
+			'emojiPalettes',
+			prefer.s.emojiPalettes.map((p) => {
+				if (p.id === palette.id) {
+					return {
+						...p,
+						emojis,
+					};
+				} else {
+					return p;
+				}
+			}),
+		);
 		os.success();
 	} else {
 		const res = await os.actions({
 			type: 'warning',
 			text: i18n.ts.emojiPaletteAlreadyAddedConfirm,
-			actions: [{
-				value: 'prepend',
-				text: i18n.ts.prepend,
-			}, {
-				value: 'append',
-				text: i18n.ts.append,
-			}, {
-				value: 'doNothing',
-				text: i18n.ts.doNothing,
-			}],
+			actions: [
+				{
+					value: 'prepend',
+					text: i18n.ts.prepend,
+				},
+				{
+					value: 'append',
+					text: i18n.ts.append,
+				},
+				{
+					value: 'doNothing',
+					text: i18n.ts.doNothing,
+				},
+			],
 		});
 
 		if (res.canceled || res.result === 'doNothing') return;
@@ -78,16 +85,19 @@ export async function addToEmojiPalette(emoji: string) {
 			emojis.unshift(emoji);
 		}
 
-		prefer.commit('emojiPalettes', prefer.s.emojiPalettes.map((p) => {
-			if (p.id === palette.id) {
-				return {
-					...p,
-					emojis,
-				};
-			} else {
-				return p;
-			}
-		}));
+		prefer.commit(
+			'emojiPalettes',
+			prefer.s.emojiPalettes.map((p) => {
+				if (p.id === palette.id) {
+					return {
+						...p,
+						emojis,
+					};
+				} else {
+					return p;
+				}
+			}),
+		);
 
 		os.success();
 	}

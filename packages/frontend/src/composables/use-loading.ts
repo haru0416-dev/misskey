@@ -40,7 +40,7 @@ export const useLoading = (props?: {
 	};
 
 	const showing = computed(() => showingCnt.value > 0);
-	const component = computed(() => showing.value ? h(MkLoading, props) : null);
+	const component = computed(() => (showing.value ? h(MkLoading, props) : null));
 
 	return {
 		show,

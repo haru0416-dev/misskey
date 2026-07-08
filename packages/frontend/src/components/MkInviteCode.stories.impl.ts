@@ -45,9 +45,11 @@ export const Default = {
 			],
 		},
 	},
-	decorators: [() => ({
-		template: '<div style="width:100cqmin"><story/></div>',
-	})],
+	decorators: [
+		() => ({
+			template: '<div style="width:100cqmin"><story/></div>',
+		}),
+	],
 } satisfies StoryObj<typeof MkInviteCode>;
 
 export const Used = {

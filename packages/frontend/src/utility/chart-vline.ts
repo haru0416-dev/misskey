@@ -5,25 +5,26 @@
 
 import type { Plugin } from 'chart.js';
 
-export const chartVLine = (vLineColor: string) => ({
-	id: 'vLine',
-	beforeDraw(chart, args, options) {
-		const tooltip = chart.tooltip as any;
-		if (tooltip?._active?.length) {
-			const ctx = chart.ctx;
-			const xs = tooltip._active.map((a: any) => a.element.x) as number[];
-			const x = xs.reduce((a, b) => a + b, 0) / xs.length;
-			const topY = chart.scales.y.top;
-			const bottomY = chart.scales.y.bottom;
+export const chartVLine = (vLineColor: string) =>
+	({
+		id: 'vLine',
+		beforeDraw(chart, args, options) {
+			const tooltip = chart.tooltip as any;
+			if (tooltip?._active?.length) {
+				const ctx = chart.ctx;
+				const xs = tooltip._active.map((a: any) => a.element.x) as number[];
+				const x = xs.reduce((a, b) => a + b, 0) / xs.length;
+				const topY = chart.scales.y.top;
+				const bottomY = chart.scales.y.bottom;
 
-			ctx.save();
-			ctx.beginPath();
-			ctx.moveTo(x, bottomY);
-			ctx.lineTo(x, topY);
-			ctx.lineWidth = 1;
-			ctx.strokeStyle = vLineColor;
-			ctx.stroke();
-			ctx.restore();
-		}
-	},
-}) as Plugin;
+				ctx.save();
+				ctx.beginPath();
+				ctx.moveTo(x, bottomY);
+				ctx.lineTo(x, topY);
+				ctx.lineWidth = 1;
+				ctx.strokeStyle = vLineColor;
+				ctx.stroke();
+				ctx.restore();
+			}
+		},
+	}) as Plugin;

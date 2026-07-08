@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import JSON5 from 'json5';
 import { RolldownMagicString } from 'rolldown';
 import type { TransformResult } from 'rolldown';
-import path from 'node:path'
+import path from 'node:path';
 import { hash, toBase62 } from '../vite.config';
 import { minimatch } from 'minimatch';
 import {
@@ -45,12 +45,12 @@ export interface SearchIndexItem {
 }
 
 export type Options = {
-	targetFilePaths: string[],
-	mainVirtualModule: string,
-	modulesToHmrOnUpdate: string[],
-	fileVirtualModulePrefix?: string,
-	fileVirtualModuleSuffix?: string,
-	verbose?: boolean,
+	targetFilePaths: string[];
+	mainVirtualModule: string;
+	modulesToHmrOnUpdate: string[];
+	fileVirtualModulePrefix?: string;
+	fileVirtualModuleSuffix?: string;
+	verbose?: boolean;
 };
 
 // マーカー関係を表す型
@@ -62,9 +62,9 @@ interface MarkerRelation {
 
 // ロガー
 let logger = {
-	info: (msg: string, options?: LogOptions) => { },
-	warn: (msg: string, options?: LogOptions) => { },
-	error: (msg: string, options?: LogErrorOptions) => { },
+	info: (msg: string, options?: LogOptions) => {},
+	warn: (msg: string, options?: LogOptions) => {},
+	error: (msg: string, options?: LogErrorOptions) => {},
 };
 let loggerInitialized = false;
 
@@ -76,17 +76,17 @@ function initLogger(options: Options) {
 	logger.info = (msg, options) => {
 		msg = `[create-search-index] ${msg}`;
 		viteLogger.info(msg, options);
-	}
+	};
 
 	logger.warn = (msg, options) => {
 		msg = `[create-search-index] ${msg}`;
 		viteLogger.warn(msg, options);
-	}
+	};
 
 	logger.error = (msg, options) => {
 		msg = `[create-search-index] ${msg}`;
 		viteLogger.error(msg, options);
-	}
+	};
 }
 
 //region AST Utility
@@ -99,10 +99,14 @@ type WalkVueNode = RootNode | TemplateChildNode | SimpleExpressionNode;
  * @param context The context value passed to callback. you can update context for children by returning value in callback
  * @param callback Returns false if you don't want to walk inner tree
  */
-function walkVueElements<C extends {} | null>(nodes: WalkVueNode[], context: C, callback: (node: ElementNode, context: C) => C | undefined | void | false): void {
+function walkVueElements<C extends {} | null>(
+	nodes: WalkVueNode[],
+	context: C,
+	callback: (node: ElementNode, context: C) => C | undefined | void | false,
+): void {
 	for (const node of nodes) {
 		let currentContext = context;
-		if (node.type === NodeTypes.COMPOUND_EXPRESSION) throw new Error("Unexpected COMPOUND_EXPRESSION");
+		if (node.type === NodeTypes.COMPOUND_EXPRESSION) throw new Error('Unexpected COMPOUND_EXPRESSION');
 		if (node.type === NodeTypes.ELEMENT) {
 			const result = callback(node, context);
 			if (result === false) return;
@@ -114,7 +118,10 @@ function walkVueElements<C extends {} | null>(nodes: WalkVueNode[], context: C, 
 	}
 }
 
-function findAttribute(props: Array<AttributeNode | DirectiveNode>, name: string): AttributeNode | DirectiveNode | null {
+function findAttribute(
+	props: Array<AttributeNode | DirectiveNode>,
+	name: string,
+): AttributeNode | DirectiveNode | null {
 	for (const prop of props) {
 		switch (prop.type) {
 			case NodeTypes.ATTRIBUTE:
@@ -138,7 +145,7 @@ function findEndOfStartTagAttributes(node: ElementNode): number {
 		const nodeStart = node.loc.start.offset;
 		const firstChildStart = node.children[0].loc.start.offset;
 		const endOfStartTag = node.loc.source.lastIndexOf('>', firstChildStart - nodeStart);
-		if (endOfStartTag === -1) throw new Error("Bug: Failed to find end of start tag");
+		if (endOfStartTag === -1) throw new Error('Bug: Failed to find end of start tag');
 		return nodeStart + endOfStartTag;
 	} else {
 		// 子要素がない場合、自身の終了位置から逆算
@@ -152,8 +159,7 @@ function findEndOfStartTagAttributes(node: ElementNode): number {
  * TypeScriptコード生成
  */
 function generateJavaScriptCode(resolvedRootMarkers: SearchIndexItem[]): string {
-	return `import { i18n } from '@/i18n.js';\n`
-		+ `export const searchIndexes = ${customStringify(resolvedRootMarkers)};\n`;
+	return `import { i18n } from '@/i18n.js';\nexport const searchIndexes = ${customStringify(resolvedRootMarkers)};\n`;
 }
 
 /**
@@ -189,7 +195,7 @@ function extractElementTextChecked(node: ElementNode, processingNodeName: string
 }
 
 function extractElementText2Inner(node: TemplateChildNode, processingNodeName: string, id: string): string | null {
-	if (node.type === NodeTypes.COMPOUND_EXPRESSION) throw new Error("Unexpected COMPOUND_EXPRESSION");
+	if (node.type === NodeTypes.COMPOUND_EXPRESSION) throw new Error('Unexpected COMPOUND_EXPRESSION');
 
 	switch (node.type) {
 		case NodeTypes.INTERPOLATION: {
@@ -218,7 +224,9 @@ function extractElementText2Inner(node: TemplateChildNode, processingNodeName: s
 		case NodeTypes.IF_BRANCH:
 		case NodeTypes.FOR:
 		case NodeTypes.TEXT_CALL:
-			logger.error(`Unexpected controlflow element extracting text of ${processingNodeName} ${id}:${node.loc.start.line}`);
+			logger.error(
+				`Unexpected controlflow element extracting text of ${processingNodeName} ${id}:${node.loc.start.line}`,
+			);
 			return null;
 	}
 }
@@ -230,7 +238,10 @@ function extractElementText2Inner(node: TemplateChildNode, processingNodeName: s
 /**
  * SearchLabel/SearchText/SearchIconを探して抽出する関数
  */
-function extractSugarTags(nodes: TemplateChildNode[], id: string): { label: string | null; texts: string[]; icon: string | null; } {
+function extractSugarTags(
+	nodes: TemplateChildNode[],
+	id: string,
+): { label: string | null; texts: string[]; icon: string | null } {
 	let label: string | null | undefined = undefined;
 	let icon: string | null | undefined = undefined;
 	const texts: string[] = [];
@@ -314,7 +325,7 @@ function getStringArrayProp(attr: AttributeNode | DirectiveNode | null, id: stri
 			if (attr.exp == null) return null;
 			if (attr.exp.type === NodeTypes.COMPOUND_EXPRESSION) throw new Error('Unexpected COMPOUND_EXPRESSION');
 			const value = evalExpression(attr.exp.content ?? '');
-			if (!Array.isArray(value) || !value.every(x => typeof x === 'string')) {
+			if (!Array.isArray(value) || !value.every((x) => typeof x === 'string')) {
 				logger.error(`Expected string array value, got ${typeof value} at ${id}:${attr.loc.start.line}`);
 				return null;
 			}
@@ -322,10 +333,7 @@ function getStringArrayProp(attr: AttributeNode | DirectiveNode | null, id: stri
 	}
 }
 
-function extractUsageInfoFromTemplateAst(
-	templateAst: RootNode | undefined,
-	id: string,
-): SearchIndexItem[] {
+function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: string): SearchIndexItem[] {
 	const allMarkers: SearchIndexItem[] = [];
 	const markerMap = new Map<string, SearchIndexItem>();
 
@@ -337,7 +345,7 @@ function extractUsageInfoFromTemplateAst(
 		}
 
 		// マーカーID取得
-		const markerIdProp = node.props?.find(p => p.name === 'markerId');
+		const markerIdProp = node.props?.find((p) => p.name === 'markerId');
 		const markerId = markerIdProp?.type == NodeTypes.ATTRIBUTE ? markerIdProp.value?.content : null;
 
 		// SearchMarkerにマーカーIDがない場合はエラー
@@ -378,8 +386,10 @@ function extractUsageInfoFromTemplateAst(
 		// SearchLabelとSearchTextを抽出 (AST全体を探索)
 		{
 			const extracted = extractSugarTags(node.children, id);
-			if (extracted.label && markerInfo.label) logger.warn(`Duplicate label found for ${markerId} at ${id}:${node.loc.start.line}`);
-			if (extracted.icon && markerInfo.icon) logger.warn(`Duplicate icon found for ${markerId} at ${id}:${node.loc.start.line}`);
+			if (extracted.label && markerInfo.label)
+				logger.warn(`Duplicate label found for ${markerId} at ${id}:${node.loc.start.line}`);
+			if (extracted.icon && markerInfo.icon)
+				logger.warn(`Duplicate icon found for ${markerId} at ${id}:${node.loc.start.line}`);
 			markerInfo.label = extracted.label ?? markerInfo.label ?? '';
 			markerInfo.texts = [...extracted.texts, ...markerInfo.texts];
 			markerInfo.icon = extracted.icon ?? markerInfo.icon ?? undefined;
@@ -416,24 +426,24 @@ function evalExpression(expr: string): unknown {
 const propertyAccessProxySymbol = Symbol('propertyAccessProxySymbol');
 
 type AccessProxy = {
-	[propertyAccessProxySymbol]: string[],
-	[k: string]: AccessProxy,
-}
+	[propertyAccessProxySymbol]: string[];
+	[k: string]: AccessProxy;
+};
 
 const propertyAccessProxyHandler: ProxyHandler<AccessProxy> = {
 	get(target: AccessProxy, p: string | symbol): any {
 		if (p in target) {
 			return (target as any)[p];
 		}
-		if (p == "toJSON" || p == Symbol.toPrimitive) {
+		if (p == 'toJSON' || p == Symbol.toPrimitive) {
 			return propertyAccessProxyToJSON;
 		}
 		if (typeof p == 'string') {
-			return target[p] = propertyAccessProxy([...target[propertyAccessProxySymbol], p]);
+			return (target[p] = propertyAccessProxy([...target[propertyAccessProxySymbol], p]));
 		}
 		return undefined;
-	}
-}
+	},
+};
 
 function propertyAccessProxyToJSON(this: AccessProxy, hint: string) {
 	const expression = this[propertyAccessProxySymbol].reduce((prev, current) => {
@@ -541,18 +551,23 @@ export class MarkerIdAssigner {
 
 			let nodeMarkerId: string;
 			if (markerIdProp != null) {
-				if (markerIdProp.type !== NodeTypes.ATTRIBUTE) return logger.error(`markerId must be a attribute at ${id}:${markerIdProp.loc.start.line}`);
-				if (markerIdProp.value == null) return logger.error(`markerId must have a value at ${id}:${markerIdProp.loc.start.line}`);
+				if (markerIdProp.type !== NodeTypes.ATTRIBUTE)
+					return logger.error(`markerId must be a attribute at ${id}:${markerIdProp.loc.start.line}`);
+				if (markerIdProp.value == null)
+					return logger.error(`markerId must have a value at ${id}:${markerIdProp.loc.start.line}`);
 				nodeMarkerId = markerIdProp.value.content;
 			} else {
 				// ファイルパスと行番号からハッシュ値を生成
 				// この際実行環境で差が出ないようにファイルパスを正規化
-				const idKey = id.replace(/\\/g, '/').split('packages/frontend/')[1]
+				const idKey = id.replace(/\\/g, '/').split('packages/frontend/')[1];
 				const generatedMarkerId = toBase62(hash(`${idKey}:${node.loc.start.line}`));
 
 				// markerId attribute を追加
 				const endOfStartTag = findEndOfStartTagAttributes(node);
-				s.appendRight(endOfStartTag, ` markerId="${generatedMarkerId}" data-in-app-search-marker-id="${generatedMarkerId}"`);
+				s.appendRight(
+					endOfStartTag,
+					` markerId="${generatedMarkerId}" data-in-app-search-marker-id="${generatedMarkerId}"`,
+				);
 
 				nodeMarkerId = generatedMarkerId;
 			}
@@ -564,14 +579,14 @@ export class MarkerIdAssigner {
 			});
 
 			return nodeMarkerId;
-		})
+		});
 
 		// 2段階目: :children 属性の追加
 		// 最初に親マーカーごとに子マーカーIDを集約する処理を追加
 		const parentChildrenMap = new Map<string, string[]>();
 
 		// 1. まず親ごとのすべての子マーカーIDを収集
-		markerRelations.forEach(relation => {
+		markerRelations.forEach((relation) => {
 			if (relation.parentId) {
 				if (!parentChildrenMap.has(relation.parentId)) {
 					parentChildrenMap.set(relation.parentId, []);
@@ -582,7 +597,7 @@ export class MarkerIdAssigner {
 
 		// 2. 親ごとにまとめて :children 属性を処理
 		for (const [parentId, childIds] of parentChildrenMap.entries()) {
-			const parentRelation = markerRelations.find(r => r.markerId === parentId);
+			const parentRelation = markerRelations.find((r) => r.markerId === parentId);
 			if (!parentRelation) continue;
 
 			const parentNode = parentRelation.node;
@@ -650,10 +665,7 @@ export class MarkerIdAssigner {
 // Vite プラグインとして export
 export default function pluginCreateSearchIndex(options: Options): PluginOption {
 	const assigner = new MarkerIdAssigner();
-	return [
-		createSearchIndex(options, assigner),
-		pluginCreateSearchIndexVirtualModule(options, assigner),
-	]
+	return [createSearchIndex(options, assigner), pluginCreateSearchIndexVirtualModule(options, assigner)];
 }
 
 function createSearchIndex(options: Options, assigner: MarkerIdAssigner): Plugin {
@@ -662,7 +674,7 @@ function createSearchIndex(options: Options, assigner: MarkerIdAssigner): Plugin
 
 	function isTargetFile(id: string): boolean {
 		const relativePath = path.posix.relative(root, id);
-		return options.targetFilePaths.some(pat => minimatch(relativePath, pat))
+		return options.targetFilePaths.some((pat) => minimatch(relativePath, pat));
 	}
 
 	return {
@@ -695,7 +707,7 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 
 	function isTargetFile(id: string): boolean {
 		const relativePath = path.posix.relative(root, id);
-		return options.targetFilePaths.some(pat => minimatch(relativePath, pat))
+		return options.targetFilePaths.some((pat) => minimatch(relativePath, pat));
 	}
 
 	function parseSearchIndexFileId(id: string): string | null {
@@ -755,10 +767,12 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 
 		hotUpdate(this: { environment: { moduleGraph: EnvironmentModuleGraph } }, { file, modules }) {
 			if (isTargetFile(file)) {
-				const updateMods = options.modulesToHmrOnUpdate.map(id => this.environment.moduleGraph.getModuleById(path.posix.join(root, id))).filter(x => x != null);
+				const updateMods = options.modulesToHmrOnUpdate
+					.map((id) => this.environment.moduleGraph.getModuleById(path.posix.join(root, id)))
+					.filter((x) => x != null);
 				return [...modules, ...updateMods];
 			}
 			return modules;
-		}
+		},
 	};
 }

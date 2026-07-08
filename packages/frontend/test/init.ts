@@ -12,7 +12,12 @@ const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
 // XXX: misskey-js panics if WebSocket is not defined
-vi.stubGlobal('WebSocket', class WebSocket extends EventTarget { static CLOSING = 2; });
+vi.stubGlobal(
+	'WebSocket',
+	class WebSocket extends EventTarget {
+		static CLOSING = 2;
+	},
+);
 
 // XXX: localStorageがない場合がある
 const localStorageMock = (() => {
@@ -48,7 +53,6 @@ const { updateI18n } = await import('@/i18n.js');
 updateI18n(locales['en-US']);
 
 export const preferState: Record<string, unknown> = {
-
 	// なんかtestがうまいこと動かないのでここに書く
 	dataSaver: {
 		media: false,
@@ -70,7 +74,6 @@ for (const key in preferState) {
 
 // XXX: store somehow becomes undefined in vitest?
 vi.mock('@/preferences.js', () => {
-
 	return {
 		prefer: {
 			s: preferState,

@@ -26,4 +26,4 @@ export interface PostFormProps {
 	initialVisibleUsers?: Misskey.entities.UserDetailed[];
 	initialNote?: Misskey.entities.Note;
 	instant?: boolean;
-};
+}

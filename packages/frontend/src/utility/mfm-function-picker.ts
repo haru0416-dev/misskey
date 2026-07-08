@@ -10,20 +10,30 @@ import { i18n } from '@/i18n.js';
 /**
  * MFMの装飾のリストを表示する
  */
-export function mfmFunctionPicker(anchorElement: HTMLElement | EventTarget | null, onChosen: (tag: string) => void, onClosed?: () => void) {
-	os.popupMenu([{
-		text: i18n.ts.addMfmFunction,
-		type: 'label',
-	}, ...MFM_TAGS.map(tag => ({
-		text: tag,
-		icon: 'ti ti-icons',
-		action: () => {
-			onChosen(tag);
+export function mfmFunctionPicker(
+	anchorElement: HTMLElement | EventTarget | null,
+	onChosen: (tag: string) => void,
+	onClosed?: () => void,
+) {
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.addMfmFunction,
+				type: 'label',
+			},
+			...MFM_TAGS.map((tag) => ({
+				text: tag,
+				icon: 'ti ti-icons',
+				action: () => {
+					onChosen(tag);
+				},
+			})),
+		],
+		anchorElement,
+		{
+			onClosed: () => {
+				if (onClosed) onClosed();
+			},
 		},
-	}))], anchorElement, {
-		onClosed: () => {
-			if (onClosed) onClosed();
-		},
-	});
+	);
 }
-

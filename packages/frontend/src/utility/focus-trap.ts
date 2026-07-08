@@ -5,10 +5,7 @@
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 
 const focusTrapElements = new Set<HTMLElement>();
-const ignoreElements = [
-	'script',
-	'style',
-];
+const ignoreElements = ['script', 'style'];
 
 function containsFocusTrappedElements(el: HTMLElement): boolean {
 	return Array.from(focusTrapElements).some((focusTrapElement) => {
@@ -24,7 +21,7 @@ function getZIndex(el: HTMLElement): number {
 	return zIndex;
 }
 
-function getHighestZIndexElement(): { el: HTMLElement; zIndex: number; } | null {
+function getHighestZIndexElement(): { el: HTMLElement; zIndex: number } | null {
 	let highestZIndexElement: HTMLElement | null = null;
 	let highestZIndex = -Infinity;
 
@@ -36,10 +33,12 @@ function getHighestZIndexElement(): { el: HTMLElement; zIndex: number; } | null 
 		}
 	});
 
-	return highestZIndexElement == null ? null : {
-		el: highestZIndexElement,
-		zIndex: highestZIndex,
-	};
+	return highestZIndexElement == null
+		? null
+		: {
+				el: highestZIndexElement,
+				zIndex: highestZIndex,
+			};
 }
 
 function releaseFocusTrap(el: HTMLElement): void {
@@ -56,11 +55,9 @@ function releaseFocusTrap(el: HTMLElement): void {
 			if (!siblingEl) return;
 			if (
 				siblingEl !== el &&
-				(
-					highestZIndexElement == null ||
+				(highestZIndexElement == null ||
 					siblingEl === highestZIndexElement.el ||
-					siblingEl.contains(highestZIndexElement.el)
-				)
+					siblingEl.contains(highestZIndexElement.el))
 			) {
 				siblingEl.inert = false;
 			} else if (
@@ -79,8 +76,16 @@ function releaseFocusTrap(el: HTMLElement): void {
 }
 
 export function focusTrap(el: HTMLElement, hasInteractionWithOtherFocusTrappedEls: boolean, parent: true): void;
-export function focusTrap(el: HTMLElement, hasInteractionWithOtherFocusTrappedEls?: boolean, parent?: false): { release: () => void; };
-export function focusTrap(el: HTMLElement, hasInteractionWithOtherFocusTrappedEls = false, parent = false): { release: () => void; } | void {
+export function focusTrap(
+	el: HTMLElement,
+	hasInteractionWithOtherFocusTrappedEls?: boolean,
+	parent?: false,
+): { release: () => void };
+export function focusTrap(
+	el: HTMLElement,
+	hasInteractionWithOtherFocusTrappedEls = false,
+	parent = false,
+): { release: () => void } | void {
 	const highestZIndexElement = getHighestZIndexElement();
 
 	const highestZIndex = highestZIndexElement == null ? -Infinity : highestZIndexElement.zIndex;
@@ -110,10 +115,8 @@ export function focusTrap(el: HTMLElement, hasInteractionWithOtherFocusTrappedEl
 			if (!siblingEl) return;
 			if (
 				siblingEl !== el &&
-				(
-					hasInteractionWithOtherFocusTrappedEls === false ||
-					(!focusTrapElements.has(siblingEl) && !containsFocusTrappedElements(siblingEl))
-				) &&
+				(hasInteractionWithOtherFocusTrappedEls === false ||
+					(!focusTrapElements.has(siblingEl) && !containsFocusTrappedElements(siblingEl))) &&
 				!ignoreElements.includes(siblingEl.tagName.toLowerCase())
 			) {
 				siblingEl.inert = true;

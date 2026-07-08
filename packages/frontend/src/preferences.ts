@@ -34,14 +34,14 @@ const io: StorageProvider = {
 		miLocalStorage.setItem('preferences', JSON.stringify(ctx.profile));
 	},
 
-	cloudGet: async <K extends keyof PREF>(ctx: { key: K; scope: Scope; }) => {
+	cloudGet: async <K extends keyof PREF>(ctx: { key: K; scope: Scope }) => {
 		// TODO: この取得方法だとアカウントが変わると保存場所も変わってしまうので改修する
 		// 例えば複数アカウントある場合でも設定値を保存するための「プライマリアカウント」を設定できるようにするとか
 		try {
-			const cloudData = await misskeyApi('i/registry/get', {
+			const cloudData = (await misskeyApi('i/registry/get', {
 				scope: ['client', 'preferences', 'sync'],
 				key: syncGroup + ':' + ctx.key,
-			}) as [Scope, unknown][];
+			})) as [Scope, unknown][];
 			const target = cloudData.find(([scope]) => isSameScope(scope, ctx.scope));
 			if (target == null) return null;
 			return {
@@ -49,7 +49,8 @@ const io: StorageProvider = {
 				value: target[1] as ValueOf<K>,
 			};
 		} catch (err) {
-			if (isNoSuchKeyError(err)) { // TODO: いちいちエラーキャッチするのは面倒なのでキーが無くてもエラーにならない maybe-get のようなエンドポイントをバックエンドに実装する
+			if (isNoSuchKeyError(err)) {
+				// TODO: いちいちエラーキャッチするのは面倒なのでキーが無くてもエラーにならない maybe-get のようなエンドポイントをバックエンドに実装する
 				return null;
 			} else {
 				throw err;
@@ -60,12 +61,13 @@ const io: StorageProvider = {
 	cloudSet: async (ctx) => {
 		let cloudData: [Scope, unknown][] = [];
 		try {
-			cloudData = await misskeyApi('i/registry/get', {
+			cloudData = (await misskeyApi('i/registry/get', {
 				scope: ['client', 'preferences', 'sync'],
 				key: syncGroup + ':' + ctx.key,
-			}) as [Scope, unknown][];
+			})) as [Scope, unknown][];
 		} catch (err) {
-			if (isNoSuchKeyError(err)) { // TODO: いちいちエラーキャッチするのは面倒なのでキーが無くてもエラーにならない maybe-get のようなエンドポイントをバックエンドに実装する
+			if (isNoSuchKeyError(err)) {
+				// TODO: いちいちエラーキャッチするのは面倒なのでキーが無くてもエラーにならない maybe-get のようなエンドポイントをバックエンドに実装する
 				cloudData = [];
 			} else {
 				throw err;
@@ -87,9 +89,9 @@ const io: StorageProvider = {
 		});
 	},
 
-	cloudGetBulk: async <K extends keyof PREF>(ctx: { needs: { key: K; scope: Scope; }[] }) => {
+	cloudGetBulk: async <K extends keyof PREF>(ctx: { needs: { key: K; scope: Scope }[] }) => {
 		// TODO: 値の取得を1つのリクエストで済ませたい(バックエンド側でAPIの新設が必要)
-		const fetchings = ctx.needs.map(need => io.cloudGet(need).then(res => [need.key, res] as const));
+		const fetchings = ctx.needs.map((need) => io.cloudGet(need).then((res) => [need.key, res] as const));
 		const cloudDatas = await Promise.all(fetchings);
 
 		const res: Partial<Record<K, ValueOf<K>>> = {};
@@ -148,16 +150,19 @@ preferencesChannel.addEventListener('message', (msg) => {
 //#region 定期クラウドバックアップ
 let latestBackupAt = 0;
 
-window.setInterval(() => {
-	if ($i == null) return;
-	if (!store.s.enablePreferencesAutoCloudBackup) return;
-	if (window.document.visibilityState !== 'visible') return; // 同期されていない古い値がバックアップされるのを防ぐ
-	if (prefer.profile.modifiedAt <= latestBackupAt) return;
+window.setInterval(
+	() => {
+		if ($i == null) return;
+		if (!store.s.enablePreferencesAutoCloudBackup) return;
+		if (window.document.visibilityState !== 'visible') return; // 同期されていない古い値がバックアップされるのを防ぐ
+		if (prefer.profile.modifiedAt <= latestBackupAt) return;
 
-	cloudBackup().then(() => {
-		latestBackupAt = Date.now();
-	});
-}, 1000 * 60 * 3);
+		cloudBackup().then(() => {
+			latestBackupAt = Date.now();
+		});
+	},
+	1000 * 60 * 3,
+);
 //#endregion
 
 if (_DEV_) {

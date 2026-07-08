@@ -35,19 +35,6 @@ export const Default = {
 		const a = canvas.getByRole<HTMLAnchorElement>('link');
 		await expect(a).toHaveAttribute('href', 'https://misskey-hub.net/');
 		await waitFor(() => userEvent.hover(a));
-		/*
-		await tick(); // FIXME: wait for network request
-		const anchors = canvas.getAllByRole<HTMLAnchorElement>('link');
-		const popup = anchors.find(anchor => anchor !== a)!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
-		await expect(popup).toBeInTheDocument();
-		await expect(popup).toHaveAttribute('href', 'https://misskey-hub.net/');
-		await expect(popup).toHaveTextContent('Misskey Hub');
-		await expect(popup).toHaveTextContent('Misskeyはオープンソースの分散型ソーシャルネットワーキングプラットフォームです。');
-		await expect(popup).toHaveTextContent('misskey-hub.net');
-		const icon = within(popup).getByRole('img');
-		await expect(icon).toBeInTheDocument();
-		await expect(icon).toHaveAttribute('src', 'https://misskey-hub.net/favicon.ico');
-		 */
 		await waitFor(() => userEvent.unhover(a));
 	},
 	args: {
