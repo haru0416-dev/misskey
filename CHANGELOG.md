@@ -11,6 +11,7 @@
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
+- Enhance: 1秒を超えたHTTPリクエストをエンドポイント・所要時間つきで警告ログに出力するように (チューニング対象の発見用)
 - Fix: リクエストボディのサイズ制限を復元 (NestJS→Hono 移行で Fastify の bodyLimit が失われ、JSON API のボディが Node ランタイムで無制限になっていた。JSON/OAuth は upstream と同じ 1 MiB、multipart は maxFileSize+1MiB を実バイト数で強制し超過は 413。chunked 転送による content-length 回避も防止)
 - Fix: ファイルアップロードのサイズ超過判定を「全体をメモリに読み切った後」から「読みながら打ち切り」に変更 (メモリ保護の復元)。あわせて Bun ランタイムで maxFileSize が 128MiB を超える設定でもアップロードできるように `maxRequestBodySize` を設定
 - Fix: ActivityPub のコンテンツネゴシエーションが Accept ヘッダの q 値・優先順位を無視していた問題を修正 (upstream の `accepts` ライブラリ相当の RFC 7231 準拠ネゴシエータを内製。`q=0` の明示拒否や `text/html, application/activity+json` のような複合ヘッダで upstream と逆の表現を返すことがあった)

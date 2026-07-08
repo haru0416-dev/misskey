@@ -75,7 +75,23 @@ function activityPubRedirectRefusal(location: string, headers: Headers): Respons
 	});
 }
 
+// これを超えたリクエストを endpoint + 所要時間つきで警告ログに出す (チューニング対象の発見用)。
+// ハンドラが Response を返すまでの時間で、レスポンスボディの送信時間 (クライアント速度依存) は含まない。
+const SLOW_REQUEST_THRESHOLD_MS = 1000;
+
 function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): void {
+	if (deps.logger != null) {
+		const logger = deps.logger;
+		app.use('*', async (c, next) => {
+			const started = performance.now();
+			await next();
+			const elapsed = performance.now() - started;
+			if (elapsed >= SLOW_REQUEST_THRESHOLD_MS) {
+				logger.warn(`slow request: ${c.req.method} ${c.req.path} ${Math.round(elapsed)}ms (status ${c.res.status})`);
+			}
+		});
+	}
+
 	if (deps.config.url.startsWith('https') && !deps.config.disableHsts) {
 		app.use('*', async (c, next) => {
 			c.header('strict-transport-security', 'max-age=15552000; preload');
