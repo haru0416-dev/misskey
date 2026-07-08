@@ -48,6 +48,7 @@ import type Logger from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
+import { readRequestBodyWithLimit } from '../body-limit.js';
 import { packDriveFileOrFailForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
 import { buildDriveFileDeletionDependencies, validateHonoApiDriveFileName, type HonoApiDriveFilesDependencies } from './drive-files.js';
 import type { HonoApiDriveStreamPublisher, HonoApiMainStreamPublisher } from './events.js';
@@ -73,13 +74,29 @@ export type HonoApiMultipartResult =
 	| { status: 'too-large' }
 	| { status: 'ok'; file: { name: string | null; path: string }; cleanup: () => void; fields: Record<string, unknown> };
 
+// multipart のフィールド・境界文字列ぶんの余裕。ファイル本体の上限は maxFileSize で別途判定する。
+const MULTIPART_OVERHEAD = 1024 * 1024;
+
 export async function readHonoApiMultipartRequest(
 	c: Context,
 	config: Pick<Config, 'maxFileSize'>,
 ): Promise<HonoApiMultipartResult> {
+	// c.req.formData() はボディ全体を上限なしでメモリに読むため、先に上限つきで読み切る。
+	// upstream (Fastify @fastify/multipart) の limits.fileSize による途中打ち切り相当。
+	class BodyLimitExceeded extends Error {}
+	let rawBody: Uint8Array;
+	try {
+		rawBody = await readRequestBodyWithLimit(c, config.maxFileSize + MULTIPART_OVERHEAD, () => new BodyLimitExceeded());
+	} catch (err) {
+		if (err instanceof BodyLimitExceeded) return { status: 'too-large' };
+		throw err;
+	}
+
 	let formData: FormData;
 	try {
-		formData = await c.req.formData();
+		formData = await new Response(rawBody, {
+			headers: { 'content-type': c.req.header('content-type') ?? '' },
+		}).formData();
 	} catch {
 		return { status: 'missing-file' };
 	}
