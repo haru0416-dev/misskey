@@ -12,7 +12,9 @@ import * as Acct from '@/misc/acct.js';
 import { maximum } from '@/misc/prelude/array.js';
 import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listAvatarDecorationsFromDatabaseCached } from '@/core/AvatarDecorationStore.js';
-import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import { listUserNotePiningsByUserIdFromDatabase, listUserNotePiningsByUserIdsFromDatabase } from '@/core/UserNotePiningStore.js';
+import { listRoleAssignmentsByUserIdsFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { countUserSecurityKeysByUserIdFromDatabase, listUserSecurityKeySummariesByUserIdFromDatabase } from '@/core/UserSecurityKeyStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
@@ -41,12 +43,14 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiMeta } from '@/models/_.js';
+import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
+import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from './error.js';
 import { packNoteManyForHonoApi, populateEmojis, type HonoApiNoteDependencies } from './note.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
-import { getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiAdministrator, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import { computeHonoApiUserRoles, getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiAdministrator, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
@@ -199,7 +203,13 @@ async function buildUserDetailedExtrasForHonoApi(
 	user: MiUser,
 	profile: MiUserProfile,
 	me: { id: MiUser['id'] } | null | undefined,
-	hint?: { iAmModerator?: boolean; relation?: UserRelationForPack | null },
+	hint?: {
+		iAmModerator?: boolean;
+		relation?: UserRelationForPack | null;
+		/** 一覧pack用の事前計算値。ユーザー毎の roles(2クエリ)/pins(1クエリ) を回避する */
+		userRoles?: MiRole[];
+		pins?: MiUserNotePining[];
+	},
 ): Promise<UserDetailedExtras> {
 	const isMe = me != null && me.id === user.id;
 	let iAmModerator = hint?.iAmModerator ?? false;
@@ -208,10 +218,10 @@ async function buildUserDetailedExtrasForHonoApi(
 		iAmModerator = meUser != null && await isHonoApiModerator(deps, meUser);
 	}
 
-	const userRoles = await getHonoApiUserRoles(deps, user);
+	const userRoles = hint?.userRoles ?? await getHonoApiUserRoles(deps, user);
 	const policies = await getHonoApiRolePolicies(deps, user, userRoles);
 
-	const pins = await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' });
+	const pins = hint?.pins ?? await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' });
 	const pinnedNoteIds = pins.map(pin => pin.noteId);
 	let pinnedNotes: unknown[] = [];
 	if (pinnedNoteIds.length > 0 && deps.redis != null) {
@@ -292,11 +302,34 @@ export async function packUserDetailedNotMeManyForHonoApi(
 		? await getUserRelationsForHonoApi(deps, me.id, users.filter(user => user.id !== me.id).map(user => user.id))
 		: null;
 
+	// ユーザー毎に発行していた roles(2クエリ)+pins(1クエリ) を一覧単位の3クエリに集約する
+	// (負荷計測で role_assignment/role 各68k回・pining 54k回/3分の主因だった)。
+	const userIds = [...new Set(users.map(user => user.id))];
+	const [allRoles, allAssignments, allPins] = await Promise.all([
+		listRolesFromDatabase(deps.db),
+		listRoleAssignmentsByUserIdsFromDatabase(deps.db, userIds),
+		listUserNotePiningsByUserIdsFromDatabase(deps.db, userIds, { order: 'desc' }),
+	]);
+	const assignmentsByUserId = new Map<string, typeof allAssignments>();
+	for (const assignment of allAssignments) {
+		let list = assignmentsByUserId.get(assignment.userId);
+		if (!list) { list = []; assignmentsByUserId.set(assignment.userId, list); }
+		list.push(assignment);
+	}
+	const pinsByUserId = new Map<string, typeof allPins>();
+	for (const pin of allPins) {
+		let list = pinsByUserId.get(pin.userId);
+		if (!list) { list = []; pinsByUserId.set(pin.userId, list); }
+		list.push(pin);
+	}
+
 	return await Promise.all(users.map(async user => {
 		const profile = profileByUserId.get(user.id) ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 		const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, me, {
 			iAmModerator,
 			relation: relationByUserId?.get(user.id) ?? null,
+			userRoles: computeHonoApiUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
+			pins: pinsByUserId.get(user.id) ?? [],
 		});
 		return packUserDetailedNotMeCoreForHonoApi(
 			deps,
