@@ -273,9 +273,6 @@ async function createTextureFromText(text: string | null, resolution = 2048) {
 	ctx.shadowColor = '#000000';
 	ctx.shadowBlur = fontSize / 4;
 
-	//ctx.fillStyle = '#00ff00';
-	//ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
 	ctx.fillStyle = '#ffffff';
 	ctx.font = `bold ${fontSize}px sans-serif`;
 	ctx.textBaseline = 'middle';

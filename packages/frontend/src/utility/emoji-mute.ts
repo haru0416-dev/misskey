@@ -47,8 +47,6 @@ export function unmute(emoji:string) {
 		makeEmojiMuteKey({ name: extractCustomEmojiName(emoji), host: extractCustomEmojiHost(emoji) }) :
 		emoji;
 	const mutedEmojis = prefer.r.mutingEmojis.value;
-	console.log('unmute', emoji, emojiMuteKey);
-	console.log('mutedEmojis', mutedEmojis);
 	prefer.commit('mutingEmojis', mutedEmojis.filter((e) => e !== emojiMuteKey));
 }
 

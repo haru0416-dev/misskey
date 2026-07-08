@@ -78,11 +78,6 @@ function copyUrl(file: Misskey.entities.DriveFile) {
 	copyToClipboard(file.url);
 }
 
-/*
-function addApp() {
-	alert('not implemented yet');
-}
-*/
 async function deleteFile(file: Misskey.entities.DriveFile) {
 	const { canceled } = await os.confirm({
 		type: 'warning',

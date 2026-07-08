@@ -41,24 +41,10 @@ export async function common(createVue: () => Promise<App<Element>>) {
 
 		window.addEventListener('error', event => {
 			console.error(event);
-			/*
-			alert({
-				type: 'error',
-				title: 'DEV: Unhandled error',
-				text: event.message
-			});
-			*/
 		});
 
 		window.addEventListener('unhandledrejection', event => {
 			console.error(event);
-			/*
-			alert({
-				type: 'error',
-				title: 'DEV: Unhandled promise rejection',
-				text: event.reason
-			});
-			*/
 		});
 	}
 

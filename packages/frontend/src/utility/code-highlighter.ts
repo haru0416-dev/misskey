@@ -79,20 +79,6 @@ async function initHighlighter() {
 		],
 	});
 
-	// TODO
-	//watch('lightTheme', async () => {
-	//	const newTheme = await getTheme('light');
-	//	if (newTheme.name && !highlighter.getLoadedThemes().includes(newTheme.name)) {
-	//		highlighter.loadTheme(newTheme);
-	//	}
-	//});
-	//watch('darkTheme', async () => {
-	//	const newTheme = await getTheme('dark');
-	//	if (newTheme.name && !highlighter.getLoadedThemes().includes(newTheme.name)) {
-	//		highlighter.loadTheme(newTheme);
-	//	}
-	//});
-
 	_highlighter = highlighter;
 
 	return highlighter;

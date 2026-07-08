@@ -148,7 +148,6 @@ async function enter(el: Element) {
 
 function afterEnter(el: Element) {
 	if (!(el instanceof HTMLElement)) return;
-	// element.style.width = '';
 }
 
 async function leave(el: Element) {

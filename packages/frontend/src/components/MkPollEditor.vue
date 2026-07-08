@@ -116,10 +116,6 @@ function onInput(i: number, value: string) {
 
 function add() {
 	choices.value.push('');
-	// TODO
-	// nextTick(() => {
-	//   (this.$refs.choices as any).childNodes[this.choices.length - 1].childNodes[0].focus();
-	// });
 }
 
 function remove(i: number) {

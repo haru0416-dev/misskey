@@ -170,7 +170,6 @@ export class ImageFrameRenderer {
 					margin: 0,
 					type: 'canvas',
 					data: `${url}/users/${$i.id}`,
-					//image: $i.avatarUrl,
 					qrOptions: {
 						typeNumber: 0,
 						mode: 'Byte',

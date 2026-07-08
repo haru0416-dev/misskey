@@ -18,10 +18,6 @@ import { deepClone } from '@/utility/clone.js';
 
 // NOTE: 明示的な設定値のひとつとして null もあり得るため、設定が存在しないかどうかを判定する目的で null で比較したり ?? を使ってはいけない
 
-//type DottedToNested<T extends Record<string, any>> = {
-//	[K in keyof T as K extends string ? K extends `${infer A}.${infer B}` ? A : K : K]: K extends `${infer A}.${infer B}` ? DottedToNested<{ [key in B]: T[K] }> : T[K];
-//};
-
 export type PREF = typeof PREF_DEF;
 type DefaultValues = {
 	[K in keyof PREF]: PREF[K]['default'] extends () => infer R ? R : PREF[K]['default'];

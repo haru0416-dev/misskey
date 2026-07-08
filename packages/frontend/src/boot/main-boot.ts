@@ -261,19 +261,6 @@ export async function mainBoot() {
 			}, 1000 * 60 * 60);
 		}
 
-		// 邪魔
-		//const lastUsed = miLocalStorage.getItem('lastUsed');
-		//if (lastUsed) {
-		//	const lastUsedDate = parseInt(lastUsed, 10);
-		//	// 二時間以上前なら
-		//	if (Date.now() - lastUsedDate > 1000 * 60 * 60 * 2) {
-		//		toast(i18n.tsx.welcomeBackWithName({
-		//			name: $i.name || $i.username,
-		//		}));
-		//	}
-		//}
-		//miLocalStorage.setItem('lastUsed', Date.now().toString());
-
 		const latestDonationInfoShownAt = miLocalStorage.getItem('latestDonationInfoShownAt');
 		const neverShowDonationInfo = miLocalStorage.getItem('neverShowDonationInfo');
 		if (neverShowDonationInfo !== 'true' && (createdAt.getTime() < (Date.now() - (1000 * 60 * 60 * 24 * 3))) && !window.location.pathname.startsWith('/miauth')) {

@@ -161,13 +161,6 @@ const drawerMenuShowing = ref(false);
 const widgetsShowing = ref(false);
 const gap = prefer.r['deck.columnGap'];
 
-/*
-const route = 'TODO';
-watch(route, () => {
-	drawerMenuShowing.value = false;
-});
-*/
-
 function showSettings() {
 	os.pageWindow('/settings/deck');
 }
