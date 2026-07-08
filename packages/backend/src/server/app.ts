@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
+import type Logger from '@/logger.js';
 import type { MiMeta } from '@/models/_.js';
 import { createApiShellApp, type ApiShellDependencies } from './rest/shell.js';
 import { createClientBaseApp, type ClientBaseDependencies } from './web/client-base.js';
@@ -27,6 +28,7 @@ import { createClientPagesApp, type ClientPagesDependencies } from './web/client
 export type HttpMiddlewareDependencies = {
 	config: Config;
 	meta: MiMeta;
+	logger?: Logger;
 };
 
 export type MisskeyHonoAppDependencies = {
@@ -73,7 +75,23 @@ function activityPubRedirectRefusal(location: string, headers: Headers): Respons
 	});
 }
 
+// これを超えたリクエストを endpoint + 所要時間つきで警告ログに出す (チューニング対象の発見用)。
+// ハンドラが Response を返すまでの時間で、レスポンスボディの送信時間 (クライアント速度依存) は含まない。
+const SLOW_REQUEST_THRESHOLD_MS = 1000;
+
 function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): void {
+	if (deps.logger != null) {
+		const logger = deps.logger;
+		app.use('*', async (c, next) => {
+			const started = performance.now();
+			await next();
+			const elapsed = performance.now() - started;
+			if (elapsed >= SLOW_REQUEST_THRESHOLD_MS) {
+				logger.warn(`slow request: ${c.req.method} ${c.req.path} ${Math.round(elapsed)}ms (status ${c.res.status})`);
+			}
+		});
+	}
+
 	if (deps.config.url.startsWith('https') && !deps.config.disableHsts) {
 		app.use('*', async (c, next) => {
 			c.header('strict-transport-security', 'max-age=15552000; preload');
@@ -98,6 +116,17 @@ function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): vo
 
 export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	const app = new Hono();
+
+	// API シェルは runApiEndpoint が例外を捕捉するが、それ以外のルート (web SSR / file /
+	// well-known / oauth 等) の未捕捉例外は Hono デフォルトだとログ無しの 500 テキストになる。
+	// サーバーログに残るように onError で明示的にハンドリングする。
+	app.onError((err, c) => {
+		deps.http.logger?.error(err instanceof Error ? err : new Error(String(err)), { path: c.req.path });
+		return new Response('Internal Server Error', {
+			status: 500,
+			headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+		});
+	});
 
 	registerHttpMiddleware(app, deps.http);
 	app.route('/api', createApiShellApp(deps.apiShell));

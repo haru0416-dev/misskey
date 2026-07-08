@@ -39,9 +39,25 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/miauth/:session/check', async (c) => {
+	// URL は MiAuth プロトコルの公開仕様 (`/api/miauth/{session}/check`) なので変えられないが、
+	// `/miauth/gen-token` (static) と `/miauth/:session/check` (param) の同一位置共存は
+	// RegExpRouter 非対応で、この1ルートのせいでアプリ全体が TrieRouter へフォールバックする。
+	// ワイルドカードで受けてパスから session を自前で切り出す (shape不一致は従来どおり
+	// 後段の catch-all による UNKNOWN_API_ENDPOINT 404 に流す)。
+	app.post('/miauth/*', async (c, next) => {
+		// c.req.path はマウントプレフィックス (/api) 込みのフルパスなので末尾側でマッチする
+		const match = /\/miauth\/([^/]+)\/check$/.exec(c.req.path);
+		if (match == null) return await next();
+
+		let session = match[1];
+		try {
+			session = decodeURIComponent(session);
+		} catch {
+			// 不正なpercent-encodingはデコードせずそのまま扱う (旧パラメータ抽出と同じ寛容さ)
+		}
+
 		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiMiauthCheck(deps, c.req.param('session')));
+			return jsonResponse(c, await handleHonoApiMiauthCheck(deps, session));
 		});
 	});
 
