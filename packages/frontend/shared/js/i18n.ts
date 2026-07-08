@@ -18,9 +18,12 @@ type FlattenKeys<T extends ILocale, TPrediction> = keyof {
 			: never]: T[K];
 };
 
-type ParametersOf<T extends ILocale, TKey extends FlattenKeys<T, ParameterizedString>> = TKey extends `${infer K}.${infer C}`
-	// @ts-expect-error -- C は明らかに FlattenKeys<T[K], ParameterizedString> になるが、型システムはここでは TKey がドット区切りであることのコンテキストを持たないので、型システムに合法にて示すことはできない。
-	? ParametersOf<T[K], C>
+type ParametersOf<
+	T extends ILocale,
+	TKey extends FlattenKeys<T, ParameterizedString>,
+> = TKey extends `${infer K}.${infer C}`
+	? // @ts-expect-error -- C は明らかに FlattenKeys<T[K], ParameterizedString> になるが、型システムはここでは TKey がドット区切りであることのコンテキストを持たないので、型システムに合法にて示すことはできない。
+		ParametersOf<T[K], C>
 	: TKey extends keyof T
 		? T[TKey] extends ParameterizedString<infer P>
 			? P
@@ -31,15 +34,18 @@ type Tsx<T extends ILocale> = {
 	// `string extends T[K] ? never : K` part removes non-parameterized string keys from Tsx type.
 	readonly [K in keyof T as string extends T[K] ? never : K]: T[K] extends ParameterizedString<infer P>
 		? (arg: { readonly [_ in P]: string | number }) => string
-		// @ts-expect-error -- 証明省略
-		: Tsx<T[K]>;
+		: // @ts-expect-error -- 証明省略
+			Tsx<T[K]>;
 };
 
 export class I18n<T extends ILocale> {
 	private tsxCache?: Tsx<T>;
 	private devMode: boolean;
 
-	constructor(public locale: T, devMode = false) {
+	constructor(
+		public locale: T,
+		devMode = false,
+	) {
 		this.devMode = devMode;
 
 		//#region BIND
@@ -142,7 +148,7 @@ export class I18n<T extends ILocale> {
 				}
 			}
 
-			return this.tsxCache = new Proxy(this.locale, new Handler()) as unknown as Tsx<T>;
+			return (this.tsxCache = new Proxy(this.locale, new Handler()) as unknown as Tsx<T>);
 		}
 
 		if (this.tsxCache) {
@@ -201,7 +207,7 @@ export class I18n<T extends ILocale> {
 			return result;
 		}
 
-		return this.tsxCache = build(this.locale);
+		return (this.tsxCache = build(this.locale));
 	}
 
 	/**
@@ -211,7 +217,10 @@ export class I18n<T extends ILocale> {
 	/**
 	 * @deprecated なるべくこのメソッド使うよりも tsx 直接参照の方が vue のキャッシュ効いてパフォーマンスが良いかも
 	 */
-	public t<TKey extends FlattenKeys<T, ParameterizedString>>(key: TKey, args: { readonly [_ in ParametersOf<T, TKey>]: string | number }): string;
+	public t<TKey extends FlattenKeys<T, ParameterizedString>>(
+		key: TKey,
+		args: { readonly [_ in ParametersOf<T, TKey>]: string | number },
+	): string;
 	public t(key: string, args?: { readonly [_: string]: string | number }) {
 		let str: string | ParameterizedString | ILocale = this.locale;
 
@@ -228,7 +237,9 @@ export class I18n<T extends ILocale> {
 
 		if (args) {
 			if (this.devMode) {
-				const missing = Array.from((str as string).matchAll(/\{(\w+)\}/g), ([, parameter]) => parameter).filter(parameter => !Object.hasOwn(args, parameter));
+				const missing = Array.from((str as string).matchAll(/\{(\w+)\}/g), ([, parameter]) => parameter).filter(
+					(parameter) => !Object.hasOwn(args, parameter),
+				);
 
 				if (missing.length) {
 					console.error(`Missing locale parameters: ${missing.join(', ')} at ${key}`);

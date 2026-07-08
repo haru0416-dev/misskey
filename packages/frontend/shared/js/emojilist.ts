@@ -3,25 +3,33 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export const unicodeEmojiCategories = ['face', 'people', 'animals_and_nature', 'food_and_drink', 'activity', 'travel_and_places', 'objects', 'symbols', 'flags'] as const;
+export const unicodeEmojiCategories = [
+	'face',
+	'people',
+	'animals_and_nature',
+	'food_and_drink',
+	'activity',
+	'travel_and_places',
+	'objects',
+	'symbols',
+	'flags',
+] as const;
 
 export type UnicodeEmojiDef = {
 	name: string;
 	char: string;
-	category: typeof unicodeEmojiCategories[number];
+	category: (typeof unicodeEmojiCategories)[number];
 };
 
 import _emojilist from '@misskey-dev/emoji-data/emojilist.json';
 
-export const emojilist: UnicodeEmojiDef[] = _emojilist.map(x => ({
+export const emojilist: UnicodeEmojiDef[] = _emojilist.map((x) => ({
 	name: x[1] as string,
 	char: x[0] as string,
 	category: unicodeEmojiCategories[x[2] as number],
 }));
 
-const unicodeEmojisMap = new Map<string, UnicodeEmojiDef>(
-	emojilist.map(x => [x.char, x]),
-);
+const unicodeEmojisMap = new Map<string, UnicodeEmojiDef>(emojilist.map((x) => [x.char, x]));
 
 const _indexByChar = new Map<string, number>();
 const _charGroupByCategory = new Map<string, string[]>();
@@ -40,11 +48,13 @@ export const emojiCharByCategory = _charGroupByCategory;
 
 export function getUnicodeEmojiOrNull(char: string): UnicodeEmojiDef | null {
 	// Colorize it because emojilist.json assumes that
-	return unicodeEmojisMap.get(forceColorizeEmoji(char))
+	return (
+		unicodeEmojisMap.get(forceColorizeEmoji(char)) ??
 		// カラースタイル絵文字がjsonに無い場合はテキストスタイル絵文字にフォールバックする
-		?? unicodeEmojisMap.get(char)
+		unicodeEmojisMap.get(char) ??
 		// それでも見つからない場合はnullを返す
-		?? null;
+		null
+	);
 }
 
 export function getUnicodeEmoji(char: string): UnicodeEmojiDef | string {

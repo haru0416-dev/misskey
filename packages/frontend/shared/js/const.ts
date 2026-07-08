@@ -54,8 +54,32 @@ https://github.com/sindresorhus/file-type/blob/main/core.js
 https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers
 */
 
-export const MFM_TAGS = ['tada', 'jelly', 'twitch', 'shake', 'spin', 'jump', 'bounce', 'flip', 'x2', 'x3', 'x4', 'scale', 'position', 'fg', 'bg', 'border', 'font', 'blur', 'rainbow', 'sparkle', 'rotate', 'ruby', 'unixtime'];
-export const MFM_PARAMS: Record<typeof MFM_TAGS[number], string[]> = {
+export const MFM_TAGS = [
+	'tada',
+	'jelly',
+	'twitch',
+	'shake',
+	'spin',
+	'jump',
+	'bounce',
+	'flip',
+	'x2',
+	'x3',
+	'x4',
+	'scale',
+	'position',
+	'fg',
+	'bg',
+	'border',
+	'font',
+	'blur',
+	'rainbow',
+	'sparkle',
+	'rotate',
+	'ruby',
+	'unixtime',
+];
+export const MFM_PARAMS: Record<(typeof MFM_TAGS)[number], string[]> = {
 	tada: ['speed=', 'delay='],
 	jelly: ['speed=', 'delay='],
 	twitch: ['speed=', 'delay='],

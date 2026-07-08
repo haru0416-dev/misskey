@@ -8,7 +8,7 @@ import locales from 'i18n';
 import meta from '../../package.json';
 import packageInfo from './package.json' with { type: 'json' };
 import pluginJson5 from './lib/vite-plugin-json5.js';
-import { pluginRemoveUnrefI18n } from '../frontend-builder/rollup-plugin-remove-unref-i18n';
+import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n';
 import { Features } from 'lightningcss';
 
 const url = process.env.NODE_ENV === 'development' ? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).url : null;
@@ -97,7 +97,7 @@ export function getConfig(): UserConfig {
 			extensions,
 			alias: {
 				'@/': __dirname + '/src/',
-				'@@/': __dirname + '/../frontend-shared/',
+				'@@/': __dirname + '/../frontend/shared/',
 				'/client-assets/': __dirname + '/assets/',
 				'/static-assets/': __dirname + '/../backend/assets/',
 				'/fluent-emoji/': '@misskey-dev/emoji-assets/fluent-emoji/',

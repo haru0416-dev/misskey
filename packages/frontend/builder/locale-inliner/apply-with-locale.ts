@@ -41,7 +41,9 @@ export function applyWithLocale(
 				if (typeof accessed === 'string') {
 					replacement = formatFunction(accessed);
 				} else if (typeof accessed === 'object' && accessed !== null) {
-					replacement = `({${Object.entries(accessed).map(([key, value]) => `${JSON.stringify(key)}:${formatFunction(value)}`).join(',')}})`;
+					replacement = `({${Object.entries(accessed)
+						.map(([key, value]) => `${JSON.stringify(key)}:${formatFunction(value)}`)
+						.join(',')}})`;
 				} else {
 					fileLogger.warn(`Cannot find localization key ${modification.localizationKey.join('.')}`);
 					replacement = '(() => "")'; // placeholder for missing locale
@@ -66,20 +68,28 @@ export function applyWithLocale(
 
 					// we replace with `(({name,count})=>(name+count+"some"))`
 					const paramList = Array.from(params).join(',');
-					let body = components.filter(x => x !== '""').join('+');
+					let body = components.filter((x) => x !== '""').join('+');
 					if (body === '') body = '""'; // if the body is empty, we return empty string
 					return `(({${paramList}})=>(${body}))`;
 				}
 			}
 			case 'locale-name': {
-				sourceCode.update(modification.begin, modification.end, modification.literal ? JSON.stringify(localeName) : localeName);
+				sourceCode.update(
+					modification.begin,
+					modification.end,
+					modification.literal ? JSON.stringify(localeName) : localeName,
+				);
 				break;
 			}
 			case 'locale-json': {
 				// locale-json is inlined to place where initialize module-level variable which is executed only once.
 				// In such case we can use JSON.parse to speed up the parsing script.
 				// https://v8.dev/blog/cost-of-javascript-2019#json
-				sourceCode.update(modification.begin, modification.end, `JSON.parse(${JSON.stringify(JSON.stringify(localeJson))})`);
+				sourceCode.update(
+					modification.begin,
+					modification.end,
+					`JSON.parse(${JSON.stringify(JSON.stringify(localeJson))})`,
+				);
 				break;
 			}
 			default: {

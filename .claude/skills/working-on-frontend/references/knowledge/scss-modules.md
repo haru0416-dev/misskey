@@ -8,7 +8,7 @@ Misskey のテーマシステムは 2 系統の CSS 変数で構成される。�
 
 ### `--MI_THEME-*` (テーマ依存)
 
-ユーザーが選んだテーマ (light / dark / 個別テーマ) で変わる色。`packages/frontend-shared/themes/_dark.json5` などで定義。
+ユーザーが選んだテーマ (light / dark / 個別テーマ) で変わる色。`packages/frontend/shared/themes/_dark.json5` などで定義。
 
 | 変数 | 用途 |
 |---|---|
@@ -31,7 +31,7 @@ Misskey のテーマシステムは 2 系統の CSS 変数で構成される。�
 | `--MI_THEME-link` | リンク色 |
 | `--MI_THEME-mention` / `--MI_THEME-hashtag` | メンション / ハッシュタグ |
 
-全部の一覧が必要なら `packages/frontend-shared/themes/_light.json5` を読むのが早い (JSON5 で全キーが揃っている)。
+全部の一覧が必要なら `packages/frontend/shared/themes/_light.json5` を読むのが早い (JSON5 で全キーが揃っている)。
 
 ### `--MI-*` (UI 共通定数、テーマ非依存)
 

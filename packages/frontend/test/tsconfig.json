@@ -24,7 +24,7 @@
 		"isolatedModules": true,
 		"paths": {
 			"@/*": ["../src/*"],
-			"@@/*": ["../../frontend-shared/*"]
+			"@@/*": ["../shared/*"]
 		},
 		"typeRoots": ["../node_modules/@types"],
 		"lib": ["esnext", "dom"],

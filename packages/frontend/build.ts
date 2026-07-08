@@ -3,8 +3,8 @@ import url from 'node:url';
 import path from 'node:path';
 import { execa } from 'execa';
 import locales from 'i18n';
-import { LocaleInliner } from '../frontend-builder/locale-inliner.js';
-import { createLogger } from '../frontend-builder/logger';
+import { LocaleInliner } from './builder/locale-inliner.js';
+import { createLogger } from './builder/logger';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const outputDir = __dirname + '/../../built/_frontend_vite_';

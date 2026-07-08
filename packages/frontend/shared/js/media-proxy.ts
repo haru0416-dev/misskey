@@ -15,21 +15,29 @@ export class MediaProxy {
 		this.url = url;
 	}
 
-	public getProxiedImageUrl(imageUrl: string, type?: 'preview' | 'emoji' | 'avatar', mustOrigin = false, noFallback = false): string {
+	public getProxiedImageUrl(
+		imageUrl: string,
+		type?: 'preview' | 'emoji' | 'avatar',
+		mustOrigin = false,
+		noFallback = false,
+	): string {
 		const localProxy = `${this.url}/proxy`;
 		let _imageUrl = imageUrl;
 
-		if (imageUrl.startsWith(this.serverMetadata.mediaProxy + '/') || imageUrl.startsWith('/proxy/') || imageUrl.startsWith(localProxy + '/')) {
+		if (
+			imageUrl.startsWith(this.serverMetadata.mediaProxy + '/') ||
+			imageUrl.startsWith('/proxy/') ||
+			imageUrl.startsWith(localProxy + '/')
+		) {
 			// もう既にproxyっぽそうだったらurlを取り出す
-			_imageUrl = (new URL(imageUrl)).searchParams.get('url') ?? imageUrl;
+			_imageUrl = new URL(imageUrl).searchParams.get('url') ?? imageUrl;
 		}
 
 		return `${mustOrigin ? localProxy : this.serverMetadata.mediaProxy}/${
-			type === 'preview' ? 'preview.webp'
-			: 'image.webp'
+			type === 'preview' ? 'preview.webp' : 'image.webp'
 		}?${query({
 			url: _imageUrl,
-			...(!noFallback ? { 'fallback': '1' } : {}),
+			...(!noFallback ? { fallback: '1' } : {}),
 			...(type ? { [type]: '1' } : {}),
 			...(mustOrigin ? { origin: '1' } : {}),
 		})}`;

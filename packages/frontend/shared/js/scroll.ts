@@ -61,7 +61,9 @@ export function onScrollTop(el: HTMLElement, cb: (topVisible: boolean) => unknow
 		}
 	};
 
-	function removeListener() { container.removeEventListener('scroll', onScroll); }
+	function removeListener() {
+		container.removeEventListener('scroll', onScroll);
+	}
 
 	container.addEventListener('scroll', onScroll, { passive: true });
 	return removeListener;
@@ -107,7 +109,7 @@ export function scrollInContainer(el: HTMLElement, options: ScrollToOptions | un
  * @param el Scroll container element
  * @param options Scroll options
  */
-export function scrollToTop(el: HTMLElement, options: { behavior?: ScrollBehavior; } = {}) {
+export function scrollToTop(el: HTMLElement, options: { behavior?: ScrollBehavior } = {}) {
 	scrollInContainer(el, { top: 0, ...options });
 }
 
@@ -117,16 +119,13 @@ export function scrollToTop(el: HTMLElement, options: { behavior?: ScrollBehavio
  * @param options Scroll options
  * @param container Scroll container element
  */
-export function scrollToBottom(
-	el: HTMLElement,
-	options: ScrollToOptions = {},
-	container = getScrollContainer(el),
-) {
+export function scrollToBottom(el: HTMLElement, options: ScrollToOptions = {}, container = getScrollContainer(el)) {
 	if (container) {
 		container.scroll({ top: el.scrollHeight - container.clientHeight + getStickyTop(el, container) || 0, ...options });
 	} else {
 		window.scroll({
-			top: (el.scrollHeight - window.innerHeight + getStickyTop(el, container) + (window.innerWidth <= 500 ? 96 : 0)) || 0,
+			top:
+				el.scrollHeight - window.innerHeight + getStickyTop(el, container) + (window.innerWidth <= 500 ? 96 : 0) || 0,
 			...options,
 		});
 	}
@@ -145,8 +144,11 @@ export function isTailVisible(el: HTMLElement, tolerance = 1, container = getScr
 // https://ja.javascript.info/size-and-scroll-window#ref-932
 export function getBodyScrollHeight() {
 	return Math.max(
-		window.document.body.scrollHeight, window.document.documentElement.scrollHeight,
-		window.document.body.offsetHeight, window.document.documentElement.offsetHeight,
-		window.document.body.clientHeight, window.document.documentElement.clientHeight,
+		window.document.body.scrollHeight,
+		window.document.documentElement.scrollHeight,
+		window.document.body.offsetHeight,
+		window.document.documentElement.offsetHeight,
+		window.document.body.clientHeight,
+		window.document.documentElement.clientHeight,
 	);
 }

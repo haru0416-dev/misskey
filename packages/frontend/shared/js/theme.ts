@@ -16,47 +16,50 @@ export type Theme = {
 	base?: 'dark' | 'light';
 	kind?: 'dark' | 'light'; // legacy
 	props: Record<string, string>;
-	codeHighlighter?: {
-		base: BundledTheme;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		overrides?: Record<string, any>;
-	} | {
-		base: '_none_';
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		overrides: Record<string, any>;
-	};
+	codeHighlighter?:
+		| {
+				base: BundledTheme;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				overrides?: Record<string, any>;
+		  }
+		| {
+				base: '_none_';
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				overrides: Record<string, any>;
+		  };
 };
 
 export type CompiledTheme = Record<string, string>;
 
 const MAX_THEME_REFERENCE_DEPTH = 8;
 
-export const themeProps = Object.keys(lightTheme.props).filter(key => !key.startsWith('X'));
+export const themeProps = Object.keys(lightTheme.props).filter((key) => !key.startsWith('X'));
 
-export const getBuiltinThemes = () => Promise.all(
-	[
-		'l-light',
-		'l-coffee',
-		'l-apricot',
-		'l-rainy',
-		'l-botanical',
-		'l-vivid',
-		'l-cherry',
-		'l-sushi',
-		'l-u0',
+export const getBuiltinThemes = () =>
+	Promise.all(
+		[
+			'l-light',
+			'l-coffee',
+			'l-apricot',
+			'l-rainy',
+			'l-botanical',
+			'l-vivid',
+			'l-cherry',
+			'l-sushi',
+			'l-u0',
 
-		'd-dark',
-		'd-persimmon',
-		'd-astro',
-		'd-future',
-		'd-botanical',
-		'd-green-lime',
-		'd-green-orange',
-		'd-cherry',
-		'd-ice',
-		'd-u0',
-	].map(name => import(`@@/themes/${name}.json5`).then(({ default: _default }): Theme => _default)),
-);
+			'd-dark',
+			'd-persimmon',
+			'd-astro',
+			'd-future',
+			'd-botanical',
+			'd-green-lime',
+			'd-green-orange',
+			'd-cherry',
+			'd-ice',
+			'd-u0',
+		].map((name) => import(`@@/themes/${name}.json5`).then(({ default: _default }): Theme => _default)),
+	);
 
 function getThemeReferenceColor(theme: Theme, key: string, stack: string[], depth: number): tinycolor.Instance {
 	if (depth >= MAX_THEME_REFERENCE_DEPTH) {
@@ -76,11 +79,14 @@ function getThemeReferenceColor(theme: Theme, key: string, stack: string[], dept
 }
 
 function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): tinycolor.Instance {
-	if (val[0] === '@') { // ref (prop)
+	if (val[0] === '@') {
+		// ref (prop)
 		return getThemeReferenceColor(theme, val.substring(1), stack, depth);
-	} else if (val[0] === '$') { // ref (const)
+	} else if (val[0] === '$') {
+		// ref (const)
 		return getThemeReferenceColor(theme, val, stack, depth);
-	} else if (val[0] === ':') { // func
+	} else if (val[0] === ':') {
+		// func
 		if (depth >= MAX_THEME_REFERENCE_DEPTH) {
 			throw new Error('Theme reference limit exceeded');
 		}
@@ -95,11 +101,16 @@ function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): t
 			const color = getColor(theme, parts.join('<'), stack, depth + 1);
 
 			switch (func) {
-				case 'darken': return color.darken(arg);
-				case 'lighten': return color.lighten(arg);
-				case 'alpha': return color.setAlpha(arg);
-				case 'hue': return color.spin(arg);
-				case 'saturate': return color.saturate(arg);
+				case 'darken':
+					return color.darken(arg);
+				case 'lighten':
+					return color.lighten(arg);
+				case 'alpha':
+					return color.setAlpha(arg);
+				case 'hue':
+					return color.spin(arg);
+				case 'saturate':
+					return color.saturate(arg);
 			}
 		}
 	}
@@ -117,9 +128,7 @@ export function compile(theme: Theme): CompiledTheme {
 		props[k] = v.startsWith('"') ? v.replace(/^"\s*/, '') : genValue(getColor(theme, v));
 	}
 
-	return Object.fromEntries(
-		Object.entries(props).filter(([key]) => themeProps.includes(key)),
-	) as CompiledTheme;
+	return Object.fromEntries(Object.entries(props).filter(([key]) => themeProps.includes(key))) as CompiledTheme;
 }
 
 function genValue(c: tinycolor.Instance): string {

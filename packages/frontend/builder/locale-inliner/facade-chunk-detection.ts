@@ -9,16 +9,12 @@ import type { Logger } from '../logger.js';
 import type { ESTree as RolldownESTree } from 'rolldown/utils';
 
 interface FacadeInfo {
-	fileName: string,
+	fileName: string;
 	// facade export name => internal name
-	nameMap: Partial<Record<string, string>>,
+	nameMap: Partial<Record<string, string>>;
 }
 
-export function detectI18nFacadeChunk(
-	sourceCode: string,
-	fileName: string,
-	fileLogger: Logger,
-): FacadeInfo | null {
+export function detectI18nFacadeChunk(sourceCode: string, fileName: string, fileLogger: Logger): FacadeInfo | null {
 	let programNode: RolldownESTree.Program;
 	try {
 		programNode = parseAst(sourceCode);
@@ -48,19 +44,23 @@ export function detectI18nFacadeChunk(
 	const sourcePath = importDecl.source.value;
 	const sourceName = path.posix.basename(sourcePath);
 
-	const importNameMap = Object.fromEntries(importDecl.specifiers
-		.map(specifier => {
-			if (specifier.type !== 'ImportSpecifier') throw new Error(`${fileName}: Unexpected import specifier in facade module: ${specifier.type}`);
+	const importNameMap = Object.fromEntries(
+		importDecl.specifiers.map((specifier) => {
+			if (specifier.type !== 'ImportSpecifier')
+				throw new Error(`${fileName}: Unexpected import specifier in facade module: ${specifier.type}`);
 			const exportName = getExportName(specifier.imported);
 			const localName = specifier.local.name;
 			return [localName, exportName];
-		}));
-	const nameMap = Object.fromEntries(exportDecl.specifiers.map(spec => {
-		const localName = getExportName(spec.local);
-		const facadeExportName = getExportName(spec.exported);
-		const moduleExportName = importNameMap[localName];
-		return [facadeExportName, moduleExportName];
-	}));
+		}),
+	);
+	const nameMap = Object.fromEntries(
+		exportDecl.specifiers.map((spec) => {
+			const localName = getExportName(spec.local);
+			const facadeExportName = getExportName(spec.exported);
+			const moduleExportName = importNameMap[localName];
+			return [facadeExportName, moduleExportName];
+		}),
+	);
 
 	return {
 		fileName: sourceName,

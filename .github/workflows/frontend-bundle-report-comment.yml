@@ -14,8 +14,6 @@ on:
       - ready_for_review
     paths:
       - packages/frontend/**
-      - packages/frontend-shared/**
-      - packages/frontend-builder/**
       - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/misskey-js/**

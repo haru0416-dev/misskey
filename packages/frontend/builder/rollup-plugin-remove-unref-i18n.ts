@@ -15,12 +15,11 @@ import type { CallExpression, Expression } from 'estree';
 //
 // locale inliner cannot know minifiedSymbol(i18n) is 'unref(i18n)' or 'otherFunctionsWithEffect(i18n)' so
 // it is necessary to remove unref calls before minification.
-export function pluginRemoveUnrefI18n(
-	{
-		i18nSymbolName = 'i18n',
-	}: {
-		i18nSymbolName?: string
-	} = {}): Plugin {
+export function pluginRemoveUnrefI18n({
+	i18nSymbolName = 'i18n',
+}: {
+	i18nSymbolName?: string;
+} = {}): Plugin {
 	return {
 		name: 'UnwindCssModuleClassName',
 		renderChunk(code, _chunk, _options, meta) {
@@ -29,8 +28,12 @@ export function pluginRemoveUnrefI18n(
 			const magicString = meta.magicString ?? new RolldownMagicString(code);
 			walk(ast, {
 				enter(node: ESTree.Node) {
-					if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'unref'
-						&& node.arguments.length === 1) {
+					if (
+						node.type === 'CallExpression' &&
+						node.callee.type === 'Identifier' &&
+						node.callee.name === 'unref' &&
+						node.arguments.length === 1
+					) {
 						// calls to unref with single argument
 						const arg = node.arguments[0];
 						if (arg.type === 'Identifier' && arg.name === i18nSymbolName) {

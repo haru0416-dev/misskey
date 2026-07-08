@@ -31,7 +31,11 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 		if (_DEV_) console.log('WorkerMultiDispatch: Created', this);
 	}
 
-	public postMessage(message: POST, options?: Transferable[] | StructuredSerializeOptions, useWorkerNumber: WorkerNumberGetter = this.getUseWorkerNumber) {
+	public postMessage(
+		message: POST,
+		options?: Transferable[] | StructuredSerializeOptions,
+		useWorkerNumber: WorkerNumberGetter = this.getUseWorkerNumber,
+	) {
 		let workerNumber = useWorkerNumber(this.prevWorkerNumber, this.workers.length);
 		workerNumber = Math.abs(Math.round(workerNumber)) % this.workers.length;
 		// if (_DEV_) console.log('WorkerMultiDispatch: Posting message to worker', workerNumber, useWorkerNumber);
@@ -49,15 +53,21 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	public addListener(callback: (this: Worker, ev: MessageEvent<RETURN>) => any, options?: boolean | AddEventListenerOptions) {
-		this.workers.forEach(worker => {
+	public addListener(
+		callback: (this: Worker, ev: MessageEvent<RETURN>) => any,
+		options?: boolean | AddEventListenerOptions,
+	) {
+		this.workers.forEach((worker) => {
 			worker.addEventListener('message', callback, options);
 		});
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	public removeListener(callback: (this: Worker, ev: MessageEvent<RETURN>) => any, options?: boolean | AddEventListenerOptions) {
-		this.workers.forEach(worker => {
+	public removeListener(
+		callback: (this: Worker, ev: MessageEvent<RETURN>) => any,
+		options?: boolean | AddEventListenerOptions,
+	) {
+		this.workers.forEach((worker) => {
 			worker.removeEventListener('message', callback, options);
 		});
 	}
@@ -65,7 +75,7 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 	public terminate() {
 		this.terminated = true;
 		if (_DEV_) console.log('WorkerMultiDispatch: Terminating', this);
-		this.workers.forEach(worker => {
+		this.workers.forEach((worker) => {
 			worker.terminate();
 		});
 		this.workers = [];

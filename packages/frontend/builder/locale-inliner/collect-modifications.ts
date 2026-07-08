@@ -10,7 +10,12 @@ import type { ESTree } from 'rolldown/utils';
 import type { LocaleInliner, TextModification } from '../locale-inliner.js';
 import type { Logger } from '../logger.js';
 
-export function collectModifications(sourceCode: string, fileName: string, fileLogger: Logger, inliner: LocaleInliner): TextModification[] {
+export function collectModifications(
+	sourceCode: string,
+	fileName: string,
+	fileLogger: Logger,
+	inliner: LocaleInliner,
+): TextModification[] {
 	if (sourceCode === '') return [];
 	let programNode: ESTree.Program;
 	try {
@@ -71,7 +76,9 @@ export function collectModifications(sourceCode: string, fileName: string, fileL
 
 			if (isAwaitFetchLocaleThenJson(node)) {
 				// await window.fetch(`/assets/locales/${d}.${x}.json`).then(u=>u.json(), () => null)
-				fileLogger.debug(`${lineCol(sourceCode, node)}: found await window.fetch(\`/assets/locales/\${d}.\${x}.json\`).then(u=>u.json()) call`);
+				fileLogger.debug(
+					`${lineCol(sourceCode, node)}: found await window.fetch(\`/assets/locales/\${d}.\${x}.json\`).then(u=>u.json()) call`,
+				);
 				modifications.push({
 					type: 'locale-json',
 					begin: node.start,
@@ -138,14 +145,17 @@ export function collectModifications(sourceCode: string, fileName: string, fileL
 				if (parent.type === 'ExportSpecifier' && property === 'exported') return; // we don't care 'id' part of { id: expr }
 				if (node.name === localI18nIdentifier) {
 					// the use of identifier is either direct reference to i18n, or unsupported conflict of the identifier, which should report error.
-					fileLogger.error(`${lineCol(sourceCode, node)}: Using i18n identifier "${localI18nIdentifier}" directly. Skipping inlining.`);
+					fileLogger.error(
+						`${lineCol(sourceCode, node)}: Using i18n identifier "${localI18nIdentifier}" directly. Skipping inlining.`,
+					);
 					preserveI18nImport = true;
 				}
 			} else if (node.type === 'MemberExpression') {
 				const i18nPath = parseI18nPropertyAccess(node);
 				if (i18nPath != null && i18nPath.length >= 2 && i18nPath[0] === 'ts') {
 					if (parent != null && parent.type === 'CallExpression' && property === 'callee') return; // we don't want to process `i18n.ts.property.stringBuiltinMethod()`
-					if (i18nPath.at(-1)?.startsWith('_')) fileLogger.debug(`found i18n grouped property access ${i18nPath.join('.')}`);
+					if (i18nPath.at(-1)?.startsWith('_'))
+						fileLogger.debug(`found i18n grouped property access ${i18nPath.join('.')}`);
 					else fileLogger.debug(`${lineCol(sourceCode, node)}: found i18n property access ${i18nPath.join('.')}`);
 					// it's i18n.ts.propertyAccess
 					// i18n.ts.* will always be resolved to string or object containing strings
@@ -173,13 +183,15 @@ export function collectModifications(sourceCode: string, fileName: string, fileL
 			}
 
 			// Scope check
-			if (node.type === 'FunctionDeclaration'
-				|| node.type === 'FunctionExpression'
-				|| node.type === 'ArrowFunctionExpression') {
+			if (
+				node.type === 'FunctionDeclaration' ||
+				node.type === 'FunctionExpression' ||
+				node.type === 'ArrowFunctionExpression'
+			) {
 				// if i18n is introduced as the Named Function Expression, interior of the function does not matter
 				if (node.id?.name === localI18nIdentifier) this.skip();
 				// If there is 'i18n' in the parameters, we care interior of the function
-				if (node.params.flatMap(param => declsOfPattern(param)).includes(localI18nIdentifier)) this.skip();
+				if (node.params.flatMap((param) => declsOfPattern(param)).includes(localI18nIdentifier)) this.skip();
 
 				// We find var declation inside the function and if there are
 				if (findFunctionScopeDecls(node).includes(localI18nIdentifier)) this.skip();
@@ -197,11 +209,11 @@ export function collectModifications(sourceCode: string, fileName: string, fileL
 				}
 			} else if (node.type === 'ForStatement') {
 				if (node.init?.type === 'VariableDeclaration') {
-					if (node.init.declarations.flatMap(x => declsOfPattern(x.id)).includes(localI18nIdentifier)) this.skip();
+					if (node.init.declarations.flatMap((x) => declsOfPattern(x.id)).includes(localI18nIdentifier)) this.skip();
 				}
 			} else if (node.type === 'ForInStatement' || node.type === 'ForOfStatement') {
 				if (node.left.type === 'VariableDeclaration') {
-					if (node.left.declarations.flatMap(x => declsOfPattern(x.id)).includes(localI18nIdentifier)) this.skip();
+					if (node.left.declarations.flatMap((x) => declsOfPattern(x.id)).includes(localI18nIdentifier)) this.skip();
 				} else {
 					if (declsOfPattern(node.left).includes(localI18nIdentifier)) this.skip();
 				}
@@ -253,13 +265,22 @@ export function collectModifications(sourceCode: string, fileName: string, fileL
 	return [...modifications, ...codeModifications];
 }
 
-function declsOfPattern(pattern: ESTree.BindingPattern | ESTree.ParamPattern | ESTree.ArrayAssignmentTarget | ESTree.ObjectAssignmentTarget | ESTree.AssignmentTargetMaybeDefault | ESTree.AssignmentTargetRest | null): string[] {
+function declsOfPattern(
+	pattern:
+		| ESTree.BindingPattern
+		| ESTree.ParamPattern
+		| ESTree.ArrayAssignmentTarget
+		| ESTree.ObjectAssignmentTarget
+		| ESTree.AssignmentTargetMaybeDefault
+		| ESTree.AssignmentTargetRest
+		| null,
+): string[] {
 	if (pattern == null) return [];
 	switch (pattern.type) {
 		case 'Identifier':
 			return [pattern.name];
 		case 'ObjectPattern':
-			return pattern.properties.flatMap(prop => {
+			return pattern.properties.flatMap((prop) => {
 				switch (prop.type) {
 					case 'Property':
 						return declsOfPattern(prop.value);
@@ -270,7 +291,7 @@ function declsOfPattern(pattern: ESTree.BindingPattern | ESTree.ParamPattern | E
 				}
 			});
 		case 'ArrayPattern':
-			return pattern.elements.flatMap(p => declsOfPattern(p));
+			return pattern.elements.flatMap((p) => declsOfPattern(p));
 		case 'RestElement':
 			return declsOfPattern(pattern.argument);
 		case 'AssignmentPattern':
@@ -304,12 +325,14 @@ function findFunctionScopeDecls(fn: ESTree.Function | ESTree.ArrowFunctionExpres
 			// The only function-scoped symbol declaration in strict mode is 'var'
 			// If it's non-strict mode, function declaration will also in function scope.
 			if (node.type === 'VariableDeclaration' && node.kind === 'var') {
-				decls.push(...node.declarations.flatMap(x => declsOfPattern(x.id)));
+				decls.push(...node.declarations.flatMap((x) => declsOfPattern(x.id)));
 			}
 
-			if (node.type === 'FunctionDeclaration'
-				|| node.type === 'FunctionExpression'
-				|| node.type === 'ArrowFunctionExpression') {
+			if (
+				node.type === 'FunctionDeclaration' ||
+				node.type === 'FunctionExpression' ||
+				node.type === 'ArrowFunctionExpression'
+			) {
 				// The function makes new inner scope
 				this.skip();
 			}
@@ -325,7 +348,7 @@ function findBlockScopeDecls(block: ESTree.BlockStatement): string[] {
 		walk(body, {
 			enter(node) {
 				if (node.type === 'VariableDeclaration' && node.kind !== 'var') {
-					decls.push(...node.declarations.flatMap(x => declsOfPattern(x.id)));
+					decls.push(...node.declarations.flatMap((x) => declsOfPattern(x.id)));
 				} else if (node.type === 'FunctionDeclaration') {
 					if (node.id != null) decls.push(node.id.name);
 				} else if (node.type === 'ClassDeclaration') {
@@ -333,14 +356,14 @@ function findBlockScopeDecls(block: ESTree.BlockStatement): string[] {
 				}
 
 				if (
-					node.type === 'FunctionDeclaration'
-					|| node.type === 'FunctionExpression'
-					|| node.type === 'ArrowFunctionExpression'
-					|| node.type === 'BlockStatement'
-					|| node.type === 'CatchClause'
-					|| node.type === 'ForStatement'
-					|| node.type === 'ForInStatement'
-					|| node.type === 'ForOfStatement'
+					node.type === 'FunctionDeclaration' ||
+					node.type === 'FunctionExpression' ||
+					node.type === 'ArrowFunctionExpression' ||
+					node.type === 'BlockStatement' ||
+					node.type === 'CatchClause' ||
+					node.type === 'ForStatement' ||
+					node.type === 'ForInStatement' ||
+					node.type === 'ForOfStatement'
 				) {
 					// The function makes new inner scope
 					this.skip();
@@ -414,14 +437,13 @@ function isAwaitFetchLocaleThenJson(awaitNode: ESTree.Node): boolean {
 
 type SpecifierResult =
 	| { type: 'no-import' }
-	| { type: 'no-specifiers', importNode: ESTree.ImportDeclaration }
-	| { type: 'unexpected-specifiers', importNode: ESTree.ImportDeclaration }
-	| { type: 'specifier', localI18nIdentifier: string, importNode: ESTree.ImportDeclaration }
-	;
+	| { type: 'no-specifiers'; importNode: ESTree.ImportDeclaration }
+	| { type: 'unexpected-specifiers'; importNode: ESTree.ImportDeclaration }
+	| { type: 'specifier'; localI18nIdentifier: string; importNode: ESTree.ImportDeclaration };
 
 function findImportSpecifier(programNode: ESTree.Program, i18nFileName: string, i18nSymbol: string): SpecifierResult {
-	const imports = programNode.body.filter(x => x.type === 'ImportDeclaration');
-	const importNode = imports.find(x => x.source.value === `./${i18nFileName}`);
+	const imports = programNode.body.filter((x) => x.type === 'ImportDeclaration');
+	const importNode = imports.find((x) => x.source.value === `./${i18nFileName}`);
 	if (!importNode) return { type: 'no-import' };
 
 	if (importNode.specifiers.length === 0) {
@@ -450,7 +472,12 @@ function findImportSpecifier(programNode: ESTree.Program, i18nFileName: string, 
 
 // checker helpers
 function isMemberExpression(node: ESTree.Node, property: string): node is ESTree.MemberExpression {
-	return node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier' && node.property.name === property;
+	return (
+		node.type === 'MemberExpression' &&
+		!node.computed &&
+		node.property.type === 'Identifier' &&
+		node.property.name === property
+	);
 }
 
 function isStringLiteral(node: ESTree.Node, value: string): node is ESTree.StringLiteral {
