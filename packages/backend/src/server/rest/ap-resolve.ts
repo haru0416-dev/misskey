@@ -18,7 +18,7 @@ import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, fetchNoteBy
 import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
 import { fetchLocalUserByIdFromDatabase, fetchRemoteUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUriFromDatabase } from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabase } from '@/core/UserKeypairStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { fetchUserPublickeyByKeyIdFromDatabase } from '@/core/UserPublickeyStore.js';
 import type { MiUserPublickey } from '@/models/UserPublickey.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -215,7 +215,7 @@ async function signedGetForHonoApi(
 	allowSoftfail: FetchAllowSoftFailMask,
 	followAlternate = true,
 ): Promise<IObject> {
-	const keypair = await fetchUserKeypairFromDatabase(deps.db, user.id);
+	const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
 	const req = await ApRequestCreator.createSignedGet({
 		key: {
@@ -280,7 +280,7 @@ export async function signedPostForHonoApi(
 ): Promise<void> {
 	const body = typeof object === 'string' ? object : JSON.stringify(object);
 
-	const keypair = await fetchUserKeypairFromDatabase(deps.db, user.id);
+	const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
 	const req = await ApRequestCreator.createSignedPost({
 		key: {

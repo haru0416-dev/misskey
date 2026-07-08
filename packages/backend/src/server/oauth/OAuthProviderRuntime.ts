@@ -5,7 +5,7 @@
 
 import dns from 'node:dns/promises';
 import * as htmlParser from 'node-html-parser';
-import httpLinkHeader from 'http-link-header';
+import { extractLinkHeaderUrisByRel } from '@/misc/parse-link-header.js';
 import ipaddr from 'ipaddr.js';
 import { verifyChallenge } from 'pkce-challenge';
 import { permissions as kinds } from 'misskey-js';
@@ -187,7 +187,7 @@ async function discoverClientInformation(logger: Logger, httpRequestService: OAu
 
 		const linkHeader = res.headers.get('link');
 		if (linkHeader) {
-			redirectUris.push(...httpLinkHeader.parse(linkHeader).get('rel', 'redirect_uri').map(link => link.uri));
+			redirectUris.push(...extractLinkHeaderUrisByRel(linkHeader, 'redirect_uri'));
 		}
 
 		const contentType = res.headers.get('content-type');

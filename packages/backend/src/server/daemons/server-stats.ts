@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { globalEventBus } from '@/misc/global-event-bus.js';
 import os from 'node:os';
-import Xev from 'xev';
 import type { MiMeta } from '@/models/_.js';
 
-const ev = new Xev();
+const ev = globalEventBus;
 
 const INTERVAL_MS = 2000;
 const CPU_SAMPLE_MS = 1000;
@@ -59,7 +59,7 @@ export type HonoDaemonServerStatsDependencies = {
 	meta: Pick<MiMeta, 'enableServerMachineStats'>;
 };
 
-/** ServerStatsService.start 相当。サーバーのCPU/メモリ/ネットワーク/ディスク使用状況を定期的にXev経由でブロードキャストする。 */
+/** ServerStatsService.start 相当。サーバーのCPU/メモリ/ネットワーク/ディスク使用状況を定期的にglobalEventBus経由でブロードキャストする。 */
 export function startHonoServerStatsDaemon(deps: HonoDaemonServerStatsDependencies): { dispose: () => void } {
 	if (!deps.meta.enableServerMachineStats) {
 		return { dispose: () => {} };

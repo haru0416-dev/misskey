@@ -58,8 +58,12 @@ export async function packFeed(
 		copyright: user.name ?? user.username,
 	});
 
+	const allFileIds = [...new Set(notes.flatMap(note => note.fileIds))];
+	const allFiles = allFileIds.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, allFileIds) : [];
+	const filesById = new Map(allFiles.map(file => [file.id, file]));
+
 	for (const note of notes) {
-		const files = note.fileIds.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, note.fileIds) : [];
+		const files = note.fileIds.map(id => filesById.get(id)).filter(file => file != null);
 		const file = files.find(file => file.type.startsWith('image/'));
 		const text = note.text;
 

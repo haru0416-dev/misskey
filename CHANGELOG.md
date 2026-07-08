@@ -11,6 +11,16 @@
 - Enhance: iOS Safari のハプティックフィードバック機能 (実験的機能の「ハプティックフィードバックを有効にする」) を削除。使用していた `<input type="checkbox" switch>` トリックが iOS 26.5 で Apple により無効化され、機能しなくなったため
 
 ### Server
+- Fix: 通常の通知 (リアクション・フォロー・メンション・返信・引用等) が Service Worker push で配信されず、ブラウザを閉じている間のプッシュ通知が一切届かなかった問題を修正 (NestJS→Hono 移行時の移植漏れ。チャットのみ移植されていた。通知の既読同期 `readAllNotifications` push も復元)
+- Enhance: 未メンテの依存パッケージ2個を内製実装で置き換え (`xev` → クラスタ横断イベントバス、`http-link-header` → OAuth 用 Link ヘッダパーサ)
+- Enhance: タイムラインのDBフォールバッククエリを軽量化 (全タイムラインで note テーブルへの冗長なセルフJOINを削除し非正規化カラム参照に統一、投票有無チェックを `COUNT(*)` から `EXISTS` に変更、フォロー先IDリストを数万個のプレースホルダ展開から配列1パラメータに変更)
+- Enhance: 連合チャートの集計クエリを改善 (`COUNT(DISTINCT ...)` による following 全表ソートを recursive CTE のインデックス走査に変更)
+- Fix: ブロック済みホストを設定しているサーバーで連合チャートの集計 (sub/pub/pubsub) が SQL エラーで毎回失敗していた問題を修正 (配列パラメータの渡し方の誤り)
+- Enhance: ユーザー名の前方一致検索用インデックス (`varchar_pattern_ops`) を追加し、ユーザー名補完・検索の全表走査を解消
+- Enhance: ActivityPub 配送のCPU負荷を削減 (署名鍵のパース結果をキャッシュしジョブ毎の再パースを回避、鍵取得のDBアクセスをキャッシュ化、配送停止インスタンス判定を配列走査からSet参照に変更)
+- Enhance: ワードミュート等の正規表現マッチングでコンパイル済みインスタンスを使い回すように変更 (ノート×ユーザー数分のRE2再コンパイルを回避)
+- Enhance: `following`/`note_reaction` テーブルにページング用の複合インデックスを追加し、フォロワー一覧・リアクション一覧の大規模データでの応答を改善
+- Enhance: RSSフィード生成・ActivityPub受信ノートの添付ファイル取得を一括化/並列化
 - Enhance: タイムライン等の複数ノート取得時のデータベース/Redisアクセスを一括化 (ノート毎に個別発行していた投稿者・添付ファイル・チャンネル・自分のリアクション・リアクションバッファの取得をリクエスト単位でバッチ化。20件のタイムラインで最大100クエリ超→数クエリに削減)
 - Enhance: パスワードのハッシュ化/照合を Bun ランタイムではネイティブ実装 (`Bun.password`) で行うように変更しサインイン/サインアップを高速化 (既存の bcrypt ハッシュとは互換で、Node 実行時や72バイト超のパスワードは従来どおり bcryptjs で処理)
 - Enhance: バックエンドの依存パッケージを整理し、未メンテのライブラリ16個を削除 (`got`/`fluent-ffmpeg`/`deep-email-validator`/`ratelimiter`/`probe-image-size`/`tinycolor2`/`stringz`/`tmp` 等を fetch・ffmpeg 直接起動・自前実装・`sharp`・`Intl.Segmenter` 等へ置き換え。レート制限は従来と同一の Redis キー形式・アルゴリズムを維持)

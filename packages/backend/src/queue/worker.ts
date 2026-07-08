@@ -6,6 +6,7 @@
 import * as Bull from 'bullmq';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
+import { isDebugLoggingEnabled } from '@/logger.js';
 import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
 import { handleHonoQueueSystemWebhookDeliver, handleHonoQueueUserWebhookDeliver, type HonoQueueWebhookDeliverDependencies } from './handlers/webhook-deliver.js';
 import {
@@ -139,8 +140,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	{
 		const logger = deps.logger.createSubLogger('user-webhook');
 		userWebhookDeliverQueueWorker
-			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`))
-			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('active', (job) => { if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`); })
+			.on('completed', (job, result) => { if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`); })
 			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`))
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
@@ -166,8 +167,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	{
 		const logger = deps.logger.createSubLogger('system-webhook');
 		systemWebhookDeliverQueueWorker
-			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`))
-			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('active', (job) => { if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`); })
+			.on('completed', (job, result) => { if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`); })
 			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`))
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
@@ -262,8 +263,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	{
 		const logger = deps.logger.createSubLogger('deliver');
 		deliverQueueWorker
-			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`))
-			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`))
+			.on('active', (job) => { if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`); })
+			.on('completed', (job, result) => { if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`); })
 			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`))
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
@@ -289,8 +290,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	{
 		const logger = deps.logger.createSubLogger('inbox');
 		inboxQueueWorker
-			.on('active', (job) => logger.debug(`active ${getJobInfo(job, true)}`))
-			.on('completed', (job, result) => logger.debug(`completed(${result}) ${getJobInfo(job, true)}`))
+			.on('active', (job) => { if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)}`); })
+			.on('completed', (job, result) => { if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)}`); })
 			.on('failed', (job, err) => logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} activity=${job ? (job.data.activity ? job.data.activity.id : 'none') : '-'}`, { e: renderError(err) }))
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));

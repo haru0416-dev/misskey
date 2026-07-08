@@ -18,6 +18,14 @@ type Context = {
 
 type Level = 'error' | 'success' | 'warning' | 'debug' | 'info';
 
+/**
+ * Logger.debug が実際にログを出すかどうか。production では既定でdebugログを破棄するため、
+ * 呼び出し側でメッセージ文字列の構築自体を省略したい場合 (高頻度呼び出し箇所) にこれで事前判定できる。
+ */
+export function isDebugLoggingEnabled(): boolean {
+	return process.env.NODE_ENV !== 'production' || envOption.verbose;
+}
+
 // eslint-disable-next-line import/no-default-export
 export default class Logger {
 	private context: Context;
@@ -97,7 +105,7 @@ export default class Logger {
 
 	@bindThis
 	public debug(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // デバッグ用に使う(開発者に必要だが利用者に不要な情報)
-		if (process.env.NODE_ENV !== 'production' || envOption.verbose) {
+		if (isDebugLoggingEnabled()) {
 			this.log('debug', message, data, important);
 		}
 	}
