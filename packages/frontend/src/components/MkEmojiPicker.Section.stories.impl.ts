@@ -3,5 +3,5 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import MkCode_core from './MkCode.core.vue';
-void MkCode_core;
+import MkEmojiPicker_section from './MkEmojiPicker.Section.vue';
+void MkEmojiPicker_section;

@@ -3,5 +3,5 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import MkDrive_navFolder from './MkDrive.navFolder.vue';
+import MkDrive_navFolder from './MkDrive.NavFolder.vue';
 void MkDrive_navFolder;

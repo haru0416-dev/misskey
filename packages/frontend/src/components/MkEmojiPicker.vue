@@ -129,7 +129,7 @@ import type {
 	UnicodeEmojiDef,
 	CustomEmojiFolderTree,
 } from '@@/js/emojilist.js';
-import XSection from '@/components/MkEmojiPicker.section.vue';
+import XSection from '@/components/MkEmojiPicker.Section.vue';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import * as os from '@/os.js';
 import { isTouchUsing } from '@/utility/touch.js';
@@ -410,7 +410,7 @@ function getDef(emoji: string): string | Misskey.entities.EmojiSimple | UnicodeE
 	}
 }
 
-/** @see MkEmojiPicker.section.vue */
+/** @see MkEmojiPicker.Section.vue */
 function computeButtonTitle(ev: PointerEvent): void {
 	const elm = ev.target as HTMLElement;
 	const emoji = elm.dataset.emoji as string;

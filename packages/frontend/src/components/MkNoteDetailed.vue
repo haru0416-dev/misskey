@@ -250,7 +250,7 @@ import type { MenuItem } from '@/types/menu.js';
 import MkNoteSub from '@/components/MkNoteSub.vue';
 import MkNoteSimple from '@/components/MkNoteSimple.vue';
 import MkReactionsViewer from '@/components/MkReactionsViewer.vue';
-import MkReactionsViewerDetails from '@/components/MkReactionsViewer.details.vue';
+import MkReactionsViewerDetails from '@/components/MkReactionsViewer.Details.vue';
 import MkMediaList from '@/components/MkMediaList.vue';
 import MkCwButton from '@/components/MkCwButton.vue';
 import MkPoll from '@/components/MkPoll.vue';

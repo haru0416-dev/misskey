@@ -61,7 +61,7 @@ const props = withDefaults(defineProps<{
 
 const show = ref(props.forceShow === true ? true : !prefer.s.dataSaver.code);
 
-const XCode = defineAsyncComponent(() => import('@/components/MkCode.core.vue'));
+const XCode = defineAsyncComponent(() => import('@/components/MkCode.Core.vue'));
 
 function copy() {
 	copyToClipboard(props.code);

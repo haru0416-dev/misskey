@@ -23,7 +23,7 @@ import * as Misskey from 'misskey-js';
 import { getUnicodeEmojiOrNull } from '@@/js/emojilist.js';
 import MkCustomEmojiDetailedDialog from './MkCustomEmojiDetailedDialog.vue';
 import type { MenuItem } from '@/types/menu';
-import XDetails from '@/components/MkReactionsViewer.details.vue';
+import XDetails from '@/components/MkReactionsViewer.Details.vue';
 import MkReactionIcon from '@/components/MkReactionIcon.vue';
 import * as os from '@/os.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';

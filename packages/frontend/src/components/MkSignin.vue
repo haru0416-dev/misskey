@@ -70,16 +70,16 @@ import * as Misskey from 'misskey-js';
 import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialRequestOptionsJSON, AuthenticationResponseJSON } from '@simplewebauthn/browser';
 import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
-import type { PwResponse } from '@/components/MkSignin.password.vue';
+import type { PwResponse } from '@/components/MkSignin.Password.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { showSuspendedDialog } from '@/utility/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 
-import XInput from '@/components/MkSignin.input.vue';
-import XPassword from '@/components/MkSignin.password.vue';
-import XTotp from '@/components/MkSignin.totp.vue';
-import XPasskey from '@/components/MkSignin.passkey.vue';
+import XInput from '@/components/MkSignin.Input.vue';
+import XPassword from '@/components/MkSignin.Password.vue';
+import XTotp from '@/components/MkSignin.Totp.vue';
+import XPasskey from '@/components/MkSignin.Passkey.vue';
 import { login } from '@/accounts.js';
 
 const emit = defineEmits<{

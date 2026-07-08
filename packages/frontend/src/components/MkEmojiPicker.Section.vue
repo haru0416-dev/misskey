@@ -67,7 +67,7 @@ import type { Ref } from 'vue';
 import type { CustomEmojiFolderTree } from '@@/js/emojilist.js';
 import { i18n } from '@/i18n.js';
 import { customEmojis } from '@/custom-emojis.js';
-import MkEmojiPickerSection from '@/components/MkEmojiPicker.section.vue';
+import MkEmojiPickerSection from '@/components/MkEmojiPicker.Section.vue';
 
 const props = defineProps<{
 	emojis: string[] | Ref<string[]>;
