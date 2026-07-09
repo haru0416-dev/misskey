@@ -44,11 +44,11 @@ export type Statement =
 	AddAssign |
 	SubAssign;
 
-const statementTypes = [
+const statementTypes = new Set([
 	'def', 'return', 'each', 'for', 'loop', 'break', 'continue', 'assign', 'addAssign', 'subAssign',
-];
+]);
 export function isStatement(x: Node): x is Statement {
-	return statementTypes.includes(x.type);
+	return statementTypes.has(x.type);
 }
 
 export type Definition = NodeBase & {
@@ -85,6 +85,7 @@ export type For = NodeBase & {
 	var?: string; // イテレータ変数名
 	from?: Expression; // 開始値
 	to?: Expression; // 終値
+	step?: Expression; // 1反復ごとの増分(未指定なら1)
 	times?: Expression; // 回数
 	for: Statement | Expression; // 本体処理
 };
@@ -291,6 +292,7 @@ export type Match = NodeBase & {
 	about: Expression; // 対象
 	qs: {
 		q: Expression; // 条件
+		guard?: Expression; // ガード条件(case Q if Guard => A)
 		a: Statement | Expression; // 結果
 	}[];
 	default?: Statement | Expression; // デフォルト値

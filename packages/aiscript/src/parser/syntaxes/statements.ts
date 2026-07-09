@@ -281,8 +281,8 @@ function parseEach(s: ITokenStream): Ast.Each {
 /**
  * ```abnf
  * For = ForRange / ForTimes
- * ForRange = "for" "(" "let" IDENT ["=" Expr] "," Expr ")" BlockOrStatement
- *          / "for"     "let" IDENT ["=" Expr] "," Expr     BlockOrStatement
+ * ForRange = "for" "(" "let" IDENT ["=" Expr] "," Expr ["," Expr] ")" BlockOrStatement
+ *          / "for"     "let" IDENT ["=" Expr] "," Expr ["," Expr]     BlockOrStatement
  * ForTimes = "for" "(" Expr ")" BlockOrStatement
  *          / "for"     Expr     BlockOrStatement
  * ```
@@ -325,6 +325,12 @@ function parseFor(s: ITokenStream): Ast.For {
 
 		const to = parseExpr(s, false);
 
+		let step: Ast.Expression | undefined;
+		if (s.is(TokenKind.Comma)) {
+			s.next();
+			step = parseExpr(s, false);
+		}
+
 		if (hasParen) {
 			s.expect(TokenKind.CloseParen);
 			s.next();
@@ -336,6 +342,7 @@ function parseFor(s: ITokenStream): Ast.For {
 			var: name,
 			from: _from,
 			to,
+			step,
 			for: body,
 		}, startPos, s.getPos());
 	} else {

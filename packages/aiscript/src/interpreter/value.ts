@@ -112,10 +112,9 @@ export const STR = (str: VStr['value']): VStr => ({
 	value: str,
 });
 
-export const BOOL = (bool: VBool['value']): VBool => ({
-	type: 'bool' as const,
-	value: bool,
-});
+// NULLと同様、TRUE/FALSEシングルトンを再利用する(evalAndSetAttrはmutateせず
+// 新しいオブジェクトを返すため、ここで使い回しても属性の汚染は起きない)
+export const BOOL = (bool: VBool['value']): VBool => bool ? TRUE : FALSE;
 
 export const OBJ = (obj: VObj['value']): VObj => ({
 	type: 'obj' as const,

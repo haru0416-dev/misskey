@@ -194,6 +194,39 @@ describe('separator', () => {
 				`);
 			});
 		});
+
+		test.concurrent('guard (matched)', async () => {
+			const res = await exe(`
+			let x = 3
+			<: match x {
+				case 3 if x > 2 => "big"
+				case 3 => "small"
+			}
+			`);
+			eq(res, STR('big'));
+		});
+
+		test.concurrent('guard (not matched, falls through to next case)', async () => {
+			const res = await exe(`
+			let x = 3
+			<: match x {
+				case 3 if x > 10 => "big"
+				case 3 => "small"
+			}
+			`);
+			eq(res, STR('small'));
+		});
+
+		test.concurrent('guard (not matched, falls through to default)', async () => {
+			const res = await exe(`
+			let x = 3
+			<: match x {
+				case 3 if x > 10 => "big"
+				default => "other"
+			}
+			`);
+			eq(res, STR('other'));
+		});
 	});
 
 	describe('call', () => {
@@ -243,6 +276,41 @@ describe('separator', () => {
 			<:f(2,3,1,)
 			`);
 			eq(res, NUM(7));
+		});
+	});
+
+	describe('pipe', () => {
+		test.concurrent('bare function reference', async () => {
+			const res = await exe(`
+			@double(x) { x * 2 }
+			<: 3 |> double
+			`);
+			eq(res, NUM(6));
+		});
+
+		test.concurrent('call with existing args (prepend)', async () => {
+			const res = await exe(`
+			@add(a, b) { a + b }
+			<: 3 |> add(4)
+			`);
+			eq(res, NUM(7));
+		});
+
+		test.concurrent('chained (left-associative)', async () => {
+			const res = await exe(`
+			@double(x) { x * 2 }
+			@inc(x) { x + 1 }
+			<: 3 |> double |> inc
+			`);
+			eq(res, NUM(7));
+		});
+
+		test.concurrent('lower precedence than arithmetic', async () => {
+			const res = await exe(`
+			@double(x) { x * 2 }
+			<: 1 + 2 |> double
+			`);
+			eq(res, NUM(6));
 		});
 	});
 
@@ -524,6 +592,21 @@ describe('Comment', () => {
 	test.concurrent('invalid EOF in multi line comment 2', async () => {
 		await assert.rejects(() => exe('/* comment *'), AiScriptUnexpectedEOFError);
 	});
+
+	test.concurrent('nested multi line comment', async () => {
+		const res = await exe(`
+		/* outer /* inner */ still outer */
+		let a = 42
+		<: a
+		`);
+		eq(res, NUM(42));
+	});
+
+	test.concurrent('invalid EOF in nested multi line comment', async () => {
+		await assert.rejects(() => exe(`
+		/* outer /* inner */
+		`), AiScriptUnexpectedEOFError);
+	});
 });
 
 describe('lang version', () => {
@@ -705,6 +788,39 @@ describe('for', () => {
 		<: count
 		`);
 		eq(res, NUM(65));
+	});
+
+	test.concurrent('step (default is 1)', async () => {
+		const res = await exe(`
+		let arr = []
+		for (let i = 0, 5) {
+			arr.push(i)
+		}
+		<: arr
+		`);
+		eq(res, ARR([NUM(0), NUM(1), NUM(2), NUM(3), NUM(4)]));
+	});
+
+	test.concurrent('step (positive)', async () => {
+		const res = await exe(`
+		let arr = []
+		for (let i = 0, 5, 2) {
+			arr.push(i)
+		}
+		<: arr
+		`);
+		eq(res, ARR([NUM(0), NUM(2), NUM(4), NUM(6), NUM(8)]));
+	});
+
+	test.concurrent('step (negative, reverse)', async () => {
+		const res = await exe(`
+		let arr = []
+		for (let i = 10, 5, -1) {
+			arr.push(i)
+		}
+		<: arr
+		`);
+		eq(res, ARR([NUM(10), NUM(9), NUM(8), NUM(7), NUM(6)]));
 	});
 
 	test.concurrent('wuthout iterator', async () => {

@@ -269,10 +269,10 @@ export class Interpreter {
 						throw new AiScriptNamespaceError('No "var" in namespace declaration: ' + node.dest.name, node.loc.start);
 					}
 
-					const value = await this._eval(node.expr, nsScope, null);
+					let value = await this._eval(node.expr, nsScope, null);
 					assertValue(value);
 
-					await this.evalAndSetAttr(node.attr, value, scope, null);
+					value = await this.evalAndSetAttr(node.attr, value, scope, null);
 
 					if (
 						node.expr.type === 'fn'
@@ -316,10 +316,10 @@ export class Interpreter {
 						throw new AiScriptNamespaceError('No "var" in namespace declaration: ' + node.dest.name, node.loc.start);
 					}
 
-					const value = this._evalSync(node.expr, nsScope, null);
+					let value = this._evalSync(node.expr, nsScope, null);
 					assertValue(value);
 
-					this.evalAndSetAttrSync(node.attr, value, scope, null);
+					value = this.evalAndSetAttrSync(node.attr, value, scope, null);
 
 					if (
 						node.expr.type === 'fn'
@@ -551,6 +551,16 @@ export class Interpreter {
 						return q;
 					}
 					if (eq(about, q)) {
+						if (qa.guard) {
+							const guard = await this._eval(qa.guard, scope, callStack);
+							if (isControl(guard)) {
+								return guard;
+							}
+							assertBoolean(guard);
+							if (!guard.value) {
+								continue;
+							}
+						}
 						return unWrapLabeledBreak(await this._evalClause(qa.a, scope, callStack), node.label);
 					}
 				}
@@ -613,7 +623,17 @@ export class Interpreter {
 					}
 					assertNumber(from);
 					assertNumber(to);
-					for (let i = from.value; i < from.value + to.value; i++) {
+					let step = NUM(1);
+					if (node.step) {
+						const stepValue = await this._eval(node.step, scope, callStack);
+						if (isControl(stepValue)) {
+							return stepValue;
+						}
+						assertNumber(stepValue);
+						step = stepValue;
+					}
+					let i = from.value;
+					for (let n = 0; n < to.value; n++, i += step.value) {
 						const v = await this._eval(node.for, scope.createChildScope(new Map([
 							[node.var!, {
 								isMutable: false,
@@ -644,8 +664,17 @@ export class Interpreter {
 				}
 				assertArray(items);
 				for (const item of items.value) {
-					const eachScope = scope.createChildScope();
-					this.define(eachScope, node.var, item, false);
+					let eachScope: Scope;
+					if (node.var.type === 'identifier') {
+						// 分割代入を伴わない最も一般的なケースは、Scope生成後にadd()するのではなく
+						// 束縛を最初から持たせて生成する(重複チェックと呼び出し1回分を省く)
+						eachScope = scope.createChildScope(new Map([
+							[node.var.name, { isMutable: false, value: item }],
+						]));
+					} else {
+						eachScope = scope.createChildScope();
+						this.define(eachScope, node.var, item, false);
+					}
 					const v = await this._eval(node.for, eachScope, callStack);
 					if (v.type === 'break') {
 						if (v.label != null && v.label !== node.label) {
@@ -664,11 +693,11 @@ export class Interpreter {
 			}
 
 			case 'def': {
-				const value = await this._eval(node.expr, scope, callStack);
+				let value = await this._eval(node.expr, scope, callStack);
 				if (isControl(value)) {
 					return value;
 				}
-				await this.evalAndSetAttr(node.attr, value, scope, callStack);
+				value = await this.evalAndSetAttr(node.attr, value, scope, callStack);
 				if (
 					node.expr.type === 'fn'
 					&& node.dest.type === 'identifier'
@@ -1108,6 +1137,16 @@ export class Interpreter {
 						return q;
 					}
 					if (eq(about, q)) {
+						if (qa.guard) {
+							const guard = this._evalSync(qa.guard, scope, callStack);
+							if (isControl(guard)) {
+								return guard;
+							}
+							assertBoolean(guard);
+							if (!guard.value) {
+								continue;
+							}
+						}
 						return unWrapLabeledBreak(this._evalClauseSync(qa.a, scope, callStack), node.label);
 					}
 				}
@@ -1170,7 +1209,17 @@ export class Interpreter {
 					}
 					assertNumber(from);
 					assertNumber(to);
-					for (let i = from.value; i < from.value + to.value; i++) {
+					let step = NUM(1);
+					if (node.step) {
+						const stepValue = this._evalSync(node.step, scope, callStack);
+						if (isControl(stepValue)) {
+							return stepValue;
+						}
+						assertNumber(stepValue);
+						step = stepValue;
+					}
+					let i = from.value;
+					for (let n = 0; n < to.value; n++, i += step.value) {
 						const v = this._evalSync(node.for, scope.createChildScope(new Map([
 							[node.var!, {
 								isMutable: false,
@@ -1201,8 +1250,15 @@ export class Interpreter {
 				}
 				assertArray(items);
 				for (const item of items.value) {
-					const eachScope = scope.createChildScope();
-					this.define(eachScope, node.var, item, false);
+					let eachScope: Scope;
+					if (node.var.type === 'identifier') {
+						eachScope = scope.createChildScope(new Map([
+							[node.var.name, { isMutable: false, value: item }],
+						]));
+					} else {
+						eachScope = scope.createChildScope();
+						this.define(eachScope, node.var, item, false);
+					}
 					const v = this._evalSync(node.for, eachScope, callStack);
 					if (v.type === 'break') {
 						if (v.label != null && v.label !== node.label) {
@@ -1221,11 +1277,11 @@ export class Interpreter {
 			}
 
 			case 'def': {
-				const value = this._evalSync(node.expr, scope, callStack);
+				let value = this._evalSync(node.expr, scope, callStack);
 				if (isControl(value)) {
 					return value;
 				}
-				this.evalAndSetAttrSync(node.attr, value, scope, callStack);
+				value = this.evalAndSetAttrSync(node.attr, value, scope, callStack);
 				if (
 					node.expr.type === 'fn'
 					&& node.dest.type === 'identifier'
@@ -1713,35 +1769,39 @@ export class Interpreter {
 	}
 
 	@autobind
-	private async evalAndSetAttr(attr: Ast.Attribute[], value: Value, scope: Scope, callStack: CallStack): Promise<void> {
+	// NULL/TRUE/FALSE等は使い回されるシングルトンなので、attrをその場でmutateすると
+	// 無関係な箇所にまで波及してしまう。新しいオブジェクトを作って返す。
+	private async evalAndSetAttr(attr: Ast.Attribute[], value: Value, scope: Scope, callStack: CallStack): Promise<Value> {
 		if (attr.length > 0) {
 			const attrs: Value['attr'] = [];
 			for (const nAttr of attr) {
-				const value = await this._eval(nAttr.value, scope, callStack);
-				assertValue(value);
+				const attrValue = await this._eval(nAttr.value, scope, callStack);
+				assertValue(attrValue);
 				attrs.push({
 					name: nAttr.name,
-					value,
+					value: attrValue,
 				});
 			}
-			value.attr = attrs;
+			return { ...value, attr: attrs };
 		}
+		return value;
 	}
 
 	@autobind
-	private evalAndSetAttrSync(attr: Ast.Attribute[], value: Value, scope: Scope, callStack: CallStack): void {
+	private evalAndSetAttrSync(attr: Ast.Attribute[], value: Value, scope: Scope, callStack: CallStack): Value {
 		if (attr.length > 0) {
 			const attrs: Value['attr'] = [];
 			for (const nAttr of attr) {
-				const value = this._evalSync(nAttr.value, scope, callStack);
-				assertValue(value);
+				const attrValue = this._evalSync(nAttr.value, scope, callStack);
+				assertValue(attrValue);
 				attrs.push({
 					name: nAttr.name,
-					value,
+					value: attrValue,
 				});
 			}
-			value.attr = attrs;
+			return { ...value, attr: attrs };
 		}
+		return value;
 	}
 
 	@autobind

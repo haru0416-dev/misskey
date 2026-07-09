@@ -8,6 +8,15 @@ import type { Value, VArr, VFn, VNum, VStr, VError } from './value.js';
 
 type VWithPP = VNum|VStr|VArr|VError;
 
+/**
+ * Array.prototype.slice(start)と同じ規則でstartを非負のインデックスにクランプする
+ * (負数は末尾からのオフセット、範囲外は境界に丸める)。配列をコピーせずに済む。
+ */
+function clampSliceStart(index: number, length: number): number {
+	const i = Number.isNaN(index) ? 0 : Math.trunc(index);
+	return i < 0 ? Math.max(length + i, 0) : Math.min(i, length);
+}
+
 type PrimitiveProps = {
 	[key in VWithPP['type']]: { [key: string]: (target: Value) => Value }
 };
@@ -300,14 +309,17 @@ const PRIMITIVE_PROPS = {
 
 		index_of: (target: VArr): VFn => FN_NATIVE(([val, fromI], _opts) => {
 			expectAny(val);
+			let start = 0;
 			if (fromI) {
 				assertNumber(fromI);
-				const offset = target.value.slice(0, fromI.value).length;
-				const result = target.value.slice(fromI.value).findIndex(v => eq(v, val));
-				return NUM(result < 0 ? result : result + offset);
-			} else {
-				return NUM(target.value.findIndex(v => eq(v, val)));
+				start = clampSliceStart(fromI.value, target.value.length);
 			}
+			for (let i = start; i < target.value.length; i++) {
+				if (eq(target.value[i]!, val)) {
+					return NUM(i);
+				}
+			}
+			return NUM(-1);
 		}),
 
 		reverse: (target: VArr): VFn => FN_NATIVE((_, _opts) => {

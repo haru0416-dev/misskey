@@ -111,6 +111,8 @@ export enum TokenKind {
 	Or2,
 	/** "}" */
 	CloseBrace,
+	/** "|>" */
+	Pipe,
 }
 
 export type TokenPosition = { column: number, line: number };

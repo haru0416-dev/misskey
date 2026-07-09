@@ -30,6 +30,16 @@ describe('literal', () => {
 		eq(res, STR('ai saw a note \'bebeyo\'.'));
 	});
 
+	test.concurrent('Escape sequences', async () => {
+		const res = await exe('<: "a\\nb\\tc\\rd\\\\e\\u0041"');
+		eq(res, STR('a\nb\tc\rd\\eA'));
+	});
+
+	test.concurrent('Escape sequences in template', async () => {
+		const res = await exe('<: `a\\nb\\tc\\u0041`');
+		eq(res, STR('a\nb\tcA'));
+	});
+
 	test.concurrent('bool (true)', async () => {
 		const res = await exe(`
 		<: true
@@ -58,7 +68,6 @@ describe('literal', () => {
 		eq(res, NUM(0.5));
 	});
 
-	/* 指数表記仕様が必要になった段階で有効化する
 	test.concurrent('number (positive exponent without plus sign)', async () => {
 		const res = await exe(`
 		<: 1.2e3
@@ -81,11 +90,44 @@ describe('literal', () => {
 	});
 
 	test.concurrent('number (missing exponent)', async () => {
-		assert.rejects(() => exe(`
+		await assert.rejects(() => exe(`
 		<: 1.2e+
-		`), 'exponent expected');
+		`), AiScriptSyntaxError);
 	});
-	*/
+
+	test.concurrent('number (hexadecimal)', async () => {
+		const res = await exe(`
+		<: 0x1F
+		`);
+		eq(res, NUM(31));
+	});
+
+	test.concurrent('number (binary)', async () => {
+		const res = await exe(`
+		<: 0b1010
+		`);
+		eq(res, NUM(10));
+	});
+
+	test.concurrent('number (octal)', async () => {
+		const res = await exe(`
+		<: 0o17
+		`);
+		eq(res, NUM(15));
+	});
+
+	test.concurrent('number (missing hexadecimal digit)', async () => {
+		await assert.rejects(() => exe(`
+		<: 0x
+		`), AiScriptSyntaxError);
+	});
+
+	test.concurrent('number (underscore separator)', async () => {
+		const res = await exe(`
+		<: [1_000_000, 0x1_F, 0b10_10, 3.14_15]
+		`);
+		eq(res, ARR([NUM(1000000), NUM(31), NUM(10), NUM(3.1415)]));
+	});
 
 	test.concurrent('arr (separated by comma)', async () => {
 		const res = await exe(`

@@ -10,10 +10,14 @@ import type { Token, TokenPosition } from './token.js';
 const spaceChars = [' ', '\t'];
 const lineBreakChars = ['\r', '\n'];
 const digit = /^[0-9]$/;
+const decimalDigitOrUnderscore = /^[0-9_]$/;
+const hexDigitOrUnderscore = /^[0-9a-fA-F_]$/;
+const binaryDigitOrUnderscore = /^[01_]$/;
+const octalDigitOrUnderscore = /^[0-7_]$/;
 const identifierStart = /^[A-Za-z_]$/u;
 const identifierPart = /^[A-Za-z0-9_]$/u;
 const hexDigit = /^[0-9a-fA-F]$/;
-//const exponentIndicatorPattern = /^[eE]$/;
+const exponentIndicatorPattern = /^[eE]$/;
 
 /**
  * 入力文字列からトークンを読み取るクラス
@@ -312,6 +316,9 @@ export class Scanner implements ITokenStream {
 					if (!this.stream.eof && (this.stream.char as string) === '|') {
 						this.stream.next();
 						return TOKEN(TokenKind.Or2, pos, { hasLeftSpacing });
+					} else if (!this.stream.eof && (this.stream.char as string) === '>') {
+						this.stream.next();
+						return TOKEN(TokenKind.Pipe, pos, { hasLeftSpacing });
 					} else {
 						return TOKEN(TokenKind.Or, pos, { hasLeftSpacing });
 					}
@@ -482,62 +489,99 @@ export class Scanner implements ITokenStream {
 	}
 
 	private tryReadDigits(hasLeftSpacing: boolean): Token | undefined {
-		let wholeNumber = '';
-		let fractional = '';
-
 		const pos = this.stream.getPos();
 
-		while (!this.stream.eof && digit.test(this.stream.char)) {
+		// 0x, 0b, 0o プレフィックス付きの基数付きリテラル
+		if (!this.stream.eof && this.stream.char === '0') {
+			this.stream.next();
+			if (!this.stream.eof && ((this.stream.char as string) === 'x' || (this.stream.char as string) === 'X')) {
+				this.stream.next();
+				const value = this.readRadixDigits(hexDigitOrUnderscore, pos, 'hexadecimal');
+				return TOKEN(TokenKind.NumberLiteral, pos, { hasLeftSpacing, value: '0x' + value });
+			}
+			if (!this.stream.eof && ((this.stream.char as string) === 'b' || (this.stream.char as string) === 'B')) {
+				this.stream.next();
+				const value = this.readRadixDigits(binaryDigitOrUnderscore, pos, 'binary');
+				return TOKEN(TokenKind.NumberLiteral, pos, { hasLeftSpacing, value: '0b' + value });
+			}
+			if (!this.stream.eof && ((this.stream.char as string) === 'o' || (this.stream.char as string) === 'O')) {
+				this.stream.next();
+				const value = this.readRadixDigits(octalDigitOrUnderscore, pos, 'octal');
+				return TOKEN(TokenKind.NumberLiteral, pos, { hasLeftSpacing, value: '0o' + value });
+			}
+			this.stream.prev();
+		}
+
+		// 先頭の1文字は識別子(例: `_foo`)と区別するため、アンダースコアを許容しない
+		if (this.stream.eof || !digit.test(this.stream.char)) {
+			return;
+		}
+		let wholeNumber = this.stream.char;
+		this.stream.next();
+		while (!this.stream.eof && decimalDigitOrUnderscore.test(this.stream.char)) {
 			wholeNumber += this.stream.char;
 			this.stream.next();
 		}
-		if (wholeNumber.length === 0) {
-			return;
-		}
+
+		let fractional = '';
 		if (!this.stream.eof && this.stream.char === '.') {
 			this.stream.next();
-			while (!this.stream.eof as boolean && digit.test(this.stream.char as string)) {
+			if (this.stream.eof || !digit.test(this.stream.char as string)) {
+				throw new AiScriptSyntaxError('digit expected', pos);
+			}
+			fractional = this.stream.char as string;
+			this.stream.next();
+			while (!this.stream.eof as boolean && decimalDigitOrUnderscore.test(this.stream.char as string)) {
 				fractional += this.stream.char;
 				this.stream.next();
 			}
-			if (fractional.length === 0) {
-				throw new AiScriptSyntaxError('digit expected', pos);
+		}
+
+		let exponentIndicator = '';
+		let exponentSign = '';
+		let exponentAbsolute = '';
+		if (!this.stream.eof && exponentIndicatorPattern.test(this.stream.char as string)) {
+			exponentIndicator = this.stream.char as string;
+			this.stream.next();
+			if (!this.stream.eof && (this.stream.char as string) === '-') {
+				exponentSign = '-';
+				this.stream.next();
+			} else if (!this.stream.eof && (this.stream.char as string) === '+') {
+				exponentSign = '+';
+				this.stream.next();
+			}
+			if (this.stream.eof || !digit.test(this.stream.char as string)) {
+				throw new AiScriptSyntaxError('exponent expected', pos);
+			}
+			exponentAbsolute = this.stream.char as string;
+			this.stream.next();
+			while (!this.stream.eof && decimalDigitOrUnderscore.test(this.stream.char)) {
+				exponentAbsolute += this.stream.char;
+				this.stream.next();
 			}
 		}
 
-		// 指数表記仕様が必要になった段階で有効化する
-		//let exponentIndicator = '';
-		//let exponentSign = '';
-		//let exponentAbsolute = '';
-		//if (!this.stream.eof && exponentIndicatorPattern.test(this.stream.char as string)) {
-		//	exponentIndicator = this.stream.char as string;
-		//	this.stream.next();
-		//	if (!this.stream.eof && (this.stream.char as string) === '-') {
-		//		exponentSign = '-';
-		//		this.stream.next();
-		//	} else if (!this.stream.eof && (this.stream.char as string) === '+') {
-		//		exponentSign = '+';
-		//		this.stream.next();
-		//	}
-		//	while (!this.stream.eof && digit.test(this.stream.char)) {
-		//		exponentAbsolute += this.stream.char;
-		//		this.stream.next();
-		//	}
-		//	if (exponentAbsolute.length === 0) {
-		//		throw new AiScriptSyntaxError('exponent expected', pos);
-		//	}
-		//}
-
-		let value: string;
+		let value = wholeNumber.replaceAll('_', '');
 		if (fractional.length > 0) {
-			value = wholeNumber + '.' + fractional;
-		} else {
-			value = wholeNumber;
+			value += '.' + fractional.replaceAll('_', '');
 		}
-		//if (exponentIndicator.length > 0) {
-		//	value += exponentIndicator + exponentSign + exponentAbsolute;
-		//}
+		if (exponentIndicator.length > 0) {
+			value += exponentIndicator + exponentSign + exponentAbsolute.replaceAll('_', '');
+		}
 		return TOKEN(TokenKind.NumberLiteral, pos, { hasLeftSpacing, value });
+	}
+
+	private readRadixDigits(pattern: RegExp, pos: TokenPosition, radixName: string): string {
+		let raw = '';
+		while (!this.stream.eof && pattern.test(this.stream.char)) {
+			raw += this.stream.char;
+			this.stream.next();
+		}
+		const value = raw.replaceAll('_', '');
+		if (value.length === 0) {
+			throw new AiScriptSyntaxError(`${radixName} digit expected`, pos);
+		}
+		return value;
 	}
 
 	private readStringLiteral(hasLeftSpacing: boolean): Token {
@@ -569,17 +613,42 @@ export class Scanner implements ITokenStream {
 					break;
 				}
 				case 'escape': {
-					if (this.stream.eof) {
-						throw new AiScriptUnexpectedEOFError(pos);
-					}
-					value += this.stream.char;
-					this.stream.next();
+					value += this.readEscapeSequence(pos);
 					state = 'string';
 					break;
 				}
 			}
 		}
 		return TOKEN(TokenKind.StringLiteral, pos, { hasLeftSpacing, value });
+	}
+
+	/**
+	 * `\`の直後から呼び出し、エスケープシーケンスをデコードして1文字以上の文字列を返します。
+	 * (呼び出し時点で`\`自体は読み飛ばし済みであることが前提)
+	*/
+	private readEscapeSequence(literalStartPos: TokenPosition): string {
+		if (this.stream.eof) {
+			throw new AiScriptUnexpectedEOFError(literalStartPos);
+		}
+		const escapeChar = this.stream.char;
+		switch (escapeChar) {
+			case 'n': this.stream.next(); return '\n';
+			case 't': this.stream.next(); return '\t';
+			case 'r': this.stream.next(); return '\r';
+			case '0': this.stream.next(); return '\0';
+			case 'b': this.stream.next(); return '\b';
+			case 'f': this.stream.next(); return '\f';
+			case 'v': this.stream.next(); return '\v';
+			case 'u': {
+				const code = this.readUnicodeEscapeSequence().slice(1);
+				return String.fromCharCode(Number.parseInt(code, 16));
+			}
+			default: {
+				// \\ \' \" \` \{ \} 等はそのままの文字として、それ以外の未知のエスケープも寛容にそのままの文字として扱う
+				this.stream.next();
+				return escapeChar;
+			}
+		}
 	}
 
 	private readTemplate(hasLeftSpacing: boolean): Token {
@@ -632,13 +701,8 @@ export class Scanner implements ITokenStream {
 					break;
 				}
 				case 'escape': {
-					// エスケープ対象の文字が無いままEOFに達した
-					if (this.stream.eof) {
-						throw new AiScriptUnexpectedEOFError(pos);
-					}
-					// 普通の文字として取り込み
-					buf += this.stream.char;
-					this.stream.next();
+					// デコードしたエスケープシーケンスを取り込む
+					buf += this.readEscapeSequence(pos);
 					// 通常の文字列に戻る
 					state = 'string';
 					break;
@@ -721,9 +785,19 @@ export class Scanner implements ITokenStream {
 	}
 
 	private skipCommentRange(): void {
-		while (true) {
+		// 呼び出し時点で最初の`/*`は読み飛ばし済みなので、深さ1から始める
+		let depth = 1;
+		while (depth > 0) {
 			if (this.stream.eof) {
 				throw new AiScriptUnexpectedEOFError(this.stream.getPos());
+			}
+			if (this.stream.char === '/') {
+				this.stream.next();
+				if (!this.stream.eof && (this.stream.char as string) === '*') {
+					this.stream.next();
+					depth++;
+				}
+				continue;
 			}
 			if (this.stream.char === '*') {
 				this.stream.next();
@@ -732,7 +806,7 @@ export class Scanner implements ITokenStream {
 				}
 				if ((this.stream.char as string) === '/') {
 					this.stream.next();
-					break;
+					depth--;
 				}
 				continue;
 			}

@@ -382,4 +382,32 @@ describe('Attribute', () => {
 		`);
 		expect(attr).toStrictEqual([{ name: 'x', value: NUM(42) }]);
 	});
+
+	test.concurrent('attribute on a singleton value (null) does not leak to other uses of it', async () => {
+		const parser = new Parser();
+		const interpreter = new Interpreter({});
+		const ast = parser.parse(`
+		#[x 1]
+		let a = null
+		let b = null
+		`);
+		await interpreter.exec(ast);
+		expect(interpreter.scope.get('a').attr).toStrictEqual([{ name: 'x', value: NUM(1) }]);
+		expect(interpreter.scope.get('b').attr).toBeUndefined();
+	});
+
+	test.concurrent('attribute on a singleton value (bool) does not leak to other uses of it', async () => {
+		const parser = new Parser();
+		const interpreter = new Interpreter({});
+		const ast = parser.parse(`
+		#[x 1]
+		let a = true
+		let b = true
+		let c = false
+		`);
+		await interpreter.exec(ast);
+		expect(interpreter.scope.get('a').attr).toStrictEqual([{ name: 'x', value: NUM(1) }]);
+		expect(interpreter.scope.get('b').attr).toBeUndefined();
+		expect(interpreter.scope.get('c').attr).toBeUndefined();
+	});
 });

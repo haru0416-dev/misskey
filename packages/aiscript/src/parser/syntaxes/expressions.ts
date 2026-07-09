@@ -50,6 +50,8 @@ const operators: OpInfo[] = [
 	{ opKind: 'infix', kind: TokenKind.And2, lbp: 4, rbp: 5 },
 
 	{ opKind: 'infix', kind: TokenKind.Or2, lbp: 2, rbp: 3 },
+
+	{ opKind: 'infix', kind: TokenKind.Pipe, lbp: 0, rbp: 1 },
 ];
 
 function parsePrefix(s: ITokenStream, minBp: number): Ast.Expression {
@@ -156,6 +158,14 @@ function parseInfix(s: ITokenStream, left: Ast.Expression, minBp: number): Ast.E
 			}
 			case TokenKind.Or2: {
 				return NODE('or', { left, right }, startPos, endPos);
+			}
+			case TokenKind.Pipe: {
+				// `x |> f` は `f(x)` に、`x |> f(y, z)` は `f(x, y, z)` にデシュガーする
+				if (right.type === 'call') {
+					return NODE('call', { target: right.target, args: [left, ...right.args] }, startPos, endPos);
+				} else {
+					return NODE('call', { target: right, args: [left] }, startPos, endPos);
+				}
 			}
 			default: {
 				throw unexpectedTokenError(op, startPos);
@@ -489,17 +499,22 @@ function parseMatch(s: ITokenStream): Ast.Match {
 
 /**
  * ```abnf
- * MatchCase = "case" Expr "=>" BlockOrStatement
+ * MatchCase = "case" Expr ["if" Expr] "=>" BlockOrStatement
  * ```
 */
 function parseMatchCase(s: ITokenStream): Ast.Match['qs'][number] {
 	s.expect(TokenKind.CaseKeyword);
 	s.next();
 	const q = parseExpr(s, false);
+	let guard: Ast.Expression | undefined;
+	if (s.is(TokenKind.IfKeyword)) {
+		s.next();
+		guard = parseExpr(s, false);
+	}
 	s.expect(TokenKind.Arrow);
 	s.next();
 	const a = parseBlockOrStatement(s);
-	return { q, a };
+	return { q, guard, a };
 }
 
 /**
