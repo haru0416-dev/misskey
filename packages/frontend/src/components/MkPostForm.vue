@@ -1621,10 +1621,6 @@ defineExpose({
 	&:disabled {
 		background: none;
 	}
-
-	&.danger {
-		color: #ff2a2a;
-	}
 }
 
 .headerRightButtonText {
@@ -1690,14 +1686,8 @@ html[data-color-scheme=light] .preview {
 	background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
 }
 
-.hasNotSpecifiedMentions {
-	margin: 0 20px 16px 20px;
-}
-
-.scheduledAt {
-	margin: 0 20px 16px 20px;
-}
-
+.hasNotSpecifiedMentions,
+.scheduledAt,
 .showHowToUse {
 	margin: 0 20px 16px 20px;
 }
@@ -1748,10 +1738,6 @@ html[data-color-scheme=light] .preview {
 	max-width: 100%;
 	min-width: 1.6em;
 	text-align: center;
-
-	&.cwTextOver {
-		color: #ff2a2a;
-	}
 }
 
 .hashtags {
@@ -1789,10 +1775,12 @@ html[data-color-scheme=light] .preview {
 	border-radius: 6px;
 	min-width: 1.6em;
 	text-align: center;
+}
 
-	&.textOver {
-		color: #ff2a2a;
-	}
+.headerRightItem.danger,
+.cwTextCount.cwTextOver,
+.textCount.textOver {
+	color: #ff2a2a;
 }
 
 .footer {

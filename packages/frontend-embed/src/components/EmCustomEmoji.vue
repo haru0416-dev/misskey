@@ -94,6 +94,6 @@ const errored = ref(url.value == null);
 }
 
 .noStyle {
-	height: auto !important;
+	height: auto;
 }
 </style>

@@ -573,6 +573,9 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 				}
 
 				> .fields {
+					display: flex;
+					flex-direction: column;
+					gap: 8px;
 					padding: 24px;
 					font-size: 0.9em;
 					border-top: solid 0.5px var(--MI_THEME-divider);
@@ -582,10 +585,6 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						padding: 0;
 						margin: 0;
 						align-items: center;
-
-						&:not(:last-child) {
-							margin-bottom: 8px;
-						}
 
 						> .name {
 							width: 30%;

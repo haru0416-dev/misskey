@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<template #label>{{ i18n.ts.state }}</template>
 		</MkSelect>
 
-		<div>
+		<div class="_gaps">
 			<div v-for="ad in ads" class="_panel _gaps_m" :class="$style.ad">
 				<MkAd v-if="ad.url" :key="ad.id" :specify="ad"/>
 
@@ -283,10 +283,6 @@ definePage(() => ({
 <style lang="scss" module>
 .ad {
 	padding: 32px;
-
-	&:not(:last-child) {
-		margin-bottom: var(--MI-margin);
-	}
 }
 .input {
 	margin-bottom: 32px;

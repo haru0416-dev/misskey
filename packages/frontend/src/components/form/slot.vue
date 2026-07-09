@@ -26,19 +26,15 @@ function focus() {
 	font-size: 0.85em;
 	padding: 0 0 8px 0;
 	user-select: none;
-
-	&:empty {
-		display: none;
-	}
 }
 
 .caption {
 	font-size: 0.85em;
 	padding: 8px 0 0 0;
 	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+}
 
-	&:empty {
-		display: none;
-	}
+:is(.label, .caption):empty {
+	display: none;
 }
 </style>

@@ -359,7 +359,7 @@ definePage(() => ({
 		.ldhfsamy {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-			grid-gap: 12px;
+			gap: 12px;
 			margin: var(--MI-margin) 0;
 
 			> .emoji {
@@ -411,7 +411,7 @@ definePage(() => ({
 		.ldhfsamy {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-			grid-gap: 12px;
+			gap: 12px;
 			margin: var(--MI-margin) 0;
 
 			> .emoji {

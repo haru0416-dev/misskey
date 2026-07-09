@@ -174,43 +174,29 @@ if ($i) {
 
 <style lang="scss" module>
 .transition_menuDrawerBg_enterActive,
-.transition_menuDrawerBg_leaveActive {
-	opacity: 1;
-	transition: opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.transition_menuDrawerBg_enterFrom,
-.transition_menuDrawerBg_leaveTo {
-	opacity: 0;
-}
-
-.transition_menuDrawer_enterActive,
-.transition_menuDrawer_leaveActive {
-	opacity: 1;
-	transform: translateX(0);
-	transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.transition_menuDrawer_enterFrom,
-.transition_menuDrawer_leaveTo {
-	opacity: 0;
-	transform: translateX(-240px);
-}
-
+.transition_menuDrawerBg_leaveActive,
 .transition_widgetsDrawerBg_enterActive,
 .transition_widgetsDrawerBg_leaveActive {
 	opacity: 1;
 	transition: opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+.transition_menuDrawerBg_enterFrom,
+.transition_menuDrawerBg_leaveTo,
 .transition_widgetsDrawerBg_enterFrom,
 .transition_widgetsDrawerBg_leaveTo {
 	opacity: 0;
 }
 
+.transition_menuDrawer_enterActive,
+.transition_menuDrawer_leaveActive,
 .transition_widgetsDrawer_enterActive,
 .transition_widgetsDrawer_leaveActive {
 	opacity: 1;
 	transform: translateX(0);
 	transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+.transition_menuDrawer_enterFrom,
+.transition_menuDrawer_leaveTo,
 .transition_widgetsDrawer_enterFrom,
 .transition_widgetsDrawer_leaveTo {
 	opacity: 0;
@@ -279,6 +265,7 @@ if ($i) {
 	padding: 0 var(--MI-margin);
 	pointer-events: none;
 	display: flex;
+	gap: 8px;
 
 	&.notificationsPosition_leftTop {
 		top: var(--MI-margin);
@@ -306,23 +293,11 @@ if ($i) {
 		&.notificationsPosition_leftTop,
 		&.notificationsPosition_rightTop {
 			flex-direction: column;
-
-			.notification {
-				& + .notification {
-					margin-top: 8px;
-				}
-			}
 		}
 
 		&.notificationsPosition_leftBottom,
 		&.notificationsPosition_rightBottom {
 			flex-direction: column-reverse;
-
-			.notification {
-				& + .notification {
-					margin-bottom: 8px;
-				}
-			}
 		}
 	}
 
@@ -332,23 +307,11 @@ if ($i) {
 		&.notificationsPosition_leftTop,
 		&.notificationsPosition_leftBottom {
 			flex-direction: row;
-
-			.notification {
-				& + .notification {
-					margin-left: 8px;
-				}
-			}
 		}
 
 		&.notificationsPosition_rightTop,
 		&.notificationsPosition_rightBottom {
 			flex-direction: row-reverse;
-
-			.notification {
-				& + .notification {
-					margin-right: 8px;
-				}
-			}
 		}
 
 		.notification {

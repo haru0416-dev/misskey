@@ -366,7 +366,7 @@ function onDrop(ev: DragEvent) {
 	}
 
 	&.naked {
-		background: color(from var(--MI_THEME-bg) srgb r g b / 0.5) !important;
+		background: color(from var(--MI_THEME-bg) srgb r g b / 0.5);
 
 		> .header {
 			background: transparent;
@@ -375,14 +375,14 @@ function onDrop(ev: DragEvent) {
 		}
 
 		> .body {
-			background: transparent !important;
+			background: transparent;
 			scrollbar-color: var(--MI_THEME-scrollbarHandle) transparent;
 		}
 	}
 
 	&.withWallpaper {
 		&.naked {
-			background: color(from var(--MI_THEME-bg) srgb r g b / 0.75) !important;
+			background: color(from var(--MI_THEME-bg) srgb r g b / 0.75);
 			-webkit-backdrop-filter: var(--MI-blur, blur(10px));
 			backdrop-filter: var(--MI-blur, blur(10px));
 
@@ -397,10 +397,10 @@ function onDrop(ev: DragEvent) {
 	}
 
 	&.paged {
-		background: var(--MI_THEME-bg) !important;
+		background: var(--MI_THEME-bg);
 
 		> .body {
-			background: var(--MI_THEME-bg) !important;
+			background: var(--MI_THEME-bg);
 			scrollbar-color: var(--MI_THEME-scrollbarHandle) transparent;
 		}
 	}

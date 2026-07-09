@@ -114,7 +114,7 @@ async function onClick() {
 	}
 
 	&.wait {
-		cursor: wait !important;
+		cursor: wait;
 		opacity: 0.7;
 	}
 }

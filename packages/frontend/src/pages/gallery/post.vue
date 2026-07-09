@@ -235,16 +235,16 @@ definePage(() => ({
 
 .rkxwuolj {
 	> .files {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+
 		> .file {
 			> img {
 				display: block;
 				max-width: 100%;
 				max-height: 500px;
 				margin: 0 auto;
-			}
-
-			& + .file {
-				margin-top: 16px;
 			}
 		}
 	}
@@ -327,7 +327,7 @@ definePage(() => ({
 .sdrarzaf {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-	grid-gap: 12px;
+	gap: 12px;
 	margin: var(--MI-margin);
 
 	> .post {

@@ -186,7 +186,7 @@ function onMousedown(evt: MouseEvent): void {
 
 	&.primary {
 		font-weight: bold;
-		color: var(--MI_THEME-fgOnAccent) !important;
+		color: var(--MI_THEME-fgOnAccent);
 		background: var(--MI_THEME-accent);
 
 		&:not(:disabled):hover {
@@ -217,6 +217,7 @@ function onMousedown(evt: MouseEvent): void {
 		}
 
 		&.primary {
+			color: var(--MI_THEME-fgOnAccent);
 			background: rgb(241 97 132);
 
 			&:not(:disabled):hover {
@@ -274,7 +275,7 @@ function onMousedown(evt: MouseEvent): void {
 	}
 
 	&.wait {
-		cursor: wait !important;
+		cursor: wait;
 	}
 
 	&:focus-visible {

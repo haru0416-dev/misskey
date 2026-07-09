@@ -63,13 +63,11 @@ export class I18n<T extends ILocale> {
 						return new Proxy(value, new Handler<TTarget[keyof TTarget] & ILocale>());
 					}
 
+					// パラメータ化された文字列 ({name} 等を含む) を .ts 経由で取得するのは
+					// <I18n :src="i18n.ts.xxx"> にそのまま渡してスロットで埋める正規の用法であり、
+					// この時点ではパラメータが充足されるかどうか判定できないので警告しない
+					// (実際に引数を渡して埋める .tsx/.t() 側でのみ充足チェックを行う)。
 					if (typeof value === 'string') {
-						const parameters = Array.from(value.matchAll(/\{(\w+)\}/g), ([, parameter]) => parameter);
-
-						if (parameters.length) {
-							console.error(`Missing locale parameters: ${parameters.join(', ')} at ${String(p)}`);
-						}
-
 						return value;
 					}
 

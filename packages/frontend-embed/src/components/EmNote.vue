@@ -205,7 +205,7 @@ const isDeleted = ref(false);
 			top: 12px;
 			right: 12px;
 			padding: 0 4px;
-			margin-bottom: 0 !important;
+			margin-bottom: 0;
 			background: var(--MI_THEME-popup);
 			border-radius: 8px;
 			box-shadow: 0px 4px 32px var(--MI_THEME-shadow);

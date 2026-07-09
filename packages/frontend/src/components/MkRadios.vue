@@ -96,10 +96,6 @@ function toggle(o: MkRadiosOption): void {
 	font-size: 0.85em;
 	padding: 0 0 8px 0;
 	user-select: none;
-
-	&:empty {
-		display: none;
-	}
 }
 
 .body {
@@ -112,10 +108,10 @@ function toggle(o: MkRadiosOption): void {
 	font-size: 0.85em;
 	padding: 8px 0 0 0;
 	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+}
 
-	&:empty {
-		display: none;
-	}
+:is(.label, .caption):empty {
+	display: none;
 }
 
 .vertical > .body {
@@ -140,11 +136,11 @@ function toggle(o: MkRadiosOption): void {
 
 	&.disabled {
 		opacity: 0.6;
-		cursor: not-allowed !important;
+		cursor: not-allowed;
 	}
 
 	&:hover {
-		border-color: var(--MI_THEME-inputBorderHover) !important;
+		border-color: var(--MI_THEME-inputBorderHover);
 	}
 
 	&:focus-within {
@@ -153,10 +149,10 @@ function toggle(o: MkRadiosOption): void {
 	}
 
 	&.checked {
-		background-color: var(--MI_THEME-accentedBg) !important;
-		border-color: var(--MI_THEME-accentedBg) !important;
+		background-color: var(--MI_THEME-accentedBg);
+		border-color: var(--MI_THEME-accentedBg);
 		color: var(--MI_THEME-accent);
-		cursor: default !important;
+		cursor: default;
 
 		.optionButton {
 			border-color: var(--MI_THEME-accent);

@@ -324,12 +324,7 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	pointer-events: none;
 }
 
-.t_renote {
-	background: var(--eventRenote);
-	pointer-events: none;
-}
-
-.t_quote {
+.t_renote, .t_quote {
 	background: var(--eventRenote);
 	pointer-events: none;
 }
@@ -339,22 +334,14 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	pointer-events: none;
 }
 
-.t_mention {
-	background: var(--eventOther);
-	pointer-events: none;
-}
-
-.t_pollEnded {
-	background: var(--eventOther);
-	pointer-events: none;
-}
-
-.t_scheduledNotePosted {
-	background: var(--eventOther);
-	pointer-events: none;
-}
-
-.t_scheduledNotePostFailed {
+.t_mention,
+.t_pollEnded,
+.t_scheduledNotePosted,
+.t_scheduledNotePostFailed,
+.t_exportCompleted,
+.t_roleAssigned,
+.t_createToken,
+.t_chatRoomInvitationReceived {
 	background: var(--eventOther);
 	pointer-events: none;
 }
@@ -364,28 +351,8 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	pointer-events: none;
 }
 
-.t_exportCompleted {
-	background: var(--eventOther);
-	pointer-events: none;
-}
-
-.t_roleAssigned {
-	background: var(--eventOther);
-	pointer-events: none;
-}
-
 .t_login {
 	background: var(--eventLogin);
-	pointer-events: none;
-}
-
-.t_createToken {
-	background: var(--eventOther);
-	pointer-events: none;
-}
-
-.t_chatRoomInvitationReceived {
-	background: var(--eventOther);
 	pointer-events: none;
 }
 
