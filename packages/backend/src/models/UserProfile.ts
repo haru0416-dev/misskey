@@ -68,12 +68,6 @@ export class MiUserProfile {
 
 	public moderationNote: string | null;
 
-	// TODO: そのうち消す
-	public clientData: Record<string, unknown>;
-
-	// TODO: そのうち消す
-	public room: Record<string, unknown>;
-
 	public autoAcceptFollowed: boolean;
 
 	public noCrawle: boolean;

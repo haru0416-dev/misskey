@@ -37,8 +37,6 @@ export const userProfile = pgTable('user_profile', {
 	usePasswordLessLogin: boolean().default(false).notNull(),
 	password: varchar({ length: 128 }),
 	moderationNote: varchar({ length: 8192 }).default('').notNull(),
-	clientData: jsonb().$type<MiUserProfile['clientData']>().default({}).notNull(),
-	room: jsonb().$type<MiUserProfile['room']>().default({}).notNull(),
 	autoAcceptFollowed: boolean().default(false).notNull(),
 	noCrawle: boolean().default(false).notNull(),
 	preventAiLearning: boolean().default(true).notNull(),

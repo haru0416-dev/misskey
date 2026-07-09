@@ -121,8 +121,6 @@ export const adminUpdateMetaParamDef = z.object({
 	notesPerOneAd: z.number().int().optional(),
 	silencedHosts: z.array(z.string()).nullable().optional(),
 	mediaSilencedHosts: z.array(z.string()).nullable().optional(),
-	/** [Deprecated] Use "urlPreviewSummaryProxyUrl" instead. */
-	summalyProxy: z.string().nullable().optional(),
 	urlPreviewEnabled: z.boolean().optional(),
 	urlPreviewAllowRedirect: z.boolean().optional(),
 	urlPreviewTimeout: z.number().int().optional(),
@@ -309,10 +307,6 @@ export const adminUpdateMetaJsonSchema = {
 			items: {
 				type: 'string',
 			},
-		},
-		summalyProxy: {
-			type: 'string', nullable: true,
-			description: '[Deprecated] Use "urlPreviewSummaryProxyUrl" instead.',
 		},
 		urlPreviewEnabled: { type: 'boolean' },
 		urlPreviewAllowRedirect: { type: 'boolean' },
@@ -602,8 +596,8 @@ export function buildAdminUpdateMetaPatch(
 		set.urlPreviewUserAgent = value === '' ? null : params.urlPreviewUserAgent;
 	}
 
-	if (params.summalyProxy !== undefined || params.urlPreviewSummaryProxyUrl !== undefined) {
-		const value = ((params.urlPreviewSummaryProxyUrl ?? params.summalyProxy) ?? '').trim();
+	if (params.urlPreviewSummaryProxyUrl !== undefined) {
+		const value = (params.urlPreviewSummaryProxyUrl ?? '').trim();
 		set.urlPreviewSummaryProxyUrl = value === '' ? null : value;
 	}
 
