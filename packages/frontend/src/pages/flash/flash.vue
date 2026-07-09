@@ -63,13 +63,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, onDeactivated, onUnmounted, ref, watch, shallowRef, defineAsyncComponent } from 'vue';
 import * as Misskey from 'misskey-js';
-import { utils } from '@syuilo/aiscript';
-import { compareVersions } from 'compare-versions';
+import { Interpreter, Parser, values } from '@syuilo/aiscript';
 import { url } from '@shared/utility/config.js';
 import type { Ref } from 'vue';
 import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
 import type { MenuItem } from '@/types/menu.js';
-import type { Interpreter } from '@syuilo/aiscript';
 import MkButton from '@/components/MkButton.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -196,23 +194,9 @@ function start() {
 	run();
 }
 
-function getIsLegacy(version: string | null): boolean {
-	if (version == null) return true;
-	try {
-		return compareVersions(version, '1.0.0') < 0;
-	} catch {
-		return false;
-	}
-}
-
 async function run() {
 	if (aiscript.value) aiscript.value.abort();
 	if (!flash.value) return;
-
-	const version = utils.getLangVersion(flash.value.script);
-	const isLegacy = getIsLegacy(version);
-
-	const { Interpreter, Parser, values } = (isLegacy ? (await import('@syuilo/aiscript-0-19-0')) : await import('@syuilo/aiscript')) as typeof import('@syuilo/aiscript');
 
 	const parser = new Parser();
 
