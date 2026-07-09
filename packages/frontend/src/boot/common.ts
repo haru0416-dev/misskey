@@ -95,8 +95,8 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	}
 
 	// 一斉リロード
-	reloadChannel.addEventListener('message', (path) => {
-		if (path !== null) window.location.href = path;
+	reloadChannel.addEventListener('message', (ev: MessageEvent<string | null>) => {
+		if (ev.data !== null) window.location.href = ev.data;
 		else window.location.reload();
 	});
 

@@ -214,7 +214,6 @@ export async function handleHonoApiAdminMeta(
 		perUserListTimelineCacheMax: instance.perUserListTimelineCacheMax,
 		enableReactionsBuffering: instance.enableReactionsBuffering,
 		notesPerOneAd: instance.notesPerOneAd,
-		summalyProxy: instance.urlPreviewSummaryProxyUrl,
 		urlPreviewEnabled: instance.urlPreviewEnabled,
 		urlPreviewAllowRedirect: instance.urlPreviewAllowRedirect,
 		urlPreviewTimeout: instance.urlPreviewTimeout,

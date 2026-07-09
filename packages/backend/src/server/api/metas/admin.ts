@@ -1573,12 +1573,6 @@ export const endpointMetas = {
 						type: 'string',
 						optional: false, nullable: true,
 					},
-					summalyProxy: {
-						type: 'string',
-						optional: false, nullable: true,
-						deprecated: true,
-						description: '[Deprecated] Use "urlPreviewSummaryProxyUrl" instead.',
-					},
 					themeColor: {
 						type: 'string',
 						optional: false, nullable: true,

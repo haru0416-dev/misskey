@@ -36,7 +36,6 @@ export type Keys =
 	| 'isSafeMode'
 	| `miux:${string}`
 	| `ui:folder:${string}`
-	| `themes:${string}` // DEPRECATED
 	| `aiscript:${string}`
 	| 'lastEmojisFetchedAt' // DEPRECATED, stored in indexeddb (13.9.0~)
 	| 'emojis' // DEPRECATED, stored in indexeddb (13.9.0~);

@@ -305,7 +305,6 @@ describe('Endpoints', () => {
 			assert.strictEqual(typeof res.body.version, 'string');
 			assert.strictEqual(res.body.emailRequiredForSignup, meta.emailRequiredForSignup);
 			assert.strictEqual(res.body.federation, meta.federation);
-			assert.strictEqual(res.body.summalyProxy, meta.urlPreviewSummaryProxyUrl);
 			assert.strictEqual(typeof res.body.proxyAccountId, 'string');
 			assert.strictEqual((res.body.policies as { canPublicNote?: boolean }).canPublicNote, true);
 
@@ -356,7 +355,7 @@ describe('Endpoints', () => {
 					truemailInstance: '',
 					tosUrl: `https://example.com/tos-${now}`,
 					repositoryUrl: 'not a url',
-					summalyProxy: ` https://example.com/summary-${now} `,
+					urlPreviewSummaryProxyUrl: ` https://example.com/summary-${now} `,
 					clientOptions: {
 						entrancePageStyle: 'simple',
 						showTimelineForVisitor: false,
