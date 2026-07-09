@@ -111,7 +111,7 @@ export async function handleHonoApiAppCreate(
 	const secret = secureRndstr(32);
 	const permission = unique(params.permission.map(v => v.replace(/^(.+)(\/|-)(read|write)$/, '$3:$1')));
 	const app = await createAppInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: user ? user.id : null,
 		name: params.name,
 		description: params.description,
@@ -181,7 +181,7 @@ export async function handleHonoApiIApps(
 		return {
 			id: token.id,
 			name: token.name ?? app?.name,
-			createdAt: parseId(deps.config, token.id).date.toISOString(),
+			createdAt: parseId(token.id).date.toISOString(),
 			lastUsedAt: token.lastUsedAt?.toISOString(),
 			permission: app ? app.permission : token.permission,
 			iconUrl: token.iconUrl,

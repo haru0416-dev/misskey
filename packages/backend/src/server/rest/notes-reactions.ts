@@ -209,7 +209,7 @@ export async function createNoteReactionForHonoApi(
 	}
 
 	const record = {
-		id: genId(deps.config),
+		id: genId(),
 		noteId: note.id,
 		userId: user.id,
 		reaction,
@@ -449,14 +449,14 @@ export async function handleHonoApiNotesReactions(
 	} else if (untilId) {
 		order = 'desc';
 	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(deps.config, params.sinceDate);
-		untilId = genId(deps.config, params.untilDate);
+		sinceId = genId(params.sinceDate);
+		untilId = genId(params.untilDate);
 		order = 'desc';
 	} else if (params.sinceDate) {
-		sinceId = genId(deps.config, params.sinceDate);
+		sinceId = genId(params.sinceDate);
 		order = 'asc';
 	} else if (params.untilDate) {
-		untilId = genId(deps.config, params.untilDate);
+		untilId = genId(params.untilDate);
 		order = 'desc';
 	}
 
@@ -472,7 +472,7 @@ export async function handleHonoApiNotesReactions(
 
 	return reactions.map(r => ({
 		id: r.id,
-		createdAt: parseId(deps.config, r.id).date.toISOString(),
+		createdAt: parseId(r.id).date.toISOString(),
 		user: userMap.get(r.userId),
 		type: decodeReactionForHonoApi(r.reaction).reaction,
 	}));

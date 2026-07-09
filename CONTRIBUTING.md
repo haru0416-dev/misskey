@@ -579,14 +579,15 @@ enumの列挙の内容の削除は、その値をもつレコードを全て削�
 削除が重たかったり不可能だったりする場合は、削除しないでおく
 
 ### Migration作成方法
-packages/backendで:
+`packages/backend/src/db/schema/*.ts` (drizzle-orm) を編集した後、ルートで:
 ```sh
-bun run --bun typeorm migration:generate -d ormconfig.js -o --esm <migration name>
+bun run --filter backend db:generate
 ```
 
-- 生成後、ファイルをmigration下に移してください
-- 作成されたスクリプトは不必要な変更を含むため除去してください
-- `-o` (`--outputJs`) で JS 形式、`--esm` で ESM 形式に生成する。Misskey の既存 migration はすべて ESM JS なので両方のオプションが必要
+- `packages/backend/migration/` に差分SQLファイルが自動生成される
+- 拡張機能・関数・`INCLUDE`句などdrizzle-kitが検出できないDDLは `bun run --filter backend db:generate:custom` で空ファイルを作り手書きする
+- 生成されたSQLの中身を必ず確認すること(特にenum変更・列リネームは対話プロンプトでの判定に依存する)
+- forward-onlyのため`down`migrationの概念は無い
 
 ### コネクションには`markRaw`せよ
 **Vueのコンポーネントのdataオプションとして**misskey.jsのコネクションを設定するとき、必ず`markRaw`でラップしてください。インスタンスが不必要にリアクティブ化されることで、misskey.js内の処理で不具合が発生するとともに、パフォーマンス上の問題にも繋がる。なお、Composition APIを使う場合はこの限りではない(リアクティブ化はマニュアルなため)。

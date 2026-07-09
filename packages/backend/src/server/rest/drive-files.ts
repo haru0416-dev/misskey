@@ -81,8 +81,8 @@ export async function handleHonoApiDriveFilesList(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
-		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+		if (params.sinceDate) sinceId = genId(params.sinceDate);
+		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
 	const files = await listDriveFilesForUserFromDatabase(deps.db, {
@@ -127,8 +127,8 @@ export async function handleHonoApiDriveStream(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
-		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+		if (params.sinceDate) sinceId = genId(params.sinceDate);
+		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
 	const files = await listDriveFilesForUserFromDatabase(deps.db, {
@@ -251,8 +251,8 @@ export async function handleHonoApiDriveFilesAttachedNotes(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
-		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+		if (params.sinceDate) sinceId = genId(params.sinceDate);
+		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
 	const notes = await listNotesByAttachedFileIdFromDatabase(deps.db, file.id, {
@@ -454,7 +454,7 @@ export async function handleHonoApiDriveFilesAttachedChatMessages(
 
 	const messages = await listChatMessagesByFileIdFromDatabase(deps.db, file.id, {
 		limit: params.limit,
-		...resolveChatMessagePagination({ gen: (time) => genId(deps.config, time) }, params),
+		...resolveChatMessagePagination({ gen: (time) => genId(time) }, params),
 	});
 
 	return await packChatMessagesDetailedForHonoApi(deps, messages, me);

@@ -119,7 +119,7 @@ redis:
 
 # These are the setting items for the full-text search provider.
 fulltextSearch:
-  # You can select the ID generation method.
+  # You can select the fulltext search provider.
   # - sqlLike (default)
   #   Use SQL-like search.
   #   This is a standard feature of PostgreSQL, so no special extensions are required.
@@ -145,26 +145,6 @@ fulltextSearch:
 #  ssl: true
 #  index: ''
 #  scope: local
-
-#   ┌───────────────┐
-#───┘ ID generation └───────────────────────────────────────────
-
-# You can select the ID generation method.
-# You don't usually need to change this setting, but you can
-# change it according to your preferences.
-
-# Available methods:
-# aid ... Short, Millisecond accuracy
-# aidx ... Millisecond accuracy
-# meid ... Similar to ObjectID, Millisecond accuracy
-# ulid ... Millisecond accuracy
-# objectid ... This is left for backward compatibility
-# uuidv7 ... UUIDv7 (RFC 9562), hex without hyphens, Millisecond accuracy
-
-# ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
-# ID SETTINGS AFTER THAT!
-
-id: 'uuidv7'
 
 #   ┌────────────────┐
 #───┘ Error tracking └──────────────────────────────────────────

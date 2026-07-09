@@ -18,8 +18,8 @@ export const ad = pgTable('ad', {
 	dayOfWeek: integer().default(0).notNull(),
 	isSensitive: boolean().default(false).notNull(),
 }, table => [
-	index('IDX_2da24ce20ad209f1d9dc032457').on(table.expiresAt),
-	index('IDX_3fcc2c589eaefc205e0714b99c').on(table.startsAt),
+	index('IDX_AD_EXPIRES_AT').on(table.expiresAt),
+	index('IDX_AD_STARTS_AT').on(table.startsAt),
 ]);
 
 export type AdRow = typeof ad.$inferSelect;

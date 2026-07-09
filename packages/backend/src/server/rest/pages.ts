@@ -123,7 +123,7 @@ export async function packPageForHonoApi(
 
 	return {
 		id: pageEntity.id,
-		createdAt: parseId(deps.config, pageEntity.id).date.toISOString(),
+		createdAt: parseId(pageEntity.id).date.toISOString(),
 		updatedAt: pageEntity.updatedAt.toISOString(),
 		userId: pageEntity.userId,
 		user,
@@ -218,7 +218,7 @@ export async function handleHonoApiPagesCreate(
 	}
 
 	const pageEntity = await createPageInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		updatedAt: new Date(),
 		title: params.title,
 		name: params.name,
@@ -459,7 +459,7 @@ export async function handleHonoApiIPages(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
 	const params = parseHonoApiParams(iPagesParamDef, body);
-	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(deps.config, time) }, params);
+	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(time) }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -507,13 +507,13 @@ export async function handleHonoApiIPageLikes(
 	} else if (params.untilId) {
 		untilId = params.untilId;
 	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(deps.config, params.sinceDate);
-		untilId = genId(deps.config, params.untilDate);
+		sinceId = genId(params.sinceDate);
+		untilId = genId(params.untilDate);
 	} else if (params.sinceDate) {
-		sinceId = genId(deps.config, params.sinceDate);
+		sinceId = genId(params.sinceDate);
 		order = 'asc';
 	} else if (params.untilDate) {
-		untilId = genId(deps.config, params.untilDate);
+		untilId = genId(params.untilDate);
 	}
 
 	const likes = await listPageLikesByUserIdFromDatabase(deps.db, me.id, {
@@ -559,7 +559,7 @@ export async function handleHonoApiUsersPages(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
 	const params = parseHonoApiParams(usersPagesParamDef, body);
-	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(deps.config, time) }, params);
+	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(time) }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, params.userId, {
 		limit: params.limit,

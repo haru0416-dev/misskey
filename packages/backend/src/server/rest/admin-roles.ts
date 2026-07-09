@@ -188,7 +188,7 @@ export async function handleHonoApiAdminRolesAssign(
 
 	await assignRoleWithSideEffects({
 		db: deps.db,
-		genId: time => genId(deps.config, time),
+		genId,
 		publishInternalEvent: deps.publishInternalEvent,
 		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
 		notifyRoleAssigned: (userId, _roleId, assignedRole) => createRoleAssignedNotification(deps, userId, assignedRole),
@@ -207,7 +207,7 @@ export async function handleHonoApiAdminRolesCreate(
 	const params = parseHonoApiParams(adminRolesCreateParamDef, body);
 	const created = await createRoleWithSideEffects({
 		db: deps.db,
-		genId: time => genId(deps.config, time),
+		genId,
 		publishInternalEvent: deps.publishInternalEvent,
 		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
 	}, {
@@ -363,7 +363,7 @@ export async function handleHonoApiAdminRolesUsers(
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
 		...resolveRoleAssignmentPagination({
-			gen: (time?: number) => genId(deps.config, time),
+			gen: (time?: number) => genId(time),
 		}, params),
 	});
 
@@ -372,7 +372,7 @@ export async function handleHonoApiAdminRolesUsers(
 
 	return assigns.map(assign => ({
 		id: assign.id,
-		createdAt: parseId(deps.config, assign.id).date.toISOString(),
+		createdAt: parseId(assign.id).date.toISOString(),
 		user: userById.get(assign.userId)!,
 		expiresAt: assign.expiresAt?.toISOString() ?? null,
 	}));

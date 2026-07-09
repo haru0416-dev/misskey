@@ -196,7 +196,7 @@ export async function packClipForHonoApi(
 
 	return {
 		id: clip.id,
-		createdAt: parseId(deps.config, clip.id).date.toISOString(),
+		createdAt: parseId(clip.id).date.toISOString(),
 		lastClippedAt: clip.lastClippedAt ? clip.lastClippedAt.toISOString() : null,
 		userId: clip.userId,
 		user,
@@ -227,7 +227,7 @@ export async function handleHonoApiClipsList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
 	const params = parseHonoApiParams(clipsListParamDef, body);
-	const pagination = resolveClipPagination({ gen: (time) => genId(deps.config, time) }, params);
+	const pagination = resolveClipPagination({ gen: (time) => genId(time) }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
 		limit: params.limit,
@@ -280,7 +280,7 @@ export async function handleHonoApiClipsCreate(
 	}
 
 	const clip = await createClipInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		name: params.name,
 		isPublic: params.isPublic,
@@ -339,7 +339,7 @@ export async function handleHonoApiClipsAddNote(
 
 	try {
 		await createClipNoteInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			noteId: params.noteId,
 			clipId: clip.id,
 		});
@@ -386,8 +386,8 @@ export async function handleHonoApiClipsNotes(
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
-		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+		if (params.sinceDate) sinceId = genId(params.sinceDate);
+		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
 	const notes = await listClipNotesFromDatabase(deps.db, {
@@ -427,7 +427,7 @@ export async function handleHonoApiUsersClips(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
 	const params = parseHonoApiParams(usersClipsParamDef, body);
-	const pagination = resolveClipPagination({ gen: (time) => genId(deps.config, time) }, params);
+	const pagination = resolveClipPagination({ gen: (time) => genId(time) }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
 		isPublic: true,

@@ -30,7 +30,7 @@ const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
 const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
 
 export type HonoQueueSystemDependencies = {
-	config: Pick<Config, 'id' | 'deactivateAntennaThreshold' | 'redis' | 'redisForReactions'>;
+	config: Pick<Config, 'deactivateAntennaThreshold' | 'redis' | 'redisForReactions'>;
 	db: MiDrizzleDatabase;
 	chartWriters: HonoChartWriters;
 	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
@@ -100,11 +100,11 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 
 	const pastRecords = await listRetentionAggregationsCreatedAfter(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 31)));
 
-	const targetUserIds = await listLocalUserIdsCreatedAfter(deps.db, genId(deps.config, Date.now() - (1000 * 60 * 60 * 24)));
+	const targetUserIds = await listLocalUserIdsCreatedAfter(deps.db, genId(Date.now() - (1000 * 60 * 60 * 24)));
 
 	try {
 		await createRetentionAggregationInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: now,
 			updatedAt: now,
 			dateKey,

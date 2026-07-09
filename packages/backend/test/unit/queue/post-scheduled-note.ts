@@ -35,14 +35,14 @@ describe('hono-queue-post-scheduled-note', () => {
 	});
 
 	test('scheduledAt/isActuallyScheduledな下書きからノートを作成し、下書きを削除する', async () => {
-		const userId = genId(runtime.config);
+		const userId = genId();
 		await createUserInDatabase(runtime.db, {
 			id: userId,
 			username: `honoqueuepsn${userId}`,
 			usernameLower: `honoqueuepsn${userId}`.toLowerCase(),
 		});
 
-		const draftId = genId(runtime.config);
+		const draftId = genId();
 		await createNoteDraftInDatabase(runtime.db, {
 			id: draftId,
 			userId,
@@ -67,14 +67,14 @@ describe('hono-queue-post-scheduled-note', () => {
 	});
 
 	test('isActuallyScheduledがfalseの下書きは何もしない', async () => {
-		const userId = genId(runtime.config);
+		const userId = genId();
 		await createUserInDatabase(runtime.db, {
 			id: userId,
 			username: `honoqueuepsn${userId}`,
 			usernameLower: `honoqueuepsn${userId}`.toLowerCase(),
 		});
 
-		const draftId = genId(runtime.config);
+		const draftId = genId();
 		await createNoteDraftInDatabase(runtime.db, {
 			id: draftId,
 			userId,
@@ -91,6 +91,6 @@ describe('hono-queue-post-scheduled-note', () => {
 	});
 
 	test('存在しないnoteDraftIdは何もしない', async () => {
-		await expect(handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId(runtime.config) }))).resolves.toBeUndefined();
+		await expect(handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId() }))).resolves.toBeUndefined();
 	});
 });

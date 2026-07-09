@@ -27,7 +27,7 @@ import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/s
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: string): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 		profile: { userId: id },
@@ -35,7 +35,7 @@ async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: st
 }
 
 async function createTestRemoteUser(deps: HonoStreamConnectionDependencies, prefix: string, host: string): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase(), host },
 		profile: { userId: id },
@@ -82,7 +82,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('hashtag: マッチするタグの公開ノートを受け取る', async () => {
 		const viewer = await createTestUser(deps, 'honostreamhashtagviewer');
 		const author = await createTestUser(deps, 'honostreamhashtagauthor');
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, { id: noteId, text: '#foo hello', userId: author.id, userHost: null, visibility: 'public', tags: ['foo'] });
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
@@ -103,7 +103,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('hashtag: マッチしないタグのノートは受け取らない', async () => {
 		const viewer = await createTestUser(deps, 'honostreamhashtagviewer2');
 		const author = await createTestUser(deps, 'honostreamhashtagauthor2');
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, { id: noteId, text: '#bar hello', userId: author.id, userHost: null, visibility: 'public', tags: ['bar'] });
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
@@ -123,9 +123,9 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('channel (misskeyチャンネル): 指定したchannelIdのノートのみ受け取る', async () => {
 		const viewer = await createTestUser(deps, 'honostreamchannelviewer');
 		const author = await createTestUser(deps, 'honostreamchannelauthor');
-		const mkChannelId = genId(deps.config);
+		const mkChannelId = genId();
 		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'test channel', userId: author.id });
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, { id: noteId, text: 'in channel', userId: author.id, userHost: null, visibility: 'public', channelId: mkChannelId });
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
@@ -145,11 +145,11 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('channel (misskeyチャンネル): 異なるchannelIdのノートは受け取らない', async () => {
 		const viewer = await createTestUser(deps, 'honostreamchannelviewer2');
 		const author = await createTestUser(deps, 'honostreamchannelauthor2');
-		const mkChannelId = genId(deps.config);
-		const otherChannelId = genId(deps.config);
+		const mkChannelId = genId();
+		const otherChannelId = genId();
 		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'test channel 2', userId: author.id });
 		await createChannelInDatabase(deps.db, { id: otherChannelId, name: 'test channel 3', userId: author.id });
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, { id: noteId, text: 'in other channel', userId: author.id, userHost: null, visibility: 'public', channelId: otherChannelId });
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
@@ -170,18 +170,18 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const owner = await createTestUser(deps, 'honostreamlistowner');
 		const member = await createTestUser(deps, 'honostreamlistmember');
 		const nonMember = await createTestUser(deps, 'honostreamlistnonmember');
-		const listId = genId(deps.config);
+		const listId = genId();
 		await createUserListInDatabase(deps.db, { id: listId, name: 'test list', userId: owner.id });
 		await createUserListMembershipInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			userListId: listId,
 			userId: member.id,
 			userListUserId: owner.id,
 		});
 
-		const memberNoteId = genId(deps.config);
+		const memberNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: memberNoteId, text: 'from member', userId: member.id, userHost: null, visibility: 'public' });
-		const nonMemberNoteId = genId(deps.config);
+		const nonMemberNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: nonMemberNoteId, text: 'from non-member', userId: nonMember.id, userHost: null, visibility: 'public' });
 
 		const connection = new HonoStreamConnection(deps, owner, null);
@@ -206,9 +206,9 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const localAuthor = await createTestUser(deps, 'honostreamltlauthor');
 		const remoteAuthor = await createTestRemoteUser(deps, 'honostreamltlremote', 'ltl-remote.example.com');
 
-		const localNoteId = genId(deps.config);
+		const localNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: localNoteId, text: 'local public', userId: localAuthor.id, userHost: null, visibility: 'public' });
-		const remoteNoteId = genId(deps.config);
+		const remoteNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: remoteNoteId, text: 'remote public', userId: remoteAuthor.id, userHost: remoteAuthor.host, visibility: 'public' });
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -228,12 +228,12 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('globalTimeline: 公開ノートを受け取り、チャンネル投稿は受け取らない', async () => {
 		const viewer = await createTestUser(deps, 'honostreamgtlviewer');
 		const author = await createTestUser(deps, 'honostreamgtlauthor');
-		const mkChannelId = genId(deps.config);
+		const mkChannelId = genId();
 		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'gtl test channel', userId: author.id });
 
-		const publicNoteId = genId(deps.config);
+		const publicNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: publicNoteId, text: 'public note', userId: author.id, userHost: null, visibility: 'public' });
-		const channelNoteId = genId(deps.config);
+		const channelNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: channelNoteId, text: 'channel note', userId: author.id, userHost: null, visibility: 'public', channelId: mkChannelId });
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -254,11 +254,11 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const viewer = await createTestUser(deps, 'honostreamhtlviewer');
 		const followee = await createTestUser(deps, 'honostreamhtlfollowee');
 		const stranger = await createTestUser(deps, 'honostreamhtlstranger');
-		await createFollowingInDatabase(deps.db, { id: genId(deps.config), followerId: viewer.id, followeeId: followee.id });
+		await createFollowingInDatabase(deps.db, { id: genId(), followerId: viewer.id, followeeId: followee.id });
 
-		const followeeNoteId = genId(deps.config);
+		const followeeNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: followeeNoteId, text: 'from followee', userId: followee.id, userHost: null, visibility: 'public' });
-		const strangerNoteId = genId(deps.config);
+		const strangerNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: strangerNoteId, text: 'from stranger', userId: stranger.id, userHost: null, visibility: 'public' });
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -280,9 +280,9 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const localStranger = await createTestUser(deps, 'honostreamhybridstranger');
 		const remoteStranger = await createTestRemoteUser(deps, 'honostreamhybridremote', 'hybrid-remote.example.com');
 
-		const localNoteId = genId(deps.config);
+		const localNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: localNoteId, text: 'local public unrelated', userId: localStranger.id, userHost: null, visibility: 'public' });
-		const remoteNoteId = genId(deps.config);
+		const remoteNoteId = genId();
 		await createNoteInDatabase(deps.db, { id: remoteNoteId, text: 'remote public unrelated', userId: remoteStranger.id, userHost: remoteStranger.host, visibility: 'public' });
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -303,7 +303,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('roleTimeline: isExplorableなロールの公開ノートを受け取る', async () => {
 		const viewer = await createTestUser(deps, 'honostreamroletlviewer');
 		const author = await createTestUser(deps, 'honostreamroletlauthor');
-		const roleId = genId(deps.config);
+		const roleId = genId();
 		await createRoleInDatabase(deps.db, {
 			id: roleId,
 			name: `honostreamroletlrole${roleId}`,
@@ -313,7 +313,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 			isExplorable: true,
 		});
 
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, { id: noteId, text: 'role timeline note', userId: author.id, userHost: null, visibility: 'public' });
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
@@ -333,7 +333,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('roleTimeline: isExplorableでないロールの投稿は受け取らない', async () => {
 		const viewer = await createTestUser(deps, 'honostreamroletlviewer2');
 		const author = await createTestUser(deps, 'honostreamroletlauthor2');
-		const roleId = genId(deps.config);
+		const roleId = genId();
 		await createRoleInDatabase(deps.db, {
 			id: roleId,
 			name: `honostreamroletlrole2${roleId}`,
@@ -343,7 +343,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 			isExplorable: false,
 		});
 
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, { id: noteId, text: 'role timeline note 2', userId: author.id, userHost: null, visibility: 'public' });
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
@@ -363,7 +363,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('antenna: アンテナ所有者は登録済みアンテナのノートを受け取る', async () => {
 		const owner = await createTestUser(deps, 'honostreamantennaowner');
 		const author = await createTestUser(deps, 'honostreamantennaauthor');
-		const antennaId = genId(deps.config);
+		const antennaId = genId();
 		await createAntennaInDatabase(deps.db, {
 			id: antennaId,
 			lastUsedAt: new Date(),
@@ -373,7 +373,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 			withFile: false,
 		});
 
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, { id: noteId, text: 'antenna matched note', userId: author.id, userHost: null, visibility: 'public' });
 
 		const connection = new HonoStreamConnection(deps, owner, null);
@@ -394,7 +394,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 	test('antenna: 他人のアンテナには接続できない', async () => {
 		const owner = await createTestUser(deps, 'honostreamantennaowner2');
 		const stranger = await createTestUser(deps, 'honostreamantennastranger');
-		const antennaId = genId(deps.config);
+		const antennaId = genId();
 		await createAntennaInDatabase(deps.db, {
 			id: antennaId,
 			lastUsedAt: new Date(),

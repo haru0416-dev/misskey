@@ -15,7 +15,6 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { CommonData } from '@/server/web/views/_.js';
 
 const config = {
-	id: 'aidx',
 	url: 'http://misskey.local',
 	host: 'misskey.local',
 } as Config;

@@ -63,7 +63,7 @@ describe('hono-queue-db (importMuting)', () => {
 	});
 
 	async function createTestUser(prefix: string): Promise<MiUser> {
-		const id = genId(runtime.config);
+		const id = genId();
 		return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 			profile: { userId: id },
@@ -77,7 +77,7 @@ describe('hono-queue-db (importMuting)', () => {
 		const { url, server } = await serveText(`${target.username}@${runtime.config.host}\n`);
 		servers.push(server);
 
-		const fileId = genId(runtime.config);
+		const fileId = genId();
 		await createDriveFileInDatabase(runtime.db, {
 			id: fileId,
 			md5: 'dummy',
@@ -101,7 +101,7 @@ describe('hono-queue-db (importMuting)', () => {
 		const { url, server } = await serveText(`${muter.username}@${runtime.config.host}\n`);
 		servers.push(server);
 
-		const fileId = genId(runtime.config);
+		const fileId = genId();
 		await createDriveFileInDatabase(runtime.db, {
 			id: fileId,
 			md5: 'dummy',
@@ -121,6 +121,6 @@ describe('hono-queue-db (importMuting)', () => {
 
 	test('存在しないfileIdは何もしない', async () => {
 		const muter = await createTestUser('honoqueueimpmutenofile');
-		await expect(handleHonoQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId: genId(runtime.config) }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId: genId() }))).resolves.toBeUndefined();
 	});
 });

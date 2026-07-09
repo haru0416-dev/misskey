@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
 import { bigint, boolean, integer, jsonb, pgEnum, pgTable, varchar } from 'drizzle-orm/pg-core';
 import type { SoftwareSuspension } from '@/models/Meta.js';
 import type { RolePolicies } from '@/core/role-policies.js';
+import { user } from './user.js';
 
 type ClientOptions = {
 	entrancePageStyle: 'classic' | 'simple';
@@ -21,7 +22,7 @@ export const metaSensitiveMediaDetectionSensitivityEnum = pgEnum('meta_sensitive
 
 export const meta = pgTable('meta', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	rootUserId: varchar({ length: 32 }),
+	rootUserId: varchar({ length: 32 }).references(() => user.id, { onDelete: 'set null' }),
 	name: varchar({ length: 1024 }),
 	shortName: varchar({ length: 64 }),
 	description: varchar({ length: 1024 }),

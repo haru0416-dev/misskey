@@ -1,6 +1,8 @@
 # drizzle-orm モデル / migration パターン
 
-Misskey backend は 2026-07-07 に TypeORM を全廃し、drizzle-orm + PostgreSQL 構成になった。`@Entity` / `@Column` / `@Index` デコレータは存在しない。テーブル定義・アプリ内モデル・migration DDL は **3 つの別ファイル** に分かれており、変更時はこの 3 つを手動で同期させる必要がある。
+Misskey backend は 2026-07-07 に TypeORM を全廃し、drizzle-orm + PostgreSQL 構成になった。`@Entity` / `@Column` / `@Index` デコレータは存在しない。テーブル定義・アプリ内モデル・migration DDL は **3 つの別ファイル** に分かれている。
+
+2026-07-09 に drizzle-kit を導入し、`db/schema/*.ts` の変更から migration SQL を自動生成できるようになった(それ以前は migration も手書きJSだった)。
 
 ## 3 つの場所
 
@@ -8,19 +10,20 @@ Misskey backend は 2026-07-07 に TypeORM を全廃し、drizzle-orm + PostgreS
 |---|---|---|
 | クエリ用のテーブル定義 (drizzle-orm) | `packages/backend/src/db/schema/<name>.ts` | `pgTable('<table>', { ... })` |
 | アプリ内で扱う型付きオブジェクト | `packages/backend/src/models/<Name>.ts` | プレーンクラス (`export class MiXxx { public field: T; constructor(data: Partial<MiXxx>) {...} }`) |
-| 本番 DB に反映する DDL | `packages/backend/migration/{unixMs}-{name}.js` | 手書き raw SQL (`queryRunner.query(...)`) |
+| 本番 DB に反映する DDL | `packages/backend/migration/{0000,0001,...}_{name}.sql` | drizzle-kit生成のSQL (+ `meta/_journal.json`) |
 
-drizzle-kit のようなスキーマ差分からの自動 migration 生成ツールは導入されていない (`drizzle-kit` は依存に無い)。**`db/schema/*.ts` を変更しても migration は自動生成されない** — 変更したら手で `packages/backend/migration/` に新規ファイルを追加する。
+**`db/schema/*.ts` を変更したら `bun run --filter backend db:generate` を実行して migration を生成する** — 詳細手順は [tasks/creating-migration.md](../tasks/creating-migration.md) を参照。
 
-### `db/schema/*.ts` の例
+### `db/schema/*.ts` の例 (FK込み)
 
 ```ts
 import { sql } from 'drizzle-orm';
 import { boolean, index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { user } from './user.js';
 
 export const accessToken = pgTable('access_token', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	permission: varchar({ length: 64 }).array().default(sql`'{}'::character varying[]`).notNull().$type<string[]>(),
 	fetched: boolean().default(false).notNull(),
 }, table => [
@@ -32,6 +35,18 @@ export type AccessTokenInsert = typeof accessToken.$inferInsert;
 ```
 
 `$type<T>()` で TypeORM 時代の型 (`MiUser['id']` 等) をそのまま引き継げる。既存 index 名 (`IDX_...`) は TypeORM が生成していたものをそのまま踏襲しているファイルが多い。
+
+**外部キー**: `.references(() => 対象テーブル.対象カラム, { onDelete: 'cascade' | 'set null' | 'restrict' | 'no action' | 'set default' })` で宣言する。2ファイル間で相互参照(循環import)になる場合(例: `user.ts` の avatarId が `drive-file.ts` を参照し、`drive-file.ts` の userId が `user.ts` を参照する)は、TypeScriptの型推論が循環するため片方(または両方)で明示的な戻り値型アノテーションを使う:
+
+```ts
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+
+avatarId: varchar({ length: 32 }).references((): AnyPgColumn => driveFile.id, { onDelete: 'set null' }),
+```
+
+同一テーブルの自己参照(例: `drive_folder.parentId -> drive_folder.id`)も同じ `AnyPgColumn` パターンが必要。
+
+1つのカラムに複数のFKを持たせたい場合(稀)は、column-levelの`.references()`に加えてテーブル配列側で`foreignKey({ columns: [table.col], foreignColumns: [other.col] }).onDelete('cascade')` を追加する。
 
 ### `models/<Name>.ts` の例
 
@@ -52,145 +67,63 @@ export class MiUser {
 
 デコレータは一切無い。zod スキーマ (`localUsernameSchema` 等のバリデーション用定数) が同じファイルに併記されることもある。
 
-## migration ファイルの構造
+## migrationファイルの構造 (drizzle-kit生成)
 
-各ファイル `packages/backend/migration/{unixMs}-{descriptive-name}.js` は ESM JS。最小形:
+`packages/backend/migration/` 配下は `{0000,0001,...}_{name}.sql` の連番ファイル + `meta/_journal.json`(適用順とタイムスタンプの記録) + `meta/{N}_snapshot.json`(その時点のスキーマ全体のスナップショット、次回generateの差分基準)。
 
-```js
-/*
- * SPDX-FileCopyrightText: syuilo and misskey-project
- * SPDX-License-Identifier: AGPL-3.0-only
- */
+- `0000_baseline.sql` : drizzle-kit移行時のベースライン(当時のschema.ts全体を再現)
+- `0001_chart_tables_and_manual_ddl.sql` : drizzle-kitが検出できない特殊DDL(チャート集計テーブル・関数・拡張機能等、後述)をまとめた手書きファイル
+- それ以降は通常 `bun run --filter backend db:generate` で1個ずつ増えていく
 
-export class PascalCaseName1234567890123 {
-    name = 'PascalCaseName1234567890123'
+`packages/backend/src/migration-runner.ts` が `drizzle-orm/node-postgres/migrator` の `migrate()` に委譲し、`drizzle.__drizzle_migrations` テーブル(drizzle標準のブックキーピング、`created_at`とjournalの`when`を比較するだけで適用済み判定する)で管理する。**マージ済 migration の編集は絶対禁止**。
 
-    async up(queryRunner) {
-        await queryRunner.query(`...`);
-    }
+**forward-only** — drizzle-kitはdown migrationを生成しない。変更を取り消したい場合は「取り消すDDLを持つ新しいmigration」を追加する(例: 追加した列を消したいなら新規migrationで`ALTER TABLE ... DROP COLUMN`)。
 
-    async down(queryRunner) {
-        await queryRunner.query(`...`);  // up の完全な巻き戻し
-    }
-}
-```
+`packages/backend/migration/_legacy/` に旧TypeORM/手書きJS時代のmigration 10本を歴史的参照として保持しているが、実行系(migration-runner.ts)からは完全に外れている。
 
-`packages/backend/src/migration-runner.ts` がこのディレクトリを読み込み、`migrations` テーブルで適用済みかどうかを管理する自前ランナー (TypeORM CLI ではない)。詳細手順は [tasks/creating-migration.md](../tasks/creating-migration.md) を参照。**マージ済 migration の編集は絶対禁止**。
+## drizzle-kitで自動生成できないDDL
 
-**2026-07-03 に migration 履歴が [migration/0000000000001-InitialSchema.js](../../../../../packages/backend/migration/0000000000001-InitialSchema.js) 1 本へ squash された。** それ以前のタイムスタンプを持つ migration ファイルは repo 上に存在しない。squash 後の migration は本稿執筆時点で 8 本のみで、いずれもインデックス追加/調整が中心 (`packages/backend/migration/` を `ls` して現況を確認すること)。以下の参照実装リンクは **すべて squash 後の実在ファイル** に限定してある。
+以下は `db/schema/*.ts` の宣言的定義では表現できないため、`bun run --filter backend db:generate --custom` で空ファイルを作り、生SQLを手書きする対象:
 
-## CONCURRENTLY (CREATE INDEX CONCURRENTLY) の扱い
+- **拡張機能** (`CREATE EXTENSION IF NOT EXISTS pg_trgm` 等) — drizzle-kitに対応する概念が無い
+- **関数** (`CREATE OR REPLACE FUNCTION ...`) とそれを使う関数インデックス — ストアドプロシージャの概念が無い
+- **`INCLUDE` 句を持つカバリングインデックス** — `IndexConfig` 型に`INCLUDE`フィールドが無い
+- **既存インデックスへの事後 `ALTER INDEX ... SET (fastupdate = off)`** — ただし**新規作成時**なら `index(...).with({ fastupdate: false })` で表現可能(`note.ts`のGINインデックス群を参照)
+- **`gin_clean_pending_list()` のようなワンショットのメンテナンス関数呼び出し**
+- **同一カラムへの複数インデックス共存**(例: 通常btree + `varchar_pattern_ops`付きbtree)で、drizzle-kitの差分検出の安定性が未検証なもの — この場合、`--custom`側で直接管理し `db/schema/*.ts` には載せない判断もあり得る(実例: `user.usernameLower` への `IDX_USER_USERNAME_LOWER_PATTERN`)
+- **重複行削除のDML・環境変数分岐による実行方法の切替・`COMMENT ON INDEX`ベースの出所トラッキング**等の手続き型ロジック
 
-大規模テーブルへの `CREATE INDEX` は本番で長時間ロックする恐れがある。`CONCURRENTLY` で発行するときは migration class に **「この migration は transaction を張らない」と指示する** 必要がある。PostgreSQL は `CREATE INDEX CONCURRENTLY` を transaction 内で実行できないため。
+それ以外(カラム追加/削除、単純index、通常の外部キー、enum追加)は`db:generate`で自動生成される。
 
-参照実装: [migration/1783491564196-AddTrgmSearchIndexes.js](../../../../../packages/backend/migration/1783491564196-AddTrgmSearchIndexes.js), [migration/1782863440578-AddDatabaseTuningIndexes.js](../../../../../packages/backend/migration/1782863440578-AddDatabaseTuningIndexes.js) (どちらも実運用中の環境変数分岐)
+## CONCURRENTLY (CREATE INDEX CONCURRENTLY) の扱い — 標準ワークフローでは使用不可
 
-```js
-const isConcurrentIndexMigrationEnabled = process.env.MISSKEY_MIGRATION_CREATE_INDEX_CONCURRENTLY === '1';
+`drizzle-orm/node-postgres/migrator`の`migrate()`は**pending migration全体を1つのtransactionにまとめて実行する**(`pg-core/dialect.js`の`PgDialect.migrate`を参照)。PostgreSQLは`CREATE INDEX CONCURRENTLY`をtransaction内で実行できないため、**標準の`db:generate`/`db:generate:custom`ワークフローではCONCURRENTLYは使えない**。
 
-export class AddTrgmSearchIndexes1783491564196 {
-    name = 'AddTrgmSearchIndexes1783491564196'
-    transaction = isConcurrentIndexMigrationEnabled ? false : undefined
+大規模テーブルへのインデックス追加でCONCURRENTLYがどうしても必要な場合は、通常のmigrationフローに乗せず、運用者が手動で個別に`psql`等から直接`CREATE INDEX CONCURRENTLY`を実行し、その後 `bun run --bun --filter backend check-migrations` が指す通常の`db:generate`生成物(CONCURRENTLYなしの同等DDL)をmigration履歴としても残す、といった特別対応が必要になる。日常的な変更では基本的に発生しないはずなので、直面したらPRで相談すること。
 
-    async up(queryRunner) {
-        const concurrently = isConcurrentIndexMigrationEnabled ? 'CONCURRENTLY ' : '';
-        await queryRunner.query(`CREATE INDEX ${concurrently}IF NOT EXISTS "IDX_NOTE_TEXT_TRGM" ON "note" USING gin (lower("text") gin_trgm_ops)`);
-    }
+(旧TypeORM時代は `transaction = false` を指定した個別migrationとして書けたが、drizzle-kit移行後この仕組みは廃止された。`migration/_legacy/1782863440578-AddDatabaseTuningIndexes.js` 等に当時のパターンが歴史的参照として残っている。)
 
-    async down(queryRunner) {
-        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_NOTE_TEXT_TRGM"`);
-    }
-}
-```
-
-要点:
-
-- **`transaction = isConcurrentIndexMigrationEnabled ? false : undefined;`** が必須。これがないと `CREATE INDEX CONCURRENTLY` が transaction 内で実行されて `ERROR: CREATE INDEX CONCURRENTLY cannot run inside a transaction block` で失敗
-- 環境変数 `MISSKEY_MIGRATION_CREATE_INDEX_CONCURRENTLY=1` がデフォルト OFF。OFF のときは普通の `CREATE INDEX` (transaction 内) で動く必要がある。`up`/`down` 双方を環境変数で分岐させる
-- [migration-runner.ts](../../../../../packages/backend/src/migration-runner.ts) の `runMigrations()` は、pending な migration すべての `transaction` が `false` でなければ (=undefined ばかりなら) それら全体を 1 つの transaction にまとめて実行し、1 つでも `transaction === false` があれば migration ごとに個別実行する。`transaction: false` を指定した migration は他の pending migration と同時に走らない前提で書くこと
-- [migration/1782863440578-AddDatabaseTuningIndexes.js](../../../../../packages/backend/migration/1782863440578-AddDatabaseTuningIndexes.js) の `down()` コメントにある通り、`migration-runner.ts` の revert 経路は `transaction: false` を指定していても常に通常 DDL (非 CONCURRENTLY) でロールバックする前提で書かれている。`down()` で `CONCURRENTLY` を使う必要はない
-
-## migration 難ケース集
-
-手書きで踏み外しやすいパターンを「**なぜ危険か → up の形 → down 戦略**」でまとめる。**squash 後の 8 本は全てインデックス関連で、下記の NOT NULL 追加・enum 変更・列リネーム等を実演する参照実装は現在のリポジトリに存在しない** — SQL 自体は汎用的な PostgreSQL の知識なので、パターンとして頭に入れつつ実際に書くときは類似の既存 migration (無ければ [InitialSchema.js](../../../../../packages/backend/migration/0000000000001-InitialSchema.js) 内の該当テーブル定義) と見比べてスタイルを揃えること。
-
-共通の鉄則: `down()` は `up()` の **完全な巻き戻し**。下記ケースは「単純な逆 SQL では戻らない」ものが多い。
+## schema.ts作成時に踏み外しやすいパターン
 
 ### 1. NOT NULL 列の追加
 
-**なぜ危険か**: 既存行があるテーブルに `NOT NULL` 列を `DEFAULT` 無しで足すと、既存行を埋められず `ALTER TABLE` が失敗する。
+**なぜ危険か**: 既存行があるテーブルに `NOT NULL` 列を `DEFAULT` 無しで足すと、既存行を埋められず生成されたSQLの実行が失敗する。
 
-- **既定値で良い場合** — `DEFAULT` を付ければ 1 文で済む。これが最も多い
-
-  ```js
-  // up
-  await queryRunner.query(`ALTER TABLE "note_draft" ADD "isActuallyScheduled" boolean NOT NULL DEFAULT false`);
-  // down
-  await queryRunner.query(`ALTER TABLE "note_draft" DROP COLUMN "isActuallyScheduled"`);
-  ```
-
-- **行ごとに計算した値で埋めたい / 既定値を後で外したい場合** — 3 段に分ける: ①nullable で追加 → ②`UPDATE` でバックフィル (ケース 3 参照) → ③`ALTER COLUMN ... SET NOT NULL`。`down` は `DROP COLUMN` で良い。巨大テーブルでは ② の `UPDATE` と ③ の `SET NOT NULL` (全行スキャン) が長時間ロックし得る点に注意
-
-**補足:** `db/schema/*.ts` 側で `.default(...)` を付けても migration の DDL は自動生成されない (drizzle-kit 未導入)。DB 既定値が必要か、アプリ実行時に常に値を入れるので不要かを判断して `DEFAULT` 句の有無を手で決める。
+- **既定値で良い場合** — schema.tsに `.default(...).notNull()` を付ければ、生成されるSQLに `DEFAULT` 句が入り1文で済む。これが最も多い
+- **行ごとに計算した値で埋めたい場合** — `db:generate`が作る素直な`ADD COLUMN NOT NULL DEFAULT ...`では対応できないため、`db:generate:custom`で「nullable追加→UPDATEでバックフィル→`ALTER COLUMN SET NOT NULL`」の3段に手書きする。この場合、schema.ts側は最終形(NOT NULL)を宣言し、生成された素朴なSQLを手動で3段に書き換える
 
 ### 2. enum 型の値の追加・変更
 
-**なぜ危険か**: PostgreSQL の enum は **値を削除できない** (`ALTER TYPE ... DROP VALUE` は存在しない) ため、`ADD VALUE` した変更を素直に巻き戻せない。さらに migration は基本的に 1 トランザクションで実行され得る (上記 CONCURRENTLY 節参照) ので、`ADD VALUE` で足した値を同一トランザクション内で使う処理もエラーになる。そこで **「旧型を rename → 新型を CREATE → 列を新型へ ALTER (USING キャスト) → 旧型を DROP」** という巻き戻し可能な手順に従う。
-
-```js
-// up: 値 'app' を追加する例 (新値を含む型へ載せ替える)
-await queryRunner.query(`ALTER TYPE "public"."notification_type_enum" RENAME TO "notification_type_enum_old"`);
-await queryRunner.query(`CREATE TYPE "public"."notification_type_enum" AS ENUM('follow', 'mention', /* ... */ 'app')`);
-await queryRunner.query(`ALTER TABLE "notification" ALTER COLUMN "type" TYPE "public"."notification_type_enum" USING "type"::"text"::"public"."notification_type_enum"`);
-await queryRunner.query(`DROP TYPE "public"."notification_type_enum_old"`);
-```
-
-```js
-// down: 新値を含まない旧い値集合へ同じ手順で戻す
-await queryRunner.query(`ALTER TYPE "public"."notification_type_enum" RENAME TO "notification_type_enum_old"`);
-await queryRunner.query(`CREATE TYPE "public"."notification_type_enum" AS ENUM('follow', 'mention', /* ... 'app' を除く ... */)`);
-await queryRunner.query(`ALTER TABLE "notification" ALTER COLUMN "type" TYPE "public"."notification_type_enum" USING "type"::"text"::"public"."notification_type_enum"`);
-await queryRunner.query(`DROP TYPE "public"."notification_type_enum_old"`);
-```
-
-要点: ①列がデフォルトを持つ場合は ALTER 前に `DROP DEFAULT`、ALTER 後に `SET DEFAULT` を挟む。②配列列 (`mutingNotificationTypes` 等) は `TYPE "..."[] USING "col"::"text"::"..."[]` と配列キャストにする。③**`down` の落とし穴**: 削除する値を既存行が使っていると `USING` キャストが「該当 enum に存在しない」で失敗する。新値を追加しただけの直後の巻き戻しは安全だが、運用後に使われた値を消す巻き戻しは本質的に危うい — その場合は down で先に `UPDATE ... SET "type" = '<代替値>' WHERE "type" = '<消す値>'` で退避してからキャストする。
+**なぜ危険か**: PostgreSQL の enum は **値を削除できない** (`ALTER TYPE ... DROP VALUE` は存在しない)。drizzle-kitは`pgEnum(...)`配列の要素追加・削除を検出すると自動でSQLを生成するが、生成される内容を確認すること — 単純な値追加なら`ALTER TYPE ... ADD VALUE`で足りるが、削除や複数変更が絡む場合は「旧型をrename→新型をCREATE→列をALTER (USINGキャスト)→旧型をDROP」という手順になり、`db:generate`が意図通りに出さないことがある。**enum名を変更した場合、drizzle-kitはrename(既存型の維持)かdrop+create(データ非互換)かを対話的に確認してくる** — 非対話環境で実行すると誤判定されるリスクがあるため、enum変更を伴うmigrationは生成後に必ず内容を目視確認すること。
 
 ### 3. データ移行 (UPDATE バックフィル)
 
-**なぜ危険か**: migration 内の `UPDATE` は本番の全行を触る可能性がある。大量行では長時間ロック・トランザクション肥大を招く。
+**なぜ危険か**: migration内の`UPDATE`は本番の全行を触る可能性がある。大量行では長時間ロック・トランザクション肥大を招く。これは`db:generate`では生成されないため、必要なら`db:generate:custom`で手書きする。
 
-- 既定値を入れるだけなら `UPDATE ... WHERE col IS NULL` で冪等に書く。複数回流れても安全な形にする
-- 巨大テーブルの全行更新は避けるのが基本。どうしても必要なら CONCURRENTLY 同様にバッチ分割や別運用を検討し、PR で相談する
-- `down` で元値に戻せないデータ移行 (情報が失われる変換) は、`down` に戻せない旨をコメントで明示し、最低限スキーマだけは巻き戻す
+- 既定値を入れるだけなら `UPDATE ... WHERE col IS NULL` で冪等に書く
+- 巨大テーブルの全行更新は避けるのが基本。どうしても必要ならバッチ分割や別運用を検討し、PR で相談する
+- forward-onlyなので「取り消せないデータ移行をした」場合、取り消したければ別の新規migrationで復元用のUPDATEを書く(コメントで「完全には戻せない」旨を明示)
 
-```js
-// up: nullable 追加 → バックフィル → NOT NULL 化
-await queryRunner.query(`ALTER TABLE "user_profile" ADD "github" boolean`);
-await queryRunner.query(`UPDATE "user_profile" SET "github" = FALSE WHERE "github" IS NULL`);
-await queryRunner.query(`ALTER TABLE "user_profile" ALTER COLUMN "github" SET NOT NULL`);
-```
+### 4. 列リネーム
 
-### 4. JSONB / 配列列のデフォルト
-
-**なぜ危険か**: 既定値リテラルの書式を誤ると既存 migration とスタイルがズレる。実績ある書式に揃える。
-
-```js
-await queryRunner.query(`ALTER TABLE "user_profile" ADD "room" jsonb NOT NULL DEFAULT '{}'`);          // オブジェクト
-await queryRunner.query(`ALTER TABLE "bubble_game_record" ADD "logs" jsonb NOT NULL DEFAULT '[]'`);     // 配列(JSON)
-await queryRunner.query(`ALTER TABLE "meta" ADD "pinnedUsers" character varying(256) array NOT NULL DEFAULT '{}'::varchar[]`); // PG 配列型
-```
-
-`down` はいずれも `DROP COLUMN`。
-
-### 5. 安全な DROP と COMMENT
-
-- **DROP の冪等性**: 状況により対象が無いことがある DROP は `IF EXISTS` を付ける (`DROP INDEX IF EXISTS "..."`)。ただし無闇に付けると本来検出すべき不整合を隠すので、「条件付きで存在する」と分かっている時だけにする
-- **COMMENT ON COLUMN**: Misskey は denormalize した列に `'[Denormalized]'` コメントを付ける慣習がある。`up` で付与したら `down` でも対称に書く
-
-  ```js
-  await queryRunner.query(`COMMENT ON COLUMN "note"."renoteChannelId" IS '[Denormalized]'`);
-  ```
-
-### 6. 列リネーム
-
-「DROP 旧列 + ADD 新列」で書くと **データが消える**。意図がリネームなら `ALTER TABLE "t" RENAME COLUMN "old" TO "new"` (down は逆) で書くこと。
+「DROP 旧列 + ADD 新列」で書くと**データが消える**。schema.ts上でカラム名を変えて`db:generate`を実行すると、drizzle-kitが「これはrenameか、drop+addか」を対話的に確認してくる。非対話実行では誤判定される可能性があるため、リネームを意図した変更は生成後に必ずSQL内容を確認し、`ALTER TABLE "t" RENAME COLUMN "old" TO "new"`になっているか確かめること。

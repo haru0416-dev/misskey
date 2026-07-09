@@ -34,7 +34,7 @@ function fakeJob(data: RelationshipJobData): Bull.Job<RelationshipJobData> {
 }
 
 async function createTestUser(deps: HonoQueueRelationshipDependencies, options: { isLocked?: boolean } = {}): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: {
 			id,
@@ -47,7 +47,7 @@ async function createTestUser(deps: HonoQueueRelationshipDependencies, options: 
 }
 
 async function createTestRemoteUser(deps: HonoQueueRelationshipDependencies, host: string): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: {
 			id,
@@ -79,7 +79,7 @@ describe('hono-queue-relationship', () => {
 		const followee = await createTestUser(deps);
 
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: follower.id,
 			followeeId: followee.id,
 		});
@@ -105,12 +105,12 @@ describe('hono-queue-relationship', () => {
 
 		// 双方向のフォロー関係と、blockee→blocker のフォローリクエストを用意しておく
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: blocker.id,
 			followeeId: blockee.id,
 		});
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: blockee.id,
 			followeeId: blocker.id,
 		});
@@ -136,7 +136,7 @@ describe('hono-queue-relationship', () => {
 		const blockee = await createTestUser(deps);
 
 		await createFollowRequestInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: blockee.id,
 			followeeId: blocker.id,
 		});
@@ -198,7 +198,7 @@ describe('hono-queue-relationship', () => {
 		const followee = await createTestUser(deps);
 
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: follower.id,
 			followeeId: followee.id,
 		});
@@ -212,7 +212,7 @@ describe('hono-queue-relationship', () => {
 		const followee = await createTestUser(deps);
 
 		await createBlockingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			blockerId: followee.id,
 			blockeeId: follower.id,
 		});
@@ -229,7 +229,7 @@ describe('hono-queue-relationship', () => {
 		const followee = await createTestUser(deps);
 
 		await createBlockingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			blockerId: followee.id,
 			blockeeId: follower.id,
 		});
@@ -242,7 +242,7 @@ describe('hono-queue-relationship', () => {
 		const followee = await createTestUser(deps);
 
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: follower.id,
 			followeeId: followee.id,
 		});
@@ -264,7 +264,7 @@ describe('hono-queue-relationship', () => {
 
 		// followee が既に follower をフォローしている状態にしておく
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: followee.id,
 			followeeId: follower.id,
 		});

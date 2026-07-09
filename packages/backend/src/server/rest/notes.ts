@@ -118,8 +118,8 @@ function resolveNoteSinceUntilId(
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(config, params.sinceDate);
-		if (params.untilDate) untilId = genId(config, params.untilDate);
+		if (params.sinceDate) sinceId = genId(params.sinceDate);
+		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 	return { sinceId, untilId };
 }
@@ -334,7 +334,7 @@ export async function handleHonoApiNotesFavoritesCreate(
 
 	try {
 		await createNoteFavoriteInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			noteId: note.id,
 			userId: me.id,
 		});
@@ -387,7 +387,7 @@ export async function handleHonoApiNotesThreadMutingCreate(
 	if (note == null) throw notesThreadMutingCreateNoSuchNoteError();
 
 	await createNoteThreadMutingInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		threadId: note.threadId ?? note.id,
 		userId: me.id,
 	});
@@ -908,8 +908,8 @@ export async function handleHonoApiNotesSearch(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseHonoApiParams(notesSearchParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
 	if (!policies.canSearchNotes) throw notesSearchUnavailableError();
@@ -932,8 +932,8 @@ export async function handleHonoApiNotesSearch(
 		userId: params.userId,
 		channelId: params.channelId,
 		host: params.host,
-		rangeStartId: params.rangeStartAt != null ? genId(deps.config, params.rangeStartAt - 1) : null,
-		rangeEndId: params.rangeEndAt != null ? genId(deps.config, params.rangeEndAt + 1) : null,
+		rangeStartId: params.rangeStartAt != null ? genId(params.rangeStartAt - 1) : null,
+		rangeEndId: params.rangeEndAt != null ? genId(params.rangeEndAt + 1) : null,
 	});
 
 	return await packNoteManyForHonoApi(deps, notes, me);

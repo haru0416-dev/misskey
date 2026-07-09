@@ -203,7 +203,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 		}),
 		_misskey_quote: quote,
 		quoteUrl: quote,
-		published: parseId(deps.config as Config, note.id).date.toISOString(),
+		published: parseId(note.id).date.toISOString(),
 		to,
 		cc,
 		inReplyTo,
@@ -219,7 +219,7 @@ export function renderCreateForHonoApi(config: Pick<Config, 'url'>, object: Reco
 		id: `${config.url}/notes/${note.id}/activity`,
 		actor: genLocalUserUri(config, note.userId),
 		type: 'Create',
-		published: parseId(config as Config, note.id).date.toISOString(),
+		published: parseId(note.id).date.toISOString(),
 		object,
 	};
 	if (object.to) activity.to = object.to;
@@ -255,7 +255,7 @@ function renderAnnounceForHonoApi(config: Pick<Config, 'url'>, object: string, n
 		id: `${config.url}/notes/${note.id}/activity`,
 		actor: attributedTo,
 		type: 'Announce',
-		published: parseId(config as Config, note.id).date.toISOString(),
+		published: parseId(note.id).date.toISOString(),
 		to,
 		cc,
 		object,

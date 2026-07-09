@@ -166,7 +166,6 @@ export function normalizeHonoApiFederationQuery(query: Record<string, string>): 
 
 type FederatedInstanceCacheDependencies = {
 	db: MiDrizzleDatabase;
-	config: Pick<Config, 'id'>;
 	redis: Pick<Redis.Redis, 'set' | 'del'>;
 };
 
@@ -201,7 +200,7 @@ export async function fetchOrRegisterFederatedInstance(
 	}
 
 	const created = await createInstanceInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		host,
 		firstRetrievedAt: new Date(),
 	});
@@ -544,8 +543,8 @@ export async function handleHonoApiFederationUsers(
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
-		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+		if (params.sinceDate) sinceId = genId(params.sinceDate);
+		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
 	const users = await listUsersByHostWithPaginationFromDatabase(deps.db, {
@@ -573,7 +572,7 @@ export async function handleHonoApiFederationFollowers(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
-	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'followee', params.host, {
 		limit: params.limit,
 		order: pagination.order,
@@ -589,7 +588,7 @@ export async function handleHonoApiFederationFollowing(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
-	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'follower', params.host, {
 		limit: params.limit,
 		order: pagination.order,

@@ -248,7 +248,7 @@ async function extractMentionedUsersForHonoApi(deps: HonoApiNotesCreateDependenc
 }
 
 function pushFanoutTimelineForHonoApi(deps: HonoApiNotesCreateDependencies, tl: string, id: string, maxlen: number, pipeline: Redis.ChainableCommander): void {
-	const date = parseId(deps.config, id).date;
+	const date = parseId(id).date;
 	if (date.getTime() > Date.now() - 1000 * 60 * 3) {
 		pipeline.lpush('list:' + tl, id);
 		if (Math.random() < 0.1) {
@@ -256,7 +256,7 @@ function pushFanoutTimelineForHonoApi(deps: HonoApiNotesCreateDependencies, tl: 
 		}
 	} else {
 		deps.redisForTimelines.lindex('list:' + tl, -1).then(lastId => {
-			if (lastId == null || date.getTime() > parseId(deps.config, lastId).date.getTime()) {
+			if (lastId == null || date.getTime() > parseId(lastId).date.getTime()) {
 				deps.redisForTimelines.lpush('list:' + tl, id);
 			}
 		});
@@ -298,7 +298,7 @@ export async function createNoteNotificationForHonoApi(
 	}
 
 	const notification = {
-		id: genId(deps.config),
+		id: genId(),
 		createdAt: new Date().toISOString(),
 		type,
 		notifierId,
@@ -363,14 +363,14 @@ class HonoNotificationManager {
 	}
 }
 
-export async function fetchOrRegisterInstanceForHonoApi(deps: { db: MiDrizzleDatabase; config: Pick<Config, 'id'> }, host: string): Promise<{ id: string; host: string }> {
+export async function fetchOrRegisterInstanceForHonoApi(deps: { db: MiDrizzleDatabase }, host: string): Promise<{ id: string; host: string }> {
 	const puny = domainToASCII(host.toLowerCase());
 	const existing = await fetchInstanceByHostFromDatabase(deps.db, puny);
 	if (existing != null) return existing;
 
 	try {
 		return await createInstanceInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			host: puny,
 			firstRetrievedAt: new Date(),
 		});
@@ -451,7 +451,7 @@ export async function insertNoteForHonoApi(
 	mentionedUsers: MiUser[],
 ): Promise<MiNote> {
 	const insert: Record<string, unknown> = {
-		id: genId(deps.config, data.createdAt?.getTime()),
+		id: genId(data.createdAt?.getTime()),
 		uri: data.uri ?? null,
 		url: data.url ?? null,
 		fileIds: data.files.map(f => f.id),
@@ -556,7 +556,7 @@ export async function postNoteCreatedForHonoApi(
 			// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget。
 			void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
 			return recordHashtagUsageInDatabase(deps.db, {
-				id: genId(deps.config),
+				id: genId(),
 				name,
 				userId: user.id,
 				isLocalUser: user.host == null,

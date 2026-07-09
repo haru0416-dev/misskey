@@ -49,7 +49,7 @@ export async function handleHonoApiMiauthGenToken(
 	const now = new Date();
 
 	await createAccessTokenInDatabase(deps.db, {
-		id: genId(deps.config, now.getTime()),
+		id: genId(now.getTime()),
 		lastUsedAt: now,
 		session: params.session,
 		userId: user.id,

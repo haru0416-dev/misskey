@@ -3,24 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Config } from '@/config.js';
-import { parseAid } from './aid.js';
-import { parseAidx } from './aidx.js';
-import { parseMeid } from './meid.js';
-import { parseMeidg } from './meidg.js';
-import { parseObjectId } from './object-id.js';
-import { parseUlid } from './ulid.js';
 import { parseUuidv7 } from './uuidv7.js';
 
-export function parseId(config: Pick<Config, 'id'>, id: string): { date: Date; } {
-	switch (config.id.toLowerCase()) {
-		case 'aid': return parseAid(id);
-		case 'aidx': return parseAidx(id);
-		case 'objectid': return parseObjectId(id);
-		case 'meid': return parseMeid(id);
-		case 'meidg': return parseMeidg(id);
-		case 'ulid': return parseUlid(id);
-		case 'uuidv7': return parseUuidv7(id);
-		default: throw new Error('unrecognized id generation method');
-	}
+export function parseId(id: string): { date: Date; } {
+	return parseUuidv7(id);
 }

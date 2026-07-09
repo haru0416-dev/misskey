@@ -226,7 +226,7 @@ async function verifyEnabledCaptchas(deps: HonoApiSigninDependencies, body: Reco
 function packSignin(config: Config, src: MiSignin): Record<string, unknown> {
 	return {
 		id: src.id,
-		createdAt: parseId(config, src.id).date.toISOString(),
+		createdAt: parseId(src.id).date.toISOString(),
 		ip: src.ip,
 		headers: src.headers,
 		success: src.success,
@@ -239,7 +239,7 @@ async function appendFailedSignin(
 	user: MiLocalUser,
 ): Promise<void> {
 	await createSigninInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: user.id,
 		ip: request.ip,
 		headers: headersObject(request.headers),
@@ -257,7 +257,7 @@ export function completeHonoApiSignin(
 			createLoginNotification(deps, user.id);
 
 			const record = await createSigninInDatabase(deps.db, {
-				id: genId(deps.config),
+				id: genId(),
 				userId: user.id,
 				ip: request.ip,
 				headers: headersObject(request.headers),

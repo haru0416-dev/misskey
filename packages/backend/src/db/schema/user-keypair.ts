@@ -4,9 +4,10 @@
  */
 
 import { pgTable, varchar } from 'drizzle-orm/pg-core';
+import { user } from './user.js';
 
 export const userKeypair = pgTable('user_keypair', {
-	userId: varchar({ length: 32 }).primaryKey().notNull(),
+	userId: varchar({ length: 32 }).primaryKey().notNull().references(() => user.id, { onDelete: 'cascade' }),
 	publicKey: varchar({ length: 4096 }).notNull(),
 	privateKey: varchar({ length: 4096 }).notNull(),
 });

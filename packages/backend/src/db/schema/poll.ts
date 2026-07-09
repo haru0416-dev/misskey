@@ -9,12 +9,13 @@ import { noteVisibilities } from '@/types.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
+import { note } from './note.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
-const pollNoteVisibilityEnum = pgEnum('poll_notevisibility_enum', noteVisibilities);
+export const pollNoteVisibilityEnum = pgEnum('poll_notevisibility_enum', noteVisibilities);
 
 export const poll = pgTable('poll', {
-	noteId: varchar({ length: 32 }).primaryKey().notNull().$type<MiNote['id']>(),
+	noteId: varchar({ length: 32 }).primaryKey().notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 	expiresAt: timestamp({ withTimezone: true }),
 	multiple: boolean().notNull(),
 	choices: varchar({ length: 256 }).array().default(emptyVarcharArray).notNull(),
@@ -26,9 +27,9 @@ export const poll = pgTable('poll', {
 	channelId: varchar({ length: 32 }).$type<MiChannel['id'] | null>(),
 	// #endregion
 }, table => [
-	index('IDX_0610ebcfcfb4a18441a9bcdab2').on(table.userId),
-	index('IDX_7fa20a12319c7f6dc3aed98c0a').on(table.userHost),
-	index('IDX_c1240fcc9675946ea5d6c2860e').on(table.channelId),
+	index('IDX_POLL_USER_ID').on(table.userId),
+	index('IDX_POLL_USER_HOST').on(table.userHost),
+	index('IDX_POLL_CHANNEL_ID').on(table.channelId),
 ]);
 
 export type PollRow = typeof poll.$inferSelect;

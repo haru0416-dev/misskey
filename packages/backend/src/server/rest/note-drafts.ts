@@ -323,7 +323,7 @@ async function packNoteDraftForHonoApi(
 
 	return {
 		id: draft.id,
-		createdAt: parseId(deps.config, draft.id).date.toISOString(),
+		createdAt: parseId(draft.id).date.toISOString(),
 		scheduledAt: draft.scheduledAt?.getTime() ?? null,
 		isActuallyScheduled: draft.isActuallyScheduled,
 		userId: draft.userId,
@@ -410,7 +410,7 @@ export async function handleHonoApiNotesDraftsCreate(
 	});
 
 	const draft = await createNoteDraftInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		fileIds: params.fileIds ?? [],
 		pollChoices: params.poll?.choices ?? [],
@@ -535,7 +535,7 @@ export async function handleHonoApiNotesDraftsList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'NoteDraft'>[]> {
 	const params = parseHonoApiParams(notesDraftsListParamDef, body);
-	const pagination = resolveNoteDraftPagination({ gen: (time) => genId(deps.config, time) }, params);
+	const pagination = resolveNoteDraftPagination({ gen: (time) => genId(time) }, params);
 
 	const drafts = await listNoteDraftsByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,

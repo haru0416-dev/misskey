@@ -237,7 +237,7 @@ export async function handleHonoApiAdminShowUser(
 		policies,
 		roles: await Promise.all(roles.map(role => packHonoApiRole(deps, role))),
 		roleAssigns: assigns.map(assign => ({
-			createdAt: parseId(deps.config, assign.id).date.toISOString(),
+			createdAt: parseId(assign.id).date.toISOString(),
 			expiresAt: assign.expiresAt ? assign.expiresAt.toISOString() : null,
 			roleId: assign.roleId,
 		})),

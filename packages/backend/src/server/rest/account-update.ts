@@ -332,7 +332,7 @@ export async function updateUsertagsForHonoApi(deps: HonoApiAccountUpdateDepende
 		// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget (デタッチ側でも呼ばれる)。
 		void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
 		await recordHashtagUsageInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			name,
 			userId: user.id,
 			isLocalUser: user.host == null,
@@ -346,7 +346,7 @@ export async function updateUsertagsForHonoApi(deps: HonoApiAccountUpdateDepende
 		const name = normalizeForSearch(tag);
 		void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
 		await recordHashtagUsageInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			name,
 			userId: user.id,
 			isLocalUser: user.host == null,

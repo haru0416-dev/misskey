@@ -24,7 +24,6 @@ import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } fro
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type Logger from '@/logger.js';
-import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -40,7 +39,6 @@ type HonoChartWriterDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
-	config: Pick<Config, 'id'>;
 	// FederationChart.tickMinor 用。fetchReactiveMeta が返す、redis 経由の
 	// metaUpdated イベントでインプレース更新され続けるオブジェクトをそのまま渡すこと
 	// (起動時点のスナップショットを渡すと blockedHosts の変更が反映されなくなる)。
@@ -256,7 +254,6 @@ class HonoActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 		db: MiDrizzleDatabase,
 		lock: (key: string) => ReturnType<typeof acquireChartInsertLock>,
 		logger: Logger,
-		private config: Pick<Config, 'id'>,
 	) {
 		super(db, lock, logger, activeUsersChartName, activeUsersChartSchema);
 	}
@@ -279,7 +276,7 @@ class HonoActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 		const week = 1000 * 60 * 60 * 24 * 7;
 		const month = 1000 * 60 * 60 * 24 * 30;
 		const year = 1000 * 60 * 60 * 24 * 365;
-		const createdAt = parseId(this.config, user.id).date;
+		const createdAt = parseId(user.id).date;
 		const age = Date.now() - createdAt.getTime();
 
 		await this.commit({
@@ -566,7 +563,7 @@ export function createHonoChartWriters(deps: HonoChartWriterDependencies): HonoC
 		instanceChart: new HonoInstanceChartWriter(deps.db, lock, logger, instanceChartName, instanceChartSchema, true),
 		notesChart: new HonoNotesChartWriter(deps.db, lock, logger, notesChartName, notesChartSchema),
 		perUserNotesChart: new HonoPerUserNotesChartWriter(deps.db, lock, logger, perUserNotesChartName, perUserNotesChartSchema, true),
-		activeUsersChart: new HonoActiveUsersChartWriter(deps.db, lock, logger, deps.config),
+		activeUsersChart: new HonoActiveUsersChartWriter(deps.db, lock, logger),
 		perUserReactionsChart: new HonoPerUserReactionsChartWriter(deps.db, lock, logger, perUserReactionsChartName, perUserReactionsChartSchema, true),
 		perUserPvChart: new HonoPerUserPvChartWriter(deps.db, lock, logger, perUserPvChartName, perUserPvChartSchema, true),
 		federationChart: new HonoFederationChartWriter(deps.db, lock, logger, deps.db, deps.meta),

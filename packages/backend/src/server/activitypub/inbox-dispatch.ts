@@ -321,7 +321,7 @@ async function announceNoteFromApForHonoApi(deps: HonoApiInboxDependencies, acto
 		const activityAudience = await parseAudienceForHonoApi(deps, actor, activity.to, activity.cc, history);
 		const createdAt = activity.published ? new Date(activity.published) : null;
 
-		if (createdAt && createdAt < parseId(deps.config, renote.id).date) {
+		if (createdAt && createdAt < parseId(renote.id).date) {
 			return 'skip: malformed createdAt';
 		}
 

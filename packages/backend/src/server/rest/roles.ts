@@ -102,7 +102,7 @@ export async function packHonoApiRole(
 
 	return {
 		id: role.id,
-		createdAt: parseId(deps.config, role.id).date.toISOString(),
+		createdAt: parseId(role.id).date.toISOString(),
 		updatedAt: role.updatedAt.toISOString(),
 		name: role.name,
 		description: role.description,
@@ -152,7 +152,7 @@ export async function handleHonoApiRolesUsers(
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
-	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(params);
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -173,8 +173,8 @@ export async function handleHonoApiRolesNotes(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseHonoApiParams(rolesNotesParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesNotesNoSuchRoleError();

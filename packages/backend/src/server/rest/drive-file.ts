@@ -103,7 +103,7 @@ export async function packDriveFileForHonoApi(
 
 	return {
 		id: file.id,
-		createdAt: parseId(deps.config, file.id).date.toISOString(),
+		createdAt: parseId(file.id).date.toISOString(),
 		name: file.name,
 		type: file.type,
 		md5: file.md5,

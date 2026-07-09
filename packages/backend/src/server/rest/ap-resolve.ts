@@ -340,7 +340,7 @@ export async function resolveApObjectForHonoApi(
 	}
 
 	const object = deps.meta.signToActivityPubGet
-		? await signedGetForHonoApi(deps, value, await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId: () => genId(deps.config) }, 'actor'), allowSoftfail)
+		? await signedGetForHonoApi(deps, value, await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'actor'), allowSoftfail)
 		: await deps.httpRequestService.getActivityJson(value, undefined, allowSoftfail);
 
 	const contextOk = Array.isArray(object['@context'])

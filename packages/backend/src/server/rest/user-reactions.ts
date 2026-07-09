@@ -70,7 +70,7 @@ async function packNoteReactionWithNoteForHonoApi(
 ): Promise<Record<string, unknown>> {
 	return {
 		id: reaction.id,
-		createdAt: parseId(deps.config, reaction.id).date.toISOString(),
+		createdAt: parseId(reaction.id).date.toISOString(),
 		user: packedUser,
 		type: decodeReactionForHonoApi(reaction.reaction).reaction,
 		note: await packNoteForHonoApi(deps, reaction.note, me),
@@ -105,7 +105,7 @@ export async function handleHonoApiUsersReactions(
 
 	const userIdsWhoMeMuting = me ? new Set(await listMuteeIdsByMuterIdFromDatabase(deps.db, me.id)) : new Set<string>();
 
-	const pagination = resolveNoteReactionPagination({ gen: (time?: number) => genId(deps.config, time) }, params);
+	const pagination = resolveNoteReactionPagination({ gen: (time?: number) => genId(time) }, params);
 	let sinceId = pagination.sinceId;
 	let untilId = pagination.untilId;
 

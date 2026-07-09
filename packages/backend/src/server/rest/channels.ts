@@ -332,7 +332,7 @@ function packChannelForHonoApi(
 
 	return {
 		id: channel.id,
-		createdAt: parseId(deps.config, channel.id).date.toISOString(),
+		createdAt: parseId(channel.id).date.toISOString(),
 		lastNotedAt: channel.lastNotedAt ? channel.lastNotedAt.toISOString() : null,
 		name: channel.name,
 		description: channel.description,
@@ -400,8 +400,8 @@ export async function handleHonoApiChannelsSearch(
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel[]> {
 	const params = parseHonoApiParams(channelsSearchParamDef, body);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const channels = await listChannelsBySearchFromDatabase(deps.db, {
 		query: sqlLikeEscape(params.query),
 		type: params.type,
@@ -422,7 +422,7 @@ export async function handleHonoApiChannelsOwned(
 	const params = parseHonoApiParams(channelsListParamDef, body);
 	const channels = await listOwnedChannelsFromDatabase(deps.db, me.id, {
 		...resolveChannelPagination({
-			gen: (time?: number) => genId(deps.config, time),
+			gen: (time?: number) => genId(time),
 		}, params),
 		limit: params.limit,
 	});
@@ -439,7 +439,7 @@ export async function handleHonoApiChannelsFollowed(
 	const followings = await listChannelFollowingsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		...resolveChannelPagination({
-			gen: (time?: number) => genId(deps.config, time),
+			gen: (time?: number) => genId(time),
 		}, params),
 	});
 	const channelIds = followings.map(following => following.followeeId);
@@ -486,7 +486,7 @@ export async function handleHonoApiChannelsCreate(
 	}
 
 	const channel = await createChannelInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		name: params.name,
 		description: params.description ?? null,
@@ -556,7 +556,7 @@ export async function handleHonoApiChannelsFollow(
 	}
 
 	await createChannelFollowingInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		followerId: me.id,
 		followeeId: targetChannel.id,
 	});
@@ -607,7 +607,7 @@ export async function handleHonoApiChannelsMuteCreate(
 	const expiresAt = params.expiresAt ? new Date(params.expiresAt) : null;
 	try {
 		await createChannelMutingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			userId: me.id,
 			channelId: targetChannel.id,
 			expiresAt,
@@ -683,8 +683,8 @@ export async function handleHonoApiChannelsTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseHonoApiParams(channelTimelineParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) throw channelsTimelineNoSuchChannelError();

@@ -189,7 +189,7 @@ async function packAdminDriveFilesForHonoApi(
 
 	return files.map(file => ({
 		id: file.id,
-		createdAt: parseId(deps.config, file.id).date.toISOString(),
+		createdAt: parseId(file.id).date.toISOString(),
 		name: file.name,
 		type: file.type,
 		md5: file.md5,
@@ -258,8 +258,8 @@ export async function handleHonoApiAdminDriveFiles(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(deps.config, params.sinceDate);
-		if (params.untilDate) untilId = genId(deps.config, params.untilDate);
+		if (params.sinceDate) sinceId = genId(params.sinceDate);
+		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
 	const files = await listDriveFilesForAdminFromDatabase(deps.db, {
@@ -321,7 +321,7 @@ export async function handleHonoApiAdminDriveShowFile(
 		type: file.type,
 		name: file.name,
 		md5: file.md5,
-		createdAt: parseId(deps.config, file.id).date.toISOString(),
+		createdAt: parseId(file.id).date.toISOString(),
 		requestIp: iAmModerator ? file.requestIp : null,
 		requestHeaders: iAmModerator && !ownerIsModerator ? file.requestHeaders : null,
 	};

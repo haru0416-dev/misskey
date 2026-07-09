@@ -10,7 +10,6 @@ import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { Config } from '@/config.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -26,7 +25,7 @@ import type { HonoApiNoteStreamPublisher } from './events.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiNotesPollsVoteDependencies = HonoApiRelayDeliverDependencies & {
-	config: HonoApiNoteApDependencies['config'] & Pick<Config, 'id'>;
+	config: HonoApiNoteApDependencies['config'];
 	publishNoteStream?: HonoApiNoteStreamPublisher;
 };
 
@@ -93,7 +92,7 @@ export async function handleHonoApiNotesPollsVote(
 	}
 
 	const vote = await createPollVoteInDatabase(deps.db, {
-		id: genId(deps.config, createdAt.getTime()),
+		id: genId(createdAt.getTime()),
 		noteId: note.id,
 		userId: me.id,
 		choice: params.choice,

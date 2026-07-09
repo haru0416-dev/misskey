@@ -20,7 +20,7 @@ import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/s
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: string): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 		profile: { userId: id },
@@ -120,7 +120,7 @@ describe('hono-stream-connection: chat channels', () => {
 		const { raw, send } = collectSentMessages();
 		connection.listen(new EventEmitter(), send);
 
-		await connection.connectChannel('conn1', { roomId: genId(deps.config) }, 'chatRoom', true);
+		await connection.connectChannel('conn1', { roomId: genId() }, 'chatRoom', true);
 		expect(raw.length).toBe(0);
 	});
 });

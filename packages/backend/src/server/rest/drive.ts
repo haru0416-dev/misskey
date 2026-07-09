@@ -190,7 +190,7 @@ export async function packDriveFolderForHonoApi(
 
 	const packed: HonoApiPackedDriveFolder = {
 		id: folder.id,
-		createdAt: parseId(deps.config, folder.id).date.toISOString(),
+		createdAt: parseId(folder.id).date.toISOString(),
 		name: folder.name,
 		parentId: folder.parentId,
 	};
@@ -237,7 +237,7 @@ export async function handleHonoApiDriveFoldersCreate(
 	}
 
 	const folder = await createDriveFolderInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		name: params.name,
 		parentId: parent?.id ?? null,
 		userId: me.id,
@@ -256,7 +256,7 @@ export async function handleHonoApiDriveFolders(
 ): Promise<HonoApiPackedDriveFolder[]> {
 	const params = parseHonoApiParams(driveFoldersParamDef, body);
 	const pagination = resolveDriveFolderPagination({
-		gen: (time?: number) => genId(deps.config, time),
+		gen: (time?: number) => genId(time),
 	}, params);
 	const folders = await listDriveFoldersByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,

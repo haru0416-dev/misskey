@@ -536,7 +536,7 @@ export async function addDriveFileForHonoApi(
 	const folder = await fetchFolder();
 
 	let file = {
-		id: genId(deps.config),
+		id: genId(),
 		userId: user ? user.id : null,
 		user: null,
 		userHost: user ? user.host : null,

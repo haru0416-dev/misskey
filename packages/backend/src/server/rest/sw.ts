@@ -130,7 +130,7 @@ export async function handleHonoApiSwRegister(
 
 	try {
 		await createSwSubscriptionInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			userId: me.id,
 			endpoint: params.endpoint,
 			auth: params.auth,

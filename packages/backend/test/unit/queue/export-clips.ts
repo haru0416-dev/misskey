@@ -40,13 +40,13 @@ describe('hono-queue-db (exportClips)', () => {
 	});
 
 	test('クリップとクリップ内のノートをJSONとしてドライブに保存する', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `honoqueueexpclip${id}`, usernameLower: `honoqueueexpclip${id}`.toLowerCase() },
 			profile: { userId: id },
 		});
 
-		const noteId = genId(runtime.config);
+		const noteId = genId();
 		await createNoteInDatabase(runtime.db, {
 			id: noteId,
 			text: 'hono-queue-export-clips test',
@@ -56,11 +56,11 @@ describe('hono-queue-db (exportClips)', () => {
 		});
 
 		const clip = await createClipInDatabase(runtime.db, {
-			id: genId(runtime.config),
+			id: genId(),
 			userId: user.id,
 			name: 'test-clip',
 		});
-		await createClipNoteInDatabase(runtime.db, { id: genId(runtime.config), clipId: clip.id, noteId });
+		await createClipNoteInDatabase(runtime.db, { id: genId(), clipId: clip.id, noteId });
 
 		await handleHonoQueueExportClips(deps, fakeJob({ user: { id: user.id } }));
 
@@ -69,6 +69,6 @@ describe('hono-queue-db (exportClips)', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportClips(deps, fakeJob({ user: { id: genId(runtime.config) } }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueExportClips(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

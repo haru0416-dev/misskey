@@ -28,7 +28,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 
-		const id = genId(runtime.config);
+		const id = genId();
 		user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `relaydeliver${id}`, usernameLower: `relaydeliver${id}`.toLowerCase() },
 			profile: { userId: id },
@@ -52,7 +52,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 	test('deliverToRelays: accepted リレーが無い場合は何もしない (署名もキュー投入も発生しない)', async () => {
 		const activity = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.url}/test-activity/${genId(runtime.config)}`,
+			id: `${runtime.config.url}/test-activity/${genId()}`,
 			type: 'Create',
 			actor: `${runtime.config.url}/users/${user.id}`,
 			object: { type: 'Note' },
@@ -70,7 +70,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 	test('attachLdSignature: RsaSignature2017 の signature フィールドを付与し、元のフィールドを保持する', async () => {
 		const activity = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.url}/test-activity/${genId(runtime.config)}`,
+			id: `${runtime.config.url}/test-activity/${genId()}`,
 			type: 'Add',
 			actor: `${runtime.config.url}/users/${user.id}`,
 			object: `${runtime.config.url}/notes/dummy`,
@@ -89,17 +89,17 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 	});
 
 	test('deliverToRelays: accepted リレーにのみ LD 署名済みアクティビティを deliver キューへ積む', async () => {
-		const inbox = `https://relay.example.com/inbox-${genId(runtime.config)}`;
-		const relay = await createRelayInDatabase(runtime.db, { id: genId(runtime.config), inbox, status: 'accepted' });
+		const inbox = `https://relay.example.com/inbox-${genId()}`;
+		const relay = await createRelayInDatabase(runtime.db, { id: genId(), inbox, status: 'accepted' });
 		createdRelayIds.push(relay.id);
 		// requesting 状態のリレーには配送されないことも同時に確認する
-		const pendingInbox = `https://relay.example.com/pending-${genId(runtime.config)}`;
-		const pendingRelay = await createRelayInDatabase(runtime.db, { id: genId(runtime.config), inbox: pendingInbox, status: 'requesting' });
+		const pendingInbox = `https://relay.example.com/pending-${genId()}`;
+		const pendingRelay = await createRelayInDatabase(runtime.db, { id: genId(), inbox: pendingInbox, status: 'requesting' });
 		createdRelayIds.push(pendingRelay.id);
 
 		const activity = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.url}/test-activity/${genId(runtime.config)}`,
+			id: `${runtime.config.url}/test-activity/${genId()}`,
 			type: 'Create',
 			actor: `${runtime.config.url}/users/${user.id}`,
 			object: { type: 'Note' },

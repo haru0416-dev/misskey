@@ -38,14 +38,14 @@ describe('hono-queue-db (exportNotes)', () => {
 	});
 
 	test('投稿したノート一覧をJSONとしてドライブに保存する', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `honoqueueexpnote${id}`, usernameLower: `honoqueueexpnote${id}`.toLowerCase() },
 			profile: { userId: id },
 		});
 
 		await createNoteInDatabase(runtime.db, {
-			id: genId(runtime.config),
+			id: genId(),
 			text: 'hono-queue-export-notes test',
 			userId: user.id,
 			userHost: null,
@@ -59,6 +59,6 @@ describe('hono-queue-db (exportNotes)', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportNotes(deps, fakeJob({ user: { id: genId(runtime.config) } }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueExportNotes(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

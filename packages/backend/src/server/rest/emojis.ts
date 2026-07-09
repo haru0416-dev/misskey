@@ -215,13 +215,13 @@ function parseLocalAdminEmojiPagination(
 	} else if (params.untilId) {
 		untilId = params.untilId;
 	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(config, params.sinceDate);
-		untilId = genId(config, params.untilDate);
+		sinceId = genId(params.sinceDate);
+		untilId = genId(params.untilDate);
 	} else if (params.sinceDate) {
-		sinceId = genId(config, params.sinceDate);
+		sinceId = genId(params.sinceDate);
 		order = 'asc';
 	} else if (params.untilDate) {
-		untilId = genId(config, params.untilDate);
+		untilId = genId(params.untilDate);
 	}
 
 	return { order, sinceId, untilId };
@@ -245,12 +245,12 @@ function parseRemoteAdminEmojiPagination(
 	} else if (params.untilId) {
 		untilId = params.untilId;
 	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(config, params.sinceDate);
-		untilId = genId(config, params.untilDate);
+		sinceId = genId(params.sinceDate);
+		untilId = genId(params.untilDate);
 	} else if (params.sinceDate) {
-		sinceId = genId(config, params.sinceDate);
+		sinceId = genId(params.sinceDate);
 	} else if (params.untilDate) {
-		untilId = genId(config, params.untilDate);
+		untilId = genId(params.untilDate);
 	}
 
 	return { sinceId, untilId };
@@ -387,7 +387,7 @@ export async function addCustomEmojiForHonoApi(
 	moderator?: MiLocalUser,
 ): Promise<MiEmoji> {
 	const emoji = await insertEmojiInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		updatedAt: new Date(),
 		name: data.name,
 		category: data.category,
@@ -477,7 +477,7 @@ export async function handleHonoApiAdminEmojiAdd(
 	if (!FILE_TYPE_IMAGE.includes(driveFile.type)) throw adminUnsupportedFileTypeError();
 
 	const emoji = await insertEmojiInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		updatedAt: new Date(),
 		name: params.name,
 		category: params.category ?? null,
@@ -574,7 +574,7 @@ export async function handleHonoApiAdminEmojiCopy(
 	}
 
 	const addedEmoji = await insertEmojiInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		updatedAt: new Date(),
 		originalUrl: driveFile.url,
 		publicUrl: driveFile.webpublicUrl ?? driveFile.url,
@@ -846,8 +846,8 @@ export async function handleHonoApiV2AdminEmojiList(
 ): Promise<{ emojis: Packed<'EmojiDetailedAdmin'>[]; count: number; allCount: number; allPages: number }> {
 	const params = parseHonoApiParams(v2AdminEmojiListParamDef, body);
 
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
 	const q = params.query;
 	const limit = params.limit;

@@ -12,7 +12,7 @@ export const userPending = pgTable('user_pending', {
 	email: varchar({ length: 128 }).notNull(),
 	password: varchar({ length: 128 }).notNull(),
 }, table => [
-	uniqueIndex('IDX_4e5c4c99175638ec0761714ab0').on(table.code),
+	uniqueIndex('IDX_USER_PENDING_CODE_UNIQUE').on(table.code),
 ]);
 
 export type UserPendingRow = typeof userPending.$inferSelect;

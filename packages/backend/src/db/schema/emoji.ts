@@ -26,10 +26,10 @@ export const emoji = pgTable('emoji', {
 	// TODO: 定期ジョブで存在しなくなったロールIDを除去するようにする
 	roleIdsThatCanBeUsedThisEmojiAsReaction: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
 }, table => [
-	index('IDX_b37dafc86e9af007e3295c2781').on(table.name),
-	index('IDX_5900e907bb46516ddf2871327c').on(table.host),
+	index('IDX_EMOJI_NAME').on(table.name),
+	index('IDX_EMOJI_HOST').on(table.host),
 	index('IDX_EMOJI_CATEGORY').on(table.category),
-	uniqueIndex('IDX_4f4d35e1256c84ae3d1f0eab10').on(table.name, table.host),
+	uniqueIndex('IDX_EMOJI_NAME_HOST_UNIQUE').on(table.name, table.host),
 	// GIN for roleIdsThatCanBeUsedThisEmojiAsReaction in production
 	index('IDX_EMOJI_ROLE_IDS').using('gin', table.roleIdsThatCanBeUsedThisEmojiAsReaction),
 ]);

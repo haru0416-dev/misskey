@@ -86,7 +86,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		const { server, url, capture } = await captureRequestServer();
 		servers.push(server);
 
-		const id = genId(deps.config);
+		const id = genId();
 		const keyPair = await genRsaKeyPair();
 		const keyId = `http://${host}/users/${id}#main-key`;
 		const user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
@@ -103,7 +103,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		});
 
 		const activity: IActivity = {
-			id: `http://${host}/activities/${genId(deps.config)}`,
+			id: `http://${host}/activities/${genId()}`,
 			type: 'Follow',
 			actor: user.uri!,
 			// object は必須フィールドだが、署名検証のみを検証するテスト (federation/keyId系) では
@@ -139,7 +139,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	}
 
 	async function createTestLocalUser(prefix: string): Promise<MiUser> {
-		const id = genId(deps.config);
+		const id = genId();
 		return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 			profile: { userId: id },
@@ -155,7 +155,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	}
 
 	test('正しい署名のFollowアクティビティはperformActivityForHonoApiまで到達しFollowRequestを作成する', async () => {
-		const host = `hono-queue-inbox-ok-${genId(deps.config)}.example.com`;
+		const host = `hono-queue-inbox-ok-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxee');
 		const { user: actor, job } = await createSignedInboxJob(host, { object: `${deps.config.url}/users/${followee.id}` });
 
@@ -168,7 +168,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	});
 
 	test('署名を改竄した場合はHTTP-Signature検証に失敗しLD-Signatureも無いためUnrecoverableErrorになる', async () => {
-		const host = `hono-queue-inbox-tampered-${genId(deps.config)}.example.com`;
+		const host = `hono-queue-inbox-tampered-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxtamperee');
 		const { job } = await createSignedInboxJob(host, { object: `${deps.config.url}/users/${followee.id}` });
 
@@ -178,7 +178,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	});
 
 	test('federationでブロックされたホストからのリクエストはBlocked requestを返す', async () => {
-		const host = `hono-queue-inbox-blocked-${genId(deps.config)}.example.com`;
+		const host = `hono-queue-inbox-blocked-${genId()}.example.com`;
 		const { job } = await createSignedInboxJob(host);
 
 		const originalFederation = runtime.meta.federation;
@@ -195,7 +195,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	});
 
 	test('acct:形式の古いkeyIdはサポート対象外としてスキップされる', async () => {
-		const host = `hono-queue-inbox-oldkeyid-${genId(deps.config)}.example.com`;
+		const host = `hono-queue-inbox-oldkeyid-${genId()}.example.com`;
 		const { job } = await createSignedInboxJob(host);
 
 		job.data.signature.keyId = `acct:someone@${host}`;

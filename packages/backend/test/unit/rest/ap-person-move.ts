@@ -62,7 +62,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 	});
 
 	async function createLocalUser(prefix: string): Promise<{ id: string }> {
-		const id = genId(deps.config);
+		const id = genId();
 		await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 			profile: { userId: id },
@@ -95,7 +95,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 		servers.push(srcFixture.server);
 		const srcUri = `http://${srcFixture.host}/users/src`;
 
-		const srcId = genId(deps.config);
+		const srcId = genId();
 		const srcUser = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {
 				id: srcId,
@@ -111,7 +111,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 
 		const follower = await createLocalUser('honomovefollower');
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: follower.id,
 			followeeId: srcUser.id,
 			followerHost: null,
@@ -156,7 +156,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 		servers.push(srcFixture.server);
 		const srcUri = `http://${srcFixture.host}/users/noacksrc`;
 
-		const srcId = genId(deps.config);
+		const srcId = genId();
 		const srcUser = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {
 				id: srcId,
@@ -172,7 +172,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 
 		const follower = await createLocalUser('honomovenoackfollower');
 		await createFollowingInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: follower.id,
 			followeeId: srcUser.id,
 			followerHost: null,

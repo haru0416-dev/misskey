@@ -922,7 +922,7 @@ describe('クリップ', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const host = `clip-remote-${suffix}.example`;
-			const remoteUserId = genId(config);
+			const remoteUserId = genId();
 			await createUserWithProfileAndPublickeyInDatabase(db, {
 				user: {
 					id: remoteUserId,
@@ -937,7 +937,7 @@ describe('クリップ', () => {
 					userHost: host,
 				},
 			});
-			const remoteNoteId = genId(config);
+			const remoteNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: remoteNoteId,
 				userId: remoteUserId,

@@ -62,7 +62,7 @@ describe('hono-queue-db (importFollowing)', () => {
 	});
 
 	async function createTestUser(prefix: string): Promise<MiUser> {
-		const id = genId(runtime.config);
+		const id = genId();
 		return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 			profile: { userId: id },
@@ -76,7 +76,7 @@ describe('hono-queue-db (importFollowing)', () => {
 		const { url, server } = await serveText(`${followee.username}@${runtime.config.host},withReplies=true\n`);
 		servers.push(server);
 
-		const fileId = genId(runtime.config);
+		const fileId = genId();
 		await createDriveFileInDatabase(runtime.db, {
 			id: fileId,
 			md5: 'dummy',

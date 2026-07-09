@@ -34,7 +34,7 @@ describe('hono-queue-deliver', () => {
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
-		actor = await fetchOrCreateSystemAccountInDatabase({ db: runtime.db, meta: runtime.meta, genId: () => genId(runtime.config) }, 'actor');
+		actor = await fetchOrCreateSystemAccountInDatabase({ db: runtime.db, meta: runtime.meta, genId: () => genId() }, 'actor');
 		// enableStatsForFederatedInstancesはデフォルトtrueだが、trueだと配送成功時に
 		// fetchInstanceMetadataWithSideEffects経由で実在しないテストホストへ本物のHTTPリクエストを
 		// 試みてしまう (process.nextTickでの非同期fire-and-forgetのため、テスト終了後に
@@ -50,9 +50,9 @@ describe('hono-queue-deliver', () => {
 	// 一度警告(warm)されると他のテストの新規サスペンドが反映されなくなる。
 	// このテストを最初に実行してキャッシュを一度だけ警告する。
 	test('サスペンド済みインスタンス宛はskip (suspended)を返す', async () => {
-		const host = `honoqueuedeliver-suspended-${genId(runtime.config)}.example.com`;
+		const host = `honoqueuedeliver-suspended-${genId()}.example.com`;
 		await createInstanceInDatabase(runtime.db, {
-			id: genId(runtime.config),
+			id: genId(),
 			host,
 			firstRetrievedAt: new Date(),
 			suspensionState: 'manuallySuspended',
@@ -70,7 +70,7 @@ describe('hono-queue-deliver', () => {
 	});
 
 	test('meta.federationが\'none\'の場合はskip (blocked)を返す', async () => {
-		const host = `honoqueuedeliver-blocked-${genId(runtime.config)}.example.com`;
+		const host = `honoqueuedeliver-blocked-${genId()}.example.com`;
 
 		const result = await handleHonoQueueDeliver(runtime, fakeJob({
 			user: { id: actor.id },
@@ -84,7 +84,7 @@ describe('hono-queue-deliver', () => {
 	});
 
 	test('meta.blockedHostsに含まれるホスト宛はskip (blocked)を返す', async () => {
-		const host = `honoqueuedeliver-blocked-${genId(runtime.config)}.example.com`;
+		const host = `honoqueuedeliver-blocked-${genId()}.example.com`;
 
 		const result = await handleHonoQueueDeliver(
 			{ ...federatedDeps, meta: { ...federatedDeps.meta, blockedHosts: [...federatedDeps.meta.blockedHosts, host] } },
@@ -101,7 +101,7 @@ describe('hono-queue-deliver', () => {
 	});
 
 	test('署名付きPOSTが成功した場合はSuccessを返す', async () => {
-		const host = `honoqueuedeliver-ok-${genId(runtime.config)}.example.com`;
+		const host = `honoqueuedeliver-ok-${genId()}.example.com`;
 		const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
 
 		const deps: HonoQueueDeliverDependencies = { ...federatedDeps, httpRequestService: { ...federatedDeps.httpRequestService, send } };
@@ -119,7 +119,7 @@ describe('hono-queue-deliver', () => {
 	});
 
 	test('4xx(リトライ不可)エラーの場合はUnrecoverableErrorを投げる', async () => {
-		const host = `honoqueuedeliver-ng-${genId(runtime.config)}.example.com`;
+		const host = `honoqueuedeliver-ng-${genId()}.example.com`;
 		const send = vi.fn().mockRejectedValue(new StatusError('Not Found', 404, 'Not Found'));
 
 		const deps: HonoQueueDeliverDependencies = { ...federatedDeps, httpRequestService: { ...federatedDeps.httpRequestService, send } };
