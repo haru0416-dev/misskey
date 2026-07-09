@@ -90,7 +90,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, useTemplateRef, computed, onMounted, onBeforeUnmount, onDeactivated, onActivated } from 'vue';
 import * as Misskey from 'misskey-js';
-import { getScrollContainer } from '@@/js/scroll.js';
+import { getScrollContainer } from '@shared/utility/scroll.js';
 import MessageItem from '../message-item.vue';
 import XForm from './form.vue';
 import XSearch from './search.vue';

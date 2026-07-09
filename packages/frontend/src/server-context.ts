@@ -4,9 +4,9 @@
  */
 
 import * as Misskey from 'misskey-js';
-import { readServerContext } from '@@/js/server-context.js';
+import { readServerContext } from '@shared/utility/server-context.js';
 
-export { assertServerContext } from '@@/js/server-context.js';
+export { assertServerContext } from '@shared/utility/server-context.js';
 
 export type ServerContext = {
 	clip?: Misskey.entities.Clip;

@@ -82,7 +82,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, computed } from 'vue';
 import { toUnicode } from 'punycode.js';
 import * as Misskey from 'misskey-js';
-import * as config from '@@/js/config.js';
+import * as config from '@shared/utility/config.js';
 import MkButton from './MkButton.vue';
 import MkInput from './MkInput.vue';
 import type { Captcha } from '@/components/MkCaptcha.vue';

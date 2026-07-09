@@ -106,7 +106,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { hostname, port } from '@@/js/config';
+import { hostname, port } from '@shared/utility/config';
 import { useTemplateRef, ref } from 'vue';
 import MkButton from '@/components/MkButton.vue';
 import MkModalWindow from '@/components/MkModalWindow.vue';

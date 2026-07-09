@@ -16,8 +16,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { defineAsyncComponent, ref } from 'vue';
-import { url as local } from '@@/js/config.js';
-import { maybeMakeRelative } from '@@/js/url.js';
+import { url as local } from '@shared/utility/config.js';
+import { maybeMakeRelative } from '@shared/utility/url.js';
 import type { MkABehavior } from '@/components/global/MkA.vue';
 import { useTooltip } from '@/composables/useTooltip.js';
 import * as os from '@/os.js';

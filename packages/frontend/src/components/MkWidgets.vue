@@ -46,7 +46,7 @@ export type DefaultStoredWidget = {
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { isLink } from '@@/js/is-link.js';
+import { isLink } from '@shared/utility/is-link.js';
 import type { Component } from 'vue';
 import { genId } from '@/utility/id.js';
 import MkSelect from '@/components/MkSelect.vue';

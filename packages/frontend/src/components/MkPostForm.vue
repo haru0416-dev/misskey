@@ -119,7 +119,7 @@ import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import insertTextAtCursor from 'insert-text-at-cursor';
 import { toASCII } from 'punycode.js';
-import { host, url } from '@@/js/config.js';
+import { host, url } from '@shared/utility/config.js';
 import MkUploaderItems from './MkUploaderItems.vue';
 import type { ShallowRef } from 'vue';
 import type { PostFormProps } from '@/types/post-form.js';

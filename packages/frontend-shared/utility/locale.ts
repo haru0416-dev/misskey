@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { lang, version } from '@@/js/config.js';
+import { lang, version } from '@shared/utility/config.js';
 import type { Locale } from 'i18n';
 
 // ここはビルド時に const locale = JSON.parse("...") みたいな感じで置き換えられるので top-level await は消える

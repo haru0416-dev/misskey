@@ -129,7 +129,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref, useTemplateRef, watch, nextTick, defineAsyncComponent } from 'vue';
-import { host } from '@@/js/config.js';
+import { host } from '@shared/utility/config.js';
 import MkModalWindow from '@/components/MkModalWindow.vue';
 import MkButton from '@/components/MkButton.vue';
 import XProfile from '@/components/MkUserSetupDialog.Profile.vue';

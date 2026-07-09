@@ -242,8 +242,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, inject, markRaw, provide, ref, useTemplateRef } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
-import { isLink } from '@@/js/is-link.js';
-import { host } from '@@/js/config.js';
+import { isLink } from '@shared/utility/is-link.js';
+import { host } from '@shared/utility/config.js';
 import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
 import type { Keymap } from '@/utility/hotkey.js';
 import type { MenuItem } from '@/types/menu.js';

@@ -27,13 +27,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import JSON5 from 'json5';
-import type { Theme } from '@@/js/theme.js';
+import type { Theme } from '@shared/utility/theme.js';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkButton from '@/components/MkButton.vue';
 import { removeTheme } from '@/theme.js';
-import { getBuiltinThemes } from '@@/js/theme.js';
+import { getBuiltinThemes } from '@shared/utility/theme.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';

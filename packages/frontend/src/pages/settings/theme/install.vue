@@ -21,7 +21,7 @@ import { ref, computed } from 'vue';
 import MkCodeEditor from '@/components/MkCodeEditor.vue';
 import MkButton from '@/components/MkButton.vue';
 import { themeManager, installTheme, handleThemeInstallError } from '@/theme.js';
-import { parseThemeCode } from '@@/js/theme.js';
+import { parseThemeCode } from '@shared/utility/theme.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';

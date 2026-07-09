@@ -4,7 +4,7 @@
  */
 
 import type { Directive } from 'vue';
-import { getScrollContainer, getScrollPosition } from '@@/js/scroll.js';
+import { getScrollContainer, getScrollPosition } from '@shared/utility/scroll.js';
 
 interface HTMLElementWithRO extends HTMLElement {
 	_ro_?: ResizeObserver;

@@ -9,6 +9,7 @@ on:
       - packages/backend/**
       - packages/frontend/**
       - packages/frontend-embed/**
+      - packages/frontend-shared/**
       - packages/icons-subsetter/**
       - packages/sw/**
       - packages/misskey-js/**
@@ -32,6 +33,7 @@ on:
       - packages/backend/**
       - packages/frontend/**
       - packages/frontend-embed/**
+      - packages/frontend-shared/**
       - packages/icons-subsetter/**
       - packages/sw/**
       - packages/misskey-js/**

@@ -5,7 +5,7 @@
 
 import { defineAsyncComponent, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { apiUrl, host } from '@@/js/config.js';
+import { apiUrl, host } from '@shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
 import { showSuspendedDialog } from '@/utility/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';

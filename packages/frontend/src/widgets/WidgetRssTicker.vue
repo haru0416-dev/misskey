@@ -36,8 +36,8 @@ import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import MkContainer from '@/components/MkContainer.vue';
 import { shuffle } from '@/utility/shuffle.js';
 import { i18n } from '@/i18n.js';
-import { url as base } from '@@/js/config.js';
-import { useInterval } from '@@/js/use-interval.js';
+import { url as base } from '@shared/utility/config.js';
+import { useInterval } from '@shared/utility/use-interval.js';
 
 const name = 'rssTicker';
 

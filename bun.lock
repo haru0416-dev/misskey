@@ -269,6 +269,21 @@
         "vue-tsc": "3.3.5",
       },
     },
+    "packages/frontend-shared": {
+      "name": "frontend-shared",
+      "dependencies": {
+        "@misskey-dev/emoji-data": "17.0.6",
+        "i18n": "workspace:*",
+        "json5": "2.2.3",
+        "misskey-js": "workspace:*",
+        "shiki": "4.2.0",
+        "tinycolor2": "1.6.0",
+        "vue": "3.5.38",
+      },
+      "devDependencies": {
+        "@types/tinycolor2": "1.4.6",
+      },
+    },
     "packages/i18n": {
       "name": "i18n",
       "dependencies": {
@@ -1896,6 +1911,8 @@
     "frontend": ["frontend@workspace:packages/frontend"],
 
     "frontend-embed": ["frontend-embed@workspace:packages/frontend-embed"],
+
+    "frontend-shared": ["frontend-shared@workspace:packages/frontend-shared"],
 
     "fs-extra": ["fs-extra@11.2.0", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, "sha512-PmDi3uwK5nFuXh7XDTlVnS17xJS7vW36is2+w3xcv8SVxiB4NyATf4ctkVY5bkSjX0Y4nbvZCq1/EjtEyr9ktw=="],
 

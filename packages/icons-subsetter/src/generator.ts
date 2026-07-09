@@ -9,7 +9,7 @@ import { generateSubsettedFont } from './subsetter.js';
 
 const filesToScan = {
 	frontend: 'packages/frontend/src/**/*.{ts,vue}',
-	//frontendShared: 'packages/frontend/shared/js/**/*.{ts}',  // 現時点では該当がないのでスキップ。ここをコメントアウトするときは、各フロントエンドにこのチャンクのCSSのimportを追加すること
+	//frontendShared: 'packages/frontend-shared/utility/**/*.{ts}',  // 現時点では該当がないのでスキップ。ここをコメントアウトするときは、各フロントエンドにこのチャンクのCSSのimportを追加すること
 	frontendEmbed: 'packages/frontend-embed/src/**/*.{ts,vue}',
 };
 

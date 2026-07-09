@@ -207,10 +207,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
 import JSON5 from 'json5';
-import defaultLightTheme from '@@/themes/l-light.json5';
-import defaultDarkTheme from '@@/themes/d-green-lime.json5';
-import { isSafeMode } from '@@/js/config.js';
-import type { Theme } from '@@/js/theme.js';
+import defaultLightTheme from '@shared/themes/l-light.json5';
+import defaultDarkTheme from '@shared/themes/d-green-lime.json5';
+import { isSafeMode } from '@shared/utility/config.js';
+import type { Theme } from '@shared/utility/theme.js';
 import * as os from '@/os.js';
 import MkSwitch from '@/components/MkSwitch.vue';
 import FormSection from '@/components/form/section.vue';
@@ -219,7 +219,7 @@ import MkFolder from '@/components/MkFolder.vue';
 import MkThemePreview from '@/components/MkThemePreview.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import { handleThemeInstallError, installTheme, removeTheme } from '@/theme.js';
-import { getBuiltinThemes } from '@@/js/theme.js';
+import { getBuiltinThemes } from '@shared/utility/theme.js';
 import { isDeviceDarkmode } from '@/utility/is-device-darkmode.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';

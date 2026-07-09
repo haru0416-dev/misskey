@@ -124,11 +124,11 @@ import {
 	unicodeEmojiCategories as categories,
 	getEmojiName,
 	getUnicodeEmoji,
-} from '@@/js/emojilist.js';
+} from '@shared/utility/emojilist.js';
 import type {
 	UnicodeEmojiDef,
 	CustomEmojiFolderTree,
-} from '@@/js/emojilist.js';
+} from '@shared/utility/emojilist.js';
 import XSection from '@/components/MkEmojiPicker.Section.vue';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import * as os from '@/os.js';

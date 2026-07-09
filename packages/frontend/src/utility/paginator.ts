@@ -7,7 +7,7 @@ import { ref, shallowRef, triggerRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { ComputedRef, Ref, ShallowRef, UnwrapRef } from 'vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import type { MisskeyEntity } from '@@/js/misskey-entity.js';
+import type { MisskeyEntity } from '@shared/utility/misskey-entity.js';
 
 export type { MisskeyEntity };
 

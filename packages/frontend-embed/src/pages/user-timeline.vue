@@ -47,10 +47,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script setup lang="ts">
 import { ref, computed, inject, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
-import { url, instanceName } from '@@/js/config.js';
-import { defaultEmbedParams } from '@@/js/embed-page.js';
-import { scrollToTop } from '@@/js/scroll.js';
-import { isLink } from '@@/js/is-link.js';
+import { url, instanceName } from '@shared/utility/config.js';
+import { defaultEmbedParams } from '@shared/utility/embed-page.js';
+import { scrollToTop } from '@shared/utility/scroll.js';
+import { isLink } from '@shared/utility/is-link.js';
 import type { Paging } from '@/components/EmPagination.vue';
 import EmNotes from '@/components/EmNotes.vue';
 import EmAvatar from '@/components/EmAvatar.vue';
