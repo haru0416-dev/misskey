@@ -26,7 +26,7 @@ export const ROUTE_DEF = [
 	{
 		name: 'index',
 		path: '/',
-		component: $i ? PageTimeline : page(() => import('@/pages/welcome.vue')),
+		component: $i ? PageTimeline : page(() => import('@/pages/welcome/index.vue')),
 	},
 	{
 		path: '/timeline',
@@ -47,7 +47,7 @@ export const ROUTE_DEF = [
 	{
 		name: 'user',
 		path: '/@:acct/:page?',
-		component: page(() => import('@/pages/user/index.vue')),
+		component: page(() => import('@/pages/user/index/index.vue')),
 	},
 	{
 		name: 'note',
@@ -65,17 +65,17 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/chat',
-		component: chatPage(() => import('@/pages/chat/home.vue')),
+		component: chatPage(() => import('@/pages/chat/home/index.vue')),
 		loginRequired: true,
 	},
 	{
 		path: '/chat/user/:userId',
-		component: chatPage(() => import('@/pages/chat/room.vue')),
+		component: chatPage(() => import('@/pages/chat/room/index.vue')),
 		loginRequired: true,
 	},
 	{
 		path: '/chat/room/:roomId',
-		component: chatPage(() => import('@/pages/chat/room.vue')),
+		component: chatPage(() => import('@/pages/chat/room/index.vue')),
 		loginRequired: true,
 	},
 	{
@@ -101,7 +101,7 @@ export const ROUTE_DEF = [
 			{
 				path: '/avatar-decoration',
 				name: 'avatarDecoration',
-				component: page(() => import('@/pages/settings/avatar-decoration.vue')),
+				component: page(() => import('@/pages/settings/avatar-decoration/index.vue')),
 			},
 			{
 				path: '/privacy',
@@ -111,12 +111,12 @@ export const ROUTE_DEF = [
 			{
 				path: '/emoji-palette',
 				name: 'emoji-palette',
-				component: page(() => import('@/pages/settings/emoji-palette.vue')),
+				component: page(() => import('@/pages/settings/emoji-palette/index.vue')),
 			},
 			{
 				path: '/drive',
 				name: 'drive',
-				component: page(() => import('@/pages/settings/drive.vue')),
+				component: page(() => import('@/pages/settings/drive/index.vue')),
 			},
 			{
 				path: '/drive/cleaner',
@@ -126,7 +126,7 @@ export const ROUTE_DEF = [
 			{
 				path: '/notifications',
 				name: 'notifications',
-				component: page(() => import('@/pages/settings/notifications.vue')),
+				component: page(() => import('@/pages/settings/notifications/index.vue')),
 			},
 			{
 				path: '/email',
@@ -146,17 +146,17 @@ export const ROUTE_DEF = [
 			{
 				path: '/theme/install',
 				name: 'theme',
-				component: page(() => import('@/pages/settings/theme.install.vue')),
+				component: page(() => import('@/pages/settings/theme/install.vue')),
 			},
 			{
 				path: '/theme/manage',
 				name: 'theme',
-				component: page(() => import('@/pages/settings/theme.manage.vue')),
+				component: page(() => import('@/pages/settings/theme/manage.vue')),
 			},
 			{
 				path: '/theme',
 				name: 'theme',
-				component: page(() => import('@/pages/settings/theme.vue')),
+				component: page(() => import('@/pages/settings/theme/index.vue')),
 			},
 			{
 				path: '/navbar',
@@ -166,22 +166,22 @@ export const ROUTE_DEF = [
 			{
 				path: '/statusbar',
 				name: 'statusbar',
-				component: page(() => import('@/pages/settings/statusbar.vue')),
+				component: page(() => import('@/pages/settings/statusbar/index.vue')),
 			},
 			{
 				path: '/sounds',
 				name: 'sounds',
-				component: page(() => import('@/pages/settings/sounds.vue')),
+				component: page(() => import('@/pages/settings/sounds/index.vue')),
 			},
 			{
 				path: '/plugin/install',
 				name: 'plugin',
-				component: page(() => import('@/pages/settings/plugin.install.vue')),
+				component: page(() => import('@/pages/settings/plugin/install.vue')),
 			},
 			{
 				path: '/plugin',
 				name: 'plugin',
-				component: page(() => import('@/pages/settings/plugin.vue')),
+				component: page(() => import('@/pages/settings/plugin/index.vue')),
 			},
 			{
 				path: '/account-data',
@@ -191,7 +191,7 @@ export const ROUTE_DEF = [
 			{
 				path: '/mute-block',
 				name: 'mute-block',
-				component: page(() => import('@/pages/settings/mute-block.vue')),
+				component: page(() => import('@/pages/settings/mute-block/index.vue')),
 			},
 			{
 				path: '/connect',
@@ -206,12 +206,12 @@ export const ROUTE_DEF = [
 			{
 				path: '/webhook/edit/:webhookId',
 				name: 'connect',
-				component: page(() => import('@/pages/settings/webhook.edit.vue')),
+				component: page(() => import('@/pages/settings/webhook/edit.vue')),
 			},
 			{
 				path: '/webhook/new',
 				name: 'connect',
-				component: page(() => import('@/pages/settings/webhook.new.vue')),
+				component: page(() => import('@/pages/settings/webhook/new.vue')),
 			},
 			{
 				path: '/deck',
@@ -266,7 +266,7 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/about',
-		component: page(() => import('@/pages/about.vue')),
+		component: page(() => import('@/pages/about/index.vue')),
 		hash: 'initialTab',
 	},
 	{
@@ -301,12 +301,12 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/explore',
-		component: page(() => import('@/pages/explore.vue')),
+		component: page(() => import('@/pages/explore/index.vue')),
 		hash: 'initialTab',
 	},
 	{
 		path: '/search',
-		component: page(() => import('@/pages/search.vue')),
+		component: page(() => import('@/pages/search/index.vue')),
 		query: {
 			q: 'query',
 			userId: 'userId',
@@ -354,7 +354,7 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/auth/:token',
-		component: page(() => import('@/pages/auth.vue')),
+		component: page(() => import('@/pages/auth/index.vue')),
 	},
 	{
 		path: '/miauth/:session',
@@ -376,12 +376,12 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/pages/new',
-		component: page(() => import('@/pages/page-editor/page-editor.vue')),
+		component: page(() => import('@/pages/page-editor/index.vue')),
 		loginRequired: true,
 	},
 	{
 		path: '/pages/edit/:initPageId',
-		component: page(() => import('@/pages/page-editor/page-editor.vue')),
+		component: page(() => import('@/pages/page-editor/index.vue')),
 		loginRequired: true,
 	},
 	{
@@ -408,12 +408,12 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/gallery/:postId/edit',
-		component: page(() => import('@/pages/gallery/edit.vue')),
+		component: page(() => import('@/pages/gallery/edit/index.vue')),
 		loginRequired: true,
 	},
 	{
 		path: '/gallery/new',
-		component: page(() => import('@/pages/gallery/edit.vue')),
+		component: page(() => import('@/pages/gallery/edit/index.vue')),
 		loginRequired: true,
 	},
 	{
@@ -453,15 +453,15 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/registry/keys/:domain/:path(*)?',
-		component: page(() => import('@/pages/registry.keys.vue')),
+		component: page(() => import('@/pages/registry/keys.vue')),
 	},
 	{
 		path: '/registry/value/:domain/:path(*)?',
-		component: page(() => import('@/pages/registry.value.vue')),
+		component: page(() => import('@/pages/registry/value.vue')),
 	},
 	{
 		path: '/registry',
-		component: page(() => import('@/pages/registry.vue')),
+		component: page(() => import('@/pages/registry/index.vue')),
 	},
 	{
 		path: '/install-extentions',
@@ -482,7 +482,7 @@ export const ROUTE_DEF = [
 	{
 		path: '/admin/file/:fileId',
 		component: iAmModerator
-			? page(() => import('@/pages/admin-file.vue'))
+			? page(() => import('@/pages/admin-file/index.vue'))
 			: page(() => import('@/pages/not-found.vue')),
 	},
 	{
@@ -494,7 +494,7 @@ export const ROUTE_DEF = [
 			{
 				path: '/overview',
 				name: 'overview',
-				component: page(() => import('@/pages/admin/overview.vue')),
+				component: page(() => import('@/pages/admin/overview/index.vue')),
 			},
 			{
 				path: '/users',
@@ -509,7 +509,7 @@ export const ROUTE_DEF = [
 			{
 				path: '/emojis2',
 				name: 'emojis2',
-				component: page(() => import('@/pages/admin/custom-emojis-manager2.vue')),
+				component: page(() => import('@/pages/admin/custom-emojis-manager2/index.vue')),
 			},
 			{
 				path: '/avatar-decorations',
@@ -519,12 +519,12 @@ export const ROUTE_DEF = [
 			{
 				path: '/federation-job-queue',
 				name: 'federationJobQueue',
-				component: page(() => import('@/pages/admin/federation-job-queue.vue')),
+				component: page(() => import('@/pages/admin/federation-job-queue/index.vue')),
 			},
 			{
 				path: '/job-queue',
 				name: 'jobQueue',
-				component: page(() => import('@/pages/admin/job-queue.vue')),
+				component: page(() => import('@/pages/admin/job-queue/index.vue')),
 			},
 			{
 				path: '/files',
@@ -549,22 +549,22 @@ export const ROUTE_DEF = [
 			{
 				path: '/roles/:id/edit',
 				name: 'roles',
-				component: page(() => import('@/pages/admin/roles.edit.vue')),
+				component: page(() => import('@/pages/admin/roles/edit.vue')),
 			},
 			{
 				path: '/roles/new',
 				name: 'roles',
-				component: page(() => import('@/pages/admin/roles.edit.vue')),
+				component: page(() => import('@/pages/admin/roles/edit.vue')),
 			},
 			{
 				path: '/roles/:id',
 				name: 'roles',
-				component: page(() => import('@/pages/admin/roles.role.vue')),
+				component: page(() => import('@/pages/admin/roles/role.vue')),
 			},
 			{
 				path: '/roles',
 				name: 'roles',
-				component: page(() => import('@/pages/admin/roles.vue')),
+				component: page(() => import('@/pages/admin/roles/index.vue')),
 			},
 			{
 				path: '/database',
@@ -579,7 +579,7 @@ export const ROUTE_DEF = [
 			{
 				path: '/modlog',
 				name: 'modlog',
-				component: page(() => import('@/pages/admin/modlog.vue')),
+				component: page(() => import('@/pages/admin/modlog/index.vue')),
 			},
 			{
 				path: '/settings',
@@ -634,12 +634,12 @@ export const ROUTE_DEF = [
 			{
 				path: '/abuse-report-notification-recipient',
 				name: 'abuse-report-notification-recipient',
-				component: page(() => import('@/pages/admin/abuse-report/notification-recipient.vue')),
+				component: page(() => import('@/pages/admin/abuse-report/notification-recipient/index.vue')),
 			},
 			{
 				path: '/system-webhook',
 				name: 'system-webhook',
-				component: page(() => import('@/pages/admin/system-webhook.vue')),
+				component: page(() => import('@/pages/admin/system-webhook/index.vue')),
 			},
 			{
 				path: '/',
@@ -664,17 +664,17 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/my/drive/folder/:folder',
-		component: page(() => import('@/pages/drive.vue')),
+		component: page(() => import('@/pages/drive/index.vue')),
 		loginRequired: true,
 	},
 	{
 		path: '/my/drive',
-		component: page(() => import('@/pages/drive.vue')),
+		component: page(() => import('@/pages/drive/index.vue')),
 		loginRequired: true,
 	},
 	{
 		path: '/my/drive/file/:fileId',
-		component: page(() => import('@/pages/drive.file.vue')),
+		component: page(() => import('@/pages/drive/file/index.vue')),
 		loginRequired: true,
 	},
 	{
@@ -724,7 +724,7 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/qr',
-		component: page(() => import('@/pages/qr.vue')),
+		component: page(() => import('@/pages/qr/index.vue')),
 		loginRequired: true,
 	},
 	{

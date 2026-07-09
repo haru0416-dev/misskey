@@ -169,9 +169,9 @@ import { nextTick, onActivated, onBeforeUnmount, onMounted, ref, useTemplateRef,
 import * as Misskey from 'misskey-js';
 import MkButton from './MkButton.vue';
 import type { MenuItem } from '@/types/menu.js';
-import XNavFolder from '@/components/MkDrive.navFolder.vue';
-import XFolder from '@/components/MkDrive.folder.vue';
-import XFile from '@/components/MkDrive.file.vue';
+import XNavFolder from '@/components/MkDrive.NavFolder.vue';
+import XFolder from '@/components/MkDrive.Folder.vue';
+import XFile from '@/components/MkDrive.File.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';

@@ -44,13 +44,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-export type Tab = {
-	key: string;
-	onClick?: (ev: PointerEvent) => void;
-	iconOnly?: boolean;
-	title: string;
-	icon?: string;
-};
+import type { Tab } from '@/components/MkTabs.vue';
+
+export type { Tab };
 </script>
 
 <script lang="ts" setup>

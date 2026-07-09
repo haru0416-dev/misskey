@@ -36,11 +36,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts">
 import { computed, isRef, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, ref, shallowRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import { useDocumentVisibility } from '@@/js/use-document-visibility.js';
-import { onScrollTop, getBodyScrollHeight, getScrollContainer, onScrollBottom, scrollToBottom, scrollInContainer, isTailVisible, isHeadVisible } from '@@/js/scroll.js';
+import { useDocumentVisibility } from '@shared/utility/use-document-visibility.js';
+import { onScrollTop, getBodyScrollHeight, getScrollContainer, onScrollBottom, scrollToBottom, scrollInContainer, isTailVisible, isHeadVisible } from '@shared/utility/scroll.js';
 import type { ComputedRef } from 'vue';
 import { misskeyApi } from '@/misskey-api.js';
 import { i18n } from '@/i18n.js';
+import type { MisskeyEntity as MisskeyEntityBase } from '@shared/utility/misskey-entity.js';
 
 const SECOND_FETCH_LIMIT = 30;
 const TOLERANCE = 16;
@@ -65,10 +66,7 @@ export type Paging<E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints> 
 	offsetMode?: boolean;
 };
 
-type MisskeyEntity = {
-	id: string;
-	createdAt: string;
-	_shouldInsertAd_?: boolean;
+type MisskeyEntity = MisskeyEntityBase & {
 	[x: string]: any;
 };
 

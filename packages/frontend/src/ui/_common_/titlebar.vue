@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { host } from '@@/js/config.js';
+import { host } from '@shared/utility/config.js';
 import { ref } from 'vue';
 import { instance } from '@/instance.js';
 import { prefer } from '@/preferences.js';

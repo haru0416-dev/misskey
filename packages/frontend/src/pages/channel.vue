@@ -73,8 +73,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, watch, ref, markRaw, shallowRef } from 'vue';
 import * as Misskey from 'misskey-js';
-import { url } from '@@/js/config.js';
-import { useInterval } from '@@/js/use-interval.js';
+import { url } from '@shared/utility/config.js';
+import { useInterval } from '@shared/utility/use-interval.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import MkPostForm from '@/components/MkPostForm.vue';
 import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';

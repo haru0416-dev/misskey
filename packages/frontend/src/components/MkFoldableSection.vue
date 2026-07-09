@@ -36,6 +36,7 @@ import { miLocalStorage } from '@/local-storage.js';
 import { prefer } from '@/preferences.js';
 import { themeManager } from '@/theme.js';
 import { getBgColor } from '@/utility/get-bg-color.js';
+import { useHeightTransition } from '@/composables/useHeightTransition.js';
 
 const miLocalStoragePrefix = 'ui:folder:' as const;
 
@@ -58,31 +59,7 @@ watch(showBody, () => {
 	}
 });
 
-function enter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	const elementHeight = el.getBoundingClientRect().height;
-	el.style.height = '0';
-	el.offsetHeight; // reflow
-	el.style.height = `${elementHeight}px`;
-}
-
-function afterEnter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	el.style.height = '';
-}
-
-function leave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	const elementHeight = el.getBoundingClientRect().height;
-	el.style.height = `${elementHeight}px`;
-	el.offsetHeight; // reflow
-	el.style.height = '0';
-}
-
-function afterLeave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	el.style.height = '';
-}
+const { enter, afterEnter, leave, afterLeave } = useHeightTransition();
 
 function updateBgColor() {
 	if (rootEl.value) {

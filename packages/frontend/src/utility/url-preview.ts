@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { computed } from 'vue';
-import { hostname } from '@@/js/config.js';
+import { hostname } from '@shared/utility/config.js';
 import { instance } from '@/instance.js';
 import { prefer } from '@/preferences.js';
 

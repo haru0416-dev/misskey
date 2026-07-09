@@ -70,7 +70,7 @@ export type GetMkSelectValueTypesFromDef<T extends MkSelectItem[]> = T[number] e
 
 <script lang="ts" setup generic="const ITEMS extends MkSelectItem[], MODELT extends OptionValue">
 import { onMounted, nextTick, ref, watch, computed, toRefs, useTemplateRef } from 'vue';
-import { useInterval } from '@@/js/use-interval.js';
+import { useInterval } from '@shared/utility/use-interval.js';
 import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
 

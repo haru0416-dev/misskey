@@ -18,7 +18,7 @@ import { Chart } from 'chart.js';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { store } from '@/store.js';
-import { useChartTooltip } from '@/composables/use-chart-tooltip.js';
+import { useChartTooltip } from '@/composables/useChartTooltip.js';
 import { alpha } from '@/utility/color.js';
 import { initChart } from '@/utility/init-chart.js';
 
@@ -126,7 +126,9 @@ async function renderChart() {
 				borderWidth: 0,
 				borderRadius: 3,
 				backgroundColor(c: any) {
-					const value = c.dataset.data[c.dataIndex].v as number;
+					const v = c.dataset.data[c.dataIndex] as { v: number } | undefined;
+					if (v == null) return alpha(color, 0);
+					const value = v.v;
 					let a = (value - min) / max;
 					if (value !== 0) { // 0でない限りは完全に不可視にはしない
 						a = Math.max(a, 0.05);
@@ -206,14 +208,13 @@ async function renderChart() {
 					enabled: false,
 					callbacks: {
 						title(context) {
-							// @ts-expect-error TS(2339)
-							return context[0].dataset.data[context[0].dataIndex].d;
+							const v = context[0].dataset.data[context[0].dataIndex] as unknown as { d: string } | undefined;
+							return v?.d ?? '';
 						},
+						// @ts-expect-error TS(2322)
 						label(context) {
-							const v = context.dataset.data[context.dataIndex];
-
-							// @ts-expect-error TS(2339)
-							return [v.v];
+							const v = context.dataset.data[context.dataIndex] as unknown as { v: number } | undefined;
+							return v == null ? [] : [v.v];
 						},
 					},
 					//mode: 'index',

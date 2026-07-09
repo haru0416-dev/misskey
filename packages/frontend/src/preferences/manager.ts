@@ -5,7 +5,7 @@
 
 import { customRef, ref, watch, onScopeDispose } from 'vue';
 import { EventEmitter } from 'eventemitter3';
-import { host, version } from '@@/js/config.js';
+import { host, version } from '@shared/utility/config.js';
 import { PREF_DEF } from './def.js';
 import type { Ref } from 'vue';
 import type { MenuItem } from '@/types/menu.js';

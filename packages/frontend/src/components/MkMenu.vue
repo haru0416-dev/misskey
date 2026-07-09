@@ -236,7 +236,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, defineAsyncComponent, inject, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, unref, watch, shallowRef, reactive, isRef } from 'vue';
 import type { MenuItem, InnerMenuItem, MenuPending, MenuAction, MenuSwitch, MenuRadio, MenuRadioOption, MenuParent } from '@/types/menu.js';
 import type { Keymap } from '@/utility/hotkey.js';
-import MkSwitchButton from '@/components/MkSwitch.button.vue';
+import MkSwitchButton from '@/components/MkSwitch.Button.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { isTouchUsing } from '@/utility/touch.js';
@@ -247,7 +247,7 @@ const childrenCache = new WeakMap<MenuParent, MenuItem[]>();
 </script>
 
 <script lang="ts" setup>
-const XChild = defineAsyncComponent(() => import('./MkMenu.child.vue'));
+const XChild = defineAsyncComponent(() => import('./MkMenu.Child.vue'));
 
 const props = defineProps<{
 	items: MenuItem[];

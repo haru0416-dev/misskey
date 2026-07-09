@@ -145,8 +145,8 @@ import { userPage } from '@/utils.js';
 import { notePage } from '@/utils.js';
 import { i18n } from '@/i18n.js';
 import { DI } from '@/di.js';
-import { shouldCollapsed } from '@@/js/collapsed.js';
-import { url } from '@@/js/config.js';
+import { shouldCollapsed } from '@shared/utility/collapsed.js';
+import { url } from '@shared/utility/config.js';
 import EmMfm from '@/components/EmMfm.js';
 
 const props = defineProps<{

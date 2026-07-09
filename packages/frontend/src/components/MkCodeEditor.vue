@@ -36,7 +36,7 @@ import { ref, watch, toRefs, useTemplateRef, nextTick } from 'vue';
 import { debounce } from 'throttle-debounce';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
-import XCode from '@/components/MkCode.core.vue';
+import XCode from '@/components/MkCode.Core.vue';
 
 const props = withDefaults(defineProps<{
 	modelValue: string | null;

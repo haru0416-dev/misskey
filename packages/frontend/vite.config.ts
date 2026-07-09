@@ -17,7 +17,7 @@ import pluginJson5 from './lib/vite-plugin-json5.js';
 import type { Options as SearchIndexOptions } from './lib/vite-plugin-create-search-index.js';
 import pluginCreateSearchIndex from './lib/vite-plugin-create-search-index.js';
 import pluginWatchLocales from './lib/vite-plugin-watch-locales.js';
-import { pluginRemoveUnrefI18n } from '../frontend-builder/rollup-plugin-remove-unref-i18n.js';
+import { pluginRemoveUnrefI18n } from './builder/rollup-plugin-remove-unref-i18n.js';
 import { Features } from 'lightningcss';
 
 const url =
@@ -63,13 +63,13 @@ function getBundleVisualizerPlugin(): PluginOption[] {
  */
 export const searchIndexes = [
 	{
-		targetFilePaths: ['src/pages/settings/*.vue'],
+		targetFilePaths: ['src/pages/settings/**/*.vue'],
 		mainVirtualModule: 'search-index:settings',
 		modulesToHmrOnUpdate: ['src/pages/settings/index.vue'],
 		verbose: process.env.FRONTEND_SEARCH_INDEX_VERBOSE === 'true',
 	},
 	{
-		targetFilePaths: ['src/pages/admin/*.vue'],
+		targetFilePaths: ['src/pages/admin/**/*.vue'],
 		mainVirtualModule: 'search-index:admin',
 		modulesToHmrOnUpdate: ['src/pages/admin/index.vue'],
 		verbose: process.env.FRONTEND_SEARCH_INDEX_VERBOSE === 'true',
@@ -176,7 +176,7 @@ export function getConfig(): UserConfig {
 			extensions,
 			alias: {
 				'@/': __dirname + '/src/',
-				'@@/': __dirname + '/../frontend-shared/',
+				'@shared/': __dirname + '/../frontend-shared/',
 				'/client-assets/': __dirname + '/assets/',
 				'/static-assets/': __dirname + '/../backend/assets/',
 				'/fluent-emoji/': '@misskey-dev/emoji-assets/fluent-emoji/',

@@ -4,7 +4,7 @@
  */
 
 import * as Misskey from 'misskey-js';
-import { url } from '@@/js/config.js';
+import { url } from '@shared/utility/config.js';
 import { claimAchievement } from './achievements.js';
 import type { Ref, ShallowRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';

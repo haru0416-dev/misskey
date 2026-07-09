@@ -45,7 +45,7 @@ import { i18n } from '@/i18n.js';
 import MkSelect from '@/components/MkSelect.vue';
 import MkInput from '@/components/MkInput.vue';
 import { formatDateTimeString } from '@/utility/format-time-string.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 
 const props = withDefaults(defineProps<{
 	paginator: T;

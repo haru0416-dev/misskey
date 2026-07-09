@@ -21,7 +21,7 @@
 		"isolatedModules": true,
 		"paths": {
 			"@/*": ["./src/*"],
-			"@@/*": ["../frontend-shared/*"]
+			"@shared/*": ["../frontend-shared/*"]
 		},
 		"typeRoots": [
 			"./node_modules/@types",

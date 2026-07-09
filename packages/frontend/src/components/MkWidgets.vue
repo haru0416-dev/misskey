@@ -46,7 +46,7 @@ export type DefaultStoredWidget = {
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { isLink } from '@@/js/is-link.js';
+import { isLink } from '@shared/utility/is-link.js';
 import type { Component } from 'vue';
 import { genId } from '@/utility/id.js';
 import MkSelect from '@/components/MkSelect.vue';
@@ -56,7 +56,7 @@ import { widgets as widgetDefs, federationWidgets } from '@/widgets/index.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 
 const props = defineProps<{
 	widgets: Widget[];

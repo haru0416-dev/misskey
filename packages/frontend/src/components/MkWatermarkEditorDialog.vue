@@ -77,7 +77,7 @@ import * as os from '@/os.js';
 import { deepClone } from '@/utility/clone.js';
 import { ensureSignin } from '@/i.js';
 import { genId } from '@/utility/id.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 import { prefer } from '@/preferences.js';
 
 const $i = ensureSignin();

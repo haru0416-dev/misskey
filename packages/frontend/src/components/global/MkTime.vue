@@ -16,8 +16,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 import isChromatic from 'chromatic/isChromatic';
 import { computed } from 'vue';
 import { i18n } from '@/i18n.js';
-import { dateTimeFormat } from '@@/js/intl-const.js';
-import { useLowresTime } from '@/composables/use-lowres-time.js';
+import { dateTimeFormat } from '@shared/utility/intl-const.js';
+import { useLowresTime } from '@/composables/useLowresTime.js';
 
 const props = withDefaults(defineProps<{
 	time: Date | string | number | null;

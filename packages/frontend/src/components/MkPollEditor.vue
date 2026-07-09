@@ -53,7 +53,7 @@ import MkButton from './MkButton.vue';
 import { formatDateTimeString } from '@/utility/format-time-string.js';
 import { addTime } from '@/utility/time.js';
 import { i18n } from '@/i18n.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 
 export type PollEditorModelValue = {
 	expiresAt: number | null;
