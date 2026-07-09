@@ -9,7 +9,7 @@ import { miLocalStorage } from '@/local-storage.js';
 
 // TODO: 他のタブと永続化されたstateを同期
 
-type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
+export type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
 
 const accountData = miLocalStorage.getItem('account');
 

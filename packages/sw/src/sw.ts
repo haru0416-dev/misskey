@@ -8,7 +8,7 @@ import * as acct from 'misskey-js/acct.js';
 import type * as Misskey from 'misskey-js';
 import { FETCH_TIMEOUT_MS } from '@/const.js';
 import type { PushNotificationDataMap } from '@/types.js';
-import type { I18n } from '@@/js/i18n.js';
+import type { I18n } from '@shared/utility/i18n.js';
 import type { Locale } from 'i18n';
 import { createEmptyNotification, createNotification } from '@/scripts/create-notification.js';
 import { swLang } from '@/scripts/lang.js';

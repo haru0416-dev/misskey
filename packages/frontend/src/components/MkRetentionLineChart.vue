@@ -14,7 +14,7 @@ import type { ScatterDataPoint } from 'chart.js';
 import tinycolor from 'tinycolor2';
 import { store } from '@/store.js';
 import { themeManager } from '@/theme.js';
-import { useChartTooltip } from '@/composables/use-chart-tooltip.js';
+import { useChartTooltip } from '@/composables/useChartTooltip.js';
 import { chartVLine } from '@/utility/chart-vline.js';
 import { alpha } from '@/utility/color.js';
 import { initChart } from '@/utility/init-chart.js';
@@ -119,11 +119,12 @@ onMounted(async () => {
 					enabled: false,
 					callbacks: {
 						title(context) {
-							const v = context[0].dataset.data[context[0].dataIndex] as RetentionPoint;
-							return `${v.x} days later`;
+							const v = context[0].dataset.data[context[0].dataIndex] as RetentionPoint | undefined;
+							return v == null ? '' : `${v.x} days later`;
 						},
 						label(context) {
-							const v = context.dataset.data[context.dataIndex] as RetentionPoint;
+							const v = context.dataset.data[context.dataIndex] as RetentionPoint | undefined;
+							if (v == null) return '';
 							const p = Math.round(v.y) + '%';
 							return `${v.d} ${p}`;
 						},

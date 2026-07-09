@@ -25,7 +25,7 @@
 		"skipLibCheck": true,
 		"paths": {
 			"@/*": ["./src/*"],
-			"@@/*": ["../frontend-shared/*"]
+			"@shared/*": ["../frontend-shared/*"]
 		},
 		"typeRoots": ["./@types", "./node_modules/@types", "./node_modules/@vue-macros", "./node_modules"],
 		"types": ["vite/client", "vite-plugin-glsl/ext", "vitest/importMeta"],
@@ -33,6 +33,15 @@
 		"jsx": "preserve"
 	},
 	"compileOnSave": false,
-	"include": ["./src/**/*.ts", "./src/**/*.vue", "./test/**/*.ts", "./test/**/*.vue", "./@types/**/*.ts"],
+	"include": [
+		"./src/**/*.ts",
+		"./src/**/*.vue",
+		"./test/**/*.ts",
+		"./test/**/*.vue",
+		"./@types/**/*.ts",
+		"../frontend-shared/utility/**/*.ts",
+		"../frontend-shared/@types/**/*.ts",
+		"./builder/**/*.ts"
+	],
 	"exclude": ["./src/**/*.stories.ts"]
 }

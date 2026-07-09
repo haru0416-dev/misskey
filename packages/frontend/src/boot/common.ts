@@ -5,10 +5,10 @@
 
 import { watch, version as vueVersion } from 'vue';
 import { compareVersions } from 'compare-versions';
-import { version, lang, apiUrl, isSafeMode } from '@@/js/config.js';
-import defaultLightTheme from '@@/themes/l-light.json5';
-import defaultDarkTheme from '@@/themes/d-green-lime.json5';
-import { storeBootloaderErrors } from '@@/js/store-boot-errors';
+import { version, lang, apiUrl, isSafeMode } from '@shared/utility/config.js';
+import defaultLightTheme from '@shared/themes/l-light.json5';
+import defaultDarkTheme from '@shared/themes/d-green-lime.json5';
+import { storeBootloaderErrors } from '@shared/utility/store-boot-errors';
 import type { App } from 'vue';
 import widgets from '@/widgets/index.js';
 import directives from '@/directives/index.js';

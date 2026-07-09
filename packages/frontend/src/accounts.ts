@@ -5,7 +5,7 @@
 
 import { defineAsyncComponent, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { apiUrl, host } from '@@/js/config.js';
+import { apiUrl, host } from '@shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
 import { showSuspendedDialog } from '@/utility/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';
@@ -15,9 +15,8 @@ import { unisonReload, reloadChannel } from '@/utility/unison-reload.js';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
+import type { AccountWithToken } from '@/i.js';
 import { signout } from '@/signout.js';
-
-type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
 
 export async function getAccounts(): Promise<
 	{

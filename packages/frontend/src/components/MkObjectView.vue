@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { } from 'vue';
-import XValue from './MkObjectView.value.vue';
+import XValue from './MkObjectView.Value.vue';
 
 const props = defineProps<{
 	value: Record<string, unknown>;

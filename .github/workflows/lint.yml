@@ -8,9 +8,8 @@ on:
     paths:
       - packages/backend/**
       - packages/frontend/**
-      - packages/frontend-shared/**
-      - packages/frontend-builder/**
       - packages/frontend-embed/**
+      - packages/frontend-shared/**
       - packages/icons-subsetter/**
       - packages/sw/**
       - packages/misskey-js/**
@@ -33,9 +32,8 @@ on:
     paths:
       - packages/backend/**
       - packages/frontend/**
-      - packages/frontend-shared/**
-      - packages/frontend-builder/**
       - packages/frontend-embed/**
+      - packages/frontend-shared/**
       - packages/icons-subsetter/**
       - packages/sw/**
       - packages/misskey-js/**

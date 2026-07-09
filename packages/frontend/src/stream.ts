@@ -6,7 +6,7 @@
 import * as Misskey from 'misskey-js';
 import { markRaw } from 'vue';
 import { $i } from '@/i.js';
-import { wsOrigin } from '@@/js/config.js';
+import { wsOrigin } from '@shared/utility/config.js';
 
 // heart beat interval in ms
 const HEART_BEAT_INTERVAL = 1000 * 60;

@@ -103,6 +103,7 @@ import { pageFolderTeleportCount, popup } from '@/os.js';
 import { themeManager } from '@/theme.js';
 import MkFolderPage from '@/components/MkFolderPage.vue';
 import { deviceKind } from '@/utility/device-kind.js';
+import { useHeightTransition } from '@/composables/useHeightTransition.js';
 
 const props = withDefaults(defineProps<{
 	defaultOpen?: boolean;
@@ -132,39 +133,10 @@ const opened = ref(asPage ? false : props.defaultOpen);
 const openedAtLeastOnce = ref(opened.value);
 
 //#region interpolate-sizeに対応していないブラウザ向け（TODO: 主要ブラウザが対応したら消す）
-function enter(el: Element) {
-	if (CSS.supports('interpolate-size', 'allow-keywords')) return;
-	if (!(el instanceof HTMLElement)) return;
-
-	const elementHeight = el.getBoundingClientRect().height;
-	el.style.height = '0';
-	el.offsetHeight; // reflow
-	el.style.height = `${Math.min(elementHeight, props.maxHeight ?? Infinity)}px`;
-}
-
-function afterEnter(el: Element) {
-	if (CSS.supports('interpolate-size', 'allow-keywords')) return;
-	if (!(el instanceof HTMLElement)) return;
-
-	el.style.height = '';
-}
-
-function leave(el: Element) {
-	if (CSS.supports('interpolate-size', 'allow-keywords')) return;
-	if (!(el instanceof HTMLElement)) return;
-
-	const elementHeight = el.getBoundingClientRect().height;
-	el.style.height = `${elementHeight}px`;
-	el.offsetHeight; // reflow
-	el.style.height = '0';
-}
-
-function afterLeave(el: Element) {
-	if (CSS.supports('interpolate-size', 'allow-keywords')) return;
-	if (!(el instanceof HTMLElement)) return;
-
-	el.style.height = '';
-}
+const { enter, afterEnter, leave, afterLeave } = useHeightTransition({
+	maxHeight: () => props.maxHeight,
+	skip: () => CSS.supports('interpolate-size', 'allow-keywords'),
+});
 //#endregion
 
 let pageId = pageFolderTeleportCount.value;

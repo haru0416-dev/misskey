@@ -86,9 +86,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { useTemplateRef, ref, computed, nextTick, onMounted, onDeactivated, onUnmounted } from 'vue';
-import { url } from '@@/js/config.js';
-import { embedRouteWithScrollbar } from '@@/js/embed-page.js';
-import type { EmbeddableEntity, EmbedParams } from '@@/js/embed-page.js';
+import { url } from '@shared/utility/config.js';
+import { embedRouteWithScrollbar } from '@shared/utility/embed-page.js';
+import type { EmbeddableEntity, EmbedParams } from '@shared/utility/embed-page.js';
 import MkModalWindow from '@/components/MkModalWindow.vue';
 import MkPreviewWithControls from '@/components/MkPreviewWithControls.vue';
 import MkInput from '@/components/MkInput.vue';
@@ -98,7 +98,7 @@ import MkButton from '@/components/MkButton.vue';
 import MkCode from '@/components/MkCode.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import { i18n } from '@/i18n.js';
-import { useMkSelect } from '@/composables/use-mkselect.js';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { normalizeEmbedParams, getEmbedCode } from '@/utility/get-embed-code.js';
 
