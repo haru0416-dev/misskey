@@ -33,9 +33,9 @@ export const antenna = pgTable('antenna', {
 	localOnly: boolean().default(false).notNull(),
 	excludeNotesInSensitiveChannel: boolean().default(false).notNull(),
 }, table => [
-	index('IDX_084c2abb8948ef59a37dce6ac1').on(table.lastUsedAt),
-	index('IDX_6446c571a0e8d0f05f01c78909').on(table.userId),
-	index('IDX_36ef5192a1ce55ed0e40aa4db5').on(table.isActive),
+	index('IDX_ANTENNA_LAST_USED_AT').on(table.lastUsedAt),
+	index('IDX_ANTENNA_USER_ID').on(table.userId),
+	index('IDX_ANTENNA_IS_ACTIVE').on(table.isActive),
 	index('IDX_ANTENNA_USER_LIST_ID').on(table.userListId),
 ]);
 

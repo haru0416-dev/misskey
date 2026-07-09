@@ -15,7 +15,7 @@ export const signin = pgTable('signin', {
 	headers: jsonb().$type<MiSignin['headers']>().notNull(),
 	success: boolean().notNull(),
 }, table => [
-	index('IDX_2c308dbdc50d94dc625670055f').on(table.userId),
+	index('IDX_SIGNIN_USER_ID').on(table.userId),
 	index('IDX_SIGNIN_USER_ID_ID').on(table.userId, table.id),
 ]);
 

@@ -22,8 +22,8 @@ export const flash = pgTable('flash', {
 	likedCount: integer().default(0).notNull(),
 	visibility: varchar({ length: 512 }).default('public').notNull().$type<MiFlash['visibility']>(),
 }, table => [
-	index('IDX_3aa8ea9a8f15214ad91638c0a7').on(table.updatedAt),
-	index('IDX_9b88250fc2fd009b8f1b5623ed').on(table.userId),
+	index('IDX_FLASH_UPDATED_AT').on(table.updatedAt),
+	index('IDX_FLASH_USER_ID').on(table.userId),
 ]);
 
 export type FlashRow = typeof flash.$inferSelect;

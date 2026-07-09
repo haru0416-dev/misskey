@@ -15,8 +15,8 @@ export const clip = pgTable('clip', {
 	isPublic: boolean().default(false).notNull(),
 	description: varchar({ length: 2048 }),
 }, table => [
-	index('IDX_a3eac04ae2aa9e221e7596114a').on(table.lastClippedAt),
-	index('IDX_2b5ec6c574d6802c94c80313fb').on(table.userId),
+	index('IDX_CLIP_LAST_CLIPPED_AT').on(table.lastClippedAt),
+	index('IDX_CLIP_USER_ID').on(table.userId),
 ]);
 
 export type ClipRow = typeof clip.$inferSelect;

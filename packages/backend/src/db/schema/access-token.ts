@@ -27,10 +27,10 @@ export const accessToken = pgTable('access_token', {
 	permission: varchar({ length: 64 }).array().default(emptyVarcharArray).notNull().$type<string[]>(),
 	fetched: boolean().default(false).notNull(),
 }, table => [
-	index('IDX_70ba8f6af34bc924fc9e12adb8').on(table.token),
-	index('IDX_bf3a053c07d9fb5d87317c56ee').on(table.session),
-	index('IDX_64c327441248bae40f7d92f34f').on(table.hash),
-	index('IDX_9949557d0e1b2c19e5344c171e').on(table.userId),
+	index('IDX_ACCESS_TOKEN_TOKEN').on(table.token),
+	index('IDX_ACCESS_TOKEN_SESSION').on(table.session),
+	index('IDX_ACCESS_TOKEN_HASH').on(table.hash),
+	index('IDX_ACCESS_TOKEN_USER_ID').on(table.userId),
 	index('IDX_ACCESS_TOKEN_APP_ID').on(table.appId),
 ]);
 

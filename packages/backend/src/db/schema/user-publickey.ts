@@ -11,7 +11,7 @@ export const userPublickey = pgTable('user_publickey', {
 	keyId: varchar({ length: 256 }).notNull(),
 	keyPem: varchar({ length: 4096 }).notNull(),
 }, table => [
-	uniqueIndex('IDX_171e64971c780ebd23fae140bb').on(table.keyId),
+	uniqueIndex('IDX_USER_PUBLICKEY_KEY_ID_UNIQUE').on(table.keyId),
 ]);
 
 export type UserPublickeyRow = typeof userPublickey.$inferSelect;

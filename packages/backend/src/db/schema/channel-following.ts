@@ -14,9 +14,9 @@ export const channelFollowing = pgTable('channel_following', {
 	followeeId: varchar({ length: 32 }).notNull().$type<MiChannel['id']>().references(() => channel.id, { onDelete: 'cascade' }),
 	followerId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_0e43068c3f92cab197c3d3cd86').on(table.followeeId),
-	index('IDX_6d8084ec9496e7334a4602707e').on(table.followerId),
-	uniqueIndex('IDX_2e230dd45a10e671d781d99f3e').on(table.followerId, table.followeeId),
+	index('IDX_CHANNEL_FOLLOWING_FOLLOWEE_ID').on(table.followeeId),
+	index('IDX_CHANNEL_FOLLOWING_FOLLOWER_ID').on(table.followerId),
+	uniqueIndex('IDX_CHANNEL_FOLLOWING_FOLLOWER_ID_FOLLOWEE_ID_UNIQUE').on(table.followerId, table.followeeId),
 ]);
 
 export type ChannelFollowingRow = typeof channelFollowing.$inferSelect;

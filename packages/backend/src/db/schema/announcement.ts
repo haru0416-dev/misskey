@@ -21,10 +21,10 @@ export const announcement = pgTable('announcement', {
 	silence: boolean().default(false).notNull(),
 	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_bc1afcc8ef7e9400cdc3c0a87e').on(table.isActive),
-	index('IDX_da795d3a83187e8832005ba19d').on(table.forExistingUsers),
-	index('IDX_7b8d9225168e962f94ea517e00').on(table.silence),
-	index('IDX_fd25dfe3da37df1715f11ba6ec').on(table.userId),
+	index('IDX_ANNOUNCEMENT_IS_ACTIVE').on(table.isActive),
+	index('IDX_ANNOUNCEMENT_FOR_EXISTING_USERS').on(table.forExistingUsers),
+	index('IDX_ANNOUNCEMENT_SILENCE').on(table.silence),
+	index('IDX_ANNOUNCEMENT_USER_ID').on(table.userId),
 ]);
 
 export type AnnouncementRow = typeof announcement.$inferSelect;

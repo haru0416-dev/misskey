@@ -23,9 +23,9 @@ export const followRequest = pgTable('follow_request', {
 	followeeSharedInbox: varchar({ length: 512 }),
 	//#endregion
 }, table => [
-	index('IDX_12c01c0d1a79f77d9f6c15fadd').on(table.followeeId),
-	index('IDX_a7fd92dd6dc519e6fb435dd108').on(table.followerId),
-	uniqueIndex('IDX_d54a512b822fac7ed52800f6b4').on(table.followerId, table.followeeId),
+	index('IDX_FOLLOW_REQUEST_FOLLOWEE_ID').on(table.followeeId),
+	index('IDX_FOLLOW_REQUEST_FOLLOWER_ID').on(table.followerId),
+	uniqueIndex('IDX_FOLLOW_REQUEST_FOLLOWER_ID_FOLLOWEE_ID_UNIQUE').on(table.followerId, table.followeeId),
 ]);
 
 export type FollowRequestRow = typeof followRequest.$inferSelect;

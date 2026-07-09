@@ -14,9 +14,9 @@ export const promoRead = pgTable('promo_read', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	noteId: varchar({ length: 32 }).notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_9657d55550c3d37bfafaf7d4b0').on(table.userId),
+	index('IDX_PROMO_READ_USER_ID').on(table.userId),
 	index('IDX_PROMO_READ_NOTE_ID').on(table.noteId),
-	uniqueIndex('IDX_2882b8a1a07c7d281a98b6db16').on(table.userId, table.noteId),
+	uniqueIndex('IDX_PROMO_READ_USER_ID_NOTE_ID_UNIQUE').on(table.userId, table.noteId),
 ]);
 
 export type PromoReadRow = typeof promoRead.$inferSelect;

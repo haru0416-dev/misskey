@@ -11,8 +11,8 @@ export const systemAccount = pgTable('system_account', {
 	userId: varchar({ length: 32 }).notNull().references(() => user.id, { onDelete: 'cascade' }),
 	type: varchar({ length: 256 }).notNull(),
 }, table => [
-	index('IDX_41a3c87a37aea616ee459369e1').on(table.userId),
-	uniqueIndex('IDX_c362033aee0ea51011386a5a7e').on(table.type),
+	index('IDX_SYSTEM_ACCOUNT_USER_ID').on(table.userId),
+	uniqueIndex('IDX_SYSTEM_ACCOUNT_TYPE_UNIQUE').on(table.type),
 ]);
 
 export type SystemAccountRow = typeof systemAccount.$inferSelect;

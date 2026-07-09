@@ -13,8 +13,8 @@ export const userList = pgTable('user_list', {
 	isPublic: boolean().default(false).notNull(),
 	name: varchar({ length: 128 }).notNull(),
 }, table => [
-	index('IDX_b7fcefbdd1c18dce86687531f9').on(table.userId),
-	index('IDX_48a00f08598662b9ca540521eb').on(table.isPublic),
+	index('IDX_USER_LIST_USER_ID').on(table.userId),
+	index('IDX_USER_LIST_IS_PUBLIC').on(table.isPublic),
 ]);
 
 export type UserListRow = typeof userList.$inferSelect;

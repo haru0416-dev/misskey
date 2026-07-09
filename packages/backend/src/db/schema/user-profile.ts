@@ -57,8 +57,8 @@ export const userProfile = pgTable('user_profile', {
 	achievements: jsonb().$type<MiUserProfile['achievements']>().default([]).notNull(),
 	userHost: varchar({ length: 128 }),
 }, table => [
-	index('IDX_3befe6f999c86aff06eb0257b4').on(table.enableWordMute),
-	index('IDX_dce530b98e454793dac5ec2f5a').on(table.userHost),
+	index('IDX_USER_PROFILE_ENABLE_WORD_MUTE').on(table.enableWordMute),
+	index('IDX_USER_PROFILE_USER_HOST').on(table.userHost),
 	uniqueIndex('REL_6dc44f1ceb65b1e72bacef2ca2').on(table.pinnedPageId),
 ]);
 

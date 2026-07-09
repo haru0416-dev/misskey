@@ -15,9 +15,9 @@ export const pollVote = pgTable('poll_vote', {
 	noteId: varchar({ length: 32 }).notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 	choice: integer().notNull(),
 }, table => [
-	index('IDX_66d2bd2ee31d14bcc23069a89f').on(table.userId),
-	index('IDX_aecfbd5ef60374918e63ee95fa').on(table.noteId),
-	uniqueIndex('IDX_50bd7164c5b78f1f4a42c4d21f').on(table.userId, table.noteId, table.choice),
+	index('IDX_POLL_VOTE_USER_ID').on(table.userId),
+	index('IDX_POLL_VOTE_NOTE_ID').on(table.noteId),
+	uniqueIndex('IDX_POLL_VOTE_USER_ID_NOTE_ID_CHOICE_UNIQUE').on(table.userId, table.noteId, table.choice),
 ]);
 
 export type PollVoteRow = typeof pollVote.$inferSelect;

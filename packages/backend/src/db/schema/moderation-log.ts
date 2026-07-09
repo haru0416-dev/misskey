@@ -14,7 +14,7 @@ export const moderationLog = pgTable('moderation_log', {
 	type: varchar({ length: 128 }).notNull(),
 	info: jsonb().$type<MiModerationLog['info']>().notNull(),
 }, table => [
-	index('IDX_a08ad074601d204e0f69da9a95').on(table.userId),
+	index('IDX_MODERATION_LOG_USER_ID').on(table.userId),
 	index('IDX_MODERATION_LOG_TYPE_ID').on(table.type, table.id),
 	index('IDX_MODERATION_LOG_USER_ID_ID').on(table.userId, table.id),
 ]);

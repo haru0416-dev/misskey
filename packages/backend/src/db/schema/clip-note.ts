@@ -14,9 +14,9 @@ export const clipNote = pgTable('clip_note', {
 	noteId: varchar({ length: 32 }).notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 	clipId: varchar({ length: 32 }).notNull().$type<MiClip['id']>().references(() => clip.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_a012eaf5c87c65da1deb5fdbfa').on(table.noteId),
-	index('IDX_ebe99317bbbe9968a0c6f579ad').on(table.clipId),
-	uniqueIndex('IDX_6fc0ec357d55a18646262fdfff').on(table.noteId, table.clipId),
+	index('IDX_CLIP_NOTE_NOTE_ID').on(table.noteId),
+	index('IDX_CLIP_NOTE_CLIP_ID').on(table.clipId),
+	uniqueIndex('IDX_CLIP_NOTE_NOTE_ID_CLIP_ID_UNIQUE').on(table.noteId, table.clipId),
 ]);
 
 export type ClipNoteRow = typeof clipNote.$inferSelect;

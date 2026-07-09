@@ -14,9 +14,9 @@ export const galleryLike = pgTable('gallery_like', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	postId: varchar({ length: 32 }).notNull().$type<MiGalleryPost['id']>().references(() => galleryPost.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_8fd5215095473061855ceb948c').on(table.userId),
+	index('IDX_GALLERY_LIKE_USER_ID').on(table.userId),
 	index('IDX_GALLERY_LIKE_POST_ID').on(table.postId),
-	uniqueIndex('IDX_df1b5f4099e99fb0bc5eae53b6').on(table.userId, table.postId),
+	uniqueIndex('IDX_GALLERY_LIKE_USER_ID_POST_ID_UNIQUE').on(table.userId, table.postId),
 ]);
 
 export type GalleryLikeRow = typeof galleryLike.$inferSelect;

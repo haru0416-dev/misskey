@@ -14,9 +14,9 @@ export const clipFavorite = pgTable('clip_favorite', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	clipId: varchar({ length: 32 }).notNull().$type<MiClip['id']>().references(() => clip.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_25a31662b0b0cc9af6549a9d71').on(table.userId),
+	index('IDX_CLIP_FAVORITE_USER_ID').on(table.userId),
 	index('IDX_CLIP_FAVORITE_CLIP_ID').on(table.clipId),
-	uniqueIndex('IDX_b1754a39d0b281e07ed7c078ec').on(table.userId, table.clipId),
+	uniqueIndex('IDX_CLIP_FAVORITE_USER_ID_CLIP_ID_UNIQUE').on(table.userId, table.clipId),
 ]);
 
 export type ClipFavoriteRow = typeof clipFavorite.$inferSelect;

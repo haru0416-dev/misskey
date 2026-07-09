@@ -14,9 +14,9 @@ export const userNotePining = pgTable('user_note_pining', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	noteId: varchar({ length: 32 }).notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_bfbc6f79ba4007b4ce5097f08d').on(table.userId),
-	index('IDX_68881008f7c3588ad7ecae471c').on(table.noteId),
-	uniqueIndex('IDX_410cd649884b501c02d6e72738').on(table.userId, table.noteId),
+	index('IDX_USER_NOTE_PINING_USER_ID').on(table.userId),
+	index('IDX_USER_NOTE_PINING_NOTE_ID').on(table.noteId),
+	uniqueIndex('IDX_USER_NOTE_PINING_USER_ID_NOTE_ID_UNIQUE').on(table.userId, table.noteId),
 ]);
 
 export type UserNotePiningRow = typeof userNotePining.$inferSelect;

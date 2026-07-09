@@ -13,9 +13,9 @@ export const userMemo = pgTable('user_memo', {
 	targetUserId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	memo: varchar({ length: 2048 }).notNull(),
 }, table => [
-	index('IDX_650b49c5639b5840ee6a2b8f83').on(table.userId),
-	index('IDX_66ac4a82894297fd09ba61f3d3').on(table.targetUserId),
-	uniqueIndex('IDX_faef300913c738265638ba3ebc').on(table.userId, table.targetUserId),
+	index('IDX_USER_MEMO_USER_ID').on(table.userId),
+	index('IDX_USER_MEMO_TARGET_USER_ID').on(table.targetUserId),
+	uniqueIndex('IDX_USER_MEMO_USER_ID_TARGET_USER_ID_UNIQUE').on(table.userId, table.targetUserId),
 ]);
 
 export type UserMemoRow = typeof userMemo.$inferSelect;

@@ -12,9 +12,9 @@ export const renoteMuting = pgTable('renote_muting', {
 	muteeId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	muterId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_7eac97594bcac5ffcf2068089b').on(table.muteeId),
-	index('IDX_7aa72a5fe76019bfe8e5e0e8b7').on(table.muterId),
-	uniqueIndex('IDX_0d801c609cec4e9eb4b6b4490c').on(table.muterId, table.muteeId),
+	index('IDX_RENOTE_MUTING_MUTEE_ID').on(table.muteeId),
+	index('IDX_RENOTE_MUTING_MUTER_ID').on(table.muterId),
+	uniqueIndex('IDX_RENOTE_MUTING_MUTER_ID_MUTEE_ID_UNIQUE').on(table.muterId, table.muteeId),
 ]);
 
 export type RenoteMutingRow = typeof renoteMuting.$inferSelect;

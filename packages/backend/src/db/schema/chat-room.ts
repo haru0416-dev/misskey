@@ -14,7 +14,7 @@ export const chatRoom = pgTable('chat_room', {
 	description: varchar({ length: 2048 }).default('').notNull(),
 	isArchived: boolean().default(false).notNull(),
 }, table => [
-	index('IDX_f0d8ad64243fa2ca2800da0dfd').on(table.ownerId),
+	index('IDX_CHAT_ROOM_OWNER_ID').on(table.ownerId),
 ]);
 
 export type ChatRoomRow = typeof chatRoom.$inferSelect;

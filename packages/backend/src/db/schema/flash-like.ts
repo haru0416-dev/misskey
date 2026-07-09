@@ -14,9 +14,9 @@ export const flashLike = pgTable('flash_like', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	flashId: varchar({ length: 32 }).notNull().$type<MiFlash['id']>().references(() => flash.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_60c4af1c19a7a75f1592f93b28').on(table.userId),
+	index('IDX_FLASH_LIKE_USER_ID').on(table.userId),
 	index('IDX_FLASH_LIKE_FLASH_ID').on(table.flashId),
-	uniqueIndex('IDX_cfbfeeccb0cbedcd660b17eb07').on(table.userId, table.flashId),
+	uniqueIndex('IDX_FLASH_LIKE_USER_ID_FLASH_ID_UNIQUE').on(table.userId, table.flashId),
 ]);
 
 export type FlashLikeRow = typeof flashLike.$inferSelect;

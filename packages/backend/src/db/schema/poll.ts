@@ -27,9 +27,9 @@ export const poll = pgTable('poll', {
 	channelId: varchar({ length: 32 }).$type<MiChannel['id'] | null>(),
 	// #endregion
 }, table => [
-	index('IDX_0610ebcfcfb4a18441a9bcdab2').on(table.userId),
-	index('IDX_7fa20a12319c7f6dc3aed98c0a').on(table.userHost),
-	index('IDX_c1240fcc9675946ea5d6c2860e').on(table.channelId),
+	index('IDX_POLL_USER_ID').on(table.userId),
+	index('IDX_POLL_USER_HOST').on(table.userHost),
+	index('IDX_POLL_CHANNEL_ID').on(table.channelId),
 ]);
 
 export type PollRow = typeof poll.$inferSelect;

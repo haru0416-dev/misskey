@@ -16,9 +16,9 @@ export const registrationTicket = pgTable('registration_ticket', {
 	usedAt: timestamp({ withTimezone: true }),
 	pendingUserId: varchar({ length: 32 }),
 }, table => [
-	uniqueIndex('IDX_0ff69e8dfa9fe31bb4a4660f59').on(table.code),
-	index('IDX_beba993576db0261a15364ea96').on(table.createdById),
-	index('IDX_b6f93f2f30bdbb9a5ebdc7c718').on(table.usedById),
+	uniqueIndex('IDX_REGISTRATION_TICKET_CODE_UNIQUE').on(table.code),
+	index('IDX_REGISTRATION_TICKET_CREATED_BY_ID').on(table.createdById),
+	index('IDX_REGISTRATION_TICKET_USED_BY_ID').on(table.usedById),
 	uniqueIndex('REL_b6f93f2f30bdbb9a5ebdc7c718').on(table.usedById),
 ]);
 

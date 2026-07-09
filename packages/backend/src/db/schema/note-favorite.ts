@@ -14,9 +14,9 @@ export const noteFavorite = pgTable('note_favorite', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	noteId: varchar({ length: 32 }).notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_47f4b1892f5d6ba8efb3057d81').on(table.userId),
-	index('IDX_0e00498f180193423c992bc437').on(table.noteId),
-	uniqueIndex('IDX_0f4fb9ad355f3effff221ef245').on(table.userId, table.noteId),
+	index('IDX_NOTE_FAVORITE_USER_ID').on(table.userId),
+	index('IDX_NOTE_FAVORITE_NOTE_ID').on(table.noteId),
+	uniqueIndex('IDX_NOTE_FAVORITE_USER_ID_NOTE_ID_UNIQUE').on(table.userId, table.noteId),
 ]);
 
 export type NoteFavoriteRow = typeof noteFavorite.$inferSelect;

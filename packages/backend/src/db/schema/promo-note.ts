@@ -13,7 +13,7 @@ export const promoNote = pgTable('promo_note', {
 	expiresAt: timestamp({ withTimezone: true }).notNull(),
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
 }, table => [
-	index('IDX_83f0862e9bae44af52ced7099e').on(table.userId),
+	index('IDX_PROMO_NOTE_USER_ID').on(table.userId),
 ]);
 
 export type PromoNoteRow = typeof promoNote.$inferSelect;

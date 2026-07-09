@@ -22,12 +22,12 @@ export const galleryPost = pgTable('gallery_post', {
 	likedCount: integer().default(0).notNull(),
 	tags: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
 }, table => [
-	index('IDX_f631d37835adb04792e361807c').on(table.updatedAt),
-	index('IDX_985b836dddd8615e432d7043dd').on(table.userId),
-	index('IDX_3ca50563facd913c425e7a89ee').on(table.fileIds),
-	index('IDX_f2d744d9a14d0dfb8b96cb7fc5').on(table.isSensitive),
-	index('IDX_1a165c68a49d08f11caffbd206').on(table.likedCount),
-	index('IDX_05cca34b985d1b8edc1d1e28df').on(table.tags),
+	index('IDX_GALLERY_POST_UPDATED_AT').on(table.updatedAt),
+	index('IDX_GALLERY_POST_USER_ID').on(table.userId),
+	index('IDX_GALLERY_POST_FILE_IDS').on(table.fileIds),
+	index('IDX_GALLERY_POST_IS_SENSITIVE').on(table.isSensitive),
+	index('IDX_GALLERY_POST_LIKED_COUNT').on(table.likedCount),
+	index('IDX_GALLERY_POST_TAGS').on(table.tags),
 ]);
 
 export type GalleryPostRow = typeof galleryPost.$inferSelect;

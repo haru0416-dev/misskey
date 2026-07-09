@@ -33,12 +33,12 @@ export const page = pgTable('page', {
 	visibleUserIds: varchar({ length: 32 }).array().default(emptyVarcharArray).notNull().$type<MiUser['id'][]>(),
 	likedCount: integer().default(0).notNull(),
 }, table => [
-	index('IDX_af639b066dfbca78b01a920f8a').on(table.updatedAt),
-	index('IDX_b82c19c08afb292de4600d99e4').on(table.name),
-	index('IDX_ae1d917992dd0c9d9bbdad06c4').on(table.userId),
-	index('IDX_90148bbc2bf0854428786bfc15').on(table.visibleUserIds),
+	index('IDX_PAGE_UPDATED_AT').on(table.updatedAt),
+	index('IDX_PAGE_NAME').on(table.name),
+	index('IDX_PAGE_USER_ID').on(table.userId),
+	index('IDX_PAGE_VISIBLE_USER_IDS').on(table.visibleUserIds),
 	index('IDX_PAGE_EYE_CATCHING_IMAGE_ID').on(table.eyeCatchingImageId),
-	uniqueIndex('IDX_2133ef8317e4bdb839c0dcbf13').on(table.userId, table.name),
+	uniqueIndex('IDX_PAGE_USER_ID_NAME_UNIQUE').on(table.userId, table.name),
 ]);
 
 export type PageRow = typeof page.$inferSelect;

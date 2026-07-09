@@ -14,9 +14,9 @@ export const pageLike = pgTable('page_like', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	pageId: varchar({ length: 32 }).notNull().$type<MiPage['id']>().references(() => page.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_0e61efab7f88dbb79c9166dbb4').on(table.userId),
+	index('IDX_PAGE_LIKE_USER_ID').on(table.userId),
 	index('IDX_PAGE_LIKE_PAGE_ID').on(table.pageId),
-	uniqueIndex('IDX_4ce6fb9c70529b4c8ac46c9bfa').on(table.userId, table.pageId),
+	uniqueIndex('IDX_PAGE_LIKE_USER_ID_PAGE_ID_UNIQUE').on(table.userId, table.pageId),
 ]);
 
 export type PageLikeRow = typeof pageLike.$inferSelect;
