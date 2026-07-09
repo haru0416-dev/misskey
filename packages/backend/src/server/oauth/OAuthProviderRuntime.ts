@@ -624,7 +624,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 			const now = new Date();
 
 			await createAccessToken(deps.db, {
-				id: genId(deps.config, now.getTime()),
+				id: genId(now.getTime()),
 				lastUsedAt: now,
 				userId: granted.userId,
 				token: accessToken,

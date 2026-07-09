@@ -26,7 +26,7 @@ import {
 import type { HonoChartWriters } from '../../server/chart-runtime.js';
 
 export type HonoQueueDeliverDependencies = {
-	config: Pick<Config, 'id' | 'url' | 'host'>;
+	config: Pick<Config, 'url' | 'host'>;
 	db: MiDrizzleDatabase;
 	meta: Pick<MiMeta, 'enableStatsForFederatedInstances' | 'enableChartsForFederatedInstances' | 'federation' | 'federationHosts' | 'blockedHosts' | 'deliverSuspendedSoftware'>;
 	redis: Pick<import('ioredis').Redis, 'set' | 'del'>;

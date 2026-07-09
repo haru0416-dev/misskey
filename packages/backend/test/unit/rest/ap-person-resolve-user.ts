@@ -30,7 +30,7 @@ describe('resolveUserForHonoApi', () => {
 	});
 
 	test('host=nullの場合はローカルユーザーを解決する', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const username = `honoresolveuser${id}`;
 		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
 
@@ -40,7 +40,7 @@ describe('resolveUserForHonoApi', () => {
 	});
 
 	test('hostが自ホストの場合もローカルユーザーを解決する', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const username = `honoresolveuser${id}`;
 		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
 
@@ -53,7 +53,7 @@ describe('resolveUserForHonoApi', () => {
 	});
 
 	test('lastFetchedAtが新しいリモートユーザーはWebFingerせずそのまま返す', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const username = `honoresolveuser${id}`;
 		const host = `honoresolveuser-${id}.example.com`;
 		const remoteUser = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {

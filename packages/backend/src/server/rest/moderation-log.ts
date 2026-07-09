@@ -48,7 +48,7 @@ async function packModerationLogsForHonoApi(
 
 	return logs.map((log, index) => ({
 		id: log.id,
-		createdAt: parseId(deps.config, log.id).date.toISOString(),
+		createdAt: parseId(log.id).date.toISOString(),
 		type: log.type,
 		info: log.info,
 		userId: log.userId,
@@ -61,7 +61,7 @@ export async function handleHonoApiAdminShowModerationLogs(
 	body: Record<string, unknown>,
 ): Promise<HonoApiModerationLogResponse[]> {
 	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body);
-	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(params);
 	const logs = await listModerationLogsFromDatabase(deps.db, {
 		limit: params.limit,
 		order: pagination.order,

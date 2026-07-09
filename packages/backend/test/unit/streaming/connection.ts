@@ -19,7 +19,7 @@ import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/s
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: string): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 		profile: { userId: id },

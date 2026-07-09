@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiUser } from '@/models/User.js';
@@ -13,7 +12,6 @@ import { createModerationLogInDatabase } from './ModerationLogStore.js';
 
 export async function logModerationEventInDatabase<T extends typeof moderationLogTypes[number]>(
 	deps: {
-		config: Pick<Config, 'id'>;
 		db: MiDrizzleDatabase;
 	},
 	moderator: { id: MiUser['id'] },
@@ -21,7 +19,7 @@ export async function logModerationEventInDatabase<T extends typeof moderationLo
 	info?: ModerationLogPayloads[T],
 ): Promise<void> {
 	await createModerationLogInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: moderator.id,
 		type,
 		info: info ?? {},

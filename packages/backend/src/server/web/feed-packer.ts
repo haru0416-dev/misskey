@@ -45,7 +45,7 @@ export async function packFeed(
 	const feed = new Feed({
 		id: author.link,
 		title: `${author.name} (@${user.username}@${deps.config.host})`,
-		updated: notes.length !== 0 ? parseId(deps.config, notes[0].id).date : undefined,
+		updated: notes.length !== 0 ? parseId(notes[0].id).date : undefined,
 		generator: 'Misskey',
 		description: `${user.notesCount} Notes, ${profile.followingVisibility === 'public' ? user.followingCount : '?'} Following, ${profile.followersVisibility === 'public' ? user.followersCount : '?'} Followers${profile.description ? ` · ${profile.description}` : ''}`,
 		link: author.link,
@@ -70,7 +70,7 @@ export async function packFeed(
 		feed.addItem({
 			title: `New note by ${author.name}`,
 			link: `${deps.config.url}/notes/${note.id}`,
-			date: parseId(deps.config, note.id).date,
+			date: parseId(note.id).date,
 			description: note.cw ?? undefined,
 			content: text ? mfmToHtml(deps.config, mfmParse(text), JSON.parse(note.mentionedRemoteUsers)) ?? undefined : undefined,
 			image: file ? getDriveFilePublicUrl(file, deps) : undefined,

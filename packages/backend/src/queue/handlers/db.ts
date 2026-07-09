@@ -416,7 +416,7 @@ export async function handleHonoQueueImportAntennas(deps: HonoQueueDbDependencie
 			if (!validateExportedAntenna(antenna)) continue;
 
 			const result = await createAntennaInDatabase(deps.db, {
-				id: genId(deps.config, now.getTime()),
+				id: genId(now.getTime()),
 				lastUsedAt: now,
 				userId: job.data.user.id,
 				name: antenna.name,
@@ -488,7 +488,7 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 			if (target.id === job.data.user.id) continue;
 
 			await createMutingInDatabase(deps.db, {
-				id: genId(deps.config),
+				id: genId(),
 				expiresAt: null,
 				muterId: user.id,
 				muteeId: target.id,
@@ -530,7 +530,7 @@ export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependenci
 
 			if (list == null) {
 				list = await createUserListInDatabase(deps.db, {
-					id: genId(deps.config),
+					id: genId(),
 					userId: user.id,
 					name: listName,
 				});
@@ -665,11 +665,11 @@ function serializeFavoriteForHonoApi(
 ): Record<string, unknown> {
 	return {
 		id: favorite.id,
-		createdAt: parseId(deps.config, favorite.id).date.toISOString(),
+		createdAt: parseId(favorite.id).date.toISOString(),
 		note: {
 			id: favorite.note.id,
 			text: favorite.note.text,
-			createdAt: parseId(deps.config, favorite.note.id).date.toISOString(),
+			createdAt: parseId(favorite.note.id).date.toISOString(),
 			fileIds: favorite.note.fileIds,
 			replyId: favorite.note.replyId,
 			renoteId: favorite.note.renoteId,
@@ -732,7 +732,7 @@ export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependenci
 					continue;
 				}
 
-				const noteCreatedAt = parseId(deps.config, note.id).date;
+				const noteCreatedAt = parseId(note.id).date;
 				if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) {
 					continue;
 				}
@@ -771,7 +771,7 @@ function serializeNoteForHonoApi(
 	return {
 		id: note.id,
 		text: note.text,
-		createdAt: parseId(deps.config, note.id).date.toISOString(),
+		createdAt: parseId(note.id).date.toISOString(),
 		fileIds: note.fileIds,
 		files,
 		replyId: note.replyId,
@@ -862,11 +862,11 @@ function serializeClipNoteForHonoApi(
 ): Record<string, unknown> {
 	return {
 		id: clip.id,
-		createdAt: parseId(deps.config, clip.id).date.toISOString(),
+		createdAt: parseId(clip.id).date.toISOString(),
 		note: {
 			id: clip.note.id,
 			text: clip.note.text,
-			createdAt: parseId(deps.config, clip.note.id).date.toISOString(),
+			createdAt: parseId(clip.note.id).date.toISOString(),
 			fileIds: clip.note.fileIds,
 			replyId: clip.note.replyId,
 			renoteId: clip.note.renoteId,
@@ -915,7 +915,7 @@ async function processClipNotesForHonoApi(
 			const note = noteMap.get(clipNote.noteId);
 			if (note == null) continue;
 
-			const noteCreatedAt = parseId(deps.config, note.id).date;
+			const noteCreatedAt = parseId(note.id).date;
 			if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) continue;
 
 			let poll: MiPoll | undefined;

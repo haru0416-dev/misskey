@@ -148,7 +148,7 @@ async function copyMutingsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 	const nextId = (): string => {
 		let id: string;
 		do {
-			id = genId(deps.config);
+			id = genId();
 		} while (newMutings.has(id));
 		return id;
 	};
@@ -180,7 +180,7 @@ async function copyRolesForHonoApi(deps: HonoApiAccountMoveDependencies, src: Th
 		try {
 			await assignRoleWithSideEffects({
 				db: deps.db,
-				genId: time => genId(deps.config, time),
+				genId,
 				publishInternalEvent: deps.publishInternalEvent,
 				notifyRoleAssigned: (userId, _roleId, assignedRole) => createRoleAssignedNotification(deps, userId, assignedRole),
 			}, {
@@ -205,7 +205,7 @@ async function updateListsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 	const nextId = (): string => {
 		let id: string;
 		do {
-			id = genId(deps.config);
+			id = genId();
 		} while (newMemberships.has(id));
 		return id;
 	};
@@ -221,7 +221,7 @@ async function updateListsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 	await createUserListMembershipsInDatabase(deps.db, Array.from(newMemberships.entries()).map(([id, value]) => ({ id, ...value })));
 
 	if (dst.host != null) {
-		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId: () => genId(deps.config) }, 'proxy');
+		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
 		await enqueueRelationshipJobForHonoApi(deps, 'follow', [{ from: { id: proxy.id }, to: { id: dst.id } }]);
 	}
 }
@@ -295,7 +295,7 @@ export async function postMoveProcessForHonoApi(deps: HonoApiAccountMoveDependen
 		// skip if any error happens
 	}
 
-	const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId: () => genId(deps.config) }, 'proxy');
+	const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
 	const followings = await listLocalFollowerFollowingsByFolloweeIdFromDatabase(deps.db, src.id, { excludeFollowerIds: [proxy.id] });
 	const followJobs = followings.map(f => ({ from: { id: f.followerId }, to: { id: dst.id } }));
 

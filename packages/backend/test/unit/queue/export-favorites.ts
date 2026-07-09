@@ -39,13 +39,13 @@ describe('hono-queue-db (exportFavorites)', () => {
 	});
 
 	test('お気に入りに登録したノート一覧をJSONとしてドライブに保存する', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `honoqueueexpfav${id}`, usernameLower: `honoqueueexpfav${id}`.toLowerCase() },
 			profile: { userId: id },
 		});
 
-		const noteId = genId(runtime.config);
+		const noteId = genId();
 		await createNoteInDatabase(runtime.db, {
 			id: noteId,
 			text: 'hono-queue-export-favorites test',
@@ -53,7 +53,7 @@ describe('hono-queue-db (exportFavorites)', () => {
 			userHost: null,
 			visibility: 'public',
 		});
-		await createNoteFavoriteInDatabase(runtime.db, { id: genId(runtime.config), userId: user.id, noteId });
+		await createNoteFavoriteInDatabase(runtime.db, { id: genId(), userId: user.id, noteId });
 
 		await handleHonoQueueExportFavorites(deps, fakeJob({ user: { id: user.id } }));
 
@@ -62,6 +62,6 @@ describe('hono-queue-db (exportFavorites)', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportFavorites(deps, fakeJob({ user: { id: genId(runtime.config) } }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueExportFavorites(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

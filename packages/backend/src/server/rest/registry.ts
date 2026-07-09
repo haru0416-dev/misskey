@@ -209,7 +209,7 @@ export async function handleHonoApiRegistrySet(
 	const itemDomain = domain || null;
 
 	await setRegistryItemInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		updatedAt: new Date(),
 		userId: user.id as MiUser['id'],
 		domain: itemDomain,

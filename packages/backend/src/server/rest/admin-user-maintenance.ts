@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, unsetUserMfaInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import type { SchemaType } from '@/misc/json-schema.js';
@@ -19,7 +18,6 @@ import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminUserMaintenanceDependencies = {
-	config: Pick<Config, 'id'>;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 };

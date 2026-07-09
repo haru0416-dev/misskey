@@ -73,7 +73,7 @@ describe('hono-queue-object-storage', () => {
 	});
 
 	test('deleteFileSyncForHonoApi: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
-		const fileId = genId(config);
+		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
 			md5: 'dummy',
@@ -97,7 +97,7 @@ describe('hono-queue-object-storage', () => {
 
 	test('handleHonoQueueCleanRemoteFiles: リモートかつisLink=falseのキャッシュ済みファイルを削除する', async () => {
 		deleteMock.mockClear();
-		const fileId = genId(config);
+		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
 			md5: 'dummy',

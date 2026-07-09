@@ -33,7 +33,7 @@ describe('hono-queue-db (importAntennas)', () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = { ...runtime, logger: runtime.loggerService.getLogger('test-import-antennas') };
 
-		const id = genId(runtime.config);
+		const id = genId();
 		user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `honoqueueimpant${id}`, usernameLower: `honoqueueimpant${id}`.toLowerCase() },
 			profile: { userId: id },

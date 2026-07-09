@@ -134,25 +134,6 @@ redis:
 #  ssl: true
 #  index: ''
 
-#   ┌───────────────┐
-#───┘ ID generation └───────────────────────────────────────────
-
-# You can select the ID generation method.
-# You don't usually need to change this setting, but you can
-# change it according to your preferences.
-
-# Available methods:
-# aid ... Short, Millisecond accuracy
-# aidx ... Millisecond accuracy
-# meid ... Similar to ObjectID, Millisecond accuracy
-# ulid ... Millisecond accuracy
-# objectid ... This is left for backward compatibility
-
-# ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
-# ID SETTINGS AFTER THAT!
-
-id: 'uuidv7'
-
 #   ┌────────────────┐
 #───┘ Error tracking └──────────────────────────────────────────
 

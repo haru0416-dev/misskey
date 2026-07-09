@@ -319,7 +319,7 @@ async function packHonoApiBlocking(
 
 	return {
 		id: blocking.id,
-		createdAt: parseId(deps.config, blocking.id).date.toISOString(),
+		createdAt: parseId(blocking.id).date.toISOString(),
 		blockeeId: blocking.blockeeId,
 		blockee: await packUserDetailedNotMeForHonoApi(deps, blockee, me),
 	};
@@ -362,7 +362,7 @@ export async function blockForHonoApi(
 	]);
 
 	const blocking = await createBlockingInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		blockerId: blocker.id,
 		blockeeId: blockee.id,
 	}) as MiBlocking & { blocker: MiUser; blockee: MiUser };
@@ -453,7 +453,7 @@ export async function handleHonoApiBlockingList(
 	const params = parseHonoApiParams(blockingListParamDef, body);
 	const blockings = await listBlockingsByBlockerIdWithPaginationFromDatabase(deps.db, me.id, {
 		...resolveBlockingPagination({
-			gen: time => genId(deps.config, time),
+			gen: time => genId(time),
 		}, params),
 		limit: params.limit,
 	});

@@ -210,7 +210,7 @@ export async function handleHonoApiIWebhooksCreate(
 	}
 
 	const webhook = await createWebhookInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		name: params.name,
 		url: params.url,

@@ -200,7 +200,7 @@ async function packAbuseUserReportsForHonoApi(
 
 	return reports.map(report => ({
 		id: report.id,
-		createdAt: parseId(deps.config, report.id).date.toISOString(),
+		createdAt: parseId(report.id).date.toISOString(),
 		comment: report.comment,
 		resolved: report.resolved,
 		reporterId: report.reporterId,
@@ -223,7 +223,7 @@ export async function handleHonoApiAdminAbuseUserReports(
 	const reports = await listAbuseUserReportsFromDatabase(deps.db, {
 		limit: params.limit,
 		...resolveAbuseUserReportPagination({
-			gen: time => genId(deps.config, time),
+			gen: time => genId(time),
 		}, params),
 		state: params.state,
 		reporterOrigin: params.reporterOrigin,
@@ -417,7 +417,7 @@ export async function reportAbuseForHonoApi(
 	const reports: MiAbuseUserReport[] = [];
 	for (const param of params) {
 		const report = await createAbuseUserReportInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			targetUserId: param.targetUserId,
 			targetUserHost: param.targetUserHost,
 			reporterId: param.reporterId,

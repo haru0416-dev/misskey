@@ -268,7 +268,7 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientCreate(
 	await assertRecipientCorrelation(deps, params);
 
 	const recipient = await createAbuseReportNotificationRecipientInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		isActive: params.isActive,
 		name: params.name,
 		method: params.method,

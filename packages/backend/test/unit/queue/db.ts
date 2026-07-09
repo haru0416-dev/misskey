@@ -37,14 +37,14 @@ describe('hono-queue-db', () => {
 	});
 
 	test('handleHonoQueueDeleteDriveFiles: 対象ユーザーのドライブファイルを全て削除する', async () => {
-		const userId = genId(runtime.config);
+		const userId = genId();
 		await createUserInDatabase(runtime.db, {
 			id: userId,
 			username: `honoqueuedb${userId}`,
 			usernameLower: `honoqueuedb${userId}`.toLowerCase(),
 		});
 
-		const fileIds = [genId(runtime.config), genId(runtime.config), genId(runtime.config)];
+		const fileIds = [genId(), genId(), genId()];
 		for (const fileId of fileIds) {
 			await createDriveFileInDatabase(runtime.db, {
 				id: fileId,
@@ -68,6 +68,6 @@ describe('hono-queue-db', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueDeleteDriveFiles(deps, fakeJob({ user: { id: genId(runtime.config) } }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueDeleteDriveFiles(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

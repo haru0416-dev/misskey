@@ -128,7 +128,7 @@ export async function handleHonoApiAdminSystemWebhookCreate(
 	const params = parseHonoApiParams(adminSystemWebhookCreateParamDef, body);
 	const webhook = await createSystemWebhookWithSideEffects({
 		db: deps.db,
-		genId: () => genId(deps.config),
+		genId,
 		publishInternalEvent: deps.publishInternalEvent,
 		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
 	}, params, me);
