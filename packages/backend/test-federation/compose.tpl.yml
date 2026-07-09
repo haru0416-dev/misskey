@@ -67,8 +67,8 @@ services:
         target: /misskey/packages/icons-subsetter/package.json
         read_only: true
       - type: bind
-        source: ../../aiscript-languageserver-stub/package.json
-        target: /misskey/packages/aiscript-languageserver-stub/package.json
+        source: ../../aiscript/package.json
+        target: /misskey/packages/aiscript/package.json
         read_only: true
       - type: bind
         source: ../../sw/package.json
