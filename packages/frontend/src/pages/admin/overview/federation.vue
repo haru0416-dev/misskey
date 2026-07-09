@@ -109,7 +109,7 @@ onMounted(async () => {
 		> .pies {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-			grid-gap: 12px;
+			gap: 12px;
 			margin-bottom: 12px;
 
 			> .pie {
@@ -139,7 +139,7 @@ onMounted(async () => {
 		> .items {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-			grid-gap: 12px;
+			gap: 12px;
 
 			> .item {
 				display: flex;

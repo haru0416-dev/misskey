@@ -62,8 +62,8 @@ const toggle = () => {
 }
 
 .buttonChecked {
-	background-color: var(--MI_THEME-switchOnBg) !important;
-	border-color: var(--MI_THEME-switchOnBg) !important;
+	background-color: var(--MI_THEME-switchOnBg);
+	border-color: var(--MI_THEME-switchOnBg);
 }
 
 .buttonDisabled {

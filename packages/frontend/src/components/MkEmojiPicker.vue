@@ -575,7 +575,7 @@ defineExpose({
 	height: calc((var(--eachSize) * var(--rows)) + (#{$pad} * 2));
 
 	&.asDrawer {
-		width: 100% !important;
+		width: 100%;
 
 		> .emojis {
 			::v-deep(section) {
@@ -623,8 +623,8 @@ defineExpose({
 	}
 
 	&.asWindow {
-		width: 100% !important;
-		height: 100% !important;
+		width: 100%;
+		height: 100%;
 
 		> .emojis {
 			::v-deep(section) {

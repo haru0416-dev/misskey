@@ -128,11 +128,11 @@ onUnmounted(() => {
 	contain: content;
 
 	&.naked {
-		background: transparent !important;
+		background: transparent;
 		box-shadow: none !important;
 
 		> .content {
-			background: transparent !important;
+			background: transparent;
 		}
 	}
 

@@ -211,20 +211,16 @@ function show() {
 	font-size: 0.85em;
 	padding: 0 0 8px 0;
 	user-select: none;
-
-	&:empty {
-		display: none;
-	}
 }
 
 .caption {
 	font-size: 0.85em;
 	padding: 8px 0 0 0;
 	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+}
 
-	&:empty {
-		display: none;
-	}
+:is(.label, .caption, .prefix, .suffix):empty {
+	display: none;
 }
 
 .input {
@@ -248,7 +244,7 @@ function show() {
 
 		&,
 		> .inputCore {
-			cursor: not-allowed !important;
+			cursor: not-allowed;
 		}
 	}
 
@@ -305,10 +301,6 @@ function show() {
 	text-overflow: ellipsis;
 	box-sizing: border-box;
 	pointer-events: none;
-
-	&:empty {
-		display: none;
-	}
 }
 
 .prefix {

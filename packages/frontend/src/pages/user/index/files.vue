@@ -60,7 +60,7 @@ onMounted(() => {
 .stream {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-	grid-gap: 6px;
+	gap: 6px;
 
 	>:nth-child(n+9) {
 		display: none;

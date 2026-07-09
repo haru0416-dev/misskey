@@ -110,7 +110,7 @@ function getStatus(instance: Misskey.entities.FederationInstance) {
 .items {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-	grid-gap: 12px;
+	gap: 12px;
 }
 
 .item:hover {

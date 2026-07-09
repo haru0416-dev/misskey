@@ -55,15 +55,7 @@ function onClosed() {
 </script>
 
 <style lang="scss" module>
-.transition_x_enterActive {
-	> .bg {
-		transition: opacity 0.3s !important;
-	}
-
-	> .content {
-		transition: transform 0.3s cubic-bezier(0,0,.25,1) !important;
-	}
-}
+.transition_x_enterActive,
 .transition_x_leaveActive {
 	> .bg {
 		transition: opacity 0.3s !important;

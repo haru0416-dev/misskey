@@ -436,7 +436,7 @@ definePage(() => ({
 			opacity: 0.7;
 
 			&, * {
-				cursor: not-allowed !important;
+				cursor: not-allowed;
 			}
 		}
 

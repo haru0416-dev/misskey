@@ -242,7 +242,7 @@ defineExpose({
 
 .medias {
 	display: grid;
-	grid-gap: 8px;
+	gap: 8px;
 
 	height: 100%;
 	width: 100%;
@@ -324,7 +324,7 @@ defineExpose({
 		aspect-ratio: auto;
 		grid-template-columns: repeat(4, 1fr);
 		grid-template-rows: auto;
-		grid-gap: 8px;
+		gap: 8px;
 
 		> .media {
 			aspect-ratio: 1 / 1;

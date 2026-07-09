@@ -650,7 +650,7 @@ function guardMouseMove(ev: MouseEvent) {
 	text-align: left;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	text-decoration: none !important;
+	text-decoration: none;
 	color: var(--menuFg, var(--MI_THEME-fg));
 
 	&::before {
