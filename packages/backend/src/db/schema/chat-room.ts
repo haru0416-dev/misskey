@@ -5,11 +5,12 @@
 
 import { boolean, index, pgTable, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const chatRoom = pgTable('chat_room', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
 	name: varchar({ length: 256 }).notNull(),
-	ownerId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	ownerId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	description: varchar({ length: 2048 }).default('').notNull(),
 	isArchived: boolean().default(false).notNull(),
 }, table => [

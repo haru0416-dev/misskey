@@ -5,11 +5,12 @@
 
 import { boolean, index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const clip = pgTable('clip', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
 	lastClippedAt: timestamp({ withTimezone: true }),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	name: varchar({ length: 128 }).notNull(),
 	isPublic: boolean().default(false).notNull(),
 	description: varchar({ length: 2048 }),

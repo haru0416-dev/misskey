@@ -5,12 +5,13 @@
 
 import { index, pgTable, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const muting = pgTable('muting', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
 	expiresAt: timestamp({ withTimezone: true }),
-	muteeId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	muterId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	muteeId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	muterId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 }, table => [
 	index('IDX_c1fd1c3dfb0627aa36c253fd14').on(table.expiresAt),
 	index('IDX_ec96b4fed9dae517e0dbbe0675').on(table.muteeId),

@@ -6,12 +6,13 @@
 import { boolean, index, pgTable, varchar } from 'drizzle-orm/pg-core';
 import type { AbuseReportResolveType } from '@/models/AbuseUserReport.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const abuseUserReport = pgTable('abuse_user_report', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	targetUserId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	reporterId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	assigneeId: varchar({ length: 32 }).$type<MiUser['id'] | null>(),
+	targetUserId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	reporterId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	assigneeId: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'set null' }),
 	resolved: boolean().default(false).notNull(),
 	forwarded: boolean().default(false).notNull(),
 	comment: varchar({ length: 2048 }).notNull(),

@@ -6,11 +6,13 @@
 import { index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiClip } from '@/models/Clip.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { clip } from './clip.js';
 
 export const clipFavorite = pgTable('clip_favorite', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	clipId: varchar({ length: 32 }).notNull().$type<MiClip['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	clipId: varchar({ length: 32 }).notNull().$type<MiClip['id']>().references(() => clip.id, { onDelete: 'cascade' }),
 }, table => [
 	index('IDX_25a31662b0b0cc9af6549a9d71').on(table.userId),
 	index('IDX_CLIP_FAVORITE_CLIP_ID').on(table.clipId),

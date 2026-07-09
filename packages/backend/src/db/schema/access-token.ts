@@ -8,6 +8,8 @@ import { boolean, index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiApp } from '@/models/App.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { app } from './app.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
@@ -17,8 +19,8 @@ export const accessToken = pgTable('access_token', {
 	token: varchar({ length: 128 }).notNull(),
 	session: varchar({ length: 128 }),
 	hash: varchar({ length: 128 }).notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	appId: varchar({ length: 32 }).$type<MiApp['id'] | null>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	appId: varchar({ length: 32 }).$type<MiApp['id'] | null>().references(() => app.id, { onDelete: 'cascade' }),
 	name: varchar({ length: 128 }),
 	description: varchar({ length: 512 }),
 	iconUrl: varchar({ length: 512 }),

@@ -6,11 +6,13 @@
 import { boolean, index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
+import { user } from './user.js';
+import { userList } from './user-list.js';
 
 export const userListMembership = pgTable('user_list_membership', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	userListId: varchar({ length: 32 }).notNull().$type<MiUserList['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	userListId: varchar({ length: 32 }).notNull().$type<MiUserList['id']>().references(() => userList.id, { onDelete: 'cascade' }),
 	withReplies: boolean().default(false).notNull(),
 
 	//#region Denormalized fields

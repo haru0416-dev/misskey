@@ -6,11 +6,13 @@
 import { index, pgTable, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { role } from './role.js';
 
 export const roleAssignment = pgTable('role_assignment', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	roleId: varchar({ length: 32 }).notNull().$type<MiRole['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	roleId: varchar({ length: 32 }).notNull().$type<MiRole['id']>().references(() => role.id, { onDelete: 'cascade' }),
 	expiresAt: timestamp({ withTimezone: true }),
 }, table => [
 	uniqueIndex('IDX_0953deda7ce6e1448e935859e5').on(table.userId, table.roleId),

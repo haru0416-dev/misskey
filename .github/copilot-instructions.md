@@ -31,7 +31,7 @@
   `packages/misskey-js` は MIT ライセンスのサブパッケージなので、この AGPL ヘッダーを一律に付けない (サブパッケージ固有の `package.json` / `LICENSE` / 既存ファイルのヘッダーに従う)。
 
 - **`locales/ja-JP.yml` 以外の locale YAML を編集しない**。他言語ファイル (`en-US.yml` など `ja-JP.yml` 以外すべて) は Crowdin の自動配信先で、手動編集すると次の同期で上書き喪失する。
-- **マージ済 migration を編集しない**。`packages/backend/migration/{timestamp}-*.js` のうち既に `develop` / `master` に入ったものは絶対に変更しない。スキーマ変更が必要なら新しい timestamp で新規ファイルを追加し、`up()` と `down()` の両方を実装する。
+- **マージ済 migration を編集しない**。`packages/backend/migration/*.sql` のうち既に `develop` / `master` に入ったものは絶対に変更しない(`migration/_legacy/` は実行系から外れた旧形式の歴史的アーカイブ)。スキーマ変更は `packages/backend/src/db/schema/*.ts` を編集し `bun run --filter backend db:generate` でSQLを自動生成する(拡張機能/関数/`INCLUDE`句等drizzle-kitが検出できないDDLは `db:generate:custom` で手書き)。forward-onlyで`down()`は無い。
 - **secrets / 認証情報をリポジトリにコミットしない** (`.config/*.yml` の本番値、`.env` ファイル、API token、private key 等)。
 
 ### Git / リポジトリ操作
@@ -51,7 +51,7 @@
 
 1. `bun run lint` が通る (oxlint + typecheck, 全パッケージ)
 2. backend で `meta` / `paramDef` / `res` を変更した → `bun run build-misskey-js-with-types` を実行し `packages/misskey-js/src/autogen/` の差分も commit に含めた
-3. entity / migration を変更した → `bun run --bun --filter backend check-migrations` が pending DDL 0 件で通る / 新規 migration は `up()` と `down()` 両方実装済
+3. entity / migration を変更した → `bun run --bun --filter backend check-migrations` が pending DDL 0 件で通る / schema.ts変更は `db:generate`(特殊DDLのみ`db:generate:custom`)で生成したものであること
 4. 新規 `.ts` / `.js` / `.cjs` / `.mjs` / `.vue` / `.scss` / `.html` ファイルを追加した → SPDX ヘッダーを付けた
 5. ユーザー影響のある変更 → `CHANGELOG.md` の `## Unreleased` 配下の該当サブセクション (`### General` / `### Client` / `### Server`) に `- <Feat|Enhance|Fix>: <概要>` を 1 行追記
 6. `locales/` を編集した場合、`git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'` が空 (ja-JP.yml 以外に差分が無い) ことを確認
@@ -65,6 +65,7 @@
 - Backend federation test: `bun run --bun --filter backend test:fed`
 - Frontend test: `bun run --bun --filter frontend test`
 - Migration 差分検査: `bun run --bun --filter backend check-migrations`
+- schema.ts差分からmigration自動生成: `bun run --filter backend db:generate`
 - `misskey-js` 再生成 (API 変更後必須): `bun run build-misskey-js-with-types`
 
 **注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要。未作成の場合は `cp .github/misskey/test.yml .config/test.yml` を実行してから走らせる。各テストスクリプトが内部で `cross-env NODE_ENV=test bun run compile-config` を呼ぶため、コピー済みであれば追加の compile-config は不要。

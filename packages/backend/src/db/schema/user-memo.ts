@@ -5,11 +5,12 @@
 
 import { index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const userMemo = pgTable('user_memo', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	targetUserId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	targetUserId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	memo: varchar({ length: 2048 }).notNull(),
 }, table => [
 	index('IDX_650b49c5639b5840ee6a2b8f83').on(table.userId),

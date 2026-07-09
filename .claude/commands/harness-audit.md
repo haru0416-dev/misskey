@@ -66,7 +66,7 @@ git log --since='30 days ago' --pretty=format: --name-only -- 'locales/*.yml' \
   | grep -v '^$' | grep -v 'ja-JP.yml' | sort -u
 # → 出力が無い、または全て Crowdin 由来 commit なら満点
 
-# 3. [Security Guardrails] migration の pending DDL 検査 (TypeORM schema builder)
+# 3. [Security Guardrails] migration の pending DDL 検査 (drizzle-kit)
 bun run --bun --filter backend check-migrations
 # → 0 errors (= "All migrations are clean.") なら満点
 

@@ -7,13 +7,14 @@ import { sql } from 'drizzle-orm';
 import { index, jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiRegistryItem } from '@/models/RegistryItem.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
 export const registryItem = pgTable('registry_item', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
 	updatedAt: timestamp({ withTimezone: true }).notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	key: varchar({ length: 1024 }).notNull(),
 	value: jsonb().$type<MiRegistryItem['value']>().default({}),
 	scope: varchar({ length: 1024 }).array().default(emptyVarcharArray).notNull(),

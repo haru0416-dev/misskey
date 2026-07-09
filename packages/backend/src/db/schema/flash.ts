@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
 import { index, integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
@@ -15,7 +16,7 @@ export const flash = pgTable('flash', {
 	updatedAt: timestamp({ withTimezone: true }).notNull(),
 	title: varchar({ length: 256 }).notNull(),
 	summary: varchar({ length: 1024 }).notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	script: varchar({ length: 65536 }).notNull(),
 	permissions: varchar({ length: 256 }).array().default(emptyVarcharArray).notNull(),
 	likedCount: integer().default(0).notNull(),

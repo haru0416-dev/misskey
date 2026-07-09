@@ -6,11 +6,13 @@
 import { index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
+import { channel } from './channel.js';
+import { user } from './user.js';
 
 export const channelFavorite = pgTable('channel_favorite', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	channelId: varchar({ length: 32 }).notNull().$type<MiChannel['id']>(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	channelId: varchar({ length: 32 }).notNull().$type<MiChannel['id']>().references(() => channel.id, { onDelete: 'cascade' }),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 }, table => [
 	index('IDX_d3ca0db011b75ac2a940a2337d').on(table.channelId),
 	index('IDX_8302bd27226605ece14842fb25').on(table.userId),

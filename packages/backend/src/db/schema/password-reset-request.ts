@@ -5,11 +5,12 @@
 
 import { index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const passwordResetRequest = pgTable('password_reset_request', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
 	token: varchar({ length: 256 }).notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 }, table => [
 	uniqueIndex('IDX_0b575fa9a4cfe638a925949285').on(table.token),
 	index('IDX_4bb7fd4a34492ae0e6cc8d30ac').on(table.userId),

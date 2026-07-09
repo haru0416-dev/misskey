@@ -4,8 +4,10 @@
  */
 
 import { sql } from 'drizzle-orm';
-import { boolean, char, jsonb, pgEnum, pgTable, varchar } from 'drizzle-orm/pg-core';
+import { boolean, char, index, jsonb, pgEnum, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiUserProfile } from '@/models/UserProfile.js';
+import { user } from './user.js';
+import { page } from './page.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
@@ -13,7 +15,7 @@ export const userProfileFollowingVisibilityEnum = pgEnum('user_profile_following
 export const userProfileFollowersVisibilityEnum = pgEnum('user_profile_followersvisibility_enum', ['public', 'followers', 'private']);
 
 export const userProfile = pgTable('user_profile', {
-	userId: varchar({ length: 32 }).primaryKey().notNull(),
+	userId: varchar({ length: 32 }).primaryKey().notNull().references(() => user.id, { onDelete: 'cascade' }),
 	location: varchar({ length: 128 }),
 	birthday: char({ length: 10 }),
 	description: varchar({ length: 2048 }),
@@ -45,7 +47,7 @@ export const userProfile = pgTable('user_profile', {
 	carefulBot: boolean().default(false).notNull(),
 	injectFeaturedNote: boolean().default(true).notNull(),
 	receiveAnnouncementEmail: boolean().default(true).notNull(),
-	pinnedPageId: varchar({ length: 32 }),
+	pinnedPageId: varchar({ length: 32 }).references(() => page.id, { onDelete: 'set null' }),
 	enableWordMute: boolean().default(false).notNull(),
 	mutedWords: jsonb().$type<MiUserProfile['mutedWords']>().default([]).notNull(),
 	hardMutedWords: jsonb().$type<MiUserProfile['hardMutedWords']>().default([]).notNull(),
@@ -54,7 +56,11 @@ export const userProfile = pgTable('user_profile', {
 	loggedInDates: varchar({ length: 32 }).array().default(emptyVarcharArray).notNull(),
 	achievements: jsonb().$type<MiUserProfile['achievements']>().default([]).notNull(),
 	userHost: varchar({ length: 128 }),
-});
+}, table => [
+	index('IDX_3befe6f999c86aff06eb0257b4').on(table.enableWordMute),
+	index('IDX_dce530b98e454793dac5ec2f5a').on(table.userHost),
+	uniqueIndex('REL_6dc44f1ceb65b1e72bacef2ca2').on(table.pinnedPageId),
+]);
 
 export type UserProfileRow = typeof userProfile.$inferSelect;
 export type UserProfileInsert = typeof userProfile.$inferInsert;

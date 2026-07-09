@@ -6,11 +6,12 @@
 import { boolean, index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const following = pgTable('following', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	followeeId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	followerId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	followeeId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	followerId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	isFollowerHibernated: boolean().default(false).notNull(),
 	withReplies: boolean().default(false).notNull(),
 	notify: varchar({ length: 32 }).$type<MiFollowing['notify']>(),

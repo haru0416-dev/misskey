@@ -5,10 +5,11 @@
 
 import { bigint, boolean, index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const userSecurityKey = pgTable('user_security_key', {
 	id: varchar().primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	name: varchar({ length: 30 }).notNull(),
 	publicKey: varchar().notNull(),
 	counter: bigint({ mode: 'number' }).default(0).notNull(),

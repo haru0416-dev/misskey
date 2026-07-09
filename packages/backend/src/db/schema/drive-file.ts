@@ -7,10 +7,12 @@ import { boolean, index, integer, jsonb, pgTable, uniqueIndex, varchar } from 'd
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiDriveFolder } from '@/models/DriveFolder.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { driveFolder } from './drive-folder.js';
 
 export const driveFile = pgTable('drive_file', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>(),
+	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'set null' }),
 	userHost: varchar({ length: 128 }),
 	md5: varchar({ length: 32 }).notNull(),
 	name: varchar({ length: 256 }).notNull(),
@@ -29,7 +31,7 @@ export const driveFile = pgTable('drive_file', {
 	webpublicAccessKey: varchar({ length: 256 }),
 	uri: varchar({ length: 1024 }),
 	src: varchar({ length: 1024 }),
-	folderId: varchar({ length: 32 }).$type<MiDriveFolder['id'] | null>(),
+	folderId: varchar({ length: 32 }).$type<MiDriveFolder['id'] | null>().references(() => driveFolder.id, { onDelete: 'set null' }),
 	isSensitive: boolean().default(false).notNull(),
 	maybeSensitive: boolean().default(false).notNull(),
 	maybePorn: boolean().default(false).notNull(),

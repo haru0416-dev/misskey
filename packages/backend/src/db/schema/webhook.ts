@@ -7,12 +7,13 @@ import { sql } from 'drizzle-orm';
 import { boolean, index, integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
+import { user } from './user.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
 export const webhook = pgTable('webhook', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	name: varchar({ length: 128 }).notNull(),
 	on: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull().$type<WebhookEventTypes[]>(),
 	url: varchar({ length: 1024 }).notNull(),

@@ -7,6 +7,8 @@ import { sql } from 'drizzle-orm';
 import { boolean, index, integer, jsonb, pgEnum, pgTable, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { driveFile } from './drive-file.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
@@ -21,8 +23,8 @@ export const page = pgTable('page', {
 	alignCenter: boolean().notNull(),
 	hideTitleWhenPinned: boolean().default(false).notNull(),
 	font: varchar({ length: 32 }).notNull().$type<'serif' | 'sans-serif'>(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	eyeCatchingImageId: varchar({ length: 32 }).$type<MiDriveFile['id'] | null>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	eyeCatchingImageId: varchar({ length: 32 }).$type<MiDriveFile['id'] | null>().references(() => driveFile.id, { onDelete: 'set null' }),
 	content: jsonb().$type<Record<string, unknown>[]>().default([]).notNull(),
 	variables: jsonb().$type<Record<string, unknown>[]>().default([]).notNull(),
 	script: varchar({ length: 16384 }).default('').notNull(),

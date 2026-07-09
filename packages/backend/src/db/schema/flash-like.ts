@@ -6,11 +6,13 @@
 import { index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { flash } from './flash.js';
 
 export const flashLike = pgTable('flash_like', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	flashId: varchar({ length: 32 }).notNull().$type<MiFlash['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	flashId: varchar({ length: 32 }).notNull().$type<MiFlash['id']>().references(() => flash.id, { onDelete: 'cascade' }),
 }, table => [
 	index('IDX_60c4af1c19a7a75f1592f93b28').on(table.userId),
 	index('IDX_FLASH_LIKE_FLASH_ID').on(table.flashId),

@@ -5,11 +5,12 @@
 
 import { boolean, index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const followRequest = pgTable('follow_request', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	followeeId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	followerId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	followeeId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	followerId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	requestId: varchar({ length: 128 }),
 	withReplies: boolean().default(false).notNull(),
 

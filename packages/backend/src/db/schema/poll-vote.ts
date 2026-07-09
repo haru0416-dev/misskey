@@ -6,11 +6,13 @@
 import { index, integer, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
+import { note } from './note.js';
+import { user } from './user.js';
 
 export const pollVote = pgTable('poll_vote', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	noteId: varchar({ length: 32 }).notNull().$type<MiNote['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	noteId: varchar({ length: 32 }).notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 	choice: integer().notNull(),
 }, table => [
 	index('IDX_66d2bd2ee31d14bcc23069a89f').on(table.userId),

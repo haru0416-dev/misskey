@@ -6,11 +6,13 @@
 import { boolean, index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { chatRoom } from './chat-room.js';
 
 export const chatRoomMembership = pgTable('chat_room_membership', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	roomId: varchar({ length: 32 }).notNull().$type<MiChatRoom['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	roomId: varchar({ length: 32 }).notNull().$type<MiChatRoom['id']>().references(() => chatRoom.id, { onDelete: 'cascade' }),
 	isMuted: boolean().default(false).notNull(),
 }, table => [
 	index('IDX_d99c5279460fb77ef58c596ce5').on(table.userId),

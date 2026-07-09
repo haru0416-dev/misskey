@@ -8,16 +8,18 @@ import { boolean, index, integer, pgTable, timestamp, varchar } from 'drizzle-or
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { driveFile } from './drive-file.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
 export const channel = pgTable('channel', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
 	lastNotedAt: timestamp({ withTimezone: true }),
-	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>(),
+	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'set null' }),
 	name: varchar({ length: 128 }).notNull(),
 	description: varchar({ length: 2048 }),
-	bannerId: varchar({ length: 32 }).$type<MiDriveFile['id'] | null>(),
+	bannerId: varchar({ length: 32 }).$type<MiDriveFile['id'] | null>().references(() => driveFile.id, { onDelete: 'set null' }),
 	pinnedNoteIds: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
 	color: varchar({ length: 16 }).default('#86b300').notNull(),
 	isArchived: boolean().default(false).notNull(),

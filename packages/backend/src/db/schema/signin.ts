@@ -6,10 +6,11 @@
 import { boolean, index, jsonb, pgTable, varchar } from 'drizzle-orm/pg-core';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const signin = pgTable('signin', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	ip: varchar({ length: 128 }).notNull(),
 	headers: jsonb().$type<MiSignin['headers']>().notNull(),
 	success: boolean().notNull(),

@@ -5,10 +5,11 @@
 
 import { index, pgTable, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const app = pgTable('app', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>(),
+	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'set null' }),
 	secret: varchar({ length: 64 }).notNull(),
 	name: varchar({ length: 128 }).notNull(),
 	description: varchar({ length: 512 }).notNull(),

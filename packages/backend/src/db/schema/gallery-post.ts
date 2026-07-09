@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
 import { boolean, index, integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
@@ -15,7 +16,7 @@ export const galleryPost = pgTable('gallery_post', {
 	updatedAt: timestamp({ withTimezone: true }).notNull(),
 	title: varchar({ length: 256 }).notNull(),
 	description: varchar({ length: 2048 }),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	fileIds: varchar({ length: 32 }).array().default(emptyVarcharArray).notNull().$type<MiDriveFile['id'][]>(),
 	isSensitive: boolean().default(false).notNull(),
 	likedCount: integer().default(0).notNull(),

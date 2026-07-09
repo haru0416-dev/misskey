@@ -9,12 +9,13 @@ import { noteVisibilities } from '@/types.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
+import { note } from './note.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
-const pollNoteVisibilityEnum = pgEnum('poll_notevisibility_enum', noteVisibilities);
+export const pollNoteVisibilityEnum = pgEnum('poll_notevisibility_enum', noteVisibilities);
 
 export const poll = pgTable('poll', {
-	noteId: varchar({ length: 32 }).primaryKey().notNull().$type<MiNote['id']>(),
+	noteId: varchar({ length: 32 }).primaryKey().notNull().$type<MiNote['id']>().references(() => note.id, { onDelete: 'cascade' }),
 	expiresAt: timestamp({ withTimezone: true }),
 	multiple: boolean().notNull(),
 	choices: varchar({ length: 256 }).array().default(emptyVarcharArray).notNull(),
