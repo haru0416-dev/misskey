@@ -23,6 +23,7 @@
 		"idea/**",
 		"locales/**",
 		"node_modules/**",
+		"packages/aiscript/**",
 		"packages/aiscript-languageserver-stub/**",
 		"packages/backend/**",
 		"packages/frontend-embed/**",
