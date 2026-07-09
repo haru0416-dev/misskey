@@ -17,7 +17,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
-import { convertLegacyReactionForHonoApi } from './notes-reactions.js';
+import { decodeReactionForHonoApi } from './notes-reactions.js';
 import { packNoteForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { packUserLiteManyForHonoApi } from './user.js';
 import { HonoApiError } from './error.js';
@@ -72,7 +72,7 @@ async function packNoteReactionWithNoteForHonoApi(
 		id: reaction.id,
 		createdAt: parseId(deps.config, reaction.id).date.toISOString(),
 		user: packedUser,
-		type: convertLegacyReactionForHonoApi(reaction.reaction),
+		type: decodeReactionForHonoApi(reaction.reaction).reaction,
 		note: await packNoteForHonoApi(deps, reaction.note, me),
 	};
 }
