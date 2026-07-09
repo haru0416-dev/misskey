@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { BroadcastChannel } from 'broadcast-channel';
 import type { PREF, Scope, StorageProvider, ValueOf } from '@/preferences/manager.js';
 import { cloudBackup } from '@/preferences/utility.js';
 import { miLocalStorage } from '@/local-storage.js';
@@ -113,11 +112,13 @@ let latestPreferencesUpdate: {
 	timestamp: number;
 } | null = null;
 
-const preferencesChannel = new BroadcastChannel<{
+type PreferencesChannelMessage = {
 	type: 'preferencesUpdate';
 	tabId: string;
 	timestamp: number;
-}>('preferences');
+};
+
+const preferencesChannel = new BroadcastChannel('preferences');
 
 prefer.on('committed', () => {
 	latestPreferencesUpdate = {
@@ -131,7 +132,8 @@ prefer.on('committed', () => {
 	});
 });
 
-preferencesChannel.addEventListener('message', (msg) => {
+preferencesChannel.addEventListener('message', (ev: MessageEvent<PreferencesChannelMessage>) => {
+	const msg = ev.data;
 	if (msg.type === 'preferencesUpdate') {
 		if (msg.tabId === TAB_ID) return;
 		if (latestPreferencesUpdate != null) {
