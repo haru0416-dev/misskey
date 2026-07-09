@@ -345,19 +345,19 @@ export async function createNoteNotificationsForHonoApi(
 		return {
 			request,
 			profile,
-			recieveConfig: profile?.notificationRecieveConfig[request.type],
+			receiveConfig: profile?.notificationRecieveConfig[request.type],
 		};
-	}).filter(candidate => candidate.recieveConfig?.type !== 'never' && !muterIdSet.has(candidate.request.notifieeId));
+	}).filter(candidate => candidate.receiveConfig?.type !== 'never' && !muterIdSet.has(candidate.request.notifieeId));
 	if (candidates.length === 0) return;
 
 	const notifieeFollowingCandidateIds = [...new Set(candidates
-		.filter(candidate => candidate.recieveConfig?.type === 'following' || candidate.recieveConfig?.type === 'mutualFollow' || candidate.recieveConfig?.type === 'followingOrFollower')
+		.filter(candidate => candidate.receiveConfig?.type === 'following' || candidate.receiveConfig?.type === 'mutualFollow' || candidate.receiveConfig?.type === 'followingOrFollower')
 		.map(candidate => candidate.request.notifieeId))];
 	const notifierFollowingCandidateIds = [...new Set(candidates
-		.filter(candidate => candidate.recieveConfig?.type === 'follower' || candidate.recieveConfig?.type === 'mutualFollow' || candidate.recieveConfig?.type === 'followingOrFollower')
+		.filter(candidate => candidate.receiveConfig?.type === 'follower' || candidate.receiveConfig?.type === 'mutualFollow' || candidate.receiveConfig?.type === 'followingOrFollower')
 		.map(candidate => candidate.request.notifieeId))];
-	const candidateUserListIds = [...new Set(candidates.flatMap(candidate => candidate.recieveConfig?.type === 'list'
-		? [candidate.recieveConfig.userListId]
+	const candidateUserListIds = [...new Set(candidates.flatMap(candidate => candidate.receiveConfig?.type === 'list'
+		? [candidate.receiveConfig.userListId]
 		: []))];
 	const [notifieeFollowingNotifierIds, notifierFollowingNotifieeIds, memberUserListIds] = await Promise.all([
 		listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, notifierId, notifieeFollowingCandidateIds),
@@ -368,7 +368,7 @@ export async function createNoteNotificationsForHonoApi(
 	const notifierFollowingNotifieeIdSet = new Set(notifierFollowingNotifieeIds);
 
 	const accepted = candidates.filter(candidate => {
-		const config = candidate.recieveConfig;
+		const config = candidate.receiveConfig;
 		const notifieeId = candidate.request.notifieeId;
 		if (config?.type === 'following') return notifieeFollowingNotifierIdSet.has(notifieeId);
 		if (config?.type === 'follower') return notifierFollowingNotifieeIdSet.has(notifieeId);

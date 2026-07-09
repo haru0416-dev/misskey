@@ -6,6 +6,7 @@
 import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { userListMembership, type UserListMembershipInsert, type UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { UpdateValuesMissingError } from '@/misc/db-errors.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
@@ -47,21 +48,7 @@ export function resolveUserListMembershipPagination(
 	untilId?: string | null;
 	order: UserListMembershipOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 /**

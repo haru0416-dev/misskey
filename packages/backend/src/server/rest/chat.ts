@@ -485,20 +485,20 @@ async function createChatRoomInvitationNotificationForHonoApi(
 	if (notifieeId === notifierId) return;
 
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, notifieeId);
-	const recieveConfig = (profile?.notificationRecieveConfig ?? {}).chatRoomInvitationReceived;
-	if (recieveConfig?.type === 'never') return;
+	const receiveConfig = (profile?.notificationRecieveConfig ?? {}).chatRoomInvitationReceived;
+	if (receiveConfig?.type === 'never') return;
 
 	const muted = await mutingExistsInDatabase(deps.db, notifieeId, notifierId);
 	if (muted) return;
 
-	if (recieveConfig?.type === 'following') {
+	if (receiveConfig?.type === 'following') {
 		if (!await followingExistsInDatabase(deps.db, notifieeId, notifierId)) return;
-	} else if (recieveConfig?.type === 'follower') {
+	} else if (receiveConfig?.type === 'follower') {
 		if (!await followingExistsInDatabase(deps.db, notifierId, notifieeId)) return;
-	} else if (recieveConfig?.type === 'mutualFollow') {
+	} else if (receiveConfig?.type === 'mutualFollow') {
 		const count = await countMutualFollowingsBetweenUsersFromDatabase(deps.db, notifieeId, notifierId);
 		if (count !== 2) return;
-	} else if (recieveConfig?.type === 'followingOrFollower') {
+	} else if (receiveConfig?.type === 'followingOrFollower') {
 		const [isFollowing, isFollower] = await Promise.all([
 			followingExistsInDatabase(deps.db, notifieeId, notifierId),
 			followingExistsInDatabase(deps.db, notifierId, notifieeId),

@@ -24,6 +24,7 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
@@ -31,7 +32,6 @@ import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
 import { HonoApiError } from './error.js';
-import { resolveHonoApiIdPagination } from './following.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -532,7 +532,7 @@ export async function handleHonoApiIGalleryLikes(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(iGalleryLikesParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 
 	const likes = await listGalleryLikesByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,

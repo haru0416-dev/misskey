@@ -114,7 +114,7 @@ export async function countClipFavoritesByClipIdsFromDatabase(
 	return new Map(rows.map(row => [row.clipId, row.count]));
 }
 
-export async function fetchFavoriteClipIdsFromDatabase(
+export async function listFavoritedClipIdsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiClip['id'][]> {

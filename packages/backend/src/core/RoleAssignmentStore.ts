@@ -6,6 +6,7 @@
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, type SQL } from 'drizzle-orm';
 import { roleAssignment, type RoleAssignmentInsert, type RoleAssignmentRow } from '@/db/schema/role-assignment.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiUser } from '@/models/User.js';
@@ -55,21 +56,7 @@ export function resolveRoleAssignmentPagination(
 	untilId?: string | null;
 	order: RoleAssignmentOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchRoleAssignmentByIdOrFailFromDatabase(

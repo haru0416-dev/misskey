@@ -19,12 +19,12 @@ import { createUserListFavoriteInDatabase, deleteUserListFavoriteByIdFromDatabas
 import { userListExistsByIdAndPublicFromDatabase } from '@/core/UserListStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from './error.js';
-import { resolveHonoApiIdPagination } from './following.js';
 import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -305,7 +305,7 @@ export async function handleHonoApiIFavorites(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(iFavoritesParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 
 	const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,

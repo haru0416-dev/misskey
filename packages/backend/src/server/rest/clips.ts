@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { clipFavoriteExistsInDatabase, countClipFavoritesByClipIdsFromDatabase, countClipFavoritesFromDatabase, fetchFavoriteClipIdsFromDatabase, listFavoritedClipIdsByUserIdAndClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
+import { clipFavoriteExistsInDatabase, countClipFavoritesByClipIdsFromDatabase, countClipFavoritesFromDatabase, listFavoritedClipIdsByUserIdFromDatabase, listFavoritedClipIdsByUserIdAndClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
 import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteInDatabase, deleteClipNoteInDatabase } from '@/core/ClipNoteStore.js';
 import {
 	countClipsByUserIdFromDatabase,
@@ -277,7 +277,7 @@ export async function handleHonoApiClipsMyFavorites(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
 	parseHonoApiParams(emptyParamDef, body);
-	const clipIds = await fetchFavoriteClipIdsFromDatabase(deps.db, me.id);
+	const clipIds = await listFavoritedClipIdsByUserIdFromDatabase(deps.db, me.id);
 	if (clipIds.length === 0) return [];
 
 	const clipById = new Map((await listClipsByIdsFromDatabase(deps.db, clipIds)).map(clip => [clip.id, clip]));

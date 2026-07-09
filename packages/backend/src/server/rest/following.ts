@@ -27,6 +27,7 @@ import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/cor
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -262,12 +263,12 @@ async function isNotificationAllowed(
 	if (notifieeId === notifierId) return false;
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, notifieeId);
-	const recieveConfig = (profile.notificationRecieveConfig ?? {})[type];
-	if (recieveConfig?.type === 'never') return false;
+	const receiveConfig = (profile.notificationRecieveConfig ?? {})[type];
+	if (receiveConfig?.type === 'never') return false;
 
 	if (await mutingExistsInDatabase(deps.db, notifieeId, notifierId)) return false;
 
-	switch (recieveConfig?.type) {
+	switch (receiveConfig?.type) {
 		case 'following':
 			return await followingExistsInDatabase(deps.db, notifieeId, notifierId);
 		case 'follower':
@@ -287,7 +288,7 @@ async function isNotificationAllowed(
 			return isFollowing || isFollower;
 		}
 		case 'list':
-			return await userListMembershipExistsInDatabase(deps.db, notifierId, recieveConfig.userListId);
+			return await userListMembershipExistsInDatabase(deps.db, notifierId, receiveConfig.userListId);
 		default:
 			return true;
 	}
@@ -883,35 +884,6 @@ export async function handleHonoApiFollowingRequestsReject(
 	}
 }
 
-export function resolveHonoApiIdPagination(
-	params: {
-		sinceId?: string;
-		untilId?: string;
-		sinceDate?: number;
-		untilDate?: number;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: 'asc' | 'desc';
-} {
-	if (params.sinceId && params.untilId) {
-		return { sinceId: params.sinceId, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceId) {
-		return { sinceId: params.sinceId, untilId: null, order: 'asc' };
-	} else if (params.untilId) {
-		return { sinceId: null, untilId: params.untilId, order: 'desc' };
-	} else if (params.sinceDate && params.untilDate) {
-		return { sinceId: genId(params.sinceDate), untilId: genId(params.untilDate), order: 'desc' };
-	} else if (params.sinceDate) {
-		return { sinceId: genId(params.sinceDate), untilId: null, order: 'asc' };
-	} else if (params.untilDate) {
-		return { sinceId: null, untilId: genId(params.untilDate), order: 'desc' };
-	}
-
-	return { sinceId: null, untilId: null, order: 'desc' };
-}
-
 async function packFollowRequestsForHonoApi(
 	deps: HonoApiFollowingDependencies,
 	requests: FollowRequestRow[],
@@ -934,7 +906,7 @@ export async function handleHonoApiFollowingRequestsList(
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const params = parseHonoApiParams(followingRequestsListParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -951,7 +923,7 @@ export async function handleHonoApiFollowingRequestsSent(
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const params = parseHonoApiParams(followingRequestsListParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -983,7 +955,7 @@ export async function handleHonoApiFollowingList(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(followingListParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -1118,7 +1090,7 @@ export async function handleHonoApiUsersFollowers(
 		}
 	}
 
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const followings = await listFollowersByFolloweeIdWithPaginationFromDatabase(deps.db, user.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -1154,7 +1126,7 @@ export async function handleHonoApiUsersFollowing(
 		}
 	}
 
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	let followings: MiFollowing[];
 	if (params.birthday) {
 		try {

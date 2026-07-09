@@ -7,7 +7,7 @@ import { domainToASCII, URLSearchParams } from 'node:url';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
-import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase, listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
@@ -1123,7 +1123,7 @@ export async function handleHonoApiUsersNotes(
 
 	const getFromDb = async (dbUntilId: string | null, dbSinceId: string | null, limit: number) => {
 		const mutingChannelIds = me != null
-			? await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date())
+			? await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date())
 			: [];
 
 		return await listUserTimelineNotesFromDatabase(deps.db, {

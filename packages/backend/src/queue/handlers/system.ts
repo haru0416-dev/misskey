@@ -15,7 +15,7 @@ import {
 	updateRetentionAggregationDataInDatabase,
 } from '@/core/RetentionAggregationStore.js';
 import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
-import { deleteChannelMutingsByIdsFromDatabase, fetchExpiredChannelMutingsFromDatabase, fetchMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { deleteChannelMutingsByIdsFromDatabase, listExpiredChannelMutingsFromDatabase, listMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { applyBufferedNoteReactionsInDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
@@ -39,7 +39,7 @@ export type HonoQueueSystemDependencies = {
 };
 
 async function refreshMutingChannelsCache(deps: Pick<HonoQueueSystemDependencies, 'db' | 'redis'>, userId: string): Promise<void> {
-	const channelIds = await fetchMutedChannelIdsFromDatabase(deps.db, userId);
+	const channelIds = await listMutedChannelIdsByUserIdFromDatabase(deps.db, userId);
 	await deps.redis.set(`kvcache:channelMutingChannels:${userId}`, JSON.stringify(channelIds), 'EX', 60 * 30);
 }
 
@@ -149,7 +149,7 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 		}
 	}
 
-	const expiredChannelMutings = await fetchExpiredChannelMutingsFromDatabase(deps.db, new Date());
+	const expiredChannelMutings = await listExpiredChannelMutingsFromDatabase(deps.db, new Date());
 	if (expiredChannelMutings.length > 0) {
 		await deleteChannelMutingsByIdsFromDatabase(deps.db, expiredChannelMutings.map(m => m.id));
 

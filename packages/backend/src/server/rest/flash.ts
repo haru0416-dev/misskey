@@ -10,8 +10,8 @@ import {
 	deleteFlashInDatabase,
 	fetchFlashByIdFromDatabase,
 	fetchFlashByIdOrFailFromDatabase,
-	listFeaturedFlashsFromDatabase,
-	listFlashsWithPaginationFromDatabase,
+	listFeaturedFlashesFromDatabase,
+	listFlashesWithPaginationFromDatabase,
 	resolveFlashPagination,
 	updateFlashInDatabase,
 } from '@/core/FlashStore.js';
@@ -215,7 +215,7 @@ export async function handleHonoApiFlashFeatured(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashFeaturedParamDef, body);
-	const result = await listFeaturedFlashsFromDatabase(deps.db, {
+	const result = await listFeaturedFlashesFromDatabase(deps.db, {
 		offset: params.offset,
 		limit: params.limit,
 	});
@@ -246,7 +246,7 @@ export async function handleHonoApiFlashMy(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashMyParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
-	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
+	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
 		limit: params.limit,
 		order: pagination.order,
@@ -346,7 +346,7 @@ export async function handleHonoApiFlashSearch(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashSearchParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
-	const result = await listFlashsWithPaginationFromDatabase(deps.db, {
+	const result = await listFlashesWithPaginationFromDatabase(deps.db, {
 		visibility: 'public',
 		searchQuery: params.query,
 		limit: params.limit,
@@ -404,7 +404,7 @@ export async function handleHonoApiUsersFlashs(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(usersFlashsParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
-	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
+	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
 		visibility: 'public',
 		limit: params.limit,

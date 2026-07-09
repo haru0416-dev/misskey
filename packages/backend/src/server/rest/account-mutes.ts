@@ -11,6 +11,7 @@ import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -18,7 +19,6 @@ import type { MiMuting } from '@/models/Muting.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import { HonoApiError, clientError } from './error.js';
-import { resolveHonoApiIdPagination } from './following.js';
 import { packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -261,7 +261,7 @@ export async function handleHonoApiRenoteMuteList(
 	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listRenoteMutingsByMuterIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
-		...resolveHonoApiIdPagination(params),
+		...resolveDateIdPagination({ gen: time => genId(time) }, params),
 	});
 
 	const mutees = await packUserDetailedNotMeManyForHonoApi(deps, mutings.map(muting => muting.muteeId), me);

@@ -5,20 +5,20 @@
 
 import { z } from 'zod';
 import { countActiveRoleAssignmentsByRoleIdFromDatabase, countActiveRoleAssignmentsByRoleIdsFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchPublicExplorableRoleByIdFromDatabase, fetchPublicRoleByIdFromDatabase, listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { resolveHonoApiIdPagination } from './following.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -165,7 +165,7 @@ export async function handleHonoApiRolesUsers(
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -205,7 +205,7 @@ export async function handleHonoApiRolesNotes(
 
 	if (noteIds.length === 0) return [];
 
-	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 
 	const notes = await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
 		ids: noteIds,
