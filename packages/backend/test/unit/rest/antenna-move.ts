@@ -27,7 +27,7 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
 
-		const id = genId(config);
+		const id = genId();
 		owner = await createUserInDatabase(db, {
 			id,
 			username: `antennamove${id}`,
@@ -44,15 +44,15 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 	});
 
 	function fabricateUser(username: string, host: string | null): MiUser {
-		return { id: genId(config), username, host } as MiUser;
+		return { id: genId(), username, host } as MiUser;
 	}
 
 	async function createAntenna(users: string[], isActive = true): Promise<string> {
 		const antenna = await createAntennaInDatabase(db, {
-			id: genId(config),
+			id: genId(),
 			lastUsedAt: new Date(),
 			userId: owner.id,
-			name: `test-antenna-${genId(config)}`,
+			name: `test-antenna-${genId()}`,
 			src: 'users',
 			users,
 			withFile: false,
@@ -63,8 +63,8 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 	}
 
 	test('src を users に含むアンテナへ dst の acct を追記し、antennaUpdated を発行する', async () => {
-		const src = fabricateUser(`srcuser${genId(config)}`, null);
-		const dst = fabricateUser(`dstuser${genId(config)}`, 'remote.example.com');
+		const src = fabricateUser(`srcuser${genId()}`, null);
+		const dst = fabricateUser(`dstuser${genId()}`, 'remote.example.com');
 
 		const hitAntennaId = await createAntenna([`@${src.username}`]);
 		const unrelatedAntennaId = await createAntenna(['@someoneelse']);
@@ -85,8 +85,8 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 	});
 
 	test('非アクティブなアンテナは移行対象にならない (原典の getAntennas がアクティブのみ返す挙動)', async () => {
-		const src = fabricateUser(`srcinactive${genId(config)}`, null);
-		const dst = fabricateUser(`dstinactive${genId(config)}`, null);
+		const src = fabricateUser(`srcinactive${genId()}`, null);
+		const dst = fabricateUser(`dstinactive${genId()}`, null);
 
 		const inactiveAntennaId = await createAntenna([`@${src.username}`], false);
 
@@ -99,8 +99,8 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 	});
 
 	test('リモートの src (user@host 形式の acct) も一致判定される', async () => {
-		const src = fabricateUser(`remotesrc${genId(config)}`, 'old.example.com');
-		const dst = fabricateUser(`remotedst${genId(config)}`, 'new.example.com');
+		const src = fabricateUser(`remotesrc${genId()}`, 'old.example.com');
+		const dst = fabricateUser(`remotedst${genId()}`, 'new.example.com');
 
 		const antennaId = await createAntenna([`@${src.username}@${src.host}`]);
 

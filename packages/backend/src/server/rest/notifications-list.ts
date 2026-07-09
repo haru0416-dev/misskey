@@ -46,8 +46,8 @@ export async function getHonoApiNotifications(
 	},
 ): Promise<MiNotification[]> {
 	const limit = options.limit ?? 20;
-	let sinceTime = options.sinceId ? toXListId(deps.config, options.sinceId) : null;
-	let untilTime = options.untilId ? toXListId(deps.config, options.untilId) : null;
+	let sinceTime = options.sinceId ? toXListId(options.sinceId) : null;
+	let untilTime = options.untilId ? toXListId(options.untilId) : null;
 
 	let notifications: MiNotification[];
 	for (;;) {
@@ -244,8 +244,8 @@ export async function handleHonoApiINotifications(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(notificationsParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
 	if (params.includeTypes && params.includeTypes.length === 0) return [];
 	if (notificationTypes.every(type => params.excludeTypes?.includes(type))) return [];
@@ -322,8 +322,8 @@ export async function handleHonoApiINotificationsGrouped(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(notificationsParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : undefined);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
 	if (params.includeTypes && params.includeTypes.length === 0) return [];
 	if (notificationTypes.every(type => params.excludeTypes?.includes(type))) return [];

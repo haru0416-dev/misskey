@@ -82,7 +82,7 @@ export async function handleHonoApiPromoRead(
 	}
 
 	await createPromoReadInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		noteId: note.id,
 		userId: me.id,
 	});

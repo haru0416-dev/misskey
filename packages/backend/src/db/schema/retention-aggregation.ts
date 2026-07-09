@@ -15,8 +15,8 @@ export const retentionAggregation = pgTable('retention_aggregation', {
 	usersCount: integer().notNull(),
 	data: jsonb().$type<Record<string, number>>().default({}).notNull(),
 }, table => [
-	index('IDX_09f4e5b9e4a2f268d3e284e4b3').on(table.createdAt),
-	uniqueIndex('IDX_f7c3576b37bd2eec966ae24477').on(table.dateKey),
+	index('IDX_RETENTION_AGGREGATION_CREATED_AT').on(table.createdAt),
+	uniqueIndex('IDX_RETENTION_AGGREGATION_DATE_KEY_UNIQUE').on(table.dateKey),
 ]);
 
 export type RetentionAggregationRow = typeof retentionAggregation.$inferSelect;

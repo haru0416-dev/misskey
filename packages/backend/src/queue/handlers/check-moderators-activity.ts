@@ -162,7 +162,7 @@ async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivi
 	for (const moderator of moderators) {
 		await createAnnouncementWithSideEffects({
 			db: deps.db,
-			genId: () => genId(deps.config),
+			genId,
 			packAnnouncement: announcement => Promise.resolve(packAnnouncementForHonoApi(deps.config, announcement)),
 			publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
 		}, {

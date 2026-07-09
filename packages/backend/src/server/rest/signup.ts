@@ -159,7 +159,7 @@ export async function createLocalSignupAccount(
 	const keyPair = await genRsaKeyPair();
 	const remoteUri = params.host == null ? null : `https://${params.host}/users/${params.username}`;
 	const account = await createSignupAccountInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		username: params.username,
 		usernameLower,
 		host: params.host,
@@ -219,7 +219,7 @@ export async function signupPendingWithHonoApi(
 	try {
 		const pendingUser = await fetchUserPendingByCodeFromDatabase(deps.db, code);
 
-		if (parseId(deps.config, pendingUser.id).date.getTime() + (1000 * 60 * 30) < Date.now()) {
+		if (parseId(pendingUser.id).date.getTime() + (1000 * 60 * 30) < Date.now()) {
 			throw signupValidationError('EXPIRED');
 		}
 

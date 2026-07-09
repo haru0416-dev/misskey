@@ -13,7 +13,7 @@ export const relay = pgTable('relay', {
 	inbox: varchar({ length: 512 }).notNull(),
 	status: relayStatusEnum().notNull().$type<MiRelay['status']>(),
 }, table => [
-	uniqueIndex('IDX_0d9a1738f2cf7f3b1c3334dfab').on(table.inbox),
+	uniqueIndex('IDX_RELAY_INBOX_UNIQUE').on(table.inbox),
 	// accepted リレーの一覧は公開ノート作成毎に読まれるため status で引けるようにする
 	index('IDX_relay_status').on(table.status),
 ]);

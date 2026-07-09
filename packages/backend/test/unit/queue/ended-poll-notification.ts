@@ -46,7 +46,7 @@ describe('hono-queue-ended-poll-notification', () => {
 	});
 
 	test('投稿者とローカル投票者にpollEnded通知を送る', async () => {
-		const authorId = genId(config);
+		const authorId = genId();
 		await createUserWithProfileAndPublickeyInDatabase(db, {
 			user: {
 				id: authorId,
@@ -56,7 +56,7 @@ describe('hono-queue-ended-poll-notification', () => {
 			profile: { userId: authorId },
 		});
 
-		const voterId = genId(config);
+		const voterId = genId();
 		await createUserWithProfileAndPublickeyInDatabase(db, {
 			user: {
 				id: voterId,
@@ -66,7 +66,7 @@ describe('hono-queue-ended-poll-notification', () => {
 			profile: { userId: voterId },
 		});
 
-		const noteId = genId(config);
+		const noteId = genId();
 		await createNoteWithPollInDatabase(db, {
 			id: noteId,
 			text: 'hono-queue-ended-poll-notification test',
@@ -83,7 +83,7 @@ describe('hono-queue-ended-poll-notification', () => {
 			userId: authorId,
 			userHost: null,
 		});
-		await createPollVoteInDatabase(db, { id: genId(config), noteId, userId: voterId, choice: 0 });
+		await createPollVoteInDatabase(db, { id: genId(), noteId, userId: voterId, choice: 0 });
 
 		publishedNotifications.length = 0;
 		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId }));
@@ -99,14 +99,14 @@ describe('hono-queue-ended-poll-notification', () => {
 	});
 
 	test('hasPollがfalseのノートは何もしない', async () => {
-		const userId = genId(config);
+		const userId = genId();
 		await createUserInDatabase(db, {
 			id: userId,
 			username: `honoqueueepn${userId}`,
 			usernameLower: `honoqueueepn${userId}`.toLowerCase(),
 		});
 
-		const noteId = genId(config);
+		const noteId = genId();
 		await createNoteInDatabase(db, {
 			id: noteId,
 			text: 'no poll here',
@@ -123,7 +123,7 @@ describe('hono-queue-ended-poll-notification', () => {
 
 	test('存在しないnoteIdは何もしない', async () => {
 		publishedNotifications.length = 0;
-		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId: genId(config) }));
+		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId: genId() }));
 		expect(publishedNotifications).toHaveLength(0);
 	});
 });

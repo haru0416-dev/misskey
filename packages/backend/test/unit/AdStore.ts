@@ -18,7 +18,7 @@ import {
 	updateAdInDatabase,
 } from '@/core/AdStore.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
-import { genAidx } from '@/misc/id/aidx.js';
+import { genId } from '@/misc/id/gen-id.js';
 
 describe('AdStore', () => {
 	let pool: MiDrizzlePool;
@@ -46,7 +46,7 @@ describe('AdStore', () => {
 		const now = Date.now();
 		const currentDayOfWeek = 1 << new Date(now).getDay();
 		const activeAd = await createAdInDatabase(db, {
-			id: genAidx(now),
+			id: genId(now),
 			expiresAt: new Date(now + 60_000),
 			startsAt: new Date(now - 60_000),
 			place: 'square',
@@ -59,7 +59,7 @@ describe('AdStore', () => {
 			isSensitive: false,
 		});
 		await createAdInDatabase(db, {
-			id: genAidx(now + 1),
+			id: genId(now + 1),
 			expiresAt: new Date(now - 1),
 			startsAt: new Date(now - 60_000),
 			place: 'square',
@@ -72,7 +72,7 @@ describe('AdStore', () => {
 			isSensitive: false,
 		});
 		await createAdInDatabase(db, {
-			id: genAidx(now + 2),
+			id: genId(now + 2),
 			expiresAt: new Date(now + 60_000),
 			startsAt: new Date(now + 60_000),
 			place: 'square',
@@ -93,7 +93,7 @@ describe('AdStore', () => {
 	test('updates, filters, and deletes ads', async () => {
 		const now = Date.now();
 		const activeAd = await createAdInDatabase(db, {
-			id: genAidx(now),
+			id: genId(now),
 			expiresAt: new Date(now + 60_000),
 			startsAt: new Date(now - 60_000),
 			place: 'square',
@@ -106,7 +106,7 @@ describe('AdStore', () => {
 			isSensitive: false,
 		});
 		const expiredAd = await createAdInDatabase(db, {
-			id: genAidx(now + 1),
+			id: genId(now + 1),
 			expiresAt: new Date(now - 1),
 			startsAt: new Date(now - 60_000),
 			place: 'square',

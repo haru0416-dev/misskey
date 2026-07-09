@@ -87,6 +87,7 @@
 - Fix: `i/move` の移動先・`i/update` の `alsoKnownAs` で未知のリモートユーザーを WebFinger で解決できなかった問題を修正
 - Fix: Bun ランタイムで外部リクエスト (`HttpRequestService`) の private アドレスブロック (SSRF 対策) が一切機能していなかった問題を修正。Bun の `node:http` 互換レイヤーはカスタム `http.Agent.createConnection` を呼ばないため、`node-fetch` の `agent` オプション経由の socket レベル遮断が無効化されていた。宛先ホスト名を送信前に DNS 解決して private/非ユニキャストアドレスを遮断する事前チェックに変更し、あわせて `node-fetch` をグローバル `fetch` に置き換えて本番依存から除去 (レスポンスサイズ上限も自前実装で維持)
 - Enhance: REST API のリクエストパラメータ検証を `ajv` (JSON Schema) から `Zod` に全面移行し、本番依存から `ajv` を除去。あわせて `users/show`/`notes/create` の OpenAPI 仕様生成 (misskey-js 型生成) を Zod スキーマ由来に統一し、これまで独立して二重管理されていたパラメータ定義の重複を解消
+- Enhance: ID生成方式を `uuidv7` 固定に簡素化し、設定ファイルの `id` 項目 (aid/aidx/meid/meidg/objectid/ulid の選択) を削除。本フォークは常に `uuidv7` のみを使用していたための整理
 
 ## 2026.6.1
 

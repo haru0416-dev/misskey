@@ -5,15 +5,16 @@
 
 import { index, pgTable, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const noteThreadMuting = pgTable('note_thread_muting', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	threadId: varchar({ length: 256 }).notNull(),
 }, table => [
-	index('IDX_29c11c7deb06615076f8c95b80').on(table.userId),
-	index('IDX_c426394644267453e76f036926').on(table.threadId),
-	uniqueIndex('IDX_ae7aab18a2641d3e5f25e0c4ea').on(table.userId, table.threadId),
+	index('IDX_NOTE_THREAD_MUTING_USER_ID').on(table.userId),
+	index('IDX_NOTE_THREAD_MUTING_THREAD_ID').on(table.threadId),
+	uniqueIndex('IDX_NOTE_THREAD_MUTING_USER_ID_THREAD_ID_UNIQUE').on(table.userId, table.threadId),
 ]);
 
 export type NoteThreadMutingRow = typeof noteThreadMuting.$inferSelect;

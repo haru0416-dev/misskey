@@ -39,12 +39,12 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 	}
 
 	function uniqueTag(): string {
-		return `testtag${genId(config)}`.toLowerCase();
+		return `testtag${genId()}`.toLowerCase();
 	}
 
 	test('featured ランキング (zincrby)・チャート用 pfadd・ユニークカウント用 sadd が書き込まれる', async () => {
 		const tag = uniqueTag();
-		const userId = genId(config);
+		const userId = genId();
 
 		const now = new Date();
 		now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
@@ -59,7 +59,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 
 	test('同一ユーザーの2回目はランキングを加算しない (sismember スキップ)', async () => {
 		const tag = uniqueTag();
-		const userId = genId(config);
+		const userId = genId();
 		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
 
 		await updateHashtagsRankingForHonoApi(deps, tag, userId);
@@ -74,10 +74,10 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		const tag = uniqueTag();
 		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
 
-		await updateHashtagsRankingForHonoApi(deps, tag, genId(config));
+		await updateHashtagsRankingForHonoApi(deps, tag, genId());
 		expect(await pollFeaturedScore(tag)).toBe(1);
 
-		await updateHashtagsRankingForHonoApi(deps, tag, genId(config));
+		await updateHashtagsRankingForHonoApi(deps, tag, genId());
 		for (let i = 0; i < 20; i++) {
 			if (await pollFeaturedScore(tag) === 2) break;
 			await sleep(100);
@@ -87,7 +87,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 
 	test('hiddenTags に含まれるタグは一切書き込まれない', async () => {
 		const tag = uniqueTag();
-		const userId = genId(config);
+		const userId = genId();
 
 		await updateHashtagsRankingForHonoApi({ meta: { hiddenTags: [tag], sensitiveWords: [] }, redis }, tag, userId);
 
@@ -98,7 +98,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 
 	test('sensitiveWords にマッチするタグは一切書き込まれない', async () => {
 		const tag = uniqueTag();
-		const userId = genId(config);
+		const userId = genId();
 
 		await updateHashtagsRankingForHonoApi({ meta: { hiddenTags: [], sensitiveWords: [tag] }, redis }, tag, userId);
 

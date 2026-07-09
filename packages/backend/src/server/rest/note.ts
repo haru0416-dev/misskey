@@ -266,7 +266,7 @@ export async function populateMyReactionForHonoApi(
 		return undefined;
 	}
 
-	if (parseId(deps.config, note.id).date.getTime() + 2000 > Date.now()) return undefined;
+	if (parseId(note.id).date.getTime() + 2000 > Date.now()) return undefined;
 
 	const reaction = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, meId, note.id);
 	if (reaction) return normalizeReactionKey(reaction.reaction);
@@ -489,7 +489,7 @@ export async function packNoteForHonoApi(
 
 	const packed = {
 		id: note.id,
-		createdAt: parseId(deps.config, note.id).date.toISOString(),
+		createdAt: parseId(note.id).date.toISOString(),
 		userId: note.userId,
 		user,
 		text,
@@ -596,7 +596,7 @@ export async function packNoteManyForHonoApi(
 				myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
 				continue;
 			}
-			if (parseId(deps.config, target.id).date.getTime() + 2000 > Date.now()) {
+			if (parseId(target.id).date.getTime() + 2000 > Date.now()) {
 				myReactions.set(target.id, undefined);
 				continue;
 			}
@@ -913,8 +913,8 @@ export async function handleHonoApiUsersNotes(
 
 	if (params.withReplies && params.withFiles) throw usersNotesBothWithRepliesAndWithFilesError();
 
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
 	if (me != null) {
 		const userIdsWhoBlockingMe = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id);

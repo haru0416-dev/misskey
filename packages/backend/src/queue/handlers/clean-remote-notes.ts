@@ -9,13 +9,11 @@ import type * as Bull from 'bullmq';
 import { deleteNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 
 export type HonoQueueCleanRemoteNotesDependencies = {
-	config: Pick<Config, 'id'>;
 	db: MiDrizzleDatabase;
 	meta: Pick<MiMeta, 'enableRemoteNotesCleaning' | 'remoteNotesCleaningMaxProcessingDurationInMinutes' | 'remoteNotesCleaningExpiryDaysForEachNotes'>;
 };
@@ -173,9 +171,9 @@ export async function handleHonoQueueCleanRemoteNotes(
 	job: Bull.Job<Record<string, unknown>>,
 ): Promise<CleanRemoteNotesResult> {
 	const computeProgress = (minId: string, maxId: string, cursorLeft: string): number => {
-		const minTs = parseId(deps.config, minId).date.getTime();
-		const maxTs = parseId(deps.config, maxId).date.getTime();
-		const cursorTs = parseId(deps.config, cursorLeft).date.getTime();
+		const minTs = parseId(minId).date.getTime();
+		const maxTs = parseId(maxId).date.getTime();
+		const cursorTs = parseId(cursorLeft).date.getTime();
 
 		return ((cursorTs - minTs) / (maxTs - minTs)) * 100;
 	};
@@ -184,7 +182,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 		return {
 			enabled: deps.meta.enableRemoteNotesCleaning,
 			maxDuration: deps.meta.remoteNotesCleaningMaxProcessingDurationInMinutes * 60 * 1000,
-			newestLimit: genId(deps.config, Date.now() - (1000 * 60 * 60 * 24 * deps.meta.remoteNotesCleaningExpiryDaysForEachNotes)),
+			newestLimit: genId(Date.now() - (1000 * 60 * 60 * 24 * deps.meta.remoteNotesCleaningExpiryDaysForEachNotes)),
 		};
 	};
 
@@ -309,7 +307,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 				await deleteNotesByIdsFromDatabase(deps.db, deletableNoteIds);
 
 				for (const id of deletableNoteIds) {
-					const t = parseId(deps.config, id).date.getTime();
+					const t = parseId(id).date.getTime();
 					if (stats.oldest === null || t < stats.oldest) {
 						stats.oldest = t;
 					}

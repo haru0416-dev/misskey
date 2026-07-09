@@ -92,7 +92,7 @@ export async function packFlashForHonoApi(
 
 	return {
 		id: flash.id,
-		createdAt: parseId(deps.config, flash.id).date.toISOString(),
+		createdAt: parseId(flash.id).date.toISOString(),
 		updatedAt: flash.updatedAt.toISOString(),
 		userId: flash.userId,
 		user,
@@ -144,7 +144,7 @@ export async function handleHonoApiFlashCreate(
 ): Promise<Record<string, unknown>> {
 	const params = parseHonoApiParams(flashCreateParamDef, body);
 	const flash = await createFlashInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		updatedAt: new Date(),
 		title: params.title,
@@ -239,7 +239,7 @@ export async function handleHonoApiFlashMy(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashMyParamDef, body);
-	const pagination = resolveFlashPagination({ gen: time => genId(deps.config, time) }, params);
+	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
 	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
 		limit: params.limit,
@@ -289,13 +289,13 @@ export async function handleHonoApiFlashMyLikes(
 	} else if (params.untilId) {
 		untilId = params.untilId;
 	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(deps.config, params.sinceDate);
-		untilId = genId(deps.config, params.untilDate);
+		sinceId = genId(params.sinceDate);
+		untilId = genId(params.untilDate);
 	} else if (params.sinceDate) {
-		sinceId = genId(deps.config, params.sinceDate);
+		sinceId = genId(params.sinceDate);
 		order = 'asc';
 	} else if (params.untilDate) {
-		untilId = genId(deps.config, params.untilDate);
+		untilId = genId(params.untilDate);
 	}
 
 	const likes = await listFlashLikesByUserIdFromDatabase(deps.db, me.id, {
@@ -336,7 +336,7 @@ export async function handleHonoApiFlashSearch(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashSearchParamDef, body);
-	const pagination = resolveFlashPagination({ gen: time => genId(deps.config, time) }, params);
+	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
 	const result = await listFlashsWithPaginationFromDatabase(deps.db, {
 		visibility: 'public',
 		searchQuery: params.query,
@@ -394,7 +394,7 @@ export async function handleHonoApiUsersFlashs(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(usersFlashsParamDef, body);
-	const pagination = resolveFlashPagination({ gen: time => genId(deps.config, time) }, params);
+	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
 	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
 		visibility: 'public',

@@ -10,7 +10,7 @@ import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { createUserPendingInDatabase, deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
-import { genAidx } from '@/misc/id/aidx.js';
+import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 
 describe('UserPendingStore', () => {
@@ -29,7 +29,7 @@ describe('UserPendingStore', () => {
 
 	test('create, fetch, and delete pending user', async () => {
 		const data = {
-			id: genAidx(Date.now()),
+			id: genId(Date.now()),
 			code: secureRndstr(16),
 			username: secureRndstr(8),
 			email: `${secureRndstr(8)}@example.test`,

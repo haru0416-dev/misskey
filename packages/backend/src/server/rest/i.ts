@@ -44,7 +44,7 @@ export function packHonoApiSignin(
 } {
 	return {
 		id: src.id,
-		createdAt: parseId(deps.config, src.id).date.toISOString(),
+		createdAt: parseId(src.id).date.toISOString(),
 		ip: src.ip,
 		headers: src.headers,
 		success: src.success,
@@ -100,13 +100,13 @@ export async function handleHonoApiISigninHistory(
 	} else if (params.untilId) {
 		untilId = params.untilId;
 	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(deps.config, params.sinceDate);
-		untilId = genId(deps.config, params.untilDate);
+		sinceId = genId(params.sinceDate);
+		untilId = genId(params.untilDate);
 	} else if (params.sinceDate) {
-		sinceId = genId(deps.config, params.sinceDate);
+		sinceId = genId(params.sinceDate);
 		order = 'asc';
 	} else if (params.untilDate) {
-		untilId = genId(deps.config, params.untilDate);
+		untilId = genId(params.untilDate);
 	}
 
 	const history = await listSigninHistoryFromDatabase(deps.db, user.id, {

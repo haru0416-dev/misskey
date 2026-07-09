@@ -38,7 +38,7 @@ function fakeJob<T>(data: T): Bull.Job<T> {
 }
 
 async function createTestUser(runtime: RuntimeDependencies, prefix: string): Promise<MiUser> {
-	const id = genId(runtime.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 		user: {
 			id,
@@ -65,7 +65,7 @@ describe('hono-queue-db (export)', () => {
 	test('handleHonoQueueExportMuting: ミュート一覧をCSVとしてドライブに保存する', async () => {
 		const muter = await createTestUser(runtime, 'honoqueueexpmute');
 		const mutee = await createTestUser(runtime, 'honoqueueexpmute');
-		await createMutingInDatabase(runtime.db, { id: genId(runtime.config), muterId: muter.id, muteeId: mutee.id, expiresAt: null });
+		await createMutingInDatabase(runtime.db, { id: genId(), muterId: muter.id, muteeId: mutee.id, expiresAt: null });
 
 		await handleHonoQueueExportMuting(deps, fakeJob({ user: { id: muter.id } }));
 
@@ -76,7 +76,7 @@ describe('hono-queue-db (export)', () => {
 	test('handleHonoQueueExportBlocking: ブロック一覧をCSVとしてドライブに保存する', async () => {
 		const blocker = await createTestUser(runtime, 'honoqueueexpblock');
 		const blockee = await createTestUser(runtime, 'honoqueueexpblock');
-		await createBlockingInDatabase(runtime.db, { id: genId(runtime.config), blockerId: blocker.id, blockeeId: blockee.id });
+		await createBlockingInDatabase(runtime.db, { id: genId(), blockerId: blocker.id, blockeeId: blockee.id });
 
 		await handleHonoQueueExportBlocking(deps, fakeJob({ user: { id: blocker.id } }));
 
@@ -87,9 +87,9 @@ describe('hono-queue-db (export)', () => {
 	test('handleHonoQueueExportUserLists: リスト一覧をCSVとしてドライブに保存する', async () => {
 		const owner = await createTestUser(runtime, 'honoqueueexplist');
 		const member = await createTestUser(runtime, 'honoqueueexplist');
-		const listId = genId(runtime.config);
+		const listId = genId();
 		await createUserListInDatabase(runtime.db, { id: listId, userId: owner.id, name: 'test-list' });
-		await createUserListMembershipInDatabase(runtime.db, { id: genId(runtime.config), userId: member.id, userListId: listId, userListUserId: owner.id });
+		await createUserListMembershipInDatabase(runtime.db, { id: genId(), userId: member.id, userListId: listId, userListUserId: owner.id });
 
 		await handleHonoQueueExportUserLists(deps, fakeJob({ user: { id: owner.id } }));
 
@@ -100,7 +100,7 @@ describe('hono-queue-db (export)', () => {
 	test('handleHonoQueueExportAntennas: アンテナ一覧をJSONとしてドライブに保存する', async () => {
 		const owner = await createTestUser(runtime, 'honoqueueexpant');
 		await createAntennaInDatabase(runtime.db, {
-			id: genId(runtime.config),
+			id: genId(),
 			userId: owner.id,
 			name: 'test-antenna',
 			src: 'all',
@@ -118,7 +118,7 @@ describe('hono-queue-db (export)', () => {
 		const follower = await createTestUser(runtime, 'honoqueueexpfollow');
 		const followee = await createTestUser(runtime, 'honoqueueexpfollow');
 		await createFollowingInDatabase(runtime.db, {
-			id: genId(runtime.config),
+			id: genId(),
 			followerId: follower.id,
 			followeeId: followee.id,
 		});
@@ -134,6 +134,6 @@ describe('hono-queue-db (export)', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportMuting(deps, fakeJob({ user: { id: genId(runtime.config) } }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueExportMuting(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

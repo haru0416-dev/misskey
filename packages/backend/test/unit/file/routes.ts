@@ -161,7 +161,7 @@ describe('createFileServerApp', () => {
 		const accessKey = params.accessKey;
 		const url = params.uri ?? `${config.url}/files/${accessKey}`;
 		await createDriveFileInDatabase(drizzle, {
-			id: genId(config),
+			id: genId(),
 			userId: null,
 			userHost: null,
 			md5: '00000000000000000000000000000000',

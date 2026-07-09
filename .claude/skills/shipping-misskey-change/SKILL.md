@@ -18,7 +18,7 @@ CI で落ちやすい / レビュアーから指摘されやすいポイント�
 - [ ] lint が通る — 標準は `bun run lint` (oxlint + Playwright 型検査 + 全 package typecheck)。軽量な追加確認が要る場合は [/quality-gate](../../commands/quality-gate.md) も参照してよい
 - [ ] backend で `meta` / `paramDef` / `res` を変更した → `bun run build-misskey-js-with-types` を実行して `packages/misskey-js/src/autogen/` の差分も commit に含めた → 詳細手順は [references/tasks/regenerate-misskey-js.md](references/tasks/regenerate-misskey-js.md)
 - [ ] エンティティ (`packages/backend/src/models/*.ts` の `@Column` / `@Entity` / `@Index`) を変更した → `bun run --bun --filter backend check-migrations` が pending DDL 0 件で通る
-- [ ] migration ファイルを追加した → `up()` と `down()` の両方を実装した / 既存のマージ済 migration は一切触っていない
+- [ ] migration ファイルを追加した → `db/schema/*.ts` の変更を `bun run --filter backend db:generate`(特殊DDLのみ`db:generate:custom`)で生成したものである / 生成SQLの中身を目視確認した / 既存のマージ済 migration は一切触っていない
 - [ ] 新規 `.ts` / `.js` / `.cjs` / `.mjs` / `.vue` / `.scss` / `.html` ファイルを追加した → SPDX ヘッダーを付けた (`.vue` / `.html` は HTML コメント形式、その他は TS コメント形式)
 - [ ] `locales/` を編集した → **`ja-JP.yml` だけ** を変更しており、他言語 yml の diff は出ていない (`git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'` が空)
 - [ ] ユーザーから見える変更 (機能追加 / 既存挙動変更) → `CHANGELOG.md` の `## Unreleased` 直下の該当サブセクション (General / Client / Server) に 1 行追記した → 詳細書式は [references/tasks/changelog-update.md](references/tasks/changelog-update.md)

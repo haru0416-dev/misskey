@@ -210,14 +210,14 @@ export async function addNoteToAntennasForHonoApi(
 
 	for (const antenna of matchedAntennas) {
 		const tl = `antennaTimeline:${antenna.id}`;
-		if (parseId(deps.config, note.id).date.getTime() > Date.now() - 1000 * 60 * 3) {
+		if (parseId(note.id).date.getTime() > Date.now() - 1000 * 60 * 3) {
 			redisPipeline.lpush('list:' + tl, note.id);
 			if (Math.random() < 0.1) {
 				redisPipeline.ltrim('list:' + tl, 0, 200 - 1);
 			}
 		} else {
 			void deps.redisForTimelines.lindex('list:' + tl, -1).then(lastId => {
-				if (lastId == null || parseId(deps.config, note.id).date.getTime() > parseId(deps.config, lastId).date.getTime()) {
+				if (lastId == null || parseId(note.id).date.getTime() > parseId(lastId).date.getTime()) {
 					void deps.redisForTimelines.lpush('list:' + tl, note.id);
 				}
 			});
@@ -248,7 +248,7 @@ async function packAntennaForHonoApi(
 
 	return {
 		id: antenna.id,
-		createdAt: parseId(deps.config, antenna.id).date.toISOString(),
+		createdAt: parseId(antenna.id).date.toISOString(),
 		name: antenna.name,
 		keywords: antenna.keywords,
 		excludeKeywords: antenna.excludeKeywords,
@@ -324,7 +324,7 @@ export async function handleHonoApiAntennasCreate(
 
 	const now = new Date();
 	const antenna = await createAntennaInDatabase(deps.db, {
-		id: genId(deps.config, now.getTime()),
+		id: genId(now.getTime()),
 		lastUsedAt: now,
 		userId: me.id,
 		name: params.name,
@@ -527,8 +527,8 @@ export async function handleHonoApiAntennasNotes(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseHonoApiParams(antennasNotesParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(deps.config, params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(deps.config, params.sinceDate) : null);
+	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
+	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');

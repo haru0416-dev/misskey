@@ -120,7 +120,7 @@ async function packInviteCodesForHonoApi(
 		id: ticket.id,
 		code: ticket.code,
 		expiresAt: ticket.expiresAt ? ticket.expiresAt.toISOString() : null,
-		createdAt: parseId(deps.config, ticket.id).date.toISOString(),
+		createdAt: parseId(ticket.id).date.toISOString(),
 		createdBy: ticket.createdById ? userById.get(ticket.createdById) ?? null : null,
 		usedBy: ticket.usedById ? userById.get(ticket.usedById) ?? null : null,
 		usedAt: ticket.usedAt ? ticket.usedAt.toISOString() : null,
@@ -146,14 +146,14 @@ export async function handleHonoApiAdminInviteCreate(
 	}
 
 	const tickets = await Promise.all(Array.from({ length: params.count }, () => createRegistrationTicketInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		createdById: me.id,
 		expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
 		code: generateInviteCode(),
 	})));
 
 	void createModerationLogInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		type: 'createInvitation',
 		info: {
@@ -190,7 +190,7 @@ export async function handleHonoApiInviteCreate(
 	if (policies.inviteLimit) {
 		const count = await countRegistrationTicketsCreatedSinceFromDatabase(deps.db, {
 			createdById: me.id,
-			sinceId: genId(deps.config, Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
+			sinceId: genId(Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
 		});
 
 		if (count >= policies.inviteLimit) {
@@ -199,7 +199,7 @@ export async function handleHonoApiInviteCreate(
 	}
 
 	const ticket = await createRegistrationTicketInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		createdById: me.id,
 		expiresAt: policies.inviteExpirationTime ? new Date(Date.now() + (policies.inviteExpirationTime * 60 * 1000)) : null,
 		code: generateInviteCode(),
@@ -242,7 +242,7 @@ export async function handleHonoApiInviteLimit(
 
 	const count = policies.inviteLimit ? await countRegistrationTicketsCreatedSinceFromDatabase(deps.db, {
 		createdById: me.id,
-		sinceId: genId(deps.config, Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
+		sinceId: genId(Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
 	}) : null;
 
 	return {
@@ -257,7 +257,7 @@ export async function handleHonoApiInviteList(
 ): Promise<Packed<'InviteCode'>[]> {
 	const params = parseHonoApiParams(inviteListParamDef, body);
 	const { sinceId, untilId, order } = resolveRegistrationTicketPagination({
-		gen: (time?: number) => genId(deps.config, time),
+		gen: (time?: number) => genId(time),
 	}, params);
 
 	const tickets = await listRegistrationTicketsCreatedByFromDatabase(deps.db, {

@@ -92,7 +92,7 @@ async function packUserListForHonoApi(
 
 	return {
 		id: userList.id,
-		createdAt: parseId(deps.config, userList.id).date.toISOString(),
+		createdAt: parseId(userList.id).date.toISOString(),
 		name: userList.name,
 		userIds,
 		isPublic: userList.isPublic,

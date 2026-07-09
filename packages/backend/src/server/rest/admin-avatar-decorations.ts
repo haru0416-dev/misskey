@@ -78,7 +78,7 @@ function packAdminAvatarDecorationForHonoApi(
 ): AdminAvatarDecoration {
 	return {
 		id: decoration.id,
-		createdAt: parseId(config, decoration.id).date.toISOString(),
+		createdAt: parseId(decoration.id).date.toISOString(),
 		updatedAt: decoration.updatedAt?.toISOString() ?? null,
 		name: decoration.name,
 		description: decoration.description,
@@ -96,7 +96,7 @@ export async function handleHonoApiAdminAvatarDecorationsCreate(
 	const params = parseHonoApiParams(adminAvatarDecorationsCreateParamDef, body);
 	const created = await createAvatarDecorationWithSideEffects({
 		db: deps.db,
-		genId: () => genId(deps.config),
+		genId,
 		publishInternalEvent: deps.publishInternalEvent,
 		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
 	}, {

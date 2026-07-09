@@ -8,16 +8,18 @@ import { boolean, index, integer, pgTable, timestamp, varchar } from 'drizzle-or
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { driveFile } from './drive-file.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
 export const channel = pgTable('channel', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
 	lastNotedAt: timestamp({ withTimezone: true }),
-	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>(),
+	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'set null' }),
 	name: varchar({ length: 128 }).notNull(),
 	description: varchar({ length: 2048 }),
-	bannerId: varchar({ length: 32 }).$type<MiDriveFile['id'] | null>(),
+	bannerId: varchar({ length: 32 }).$type<MiDriveFile['id'] | null>().references(() => driveFile.id, { onDelete: 'set null' }),
 	pinnedNoteIds: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
 	color: varchar({ length: 16 }).default('#86b300').notNull(),
 	isArchived: boolean().default(false).notNull(),
@@ -26,11 +28,11 @@ export const channel = pgTable('channel', {
 	isSensitive: boolean().default(false).notNull(),
 	allowRenoteToExternal: boolean().default(true).notNull(),
 }, table => [
-	index('IDX_29ef80c6f13bcea998447fce43').on(table.lastNotedAt),
-	index('IDX_823bae55bd81b3be6e05cff438').on(table.userId),
-	index('IDX_cc7c72974f1b2f385a8921f094').on(table.isArchived),
-	index('IDX_0f58c11241e649d2a638a8de94').on(table.notesCount),
-	index('IDX_094b86cd36bb805d1aa1e8cc9a').on(table.usersCount),
+	index('IDX_CHANNEL_LAST_NOTED_AT').on(table.lastNotedAt),
+	index('IDX_CHANNEL_USER_ID').on(table.userId),
+	index('IDX_CHANNEL_IS_ARCHIVED').on(table.isArchived),
+	index('IDX_CHANNEL_NOTES_COUNT').on(table.notesCount),
+	index('IDX_CHANNEL_USERS_COUNT').on(table.usersCount),
 	index('IDX_CHANNEL_BANNER_ID').on(table.bannerId),
 ]);
 

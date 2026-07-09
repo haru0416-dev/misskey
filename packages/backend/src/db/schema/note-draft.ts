@@ -10,9 +10,10 @@ import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
-const noteDraftVisibilityEnum = pgEnum('note_draft_visibility_enum', noteVisibilities);
+export const noteDraftVisibilityEnum = pgEnum('note_draft_visibility_enum', noteVisibilities);
 
 export const noteDraft = pgTable('note_draft', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
@@ -20,7 +21,7 @@ export const noteDraft = pgTable('note_draft', {
 	renoteId: varchar({ length: 32 }).$type<MiNote['id'] | null>(),
 	text: text(),
 	cw: varchar({ length: 512 }),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
 	localOnly: boolean().default(false).notNull(),
 	reactionAcceptance: varchar({ length: 64 }).$type<typeof noteReactionAcceptances[number]>(),
 	visibility: noteDraftVisibilityEnum().notNull().$type<typeof noteVisibilities[number]>(),
@@ -40,6 +41,8 @@ export const noteDraft = pgTable('note_draft', {
 	index('IDX_NOTE_DRAFT_RENOTE_ID').on(table.renoteId),
 	index('IDX_NOTE_DRAFT_USER_ID').on(table.userId),
 	index('IDX_NOTE_DRAFT_CHANNEL_ID').on(table.channelId),
+	index('IDX_NOTE_DRAFT_FILE_IDS').using('gin', table.fileIds),
+	index('IDX_NOTE_DRAFT_VISIBLE_USER_IDS').using('gin', table.visibleUserIds),
 ]);
 
 export type NoteDraftRow = typeof noteDraft.$inferSelect;

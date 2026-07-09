@@ -134,7 +134,7 @@ export async function handleHonoApiAuthSessionGenerate(
 
 	const token = randomUUID();
 	const session = await createAuthSessionInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		appId: app.id,
 		token,
 	});
@@ -178,7 +178,7 @@ export async function handleHonoApiAuthAccept(
 		const now = new Date();
 
 		await createAccessTokenInDatabase(deps.db, {
-			id: genId(deps.config, now.getTime()),
+			id: genId(now.getTime()),
 			lastUsedAt: now,
 			appId: session.appId,
 			userId: user.id,

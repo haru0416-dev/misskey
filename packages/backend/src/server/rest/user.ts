@@ -384,7 +384,7 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		uri: user.uri,
 		movedTo: null,
 		alsoKnownAs,
-		createdAt: parseId(deps.config, user.id).date.toISOString(),
+		createdAt: parseId(user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
 		lastFetchedAt: user.lastFetchedAt ? user.lastFetchedAt.toISOString() : null,
 		bannerUrl: user.bannerId == null ? null : user.bannerUrl,
@@ -494,7 +494,7 @@ export async function packMeDetailedForHonoApi(
 		uri: user.uri,
 		movedTo: null,
 		alsoKnownAs,
-		createdAt: parseId(deps.config, user.id).date.toISOString(),
+		createdAt: parseId(user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
 		lastFetchedAt: user.lastFetchedAt ? user.lastFetchedAt.toISOString() : null,
 		bannerUrl: user.bannerId == null ? null : user.bannerUrl,
@@ -1231,7 +1231,7 @@ export async function handleHonoApiUsersUpdateMemo(
 	}
 
 	await upsertUserMemoInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		targetUserId: target.id,
 		memo: params.memo,

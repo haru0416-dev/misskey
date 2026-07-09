@@ -64,7 +64,7 @@ describe('hono-queue-db (importUserLists)', () => {
 	});
 
 	async function createTestUser(prefix: string): Promise<MiUser> {
-		const id = genId(runtime.config);
+		const id = genId();
 		return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 			profile: { userId: id },
@@ -74,12 +74,12 @@ describe('hono-queue-db (importUserLists)', () => {
 	test('CSVに記載されたリストへローカルユーザーをメンバー追加する (リストは自動作成)', async () => {
 		const owner = await createTestUser('honoqueueimpulowner');
 		const member = await createTestUser('honoqueueimpulmember');
-		const listName = `imported-list-${genId(runtime.config)}`;
+		const listName = `imported-list-${genId()}`;
 
 		const { url, server } = await serveText(`${listName},${member.username}@${runtime.config.host},withReplies=true\n`);
 		servers.push(server);
 
-		const fileId = genId(runtime.config);
+		const fileId = genId();
 		await createDriveFileInDatabase(runtime.db, {
 			id: fileId,
 			md5: 'dummy',
@@ -101,6 +101,6 @@ describe('hono-queue-db (importUserLists)', () => {
 
 	test('存在しないfileIdは何もしない', async () => {
 		const owner = await createTestUser('honoqueueimpulnofile');
-		await expect(handleHonoQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId: genId(runtime.config) }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId: genId() }))).resolves.toBeUndefined();
 	});
 });

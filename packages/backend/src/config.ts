@@ -88,8 +88,6 @@ type Source = {
 	clusterLimit?: number;
 	threadPoolSize?: number;
 
-	id: string;
-
 	outgoingAddress?: string;
 	outgoingAddressFamily?: 'ipv4' | 'ipv6' | 'dual';
 
@@ -165,7 +163,6 @@ export type Config = {
 	maxFileSize: number;
 	clusterLimit: number | undefined;
 	threadPoolSize: number;
-	id: string;
 	outgoingAddress: string | undefined;
 	outgoingAddressFamily: 'ipv4' | 'ipv6' | 'dual' | undefined;
 	deliverJobConcurrency: number | undefined;
@@ -317,7 +314,6 @@ export function loadConfig(): Config {
 		redisForReactions: config.redisForReactions ? convertRedisOptions(config.redisForReactions, host) : redis,
 		sentryForBackend: config.sentryForBackend,
 		sentryForFrontend: config.sentryForFrontend,
-		id: config.id,
 		proxy: config.proxy,
 		proxySmtp: config.proxySmtp,
 		proxyBypassHosts: config.proxyBypassHosts,

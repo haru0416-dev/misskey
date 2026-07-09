@@ -38,9 +38,9 @@ export const instance = pgTable('instance', {
 	infoUpdatedAt: timestamp({ withTimezone: true }),
 	moderationNote: varchar({ length: 16384 }).default('').notNull(),
 }, table => [
-	index('IDX_f7b9d338207e40e768e4a5265a').on(table.firstRetrievedAt),
-	uniqueIndex('IDX_8d5afc98982185799b160e10eb').on(table.host),
-	index('IDX_3ede46f507c87ad698051d56a8').on(table.suspensionState),
+	index('IDX_INSTANCE_FIRST_RETRIEVED_AT').on(table.firstRetrievedAt),
+	uniqueIndex('IDX_INSTANCE_HOST_UNIQUE').on(table.host),
+	index('IDX_INSTANCE_SUSPENSION_STATE').on(table.suspensionState),
 ]);
 
 export type InstanceRow = typeof instance.$inferSelect;

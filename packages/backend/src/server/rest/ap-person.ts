@@ -221,7 +221,7 @@ export async function extractEmojisForHonoApi(deps: HonoApiApPersonDependencies,
 		}
 
 		return await insertEmojiInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			host: punyHost,
 			name,
 			uri: tag.id,
@@ -561,7 +561,7 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	}
 
 	let user: MiRemoteUser;
-	const userId = genId(deps.config);
+	const userId = genId();
 	try {
 		user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {

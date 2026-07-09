@@ -39,12 +39,12 @@ function fakeJob<T>(data: T): Bull.Job<T> {
 // (元実装のDriveService.addFileも同一のチェックを持つ — 絵文字管理自体が管理者限定機能であることに由来する)。
 // そのためテストユーザーには明示的にモデレーターロールを付与する。
 async function createModeratorTestUser(runtime: RuntimeDeps, prefix: string): Promise<MiUser> {
-	const id = genId(runtime.config);
+	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 		profile: { userId: id },
 	});
-	const roleId = genId(runtime.config);
+	const roleId = genId();
 	await createRoleInDatabase(runtime.db, {
 		id: roleId,
 		name: `${prefix}role${roleId}`,
@@ -53,7 +53,7 @@ async function createModeratorTestUser(runtime: RuntimeDeps, prefix: string): Pr
 		lastUsedAt: new Date(),
 		isModerator: true,
 	});
-	await createRoleAssignmentInDatabase(runtime.db, { id: genId(runtime.config), userId: user.id, roleId, expiresAt: null });
+	await createRoleAssignmentInDatabase(runtime.db, { id: genId(), userId: user.id, roleId, expiresAt: null });
 	return user;
 }
 
@@ -102,9 +102,9 @@ describe('hono-queue-emojis', () => {
 		const { url, server } = await serveBuffer(pngBytes, 'image/png');
 		servers.push(server);
 
-		const emojiName = `honoqueueemoji${genId(runtime.config)}`;
+		const emojiName = `honoqueueemoji${genId()}`;
 		await insertEmojiInDatabase(runtime.db, {
-			id: genId(runtime.config),
+			id: genId(),
 			updatedAt: new Date(),
 			name: emojiName,
 			host: null,
@@ -120,11 +120,11 @@ describe('hono-queue-emojis', () => {
 	});
 
 	test('存在しないuserIdは何もしない (export)', async () => {
-		await expect(handleHonoQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: genId(runtime.config) } }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 
 	test('handleHonoQueueImportCustomEmojis: zipから絵文字をインポートする', async () => {
-		const emojiName = `honoqueueimpemoji${genId(runtime.config)}`;
+		const emojiName = `honoqueueimpemoji${genId()}`;
 		const pngBytes = Buffer.from('89504e470d0a1a0a', 'hex');
 
 		const [zipPath, cleanupZip] = await createTemp();
@@ -165,7 +165,7 @@ describe('hono-queue-emojis', () => {
 
 			const user = await createModeratorTestUser(runtime, 'honoqueueimpemojiuser');
 
-			const fileId = genId(runtime.config);
+			const fileId = genId();
 			await createDriveFileInDatabase(runtime.db, {
 				id: fileId,
 				md5: 'dummy',
@@ -188,7 +188,7 @@ describe('hono-queue-emojis', () => {
 	});
 
 	test('存在しないfileIdは何もしない (import)', async () => {
-		const id = genId(runtime.config);
-		await expect(handleHonoQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id }, fileId: genId(runtime.config) }))).resolves.toBeUndefined();
+		const id = genId();
+		await expect(handleHonoQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id }, fileId: genId() }))).resolves.toBeUndefined();
 	});
 });

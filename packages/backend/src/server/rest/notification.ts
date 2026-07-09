@@ -9,13 +9,7 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { parseAidFull } from '@/misc/id/aid.js';
-import { parseAidxFull } from '@/misc/id/aidx.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { parseMeidFull } from '@/misc/id/meid.js';
-import { parseMeidgFull } from '@/misc/id/meidg.js';
-import { parseObjectIdFull } from '@/misc/id/object-id.js';
-import { parseUlidFull } from '@/misc/id/ulid.js';
 import { parseUuidv7Full } from '@/misc/id/uuidv7.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -152,21 +146,8 @@ type ClaimAchievementParams = {
 	name: typeof ACHIEVEMENT_TYPES[number];
 };
 
-function parseIdFull(config: Config, id: string): { date: number; additional: bigint } {
-	switch (config.id.toLowerCase()) {
-		case 'aid': return parseAidFull(id);
-		case 'aidx': return parseAidxFull(id);
-		case 'objectid': return parseObjectIdFull(id);
-		case 'meid': return parseMeidFull(id);
-		case 'meidg': return parseMeidgFull(id);
-		case 'ulid': return parseUlidFull(id);
-		case 'uuidv7': return parseUuidv7Full(id);
-		default: throw new Error('unrecognized id generation method');
-	}
-}
-
-export function toXListId(config: Config, id: string): string {
-	const { date, additional } = parseIdFull(config, id);
+export function toXListId(id: string): string {
+	const { date, additional } = parseUuidv7Full(id);
 	return `${date}-${BigInt.asUintN(64, additional).toString()}`;
 }
 
@@ -180,7 +161,7 @@ export async function xaddHonoApiNotification(
 			return (await deps.redis.xadd(
 				`notificationTimeline:${userId}`,
 				'MAXLEN', '~', deps.config.perUserNotificationsMaxCount.toString(),
-				toXListId(deps.config, notification.id),
+				toXListId(notification.id),
 				'data', JSON.stringify(notification),
 			))!;
 		} catch (err) {
@@ -208,7 +189,7 @@ function createSimpleNotification(
 		if (profile?.notificationRecieveConfig[type]?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type,
 		} satisfies HonoSimpleNotification;
@@ -243,7 +224,7 @@ export function createRoleAssignedNotification(
 		if (profile?.notificationRecieveConfig.roleAssigned?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'roleAssigned',
 			roleId: role.id,
@@ -273,7 +254,7 @@ export function createScheduledNotePostedNotification(deps: HonoApiNotificationD
 		if (profile?.notificationRecieveConfig.scheduledNotePosted?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'scheduledNotePosted',
 			noteId,
@@ -297,7 +278,7 @@ export function createScheduledNotePostFailedNotification(deps: HonoApiNotificat
 		if (profile?.notificationRecieveConfig.scheduledNotePostFailed?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'scheduledNotePostFailed',
 			noteDraftId,
@@ -321,7 +302,7 @@ export function createPollEndedNotification(deps: HonoApiNotificationDependencie
 		if (profile?.notificationRecieveConfig.pollEnded?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'pollEnded',
 			noteId,
@@ -350,7 +331,7 @@ export function createExportCompletedNotification(
 		if (profile?.notificationRecieveConfig.exportCompleted?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'exportCompleted',
 			exportedEntity,
@@ -384,7 +365,7 @@ export function createAppNotification(
 		if (profile?.notificationRecieveConfig.app?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'app',
 			appAccessTokenId: data.appAccessTokenId,
@@ -419,7 +400,7 @@ export function createTestNotification(deps: HonoApiNotificationDependencies, us
 		if (profile?.notificationRecieveConfig.test?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'test',
 		} satisfies TestNotification;
@@ -444,7 +425,7 @@ function createAchievementEarnedNotification(
 		if (profile?.notificationRecieveConfig.achievementEarned?.type === 'never') return;
 
 		const notification = {
-			id: genId(deps.config),
+			id: genId(),
 			createdAt: new Date().toISOString(),
 			type: 'achievementEarned',
 			achievement,

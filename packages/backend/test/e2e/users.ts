@@ -216,7 +216,7 @@ describe('ユーザー', () => {
 		const config = loadConfig();
 		const suffix = `${Date.now().toString(36).slice(-6)}x${++remoteUserCounter}`;
 		const host = options.host ?? `users-remote-${suffix}.example`;
-		const id = genId(config);
+		const id = genId();
 		const username = `uremote${suffix}`;
 		await createUserWithProfileAndPublickeyInDatabase(db, {
 			user: {

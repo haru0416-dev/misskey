@@ -40,13 +40,13 @@ describe('hono-queue-delete-account', () => {
 	});
 
 	test('ノート・ドライブファイル・ページ・ユーザー行を削除する (soft指定なし)', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `honoqueuedelacct${id}`, usernameLower: `honoqueuedelacct${id}`.toLowerCase() },
 			profile: { userId: id },
 		});
 
-		const noteId = genId(runtime.config);
+		const noteId = genId();
 		await createNoteInDatabase(runtime.db, {
 			id: noteId,
 			text: 'hono-queue-delete-account test',
@@ -55,7 +55,7 @@ describe('hono-queue-delete-account', () => {
 			visibility: 'public',
 		});
 
-		const fileId = genId(runtime.config);
+		const fileId = genId();
 		await createDriveFileInDatabase(runtime.db, {
 			id: fileId,
 			md5: 'dummy',
@@ -69,7 +69,7 @@ describe('hono-queue-delete-account', () => {
 			userHost: null,
 		});
 
-		const pageId = genId(runtime.config);
+		const pageId = genId();
 		await createPageInDatabase(runtime.db, {
 			id: pageId,
 			updatedAt: new Date(),
@@ -90,7 +90,7 @@ describe('hono-queue-delete-account', () => {
 	});
 
 	test('soft指定時はユーザー行を物理削除しない', async () => {
-		const id = genId(runtime.config);
+		const id = genId();
 		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `honoqueuedelacctsoft${id}`, usernameLower: `honoqueuedelacctsoft${id}`.toLowerCase() },
 			profile: { userId: id },
@@ -102,6 +102,6 @@ describe('hono-queue-delete-account', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: genId(runtime.config) }, soft: false }))).resolves.toBeUndefined();
+		await expect(handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: genId() }, soft: false }))).resolves.toBeUndefined();
 	});
 });

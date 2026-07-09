@@ -55,7 +55,7 @@ async function packUserListByRowForHonoApi(
 
 	return {
 		id: userList.id,
-		createdAt: parseId(deps.config, userList.id).date.toISOString(),
+		createdAt: parseId(userList.id).date.toISOString(),
 		name: userList.name,
 		userIds,
 		isPublic: userList.isPublic,
@@ -71,7 +71,7 @@ async function packUserListMembershipsManyForHonoApi(
 
 	return await Promise.all(memberships.map(async membership => ({
 		id: membership.id,
-		createdAt: parseId(deps.config, membership.id).date.toISOString(),
+		createdAt: parseId(membership.id).date.toISOString(),
 		userId: membership.userId,
 		user: userMap.get(membership.userId) ?? await packUserLiteForHonoApi(deps, membership.userId),
 		withReplies: membership.withReplies,
@@ -116,7 +116,7 @@ export async function addUserListMemberForHonoApi(
 	}
 
 	await createUserListMembershipInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: target.id,
 		userListId: list.id,
 		userListUserId: list.userId,
@@ -127,7 +127,7 @@ export async function addUserListMemberForHonoApi(
 	deps.publishUserListStream?.(list.id, 'userAdded', await packUserLiteForHonoApi(deps, target));
 
 	if (target.host != null) {
-		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId: () => genId(deps.config) }, 'proxy');
+		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
 		await createFollowJobForHonoApi(deps, [{ from: { id: proxy.id }, to: { id: target.id } }]);
 	}
 }
@@ -193,7 +193,7 @@ export async function handleHonoApiUsersListsCreate(
 	}
 
 	const userList = await createUserListInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		name: params.name,
 	});
@@ -228,7 +228,7 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	}
 
 	const userList = await createUserListInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		name: params.name,
 	});
@@ -365,7 +365,7 @@ export async function handleHonoApiUsersListsGetMemberships(
 
 	if (userList == null) throw noSuchListError('7bc05c21-1d7a-41ae-88f1-66820f4dc686');
 
-	const pagination = resolveUserListMembershipPagination({ gen: (time) => genId(deps.config, time) }, params);
+	const pagination = resolveUserListMembershipPagination({ gen: (time) => genId(time) }, params);
 	const memberships = await listUserListMembershipsByUserListIdWithPaginationFromDatabase(deps.db, userList.id, {
 		limit: params.limit,
 		order: pagination.order,

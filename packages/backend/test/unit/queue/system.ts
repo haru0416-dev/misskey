@@ -51,7 +51,7 @@ describe('hono-queue-system', () => {
 		redis = new Redis.Redis(config.redis);
 		redisForReactions = new Redis.Redis(config.redisForReactions);
 		const meta = await fetchMetaFromDatabase(db);
-		chartWriters = createHonoChartWriters({ db, redis, config, meta, logger: new Logger('test-chart') });
+		chartWriters = createHonoChartWriters({ db, redis, meta, logger: new Logger('test-chart') });
 		deps = { config, db, chartWriters, meta, redis, redisForReactions };
 	});
 
@@ -63,14 +63,14 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueClean', () => {
 		test('期限切れのロールアサインメントを削除する', async () => {
-			const userId = genId(config);
+			const userId = genId();
 			await createUserInDatabase(db, {
 				id: userId,
 				username: `honoqueuesys${userId}`,
 				usernameLower: `honoqueuesys${userId}`.toLowerCase(),
 			});
 
-			const roleId = genId(config);
+			const roleId = genId();
 			await createRoleInDatabase(db, {
 				id: roleId,
 				name: `honoqueuesysrole${roleId}`,
@@ -79,7 +79,7 @@ describe('hono-queue-system', () => {
 				lastUsedAt: new Date(),
 			});
 
-			const assignmentId = genId(config);
+			const assignmentId = genId();
 			await createRoleAssignmentInDatabase(db, {
 				id: assignmentId,
 				userId,
@@ -94,7 +94,7 @@ describe('hono-queue-system', () => {
 		});
 
 		test('90日より古いUserIpを削除する', async () => {
-			const userId = genId(config);
+			const userId = genId();
 			await createUserInDatabase(db, {
 				id: userId,
 				username: `honoqueuesys${userId}`,
@@ -114,14 +114,14 @@ describe('hono-queue-system', () => {
 		});
 
 		test('deactivateAntennaThresholdが0の場合はアンテナを停止しない', async () => {
-			const userId = genId(config);
+			const userId = genId();
 			await createUserInDatabase(db, {
 				id: userId,
 				username: `honoqueuesys${userId}`,
 				usernameLower: `honoqueuesys${userId}`.toLowerCase(),
 			});
 
-			const antennaId = genId(config);
+			const antennaId = genId();
 			await createAntennaInDatabase(db, {
 				id: antennaId,
 				userId,
@@ -142,7 +142,7 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueAggregateRetention', () => {
 		test('本日分のretention_aggregationレコードを作成し、過去のレコードのretention数を更新する', async () => {
-			const pastId = genId(config, Date.now() - (1000 * 60 * 60 * 24 * 5));
+			const pastId = genId(Date.now() - (1000 * 60 * 60 * 24 * 5));
 			await createRetentionAggregationInDatabase(db, {
 				id: pastId,
 				createdAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 5)),
@@ -184,32 +184,32 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueCheckExpiredMutings', () => {
 		test('期限切れのユーザーミュート/チャンネルミュートを削除する', async () => {
-			const muterId = genId(config);
+			const muterId = genId();
 			await createUserInDatabase(db, {
 				id: muterId,
 				username: `honoqueuesys${muterId}`,
 				usernameLower: `honoqueuesys${muterId}`.toLowerCase(),
 			});
-			const muteeId = genId(config);
+			const muteeId = genId();
 			await createUserInDatabase(db, {
 				id: muteeId,
 				username: `honoqueuesys${muteeId}`,
 				usernameLower: `honoqueuesys${muteeId}`.toLowerCase(),
 			});
 			await createMutingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				muterId,
 				muteeId,
 				expiresAt: new Date(Date.now() - 1000),
 			});
 
-			const channelId = genId(config);
+			const channelId = genId();
 			await createChannelInDatabase(db, {
 				id: channelId,
 				name: `honoqueuesyschannel${channelId}`,
 			});
 			await createChannelMutingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: muterId,
 				channelId,
 				expiresAt: new Date(Date.now() - 1000),
@@ -235,14 +235,14 @@ describe('hono-queue-system', () => {
 		});
 
 		test('バッファされたリアクションをnoteに反映する', async () => {
-			const userId = genId(config);
+			const userId = genId();
 			await createUserInDatabase(db, {
 				id: userId,
 				username: `honoqueuesys${userId}`,
 				usernameLower: `honoqueuesys${userId}`.toLowerCase(),
 			});
 
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'hono-queue-system bake test',

@@ -166,7 +166,7 @@ describe('Endpoints', () => {
 			const password = 'pending-password';
 			const salt = await bcrypt.genSalt(8);
 			const pending = await createUserPendingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				code: 'pending-signup-test',
 				username: 'pendinguser',
 				email: 'pending@example.test',
@@ -573,12 +573,12 @@ describe('Endpoints', () => {
 			const blockee = await signup({ username: `hblockee${suffix}` });
 
 			await createFollowingInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				followerId: blocker.id,
 				followeeId: blockee.id,
 			});
 			await createFollowingInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				followerId: blockee.id,
 				followeeId: blocker.id,
 			});
@@ -592,23 +592,23 @@ describe('Endpoints', () => {
 			});
 
 			await createFollowRequestInDatabase(db, {
-				id: genId(config, now + 2),
+				id: genId(now + 2),
 				followerId: blocker.id,
 				followeeId: blockee.id,
 			});
 			await createFollowRequestInDatabase(db, {
-				id: genId(config, now + 3),
+				id: genId(now + 3),
 				followerId: blockee.id,
 				followeeId: blocker.id,
 			});
 
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config, now + 4),
+				id: genId(now + 4),
 				userId: blockee.id,
 				name: `hblock-list-${suffix}`,
 			});
 			await createUserListMembershipInDatabase(db, {
-				id: genId(config, now + 5),
+				id: genId(now + 5),
 				userId: blocker.id,
 				userListId: userList.id,
 				userListUserId: blockee.id,
@@ -624,7 +624,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(selfBlock.body as any).error.code, 'BLOCKEE_IS_YOURSELF');
 			assert.strictEqual(castAsError(selfBlock.body as any).error.id, '88b19138-f28d-42c0-8499-6a31bbd0fdc6');
 
-			const noSuch = await api('blocking/create', { userId: genId(config, now - 1000) }, blocker);
+			const noSuch = await api('blocking/create', { userId: genId(now - 1000) }, blocker);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, '7cc4f851-e2f1-4621-9633-ec9e1d00c01e');
@@ -889,7 +889,7 @@ describe('Endpoints', () => {
 		test('emojis and emoji return packed local emoji data', async () => {
 			const config = loadConfig();
 			const emoji = await insertEmojiInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				name: 'hono_emoji',
 				host: null,
 				category: 'frameworks',
@@ -947,7 +947,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			await createRetentionAggregationInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				createdAt: new Date(now),
 				updatedAt: new Date(now),
 				dateKey: `hono-retention-${now}`,
@@ -956,7 +956,7 @@ describe('Endpoints', () => {
 				data: { '1': 1 },
 			});
 			const latest = {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				createdAt: new Date(now + 1),
 				updatedAt: new Date(now + 1),
 				dateKey: `hono-retention-${now + 1}`,
@@ -985,7 +985,7 @@ describe('Endpoints', () => {
 			const primary = `hono_hashtag_primary_${now}`;
 			const secondary = `hono_hashtag_secondary_${now}`;
 			await db.insert(hashtagTable).values([{
-				id: genId(config, now),
+				id: genId(now),
 				name: primary,
 				mentionedUserIds: [alice.id, bob.id],
 				mentionedUsersCount: 1000002,
@@ -1000,7 +1000,7 @@ describe('Endpoints', () => {
 				attachedRemoteUserIds: [],
 				attachedRemoteUsersCount: 0,
 			}, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				name: secondary,
 				mentionedUserIds: [alice.id],
 				mentionedUsersCount: 1000001,
@@ -1052,7 +1052,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-files-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5,
@@ -1100,7 +1100,7 @@ describe('Endpoints', () => {
 
 			const imageMd5 = createHash('md5').update(`hono-drive-stream-image-${suffix}`).digest('hex');
 			const imageFile = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: user.id,
 				userHost: null,
 				md5: imageMd5,
@@ -1112,7 +1112,7 @@ describe('Endpoints', () => {
 			});
 			const textMd5 = createHash('md5').update(`hono-drive-stream-text-${suffix}`).digest('hex');
 			await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: user.id,
 				userHost: null,
 				md5: textMd5,
@@ -1124,7 +1124,7 @@ describe('Endpoints', () => {
 			});
 			const otherMd5 = createHash('md5').update(`hono-drive-stream-other-${suffix}`).digest('hex');
 			const otherFile = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: otherUser.id,
 				userHost: null,
 				md5: otherMd5,
@@ -1151,7 +1151,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-attached-notes-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5,
@@ -1161,7 +1161,7 @@ describe('Endpoints', () => {
 				storedInternal: true,
 				url: `${origin}/files/${md5}`,
 			});
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				userId: alice.id,
@@ -1188,7 +1188,7 @@ describe('Endpoints', () => {
 			await api('following/create', { userId: sender.id }, recipient);
 			const md5 = createHash('md5').update(`hono-attached-chat-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: sender.id,
 				userHost: null,
 				md5,
@@ -1216,7 +1216,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-update-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5,
@@ -1228,7 +1228,7 @@ describe('Endpoints', () => {
 				isSensitive: false,
 			});
 			const folder = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-drive-update-folder-${suffix}`,
 			});
@@ -1268,7 +1268,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-delete-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5,
@@ -1303,7 +1303,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const md5A = createHash('md5').update(`hono-drive-move-a-${suffix}`).digest('hex');
 			const fileA = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5: md5A,
@@ -1315,7 +1315,7 @@ describe('Endpoints', () => {
 			});
 			const md5B = createHash('md5').update(`hono-drive-move-b-${suffix}`).digest('hex');
 			const fileB = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5: md5B,
@@ -1326,7 +1326,7 @@ describe('Endpoints', () => {
 				url: `${origin}/files/${md5B}`,
 			});
 			const folder = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-drive-move-folder-${suffix}`,
 			});
@@ -1573,7 +1573,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			const createdRole = await createRoleInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono avatar decoration role ${now}`,
@@ -1596,7 +1596,7 @@ describe('Endpoints', () => {
 				policies: {},
 			});
 			const decoration = await createAvatarDecorationInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				name: `Hono decoration ${now}`,
 				description: 'Hono avatar decoration',
 				url: 'https://example.com/avatar-decoration.png',
@@ -1621,7 +1621,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			const alpha = await createInstanceInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				host: `hono-fed-alpha-${now}.example`,
 				firstRetrievedAt: new Date(now),
 				usersCount: 1000001,
@@ -1645,7 +1645,7 @@ describe('Endpoints', () => {
 				moderationNote: 'hidden moderation note',
 			});
 			const beta = await createInstanceInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				host: `hono-fed-beta-${now}.example`,
 				firstRetrievedAt: new Date(now + 1),
 				usersCount: 1000002,
@@ -1729,7 +1729,7 @@ describe('Endpoints', () => {
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-admin-fed-${suffix}.example`;
 			const instance = await createInstanceInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				host,
 				firstRetrievedAt: new Date(now),
 				suspensionState: 'none',
@@ -1812,7 +1812,7 @@ describe('Endpoints', () => {
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-refresh-fed-${suffix}.invalid`;
 			await createInstanceInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				host,
 				firstRetrievedAt: new Date(now),
 			});
@@ -1846,7 +1846,7 @@ describe('Endpoints', () => {
 			const follower = await signup({ username: `hafr${suffix}` });
 			const followee = await signup({ username: `haft${suffix}` });
 			const following = await createFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: follower.id,
 				followeeId: followee.id,
 				followerHost: host,
@@ -1880,7 +1880,7 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-fed-users-${suffix}.example`;
-			const remoteId = genId(config, now);
+			const remoteId = genId(now);
 			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
 				user: {
 					id: remoteId,
@@ -1917,13 +1917,13 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hffe${suffix}` });
 
 			await createFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: follower.id,
 				followeeId: followee.id,
 				followeeHost: remoteFolloweeHost,
 			});
 			await createFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: followee.id,
 				followeeId: follower.id,
 				followerHost: remoteFollowerHost,
@@ -1981,7 +1981,7 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36);
 
-			const pollNoteId = genId(config, now);
+			const pollNoteId = genId(now);
 			await createNoteInDatabase(db, {
 				id: pollNoteId,
 				text: 'ap/get poll question',
@@ -2008,7 +2008,7 @@ describe('Endpoints', () => {
 			assert.deepStrictEqual((questionRes.body.oneOf as { name: string }[]).map(o => o.name), ['a', 'b']);
 
 			const likeNote = await post(alice, { text: 'ap/get like target' });
-			const reactionId = genId(config, now + 1);
+			const reactionId = genId(now + 1);
 			await createNoteReactionInDatabase(db, {
 				id: reactionId,
 				noteId: likeNote.id,
@@ -2023,7 +2023,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(likeRes.body.object, `${config.url}/notes/${likeNote.id}`);
 
 			const remoteHost = `ap-get-remote-${suffix}.example`;
-			const remoteFolloweeId = genId(config, now + 2);
+			const remoteFolloweeId = genId(now + 2);
 			const remoteFollowee = await createUserWithProfileAndPublickeyInDatabase(db, {
 				user: {
 					id: remoteFolloweeId,
@@ -2039,7 +2039,7 @@ describe('Endpoints', () => {
 				},
 			});
 			const followRequest = await createFollowRequestInDatabase(db, {
-				id: genId(config, now + 3),
+				id: genId(now + 3),
 				followerId: alice.id,
 				followeeId: remoteFollowee.id,
 			});
@@ -2114,7 +2114,7 @@ describe('Endpoints', () => {
 				const host = `127.0.0.1:${address.port}`;
 				actorUri = `http://${host}/users/updateremote${suffix}`;
 
-				const remoteUserId = genId(config, now);
+				const remoteUserId = genId(now);
 				const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
 					user: {
 						id: remoteUserId,
@@ -2274,14 +2274,14 @@ describe('Endpoints', () => {
 			const fileType = 'application/x-hono-admin-drive';
 			const remoteHost = `hono-admin-drive-${suffix}.remote`;
 			const folder = await createDriveFolderInDatabase(db, {
-				id: genId(config, now - 2500),
+				id: genId(now - 2500),
 				userId: bob.id,
 				name: `hono-admin-drive-folder-${suffix}`,
 				parentId: null,
 			});
 			const firstMd5 = createHash('md5').update(`hono-admin-drive-list-first-${suffix}`).digest('hex');
 			const firstLocal = await createDriveFileInDatabase(db, {
-				id: genId(config, now - 2000),
+				id: genId(now - 2000),
 				userId: bob.id,
 				userHost: null,
 				md5: firstMd5,
@@ -2298,7 +2298,7 @@ describe('Endpoints', () => {
 			});
 			const secondMd5 = createHash('md5').update(`hono-admin-drive-list-second-${suffix}`).digest('hex');
 			const secondLocal = await createDriveFileInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				userId: bob.id,
 				userHost: null,
 				md5: secondMd5,
@@ -2310,7 +2310,7 @@ describe('Endpoints', () => {
 			});
 			const remoteMd5 = createHash('md5').update(`hono-admin-drive-list-remote-${suffix}`).digest('hex');
 			const remote = await createDriveFileInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				userId: null,
 				userHost: remoteHost,
 				md5: remoteMd5,
@@ -2389,7 +2389,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const bobMd5 = createHash('md5').update(`hono-admin-drive-bob-${suffix}`).digest('hex');
 			const bobFile = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				userHost: null,
 				md5: bobMd5,
@@ -2418,7 +2418,7 @@ describe('Endpoints', () => {
 			});
 			const aliceMd5 = createHash('md5').update(`hono-admin-drive-alice-${suffix}`).digest('hex');
 			const aliceFile = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5: aliceMd5,
@@ -2528,7 +2528,7 @@ describe('Endpoints', () => {
 			}) => {
 				const md5 = createHash('md5').update(`hono-drive-delete-${params.seed}-${suffix}`).digest('hex');
 				return await createDriveFileInDatabase(db, {
-					id: genId(config),
+					id: genId(),
 					userId: params.userId,
 					userHost: params.userHost,
 					md5,
@@ -2660,7 +2660,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(assign.status, 204);
 
 			const localFirst = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 2000),
+				id: genId(now - 2000),
 				name: `honoemoji_first_${suffix}`,
 				host: null,
 				aliases: [`alias_${suffix}`],
@@ -2673,7 +2673,7 @@ describe('Endpoints', () => {
 				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 			});
 			const localSecond = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				name: `honoemoji_second_${suffix}`,
 				host: null,
 				aliases: [],
@@ -2687,7 +2687,7 @@ describe('Endpoints', () => {
 			});
 			const remoteHost = `hono-emoji-${suffix}.example`;
 			const remoteOlder = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 1500),
+				id: genId(now - 1500),
 				name: `remote_old_${suffix}`,
 				host: remoteHost,
 				aliases: [],
@@ -2700,7 +2700,7 @@ describe('Endpoints', () => {
 				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 			});
 			const remoteNewer = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 500),
+				id: genId(now - 500),
 				name: `remote_new_${suffix}`,
 				host: remoteHost,
 				aliases: [],
@@ -2799,7 +2799,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(assign.status, 204);
 
 			const localFirst = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 3000),
+				id: genId(now - 3000),
 				name: `hv2emoji${suffix}a`,
 				host: null,
 				aliases: [],
@@ -2812,7 +2812,7 @@ describe('Endpoints', () => {
 				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 			});
 			const localSecond = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 2000),
+				id: genId(now - 2000),
 				name: `hv2emoji${suffix}b`,
 				host: null,
 				aliases: [],
@@ -2826,7 +2826,7 @@ describe('Endpoints', () => {
 			});
 			const remoteHost = `hono-v2-emoji-${suffix}.example`;
 			const remoteEmoji = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				name: `hv2emoji${suffix}c`,
 				host: remoteHost,
 				aliases: [],
@@ -2911,7 +2911,7 @@ describe('Endpoints', () => {
 
 			const addMd5 = createHash('md5').update(`hono-emoji-add-${suffix}`).digest('hex');
 			const addFile = await createDriveFileInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				userId: manager.id,
 				userHost: null,
 				md5: addMd5,
@@ -2923,7 +2923,7 @@ describe('Endpoints', () => {
 			});
 			const updateMd5 = createHash('md5').update(`hono-emoji-update-${suffix}`).digest('hex');
 			const updateFile = await createDriveFileInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				userId: manager.id,
 				userHost: null,
 				md5: updateMd5,
@@ -3071,7 +3071,7 @@ describe('Endpoints', () => {
 			const imageUrl = `http://127.0.0.1:${address.port}/honoemoji_copy_${suffix}.png`;
 
 			const remote = await insertEmojiInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				name: `honoemoji_copy_${suffix}`,
 				host: `copy-${suffix}.remote`,
 				aliases: [`copy_alias_${suffix}`],
@@ -3174,7 +3174,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(assign.status, 204);
 
 			const first = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				name: `honoemoji_bulk_first_${suffix}`,
 				host: null,
 				aliases: [`base_${suffix}`],
@@ -3187,7 +3187,7 @@ describe('Endpoints', () => {
 				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 			});
 			const second = await insertEmojiInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				name: `honoemoji_bulk_second_${suffix}`,
 				host: null,
 				aliases: [],
@@ -3323,7 +3323,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(assign.status, 204);
 
 			const single = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 2000),
+				id: genId(now - 2000),
 				name: `honoemoji_delete_single_${suffix}`,
 				host: null,
 				aliases: [],
@@ -3336,7 +3336,7 @@ describe('Endpoints', () => {
 				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 			});
 			const bulkFirst = await insertEmojiInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				name: `honoemoji_delete_bulk_first_${suffix}`,
 				host: null,
 				aliases: [],
@@ -3349,7 +3349,7 @@ describe('Endpoints', () => {
 				roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 			});
 			const bulkSecond = await insertEmojiInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				name: `honoemoji_delete_bulk_second_${suffix}`,
 				host: null,
 				aliases: [],
@@ -3404,7 +3404,7 @@ describe('Endpoints', () => {
 				}
 
 				const tokenTarget = await insertEmojiInDatabase(db, {
-					id: genId(config, now + 1000),
+					id: genId(now + 1000),
 					name: `honoemoji_delete_token_${suffix}`,
 					host: null,
 					aliases: [],
@@ -3458,7 +3458,7 @@ describe('Endpoints', () => {
 			}, alice);
 			assert.strictEqual(assign.status, 204);
 
-			const fileId = genId(config, now);
+			const fileId = genId(now);
 			const removeImportJobs = async () => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
 				await Promise.all(jobs
@@ -3484,11 +3484,11 @@ describe('Endpoints', () => {
 				});
 
 				const token = await createAppToken(manager, ['write:admin:emoji']);
-				const appDenied = await api('admin/emoji/import-zip', { fileId: genId(config, now + 1) }, { token });
+				const appDenied = await api('admin/emoji/import-zip', { fileId: genId(now + 1) }, { token });
 				assert.strictEqual(appDenied.status, 400);
 				assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
 
-				const roleDenied = await api('admin/emoji/import-zip', { fileId: genId(config, now + 2) }, bob);
+				const roleDenied = await api('admin/emoji/import-zip', { fileId: genId(now + 2) }, bob);
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
@@ -3509,7 +3509,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			const globalAnnouncement = await createAnnouncementInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				updatedAt: null,
 				title: 'Global announcement',
 				text: 'Visible to everyone',
@@ -3523,7 +3523,7 @@ describe('Endpoints', () => {
 				userId: null,
 			});
 			const userAnnouncement = await createAnnouncementInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				updatedAt: null,
 				title: 'User announcement',
 				text: 'Visible to Alice only',
@@ -3537,7 +3537,7 @@ describe('Endpoints', () => {
 				userId: alice.id,
 			});
 			await createAnnouncementReadInDatabase(db, {
-				id: genId(config, now + 2),
+				id: genId(now + 2),
 				announcementId: globalAnnouncement.id,
 				userId: alice.id,
 			});
@@ -3581,7 +3581,7 @@ describe('Endpoints', () => {
 			const suffix = now.toString(36).slice(-8);
 			const reader = await signup({ username: `hra${suffix}` });
 			const announcement = await createAnnouncementInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				updatedAt: null,
 				title: 'Read test announcement',
 				text: 'text',
@@ -3653,21 +3653,21 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			const older = await createSigninInDatabase(db, {
-				id: genId(config, now - 2000),
+				id: genId(now - 2000),
 				userId: alice.id,
 				ip: '192.0.2.10',
 				headers: { 'user-agent': 'hono-signin-history-older' },
 				success: true,
 			});
 			const newer = await createSigninInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				userId: alice.id,
 				ip: '192.0.2.11',
 				headers: { 'user-agent': 'hono-signin-history-newer' },
 				success: false,
 			});
 			const otherUser = await createSigninInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				userId: bob.id,
 				ip: '192.0.2.12',
 				headers: { 'user-agent': 'hono-signin-history-other' },
@@ -3936,9 +3936,9 @@ describe('Endpoints', () => {
 
 	describe('sw endpoints', () => {
 		test('sw/show-registration returns own subscription or null', async () => {
-			const endpoint = `https://push.example.test/${genId(loadConfig())}`;
+			const endpoint = `https://push.example.test/${genId()}`;
 			await createSwSubscriptionInDatabase(db, {
-				id: genId(loadConfig()),
+				id: genId(),
 				userId: alice.id,
 				endpoint,
 				auth: 'auth-secret',
@@ -3965,7 +3965,7 @@ describe('Endpoints', () => {
 		});
 
 		test('sw registration lifecycle creates, updates, and unregisters subscriptions', async () => {
-			const endpoint = `https://push.example.test/lifecycle-${genId(loadConfig())}`;
+			const endpoint = `https://push.example.test/lifecycle-${genId()}`;
 
 			const registered = await api('sw/register', {
 				endpoint,
@@ -4015,7 +4015,7 @@ describe('Endpoints', () => {
 		});
 
 		test('sw secure endpoints reject app tokens and unregister accepts anonymous requests', async () => {
-			const endpoint = `https://push.example.test/anonymous-${genId(loadConfig())}`;
+			const endpoint = `https://push.example.test/anonymous-${genId()}`;
 			await api('sw/register', {
 				endpoint,
 				auth: 'auth',
@@ -4064,9 +4064,9 @@ describe('Endpoints', () => {
 	describe('reset-password endpoint', () => {
 		test('reset-password updates password and consumes reset token', async () => {
 			const config = loadConfig();
-			const token = `reset-token-${genId(config)}`;
+			const token = `reset-token-${genId()}`;
 			await createPasswordResetRequestInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: carol.id,
 				token,
 			});
@@ -4085,7 +4085,7 @@ describe('Endpoints', () => {
 
 	describe('verify-email endpoint', () => {
 		test('verify-email verifies matching code and rejects missing code', async () => {
-			const code = `verify-${genId(loadConfig())}`;
+			const code = `verify-${genId()}`;
 			await updateUserProfileInDatabase(db, dave.id, {
 				email: 'verify-email@example.test',
 				emailVerified: false,
@@ -4110,7 +4110,7 @@ describe('Endpoints', () => {
 		test('admin/promo/create はpromo note作成、重複、権限を維持する', async () => {
 			const config = loadConfig();
 			const now = Date.now();
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'admin promo create target',
@@ -4128,13 +4128,13 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_PROMOTED');
 			assert.strictEqual(castAsError(duplicate.body as any).error.id, 'ae427aa2-7a41-484f-a18c-2c1104051604');
 
-			const missing = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, alice);
+			const missing = await api('admin/promo/create', { noteId: genId(), expiresAt: now + 60_000 }, alice);
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
 			assert.strictEqual(castAsError(missing.body as any).error.id, 'ee449fbe-af2a-453b-9cae-cf2fe7c895fc');
 
 			const writeToken = await createAppToken(alice, ['write:admin:promo']);
-			const tokenNoteId = genId(config);
+			const tokenNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: tokenNoteId,
 				text: 'admin promo create token target',
@@ -4146,19 +4146,19 @@ describe('Endpoints', () => {
 			assert.strictEqual(createdWithToken.status, 204);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
-			const scopeDenied = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, { token: deniedToken });
+			const scopeDenied = await api('admin/promo/create', { noteId: genId(), expiresAt: now + 60_000 }, { token: deniedToken });
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honopromo${now.toString(36)}` });
-			const roleDenied = await api('admin/promo/create', { noteId: genId(config), expiresAt: now + 60_000 }, normalUser);
+			const roleDenied = await api('admin/promo/create', { noteId: genId(), expiresAt: now + 60_000 }, normalUser);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
 
 		test('promo/read records a promoted note as read idempotently', async () => {
 			const config = loadConfig();
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'promo read target',
@@ -4175,14 +4175,14 @@ describe('Endpoints', () => {
 			const duplicate = await api('promo/read', { noteId }, bob);
 			assert.strictEqual(duplicate.status, 204);
 
-			const missing = await api('promo/read', { noteId: genId(config) }, bob);
+			const missing = await api('promo/read', { noteId: genId() }, bob);
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
 		});
 
 		test('promo/read requires write account permission for app tokens', async () => {
 			const config = loadConfig();
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'promo read app token target',
@@ -4202,24 +4202,24 @@ describe('Endpoints', () => {
 		async function createFavoriteFixtures(prefix: string) {
 			const config = loadConfig();
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `${prefix}-list`,
 				isPublic: true,
 			});
 			const clip = await createClipInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `${prefix}-clip`,
 				isPublic: true,
 			});
 			const channel = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `${prefix}-channel`,
 			});
 			const page = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `${prefix} page`,
 				name: `${prefix}-page`,
@@ -4235,7 +4235,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 			const flash = await createFlashInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `${prefix} flash`,
 				summary: '',
@@ -4354,7 +4354,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const md5 = createHash('md5').update(`hono-drive-${Date.now()}`).digest('hex');
 			await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5,
@@ -4382,31 +4382,31 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const stamp = Date.now().toString(36);
 			const parent = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-parent-${stamp}`,
 				parentId: null,
 			});
 			const child = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-child-${stamp}`,
 				parentId: parent.id,
 			});
 			const rootChildName = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-child-${stamp}`,
 				parentId: null,
 			});
 			const otherUserFolder = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-child-${stamp}`,
 				parentId: null,
 			});
 			await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5: createHash('md5').update(`hono-drive-folder-${stamp}`).digest('hex'),
@@ -4471,21 +4471,21 @@ describe('Endpoints', () => {
 			assert.strictEqual(before.status, 200);
 
 			await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				text: 'hono draft 1',
 				visibility: 'public',
 				pollMultiple: false,
 			});
 			await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				text: 'hono draft 2',
 				visibility: 'home',
 				pollMultiple: false,
 			});
 			await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				text: 'other user draft',
 				visibility: 'public',
@@ -4510,7 +4510,7 @@ describe('Endpoints', () => {
 		test('notes/drafts/create creates a draft with reply/renote/poll/channel and schedules it', async () => {
 			const config = loadConfig();
 			const channel = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: 'draft channel',
 			});
@@ -4606,7 +4606,7 @@ describe('Endpoints', () => {
 		test('notes/drafts/update updates a draft, reschedules it, and rejects foreign or missing drafts', async () => {
 			const config = loadConfig();
 			const draft = await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				text: 'before update',
 				visibility: 'public',
@@ -4653,7 +4653,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(cannotRenote.body as any).error.code, 'CANNOT_RENOTE');
 
 			const foreignDraft = await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				text: 'bob draft',
 				visibility: 'public',
@@ -4678,7 +4678,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
 			const draft = await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				text: 'to be deleted',
 				visibility: 'public',
@@ -4705,7 +4705,7 @@ describe('Endpoints', () => {
 		test('notes/drafts/list paginates and filters by scheduled state', async () => {
 			const config = loadConfig();
 			const scheduledDraft = await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				text: 'list scheduled draft',
 				visibility: 'public',
@@ -4714,7 +4714,7 @@ describe('Endpoints', () => {
 				scheduledAt: new Date(Date.now() + 1000 * 60 * 60),
 			});
 			const plainDraft = await createNoteDraftInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				text: 'list plain draft',
 				visibility: 'public',
@@ -4759,7 +4759,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const host = `chart-${Date.now().toString(36)}.example.com`;
 			await createInstanceInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				host,
 				firstRetrievedAt: new Date(),
 			});
@@ -4832,7 +4832,7 @@ describe('Endpoints', () => {
 
 			const config = loadConfig();
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `antenna-list-${suffix}`,
 			});
@@ -4963,7 +4963,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(created.status, 200);
 			const antennaId = created.body.id;
 
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				userId: alice.id,
@@ -5152,7 +5152,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const other = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `other page ${suffix}`,
 				name: `hono-other-page-${suffix}`,
@@ -5168,7 +5168,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 			const page = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `before update ${suffix}`,
 				name: `hono-update-page-${suffix}`,
@@ -5220,7 +5220,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `to delete ${suffix}`,
 				name: `hono-delete-page-${suffix}`,
@@ -5243,7 +5243,7 @@ describe('Endpoints', () => {
 			const moderatorRole = await role(alice, { isModerator: true });
 			const moderator = await signup({ username: `pagemod${suffix}` });
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				roleId: moderatorRole.id,
 				userId: moderator.id,
 			});
@@ -5265,7 +5265,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `show page ${suffix}`,
 				name: `hono-show-page-${suffix}`,
@@ -5305,7 +5305,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `i pages ${suffix}`,
 				name: `hono-i-page-${suffix}`,
@@ -5339,7 +5339,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const publicPage = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `users pages public ${suffix}`,
 				name: `hono-users-page-public-${suffix}`,
@@ -5364,13 +5364,13 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-push-list-${suffix}`,
 			});
 			const blocker = await signup({ username: `pushblocker${suffix}` });
 			await createBlockingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				blockerId: blocker.id,
 				blockeeId: alice.id,
 			});
@@ -5400,12 +5400,12 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-pull-list-${suffix}`,
 			});
 			await createUserListMembershipInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				userListId: userList.id,
 				userListUserId: alice.id,
@@ -5428,12 +5428,12 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-membership-list-${suffix}`,
 			});
 			await createUserListMembershipInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				userListId: userList.id,
 				userListUserId: alice.id,
@@ -5455,13 +5455,13 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-public-memberships-list-${suffix}`,
 				isPublic: true,
 			});
 			await createUserListMembershipInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				userListId: userList.id,
 				userListUserId: alice.id,
@@ -5480,20 +5480,20 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const sourceList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-source-list-${suffix}`,
 				isPublic: true,
 			});
 			await createUserListMembershipInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: carol.id,
 				userListId: sourceList.id,
 				userListUserId: bob.id,
 			});
 
 			const privateList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-private-source-list-${suffix}`,
 				isPublic: false,
@@ -5526,7 +5526,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const latestSentAt = new Date('2024-01-02T03:04:05.000Z');
 			const webhook = await createWebhookInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: 'hono webhook',
 				on: ['mention', 'reply'],
@@ -5537,7 +5537,7 @@ describe('Endpoints', () => {
 				latestStatus: 204,
 			});
 			const otherWebhook = await createWebhookInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: 'other webhook',
 				on: ['follow'],
@@ -5604,7 +5604,7 @@ describe('Endpoints', () => {
 		test('users/lists/delete removes only the caller list and preserves error id', async () => {
 			const config = loadConfig();
 			const userList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-delete-list-${Date.now()}`,
 				isPublic: false,
@@ -5627,19 +5627,19 @@ describe('Endpoints', () => {
 		test('users/lists list, show, and update preserve visibility and ownership semantics', async () => {
 			const config = loadConfig();
 			const privateList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-private-list-${Date.now()}`,
 				isPublic: false,
 			});
 			const publicList = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-public-list-${Date.now()}`,
 				isPublic: true,
 			});
 			await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-bob-list-${Date.now()}`,
 				isPublic: true,
@@ -5703,19 +5703,19 @@ describe('Endpoints', () => {
 				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
 				['drive/folders', {}, readAccountToken],
 				['drive/folders/create', { name: 'hono-denied-folder' }, readDriveToken],
-				['drive/folders/delete', { folderId: genId(config) }, readDriveToken],
+				['drive/folders/delete', { folderId: genId() }, readDriveToken],
 				['drive/folders/find', { name: 'hono-denied-folder' }, readAccountToken],
-				['drive/folders/show', { folderId: genId(config) }, readAccountToken],
-				['drive/folders/update', { folderId: genId(config), name: 'hono-denied-folder' }, readDriveToken],
+				['drive/folders/show', { folderId: genId() }, readAccountToken],
+				['drive/folders/update', { folderId: genId(), name: 'hono-denied-folder' }, readDriveToken],
 				['notes/drafts/count', {}, readDriveToken],
 				['i/webhooks/list', {}, readDriveToken],
-				['i/webhooks/show', { webhookId: genId(config) }, readDriveToken],
-				['i/webhooks/delete', { webhookId: genId(config) }, readAccountToken],
-				['i/webhooks/update', { webhookId: genId(config) }, readAccountToken],
+				['i/webhooks/show', { webhookId: genId() }, readDriveToken],
+				['i/webhooks/delete', { webhookId: genId() }, readAccountToken],
+				['i/webhooks/update', { webhookId: genId() }, readAccountToken],
 				['users/lists/list', {}, readDriveToken],
-				['users/lists/show', { listId: genId(config) }, readDriveToken],
-				['users/lists/delete', { listId: genId(config) }, readAccountToken],
-				['users/lists/update', { listId: genId(config) }, readAccountToken],
+				['users/lists/show', { listId: genId() }, readDriveToken],
+				['users/lists/delete', { listId: genId() }, readAccountToken],
+				['users/lists/update', { listId: genId() }, readAccountToken],
 			] as const) {
 				const denied = await api(endpoint, params as any, { token });
 				assert.strictEqual(denied.status, 403, endpoint);
@@ -5742,7 +5742,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(selfFollow.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
 			assert.strictEqual(castAsError(selfFollow.body as any).error.id, '26fbe7bb-a331-4857-af17-205b426669a9');
 
-			const noSuch = await api('following/create', { userId: genId(config, now - 1000) }, follower);
+			const noSuch = await api('following/create', { userId: genId(now - 1000) }, follower);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
@@ -5814,7 +5814,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(selfUpdate.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
 			assert.strictEqual(castAsError(selfUpdate.body as any).error.id, '4c4cbaf9-962a-463b-8418-a5e365dbf2eb');
 
-			const noSuch = await api('following/update', { userId: genId(config, Date.now() - 1000), notify: 'normal' }, follower);
+			const noSuch = await api('following/update', { userId: genId(Date.now() - 1000), notify: 'normal' }, follower);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, '14318698-f67e-492a-99da-5353a5ac52be');
@@ -5857,7 +5857,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(selfUnfollow.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
 			assert.strictEqual(castAsError(selfUnfollow.body as any).error.id, 'd9e400b9-36b0-4808-b1d8-79e707f1296c');
 
-			const noSuch = await api('following/delete', { userId: genId(config, Date.now() - 1000) }, follower);
+			const noSuch = await api('following/delete', { userId: genId(Date.now() - 1000) }, follower);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, '5b12c78d-2b28-4dca-99d2-f56139b42ff8');
@@ -5905,7 +5905,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(selfInvalidate.body as any).error.code, 'FOLLOWER_IS_YOURSELF');
 			assert.strictEqual(castAsError(selfInvalidate.body as any).error.id, '07dc03b9-03da-422d-885b-438313707662');
 
-			const noSuch = await api('following/invalidate', { userId: genId(config, Date.now() - 1000) }, followee);
+			const noSuch = await api('following/invalidate', { userId: genId(Date.now() - 1000) }, followee);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'b77e6ae6-a3e5-40da-9cc8-c240115479cc');
@@ -5949,7 +5949,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
-			const noSuch = await api('following/requests/accept', { userId: genId(config, Date.now() - 1000) }, followee);
+			const noSuch = await api('following/requests/accept', { userId: genId(Date.now() - 1000) }, followee);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, '66ce1645-d66c-46bb-8b79-96739af885bd');
@@ -5989,7 +5989,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
-			const noSuch = await api('following/requests/cancel', { userId: genId(config, Date.now() - 1000) }, follower);
+			const noSuch = await api('following/requests/cancel', { userId: genId(Date.now() - 1000) }, follower);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, '4e68c551-fc4c-4e46-bb41-7d4a37bf9dab');
@@ -6020,7 +6020,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
-			const noSuch = await api('following/requests/reject', { userId: genId(config, Date.now() - 1000) }, followee);
+			const noSuch = await api('following/requests/reject', { userId: genId(Date.now() - 1000) }, followee);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'abc2ffa6-25b2-4380-ba99-321ff3a94555');
@@ -6100,21 +6100,21 @@ describe('Endpoints', () => {
 			const targetA = await signup({ username: `hfub${suffix}` });
 			const targetB = await signup({ username: `hfuc${suffix}` });
 			await createFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: updater.id,
 				followeeId: targetA.id,
 				notify: 'normal',
 				withReplies: false,
 			});
 			await createFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: updater.id,
 				followeeId: targetB.id,
 				notify: 'normal',
 				withReplies: false,
 			});
 			await createFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: targetA.id,
 				followeeId: updater.id,
 				notify: 'normal',
@@ -6141,7 +6141,7 @@ describe('Endpoints', () => {
 		test('flash/update updates own flash and preserves ownership errors', async () => {
 			const config = loadConfig();
 			const flash = await createFlashInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: 'old title',
 				summary: 'old summary',
@@ -6151,7 +6151,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 			const otherFlash = await createFlashInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: 'other title',
 				summary: 'other summary',
@@ -6182,7 +6182,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(denied.status, 400);
 			assert.strictEqual(castAsError(denied.body as any).error.id, '08e60c88-5948-478e-a132-02ec701d67b2');
 
-			const missing = await api('flash/update', { flashId: genId(config) }, alice);
+			const missing = await api('flash/update', { flashId: genId() }, alice);
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.id, '611e13d2-309e-419a-a5e4-e0422da39b02');
 		});
@@ -6191,7 +6191,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const movedUser = await signup({ username: `mvflash${Date.now().toString(36)}` });
 			const flash = await createFlashInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: 'moved title',
 				summary: 'moved summary',
@@ -6216,7 +6216,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const readAccountToken = await createAppToken(alice, ['read:account']);
 			const flash = await createFlashInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: 'permission title',
 				summary: 'permission summary',
@@ -6377,7 +6377,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const md5 = createHash('md5').update(`hono-import-${suffix}-${size}`).digest('hex');
 			return await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId,
 				userHost: null,
 				md5,
@@ -6398,13 +6398,13 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hib${suffix}` });
 
-			const deniedBeforeGrant = await api('i/import-blocking', { fileId: genId(loadConfig()) }, user);
+			const deniedBeforeGrant = await api('i/import-blocking', { fileId: genId() }, user);
 			assert.strictEqual(deniedBeforeGrant.status, 403);
 			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
 			await grantImportPolicy(user.id, suffix, 'canImportBlocking');
 
-			const noSuchFile = await api('i/import-blocking', { fileId: genId(loadConfig()) }, user);
+			const noSuchFile = await api('i/import-blocking', { fileId: genId() }, user);
 			assert.strictEqual(noSuchFile.status, 400);
 			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
 
@@ -6450,13 +6450,13 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hia${suffix}` });
 
-			const deniedBeforeGrant = await api('i/import-antennas', { fileId: genId(loadConfig()) }, user);
+			const deniedBeforeGrant = await api('i/import-antennas', { fileId: genId() }, user);
 			assert.strictEqual(deniedBeforeGrant.status, 403);
 			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
 			await grantImportPolicy(user.id, suffix, 'canImportAntennas');
 
-			const noSuchFile = await api('i/import-antennas', { fileId: genId(loadConfig()) }, user);
+			const noSuchFile = await api('i/import-antennas', { fileId: genId() }, user);
 			assert.strictEqual(noSuchFile.status, 400);
 			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
 
@@ -6482,7 +6482,7 @@ describe('Endpoints', () => {
 
 			try {
 				const antennaFile = await createDriveFileInDatabase(db, {
-					id: genId(config),
+					id: genId(),
 					userId: user.id,
 					userHost: null,
 					md5: createHash('md5').update(`hono-import-antennas-${suffix}`).digest('hex'),
@@ -6511,7 +6511,7 @@ describe('Endpoints', () => {
 				assert.strictEqual(assignZeroLimit.status, 204);
 
 				const antennaFile2 = await createDriveFileInDatabase(db, {
-					id: genId(config),
+					id: genId(),
 					userId: user.id,
 					userHost: null,
 					md5: createHash('md5').update(`hono-import-antennas-2-${suffix}`).digest('hex'),
@@ -6860,7 +6860,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			const createdRole = await createRoleInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono public role ${now}`,
@@ -6883,7 +6883,7 @@ describe('Endpoints', () => {
 				policies: {},
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now - 999),
+				id: genId(now - 999),
 				userId: bob.id,
 				roleId: createdRole.id,
 				expiresAt: null,
@@ -6922,7 +6922,7 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const explorableRole = await createRoleInDatabase(db, {
-				id: genId(config, now - 2000),
+				id: genId(now - 2000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono explorable role ${suffix}`,
@@ -6942,7 +6942,7 @@ describe('Endpoints', () => {
 				policies: {},
 			});
 			const nonExplorableRole = await createRoleInDatabase(db, {
-				id: genId(config, now - 1999),
+				id: genId(now - 1999),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono non-explorable role ${suffix}`,
@@ -6963,13 +6963,13 @@ describe('Endpoints', () => {
 			});
 			const member = await signup({ username: `hru${suffix}` });
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now - 1998),
+				id: genId(now - 1998),
 				userId: member.id,
 				roleId: explorableRole.id,
 				expiresAt: null,
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now - 1997),
+				id: genId(now - 1997),
 				userId: member.id,
 				roleId: nonExplorableRole.id,
 				expiresAt: null,
@@ -6999,7 +6999,7 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const explorableRole = await createRoleInDatabase(db, {
-				id: genId(config, now - 3000),
+				id: genId(now - 3000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono roles/notes role ${suffix}`,
@@ -7019,7 +7019,7 @@ describe('Endpoints', () => {
 				policies: {},
 			});
 			const author = await signup({ username: `hrn${suffix}` });
-			const publicNoteId = genId(config, now - 2000);
+			const publicNoteId = genId(now - 2000);
 			await createNoteInDatabase(db, {
 				id: publicNoteId,
 				text: 'roles/notes public note',
@@ -7027,7 +7027,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const followersNoteId = genId(config, now - 1000);
+			const followersNoteId = genId(now - 1000);
 			await createNoteInDatabase(db, {
 				id: followersNoteId,
 				text: 'roles/notes followers-only note',
@@ -7161,7 +7161,7 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `hug${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-users-gallery-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				userHost: null,
 				md5: fileMd5,
@@ -7253,7 +7253,7 @@ describe('Endpoints', () => {
 			await updateUserInDatabase(db, notExplorable.id, { isExplorable: false });
 
 			const remoteHost = `hono-users-${suffix}.example`;
-			const remoteId = genId(loadConfig());
+			const remoteId = genId();
 			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
 				user: {
 					id: remoteId,
@@ -7332,7 +7332,7 @@ describe('Endpoints', () => {
 			const otherPrefixed = await signup({ username: `hsbuh${suffix}x` });
 			const searcher = await signup({ username: `hsbuhs${suffix}` });
 			const remoteHost = `hono-sbuh-${suffix}.example`;
-			const remoteId = genId(loadConfig());
+			const remoteId = genId();
 			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
 				user: {
 					id: remoteId,
@@ -7426,7 +7426,7 @@ describe('Endpoints', () => {
 			await updateUserInDatabase(db, alreadyFollowed.id, { updatedAt: new Date() });
 			await api('following/create', { userId: alreadyFollowed.id }, me);
 			const remoteHost = `hono-recommend-${suffix}.example`;
-			const remoteId = genId(loadConfig());
+			const remoteId = genId();
 			await createUserWithProfileAndPublickeyInDatabase(db, {
 				user: {
 					id: remoteId,
@@ -7485,7 +7485,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(empty.status, 200);
 			assert.deepStrictEqual(empty.body, []);
 
-			const noSuchUser = await api('users/get-frequently-replied-users', { userId: genId(loadConfig()) });
+			const noSuchUser = await api('users/get-frequently-replied-users', { userId: genId() });
 			assert.strictEqual(noSuchUser.status, 400);
 			assert.strictEqual(castAsError(noSuchUser.body as any).error.code, 'NO_SUCH_USER');
 		});
@@ -7519,7 +7519,7 @@ describe('Endpoints', () => {
 
 			const moderatorRole = await role(alice, { name: `hono users/reactions moderator ${suffix}`, isModerator: true });
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(loadConfig()),
+				id: genId(),
 				roleId: moderatorRole.id,
 				userId: stranger.id,
 				expiresAt: null,
@@ -7529,7 +7529,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(moderatorSees.body.length, 1);
 
 			const remoteHost = `hono-reactions-${suffix}.example`;
-			const remoteId = genId(loadConfig());
+			const remoteId = genId();
 			await createUserWithProfileAndPublickeyInDatabase(db, {
 				user: {
 					id: remoteId,
@@ -7627,7 +7627,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(unavailableNoKey.status, 400);
 			assert.strictEqual(castAsError(unavailableNoKey.body as any).error.code, 'UNAVAILABLE');
 
-			const noSuchNote = await api('notes/translate', { noteId: genId(loadConfig()), targetLang: 'en' }, viewer);
+			const noSuchNote = await api('notes/translate', { noteId: genId(), targetLang: 'en' }, viewer);
 			assert.strictEqual(noSuchNote.status, 400);
 			assert.strictEqual(castAsError(noSuchNote.body as any).error.code, 'NO_SUCH_NOTE');
 
@@ -7685,7 +7685,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(reportAdmin.status, 400);
 			assert.strictEqual(castAsError(reportAdmin.body as any).error.code, 'CANNOT_REPORT_THE_ADMIN');
 
-			const reportMissing = await api('users/report-abuse', { userId: genId(loadConfig()), comment: 'no such user' }, reporter);
+			const reportMissing = await api('users/report-abuse', { userId: genId(), comment: 'no such user' }, reporter);
 			assert.strictEqual(reportMissing.status, 400);
 			assert.strictEqual(castAsError(reportMissing.body as any).error.code, 'NO_SUCH_USER');
 		});
@@ -7702,7 +7702,7 @@ describe('Endpoints', () => {
 			const moderator = await signup({ username: `hursm${suffix}` });
 			const moderatorRole = await role(alice, { name: `hono report-abuse moderator ${suffix}`, isModerator: true });
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				roleId: moderatorRole.id,
 				userId: moderator.id,
 				expiresAt: null,
@@ -7743,7 +7743,7 @@ describe('Endpoints', () => {
 			const stranger = await signup({ username: `hgcs${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-gallery-create-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				userHost: null,
 				md5: fileMd5,
@@ -7779,7 +7779,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.body.id, created.body.id);
 			assert.strictEqual(shown.body.isLiked, false);
 
-			const missing = await api('gallery/posts/show', { postId: genId(config) });
+			const missing = await api('gallery/posts/show', { postId: genId() });
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_POST');
 
@@ -7813,7 +7813,7 @@ describe('Endpoints', () => {
 			const liker = await signup({ username: `hgll${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-gallery-like-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				userHost: null,
 				md5: fileMd5,
@@ -7868,7 +7868,7 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `hgp${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-gallery-list-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				userHost: null,
 				md5: fileMd5,
@@ -7908,7 +7908,7 @@ describe('Endpoints', () => {
 			const other = await signup({ username: `higpo${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-i-gallery-posts-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				userHost: null,
 				md5: fileMd5,
@@ -7931,7 +7931,7 @@ describe('Endpoints', () => {
 
 			const otherFileMd5 = createHash('md5').update(`hono-i-gallery-posts-other-${suffix}`).digest('hex');
 			const otherFile = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: other.id,
 				userHost: null,
 				md5: otherFileMd5,
@@ -7969,7 +7969,7 @@ describe('Endpoints', () => {
 			const liker = await signup({ username: `higll${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-i-gallery-likes-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				userHost: null,
 				md5: fileMd5,
@@ -8062,7 +8062,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcn${suffix}` });
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: `hono clip note ${suffix}`,
@@ -8073,11 +8073,11 @@ describe('Endpoints', () => {
 			const clip = await api('clips/create', { name: `Hono clip notes ${suffix}` }, owner);
 			assert.strictEqual(clip.status, 200);
 
-			const missingClip = await api('clips/add-note', { clipId: genId(config), noteId }, owner);
+			const missingClip = await api('clips/add-note', { clipId: genId(), noteId }, owner);
 			assert.strictEqual(missingClip.status, 400);
 			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
 
-			const missingNote = await api('clips/add-note', { clipId: clip.body.id, noteId: genId(config) }, owner);
+			const missingNote = await api('clips/add-note', { clipId: clip.body.id, noteId: genId() }, owner);
 			assert.strictEqual(missingNote.status, 400);
 			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
 
@@ -8122,7 +8122,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcn2${suffix}` });
 			const stranger = await signup({ username: `hcn2s${suffix}` });
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: `clip note ${suffix}`,
@@ -8149,7 +8149,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(visibleForAnyone.status, 200);
 			assert.strictEqual(visibleForAnyone.body.length, 1);
 
-			const missingClip = await api('clips/notes', { clipId: genId(config) });
+			const missingClip = await api('clips/notes', { clipId: genId() });
 			assert.strictEqual(missingClip.status, 400);
 			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
 		});
@@ -8162,7 +8162,7 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hns${suffix}` });
 			const reactor = await signup({ username: `hnsr${suffix}` });
 
-			const replyTargetId = genId(config);
+			const replyTargetId = genId();
 			await createNoteInDatabase(db, {
 				id: replyTargetId,
 				text: 'reply target',
@@ -8170,7 +8170,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const renoteTargetId = genId(config);
+			const renoteTargetId = genId();
 			await createNoteInDatabase(db, {
 				id: renoteTargetId,
 				text: 'renote target',
@@ -8178,7 +8178,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const pollNoteId = genId(config);
+			const pollNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: pollNoteId,
 				text: 'poll note',
@@ -8199,7 +8199,7 @@ describe('Endpoints', () => {
 				channelId: null,
 			});
 
-			const mainNoteId = genId(config);
+			const mainNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: mainNoteId,
 				text: 'hono notes/show main note',
@@ -8215,7 +8215,7 @@ describe('Endpoints', () => {
 				reactionAndUserPairCache: [`${reactor.id}/👍`, `${author.id}/👍`],
 			});
 			await createNoteReactionInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				noteId: mainNoteId,
 				userId: reactor.id,
 				reaction: '👍',
@@ -8244,7 +8244,7 @@ describe('Endpoints', () => {
 			const reactedAsReactor = await api('notes/show', { noteId: mainNoteId }, reactor);
 			assert.strictEqual(reactedAsReactor.body.myReaction, '👍');
 
-			const missing = await api('notes/show', { noteId: genId(config) });
+			const missing = await api('notes/show', { noteId: genId() });
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
 			assert.strictEqual(castAsError(missing.body as any).error.id, '24fcbfc6-2e37-42b6-8388-c29b3861a08d');
@@ -8259,7 +8259,7 @@ describe('Endpoints', () => {
 			const follower = await signup({ username: `hnvf${suffix}` });
 			await api('following/create', { userId: author.id }, follower);
 
-			const specifiedNoteId = genId(config);
+			const specifiedNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: specifiedNoteId,
 				text: 'specified note',
@@ -8279,7 +8279,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(visibleToAddressee.body.isHidden, undefined);
 			assert.strictEqual(visibleToAddressee.body.text, 'specified note');
 
-			const followersNoteId = genId(config);
+			const followersNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: followersNoteId,
 				text: 'followers only note',
@@ -8296,7 +8296,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(visibleToFollower.body.text, 'followers only note');
 
 			await updateUserInDatabase(db, author.id, { requireSigninToViewContents: true });
-			const publicNoteId = genId(config);
+			const publicNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: publicNoteId,
 				text: 'public but restricted',
@@ -8323,7 +8323,7 @@ describe('Endpoints', () => {
 			const mentioned = await signup({ username: `hnrm${suffix}` });
 			const stranger = await signup({ username: `hnrs${suffix}` });
 
-			const rootId = genId(config);
+			const rootId = genId();
 			await createNoteInDatabase(db, {
 				id: rootId,
 				text: 'root note',
@@ -8331,7 +8331,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const replyId = genId(config);
+			const replyId = genId();
 			await createNoteInDatabase(db, {
 				id: replyId,
 				text: 'reply note',
@@ -8340,7 +8340,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 				replyId: rootId,
 			});
-			const grandReplyId = genId(config);
+			const grandReplyId = genId();
 			await createNoteInDatabase(db, {
 				id: grandReplyId,
 				text: 'grand reply note',
@@ -8349,7 +8349,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 				replyId: replyId,
 			});
-			const renoteId = genId(config);
+			const renoteId = genId();
 			await createNoteInDatabase(db, {
 				id: renoteId,
 				text: null,
@@ -8358,7 +8358,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 				renoteId: rootId,
 			});
-			const mentionNoteId = genId(config);
+			const mentionNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: mentionNoteId,
 				text: `@${mentioned.username} hi`,
@@ -8384,7 +8384,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(renotes.body.length, 1);
 			assert.strictEqual(renotes.body[0].id, renoteId);
 
-			const missingRenotes = await api('notes/renotes', { noteId: genId(config) });
+			const missingRenotes = await api('notes/renotes', { noteId: genId() });
 			assert.strictEqual(missingRenotes.status, 400);
 			assert.strictEqual(castAsError(missingRenotes.body as any).error.code, 'NO_SUCH_NOTE');
 
@@ -8393,7 +8393,7 @@ describe('Endpoints', () => {
 			const conversationIds = conversation.body.map((n: any) => n.id).sort();
 			assert.deepStrictEqual(conversationIds, [rootId, replyId].sort());
 
-			const missingConversation = await api('notes/conversation', { noteId: genId(config) });
+			const missingConversation = await api('notes/conversation', { noteId: genId() });
 			assert.strictEqual(missingConversation.status, 400);
 			assert.strictEqual(castAsError(missingConversation.body as any).error.code, 'NO_SUCH_NOTE');
 
@@ -8414,7 +8414,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnf${suffix}` });
 			const favoriter = await signup({ username: `hnff${suffix}` });
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'favorite target',
@@ -8457,7 +8457,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `htm${suffix}` });
 			const muter = await signup({ username: `htmm${suffix}` });
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'thread mute target',
@@ -8478,7 +8478,7 @@ describe('Endpoints', () => {
 			const stateAfterUnmute = await api('notes/state', { noteId }, muter);
 			assert.strictEqual(stateAfterUnmute.body.isMutedThread, false);
 
-			const missingNote = await api('notes/thread-muting/create', { noteId: genId(config) }, muter);
+			const missingNote = await api('notes/thread-muting/create', { noteId: genId() }, muter);
 			assert.strictEqual(missingNote.status, 400);
 			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
 		});
@@ -8525,7 +8525,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnff2${suffix}` });
 			const viewer = await signup({ username: `hnff2v${suffix}` });
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'featured note',
@@ -8533,7 +8533,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const mutedNoteId = genId(config);
+			const mutedNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: mutedNoteId,
 				text: 'featured note from muted user',
@@ -8573,7 +8573,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hn${suffix}` });
 
-			const publicNoteId = genId(config);
+			const publicNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: publicNoteId,
 				text: 'bare notes public',
@@ -8581,7 +8581,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const homeNoteId = genId(config);
+			const homeNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: homeNoteId,
 				text: 'bare notes home (excluded)',
@@ -8589,7 +8589,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'home',
 			});
-			const localOnlyNoteId = genId(config);
+			const localOnlyNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: localOnlyNoteId,
 				text: 'bare notes localOnly (excluded)',
@@ -8612,7 +8612,7 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hnf${suffix}` });
 			const file = await uploadFile(author);
 
-			const localNoteId = genId(config);
+			const localNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: localNoteId,
 				text: 'bare notes local',
@@ -8620,7 +8620,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const remoteNoteId = genId(config);
+			const remoteNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: remoteNoteId,
 				text: 'bare notes remote (excluded by local)',
@@ -8630,7 +8630,7 @@ describe('Endpoints', () => {
 			});
 
 			const rootNote = await post(author, { text: 'bare notes root', visibility: 'public' });
-			const replyNoteId = genId(config);
+			const replyNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: replyNoteId,
 				text: 'bare notes reply',
@@ -8640,7 +8640,7 @@ describe('Endpoints', () => {
 				replyId: rootNote.id,
 			});
 
-			const fileNoteId = genId(config);
+			const fileNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: fileNoteId,
 				text: null,
@@ -8650,7 +8650,7 @@ describe('Endpoints', () => {
 				fileIds: [file.body!.id],
 			});
 
-			const renoteNoteId = genId(config);
+			const renoteNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: renoteNoteId,
 				text: null,
@@ -8680,7 +8680,7 @@ describe('Endpoints', () => {
 			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
 			assert.strictEqual(withFiles.body.some((n: any) => n.id === localNoteId), false);
 
-			const pollNoteId = genId(config);
+			const pollNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: pollNoteId,
 				text: 'bare notes poll',
@@ -8712,7 +8712,7 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hnm${suffix}` });
 			const reactor = await signup({ username: `hnmr${suffix}` });
 
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'bare notes anonymous packing',
@@ -8735,7 +8735,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnp${suffix}` });
 
-			const oldNoteId = genId(config);
+			const oldNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: oldNoteId,
 				text: 'bare notes pagination old',
@@ -8743,7 +8743,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const newNoteId = genId(config);
+			const newNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: newNoteId,
 				text: 'bare notes pagination new',
@@ -8772,7 +8772,7 @@ describe('Endpoints', () => {
 			const stranger = await signup({ username: `huns${suffix}` });
 			const file = await uploadFile(author);
 
-			const publicNoteId = genId(config);
+			const publicNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: publicNoteId,
 				text: 'users/notes public',
@@ -8780,7 +8780,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const specifiedNoteId = genId(config);
+			const specifiedNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: specifiedNoteId,
 				text: 'users/notes specified',
@@ -8799,7 +8799,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(asVisibleUser.status, 200);
 			assert.ok(asVisibleUser.body.some((n: any) => n.id === specifiedNoteId));
 
-			const fileNoteId = genId(config);
+			const fileNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: fileNoteId,
 				text: null,
@@ -8813,7 +8813,7 @@ describe('Endpoints', () => {
 			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
 			assert.strictEqual(withFiles.body.some((n: any) => n.id === publicNoteId), false);
 
-			const pureRenoteId = genId(config);
+			const pureRenoteId = genId();
 			await createNoteInDatabase(db, {
 				id: pureRenoteId,
 				text: null,
@@ -8835,11 +8835,11 @@ describe('Endpoints', () => {
 			const viewer = await signup({ username: `huncv${suffix}` });
 
 			const channel = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: author.id,
 				name: `${suffix}-channel`,
 			});
-			const channelNoteId = genId(config);
+			const channelNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: channelNoteId,
 				text: 'users/notes channel note',
@@ -8858,7 +8858,7 @@ describe('Endpoints', () => {
 			assert.ok(withChannelNotes.body.some((n: any) => n.id === channelNoteId));
 
 			await createChannelMutingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: viewer.id,
 				channelId: channel.id,
 				expiresAt: null,
@@ -8889,7 +8889,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hunp${suffix}` });
 
-			const oldNoteId = genId(config);
+			const oldNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: oldNoteId,
 				text: 'users/notes pagination old',
@@ -8897,7 +8897,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const newNoteId = genId(config);
+			const newNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: newNoteId,
 				text: 'users/notes pagination new',
@@ -8943,7 +8943,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hncl${suffix}` });
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'clipped note',
@@ -8961,7 +8961,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(clips.body.length, 1);
 			assert.strictEqual(clips.body[0].id, publicClip.body.id);
 
-			const missing = await api('notes/clips', { noteId: genId(config) });
+			const missing = await api('notes/clips', { noteId: genId() });
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
 		});
@@ -8971,7 +8971,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnst${suffix}` });
 			const tag = `hono-tag-${suffix}`;
-			const taggedNoteId = genId(config);
+			const taggedNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: taggedNoteId,
 				text: `#${tag}`,
@@ -8980,7 +8980,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 				tags: [tag.toLowerCase()],
 			});
-			const untaggedNoteId = genId(config);
+			const untaggedNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: untaggedNoteId,
 				text: 'no tag here',
@@ -8999,7 +8999,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnsp${suffix}` });
-			const noteId = genId(config);
+			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
 				text: 'partial bulk target',
@@ -9024,7 +9024,7 @@ describe('Endpoints', () => {
 			const stranger = await signup({ username: `hnts${suffix}` });
 			await api('following/create', { userId: followee.id }, viewer);
 
-			const followeeNoteId = genId(config);
+			const followeeNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: followeeNoteId,
 				text: 'timeline from followee',
@@ -9032,7 +9032,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const strangerNoteId = genId(config);
+			const strangerNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: strangerNoteId,
 				text: 'timeline from stranger',
@@ -9054,18 +9054,18 @@ describe('Endpoints', () => {
 			const member = await signup({ username: `hultm${suffix}` });
 			const nonMember = await signup({ username: `hultn${suffix}` });
 			const list = await createUserListInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				name: `hono user-list-timeline ${suffix}`,
 			});
 			await createUserListMembershipInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: member.id,
 				userListId: list.id,
 				userListUserId: owner.id,
 			});
 
-			const memberNoteId = genId(config);
+			const memberNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: memberNoteId,
 				text: 'from list member',
@@ -9073,7 +9073,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const nonMemberNoteId = genId(config);
+			const nonMemberNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: nonMemberNoteId,
 				text: 'from non member',
@@ -9087,7 +9087,7 @@ describe('Endpoints', () => {
 			assert.ok(timeline.body.some((n: any) => n.id === memberNoteId));
 			assert.strictEqual(timeline.body.some((n: any) => n.id === nonMemberNoteId), false);
 
-			const missingList = await api('notes/user-list-timeline', { listId: genId(config) }, owner);
+			const missingList = await api('notes/user-list-timeline', { listId: genId() }, owner);
 			assert.strictEqual(missingList.status, 400);
 			assert.strictEqual(castAsError(missingList.body as any).error.code, 'NO_SUCH_LIST');
 		});
@@ -9098,7 +9098,7 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hnpr${suffix}` });
 			const voter = await signup({ username: `hnprv${suffix}` });
 
-			const unvotedNoteId = genId(config);
+			const unvotedNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: unvotedNoteId,
 				text: 'unvoted poll',
@@ -9128,7 +9128,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnse${suffix}` });
-			const searchNoteId = genId(config);
+			const searchNoteId = genId();
 			const uniqueText = `hono-search-unique-${suffix}`;
 			await createNoteInDatabase(db, {
 				id: searchNoteId,
@@ -9155,7 +9155,7 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `hpp${suffix}` });
 			const pusher = await signup({ username: `hppp${suffix}` });
 			const page = await createPageInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				updatedAt: new Date(),
 				title: `page-push ${suffix}`,
 				name: `hpp-page-${suffix}`,
@@ -9176,7 +9176,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(secureDenied.status, 400);
 			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
 
-			const missing = await api('page-push', { pageId: genId(config), event: 'ping' }, pusher);
+			const missing = await api('page-push', { pageId: genId(), event: 'ping' }, pusher);
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_PAGE');
 			assert.strictEqual(castAsError(missing.body as any).error.id, '4a13ad31-6729-46b4-b9af-e86b265c2e74');
@@ -9272,13 +9272,13 @@ describe('Endpoints', () => {
 
 			const readToken = await createAppToken(alice, ['read:admin:roles']);
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 1000),
+				id: genId(now + 1000),
 				userId: bob.id,
 				roleId: created.body.id,
 				expiresAt: null,
 			});
 			const carolRoleAssignment = await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 1001),
+				id: genId(now + 1001),
 				userId: carol.id,
 				roleId: created.body.id,
 				expiresAt: new Date(now + 60 * 1000),
@@ -9358,7 +9358,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(assignRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
 			const moderatorRole = await createRoleInDatabase(db, {
-				id: genId(config, now + 2000),
+				id: genId(now + 2000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono moderator role ${now}`,
@@ -9381,7 +9381,7 @@ describe('Endpoints', () => {
 				policies: {},
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 2001),
+				id: genId(now + 2001),
 				userId: normalUser.id,
 				roleId: moderatorRole.id,
 				expiresAt: null,
@@ -9805,7 +9805,7 @@ describe('Endpoints', () => {
 		async function createReport(suffix: string, values: Partial<Parameters<typeof createAbuseUserReportInDatabase>[1]> = {}) {
 			const config = loadConfig();
 			return await createAbuseUserReportInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				targetUserId: bob.id,
 				reporterId: carol.id,
 				comment: `Hono abuse report ${suffix}`,
@@ -9852,11 +9852,11 @@ describe('Endpoints', () => {
 			const suffix = now.toString(36).slice(-8);
 			const config = loadConfig();
 			const unresolved = await createReport(`${suffix}unresolved`, {
-				id: genId(config, now - 2000),
+				id: genId(now - 2000),
 				comment: `Hono abuse report list unresolved ${suffix}`,
 			});
 			const resolved = await createReport(`${suffix}resolved`, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				assigneeId: alice.id,
 				resolved: true,
 				resolvedAs: 'reject',
@@ -9864,7 +9864,7 @@ describe('Endpoints', () => {
 				comment: `Hono abuse report list resolved ${suffix}`,
 			});
 			const remoteReporter = await createReport(`${suffix}remote`, {
-				id: genId(config, now),
+				id: genId(now),
 				reporterHost: 'remote.example',
 				comment: `Hono abuse report list remote ${suffix}`,
 			});
@@ -10026,7 +10026,7 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const config = loadConfig();
-			const targetId = genId(config, now - 1000);
+			const targetId = genId(now - 1000);
 			const targetHost = `hono-abuse-forward-${suffix}.example`;
 			const targetInbox = `https://${targetHost}/inbox`;
 			const targetUri = `https://${targetHost}/users/${targetId}`;
@@ -10045,7 +10045,7 @@ describe('Endpoints', () => {
 				},
 			});
 			const report = await createReport(`${suffix}forward`, {
-				id: genId(config, now),
+				id: genId(now),
 				targetUserId: target.id,
 				targetUserHost: targetHost,
 				comment: `Hono abuse report forward ${suffix}`,
@@ -10074,7 +10074,7 @@ describe('Endpoints', () => {
 
 			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
 			const tokenReport = await createReport(`${suffix}forwardtoken`, {
-				id: genId(config, now + 1000),
+				id: genId(now + 1000),
 				targetUserId: target.id,
 				targetUserHost: targetHost,
 				comment: `Hono abuse report forward token ${suffix}`,
@@ -10225,7 +10225,7 @@ describe('Endpoints', () => {
 				lastActiveDate: new Date(now - 1234),
 			});
 			const showRole = await createRoleInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono show user role ${suffix}`,
@@ -10254,13 +10254,13 @@ describe('Endpoints', () => {
 				},
 			});
 			const assign = await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				userId: target.id,
 				roleId: showRole.id,
 				expiresAt: new Date(now + 60 * 1000),
 			});
 			const signin = await createSigninInDatabase(db, {
-				id: genId(config, now + 2),
+				id: genId(now + 2),
 				userId: target.id,
 				ip: `10.0.0.${Number.parseInt(suffix.slice(-2), 36) % 200}`,
 				headers: {
@@ -10283,7 +10283,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.body.lastActiveDate, new Date(now - 1234).toISOString());
 			assert.strictEqual(shown.body.policies.canPublicNote, false);
 			assert.ok(shown.body.roles.some(item => item.id === showRole.id && item.name === showRole.name && item.usersCount === 1));
-			assert.ok(shown.body.roleAssigns.some(item => item.roleId === showRole.id && item.createdAt === parseId(config, assign.id).date.toISOString() && item.expiresAt === assign.expiresAt?.toISOString()));
+			assert.ok(shown.body.roleAssigns.some(item => item.roleId === showRole.id && item.createdAt === parseId(assign.id).date.toISOString() && item.expiresAt === assign.expiresAt?.toISOString()));
 			assert.ok(shown.body.signins.some(item => item.id === signin.id && item.ip === signin.ip && item.success === true));
 
 			const listed = await api('admin/show-users', {
@@ -10326,7 +10326,7 @@ describe('Endpoints', () => {
 			const avatarMd5 = createHash('md5').update(`hono-admin-avatar-${suffix}`).digest('hex');
 			const bannerMd5 = createHash('md5').update(`hono-admin-banner-${suffix}`).digest('hex');
 			const avatarFile = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: target.id,
 				userHost: null,
 				md5: avatarMd5,
@@ -10337,7 +10337,7 @@ describe('Endpoints', () => {
 				url: `${origin}/files/${avatarMd5}`,
 			});
 			const bannerFile = await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: target.id,
 				userHost: null,
 				md5: bannerMd5,
@@ -10546,7 +10546,7 @@ describe('Endpoints', () => {
 			const throwawayFollowee = await signup({ username: `hsusf${suffix}` });
 			const config = loadConfig();
 			const following = await createFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: target.id,
 				followeeId: throwawayFollowee.id,
 			});
@@ -10738,7 +10738,7 @@ describe('Endpoints', () => {
 				['accepted', 'accepted'],
 				['rejected', 'rejected'],
 			] as const).map(([label, status], i) => createRelayInDatabase(db, {
-				id: genId(config, now + i),
+				id: genId(now + i),
 				inbox: `https://relay-${label}-${now}.example/inbox`,
 				status,
 			})));
@@ -11049,7 +11049,7 @@ describe('Endpoints', () => {
 			const inviter = await signup({ username: `honoinv${now.toString(36)}` });
 			const deniedUser = await signup({ username: `honoinvdeny${now.toString(36)}` });
 			const inviterRole = await createRoleInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono invite role ${now}`,
@@ -11088,18 +11088,18 @@ describe('Endpoints', () => {
 				},
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				userId: inviter.id,
 				roleId: inviterRole.id,
 				expiresAt: null,
 			});
 			await createRegistrationTicketInDatabase(db, {
-				id: genId(config, now - 1000),
+				id: genId(now - 1000),
 				code: `hono-invite-recent-${now}`,
 				createdById: inviter.id,
 			});
 			await createRegistrationTicketInDatabase(db, {
-				id: genId(config, now - (1000 * 60 * 120)),
+				id: genId(now - (1000 * 60 * 120)),
 				code: `hono-invite-old-${now}`,
 				createdById: inviter.id,
 			});
@@ -11123,7 +11123,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			const inviterRole = await createRoleInDatabase(db, {
-				id: genId(config, now + 10),
+				id: genId(now + 10),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Invite role ${now}`,
@@ -11152,13 +11152,13 @@ describe('Endpoints', () => {
 				},
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 11),
+				id: genId(now + 11),
 				userId: bob.id,
 				roleId: inviterRole.id,
 				expiresAt: null,
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 12),
+				id: genId(now + 12),
 				userId: carol.id,
 				roleId: inviterRole.id,
 				expiresAt: null,
@@ -11245,7 +11245,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const now = Date.now();
 			const marker = `hono moderation log ${now}`;
-			const id = genId(config, now);
+			const id = genId(now);
 			await createModerationLogInDatabase(db, {
 				id,
 				userId: alice.id,
@@ -11425,7 +11425,7 @@ describe('Endpoints', () => {
 			const manager = await signup({ username: `honoavmgr${now.toString(36)}` });
 			const config = loadConfig();
 			const managerRole = await createRoleInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `avatar manager ${now}`,
@@ -11450,7 +11450,7 @@ describe('Endpoints', () => {
 				},
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				userId: manager.id,
 				roleId: managerRole.id,
 				expiresAt: null,
@@ -12204,7 +12204,7 @@ describe('Endpoints', () => {
 			const moderatorRole = await role(alice, { isModerator: true });
 			const moderator = await signup({ username: `hnflmo${suffix}` });
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				roleId: moderatorRole.id,
 				userId: moderator.id,
 			});
@@ -12861,21 +12861,21 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const stamp = Date.now().toString(36);
 			const owned = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-owned-${stamp}`,
 				description: 'hono owned channel',
 				lastNotedAt: new Date('2024-01-01T00:00:00.000Z'),
 			});
 			const followed = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-followed-${stamp}`,
 				description: 'hono followed channel',
 				lastNotedAt: new Date('2024-01-02T00:00:00.000Z'),
 			});
 			const archived = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `hono-archived-${stamp}`,
 				description: 'hono archived channel',
@@ -12883,17 +12883,17 @@ describe('Endpoints', () => {
 				isArchived: true,
 			});
 			await createChannelFollowingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				followerId: alice.id,
 				followeeId: followed.id,
 			});
 			await createChannelFavoriteInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				channelId: followed.id,
 			});
 			await createChannelMutingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				channelId: followed.id,
 			});
@@ -12949,7 +12949,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const md5 = createHash('md5').update(seed).digest('hex');
 			return await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId,
 				userHost: null,
 				md5,
@@ -13015,7 +13015,7 @@ describe('Endpoints', () => {
 			const requester = await signup({ username: `honochreq${now.toString(36)}` });
 			const fileOwner = await signup({ username: `honochfile${now.toString(36)}` });
 			const denyRole = await createRoleInDatabase(db, {
-				id: genId(config, now),
+				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono channel create deny role ${now}`,
@@ -13044,7 +13044,7 @@ describe('Endpoints', () => {
 				},
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 1),
+				id: genId(now + 1),
 				userId: deniedUser.id,
 				roleId: denyRole.id,
 				expiresAt: null,
@@ -13089,7 +13089,7 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `hcupown${now.toString(36)}` });
 			const intruder = await signup({ username: `honochupintr${now.toString(36)}` });
 			const target = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				name: `hono-update-target-${now.toString(36)}`,
 				description: 'hono update target',
@@ -13127,7 +13127,7 @@ describe('Endpoints', () => {
 
 			const moderator = await signup({ username: `honomod${now.toString(36)}` });
 			const moderatorRole = await createRoleInDatabase(db, {
-				id: genId(config, now + 2),
+				id: genId(now + 2),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `Hono channel moderator role ${now}`,
@@ -13150,7 +13150,7 @@ describe('Endpoints', () => {
 				policies: {},
 			});
 			await createRoleAssignmentInDatabase(db, {
-				id: genId(config, now + 3),
+				id: genId(now + 3),
 				userId: moderator.id,
 				roleId: moderatorRole.id,
 				expiresAt: null,
@@ -13170,7 +13170,7 @@ describe('Endpoints', () => {
 		test('follow and unfollow update the channel following row', async () => {
 			const config = loadConfig();
 			const target = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-follow-${Date.now().toString(36)}`,
 				description: 'hono follow target',
@@ -13197,7 +13197,7 @@ describe('Endpoints', () => {
 		test('keeps legacy validation, permission, and moved-account errors', async () => {
 			const config = loadConfig();
 			const target = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-follow-validation-${Date.now().toString(36)}`,
 				description: 'hono follow validation target',
@@ -13240,21 +13240,21 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const stamp = Date.now().toString(36);
 			const target = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-mute-${stamp}`,
 				description: 'hono mute target',
 				lastNotedAt: new Date('2024-01-04T00:00:00.000Z'),
 			});
 			const expiredTarget = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-expired-mute-${stamp}`,
 				description: 'hono expired mute target',
 				lastNotedAt: new Date('2024-01-05T00:00:00.000Z'),
 			});
 			await createChannelMutingInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				channelId: expiredTarget.id,
 				expiresAt: new Date(Date.now() - 60_000),
@@ -13303,7 +13303,7 @@ describe('Endpoints', () => {
 		test('keeps legacy validation, permission, and moved-account errors', async () => {
 			const config = loadConfig();
 			const target = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `hono-mute-validation-${Date.now().toString(36)}`,
 				description: 'hono mute validation target',
@@ -13367,19 +13367,19 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const prefix = `hono-search-${Date.now().toString(36)}`;
 			const aaa = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `${prefix}-aaa`,
 				description: `${prefix}-bbb`,
 			});
 			const ccc1 = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `${prefix}-ccc1`,
 				description: `${prefix}-ddd1`,
 			});
 			const ccc2 = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: bob.id,
 				name: `${prefix}-ccc2`,
 				description: `${prefix}-ddd2`,
@@ -13493,12 +13493,12 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcs${suffix}` });
 			const channel = await createChannelInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: owner.id,
 				name: `hono-channel-show-${suffix}`,
 				description: 'hono channel show test',
 			});
-			const pinnedNoteId = genId(config);
+			const pinnedNoteId = genId();
 			await createNoteInDatabase(db, {
 				id: pinnedNoteId,
 				text: 'channel pinned note',
@@ -13515,7 +13515,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.body.pinnedNoteIds?.[0], pinnedNoteId);
 			assert.strictEqual(shown.body.pinnedNotes?.[0]?.id, pinnedNoteId);
 
-			const missingChannel = await api('channels/show', { channelId: genId(config) });
+			const missingChannel = await api('channels/show', { channelId: genId() });
 			assert.strictEqual(missingChannel.status, 400);
 			assert.strictEqual(castAsError(missingChannel.body as any).error.code, 'NO_SUCH_CHANNEL');
 
@@ -13525,7 +13525,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(timeline.body[0].id, pinnedNoteId);
 			assert.strictEqual(timeline.body[0].channelId, channel.id);
 
-			const missingTimeline = await api('channels/timeline', { channelId: genId(config) });
+			const missingTimeline = await api('channels/timeline', { channelId: genId() });
 			assert.strictEqual(missingTimeline.status, 400);
 			assert.strictEqual(castAsError(missingTimeline.body as any).error.code, 'NO_SUCH_CHANNEL');
 		});
@@ -13931,7 +13931,7 @@ describe('Endpoints', () => {
 		test('空フォルダを削除できる', async () => {
 			const config = loadConfig();
 			const folder = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `delete-folder-${Date.now()}`,
 				parentId: null,
@@ -13948,7 +13948,7 @@ describe('Endpoints', () => {
 		test('他人のフォルダを削除できない', async () => {
 			const config = loadConfig();
 			const folder = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `delete-other-user-folder-${Date.now()}`,
 				parentId: null,
@@ -13966,13 +13966,13 @@ describe('Endpoints', () => {
 		test('子フォルダがあるフォルダを削除できない', async () => {
 			const config = loadConfig();
 			const parent = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `delete-parent-folder-${Date.now()}`,
 				parentId: null,
 			});
 			await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `delete-child-folder-${Date.now()}`,
 				parentId: parent.id,
@@ -13990,13 +13990,13 @@ describe('Endpoints', () => {
 		test('子ファイルがあるフォルダを削除できない', async () => {
 			const config = loadConfig();
 			const parent = await createDriveFolderInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				name: `delete-file-parent-folder-${Date.now()}`,
 				parentId: null,
 			});
 			await createDriveFileInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId: alice.id,
 				userHost: null,
 				md5: createHash('md5').update(`delete-folder-file-${Date.now()}`).digest('hex'),
@@ -14340,7 +14340,7 @@ describe('Endpoints', () => {
 		test('存在しないユーザーに対してはNO_SUCH_USERを維持する', async () => {
 			const res = await api('users/update-memo', {
 				memo: 'test',
-				userId: genId(loadConfig()),
+				userId: genId(),
 			}, alice);
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_USER');

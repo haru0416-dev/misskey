@@ -108,7 +108,7 @@ describe('Webリソース', () => {
 		const db = createDrizzleDatabase(pool, config);
 		const suffix = Date.now().toString(36).slice(-8);
 		const remoteHost = `fetch-remote-${suffix}.example`;
-		const remoteUserId = genId(config);
+		const remoteUserId = genId();
 		remoteUserAcct = `fetchremote${suffix}@${remoteHost}`;
 		remoteUserUri = `https://${remoteHost}/users/${remoteUserId}`;
 		await createUserWithProfileAndPublickeyInDatabase(db, {

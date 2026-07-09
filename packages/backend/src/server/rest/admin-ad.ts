@@ -101,7 +101,7 @@ export async function handleHonoApiAdminAdCreate(
 ): Promise<Packed<'Ad'>> {
 	const params = parseHonoApiParams(adminAdCreateParamDef, body);
 	const ad = await createAdInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		expiresAt: new Date(params.expiresAt),
 		startsAt: new Date(params.startsAt),
 		dayOfWeek: params.dayOfWeek,
@@ -145,7 +145,7 @@ export async function handleHonoApiAdminAdList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>[]> {
 	const params = parseHonoApiParams(adminAdListParamDef, body);
-	const { sinceId, untilId } = resolveHonoApiIdPagination(deps.config, params);
+	const { sinceId, untilId } = resolveHonoApiIdPagination(params);
 	const ads = await listAdsFromDatabase(deps.db, {
 		limit: params.limit,
 		sinceId,

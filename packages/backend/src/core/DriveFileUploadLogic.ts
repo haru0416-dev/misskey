@@ -342,7 +342,7 @@ export async function uploadSystemDriveFileFromUrl(
 		}
 
 		const file = new MiDriveFile();
-		file.id = genId(deps.config);
+		file.id = genId();
 		file.userId = null;
 		file.userHost = null;
 		file.folderId = null;

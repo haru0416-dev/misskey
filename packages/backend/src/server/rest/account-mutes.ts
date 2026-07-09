@@ -111,7 +111,7 @@ async function packHonoApiMuting(
 
 	return {
 		id: muting.id,
-		createdAt: parseId(deps.config, muting.id).date.toISOString(),
+		createdAt: parseId(muting.id).date.toISOString(),
 		expiresAt: muting.expiresAt ? muting.expiresAt.toISOString() : null,
 		muteeId: muting.muteeId,
 		mutee,
@@ -131,7 +131,7 @@ async function packHonoApiRenoteMuting(
 
 	return {
 		id: muting.id,
-		createdAt: parseId(deps.config, muting.id).date.toISOString(),
+		createdAt: parseId(muting.id).date.toISOString(),
 		muteeId: muting.muteeId,
 		mutee,
 	};
@@ -158,7 +158,7 @@ export async function handleHonoApiMuteCreate(
 	}
 
 	await createMutingInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
 		muterId: me.id,
 		muteeId: mutee.id,
@@ -196,7 +196,7 @@ export async function handleHonoApiMuteList(
 	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listMutingsByMuterIdWithPaginationFromDatabase(deps.db, me.id, {
 		...resolveMutingPagination({
-			gen: time => genId(deps.config, time),
+			gen: time => genId(time),
 		}, params),
 		limit: params.limit,
 	});
@@ -221,7 +221,7 @@ export async function handleHonoApiRenoteMuteCreate(
 	}
 
 	await createRenoteMutingInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		muterId: me.id,
 		muteeId: mutee.id,
 	});
@@ -258,7 +258,7 @@ export async function handleHonoApiRenoteMuteList(
 	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listRenoteMutingsByMuterIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
-		...resolveHonoApiIdPagination(deps.config, params),
+		...resolveHonoApiIdPagination(params),
 	});
 
 	return await Promise.all(mutings.map(muting => packHonoApiRenoteMuting(deps, muting, me) as Promise<Packed<'RenoteMuting'>>));

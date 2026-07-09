@@ -12,8 +12,8 @@ export const userIp = pgTable('user_ip', {
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
 	ip: varchar({ length: 128 }).notNull(),
 }, table => [
-	index('IDX_7f7f1c66f48e9a8e18a33bc515').on(table.userId),
-	uniqueIndex('IDX_361b500e06721013c124b7b6c5').on(table.userId, table.ip),
+	index('IDX_USER_IP_USER_ID').on(table.userId),
+	uniqueIndex('IDX_USER_IP_USER_ID_IP_UNIQUE').on(table.userId, table.ip),
 ]);
 
 export type UserIpRow = typeof userIp.$inferSelect;
