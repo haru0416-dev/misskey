@@ -121,7 +121,7 @@ function normalizeReactionForHonoApi(reaction: string | null): string {
 	return FALLBACK;
 }
 
-function decodeReactionForHonoApi(str: string): { reaction: string; name?: string; host?: string | null } {
+export function decodeReactionForHonoApi(str: string): { reaction: string; name?: string; host?: string | null } {
 	const custom = str.match(decodeCustomEmojiRegexp);
 	if (custom) {
 		const name = custom[1]!;
@@ -391,11 +391,6 @@ export const reactionsDeleteRateLimit = {
 	minInterval: 3 * SECOND,
 };
 
-export function convertLegacyReactionForHonoApi(reaction: string): string {
-	const decoded = decodeReactionForHonoApi(reaction).reaction;
-	return Object.hasOwn(legacies, decoded) ? legacies[decoded]! : decoded;
-}
-
 const notesReactionsIntegerQueryParams = new Set(['limit', 'sinceDate', 'untilDate']);
 
 export function normalizeHonoApiNotesReactionsQuery(query: Record<string, string>): Record<string, unknown> {
@@ -479,6 +474,6 @@ export async function handleHonoApiNotesReactions(
 		id: r.id,
 		createdAt: parseId(deps.config, r.id).date.toISOString(),
 		user: userMap.get(r.userId),
-		type: convertLegacyReactionForHonoApi(r.reaction),
+		type: decodeReactionForHonoApi(r.reaction).reaction,
 	}));
 }

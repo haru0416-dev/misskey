@@ -51,20 +51,6 @@ export type HonoApiEmojiPopulateDependencies = {
 const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
 const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
 
-const legacyReactions: Record<string, string> = {
-	'like': '👍',
-	'love': '❤',
-	'laugh': '😆',
-	'hmm': '🤔',
-	'surprise': '😮',
-	'congrats': '🎉',
-	'angry': '💢',
-	'confused': '😥',
-	'rip': '😇',
-	'pudding': '🍮',
-	'star': '⭐',
-};
-
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 
 function decodeReaction(str: string): { reaction: string; name?: string; host?: string | null } {
@@ -84,16 +70,14 @@ function decodeReaction(str: string): { reaction: string; name?: string; host?: 
 	return { reaction: str, name: undefined, host: undefined };
 }
 
-function convertLegacyReaction(reaction: string): string {
-	reaction = decodeReaction(reaction).reaction;
-	if (Object.hasOwn(legacyReactions, reaction)) return legacyReactions[reaction]!;
-	return reaction;
+function normalizeReactionKey(reaction: string): string {
+	return decodeReaction(reaction).reaction;
 }
 
-function convertLegacyReactions(reactions: MiNote['reactions']): MiNote['reactions'] {
+function normalizeReactionKeys(reactions: MiNote['reactions']): MiNote['reactions'] {
 	return Object.entries(reactions)
 		.filter(([, count]) => count > 0)
-		.map(([reaction, count]) => [convertLegacyReaction(reaction), count] as const)
+		.map(([reaction, count]) => [normalizeReactionKey(reaction), count] as const)
 		.reduce<MiNote['reactions']>((acc, [key, count]) => {
 			acc[key] = (acc[key] ?? 0) + count;
 			return acc;
@@ -278,14 +262,14 @@ export async function populateMyReactionForHonoApi(
 
 	if (note.reactionAndUserPairCache && reactionsCount <= note.reactionAndUserPairCache.length) {
 		const pair = note.reactionAndUserPairCache.find(p => p.startsWith(meId));
-		if (pair) return convertLegacyReaction(pair.split('/')[1]!);
+		if (pair) return normalizeReactionKey(pair.split('/')[1]!);
 		return undefined;
 	}
 
 	if (parseId(deps.config, note.id).date.getTime() + 2000 > Date.now()) return undefined;
 
 	const reaction = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, meId, note.id);
-	if (reaction) return convertLegacyReaction(reaction.reaction);
+	if (reaction) return normalizeReactionKey(reaction.reaction);
 
 	return undefined;
 }
@@ -457,7 +441,7 @@ export async function packNoteForHonoApi(
 	const hint = opts.hint != null && opts.hint.noteIds.has(note.id) ? opts.hint : undefined;
 
 	const bufferedReactions = hint?.bufferedReactions.get(note.id) ?? await getBufferedReactions(deps, note.id);
-	const reactions = convertLegacyReactions(mergeReactions(note.reactions, bufferedReactions.deltas));
+	const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));
 	const reactionAndUserPairCache = note.reactionAndUserPairCache.concat(bufferedReactions.pairs.map(x => x.join('/')));
 
 	let text = note.text;
@@ -600,7 +584,7 @@ export async function packNoteManyForHonoApi(
 		for (const target of targets) {
 			if (!myReactionTargetIds.has(target.id)) continue;
 			const buffered = bufferedReactions.get(target.id)!;
-			const reactions = convertLegacyReactions(mergeReactions(target.reactions, buffered.deltas));
+			const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 			const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
 			if (reactionsCount === 0) {
 				myReactions.set(target.id, undefined);
@@ -609,7 +593,7 @@ export async function packNoteManyForHonoApi(
 			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(x => x.join('/')));
 			if (reactionsCount <= pairCache.length) {
 				const pair = pairCache.find(p => p.startsWith(meId));
-				myReactions.set(target.id, pair ? convertLegacyReaction(pair.split('/')[1]!) : undefined);
+				myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
 				continue;
 			}
 			if (parseId(deps.config, target.id).date.getTime() + 2000 > Date.now()) {
@@ -623,7 +607,7 @@ export async function packNoteManyForHonoApi(
 			const reactionByNoteId = new Map(rows.map(row => [row.noteId, row.reaction]));
 			for (const id of idsNeedingDbLookup) {
 				const reaction = reactionByNoteId.get(id);
-				myReactions.set(id, reaction != null ? convertLegacyReaction(reaction) : undefined);
+				myReactions.set(id, reaction != null ? normalizeReactionKey(reaction) : undefined);
 			}
 		}
 	}
@@ -665,7 +649,7 @@ export async function fetchNoteDiffsForHonoApi(
 ): Promise<{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string> }[]> {
 	return await Promise.all(notes.map(async note => {
 		const bufferedReactions = await getBufferedReactions(deps, note.id);
-		const reactions = convertLegacyReactions(mergeReactions(note.reactions, bufferedReactions.deltas));
+		const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));
 
 		const reactionEmojiNames = Object.keys(reactions)
 			.filter(x => x.startsWith(':') && x.includes('@') && !x.includes('@.'))

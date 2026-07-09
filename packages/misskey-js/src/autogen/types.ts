@@ -9560,11 +9560,6 @@ export interface operations {
                         inquiryUrl: string | null;
                         repositoryUrl: string | null;
                         feedbackUrl: string | null;
-                        /**
-                         * @deprecated
-                         * @description [Deprecated] Use "urlPreviewSummaryProxyUrl" instead.
-                         */
-                        summalyProxy: string | null;
                         themeColor: string | null;
                         tosUrl: string | null;
                         uri: string;
@@ -13372,8 +13367,6 @@ export interface operations {
                     notesPerOneAd?: number;
                     silencedHosts?: string[] | null;
                     mediaSilencedHosts?: string[] | null;
-                    /** @description [Deprecated] Use "urlPreviewSummaryProxyUrl" instead. */
-                    summalyProxy?: string | null;
                     urlPreviewEnabled?: boolean;
                     urlPreviewAllowRedirect?: boolean;
                     urlPreviewTimeout?: number;
