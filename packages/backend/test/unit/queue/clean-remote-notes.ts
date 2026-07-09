@@ -33,7 +33,6 @@ describe('hono-queue-clean-remote-notes', () => {
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
 		deps = {
-			config,
 			db,
 			meta: {
 				enableRemoteNotesCleaning: false,
@@ -53,8 +52,8 @@ describe('hono-queue-clean-remote-notes', () => {
 	});
 
 	test('返信・リアクション・お気に入り・ピン留めが無い古いリモートノートを削除する', async () => {
-		const host = `honoqueuecrn-${genId(config)}.example.com`;
-		const userId = genId(config);
+		const host = `honoqueuecrn-${genId()}.example.com`;
+		const userId = genId();
 		await createUserInDatabase(db, {
 			id: userId,
 			username: `honoqueuecrn${userId}`,
@@ -62,7 +61,7 @@ describe('hono-queue-clean-remote-notes', () => {
 			host,
 		});
 
-		const noteId = genId(config, Date.now() - (1000 * 60 * 60 * 24 * 100));
+		const noteId = genId(Date.now() - (1000 * 60 * 60 * 24 * 100));
 		await createNoteInDatabase(db, {
 			id: noteId,
 			text: 'hono-queue-clean-remote-notes test',

@@ -77,7 +77,7 @@ export async function handleHonoApiUsersListsFavorite(
 	}
 
 	await createUserListFavoriteInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		userListId: params.listId,
 	});
@@ -118,7 +118,7 @@ export async function handleHonoApiClipsFavorite(
 	}
 
 	await createClipFavoriteInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		clipId: clip.id,
 		userId: me.id,
 	});
@@ -155,7 +155,7 @@ export async function handleHonoApiChannelsFavorite(
 	}
 
 	await createChannelFavoriteInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: me.id,
 		channelId: channel.id,
 	});
@@ -195,7 +195,7 @@ export async function handleHonoApiPagesLike(
 
 	try {
 		await createPageLikeInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			pageId: page.id,
 			userId: me.id,
 		});
@@ -249,7 +249,7 @@ export async function handleHonoApiFlashLike(
 
 	try {
 		await createFlashLikeInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			flashId: flash.id,
 			userId: me.id,
 		});
@@ -305,7 +305,7 @@ export async function handleHonoApiIFavorites(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(iFavoritesParamDef, body);
-	const pagination = resolveHonoApiIdPagination(deps.config, params);
+	const pagination = resolveHonoApiIdPagination(params);
 
 	const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -319,7 +319,7 @@ export async function handleHonoApiIFavorites(
 
 	return await Promise.all(favorites.map(async favorite => ({
 		id: favorite.id,
-		createdAt: parseId(deps.config, favorite.id).date.toISOString(),
+		createdAt: parseId(favorite.id).date.toISOString(),
 		noteId: favorite.noteId,
 		note: await packNoteForHonoApi(deps, noteMap.get(favorite.noteId) ?? favorite.noteId, me),
 	})));

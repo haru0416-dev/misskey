@@ -73,7 +73,7 @@ export async function handleHonoApiRequestResetPassword(
 	const token = secureRndstr(64, { chars: L_CHARS });
 
 	await createPasswordResetRequestInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: profile.userId,
 		token,
 	});
@@ -92,7 +92,7 @@ export async function handleHonoApiResetPassword(
 	const params = parseHonoApiParams(resetPasswordParamDef, body);
 	const req = await fetchPasswordResetRequestByTokenFromDatabase(deps.db, params.token);
 
-	if (Date.now() - parseId(deps.config, req.id).date.getTime() > 1000 * 60 * 30) {
+	if (Date.now() - parseId(req.id).date.getTime() > 1000 * 60 * 30) {
 		throw new Error();
 	}
 

@@ -5,7 +5,6 @@
 
 import { z } from 'zod';
 import type { JobType } from 'bullmq';
-import type { Config } from '@/config.js';
 import { clearQueue, getDelayedDeliverHosts, getDelayedInboxHosts, getLegacyQueueCounts, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, pauseQueue, promoteQueueJobs, QUEUE_TYPES, removeQueueJob, resumeQueue, retryQueueJob, type AdminQueueDependencies, type QueueClearState, type QueueType } from '@/core/QueueAdminLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -13,7 +12,6 @@ import type { MiUser } from '@/models/User.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminQueueDependencies = AdminQueueDependencies & {
-	config: Pick<Config, 'id'>;
 	db: MiDrizzleDatabase;
 };
 

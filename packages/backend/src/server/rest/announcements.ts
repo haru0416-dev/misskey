@@ -62,7 +62,7 @@ async function packHonoApiAnnouncement(
 
 	return {
 		id: announcement.id,
-		createdAt: parseId(deps.config, announcement.id).date.toISOString(),
+		createdAt: parseId(announcement.id).date.toISOString(),
 		updatedAt: announcement.updatedAt?.toISOString() ?? null,
 		title: announcement.title,
 		text: announcement.text,
@@ -85,7 +85,7 @@ export async function handleHonoApiAnnouncements(
 	const announcements = await listAnnouncementsForUserFromDatabase(deps.db, {
 		limit: params.limit,
 		...resolveAnnouncementPagination({
-			gen: time => genId(deps.config, time),
+			gen: time => genId(time),
 		}, params),
 		isActive: params.isActive,
 		requestUserId: user?.id,
@@ -115,7 +115,7 @@ export async function handleHonoApiIReadAnnouncement(
 	const params = parseHonoApiParams(readAnnouncementParamDef, body);
 
 	const created = await createAnnouncementReadInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		announcementId: params.announcementId,
 		userId: me.id,
 	});

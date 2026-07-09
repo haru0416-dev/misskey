@@ -22,7 +22,7 @@ describe('Streaming', () => {
 
 	const follow = async (follower: any, followee: any) => {
 		await createFollowingInDatabase(db, {
-			id: genId(loadConfig()),
+			id: genId(),
 			followerId: follower.id,
 			followeeId: followee.id,
 			followerHost: follower.host,

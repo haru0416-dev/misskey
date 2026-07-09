@@ -20,7 +20,6 @@ export type HonoApiRolePolicyDependencies = {
 };
 
 function evaluateRoleCondition(
-	deps: HonoApiRolePolicyDependencies,
 	user: MiUser,
 	assignedRoles: MiRole[],
 	value: RoleCondFormulaValue,
@@ -28,11 +27,11 @@ function evaluateRoleCondition(
 	try {
 		switch (value.type) {
 			case 'and':
-				return value.values.every(v => evaluateRoleCondition(deps, user, assignedRoles, v));
+				return value.values.every(v => evaluateRoleCondition(user, assignedRoles, v));
 			case 'or':
-				return value.values.some(v => evaluateRoleCondition(deps, user, assignedRoles, v));
+				return value.values.some(v => evaluateRoleCondition(user, assignedRoles, v));
 			case 'not':
-				return !evaluateRoleCondition(deps, user, assignedRoles, value.value);
+				return !evaluateRoleCondition(user, assignedRoles, value.value);
 			case 'roleAssignedTo':
 				return assignedRoles.some(role => role.id === value.roleId);
 			case 'isLocal':
@@ -50,9 +49,9 @@ function evaluateRoleCondition(
 			case 'isExplorable':
 				return user.isExplorable;
 			case 'createdLessThan':
-				return parseId(deps.config, user.id).date.getTime() > Date.now() - (value.sec * 1000);
+				return parseId(user.id).date.getTime() > Date.now() - (value.sec * 1000);
 			case 'createdMoreThan':
-				return parseId(deps.config, user.id).date.getTime() < Date.now() - (value.sec * 1000);
+				return parseId(user.id).date.getTime() < Date.now() - (value.sec * 1000);
 			case 'followersLessThanOrEq':
 				return user.followersCount <= value.value;
 			case 'followersMoreThanOrEq':
@@ -93,7 +92,7 @@ export function computeHonoApiUserRoles(
 		...assignedRoles,
 		...roles.filter(role =>
 			role.target === 'conditional' &&
-			evaluateRoleCondition(deps, user, assignedRoles, role.condFormula)),
+			evaluateRoleCondition(user, assignedRoles, role.condFormula)),
 	];
 }
 

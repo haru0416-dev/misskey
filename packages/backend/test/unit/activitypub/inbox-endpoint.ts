@@ -29,7 +29,7 @@ type CapturedRequest = {
 };
 
 async function createTestUserWithKeypair(deps: InboxEndpointDependencies & { db: RuntimeDependencies['db'] }): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `honoinboxep${id}`, usernameLower: `honoinboxep${id}`.toLowerCase() },
 		profile: { userId: id },
@@ -99,7 +99,7 @@ describe('hono-inbox-endpoint', () => {
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
 		await signedPostForHonoApi({ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService }, user, url, {
-			id: `https://${host}/activities/${genId(runtime.config)}`,
+			id: `https://${host}/activities/${genId()}`,
 			type: 'Follow',
 			actor: `https://${host}/users/${user.id}`,
 			object: `https://${host}/users/somebody`,
@@ -155,7 +155,7 @@ describe('hono-inbox-endpoint', () => {
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
 		await signedPostForHonoApi({ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService }, user, url, {
-			id: `https://example.com/activities/${genId(runtime.config)}`,
+			id: `https://example.com/activities/${genId()}`,
 			type: 'Follow',
 			actor: `https://example.com/users/${user.id}`,
 			object: 'https://example.com/users/somebody',
@@ -182,7 +182,7 @@ describe('hono-inbox-endpoint', () => {
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
 		await signedPostForHonoApi({ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService }, user, url, {
-			id: `https://${host}/activities/${genId(runtime.config)}`,
+			id: `https://${host}/activities/${genId()}`,
 			type: 'Follow',
 			// actor を欠落させる
 			object: `https://${host}/users/somebody`,

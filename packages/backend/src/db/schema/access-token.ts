@@ -8,6 +8,8 @@ import { boolean, index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiApp } from '@/models/App.js';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
+import { app } from './app.js';
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
@@ -17,18 +19,18 @@ export const accessToken = pgTable('access_token', {
 	token: varchar({ length: 128 }).notNull(),
 	session: varchar({ length: 128 }),
 	hash: varchar({ length: 128 }).notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	appId: varchar({ length: 32 }).$type<MiApp['id'] | null>(),
+	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
+	appId: varchar({ length: 32 }).$type<MiApp['id'] | null>().references(() => app.id, { onDelete: 'cascade' }),
 	name: varchar({ length: 128 }),
 	description: varchar({ length: 512 }),
 	iconUrl: varchar({ length: 512 }),
 	permission: varchar({ length: 64 }).array().default(emptyVarcharArray).notNull().$type<string[]>(),
 	fetched: boolean().default(false).notNull(),
 }, table => [
-	index('IDX_70ba8f6af34bc924fc9e12adb8').on(table.token),
-	index('IDX_bf3a053c07d9fb5d87317c56ee').on(table.session),
-	index('IDX_64c327441248bae40f7d92f34f').on(table.hash),
-	index('IDX_9949557d0e1b2c19e5344c171e').on(table.userId),
+	index('IDX_ACCESS_TOKEN_TOKEN').on(table.token),
+	index('IDX_ACCESS_TOKEN_SESSION').on(table.session),
+	index('IDX_ACCESS_TOKEN_HASH').on(table.hash),
+	index('IDX_ACCESS_TOKEN_USER_ID').on(table.userId),
 	index('IDX_ACCESS_TOKEN_APP_ID').on(table.appId),
 ]);
 

@@ -33,7 +33,7 @@ export async function fetchOrCreateSystemAccount(
 	const keyPair = await genRsaKeyPair();
 
 	return await createOrFetchSystemAccountInDatabase(db, {
-		id: genId(config),
+		id: genId(),
 		type,
 		username,
 		usernameLower: username.toLowerCase(),

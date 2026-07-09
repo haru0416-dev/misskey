@@ -83,7 +83,7 @@ export async function addPinnedForHonoApi(
 	if (pinings.some(pining => pining.noteId === note.id)) throw iPinAlreadyPinnedError();
 
 	await createUserNotePiningInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		userId: user.id,
 		noteId: note.id,
 	});

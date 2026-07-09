@@ -5,6 +5,7 @@
 
 import { boolean, index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
+import { user } from './user.js';
 
 export const announcement = pgTable('announcement', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
@@ -18,12 +19,12 @@ export const announcement = pgTable('announcement', {
 	isActive: boolean().default(true).notNull(),
 	forExistingUsers: boolean().default(false).notNull(),
 	silence: boolean().default(false).notNull(),
-	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>(),
+	userId: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'cascade' }),
 }, table => [
-	index('IDX_bc1afcc8ef7e9400cdc3c0a87e').on(table.isActive),
-	index('IDX_da795d3a83187e8832005ba19d').on(table.forExistingUsers),
-	index('IDX_7b8d9225168e962f94ea517e00').on(table.silence),
-	index('IDX_fd25dfe3da37df1715f11ba6ec').on(table.userId),
+	index('IDX_ANNOUNCEMENT_IS_ACTIVE').on(table.isActive),
+	index('IDX_ANNOUNCEMENT_FOR_EXISTING_USERS').on(table.forExistingUsers),
+	index('IDX_ANNOUNCEMENT_SILENCE').on(table.silence),
+	index('IDX_ANNOUNCEMENT_USER_ID').on(table.userId),
 ]);
 
 export type AnnouncementRow = typeof announcement.$inferSelect;

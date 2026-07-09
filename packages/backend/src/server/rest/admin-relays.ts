@@ -105,11 +105,11 @@ export async function handleHonoApiAdminRelaysAdd(
 	return await addRelayWithSideEffects({
 		config: deps.config,
 		db: deps.db,
-		genId: () => genId(deps.config),
+		genId,
 		fetchRelayActor: () => fetchOrCreateSystemAccountInDatabase({
 			db: deps.db,
 			meta: deps.meta,
-			genId: () => genId(deps.config),
+			genId,
 		}, 'relay'),
 		enqueueDeliver: (user, content, to, isSharedInbox) => enqueueDeliverJob(deps.deliverQueue, deps.config, user, content, to, isSharedInbox),
 	}, ps.inbox);
@@ -124,11 +124,11 @@ export async function handleHonoApiAdminRelaysRemove(
 	await removeRelayWithSideEffects({
 		config: deps.config,
 		db: deps.db,
-		genId: () => genId(deps.config),
+		genId,
 		fetchRelayActor: () => fetchOrCreateSystemAccountInDatabase({
 			db: deps.db,
 			meta: deps.meta,
-			genId: () => genId(deps.config),
+			genId,
 		}, 'relay'),
 		enqueueDeliver: (user, content, to, isSharedInbox) => enqueueDeliverJob(deps.deliverQueue, deps.config, user, content, to, isSharedInbox),
 	}, ps.inbox);

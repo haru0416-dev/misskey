@@ -110,7 +110,7 @@ export function packAnnouncementForHonoApi(
 ): Packed<'Announcement'> {
 	return {
 		id: announcement.id,
-		createdAt: parseId(config, announcement.id).date.toISOString(),
+		createdAt: parseId(announcement.id).date.toISOString(),
 		updatedAt: announcement.updatedAt?.toISOString() ?? null,
 		title: announcement.title,
 		text: announcement.text,
@@ -131,7 +131,7 @@ function packAdminAnnouncementForHonoApi(
 ): AdminAnnouncement {
 	return {
 		id: announcement.id,
-		createdAt: parseId(config, announcement.id).date.toISOString(),
+		createdAt: parseId(announcement.id).date.toISOString(),
 		updatedAt: announcement.updatedAt?.toISOString() ?? null,
 		title: announcement.title,
 		text: announcement.text,
@@ -155,7 +155,7 @@ export async function handleHonoApiAdminAnnouncementsCreate(
 	const params = parseHonoApiParams(adminAnnouncementsCreateParamDef, body);
 	const { packed } = await createAnnouncementWithSideEffects({
 		db: deps.db,
-		genId: () => genId(deps.config),
+		genId,
 		packAnnouncement: announcement => Promise.resolve(packAnnouncementForHonoApi(deps.config, announcement)),
 		publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
 		publishBroadcastStream: (type, value) => deps.publishBroadcastStream?.(type, value),
@@ -199,7 +199,7 @@ export async function handleHonoApiAdminAnnouncementsList(
 	const params = parseHonoApiParams(adminAnnouncementsListParamDef, body);
 	const announcements = await listAnnouncementsForAdminFromDatabase(deps.db, {
 		limit: params.limit,
-		...resolveAnnouncementPagination({ gen: time => genId(deps.config, time) }, params),
+		...resolveAnnouncementPagination({ gen: time => genId(time) }, params),
 		status: params.status,
 		userId: params.userId,
 	});

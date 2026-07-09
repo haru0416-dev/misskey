@@ -28,7 +28,7 @@ function asRemote(user: MiUser): MiRemoteUser {
 }
 
 async function createTestLocalUser(deps: HonoApiInboxDependencies, prefix: string, options: { isLocked?: boolean } = {}): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: {
 			id,
@@ -41,7 +41,7 @@ async function createTestLocalUser(deps: HonoApiInboxDependencies, prefix: strin
 }
 
 async function createTestRemoteUser(deps: HonoApiInboxDependencies, prefix: string, host: string): Promise<MiUser> {
-	const id = genId(deps.config);
+	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: {
 			id,
@@ -86,7 +86,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'Follow',
-			id: `https://hono-inbox-follow.example.com/follows/${genId(deps.config)}`,
+			id: `https://hono-inbox-follow.example.com/follows/${genId()}`,
 			actor: actor.uri!,
 			object: localUserUri(deps, followee),
 		} as IObject;
@@ -104,7 +104,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'Follow',
-			id: `https://hono-inbox-follow-lock.example.com/follows/${genId(deps.config)}`,
+			id: `https://hono-inbox-follow-lock.example.com/follows/${genId()}`,
 			actor: actor.uri!,
 			object: localUserUri(deps, followee),
 		} as IObject;
@@ -124,14 +124,14 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 		const followee = await createTestLocalUser(deps, 'honoinboxundofollowee');
 
 		await createFollowRequestInDatabase(deps.db, {
-			id: genId(deps.config),
+			id: genId(),
 			followerId: actor.id,
 			followeeId: followee.id,
 		});
 
 		const activity: IObject = {
 			type: 'Undo',
-			id: `https://hono-inbox-undo-follow.example.com/undo/${genId(deps.config)}`,
+			id: `https://hono-inbox-undo-follow.example.com/undo/${genId()}`,
 			actor: actor.uri!,
 			object: {
 				type: 'Follow',
@@ -153,7 +153,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'Block',
-			id: `https://hono-inbox-block.example.com/blocks/${genId(deps.config)}`,
+			id: `https://hono-inbox-block.example.com/blocks/${genId()}`,
 			actor: actor.uri!,
 			object: localUserUri(deps, blockee),
 		} as IObject;
@@ -171,7 +171,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'Block',
-			id: `https://hono-inbox-unblock.example.com/blocks/${genId(deps.config)}`,
+			id: `https://hono-inbox-unblock.example.com/blocks/${genId()}`,
 			actor: actor.uri!,
 			object: localUserUri(deps, blockee),
 		} as IObject;
@@ -180,7 +180,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const undoActivity: IObject = {
 			type: 'Undo',
-			id: `https://hono-inbox-unblock.example.com/undo/${genId(deps.config)}`,
+			id: `https://hono-inbox-unblock.example.com/undo/${genId()}`,
 			actor: actor.uri!,
 			object: {
 				type: 'Block',
@@ -197,7 +197,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 	test('Like: リモートアクターがローカルノートにリアクションする', async () => {
 		const actor = await createTestRemoteUser(deps, 'honoinboxlike', 'hono-inbox-like.example.com');
 		const noteOwner = await createTestLocalUser(deps, 'honoinboxlikeowner');
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, {
 			id: noteId,
 			text: 'hono-ap-inbox like test',
@@ -208,7 +208,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'Like',
-			id: `https://hono-inbox-like.example.com/likes/${genId(deps.config)}`,
+			id: `https://hono-inbox-like.example.com/likes/${genId()}`,
 			actor: actor.uri!,
 			object: `${deps.config.url}/notes/${noteId}`,
 		} as IObject;
@@ -223,7 +223,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 	test('Undo(Like): 既存のリアクションを取り消す', async () => {
 		const actor = await createTestRemoteUser(deps, 'honoinboxunlike', 'hono-inbox-unlike.example.com');
 		const noteOwner = await createTestLocalUser(deps, 'honoinboxunlikeowner');
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		await createNoteInDatabase(deps.db, {
 			id: noteId,
 			text: 'hono-ap-inbox unlike test',
@@ -234,7 +234,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const likeActivity: IObject = {
 			type: 'Like',
-			id: `https://hono-inbox-unlike.example.com/likes/${genId(deps.config)}`,
+			id: `https://hono-inbox-unlike.example.com/likes/${genId()}`,
 			actor: actor.uri!,
 			object: `${deps.config.url}/notes/${noteId}`,
 		} as IObject;
@@ -243,7 +243,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const undoActivity: IObject = {
 			type: 'Undo',
-			id: `https://hono-inbox-unlike.example.com/undo/${genId(deps.config)}`,
+			id: `https://hono-inbox-unlike.example.com/undo/${genId()}`,
 			actor: actor.uri!,
 			object: {
 				type: 'Like',
@@ -259,7 +259,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 	test('Delete: リモートアクターが自分のノートを削除する', async () => {
 		const actor = await createTestRemoteUser(deps, 'honoinboxdelete', 'hono-inbox-delete.example.com');
-		const noteId = genId(deps.config);
+		const noteId = genId();
 		const noteUri = `https://hono-inbox-delete.example.com/notes/${noteId}`;
 		await createNoteInDatabase(deps.db, {
 			id: noteId,
@@ -272,7 +272,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'Delete',
-			id: `https://hono-inbox-delete.example.com/deletes/${genId(deps.config)}`,
+			id: `https://hono-inbox-delete.example.com/deletes/${genId()}`,
 			actor: actor.uri!,
 			object: noteUri,
 		} as IObject;
@@ -287,7 +287,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'SomeUnknownType',
-			id: `https://hono-inbox-unknown.example.com/x/${genId(deps.config)}`,
+			id: `https://hono-inbox-unknown.example.com/x/${genId()}`,
 			actor: actor.uri!,
 			object: actor.uri!,
 		} as IObject;
@@ -302,7 +302,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 
 		const activity: IObject = {
 			type: 'Follow',
-			id: `https://hono-inbox-suspended.example.com/follows/${genId(deps.config)}`,
+			id: `https://hono-inbox-suspended.example.com/follows/${genId()}`,
 			actor: actor.uri!,
 			object: actor.uri!,
 		} as IObject;

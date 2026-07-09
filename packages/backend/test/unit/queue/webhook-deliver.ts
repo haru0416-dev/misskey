@@ -61,14 +61,14 @@ describe('hono-queue-webhook-deliver', () => {
 			const address = server.address() as AddressInfo;
 			const to = `http://127.0.0.1:${address.port}/webhook`;
 
-			const userId = genId(config);
+			const userId = genId();
 			await createUserInDatabase(db, {
 				id: userId,
 				username: `honoqueuetest${userId}`,
 				usernameLower: `honoqueuetest${userId}`.toLowerCase(),
 			});
 			const webhook = await createWebhookInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId,
 				name: 'test webhook',
 				url: to,
@@ -84,7 +84,7 @@ describe('hono-queue-webhook-deliver', () => {
 				to,
 				secret: webhook.secret,
 				createdAt: Date.now(),
-				eventId: genId(config),
+				eventId: genId(),
 			};
 
 			const result = await handleHonoQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
@@ -129,7 +129,7 @@ describe('hono-queue-webhook-deliver', () => {
 			const to = `http://127.0.0.1:${address.port}/webhook`;
 
 			const webhook = await createSystemWebhookInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				name: 'test system webhook',
 				url: to,
 				secret: 'test-system-secret',
@@ -143,7 +143,7 @@ describe('hono-queue-webhook-deliver', () => {
 				to,
 				secret: webhook.secret,
 				createdAt: Date.now(),
-				eventId: genId(config),
+				eventId: genId(),
 			};
 
 			const result = await handleHonoQueueSystemWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
@@ -180,14 +180,14 @@ describe('hono-queue-webhook-deliver', () => {
 			const address = server.address() as AddressInfo;
 			const to = `http://127.0.0.1:${address.port}/webhook`;
 
-			const userId = genId(config);
+			const userId = genId();
 			await createUserInDatabase(db, {
 				id: userId,
 				username: `honoqueuetest${userId}`,
 				usernameLower: `honoqueuetest${userId}`.toLowerCase(),
 			});
 			const webhook = await createWebhookInDatabase(db, {
-				id: genId(config),
+				id: genId(),
 				userId,
 				name: 'test webhook 4xx',
 				url: to,
@@ -203,7 +203,7 @@ describe('hono-queue-webhook-deliver', () => {
 				to,
 				secret: webhook.secret,
 				createdAt: Date.now(),
-				eventId: genId(config),
+				eventId: genId(),
 			};
 
 			await expect(handleHonoQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data)))

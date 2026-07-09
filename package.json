@@ -39,7 +39,6 @@
 		"cli": "cd packages/backend && bun run cli",
 		"init": "bun run migrate",
 		"migrate": "cd packages/backend && bun run migrate",
-		"revert": "cd packages/backend && bun run revert",
 		"check:connect": "cd packages/backend && bun run check:connect",
 		"migrateandstart": "bun run migrate && bun run start",
 		"watch": "bun run dev",

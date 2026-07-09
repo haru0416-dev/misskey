@@ -25,12 +25,12 @@ import {
 import type { MiUser } from '@/models/User.js';
 
 async function createModeratorTestUser(runtime: RuntimeDependencies, prefix: string, lastActiveDate: Date): Promise<MiUser> {
-	const id = genId(runtime.config);
+	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
 		profile: { userId: id },
 	});
-	const roleId = genId(runtime.config);
+	const roleId = genId();
 	await createRoleInDatabase(runtime.db, {
 		id: roleId,
 		name: `${prefix}role${roleId}`,
@@ -39,7 +39,7 @@ async function createModeratorTestUser(runtime: RuntimeDependencies, prefix: str
 		lastUsedAt: new Date(),
 		isModerator: true,
 	});
-	await createRoleAssignmentInDatabase(runtime.db, { id: genId(runtime.config), userId: user.id, roleId, expiresAt: null });
+	await createRoleAssignmentInDatabase(runtime.db, { id: genId(), userId: user.id, roleId, expiresAt: null });
 	await updateUserLastActiveDateInDatabase(runtime.db, user.id, lastActiveDate);
 	return { ...user, lastActiveDate };
 }

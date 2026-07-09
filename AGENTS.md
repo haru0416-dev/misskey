@@ -45,10 +45,11 @@
    - 根拠: [locales/README.md](locales/README.md) と [crowdin.yml](crowdin.yml) (`ja-JP.yml` → `locales/%locale%.yml` の同期設定)
 
 3. **マージ済 migration ファイルを編集しない**
-   - 対象: `packages/backend/migration/{unixMs}-{name}.js` のうち、既に `develop` / `master` にマージされたもの
+   - 対象: `packages/backend/migration/*.sql` のうち、既に `develop` / `master` にマージされたもの (`migration/_legacy/` は旧TypeORM時代の手書きmigrationの歴史的アーカイブで実行系からは外れている、触らない)
    - 本番環境で履歴改変が起きると深刻なデータ不整合を引き起こす
-   - スキーマ変更が必要な場合は **新しいタイムスタンプで新規ファイル** を作成する (`bun -e "console.log(Date.now())"` でタイムスタンプ取得)
-   - 新規 migration は `up()` と `down()` の両方を実装し、`bun run --bun --filter backend check-migrations` を通すこと (`migration-runner.ts` が設定先 DB に対して未適用の migration ファイルが無いことを検査する)
+   - スキーマ変更は `packages/backend/src/db/schema/*.ts` を編集した上で `bun run --filter backend db:generate` を実行し、drizzle-kitに差分SQLを自動生成させる。関数・拡張機能・`INCLUDE`句・ストレージパラメータ変更等drizzle-kitが検出できないDDLは `bun run --filter backend db:generate:custom` で空ファイルを作り手書きする
+   - migrationはforward-onlyで`down()`の概念が無い(drizzle-kitはdownを生成しない)。変更を戻したい場合は新しいmigrationとして逆方向のSQLを書く
+   - `bun run --bun --filter backend check-migrations` を通すこと (`migration-runner.ts` が設定先DBに対して未適用のmigrationファイルが無いことを検査する)
 
 ### Git / リポジトリ操作
 
@@ -82,7 +83,7 @@
 
 1. **lint**: `bun run lint` が通る (oxlint + typecheck, 全パッケージ)
 2. **backend API 変更時**: `bun run build-misskey-js-with-types` を実行し `packages/misskey-js/src/autogen/` の差分も commit に含めた
-3. **migration 変更時**: `bun run --bun --filter backend check-migrations` が未適用 migration 0 件で通る / 新規 migration は `up()` と `down()` 両方実装済
+3. **migration 変更時**: `bun run --bun --filter backend check-migrations` が未適用 migration 0 件で通る / schema.ts変更は`db:generate`(または特殊DDLのみ`db:generate:custom`)で生成したものであること
 4. **新規ファイル**: SPDX ヘッダーを付けた (`.vue` / `.html` は HTML コメント形式、それ以外は TS コメント形式)
 5. **ユーザー影響のある変更**: `CHANGELOG.md` の `## Unreleased` 配下の該当サブセクション (`### General` / `### Client` / `### Server`) に `- <Feat|Enhance|Fix>: <概要>` を 1 行追記
 6. **locale safety**: `locales/` を編集した場合、`git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'` が空 (ja-JP.yml 以外に差分が無い) ことを確認
@@ -99,6 +100,8 @@
 | Backend federation test | `bun run --bun --filter backend test:fed` |
 | Frontend unit test | `bun run --bun --filter frontend test` |
 | Migration 未適用チェック | `bun run --bun --filter backend check-migrations` |
+| schema.ts差分からmigration自動生成 | `bun run --filter backend db:generate` |
+| 特殊DDL(拡張機能/関数/INCLUDE等)用の空migration作成 | `bun run --filter backend db:generate:custom` |
 | `misskey-js` 再生成 (API 変更後必須) | `bun run build-misskey-js-with-types` |
 | 全体ビルド | `bun run build` |
 | 開発サーバー (backend + frontend watch) | `bun run dev` |

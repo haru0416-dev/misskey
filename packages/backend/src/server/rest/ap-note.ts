@@ -10,11 +10,6 @@ import { checkHttps } from '@/misc/check-https.js';
 import { acquireApObjectLock } from '@/misc/distributed-lock.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { StatusError } from '@/misc/status-error.js';
-import { isSafeAidT } from '@/misc/id/aid.js';
-import { isSafeAidxT } from '@/misc/id/aidx.js';
-import { isSafeMeidT } from '@/misc/id/meid.js';
-import { isSafeMeidgT } from '@/misc/id/meidg.js';
-import { isSafeObjectIdT } from '@/misc/id/object-id.js';
 import { isSafeUuidv7T } from '@/misc/id/uuidv7.js';
 import {
 	getApId,
@@ -67,21 +62,8 @@ export type HonoApiApNoteDependencies = HonoApiApPersonDependencies & HonoApiApR
 	publishNoteStream?: HonoApiNoteStreamPublisher;
 };
 
-function isSafeTimestampForHonoApi(config: Pick<Config, 'id'>, t: number): boolean {
-	switch (config.id.toLowerCase()) {
-		case 'aid': return isSafeAidT(t);
-		case 'aidx': return isSafeAidxT(t);
-		case 'meid': return isSafeMeidT(t);
-		case 'meidg': return isSafeMeidgT(t);
-		case 'ulid': return t > 0;
-		case 'objectid': return isSafeObjectIdT(t);
-		case 'uuidv7': return isSafeUuidv7T(t);
-		default: throw new Error('unrecognized id generation method');
-	}
-}
-
 /** ApNoteService.validateNote 相当。 */
-function validateNoteForHonoApi(config: Pick<Config, 'id'>, x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
+function validateNoteForHonoApi(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
 	const expectHost = extractDbHost(uri);
 	const apType = (x as { type?: string }).type;
 
@@ -98,7 +80,7 @@ function validateNoteForHonoApi(config: Pick<Config, 'id'>, x: IObject, uri: str
 		return new IdentifiableError('d450b8a9-48e4-4dab-ae36-f4db763fda7c', `invalid Note: attributedTo has different host. expected: ${expectHost}, actual: ${actualHost}`);
 	}
 
-	if ((x as { published?: string }).published && !isSafeTimestampForHonoApi(config, new Date((x as { published: string }).published).valueOf())) {
+	if ((x as { published?: string }).published && !isSafeUuidv7T(new Date((x as { published: string }).published).valueOf())) {
 		return new IdentifiableError('d450b8a9-48e4-4dab-ae36-f4db763fda7c', 'invalid Note: published timestamp is malformed');
 	}
 
@@ -251,7 +233,7 @@ async function voteFromApForHonoApi(deps: HonoApiApNoteDependencies, actor: { id
 	}
 
 	await createPollVoteInDatabase(deps.db, {
-		id: genId(deps.config),
+		id: genId(),
 		noteId: note.id,
 		userId: actor.id,
 		choice,
@@ -279,7 +261,7 @@ export async function createNoteFromApForHonoApi(
 	const object = await resolveApObjectForHonoApi(deps, value, FetchAllowSoftFailMask.Strict, history);
 
 	const entryUri = getApId(value);
-	const err = validateNoteForHonoApi(deps.config, object, entryUri, actor);
+	const err = validateNoteForHonoApi(object, entryUri, actor);
 	if (err) throw err;
 
 	const note = object as IPost;
