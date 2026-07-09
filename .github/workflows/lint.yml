@@ -6,6 +6,7 @@ on:
       - master
       - develop
     paths:
+      - packages/aiscript/**
       - packages/backend/**
       - packages/frontend/**
       - packages/frontend-embed/**
@@ -30,6 +31,7 @@ on:
       - .github/workflows/lint.yml
   pull_request:
     paths:
+      - packages/aiscript/**
       - packages/backend/**
       - packages/frontend/**
       - packages/frontend-embed/**
@@ -103,6 +105,7 @@ jobs:
     strategy:
       matrix:
         workspace:
+          - '@syuilo/aiscript'
           - backend
           - frontend
           - sw

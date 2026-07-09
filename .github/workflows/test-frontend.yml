@@ -6,6 +6,7 @@ on:
       - master
       - develop
     paths:
+      - packages/aiscript/**
       - packages/frontend/**
       - packages/frontend-shared/**
       # for permissions
@@ -20,6 +21,7 @@ on:
       - .github/misskey/test.yml
   pull_request:
     paths:
+      - packages/aiscript/**
       - packages/frontend/**
       - packages/frontend-shared/**
       # for permissions
