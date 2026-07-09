@@ -236,7 +236,7 @@ onBeforeUnmount(() => {
 	}
 
 	&.wait {
-		cursor: wait !important;
+		cursor: wait;
 		opacity: 0.7;
 	}
 }

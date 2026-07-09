@@ -57,7 +57,7 @@ const showContent = ref(false);
 	border-radius: 8px;
 
 	&.useSticky {
-		position: sticky !important;
+		position: sticky;
 		top: calc(16px + var(--MI-stickyTop, 0px));
 		left: 0;
 	}

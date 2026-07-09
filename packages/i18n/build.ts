@@ -11,6 +11,7 @@ import * as esbuild from 'esbuild';
 import { build } from 'esbuild';
 import { execa } from 'execa';
 import { generateLocaleInterface } from './scripts/generateLocaleInterface.js';
+import { languages } from './src/const.js';
 import type { BuildOptions, BuildResult, Plugin, PluginBuild } from 'esbuild';
 
 const _filename = fileURLToPath(import.meta.url);
@@ -48,13 +49,16 @@ if (args.includes('--watch')) {
 	await buildSrc();
 }
 
+// `/locales` には Crowdin 経由で翻訳進捗70%未満の言語ファイルも同期されてくるが、
+// それらは const.ts の languages に載るまで build() から一切参照されない。
+// 未参照ファイルまでコピーするとビルド毎の無駄なI/Oと成果物肥大化になるので対象を絞る。
 function copyLocales(): void {
 	const srcDir = _localesDir;
 	const destDir = resolve(_dirname, 'built/locales');
 
 	fs.mkdirSync(destDir, { recursive: true });
 
-	const files = fs.readdirSync(srcDir).filter((f) => f.endsWith('.yml'));
+	const files = languages.map((lang) => `${lang}.yml`).filter((f) => fs.existsSync(resolve(srcDir, f)));
 	for (const file of files) {
 		fs.copyFileSync(resolve(srcDir, file), resolve(destDir, file));
 	}

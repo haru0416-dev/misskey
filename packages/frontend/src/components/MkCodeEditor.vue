@@ -133,20 +133,16 @@ watch(v, newValue => {
 	font-size: 0.85em;
 	padding: 0 0 8px 0;
 	user-select: none;
-
-	&:empty {
-		display: none;
-	}
 }
 
 .caption {
 	font-size: 0.85em;
 	padding: 8px 0 0 0;
 	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+}
 
-	&:empty {
-		display: none;
-	}
+:is(.label, .caption):empty {
+	display: none;
 }
 
 .save {
@@ -167,12 +163,12 @@ watch(v, newValue => {
 	transition: border-color 0.1s ease-out;
 	font-family: Consolas, Monaco, Andale Mono, Ubuntu Mono, monospace;
 	&:hover {
-		border-color: var(--MI_THEME-inputBorderHover) !important;
+		border-color: var(--MI_THEME-inputBorderHover);
 	}
 }
 
 .focused.codeEditorRoot {
-	border-color: var(--MI_THEME-accent) !important;
+	border-color: var(--MI_THEME-accent);
 	border-radius: 6px;
 }
 

@@ -174,7 +174,7 @@ function showMenu(ev: PointerEvent) {
 .stats {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	grid-gap: 16px;
+	gap: 16px;
 }
 
 .statsItem {

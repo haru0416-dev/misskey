@@ -127,10 +127,7 @@ router.useListener('replace', ({ fullPath }) => {
 .transition_x_move,
 .transition_x_enterActive,
 .transition_x_leaveActive {
-	.tabBg {
-		transition: opacity 0.2s cubic-bezier(0,.5,.5,1), transform 0.2s cubic-bezier(0,.5,.5,1) !important;
-	}
-
+	.tabBg,
 	.tabFg {
 		transition: opacity 0.2s cubic-bezier(0,.5,.5,1), transform 0.2s cubic-bezier(0,.5,.5,1) !important;
 	}
