@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { toRefs } from 'vue';
 import type { Ref } from 'vue';
-import XButton from '@/components/MkSwitch.button.vue';
+import XButton from '@/components/MkSwitch.Button.vue';
 
 const props = defineProps<{
 	modelValue: boolean | Ref<boolean>;

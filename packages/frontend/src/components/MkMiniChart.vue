@@ -35,7 +35,7 @@ import { watch, ref } from 'vue';
 import { genId } from '@/utility/id.js';
 import { themeManager } from '@/theme.js';
 import tinycolor from 'tinycolor2';
-import { useInterval } from '@@/js/use-interval.js';
+import { useInterval } from '@shared/utility/use-interval.js';
 
 const props = defineProps<{
 	src: number[];

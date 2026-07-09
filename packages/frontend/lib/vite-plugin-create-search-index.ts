@@ -378,9 +378,10 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 		if (keywords) markerInfo.keywords = keywords;
 		if (texts) markerInfo.texts = texts;
 
-		// pathがない場合はファイルパスを設定
+		// pathがない場合はファイルパスを設定 (ネストされた `dir/index.vue` 規約にも対応)
 		if (markerInfo.path == null && parentId == null) {
-			markerInfo.path = id.match(/.*(\/(admin|settings)\/[^\/]+)\.vue$/)?.[1];
+			const m = id.match(/\/(admin|settings)\/([^/]+)\/index\.vue$/) ?? id.match(/\/(admin|settings)\/([^/]+)\.vue$/);
+			if (m) markerInfo.path = `/${m[1]}/${m[2]}`;
 		}
 
 		// SearchLabelとSearchTextを抽出 (AST全体を探索)

@@ -42,6 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
+import { useHeightTransition } from '@/composables/useHeightTransition.js';
 
 const props = withDefaults(defineProps<{
 	showHeader?: boolean;
@@ -64,31 +65,9 @@ const showBody = ref(props.expanded);
 const ignoreOmit = ref(false);
 const omitted = ref(false);
 
-function enter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	const elementHeight = el.getBoundingClientRect().height;
-	el.style.height = '0';
-	el.offsetHeight; // reflow
-	el.style.height = `${Math.min(elementHeight, props.maxHeight ?? Infinity)}px`;
-}
-
-function afterEnter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	el.style.height = '';
-}
-
-function leave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	const elementHeight = el.getBoundingClientRect().height;
-	el.style.height = `${elementHeight}px`;
-	el.offsetHeight; // reflow
-	el.style.height = '0';
-}
-
-function afterLeave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
-	el.style.height = '';
-}
+const { enter, afterEnter, leave, afterLeave } = useHeightTransition({
+	maxHeight: () => props.maxHeight,
+});
 
 const calcOmit = () => {
 	if (omitted.value || ignoreOmit.value || props.maxHeight == null) return;

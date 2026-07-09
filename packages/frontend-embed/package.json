@@ -9,11 +9,11 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
+		"@misskey-dev/emoji-data": "17.0.6",
 		"@rollup/plugin-json": "6.1.0",
 		"@rollup/pluginutils": "5.4.0",
 		"@vitejs/plugin-vue": "6.0.7",
 		"buraha": "0.0.1",
-		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
 		"icons-subsetter": "workspace:*",
 		"json5": "2.2.3",

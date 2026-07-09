@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-declare module '@@/themes/*.json5' {
-	import { Theme } from '@@/js/theme.js';
+declare module '@shared/themes/*.json5' {
+	import { Theme } from '@shared/utility/theme.js';
 
 	const theme: Theme;
 

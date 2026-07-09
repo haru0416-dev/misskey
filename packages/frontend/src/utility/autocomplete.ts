@@ -237,7 +237,6 @@ export class Autocomplete {
 					textarea: this.textarea,
 					close: this.close,
 					type: type,
-					//@ts-expect-error popupは今のところジェネリック型のコンポーネントに対応していない
 					q: _q,
 					x: _x,
 					y: _y,

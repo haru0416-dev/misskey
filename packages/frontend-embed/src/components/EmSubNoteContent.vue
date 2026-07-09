@@ -35,8 +35,8 @@ import * as Misskey from 'misskey-js';
 import EmMediaList from '@/components/EmMediaList.vue';
 import EmPoll from '@/components/EmPoll.vue';
 import { i18n } from '@/i18n.js';
-import { url } from '@@/js/config.js';
-import { shouldCollapsed } from '@@/js/collapsed.js';
+import { url } from '@shared/utility/config.js';
+import { shouldCollapsed } from '@shared/utility/collapsed.js';
 import EmA from '@/components/EmA.vue';
 import EmMfm from '@/components/EmMfm.js';
 

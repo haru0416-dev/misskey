@@ -59,7 +59,7 @@ export type PageHeaderProps = {
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, inject, useTemplateRef, computed } from 'vue';
-import { scrollToTop } from '@@/js/scroll.js';
+import { scrollToTop } from '@shared/utility/scroll.js';
 import XTabs from './MkPageHeader.tabs.vue';
 import { getAccountMenu } from '@/accounts.js';
 import { $i } from '@/i.js';

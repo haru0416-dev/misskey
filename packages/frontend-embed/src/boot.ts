@@ -14,21 +14,21 @@ if (import.meta.env.DEV) {
 
 import '@/style.scss';
 import { createApp, defineAsyncComponent } from 'vue';
-import defaultLightTheme from '@@/themes/l-light.json5';
-import defaultDarkTheme from '@@/themes/d-dark.json5';
-import { MediaProxy } from '@@/js/media-proxy.js';
-import { storeBootloaderErrors } from '@@/js/store-boot-errors';
+import defaultLightTheme from '@shared/themes/l-light.json5';
+import defaultDarkTheme from '@shared/themes/d-dark.json5';
+import { MediaProxy } from '@shared/utility/media-proxy.js';
+import { storeBootloaderErrors } from '@shared/utility/store-boot-errors';
 import { applyTheme, assertIsTheme } from '@/theme.js';
 import { fetchCustomEmojis } from '@/custom-emojis.js';
 import { DI } from '@/di.js';
 import { serverMetadata } from '@/server-metadata.js';
-import { url, version, lang } from '@@/js/config.js';
-import { parseEmbedParams } from '@@/js/embed-page.js';
+import { url, version, lang } from '@shared/utility/config.js';
+import { parseEmbedParams } from '@shared/utility/embed-page.js';
 import { postMessageToParentWindow, setIframeId } from '@/post-message.js';
 import { serverContext } from '@/server-context.js';
 import { i18n } from '@/i18n.js';
 
-import type { Theme } from '@@/js/theme.js';
+import type { Theme } from '@shared/utility/theme.js';
 
 console.log('Misskey Embed');
 

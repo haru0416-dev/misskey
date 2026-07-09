@@ -7,7 +7,7 @@
  * Language manager for SW
  */
 import { get, set } from 'idb-keyval';
-import { I18n } from '@@/js/i18n.js';
+import { I18n } from '@shared/utility/i18n.js';
 import { FETCH_TIMEOUT_MS } from '@/const.js';
 import type { Locale } from 'i18n';
 

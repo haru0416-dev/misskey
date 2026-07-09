@@ -5,15 +5,7 @@
 
 import type { GeneratedSearchIndexItem } from 'search-index';
 
-export type SearchIndexItem = {
-	id: string;
-	parentId?: string;
-	path?: string;
-	label: string;
-	keywords: string[];
-	texts: string[];
-	icon?: string;
-};
+export type SearchIndexItem = GeneratedSearchIndexItem;
 
 export function genSearchIndexes(generated: GeneratedSearchIndexItem[]): SearchIndexItem[] {
 	const rootMods = new Map(generated.map((item) => [item.id, item]));

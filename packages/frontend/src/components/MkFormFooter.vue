@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { } from 'vue';
 import MkButton from './MkButton.vue';
-import type { useForm } from '@/composables/use-form.js';
+import type { useForm } from '@/composables/useForm.js';
 import { i18n } from '@/i18n.js';
 
 const props = withDefaults(defineProps<{

@@ -4,11 +4,9 @@
  */
 
 import * as Misskey from 'misskey-js';
-import type { Component, ComputedRef, Ref, MaybeRef } from 'vue';
-import type { ComponentProps as CP } from 'vue-component-type-helpers';
+import type { Component, ComputedRef, Ref } from 'vue';
 import type { OptionValue } from '@/types/option-value.js';
-
-type ComponentProps<T extends Component> = { [K in keyof CP<T>]: MaybeRef<CP<T>[K]> };
+import type { ComponentProps } from '@/utility/component-props.js';
 
 type Text = string | ComputedRef<string>;
 

@@ -4,8 +4,9 @@
  */
 
 import * as Misskey from 'misskey-js';
+import { readServerContext } from '@shared/utility/server-context.js';
 
-const providedContextEl = window.document.getElementById('misskey_clientCtx');
+export { assertServerContext } from '@shared/utility/server-context.js';
 
 export type ServerContext = {
 	clip?: Misskey.entities.Clip;
@@ -13,13 +14,4 @@ export type ServerContext = {
 	user?: Misskey.entities.UserDetailed;
 } | null;
 
-export const serverContext: ServerContext =
-	providedContextEl && providedContextEl.textContent ? JSON.parse(providedContextEl.textContent) : null;
-
-export function assertServerContext<K extends keyof NonNullable<ServerContext>>(
-	ctx: ServerContext,
-	entity: K,
-): ctx is Required<Pick<NonNullable<ServerContext>, K>> {
-	if (ctx == null) return false;
-	return entity in ctx && ctx[entity] != null;
-}
+export const serverContext: ServerContext = readServerContext<NonNullable<ServerContext>>('misskey_clientCtx');

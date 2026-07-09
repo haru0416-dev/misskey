@@ -49,8 +49,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts">
 import DrawBlurhash from '@/workers/draw-blurhash?worker';
 import TestWebGL2 from '@/workers/test-webgl2?worker';
-import { WorkerMultiDispatch } from '@@/js/worker-multi-dispatch.js';
-import { extractAvgColorFromBlurhash } from '@@/js/extract-avg-color-from-blurhash.js';
+import { WorkerMultiDispatch } from '@shared/utility/worker-multi-dispatch.js';
+import { extractAvgColorFromBlurhash } from '@shared/utility/extract-avg-color-from-blurhash.js';
 
 // テスト環境で Web Worker インスタンスは作成できない
 const isTest = import.meta.env.MODE === 'test' || window.localStorage.getItem('__MISSKEY_E2E_TEST__') === 'true';

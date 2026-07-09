@@ -276,7 +276,7 @@ i18n.tsx.save({...})
 <!-- 画面に "{name}のフォローを解除しますか？" が {name} 未置換のまま出る -->
 ```
 
-**原因**: `Tsx<T>` 型 ([packages/frontend-shared/js/i18n.ts](../../../../../packages/frontend-shared/js/i18n.ts)) は `ParameterizedString<P>` を持つキーだけを関数として公開する。
+**原因**: `Tsx<T>` 型 ([packages/frontend-shared/utility/i18n.ts](../../../../../packages/frontend-shared/utility/i18n.ts)) は `ParameterizedString<P>` を持つキーだけを関数として公開する。
 
 **対処**: パラメータ有無は yml の `{...}` 記法で決まる。
 
@@ -289,7 +289,7 @@ i18n.tsx.save({...})
 
 **症状**: 開発モードのコンソールに出る。
 
-**原因**: dev mode の Proxy が ja-JP.yml に存在しないキーへのアクセスを検知 ([packages/frontend-shared/js/i18n.ts](../../../../../packages/frontend-shared/js/i18n.ts) の dev 用 Proxy)。
+**原因**: dev mode の Proxy が ja-JP.yml に存在しないキーへのアクセスを検知 ([packages/frontend-shared/utility/i18n.ts](../../../../../packages/frontend-shared/utility/i18n.ts) の dev 用 Proxy)。
 
 **対処**: ja-JP.yml に該当キーを追加するか、参照側のタイポを直す。
 
@@ -302,7 +302,7 @@ i18n.tsx.save({...})
 - yml 側 `{name}` に対し、呼び出し側で `{ user: ... }` のように **キー名が違う**
 - あるいは引数オブジェクトに値が含まれていない
 
-実装根拠: [packages/frontend-shared/js/i18n.ts](../../../../../packages/frontend-shared/js/i18n.ts) (`Object.hasOwn(arg, expressions[i])` チェック)。
+実装根拠: [packages/frontend-shared/utility/i18n.ts](../../../../../packages/frontend-shared/utility/i18n.ts) (`Object.hasOwn(arg, expressions[i])` チェック)。
 
 **対処**: yml と呼び出し側でパラメータ名を一致させる。yml 側のキー名を変更したら、呼び出し側 (frontend 全体) を grep で揃える。
 

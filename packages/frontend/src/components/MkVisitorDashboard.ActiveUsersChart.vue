@@ -19,9 +19,10 @@ import tinycolor from 'tinycolor2';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { themeManager } from '@/theme.js';
 import { store } from '@/store.js';
-import { useChartTooltip } from '@/composables/use-chart-tooltip.js';
+import { useChartTooltip } from '@/composables/useChartTooltip.js';
 import { chartVLine } from '@/utility/chart-vline.js';
 import { initChart } from '@/utility/init-chart.js';
+import { toChartSeries } from '@/utility/chart-helpers.js';
 
 initChart();
 
@@ -38,20 +39,7 @@ async function renderChart() {
 		chartInstance.destroy();
 	}
 
-	const getDate = (ago: number) => {
-		const y = now.getFullYear();
-		const m = now.getMonth();
-		const d = now.getDate();
-
-		return new Date(y, m, d - ago);
-	};
-
-	const format = (arr: number[]) => {
-		return arr.map((v, i) => ({
-			x: getDate(i).getTime(),
-			y: v,
-		}));
-	};
+	const format = (arr: number[]) => toChartSeries(now, arr);
 
 	const raw = await misskeyApi('charts/active-users', { limit: chartLimit, span: 'day' });
 

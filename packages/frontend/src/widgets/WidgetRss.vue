@@ -22,8 +22,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, watch, computed } from 'vue';
 import * as Misskey from 'misskey-js';
-import { url as base } from '@@/js/config.js';
-import { useInterval } from '@@/js/use-interval.js';
+import { url as base } from '@shared/utility/config.js';
+import { useInterval } from '@shared/utility/use-interval.js';
 import { useWidgetPropsManager } from './widget.js';
 import { i18n } from '@/i18n.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';

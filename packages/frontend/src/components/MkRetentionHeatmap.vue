@@ -17,7 +17,7 @@ import { onMounted, nextTick, useTemplateRef, ref } from 'vue';
 import { Chart } from 'chart.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { store } from '@/store.js';
-import { useChartTooltip } from '@/composables/use-chart-tooltip.js';
+import { useChartTooltip } from '@/composables/useChartTooltip.js';
 import { alpha } from '@/utility/color.js';
 import { initChart } from '@/utility/init-chart.js';
 
@@ -99,7 +99,8 @@ async function renderChart() {
 				borderWidth: 0,
 				borderRadius: 3,
 				backgroundColor(c: any) {
-					const v = c.dataset.data[c.dataIndex] as unknown as typeof data[0];
+					const v = c.dataset.data[c.dataIndex] as unknown as typeof data[0] | undefined;
+					if (v == null) return alpha(color, 0);
 					const value = v.v;
 					const m = max(v.y);
 					if (m === 0) {
