@@ -34,9 +34,11 @@ import { listFollowerUserIdsByChannelIdFromDatabase } from '@/core/ChannelFollow
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import {
 	listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase,
+	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
+	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
 	listNotificationFollowerIdsByFolloweeIdFromDatabase,
 } from '@/core/FollowingStore.js';
-import { recordHashtagUsageInDatabase } from '@/core/HashtagStore.js';
+import { recordHashtagUsagesInDatabase } from '@/core/HashtagStore.js';
 import { adjustInstanceNotesCountFromDatabase, createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import {
 	countNotesByUserIdAndChannelIdFromDatabase,
@@ -45,20 +47,20 @@ import {
 	fetchNoteByIdFromDatabase,
 	incrementNoteRenoteCountInDatabase,
 	incrementNoteRepliesCountInDatabase,
+	listNotesByIdsFromDatabase,
 } from '@/core/NoteStore.js';
 import { listNoteThreadMutedUserIdsFromDatabase, noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
-import { listUserListMembershipsForFanoutByUserIdFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
-import { listUserProfilesByUserIdsFromDatabase, fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
+import { listUserListIdsContainingUserFromDatabase, listUserListMembershipsForFanoutByUserIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import { listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
 import {
-	fetchLocalUserByUsernameFromDatabase,
+	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
-	fetchUserByUsernameAndHostFromDatabase,
 	incrementUserNotesCountAndUpdatedAtInDatabase,
 	listUsersByIdsFromDatabase,
+	listUsersByUsernamesAndHostsFromDatabase,
 } from '@/core/UserStore.js';
-import { mutingExistsInDatabase } from '@/core/MutingStore.js';
+import { listMuterIdsByMuteeIdAndMuterIdsFromDatabase } from '@/core/MutingStore.js';
 import { listRenoteMuterIdsByMuteeIdFromDatabase } from '@/core/RenoteMutingStore.js';
-import { countMutualFollowingsBetweenUsersFromDatabase, followingExistsInDatabase } from '@/core/FollowingStore.js';
 import type { EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
@@ -67,13 +69,14 @@ import { addNoteToAntennasForHonoApi } from './antennas.js';
 import { HonoApiError } from './error.js';
 import { formatHashtagUsersWindow, getCurrentFeaturedWindow, HASHTAG_RANKING_WINDOW } from './hashtags.js';
 import { deliverNoteActivityForHonoApi, deliverToRelaysForHonoApi, renderNoteOrRenoteActivityForHonoApi, resolveRemoteRecipientForHonoApi, type HonoApiNoteApDependencies, type HonoApiRelayDeliverDependencies } from './notes-ap.js';
-import { packNoteForHonoApi, isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import { createPackNoteHintsForUsersForHonoApi, createPackNoteStaticHintForHonoApi, packNoteForHonoApi, isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiNotification } from '@/models/Notification.js';
 import { getHonoApiRolePolicies, getHonoApiUserRoles, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { pushSwNotificationForHonoApi } from './push-notification.js';
-import { packNotificationsForHonoApi, type HonoApiNotificationsListDependencies } from './notifications-list.js';
-import { xaddHonoApiNotification, type HonoApiNotificationDependencies } from './notification.js';
+import { packNotificationForHonoApi, type HonoApiNotificationsListDependencies } from './notifications-list.js';
+import { xaddHonoApiNotifications, type HonoApiNotificationDependencies } from './notification.js';
+import { packUserLiteForHonoApi } from './user.js';
 import type { HonoApiAntennaStreamPublisher, HonoApiMainStreamPublisher, HonoApiNotesStreamPublisher, HonoApiRoleTimelineStreamPublisher } from './events.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
 import { parseHonoApiParams } from './validation.js';
@@ -134,59 +137,58 @@ export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): b
 	});
 }
 
-/** FeaturedService#updateHashtagsRanking 相当 (updateRankingOf の hashtag 特化形)。 */
-async function updateFeaturedHashtagsRankingForHonoApi(redis: Redis.Redis, hashtag: string, score = 1): Promise<void> {
-	const currentWindow = getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW);
-	const redisTransaction = redis.multi();
-	redisTransaction.zincrby(`featuredHashtagsRanking:${currentWindow}`, score, hashtag);
-	redisTransaction.expire(
-		`featuredHashtagsRanking:${currentWindow}`,
-		(HASHTAG_RANKING_WINDOW * 3) / 1000,
-		'NX', // "NX -- Set expiry only when the key has no expiry" = 有効期限がないときだけ設定
-	);
-	await redisTransaction.exec();
-}
-
-/** HashtagService#updateHashtagsRanking 相当。hashtag は normalizeForSearch 済みで渡すこと。 */
-export async function updateHashtagsRankingForHonoApi(
+/** HashtagService#updateHashtagsRanking 相当。hashtags は normalizeForSearch 済みで渡すこと。 */
+export async function updateHashtagsRankingsForHonoApi(
 	deps: { meta: Pick<MiMeta, 'hiddenTags' | 'sensitiveWords'>; redis: Redis.Redis },
-	hashtag: string,
+	hashtags: string[],
 	userId: MiUser['id'],
 ): Promise<void> {
-	const hiddenTags = deps.meta.hiddenTags.map(t => normalizeForSearch(t));
-	if (hiddenTags.includes(hashtag)) return;
-	if (isKeyWordIncludedForHonoApi(hashtag, deps.meta.sensitiveWords)) return;
+	const hiddenTags = new Set(deps.meta.hiddenTags.map(tag => normalizeForSearch(tag)));
+	const candidates = [...new Set(hashtags)].filter(hashtag =>
+		!hiddenTags.has(hashtag) && !isKeyWordIncludedForHonoApi(hashtag, deps.meta.sensitiveWords));
+	if (candidates.length === 0) return;
+
+	const checkPipeline = deps.redis.pipeline();
+	for (const hashtag of candidates) {
+		checkPipeline.sismember(`hashtagUsers:${hashtag}`, userId);
+	}
+	const checkResults = await checkPipeline.exec();
+	if (checkResults == null) throw new Error('Failed to check hashtag ranking users');
+	const hashtagsToUpdate: string[] = [];
+	for (let i = 0; i < checkResults.length; i++) {
+		const [error, exists] = checkResults[i]!;
+		if (error != null) throw error;
+		if (exists !== 1) hashtagsToUpdate.push(candidates[i]!);
+	}
+	if (hashtagsToUpdate.length === 0) return;
 
 	// YYYYMMDDHHmm (10分間隔)
 	const now = new Date();
 	now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
 	const window = formatHashtagUsersWindow(now);
-
-	const exist = await deps.redis.sismember(`hashtagUsers:${hashtag}`, userId);
-	if (exist === 1) return;
-
-	// 原典 HashtagService#updateHashtagsRanking 同様、featured ランキング更新は await しない。
-	void updateFeaturedHashtagsRankingForHonoApi(deps.redis, hashtag, 1);
-
+	const currentFeaturedWindow = getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW);
 	const redisPipeline = deps.redis.pipeline();
+	for (const hashtag of hashtagsToUpdate) {
+		redisPipeline.zincrby(`featuredHashtagsRanking:${currentFeaturedWindow}`, 1, hashtag);
+		redisPipeline.expire(
+			`featuredHashtagsRanking:${currentFeaturedWindow}`,
+			(HASHTAG_RANKING_WINDOW * 3) / 1000,
+			'NX',
+		);
+		redisPipeline.pfadd(`hashtagUsers:${hashtag}:${window}`, userId);
+		redisPipeline.expire(`hashtagUsers:${hashtag}:${window}`, 60 * 60 * 24 * 3, 'NX');
+		redisPipeline.sadd(`hashtagUsers:${hashtag}`, userId);
+		redisPipeline.expire(`hashtagUsers:${hashtag}`, 60 * 60, 'NX');
+	}
+	await redisPipeline.exec();
+}
 
-	// チャート用
-	redisPipeline.pfadd(`hashtagUsers:${hashtag}:${window}`, userId);
-	redisPipeline.expire(`hashtagUsers:${hashtag}:${window}`,
-		60 * 60 * 24 * 3, // 3日間
-		'NX', // "NX -- Set expiry only when the key has no expiry" = 有効期限がないときだけ設定
-	);
-
-	// ユニークカウント用
-	// TODO: Bloom Filter を使うようにしても良さそう
-	redisPipeline.sadd(`hashtagUsers:${hashtag}`, userId);
-	redisPipeline.expire(`hashtagUsers:${hashtag}`,
-		60 * 60, // 1時間
-		'NX', // "NX -- Set expiry only when the key has no expiry" = 有効期限がないときだけ設定
-	);
-
-	// 原典同様 exec も await しない。
-	void redisPipeline.exec();
+export async function updateHashtagsRankingForHonoApi(
+	deps: { meta: Pick<MiMeta, 'hiddenTags' | 'sensitiveWords'>; redis: Redis.Redis },
+	hashtag: string,
+	userId: MiUser['id'],
+): Promise<void> {
+	await updateHashtagsRankingsForHonoApi(deps, [hashtag], userId);
 }
 
 function noSuchRenoteTargetError(): HonoApiError {
@@ -232,19 +234,27 @@ function containsTooManyMentionsError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Cannot post because it exceeds the allowed number of mentions.', code: 'CONTAINS_TOO_MANY_MENTIONS', id: '4de0363a-3046-481b-9b0f-feff3e211025' });
 }
 
-async function resolveMentionedUserForHonoApi(deps: HonoApiNotesCreateDependencies, username: string, host: string | null): Promise<MiUser | null> {
-	if (host == null) {
-		return await fetchLocalUserByUsernameFromDatabase(deps.db, username.toLowerCase());
-	}
-	const puny = domainToASCII(host.toLowerCase());
-	return await fetchUserByUsernameAndHostFromDatabase(deps.db, username.toLowerCase(), puny);
-}
-
 async function extractMentionedUsersForHonoApi(deps: HonoApiNotesCreateDependencies, user: { host: MiUser['host'] }, tokens: mfm.MfmNode[]): Promise<MiUser[]> {
 	if (tokens == null) return [];
 	const mentions = extractMentions(tokens);
-	const resolved = (await Promise.all(mentions.map(m => resolveMentionedUserForHonoApi(deps, m.username, m.host ?? user.host).catch(() => null)))).filter((x): x is MiUser => x != null);
-	return resolved.filter((u, i, self) => i === self.findIndex(u2 => u.id === u2.id));
+	const accounts = mentions.map(mention => {
+		const host = mention.host ?? user.host;
+		return {
+			username: mention.username.toLowerCase(),
+			host: host == null ? null : domainToASCII(host.toLowerCase()),
+		};
+	});
+	const users = await listUsersByUsernamesAndHostsFromDatabase(deps.db, accounts).catch(() => []);
+	const userByAccount = new Map(users.map(resolved => [`${resolved.username.toLowerCase()}@${resolved.host ?? ''}`, resolved]));
+	const seenUserIds = new Set<MiUser['id']>();
+	const resolvedUsers: MiUser[] = [];
+	for (const account of accounts) {
+		const resolved = userByAccount.get(`${account.username}@${account.host ?? ''}`);
+		if (resolved == null || seenUserIds.has(resolved.id)) continue;
+		seenUserIds.add(resolved.id);
+		resolvedUsers.push(resolved);
+	}
+	return resolvedUsers;
 }
 
 function pushFanoutTimelineForHonoApi(deps: HonoApiNotesCreateDependencies, tl: string, id: string, maxlen: number, pipeline: Redis.ChainableCommander): void {
@@ -263,56 +273,177 @@ function pushFanoutTimelineForHonoApi(deps: HonoApiNotesCreateDependencies, tl: 
 	}
 }
 
+type NoteNotificationType = 'mention' | 'reply' | 'renote' | 'quote' | 'note' | 'reaction';
+
+type NoteNotificationRequest = {
+	notifieeId: MiUser['id'];
+	type: NoteNotificationType;
+	extra: Record<string, unknown>;
+};
+
+async function hydrateNotificationNoteRelationsForHonoApi(
+	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
+	notes: MiNote[],
+): Promise<MiNote[]> {
+	const roots = notes.map(note => ({ ...note }) as MiNote);
+	const noteById = new Map<MiNote['id'], MiNote>(roots.map(note => [note.id, note]));
+	const register = (note: MiNote): MiNote => {
+		const existing = noteById.get(note.id);
+		if (existing != null) return existing;
+		const cloned = { ...note } as MiNote;
+		noteById.set(cloned.id, cloned);
+		return cloned;
+	};
+	const expanded = new Set<MiNote['id']>();
+	let detailFrontier = roots;
+	while (detailFrontier.length > 0) {
+		const current = detailFrontier.filter(note => !expanded.has(note.id));
+		if (current.length === 0) break;
+		for (const note of current) {
+			expanded.add(note.id);
+			if (note.reply) note.reply = register(note.reply);
+			if (note.renote) note.renote = register(note.renote);
+		}
+
+		const missingIds = [...new Set(current.flatMap(note => [note.replyId, note.renoteId])
+			.filter((id): id is MiNote['id'] => id != null && !noteById.has(id)))];
+		for (const relation of await listNotesByIdsFromDatabase(deps.db, missingIds)) {
+			register(relation);
+		}
+
+		const nextFrontier: MiNote[] = [];
+		for (const note of current) {
+			if (note.replyId) note.reply = noteById.get(note.replyId) ?? null;
+			if (note.renoteId) {
+				note.renote = noteById.get(note.renoteId) ?? null;
+				if (note.renote != null) nextFrontier.push(note.renote);
+			}
+		}
+		detailFrontier = nextFrontier;
+	}
+
+	return roots;
+}
+
+export async function createNoteNotificationsForHonoApi(
+	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
+	notifierId: MiUser['id'],
+	requests: readonly NoteNotificationRequest[],
+): Promise<void> {
+	const pending = requests.filter(request => request.notifieeId !== notifierId);
+	if (pending.length === 0) return;
+
+	const notifieeIds = [...new Set(pending.map(request => request.notifieeId))];
+	const [profiles, muterIds] = await Promise.all([
+		listUserProfilesByUserIdsFromDatabase(deps.db, notifieeIds),
+		listMuterIdsByMuteeIdAndMuterIdsFromDatabase(deps.db, notifierId, notifieeIds),
+	]);
+	const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
+	const muterIdSet = new Set(muterIds);
+	const candidates = pending.map(request => {
+		const profile = profileByUserId.get(request.notifieeId);
+		return {
+			request,
+			profile,
+			recieveConfig: profile?.notificationRecieveConfig[request.type],
+		};
+	}).filter(candidate => candidate.recieveConfig?.type !== 'never' && !muterIdSet.has(candidate.request.notifieeId));
+	if (candidates.length === 0) return;
+
+	const notifieeFollowingCandidateIds = [...new Set(candidates
+		.filter(candidate => candidate.recieveConfig?.type === 'following' || candidate.recieveConfig?.type === 'mutualFollow' || candidate.recieveConfig?.type === 'followingOrFollower')
+		.map(candidate => candidate.request.notifieeId))];
+	const notifierFollowingCandidateIds = [...new Set(candidates
+		.filter(candidate => candidate.recieveConfig?.type === 'follower' || candidate.recieveConfig?.type === 'mutualFollow' || candidate.recieveConfig?.type === 'followingOrFollower')
+		.map(candidate => candidate.request.notifieeId))];
+	const candidateUserListIds = [...new Set(candidates.flatMap(candidate => candidate.recieveConfig?.type === 'list'
+		? [candidate.recieveConfig.userListId]
+		: []))];
+	const [notifieeFollowingNotifierIds, notifierFollowingNotifieeIds, memberUserListIds] = await Promise.all([
+		listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, notifierId, notifieeFollowingCandidateIds),
+		listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, notifierId, notifierFollowingCandidateIds),
+		listUserListIdsContainingUserFromDatabase(deps.db, notifierId, candidateUserListIds),
+	]);
+	const notifieeFollowingNotifierIdSet = new Set(notifieeFollowingNotifierIds);
+	const notifierFollowingNotifieeIdSet = new Set(notifierFollowingNotifieeIds);
+
+	const accepted = candidates.filter(candidate => {
+		const config = candidate.recieveConfig;
+		const notifieeId = candidate.request.notifieeId;
+		if (config?.type === 'following') return notifieeFollowingNotifierIdSet.has(notifieeId);
+		if (config?.type === 'follower') return notifierFollowingNotifieeIdSet.has(notifieeId);
+		if (config?.type === 'mutualFollow') return notifieeFollowingNotifierIdSet.has(notifieeId) && notifierFollowingNotifieeIdSet.has(notifieeId);
+		if (config?.type === 'followingOrFollower') return notifieeFollowingNotifierIdSet.has(notifieeId) || notifierFollowingNotifieeIdSet.has(notifieeId);
+		if (config?.type === 'list') return memberUserListIds.has(config.userListId);
+		return true;
+	});
+	if (accepted.length === 0) return;
+
+	const stored = accepted.map(candidate => ({
+		...candidate,
+		notification: {
+			id: genId(),
+			createdAt: new Date().toISOString(),
+			type: candidate.request.type,
+			notifierId,
+			...candidate.request.extra,
+		},
+	}));
+	await xaddHonoApiNotifications(deps, stored.map(item => ({
+		userId: item.request.notifieeId,
+		notification: item.notification,
+	})));
+
+	const notifier = await fetchUserByIdFromDatabase(deps.db, notifierId);
+	if (notifier == null || notifier.isSuspended) return;
+	const publishable = stored.filter(item => notifier.host == null || !item.profile?.mutedInstances.includes(notifier.host));
+	if (publishable.length === 0) return;
+
+	const noteIds = [...new Set(publishable
+		.map(item => 'noteId' in item.notification ? item.notification.noteId : null)
+		.filter((noteId): noteId is string => typeof noteId === 'string'))];
+	const fetchedNotes = await listNotesByIdsFromDatabase(deps.db, noteIds);
+	if (fetchedNotes.length === 0) return;
+	const notes = await hydrateNotificationNoteRelationsForHonoApi(deps, fetchedNotes);
+	const notePackHint = await createPackNoteStaticHintForHonoApi(deps, notes);
+	const packedNotifier = notePackHint.packedUsers.get(notifier.id) ?? await packUserLiteForHonoApi(deps, notifier).catch(() => null);
+	if (packedNotifier == null) return;
+	const packedUsers = new Map([[notifier.id, packedNotifier]]);
+	const noteSources = new Map(notes.map(note => [note.id, note]));
+
+	const batchSize = 1000;
+	for (let offset = 0; offset < publishable.length; offset += batchSize) {
+		const batch = publishable.slice(offset, offset + batchSize);
+		const notePackHintsByUserId = await createPackNoteHintsForUsersForHonoApi(
+			deps,
+			notes,
+			batch.map(item => item.request.notifieeId),
+			{ staticHint: notePackHint },
+		);
+		await Promise.all(batch.map(async item => {
+			const packed = await packNotificationForHonoApi(
+				deps,
+				item.notification as unknown as MiNotification,
+				item.request.notifieeId,
+				{ checkValidNotifier: false },
+				{ packedUsers, noteSources, notePackHint: notePackHintsByUserId.get(item.request.notifieeId) ?? notePackHint },
+			);
+			if (packed != null) {
+				deps.publishMainStream?.(item.request.notifieeId, 'notification', packed);
+				void pushSwNotificationForHonoApi(deps, item.request.notifieeId, 'notification', packed);
+			}
+		}));
+	}
+}
+
 export async function createNoteNotificationForHonoApi(
 	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
 	notifieeId: MiUser['id'],
 	notifierId: MiUser['id'],
-	type: 'mention' | 'reply' | 'renote' | 'quote' | 'note' | 'reaction',
+	type: NoteNotificationType,
 	extra: Record<string, unknown>,
 ): Promise<void> {
-	if (notifieeId === notifierId) return;
-
-	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, notifieeId);
-	const recieveConfig = (profile?.notificationRecieveConfig ?? {})[type as keyof NonNullable<typeof profile>['notificationRecieveConfig']];
-	if (recieveConfig?.type === 'never') return;
-
-	const muted = await mutingExistsInDatabase(deps.db, notifieeId, notifierId);
-	if (muted) return;
-
-	if (recieveConfig?.type === 'following') {
-		if (!await followingExistsInDatabase(deps.db, notifieeId, notifierId)) return;
-	} else if (recieveConfig?.type === 'follower') {
-		if (!await followingExistsInDatabase(deps.db, notifierId, notifieeId)) return;
-	} else if (recieveConfig?.type === 'mutualFollow') {
-		const count = await countMutualFollowingsBetweenUsersFromDatabase(deps.db, notifieeId, notifierId);
-		if (count !== 2) return;
-	} else if (recieveConfig?.type === 'followingOrFollower') {
-		const [isFollowing, isFollower] = await Promise.all([
-			followingExistsInDatabase(deps.db, notifieeId, notifierId),
-			followingExistsInDatabase(deps.db, notifierId, notifieeId),
-		]);
-		if (!isFollowing && !isFollower) return;
-	} else if (recieveConfig?.type === 'list') {
-		const isMember = await userListMembershipExistsInDatabase(deps.db, notifierId, recieveConfig.userListId);
-		if (!isMember) return;
-	}
-
-	const notification = {
-		id: genId(),
-		createdAt: new Date().toISOString(),
-		type,
-		notifierId,
-		...extra,
-	};
-	await xaddHonoApiNotification(deps, notifieeId, notification);
-
-	// 原典 NotificationService と同じく、mainStream には pack済みの通知 (user/note が埋まった形) を流す。
-	// 生の保存形 (notifierId/noteId のみ) を流すとクライアントは通知を表示できない
-	const [packed] = await packNotificationsForHonoApi(deps, [notification as unknown as MiNotification], notifieeId);
-	if (packed != null) {
-		deps.publishMainStream?.(notifieeId, 'notification', packed);
-		void pushSwNotificationForHonoApi(deps, notifieeId, 'notification', packed);
-	}
+	await createNoteNotificationsForHonoApi(deps, notifierId, [{ notifieeId, type, extra }]);
 }
 
 type NotificationType = 'reply' | 'renote' | 'quote' | 'mention';
@@ -350,16 +481,18 @@ class HonoNotificationManager {
 				break;
 		}
 
+		const requests: NoteNotificationRequest[] = [];
 		for (const x of this.queue.values()) {
 			const isVisibleToTarget = visibleUserIds === null || visibleUserIds.has(x.target);
 			if (!isVisibleToTarget) continue;
 
 			if (x.reason === 'renote') {
-				void createNoteNotificationForHonoApi(deps, x.target, this.notifier.id, 'renote', { noteId: this.note.id, targetNoteId: this.note.renoteId! });
+				requests.push({ notifieeId: x.target, type: 'renote', extra: { noteId: this.note.id, targetNoteId: this.note.renoteId! } });
 			} else {
-				void createNoteNotificationForHonoApi(deps, x.target, this.notifier.id, x.reason, { noteId: this.note.id });
+				requests.push({ notifieeId: x.target, type: x.reason, extra: { noteId: this.note.id } });
 			}
 		}
+		void createNoteNotificationsForHonoApi(deps, this.notifier.id, requests);
 	}
 }
 
@@ -389,7 +522,7 @@ async function enqueueUserWebhookForHonoApi(
 	type: 'note' | 'reply' | 'renote' | 'mention',
 	note: unknown,
 ): Promise<void> {
-	const webhooks = (await listWebhooksFromDatabase(deps.db, { isActive: true, on: [type] })).filter(w => w.userId === userId && w.on.includes(type));
+	const webhooks = await listWebhooksFromDatabase(deps.db, { userId, isActive: true, on: [type] });
 
 	await Promise.all(webhooks.map(webhook => {
 		const data: UserWebhookDeliverJobData = {
@@ -490,8 +623,9 @@ export async function insertNoteForHonoApi(
 	if (mentionedUsers.length > 0) {
 		insert.mentions = mentionedUsers.map(u => u.id);
 		const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, mentionedUsers.map(u => u.id));
+		const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
 		insert.mentionedRemoteUsers = JSON.stringify(mentionedUsers.filter((u): u is MiUser & { host: string } => u.host != null).map(u => {
-			const profile = profiles.find(p => p.userId === u.id);
+			const profile = profileByUserId.get(u.id);
 			return { uri: u.uri, url: profile?.url ?? undefined, username: u.username, host: u.host } as IMentionedRemoteUsers[0];
 		}));
 	}
@@ -548,23 +682,17 @@ export async function postNoteCreatedForHonoApi(
 	}
 
 	if (data.visibility === 'public' || data.visibility === 'home') {
-		// 原典は直列 await だが、タグごとに独立した行への書き込みなので並列化する。
-		// recordHashtagUsageInDatabase は read-modify-write のため、同名に正規化される重複タグは
-		// Set で除去して競合を避ける (直列実行時と最終状態は同じ — 2回目の同名書き込みは no-op)。
 		const names = [...new Set(tags.map(tag => normalizeForSearch(tag)))];
-		await Promise.all(names.map(name => {
-			// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget。
-			void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
-			return recordHashtagUsageInDatabase(deps.db, {
-				id: genId(),
-				name,
-				userId: user.id,
-				isLocalUser: user.host == null,
-				isRemoteUser: user.host != null,
-				isUserAttached: false,
-				increment: true,
-			});
-		}));
+		// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget。
+		void updateHashtagsRankingsForHonoApi(deps, names, user.id).catch(() => {});
+		await recordHashtagUsagesInDatabase(deps.db, {
+			entries: names.map(name => ({ id: genId(), name })),
+			userId: user.id,
+			isLocalUser: user.host == null,
+			isRemoteUser: user.host != null,
+			isUserAttached: false,
+			increment: true,
+		});
 	}
 
 	await incrementUserNotesCountAndUpdatedAtInDatabase(deps.db, user.id, new Date());
@@ -589,10 +717,10 @@ export async function postNoteCreatedForHonoApi(
 				const renoteMuterIds = isPureRenote
 					? new Set(await listRenoteMuterIdsByMuteeIdFromDatabase(deps.db, user.id))
 					: null;
-				for (const followerId of followerIds) {
-					if (renoteMuterIds?.has(followerId)) continue;
-					void createNoteNotificationForHonoApi(deps, followerId, user.id, 'note', { noteId: note.id });
-				}
+				const requests = followerIds
+					.filter(followerId => !renoteMuterIds?.has(followerId))
+					.map(followerId => ({ notifieeId: followerId, type: 'note' as const, extra: { noteId: note.id } }));
+				void createNoteNotificationsForHonoApi(deps, user.id, requests);
 			}
 		}).catch(() => {});
 	}
@@ -735,13 +863,15 @@ async function pushNoteToFanoutTimelinesForHonoApi(deps: HonoApiNotesCreateDepen
 			listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase(deps.db, user.id),
 			listUserListMembershipsForFanoutByUserIdFromDatabase(deps.db, user.id),
 		]);
+		const followerIdSet = new Set(followings.map(following => following.followerId));
+		const visibleUserIdSet = new Set(note.visibleUserIds);
 
 		if (note.visibility === 'followers') {
-			userListMemberships = userListMemberships.filter(x => x.userListUserId === user.id || followings.some(f => f.followerId === x.userListUserId));
+			userListMemberships = userListMemberships.filter(x => x.userListUserId === user.id || followerIdSet.has(x.userListUserId));
 		}
 
 		for (const following of followings) {
-			if (note.visibility === 'specified' && !note.visibleUserIds.some(v => v === following.followerId)) continue;
+			if (note.visibility === 'specified' && !visibleUserIdSet.has(following.followerId)) continue;
 			if (isReply(note, following.followerId) && !following.withReplies) continue;
 
 			pushFanoutTimelineForHonoApi(deps, `homeTimeline:${following.followerId}`, note.id, deps.meta.perUserHomeTimelineCacheMax, r);
@@ -751,7 +881,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(deps: HonoApiNotesCreateDepen
 		}
 
 		for (const membership of userListMemberships) {
-			if (note.visibility === 'specified' && note.userId !== membership.userListUserId && !note.visibleUserIds.some(v => v === membership.userListUserId)) continue;
+			if (note.visibility === 'specified' && note.userId !== membership.userListUserId && !visibleUserIdSet.has(membership.userListUserId)) continue;
 			if (isReply(note, membership.userListUserId) && !membership.withReplies) continue;
 
 			pushFanoutTimelineForHonoApi(deps, `userListTimeline:${membership.userListId}`, note.id, deps.meta.perUserListTimelineCacheMax, r);
@@ -761,7 +891,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(deps: HonoApiNotesCreateDepen
 		}
 
 		if (note.userHost == null) {
-			if (note.visibility !== 'specified' || !note.visibleUserIds.some(v => v === user.id)) {
+			if (note.visibility !== 'specified' || !visibleUserIdSet.has(user.id)) {
 				pushFanoutTimelineForHonoApi(deps, `homeTimeline:${user.id}`, note.id, deps.meta.perUserHomeTimelineCacheMax, r);
 				if (note.fileIds.length > 0) {
 					pushFanoutTimelineForHonoApi(deps, `homeTimelineWithFiles:${user.id}`, note.id, deps.meta.perUserHomeTimelineCacheMax / 2, r);
@@ -891,18 +1021,28 @@ export async function createNoteForHonoApi(
 	tags = tags.filter(tag => Array.from(tag).length <= 128).splice(0, 32);
 
 	const finalMentionedUsers: MiUser[] = mentionedUsers ?? [];
+	const finalMentionedUserIds = new Set(finalMentionedUsers.map(user => user.id));
+	let replyUserForVisibility: MiUser | null = null;
 
-	if (data.reply && user.id !== data.reply.userId && !finalMentionedUsers.some(u => u.id === data.reply!.userId)) {
-		finalMentionedUsers.push(await fetchUserByIdOrFailFromDatabase(deps.db, data.reply.userId));
+	if (data.reply && user.id !== data.reply.userId && !finalMentionedUserIds.has(data.reply.userId)) {
+		replyUserForVisibility = await fetchUserByIdOrFailFromDatabase(deps.db, data.reply.userId);
+		finalMentionedUsers.push(replyUserForVisibility);
+		finalMentionedUserIds.add(replyUserForVisibility.id);
 	}
 
 	if (data.visibility === 'specified') {
 		if (data.visibleUsers == null) throw new Error('invalid param');
 		for (const u of data.visibleUsers) {
-			if (!finalMentionedUsers.some(x => x.id === u.id)) finalMentionedUsers.push(u);
+			if (!finalMentionedUserIds.has(u.id)) {
+				finalMentionedUsers.push(u);
+				finalMentionedUserIds.add(u.id);
+			}
 		}
-		if (data.reply && !data.visibleUsers.some(x => x.id === data.reply!.userId)) {
-			data.visibleUsers.push(await fetchUserByIdOrFailFromDatabase(deps.db, data.reply.userId));
+		const visibleUserIds = new Set(data.visibleUsers.map(user => user.id));
+		if (data.reply && !visibleUserIds.has(data.reply.userId)) {
+			const replyUser = replyUserForVisibility ?? await fetchUserByIdOrFailFromDatabase(deps.db, data.reply.userId);
+			data.visibleUsers.push(replyUser);
+			visibleUserIds.add(replyUser.id);
 		}
 	}
 

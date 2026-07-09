@@ -166,6 +166,30 @@ export async function fetchUserByUsernameAndHostFromDatabase(
 	return row ? deserializeUser(row) : null;
 }
 
+export async function listUsersByUsernamesAndHostsFromDatabase(
+	db: MiDrizzleDatabase,
+	queries: readonly { username: string; host: MiUser['host'] }[],
+): Promise<MiUser[]> {
+	if (queries.length === 0) return [];
+
+	const usernamesByHost = new Map<MiUser['host'], Set<string>>();
+	for (const query of queries) {
+		const usernames = usernamesByHost.get(query.host) ?? new Set<string>();
+		usernames.add(query.username.toLowerCase());
+		usernamesByHost.set(query.host, usernames);
+	}
+
+	const rows = await db
+		.select()
+		.from(userTable)
+		.where(or(...[...usernamesByHost.entries()].map(([host, usernames]) => and(
+			host == null ? isNull(userTable.host) : eq(userTable.host, host),
+			inArray(userTable.usernameLower, [...usernames]),
+		))));
+
+	return rows.map(row => deserializeUser(row));
+}
+
 export async function fetchLocalUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<MiLocalUser | null> {
 	const user = await fetchUserByIdFromDatabase(db, id);
 

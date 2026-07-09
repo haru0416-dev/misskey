@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { userListMembership, type UserListMembershipInsert, type UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { UpdateValuesMissingError } from '@/misc/db-errors.js';
@@ -109,7 +109,7 @@ export async function listUserListIdsContainingUserFromDatabase(
 		.from(userListMembership)
 		.where(and(
 			eq(userListMembership.userId, userId),
-			inArray(userListMembership.userListId, candidateUserListIds),
+			sql`${userListMembership.userListId} = ANY(${sql.param(candidateUserListIds)})`,
 		));
 
 	return new Set(rows.map(row => row.userListId));
@@ -179,6 +179,34 @@ export async function listUserListMembershipUserIdsByUserListIdFromDatabase(
 	return rows.map(row => row.userId);
 }
 
+export async function listUserListMembershipUserIdsByUserListIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userListIds: MiUserList['id'][],
+): Promise<Map<MiUserList['id'], MiUser['id'][]>> {
+	if (userListIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await db
+		.select({
+			userListId: userListMembership.userListId,
+			userId: userListMembership.userId,
+		})
+		.from(userListMembership)
+		.where(inArray(userListMembership.userListId, userListIds));
+	const userIdsByListId = new Map<MiUserList['id'], MiUser['id'][]>();
+	for (const row of rows) {
+		let userIds = userIdsByListId.get(row.userListId);
+		if (userIds == null) {
+			userIds = [];
+			userIdsByListId.set(row.userListId, userIds);
+		}
+		userIds.push(row.userId);
+	}
+
+	return userIdsByListId;
+}
+
 export async function listUserListMembershipsByUserListIdWithPaginationFromDatabase(
 	db: MiDrizzleDatabase,
 	userListId: MiUserList['id'],
@@ -227,6 +255,19 @@ export async function deleteUserListMembershipInDatabase(
 	await db
 		.delete(userListMembership)
 		.where(userListMembershipUserAndListCondition(userId, userListId));
+}
+
+export async function deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	listOwnerId: MiUser['id'],
+): Promise<void> {
+	await db
+		.delete(userListMembership)
+		.where(and(
+			eq(userListMembership.userId, userId),
+			eq(userListMembership.userListUserId, listOwnerId),
+		));
 }
 
 /**

@@ -14,9 +14,9 @@ import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, del
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
 import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { mutingExistsInDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
-import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, listFollowingUsersByBirthdayDateFromDatabase } from '@/core/UserProfileStore.js';
 import { isHonoApiModerator } from './role-policy.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
@@ -265,8 +265,7 @@ async function isNotificationAllowed(
 	const recieveConfig = (profile.notificationRecieveConfig ?? {})[type];
 	if (recieveConfig?.type === 'never') return false;
 
-	const mutings = await listMuteeIdsByMuterIdFromDatabase(deps.db, notifieeId);
-	if (mutings.includes(notifierId)) return false;
+	if (await mutingExistsInDatabase(deps.db, notifieeId, notifierId)) return false;
 
 	switch (recieveConfig?.type) {
 		case 'following':
@@ -338,10 +337,11 @@ async function enqueueUserWebhook(
 	type: 'follow' | 'followed' | 'unfollow',
 	user: Packed<'UserDetailedNotMe'> | Packed<'UserLite'>,
 ): Promise<void> {
-	const webhooks = (await listWebhooksFromDatabase(deps.db, {
+	const webhooks = await listWebhooksFromDatabase(deps.db, {
+		userId,
 		isActive: true,
 		on: [type],
-	})).filter(webhook => webhook.userId === userId && webhook.on.includes(type));
+	});
 
 	await Promise.all(webhooks.map(webhook => {
 		const data: UserWebhookDeliverJobData = {
@@ -607,10 +607,9 @@ async function checkAutoAcceptIfMovedForHonoApi(
 	if (!oldSelfIds || oldSelfIds.length === 0) return false;
 
 	const followerUri = getUserUri(deps.config, follower);
+	const oldSelfs = await listUsersByIdsFromDatabase(deps.db, oldSelfIds, { includeSuspended: true });
 
-	for (const oldSelfId of oldSelfIds) {
-		const oldSelf = await fetchUserByIdFromDatabase(deps.db, oldSelfId);
-		if (oldSelf == null) continue;
+	for (const oldSelf of oldSelfs) {
 		if (oldSelf.movedToUri !== followerUri) continue;
 		if (await followingExistsInDatabase(deps.db, oldSelf.id, followee.id)) return true;
 	}
@@ -799,12 +798,19 @@ export async function acceptAllFollowRequestsForHonoApi(
 	followee: MiLocalUser,
 ): Promise<void> {
 	const requests = await listAllFollowRequestsByFolloweeIdFromDatabase(deps.db, followee.id);
+	if (requests.length === 0) return;
+
+	const followerIds = [...new Set(requests.map(request => request.followerId))];
+	const [followeeProfile, followers] = await Promise.all([
+		fetchUserProfileByUserIdOrFailFromDatabase(deps.db, followee.id),
+		listUsersByIdsFromDatabase(deps.db, followerIds, { includeSuspended: true }),
+	]);
+	const followerById = new Map(followers.map(follower => [follower.id, follower]));
 
 	for (const request of requests) {
-		const follower = await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId);
+		const follower = followerById.get(request.followerId) ?? await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId);
 
 		(async () => {
-			const followeeProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, followee.id);
 			await insertFollowingWithSideEffects(deps, follower, followee, {
 				withReplies: request.withReplies ?? undefined,
 				followeeProfile,
@@ -911,7 +917,7 @@ async function packFollowRequestsForHonoApi(
 	requests: FollowRequestRow[],
 	me: MiLocalUser,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const userIds = [...requests.map(r => r.followerId), ...requests.map(r => r.followeeId)];
+	const userIds = [...new Set([...requests.map(r => r.followerId), ...requests.map(r => r.followeeId)])];
 	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
 	const userById = new Map(packedUsers.map(user => [user.id, user]));
 

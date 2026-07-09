@@ -4,8 +4,8 @@
  */
 
 import { z } from 'zod';
-import { clipFavoriteExistsInDatabase, countClipFavoritesFromDatabase, fetchFavoriteClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
-import { countClipNotesByClipIdFromDatabase, createClipNoteInDatabase, deleteClipNoteInDatabase } from '@/core/ClipNoteStore.js';
+import { clipFavoriteExistsInDatabase, countClipFavoritesByClipIdsFromDatabase, countClipFavoritesFromDatabase, fetchFavoriteClipIdsFromDatabase, listFavoritedClipIdsByUserIdAndClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
+import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteInDatabase, deleteClipNoteInDatabase } from '@/core/ClipNoteStore.js';
 import {
 	countClipsByUserIdFromDatabase,
 	createClipInDatabase,
@@ -183,15 +183,20 @@ export async function packClipForHonoApi(
 	deps: HonoApiClipDependencies,
 	clip: MiClip,
 	me: { id: MiUser['id'] } | null | undefined,
-	hint?: { packedUser?: Packed<'UserLite'> },
+	hint?: {
+		packedUser?: Packed<'UserLite'>;
+		favoritedCount?: number;
+		isFavorited?: boolean;
+		notesCount?: number;
+	},
 ): Promise<Packed<'Clip'>> {
 	const meId = me ? me.id : null;
 
 	const [user, favoritedCount, isFavorited, notesCount] = await Promise.all([
 		hint?.packedUser ? Promise.resolve(hint.packedUser) : packUserLiteForHonoApi(deps, clip.userId),
-		countClipFavoritesFromDatabase(deps.db, clip.id),
-		meId ? clipFavoriteExistsInDatabase(deps.db, meId, clip.id) : Promise.resolve(undefined),
-		meId === clip.userId ? countClipNotesByClipIdFromDatabase(deps.db, clip.id) : Promise.resolve(undefined),
+		hint?.favoritedCount !== undefined ? Promise.resolve(hint.favoritedCount) : countClipFavoritesFromDatabase(deps.db, clip.id),
+		hint?.isFavorited !== undefined ? Promise.resolve(hint.isFavorited) : meId ? clipFavoriteExistsInDatabase(deps.db, meId, clip.id) : Promise.resolve(undefined),
+		hint?.notesCount !== undefined ? Promise.resolve(hint.notesCount) : meId === clip.userId ? countClipNotesByClipIdFromDatabase(deps.db, clip.id) : Promise.resolve(undefined),
 	]);
 
 	return {
@@ -215,10 +220,24 @@ export async function packClipsManyForHonoApi(
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Clip'>[]> {
 	const userIds = [...new Set(clips.map(c => c.userId))];
-	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
+	const clipIds = clips.map(clip => clip.id);
+	const meId = me?.id ?? null;
+	const ownedClipIds = meId == null ? [] : clips.filter(clip => clip.userId === meId).map(clip => clip.id);
+	const [packedUsers, favoriteCounts, favoritedClipIds, noteCounts] = await Promise.all([
+		packUserLiteManyForHonoApi(deps, userIds),
+		countClipFavoritesByClipIdsFromDatabase(deps.db, clipIds),
+		meId == null ? Promise.resolve([]) : listFavoritedClipIdsByUserIdAndClipIdsFromDatabase(deps.db, meId, clipIds),
+		countClipNotesByClipIdsFromDatabase(deps.db, ownedClipIds),
+	]);
 	const userById = new Map(packedUsers.map(u => [u.id, u]));
+	const favoritedClipIdSet = new Set(favoritedClipIds);
 
-	return await Promise.all(clips.map(clip => packClipForHonoApi(deps, clip, me, { packedUser: userById.get(clip.userId) })));
+	return await Promise.all(clips.map(clip => packClipForHonoApi(deps, clip, me, {
+		packedUser: userById.get(clip.userId),
+		favoritedCount: favoriteCounts.get(clip.id) ?? 0,
+		isFavorited: meId == null ? undefined : favoritedClipIdSet.has(clip.id),
+		notesCount: clip.userId === meId ? (noteCounts.get(clip.id) ?? 0) : undefined,
+	})));
 }
 
 export async function handleHonoApiClipsList(

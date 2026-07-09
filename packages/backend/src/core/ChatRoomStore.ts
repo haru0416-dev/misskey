@@ -475,6 +475,23 @@ export async function fetchChatRoomInvitationByIdOrFailFromDatabase(
 	return row;
 }
 
+export async function listChatRoomInvitationsByIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: ChatRoomInvitationRow['id'][],
+): Promise<ChatRoomInvitationRow[]> {
+	if (ids.length === 0) {
+		return [];
+	}
+
+	const rows = await db
+		.select()
+		.from(chatRoomInvitation)
+		.where(inArray(chatRoomInvitation.id, ids));
+	const invitationById = new Map(rows.map(row => [row.id, row]));
+
+	return ids.map(id => invitationById.get(id)).filter((row): row is ChatRoomInvitationRow => row != null);
+}
+
 export async function fetchChatRoomInvitationOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	roomId: MiChatRoom['id'],

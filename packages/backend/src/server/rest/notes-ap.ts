@@ -12,7 +12,7 @@ import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverQueue } from '@/core/queues.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
-import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached, fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/EmojiStore.js';
 import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/NoteStore.js';
 import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
@@ -136,8 +136,9 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 	const mentionTags = mentionedUsers.map(u => renderMention(deps.config, u));
 
 	const files = note.fileIds.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, note.fileIds) : [];
+	const fileById = new Map(files.map(file => [file.id, file]));
 	const orderedFiles = note.fileIds
-		.map(id => files.find(f => f.id === id))
+		.map(id => fileById.get(id))
 		.filter((f): f is MiDriveFile => f != null);
 
 	const poll = note.hasPoll ? await fetchPollByNoteIdFromDatabase(deps.db, note.id) : null;
@@ -152,7 +153,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 	const noMisskeyContent = extraHtml == null && parsed.every(n => ['text', 'unicodeEmoji', 'emojiCode', 'mention', 'hashtag', 'url'].includes(n.type));
 	const content = mfmService.toHtml(parsed, JSON.parse(note.mentionedRemoteUsers), extraHtml);
 
-	const emojiRows = (await Promise.all(note.emojis.map(name => fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null))))
+	const emojiRows = (await fetchEmojisByNamesAndHostsFromDatabaseCached(deps.db, note.emojis.map(name => ({ name, host: null }))))
 		.filter((e): e is MiEmoji => e != null && !e.localOnly);
 	const apemojis = emojiRows.map(e => renderEmoji(deps.config, e));
 

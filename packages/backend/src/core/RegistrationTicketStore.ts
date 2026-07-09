@@ -96,6 +96,27 @@ export async function createRegistrationTicketInDatabase(
 	return row;
 }
 
+export async function createRegistrationTicketsInDatabase(
+	db: MiDrizzleDatabase,
+	data: RegistrationTicketInsert[],
+): Promise<RegistrationTicketRow[]> {
+	if (data.length === 0) return [];
+
+	const rows = await db
+		.insert(registrationTicket)
+		.values(data)
+		.returning();
+	const rowById = new Map(rows.map(row => [row.id, row]));
+
+	return data.map(ticket => {
+		const row = rowById.get(ticket.id);
+		if (row == null) {
+			throw new Error(`Failed to create registration ticket ${ticket.id}`);
+		}
+		return row;
+	});
+}
+
 export async function updateRegistrationTicketInDatabase(
 	db: MiDrizzleDatabase,
 	id: RegistrationTicketRow['id'],

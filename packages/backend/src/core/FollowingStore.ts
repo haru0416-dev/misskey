@@ -125,6 +125,24 @@ export async function listFolloweeIdsByFollowerIdFromDatabase(
 	return rows.map(row => row.followeeId);
 }
 
+export async function listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followerId: MiUser['id'],
+	followeeIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (followeeIds.length === 0) return [];
+
+	const rows = await db
+		.select({ followeeId: following.followeeId })
+		.from(following)
+		.where(and(
+			eq(following.followerId, followerId),
+			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
+		));
+
+	return rows.map(row => row.followeeId);
+}
+
 export async function listLocalFollowerFollowingsByFolloweeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
@@ -160,6 +178,43 @@ export async function listFollowerIdsByFolloweeIdFromDatabase(
 		.where(eq(following.followeeId, followeeId));
 
 	return rows.map(row => row.followerId);
+}
+
+export async function listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followeeId: MiUser['id'],
+	followerIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (followerIds.length === 0) return [];
+
+	const rows = await db
+		.select({ followerId: following.followerId })
+		.from(following)
+		.where(and(
+			eq(following.followeeId, followeeId),
+			sql`${following.followerId} = ANY(${sql.param(followerIds)})`,
+		));
+
+	return rows.map(row => row.followerId);
+}
+
+export async function listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followerIds: MiUser['id'][],
+	followeeIds: MiUser['id'][],
+): Promise<Pick<MiFollowing, 'followerId' | 'followeeId'>[]> {
+	if (followerIds.length === 0 || followeeIds.length === 0) return [];
+
+	return await db
+		.select({
+			followerId: following.followerId,
+			followeeId: following.followeeId,
+		})
+		.from(following)
+		.where(and(
+			sql`${following.followerId} = ANY(${sql.param(followerIds)})`,
+			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
+		));
 }
 
 export async function listNotificationFollowerIdsByFolloweeIdFromDatabase(

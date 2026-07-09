@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { countActiveRoleAssignmentsByRoleIdFromDatabase, countActiveRoleAssignmentsByRoleIdsFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchPublicExplorableRoleByIdFromDatabase, fetchPublicRoleByIdFromDatabase, listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
@@ -86,8 +86,11 @@ export const rolesNotesParamDef = z.object({
 export async function packHonoApiRole(
 	deps: HonoApiRoleDependencies,
 	role: MiRole,
+	options?: {
+		assignedCount?: number;
+	},
 ): Promise<Packed<'Role'>> {
-	const assignedCount = await countActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id);
+	const assignedCount = options?.assignedCount ?? await countActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id);
 	const policies = { ...role.policies };
 
 	for (const [key, value] of Object.entries(DEFAULT_POLICIES)) {
@@ -123,13 +126,23 @@ export async function packHonoApiRole(
 	};
 }
 
+export async function packHonoApiRoles(
+	deps: HonoApiRoleDependencies,
+	roles: MiRole[],
+): Promise<Packed<'Role'>[]> {
+	const assignedCountByRoleId = await countActiveRoleAssignmentsByRoleIdsFromDatabase(deps.db, roles.map(role => role.id));
+	return await Promise.all(roles.map(role => packHonoApiRole(deps, role, {
+		assignedCount: assignedCountByRoleId.get(role.id) ?? 0,
+	})));
+}
+
 export async function handleHonoApiRolesList(
 	deps: HonoApiRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>[]> {
 	parseHonoApiParams(rolesListParamDef, body);
 	const roles = await listPublicExplorableRolesFromDatabase(deps.db);
-	return await Promise.all(roles.map(role => packHonoApiRole(deps, role)));
+	return await packHonoApiRoles(deps, roles);
 }
 
 export async function handleHonoApiRolesShow(

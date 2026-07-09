@@ -17,7 +17,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
-import { packDriveFolderForHonoApi } from './drive.js';
+import { packDriveFoldersManyForHonoApi } from './drive.js';
 import { packUserLiteManyForHonoApi } from './user.js';
 import type { HonoApiDriveStreamPublisher } from './events.js';
 import type { HonoApiRolePolicyDependencies } from './role-policy.js';
@@ -184,7 +184,7 @@ async function packAdminDriveFilesForHonoApi(
 
 	const folderRefs = files.map(({ folder, folderId }) => folder ?? folderId).filter(x => x != null);
 	const uniqueFolderRefs = Array.from(new Map(folderRefs.map(folder => [typeof folder === 'string' ? folder : folder.id, folder])).values());
-	const packedFolders = await Promise.all(uniqueFolderRefs.map(folder => packDriveFolderForHonoApi(deps, folder, { detail: true })));
+	const packedFolders = await packDriveFoldersManyForHonoApi(deps, uniqueFolderRefs, { detail: true });
 	const folderMap = new Map(packedFolders.map(folder => [folder.id, folder]));
 
 	return files.map(file => ({

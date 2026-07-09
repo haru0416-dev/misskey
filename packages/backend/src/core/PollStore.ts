@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, desc, eq, gt, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import { poll, type PollInsert, type PollRow } from '@/db/schema/poll.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -37,6 +37,20 @@ export async function fetchPollByNoteIdFromDatabase(
 		.limit(1);
 
 	return row == null ? null : deserializePoll(row);
+}
+
+export async function listPollsByNoteIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	noteIds: MiNote['id'][],
+): Promise<MiPoll[]> {
+	if (noteIds.length === 0) return [];
+
+	const rows = await db
+		.select()
+		.from(poll)
+		.where(inArray(poll.noteId, noteIds));
+
+	return rows.map(row => deserializePoll(row));
 }
 
 export async function fetchPollByNoteIdOrFailFromDatabase(

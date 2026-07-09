@@ -19,7 +19,7 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import { HonoApiError, clientError } from './error.js';
 import { resolveHonoApiIdPagination } from './following.js';
-import { packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import { packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAccountMuteDependencies = UserPackingDependencies & {
@@ -102,8 +102,9 @@ async function packHonoApiMuting(
 	deps: HonoApiAccountMuteDependencies,
 	muting: MiMuting,
 	me: { id: MiUser['id'] },
+	packedMutee?: UserDetailedNotMeHonoApiResponse,
 ): Promise<HonoApiMutingResponse> {
-	const mutee = await packUserDetailedNotMeForHonoApi(
+	const mutee = packedMutee ?? await packUserDetailedNotMeForHonoApi(
 		deps,
 		muting.mutee ?? await getTargetUserOrThrow(deps, muting.muteeId, muteCreateNoSuchUserError),
 		me,
@@ -122,8 +123,9 @@ async function packHonoApiRenoteMuting(
 	deps: HonoApiAccountMuteDependencies,
 	muting: RenoteMutingRow,
 	me: { id: MiUser['id'] },
+	packedMutee?: UserDetailedNotMeHonoApiResponse,
 ): Promise<HonoApiRenoteMutingResponse> {
-	const mutee = await packUserDetailedNotMeForHonoApi(
+	const mutee = packedMutee ?? await packUserDetailedNotMeForHonoApi(
 		deps,
 		await getTargetUserOrThrow(deps, muting.muteeId, renoteMuteCreateNoSuchUserError),
 		me,
@@ -201,7 +203,8 @@ export async function handleHonoApiMuteList(
 		limit: params.limit,
 	});
 
-	return await Promise.all(mutings.map(muting => packHonoApiMuting(deps, muting, me) as Promise<Packed<'Muting'>>));
+	const mutees = await packUserDetailedNotMeManyForHonoApi(deps, mutings.map(muting => muting.mutee ?? muting.muteeId), me);
+	return await Promise.all(mutings.map((muting, index) => packHonoApiMuting(deps, muting, me, mutees[index]) as Promise<Packed<'Muting'>>));
 }
 
 export async function handleHonoApiRenoteMuteCreate(
@@ -261,5 +264,6 @@ export async function handleHonoApiRenoteMuteList(
 		...resolveHonoApiIdPagination(params),
 	});
 
-	return await Promise.all(mutings.map(muting => packHonoApiRenoteMuting(deps, muting, me) as Promise<Packed<'RenoteMuting'>>));
+	const mutees = await packUserDetailedNotMeManyForHonoApi(deps, mutings.map(muting => muting.muteeId), me);
+	return await Promise.all(mutings.map((muting, index) => packHonoApiRenoteMuting(deps, muting, me, mutees[index]) as Promise<Packed<'RenoteMuting'>>));
 }

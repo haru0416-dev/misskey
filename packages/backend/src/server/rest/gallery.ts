@@ -6,7 +6,7 @@
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
-import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase, listGalleryLikesByUserIdFromDatabase } from '@/core/GalleryLikeStore.js';
+import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase, listGalleryLikesByUserIdFromDatabase, listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase } from '@/core/GalleryLikeStore.js';
 import {
 	createGalleryPostInDatabase,
 	decrementGalleryPostLikedCountInDatabase,
@@ -33,7 +33,7 @@ import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } f
 import { HonoApiError } from './error.js';
 import { resolveHonoApiIdPagination } from './following.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
-import { packUserLiteForHonoApi } from './user.js';
+import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiGalleryDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies & {
@@ -224,14 +224,19 @@ export async function packGalleryPostForHonoApi(
 	deps: HonoApiGalleryDependencies,
 	src: MiGalleryPost['id'] | MiGalleryPost,
 	me: { id: MiUser['id'] } | null | undefined,
+	hint?: {
+		packedUser?: Packed<'UserLite'>;
+		packedFiles?: Packed<'DriveFile'>[];
+		isLiked?: boolean;
+	},
 ): Promise<Packed<'GalleryPost'>> {
 	const meId = me ? me.id : null;
 	const post = typeof src === 'object' ? src : await fetchGalleryPostByIdOrFailFromDatabase(deps.db, src);
 
 	const [user, files, isLiked] = await Promise.all([
-		packUserLiteForHonoApi(deps, post.userId),
-		packDriveFileManyByIdsForHonoApi(deps, post.fileIds),
-		meId ? galleryLikeExistsInDatabase(deps.db, meId, post.id) : Promise.resolve(undefined),
+		hint?.packedUser ?? packUserLiteForHonoApi(deps, post.userId),
+		hint?.packedFiles ?? packDriveFileManyByIdsForHonoApi(deps, post.fileIds),
+		hint?.isLiked ?? (meId ? galleryLikeExistsInDatabase(deps.db, meId, post.id) : Promise.resolve(undefined)),
 	]);
 
 	return {
@@ -256,7 +261,25 @@ export async function packGalleryPostsManyForHonoApi(
 	posts: MiGalleryPost[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'GalleryPost'>[]> {
-	return await Promise.all(posts.map(post => packGalleryPostForHonoApi(deps, post, me)));
+	if (posts.length === 0) return [];
+
+	const userIds = [...new Set(posts.map(post => post.userId))];
+	const fileIds = [...new Set(posts.flatMap(post => post.fileIds))];
+	const postIds = posts.map(post => post.id);
+	const [packedUsers, packedFiles, likedPostIds] = await Promise.all([
+		packUserLiteManyForHonoApi(deps, userIds),
+		packDriveFileManyByIdsForHonoApi(deps, fileIds),
+		me ? listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(deps.db, me.id, postIds) : Promise.resolve([]),
+	]);
+	const userById = new Map(packedUsers.map(user => [user.id, user]));
+	const fileById = new Map(packedFiles.map(file => [file.id, file]));
+	const likedPostIdSet = new Set(likedPostIds);
+
+	return await Promise.all(posts.map(post => packGalleryPostForHonoApi(deps, post, me, {
+		packedUser: userById.get(post.userId),
+		packedFiles: post.fileIds.map(fileId => fileById.get(fileId)).filter((file): file is Packed<'DriveFile'> => file != null),
+		isLiked: me ? likedPostIdSet.has(post.id) : undefined,
+	})));
 }
 
 export async function handleHonoApiGalleryFeatured(
@@ -522,11 +545,12 @@ export async function handleHonoApiIGalleryLikes(
 
 	const postIds = likes.map(like => like.postId);
 	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
-	const postById = new Map(posts.map(post => [post.id, post]));
+	const packedPosts = await packGalleryPostsManyForHonoApi(deps, posts, me);
+	const packedPostById = new Map(packedPosts.map(post => [post.id, post]));
 
 	return await Promise.all(likes.map(async like => ({
 		id: like.id,
-		post: await packGalleryPostForHonoApi(deps, postById.get(like.postId) ?? like.postId, me),
+		post: packedPostById.get(like.postId) ?? await packGalleryPostForHonoApi(deps, like.postId, me),
 	})));
 }
 

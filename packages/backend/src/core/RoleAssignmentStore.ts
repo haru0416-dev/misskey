@@ -164,6 +164,29 @@ export async function countActiveRoleAssignmentsByRoleIdFromDatabase(
 	return row?.count ?? 0;
 }
 
+export async function countActiveRoleAssignmentsByRoleIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	roleIds: MiRole['id'][],
+): Promise<Map<MiRole['id'], number>> {
+	if (roleIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await db
+		.select({
+			roleId: roleAssignment.roleId,
+			count: count(),
+		})
+		.from(roleAssignment)
+		.where(and(
+			inArray(roleAssignment.roleId, roleIds),
+			activeRoleAssignmentCondition(),
+		))
+		.groupBy(roleAssignment.roleId);
+
+	return new Map(rows.map(row => [row.roleId, row.count]));
+}
+
 export async function listActiveRoleAssignmentsByRoleIdFromDatabase(
 	db: MiDrizzleDatabase,
 	roleId: MiRole['id'],

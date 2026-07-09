@@ -25,7 +25,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from './error.js';
 import { resolveHonoApiIdPagination } from './following.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiFavoriteDependencies = {
@@ -315,12 +315,13 @@ export async function handleHonoApiIFavorites(
 	});
 
 	const notes = favorites.length === 0 ? [] : await listNotesByIdsFromDatabase(deps.db, favorites.map(f => f.noteId));
-	const noteMap = new Map(notes.map(note => [note.id, note]));
+	const packedNotes = await packNoteManyForHonoApi(deps, notes, me);
+	const packedNoteMap = new Map(packedNotes.map(note => [note.id, note]));
 
 	return await Promise.all(favorites.map(async favorite => ({
 		id: favorite.id,
 		createdAt: parseId(favorite.id).date.toISOString(),
 		noteId: favorite.noteId,
-		note: await packNoteForHonoApi(deps, noteMap.get(favorite.noteId) ?? favorite.noteId, me),
+		note: packedNoteMap.get(favorite.noteId) ?? await packNoteForHonoApi(deps, favorite.noteId, me),
 	})));
 }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { muting, type MutingInsert, type MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -92,6 +92,24 @@ export async function mutingExistsInDatabase(
 		.limit(1);
 
 	return row != null;
+}
+
+export async function listMuterIdsByMuteeIdAndMuterIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	muteeId: MiUser['id'],
+	muterIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (muterIds.length === 0) return [];
+
+	const rows = await db
+		.select({ muterId: muting.muterId })
+		.from(muting)
+		.where(and(
+			eq(muting.muteeId, muteeId),
+			sql`${muting.muterId} = ANY(${sql.param(muterIds)})`,
+		));
+
+	return rows.map(row => row.muterId);
 }
 
 export async function fetchMutingByIdOrFailFromDatabase(

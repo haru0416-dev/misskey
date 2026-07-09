@@ -39,7 +39,7 @@ import {
 } from './notes-ap.js';
 import { createNoteNotificationForHonoApi } from './notes-create.js';
 import { isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
-import { packUserLiteForHonoApi } from './user.js';
+import { packUserLiteManyForHonoApi } from './user.js';
 import type { HonoApiNotificationDependencies } from './notification.js';
 import { getHonoApiUserRoles, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import type { HonoApiNoteStreamPublisher } from './events.js';
@@ -468,7 +468,8 @@ export async function handleHonoApiNotesReactions(
 		type,
 	});
 
-	const userMap = new Map((await Promise.all(reactions.map(r => packUserLiteForHonoApi(deps, r.userId)))).map(u => [u.id, u]));
+	const packedUsers = await packUserLiteManyForHonoApi(deps, reactions.map(r => r.userId));
+	const userMap = new Map(packedUsers.map(u => [u.id, u]));
 
 	return reactions.map(r => ({
 		id: r.id,

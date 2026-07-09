@@ -677,8 +677,9 @@ export async function handleHonoApiNotesHybridTimeline(
 	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
 	const followeeIdSet = new Set(followeeIds);
 	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIdSet = new Set(mutingChannelIds);
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
-		.filter(id => !mutingChannelIds.includes(id));
+		.filter(id => !mutingChannelIdSet.has(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHybridTimelineNotesFromDatabase(deps.db, {
 		me,
@@ -1110,8 +1111,9 @@ export async function handleHonoApiNotesTimeline(
 	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
 	const followeeIdSet = new Set(followeeIds);
 	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIdSet = new Set(mutingChannelIds);
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
-		.filter(id => !mutingChannelIds.includes(id));
+		.filter(id => !mutingChannelIdSet.has(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHomeTimelineNotesFromDatabase(deps.db, {
 		me,

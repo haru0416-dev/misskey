@@ -8,12 +8,12 @@ import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
 import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
-import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
+import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/EmojiStore.js';
+import { followingExistsInDatabase, listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
-import { fetchNoteReactionByUserAndNoteFromDatabase, listNoteReactionsByUserAndNoteIdsFromDatabase } from '@/core/NoteReactionStore.js';
-import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
-import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
+import { fetchNoteReactionByUserAndNoteFromDatabase, listNoteReactionsByNoteIdsAndUserIdsFromDatabase, listNoteReactionsByUserAndNoteIdsFromDatabase } from '@/core/NoteReactionStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase, listPollsByNoteIdsFromDatabase } from '@/core/PollStore.js';
+import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase, listPollVotesByNoteIdsAndUserFromDatabase, listPollVotesByNoteIdsAndUserIdsFromDatabase } from '@/core/PollVoteStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
@@ -29,6 +29,8 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { deepClone } from '@/misc/clone.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
+import type { MiPoll } from '@/models/Poll.js';
+import type { MiPollVote } from '@/models/PollVote.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
 import { HonoApiError } from './error.js';
@@ -82,6 +84,12 @@ function normalizeReactionKeys(reactions: MiNote['reactions']): MiNote['reaction
 			acc[key] = (acc[key] ?? 0) + count;
 			return acc;
 		}, {});
+}
+
+function collectReactionEmojiNames(reactions: MiNote['reactions']): string[] {
+	return Object.keys(reactions)
+		.filter(reaction => reaction.startsWith(':') && reaction.includes('@') && !reaction.includes('@.'))
+		.map(reaction => decodeReaction(reaction).reaction.replaceAll(':', ''));
 }
 
 function mergeReactions(src: MiNote['reactions'], delta: Record<string, number>): MiNote['reactions'] {
@@ -184,32 +192,40 @@ function parseEmojiStr(config: Config, emojiName: string, noteUserHost: string |
 	return { name, host };
 }
 
-async function populateEmoji(
-	deps: HonoApiEmojiPopulateDependencies,
-	emojiName: string,
-	noteUserHost: string | null,
-): Promise<string | null> {
-	const { name, host } = parseEmojiStr(deps.config, emojiName, noteUserHost);
-	if (name == null || host == null) return null;
-
-	const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, host);
-	if (emoji == null) return null;
-
-	return emoji.publicUrl || emoji.originalUrl;
-}
-
 export async function populateEmojis(
 	deps: HonoApiEmojiPopulateDependencies,
 	emojiNames: string[],
 	noteUserHost: string | null,
 ): Promise<Record<string, string>> {
-	const resolved = await Promise.all(emojiNames.map(name => populateEmoji(deps, name, noteUserHost)));
-	const res: Record<string, string> = {};
-	for (let i = 0; i < emojiNames.length; i++) {
-		const url = resolved[i];
-		if (url != null) res[emojiNames[i]!] = url;
+	return (await populateEmojisMany(deps, [{ emojiNames, noteUserHost }]))[0]!;
+}
+
+export async function populateEmojisMany(
+	deps: HonoApiEmojiPopulateDependencies,
+	requests: readonly { emojiNames: readonly string[]; noteUserHost: string | null }[],
+): Promise<Record<string, string>[]> {
+	const refs: { requestIndex: number; emojiName: string; name: string; host: string }[] = [];
+	for (let requestIndex = 0; requestIndex < requests.length; requestIndex++) {
+		const request = requests[requestIndex]!;
+		for (const emojiName of new Set(request.emojiNames)) {
+			const { name, host } = parseEmojiStr(deps.config, emojiName, request.noteUserHost);
+			if (name == null || host == null) continue;
+			refs.push({ requestIndex, emojiName, name, host });
+		}
 	}
-	return res;
+
+	const emojis = await fetchEmojisByNamesAndHostsFromDatabaseCached(
+		deps.db,
+		refs.map(ref => ({ name: ref.name, host: ref.host })),
+	);
+	const results = requests.map(() => ({} as Record<string, string>));
+	for (let i = 0; i < refs.length; i++) {
+		const emoji = emojis[i];
+		if (emoji == null) continue;
+		results[refs[i]!.requestIndex]![refs[i]!.emojiName] = emoji.publicUrl || emoji.originalUrl;
+	}
+
+	return results;
 }
 
 async function nullIfEntityNotFound<T>(promise: Promise<T>): Promise<T | null> {
@@ -225,8 +241,12 @@ async function populatePoll(
 	deps: HonoApiNoteDependencies,
 	note: MiNote,
 	meId: MiUser['id'] | null,
+	hint?: {
+		poll: MiPoll;
+		votes?: MiPollVote[];
+	},
 ): Promise<{ multiple: boolean; expiresAt: string | null; choices: { text: string; votes: number; isVoted: boolean }[] }> {
-	const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
+	const poll = hint?.poll ?? await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
 	const choices = poll.choices.map(c => ({
 		text: c,
 		votes: poll.votes[poll.choices.indexOf(c)]!,
@@ -234,14 +254,11 @@ async function populatePoll(
 	}));
 
 	if (meId) {
-		if (poll.multiple) {
-			const votes = await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, meId);
-			for (const vote of votes) {
-				choices[vote.choice]!.isVoted = true;
-			}
-		} else {
-			const vote = await fetchPollVoteByNoteAndUserFromDatabase(deps.db, note.id, meId);
-			if (vote) choices[vote.choice]!.isVoted = true;
+		const votes = hint?.votes ?? (poll.multiple
+			? await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, meId)
+			: [await fetchPollVoteByNoteAndUserFromDatabase(deps.db, note.id, meId)].filter((vote): vote is MiPollVote => vote != null));
+		for (const vote of votes) {
+			choices[vote.choice]!.isVoted = true;
 		}
 	}
 
@@ -289,6 +306,7 @@ export async function shouldHideNoteForHonoApi(
 	packedNote: Packed<'Note'>,
 	meId: MiUser['id'] | null,
 	followeeIds?: Set<MiUser['id']>,
+	followeeIdCoverage?: Set<MiUser['id']>,
 ): Promise<boolean> {
 	if (meId === packedNote.userId) return false;
 
@@ -308,9 +326,9 @@ export async function shouldHideNoteForHonoApi(
 		if (packedNote.reply && meId === packedNote.reply.userId) return false;
 		if (packedNote.mentions?.some(id => meId === id)) return false;
 
-		// home/hybrid タイムライン等、呼び出し元が既に me の全フォロー先を取得済みの場合は
-		// followeeIds を hint として渡すことで pack 対象ノート毎の followingExists クエリを避ける。
-		const isFollowing = followeeIds ? followeeIds.has(packedNote.userId) : await followingExistsInDatabase(deps.db, meId, packedNote.userId);
+		// followeeIds が全フォロー先、または coverage に含まれる対象者の照会結果なら再利用する。
+		const canUseHint = followeeIds != null && (followeeIdCoverage == null || followeeIdCoverage.has(packedNote.userId));
+		const isFollowing = canUseHint ? followeeIds.has(packedNote.userId) : await followingExistsInDatabase(deps.db, meId, packedNote.userId);
 		if (!isFollowing) return true;
 	}
 
@@ -402,18 +420,24 @@ type PackNoteChannel = NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFro
  * packNoteManyForHonoApi が事前一括取得した結果。`noteIds` に含まれるノートについてのみ
  * 各 Map の内容を信頼してよい (含まれないノートは従来どおり個別取得にフォールバックする)。
  */
-type PackNoteBatchHint = {
+export type PackNoteBatchHint = {
 	noteIds: Set<MiNote['id']>;
 	bufferedReactions: Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>;
 	myReactions: Map<MiNote['id'], string | undefined>;
+	polls: Map<MiNote['id'], MiPoll>;
+	pollVotes: Map<MiNote['id'], MiPollVote[]>;
+	pollVoteNoteIds: Set<MiNote['id']>;
+	reactionEmojis: Map<MiNote['id'], Record<string, string>>;
+	emojis: Map<MiNote['id'], Record<string, string> | undefined>;
 	packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
 	packedFiles: Map<string, Packed<'DriveFile'>>;
 	channels: Map<string, PackNoteChannel>;
 	/**
-	 * me の全フォロー先ID集合。noteIds による対象ノート制限とは独立 (誰をフォローしているかは
-	 * どのノートを pack しているかに関わらず有効なので、hint内の他フィールドと違い無条件で使える)。
+	 * me のフォロー先ID集合。followeeIdCoverage が無ければ全フォロー先、あれば coverage 内の
+	 * ユーザーだけを照会した結果。
 	 */
 	followeeIds?: Set<MiUser['id']>;
+	followeeIdCoverage?: Set<MiUser['id']>;
 };
 
 export async function packNoteForHonoApi(
@@ -449,17 +473,17 @@ export async function packNoteForHonoApi(
 		text = `【${note.name}】\n${(note.text ?? '').trim()}\n\n${note.url ?? note.uri}`;
 	}
 
-	const reactionEmojiNames = Object.keys(reactions)
-		.filter(x => x.startsWith(':') && x.includes('@') && !x.includes('@.'))
-		.map(x => decodeReaction(x).reaction.replaceAll(':', ''));
+	const reactionEmojiNames = collectReactionEmojiNames(reactions);
 
 	const [user, files, reactionEmojis, emojis, channel, reply, renote, poll, myReaction] = await Promise.all([
 		hint?.packedUsers.get(note.userId) ?? packUserLiteForHonoApi(deps, note.user ?? note.userId),
 		hint != null
 			? note.fileIds.map(id => hint.packedFiles.get(id)).filter((f): f is Packed<'DriveFile'> => f != null)
 			: packDriveFileManyByIdsForHonoApi(deps, note.fileIds),
-		populateEmojis(deps, reactionEmojiNames, host),
-		host != null ? populateEmojis(deps, note.emojis, host) : Promise.resolve(undefined),
+		hint?.reactionEmojis.get(note.id) ?? populateEmojis(deps, reactionEmojiNames, host),
+		hint?.emojis.has(note.id)
+			? hint.emojis.get(note.id)
+			: (host != null ? populateEmojis(deps, note.emojis, host) : Promise.resolve(undefined)),
 		note.channelId
 			? (hint != null ? (hint.channels.get(note.channelId) ?? null) : fetchChannelByIdFromDatabase(deps.db, note.channelId))
 			: Promise.resolve(null),
@@ -475,7 +499,10 @@ export async function packNoteForHonoApi(
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
 			hint: opts.hint,
 		})) : Promise.resolve(undefined),
-		(opts.detail && note.hasPoll) ? populatePoll(deps, note, meId) : Promise.resolve(undefined),
+		(opts.detail && note.hasPoll) ? populatePoll(deps, note, meId, hint?.polls.has(note.id) ? {
+			poll: hint.polls.get(note.id)!,
+			...(hint.pollVoteNoteIds.has(note.id) ? { votes: hint.pollVotes.get(note.id) ?? [] } : {}),
+		} : undefined) : Promise.resolve(undefined),
 		(opts.detail && meId && Object.keys(reactions).length > 0)
 			? (hint?.myReactions.has(note.id)
 				? hint.myReactions.get(note.id)
@@ -534,11 +561,203 @@ export async function packNoteForHonoApi(
 
 	treatVisibility(packed);
 
-	if (!opts.skipHide && await shouldHideNoteForHonoApi(deps, packed, meId, opts.hint?.followeeIds)) {
+	if (!opts.skipHide && await shouldHideNoteForHonoApi(deps, packed, meId, opts.hint?.followeeIds, opts.hint?.followeeIdCoverage)) {
 		hideNoteForHonoApi(packed);
 	}
 
 	return packed;
+}
+
+type PackNoteTargets = {
+	targetById: Map<MiNote['id'], MiNote>;
+	targets: MiNote[];
+	detailTargetIds: Set<MiNote['id']>;
+	pollTargetIds: MiNote['id'][];
+};
+
+function collectPackNoteTargets(notes: MiNote[], detail: boolean): PackNoteTargets {
+	// 本体 + relation ロード済みの reply/renote を事前一括取得の対象にする
+	// (relation 未ロードのノートは packNoteForHonoApi 内の個別取得にフォールバックする)
+	const targetById = new Map<MiNote['id'], MiNote>();
+	const detailTargetIds = new Set<MiNote['id']>();
+	const addTarget = (note: MiNote, packDetail: boolean): void => {
+		targetById.set(note.id, note);
+		if (!packDetail || detailTargetIds.has(note.id)) return;
+
+		detailTargetIds.add(note.id);
+		if (note.reply) addTarget(note.reply, false);
+		if (note.renote) addTarget(note.renote, true);
+	};
+	for (const note of notes) {
+		addTarget(note, detail);
+	}
+	const targets = [...targetById.values()];
+	const pollTargetIds = targets
+		.filter(target => detailTargetIds.has(target.id) && target.hasPoll)
+		.map(target => target.id);
+
+	return { targetById, targets, detailTargetIds, pollTargetIds };
+}
+
+type PackNoteStaticHint = Pick<PackNoteBatchHint,
+	'noteIds' | 'bufferedReactions' | 'polls' | 'reactionEmojis' | 'emojis' | 'packedUsers' | 'packedFiles' | 'channels'>;
+
+async function buildPackNoteStaticHint(
+	deps: HonoApiNoteDependencies,
+	targetInfo: PackNoteTargets,
+): Promise<PackNoteStaticHint> {
+	const { targetById, targets, pollTargetIds } = targetInfo;
+	const [bufferedReactions, polls] = await Promise.all([
+		getBufferedReactionsMany(deps, targets.map(target => target.id)),
+		listPollsByNoteIdsFromDatabase(deps.db, pollTargetIds),
+	]);
+
+	const userSrcById = new Map<MiUser['id'], MiUser['id'] | MiUser>();
+	const fileIds = new Set<string>();
+	const channelIds = new Set<string>();
+	const emojiRequests: { emojiNames: string[]; noteUserHost: string | null }[] = [];
+	for (const target of targets) {
+		const existing = userSrcById.get(target.userId);
+		if (existing == null || typeof existing === 'string') {
+			userSrcById.set(target.userId, target.user ?? target.userId);
+		}
+		for (const fileId of target.fileIds) fileIds.add(fileId);
+		if (target.channelId) channelIds.add(target.channelId);
+		const buffered = bufferedReactions.get(target.id)!;
+		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
+		emojiRequests.push({ emojiNames: collectReactionEmojiNames(reactions), noteUserHost: target.userHost });
+		emojiRequests.push({ emojiNames: target.userHost != null ? target.emojis : [], noteUserHost: target.userHost });
+	}
+
+	const [packedUserArray, packedFileArray, channelArray, populatedEmojiArray] = await Promise.all([
+		packUserLiteManyForHonoApi(deps, [...userSrcById.values()]),
+		packDriveFileManyByIdsForHonoApi(deps, [...fileIds]),
+		channelIds.size > 0 ? listChannelsByIdsFromDatabase(deps.db, [...channelIds]) : Promise.resolve([]),
+		populateEmojisMany(deps, emojiRequests),
+	]);
+
+	return {
+		noteIds: new Set(targetById.keys()),
+		bufferedReactions,
+		polls: new Map(polls.map(poll => [poll.noteId, poll])),
+		reactionEmojis: new Map(targets.map((target, index) => [target.id, populatedEmojiArray[index * 2]!])),
+		emojis: new Map(targets.map((target, index) => [target.id, target.userHost != null ? populatedEmojiArray[index * 2 + 1]! : undefined])),
+		packedUsers: new Map(packedUserArray.map(user => [user.id, user])),
+		packedFiles: new Map(packedFileArray.map(file => [file.id, file])),
+		channels: new Map(channelArray.map(channel => [channel.id, channel])),
+	};
+}
+
+export async function createPackNoteStaticHintForHonoApi(
+	deps: HonoApiNoteDependencies,
+	notes: MiNote[],
+	options?: { detail?: boolean },
+): Promise<PackNoteBatchHint> {
+	const targetInfo = collectPackNoteTargets(notes, options?.detail ?? true);
+	const staticHint = await buildPackNoteStaticHint(deps, targetInfo);
+
+	return {
+		...staticHint,
+		myReactions: new Map(),
+		pollVotes: new Map(),
+		pollVoteNoteIds: new Set(),
+	};
+}
+
+export async function createPackNoteHintsForUsersForHonoApi(
+	deps: HonoApiNoteDependencies,
+	notes: MiNote[],
+	userIds: MiUser['id'][],
+	options?: {
+		detail?: boolean;
+		skipHide?: boolean;
+		staticHint?: PackNoteBatchHint;
+	},
+): Promise<Map<MiUser['id'], PackNoteBatchHint>> {
+	const uniqueUserIds = [...new Set(userIds)];
+	if (uniqueUserIds.length === 0 || notes.length === 0) return new Map();
+
+	const detail = options?.detail ?? true;
+	const targetInfo = collectPackNoteTargets(notes, detail);
+	const { targets, detailTargetIds, pollTargetIds } = targetInfo;
+	const staticHint = options?.staticHint ?? await createPackNoteStaticHintForHonoApi(deps, notes, { detail });
+	const reactionLookupNoteIds: MiNote['id'][] = [];
+	for (const target of targets) {
+		if (!detailTargetIds.has(target.id)) continue;
+		const buffered = staticHint.bufferedReactions.get(target.id)!;
+		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
+		const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
+		const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(pair => pair.join('/')));
+		if (reactionsCount > 0 && reactionsCount > pairCache.length && parseId(target.id).date.getTime() + 2000 <= Date.now()) {
+			reactionLookupNoteIds.push(target.id);
+		}
+	}
+	const followeeIdCoverage = !options?.skipHide
+		? new Set(targets.filter(target => target.visibility === 'followers').map(target => target.userId))
+		: undefined;
+
+	const [reactionRows, pollVoteRows, followingRows] = await Promise.all([
+		listNoteReactionsByNoteIdsAndUserIdsFromDatabase(deps.db, reactionLookupNoteIds, uniqueUserIds),
+		listPollVotesByNoteIdsAndUserIdsFromDatabase(deps.db, pollTargetIds, uniqueUserIds),
+		followeeIdCoverage != null
+			? listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase(deps.db, uniqueUserIds, [...followeeIdCoverage])
+			: Promise.resolve([]),
+	]);
+	const reactionByUserId = new Map<MiUser['id'], Map<MiNote['id'], string>>();
+	for (const row of reactionRows) {
+		const reactions = reactionByUserId.get(row.userId) ?? new Map<MiNote['id'], string>();
+		reactions.set(row.noteId, row.reaction);
+		reactionByUserId.set(row.userId, reactions);
+	}
+	const pollVotesByUserId = new Map<MiUser['id'], Map<MiNote['id'], MiPollVote[]>>();
+	for (const row of pollVoteRows) {
+		const votesByNoteId = pollVotesByUserId.get(row.userId) ?? new Map<MiNote['id'], MiPollVote[]>();
+		const votes = votesByNoteId.get(row.noteId) ?? [];
+		votes.push(row);
+		votesByNoteId.set(row.noteId, votes);
+		pollVotesByUserId.set(row.userId, votesByNoteId);
+	}
+	const followeeIdsByFollowerId = new Map<MiUser['id'], Set<MiUser['id']>>();
+	for (const row of followingRows) {
+		const followeeIds = followeeIdsByFollowerId.get(row.followerId) ?? new Set<MiUser['id']>();
+		followeeIds.add(row.followeeId);
+		followeeIdsByFollowerId.set(row.followerId, followeeIds);
+	}
+
+	return new Map(uniqueUserIds.map(userId => {
+		const myReactions = new Map<MiNote['id'], string | undefined>();
+		for (const target of targets) {
+			if (!detailTargetIds.has(target.id)) continue;
+			const buffered = staticHint.bufferedReactions.get(target.id)!;
+			const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
+			const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
+			if (reactionsCount === 0) {
+				myReactions.set(target.id, undefined);
+				continue;
+			}
+			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(pair => pair.join('/')));
+			if (reactionsCount <= pairCache.length) {
+				const pair = pairCache.find(pair => pair.startsWith(userId));
+				myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
+				continue;
+			}
+			if (parseId(target.id).date.getTime() + 2000 > Date.now()) {
+				myReactions.set(target.id, undefined);
+				continue;
+			}
+			const reaction = reactionByUserId.get(userId)?.get(target.id);
+			myReactions.set(target.id, reaction != null ? normalizeReactionKey(reaction) : undefined);
+		}
+
+		return [userId, {
+			...staticHint,
+			myReactions,
+			pollVotes: pollVotesByUserId.get(userId) ?? new Map(),
+			pollVoteNoteIds: new Set(pollTargetIds),
+			followeeIds: followeeIdCoverage != null ? (followeeIdsByFollowerId.get(userId) ?? new Set()) : undefined,
+			followeeIdCoverage,
+		}];
+	}));
 }
 
 export async function packNoteManyForHonoApi(
@@ -555,26 +774,21 @@ export async function packNoteManyForHonoApi(
 
 	const detail = options?.detail ?? true;
 	const meId = me ? me.id : null;
+	const targetInfo = collectPackNoteTargets(notes, detail);
+	const { targets, detailTargetIds, pollTargetIds } = targetInfo;
+	const followeeIdCoverage = options?.followeeIds == null && meId != null && !options?.skipHide
+		? new Set(targets.filter(target => target.visibility === 'followers' && target.userId !== meId).map(target => target.userId))
+		: undefined;
 
-	// 本体 + relation ロード済みの reply/renote を事前一括取得の対象にする
-	// (relation 未ロードのノートは packNoteForHonoApi 内の個別取得にフォールバックする)
-	const targetById = new Map<MiNote['id'], MiNote>();
-	const myReactionTargetIds = new Set<MiNote['id']>();
-	for (const note of notes) {
-		targetById.set(note.id, note);
-		myReactionTargetIds.add(note.id);
-		if (detail) {
-			if (note.reply) targetById.set(note.reply.id, note.reply);
-			if (note.renote) {
-				targetById.set(note.renote.id, note.renote);
-				// renote は detail:true で pack されるので myReaction も必要 (reply は detail:false なので不要)
-				myReactionTargetIds.add(note.renote.id);
-			}
-		}
-	}
-	const targets = [...targetById.values()];
-
-	const bufferedReactions = await getBufferedReactionsMany(deps, targets.map(t => t.id));
+	const [staticHint, pollVotes, packedFolloweeIds] = await Promise.all([
+		buildPackNoteStaticHint(deps, targetInfo),
+		meId != null
+			? listPollVotesByNoteIdsAndUserFromDatabase(deps.db, pollTargetIds, meId)
+			: Promise.resolve([]),
+		followeeIdCoverage != null && meId != null
+			? listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, meId, [...followeeIdCoverage])
+			: Promise.resolve([]),
+	]);
 
 	// myReaction: populateMyReactionForHonoApi と同じ判定で pair cache から解決し、
 	// DB 参照が必要なノートだけ IN 句 1 クエリでまとめて引く
@@ -582,8 +796,8 @@ export async function packNoteManyForHonoApi(
 	if (meId != null && detail) {
 		const idsNeedingDbLookup: MiNote['id'][] = [];
 		for (const target of targets) {
-			if (!myReactionTargetIds.has(target.id)) continue;
-			const buffered = bufferedReactions.get(target.id)!;
+			if (!detailTargetIds.has(target.id)) continue;
+			const buffered = staticHint.bufferedReactions.get(target.id)!;
 			const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 			const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
 			if (reactionsCount === 0) {
@@ -592,7 +806,7 @@ export async function packNoteManyForHonoApi(
 			}
 			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(x => x.join('/')));
 			if (reactionsCount <= pairCache.length) {
-				const pair = pairCache.find(p => p.startsWith(meId));
+				const pair = pairCache.find(pair => pair.startsWith(meId));
 				myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
 				continue;
 			}
@@ -612,51 +826,37 @@ export async function packNoteManyForHonoApi(
 		}
 	}
 
-	const userSrcById = new Map<MiUser['id'], MiUser['id'] | MiUser>();
-	const fileIds = new Set<string>();
-	const channelIds = new Set<string>();
-	for (const target of targets) {
-		const existing = userSrcById.get(target.userId);
-		if (existing == null || typeof existing === 'string') {
-			userSrcById.set(target.userId, target.user ?? target.userId);
-		}
-		for (const fileId of target.fileIds) fileIds.add(fileId);
-		if (target.channelId) channelIds.add(target.channelId);
-	}
-
-	const [packedUserArray, packedFileArray, channelArray] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, [...userSrcById.values()]),
-		packDriveFileManyByIdsForHonoApi(deps, [...fileIds]),
-		channelIds.size > 0 ? listChannelsByIdsFromDatabase(deps.db, [...channelIds]) : Promise.resolve([]),
-	]);
-
 	const hint: PackNoteBatchHint = {
-		noteIds: new Set(targetById.keys()),
-		bufferedReactions,
+		...staticHint,
 		myReactions,
-		packedUsers: new Map(packedUserArray.map(u => [u.id, u])),
-		packedFiles: new Map(packedFileArray.map(f => [f.id, f])),
-		channels: new Map(channelArray.map(c => [c.id, c])),
-		followeeIds: options?.followeeIds,
+		pollVotes: Map.groupBy(pollVotes, vote => vote.noteId),
+		pollVoteNoteIds: meId != null ? new Set(pollTargetIds) : new Set(),
+		followeeIds: options?.followeeIds ?? (followeeIdCoverage != null ? new Set(packedFolloweeIds) : undefined),
+		followeeIdCoverage,
 	};
 
-	return await Promise.all(notes.map(n => packNoteForHonoApi(deps, n, me, { ...options, hint })));
+	return await Promise.all(notes.map(note => packNoteForHonoApi(deps, note, me, { ...options, hint })));
 }
 
 export async function fetchNoteDiffsForHonoApi(
 	deps: HonoApiNoteDependencies,
 	notes: MiNote[],
 ): Promise<{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string> }[]> {
-	return await Promise.all(notes.map(async note => {
-		const bufferedReactions = await getBufferedReactions(deps, note.id);
+	const bufferedReactionsByNoteId = await getBufferedReactionsMany(deps, notes.map(note => note.id));
+	const diffs = notes.map(note => {
+		const bufferedReactions = bufferedReactionsByNoteId.get(note.id)!;
 		const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));
+		return { note, reactions, reactionEmojiNames: collectReactionEmojiNames(reactions) };
+	});
+	const reactionEmojis = await populateEmojisMany(deps, diffs.map(diff => ({
+		emojiNames: diff.reactionEmojiNames,
+		noteUserHost: diff.note.userHost,
+	})));
 
-		const reactionEmojiNames = Object.keys(reactions)
-			.filter(x => x.startsWith(':') && x.includes('@') && !x.includes('@.'))
-			.map(x => decodeReaction(x).reaction.replaceAll(':', ''));
-		const reactionEmojis = await populateEmojis(deps, reactionEmojiNames, note.userHost);
-
-		return { id: note.id, reactions, reactionEmojis };
+	return diffs.map((diff, index) => ({
+		id: diff.note.id,
+		reactions: diff.reactions,
+		reactionEmojis: reactionEmojis[index]!,
 	}));
 }
 

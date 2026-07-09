@@ -4,10 +4,11 @@
  */
 
 import { z } from 'zod';
+import { listChatRoomInvitationsByIdsFromDatabase } from '@/core/ChatRoomStore.js';
 import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/FollowRequestStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { fetchRoleByIdFromDatabase } from '@/core/RoleStore.js';
+import { fetchRoleByIdFromDatabase, listRolesByIdsFromDatabase } from '@/core/RoleStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -17,9 +18,9 @@ import type { MiGroupedNotification, MiNotification } from '@/models/Notificatio
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { notificationTypes, obsoleteNotificationTypes } from '@/types.js';
-import { packChatRoomInvitationForHonoApi, type HonoApiChatDependencies } from './chat.js';
-import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
-import { packHonoApiRole, type HonoApiRoleDependencies } from './roles.js';
+import { packChatRoomInvitationForHonoApi, packChatRoomInvitationsForHonoApi, type HonoApiChatDependencies } from './chat.js';
+import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies, type PackNoteBatchHint } from './note.js';
+import { packHonoApiRole, packHonoApiRoles, type HonoApiRoleDependencies } from './roles.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 import { markAllHonoApiNotificationsAsRead, toXListId, type HonoApiNotificationDependencies } from './notification.js';
@@ -48,6 +49,8 @@ export async function getHonoApiNotifications(
 	const limit = options.limit ?? 20;
 	let sinceTime = options.sinceId ? toXListId(options.sinceId) : null;
 	let untilTime = options.untilId ? toXListId(options.untilId) : null;
+	const includeTypeSet = options.includeTypes && options.includeTypes.length > 0 ? new Set(options.includeTypes) : null;
+	const excludeTypeSet = options.excludeTypes && options.excludeTypes.length > 0 ? new Set(options.excludeTypes) : null;
 
 	let notifications: MiNotification[];
 	for (;;) {
@@ -63,10 +66,10 @@ export async function getHonoApiNotifications(
 
 		notifications = notificationsRes.map(x => JSON.parse(x[1][1])) as MiNotification[];
 
-		if (options.includeTypes && options.includeTypes.length > 0) {
-			notifications = notifications.filter(n => options.includeTypes!.includes(n.type));
-		} else if (options.excludeTypes && options.excludeTypes.length > 0) {
-			notifications = notifications.filter(n => !options.excludeTypes!.includes(n.type));
+		if (includeTypeSet != null) {
+			notifications = notifications.filter(n => includeTypeSet.has(n.type));
+		} else if (excludeTypeSet != null) {
+			notifications = notifications.filter(n => !excludeTypeSet.has(n.type));
 		}
 
 		if (notifications.length !== 0) break;
@@ -93,14 +96,15 @@ async function filterValidNotifiersForHonoApi<T extends MiNotification | MiGroup
 	const userMutedInstances = new Set(profile?.mutedInstances ?? []);
 	const mutingSet = new Set(userIdsWhoMeMuting);
 
-	const notifierIds = notifications.map(n => 'notifierId' in n ? n.notifierId : null).filter((x): x is string => x != null);
+	const notifierIds = [...new Set(notifications.map(n => 'notifierId' in n ? n.notifierId : null).filter((x): x is string => x != null))];
 	const notifiers = notifierIds.length > 0 ? await listUsersByIdsFromDatabase(deps.db, notifierIds, { includeSuspended: true }) : [];
+	const notifierById = new Map(notifiers.map(notifier => [notifier.id, notifier]));
 
 	return notifications.filter(notification => {
 		if (!('notifierId' in notification)) return true;
 		if (mutingSet.has(notification.notifierId)) return false;
 
-		const notifier = notifiers.find(u => u.id === notification.notifierId) ?? null;
+		const notifier = notifierById.get(notification.notifierId) ?? null;
 		if (notifier == null) return false;
 		if (notifier.host && userMutedInstances.has(notifier.host)) return false;
 		if (notifier.isSuspended) return false;
@@ -109,14 +113,18 @@ async function filterValidNotifiersForHonoApi<T extends MiNotification | MiGroup
 	});
 }
 
-async function packNotificationForHonoApi<T extends MiNotification | MiGroupedNotification>(
+export async function packNotificationForHonoApi<T extends MiNotification | MiGroupedNotification>(
 	deps: HonoApiNotificationsListDependencies,
 	src: T,
 	meId: MiUser['id'],
 	options: { checkValidNotifier?: boolean },
 	hint?: {
-		packedNotes: Map<MiNote['id'], Packed<'Note'>>;
-		packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
+		packedNotes?: Map<MiNote['id'], Packed<'Note'>>;
+		noteSources?: Map<MiNote['id'], MiNote>;
+		notePackHint?: PackNoteBatchHint;
+		packedUsers?: Map<MiUser['id'], Packed<'UserLite'>>;
+		packedRoles?: Map<string, Packed<'Role'>>;
+		packedChatRoomInvitations?: Map<string, Packed<'ChatRoomInvitation'>>;
 	},
 ): Promise<Record<string, unknown> | null> {
 	if (options.checkValidNotifier !== false) {
@@ -125,8 +133,11 @@ async function packNotificationForHonoApi<T extends MiNotification | MiGroupedNo
 	}
 
 	const needsNote = NOTE_REQUIRED_NOTIFICATION_TYPES.has(src.type) && 'noteId' in src;
+	const noteId = needsNote ? (src as { noteId: string }).noteId : null;
 	const noteIfNeed = needsNote
-		? (hint?.packedNotes != null ? hint.packedNotes.get((src as { noteId: string }).noteId) : await packNoteForHonoApi(deps, (src as { noteId: string }).noteId, { id: meId }, { detail: true }).catch(() => null))
+		? (hint?.packedNotes != null
+			? hint.packedNotes.get(noteId!)
+			: await packNoteForHonoApi(deps, hint?.noteSources?.get(noteId!) ?? noteId!, { id: meId }, { detail: true, hint: hint?.notePackHint }).catch(() => null))
 		: undefined;
 	if (needsNote && !noteIfNeed) return null;
 
@@ -154,11 +165,19 @@ async function packNotificationForHonoApi<T extends MiNotification | MiGroupedNo
 	}
 
 	const needsRole = src.type === 'roleAssigned';
-	const role = needsRole ? await fetchRoleByIdFromDatabase(deps.db, src.roleId).then(r => r ? packHonoApiRole(deps, r) : null) : undefined;
+	const role = needsRole
+		? hint?.packedRoles != null
+			? hint.packedRoles.get(src.roleId)
+			: await fetchRoleByIdFromDatabase(deps.db, src.roleId).then(r => r ? packHonoApiRole(deps, r) : null)
+		: undefined;
 	if (needsRole && !role) return null;
 
 	const needsChatRoomInvitation = src.type === 'chatRoomInvitationReceived';
-	const chatRoomInvitation = needsChatRoomInvitation ? await packChatRoomInvitationForHonoApi(deps, src.invitationId, { id: meId }).catch(() => null) : undefined;
+	const chatRoomInvitation = needsChatRoomInvitation
+		? hint?.packedChatRoomInvitations != null
+			? hint.packedChatRoomInvitations.get(src.invitationId)
+			: await packChatRoomInvitationForHonoApi(deps, src.invitationId, { id: meId }).catch(() => null)
+		: undefined;
 	if (needsChatRoomInvitation && !chatRoomInvitation) return null;
 
 	return {
@@ -203,13 +222,26 @@ export async function packNotificationsForHonoApi<T extends MiNotification | MiG
 	const packedUsersArray = userIds.length > 0 ? await packUserLiteManyForHonoApi(deps, [...new Set(userIds)]) : [];
 	const packedUsers = new Map(packedUsersArray.map(p => [p.id, p]));
 
+	const roleIds = validNotifications.map(x => x.type === 'roleAssigned' ? x.roleId : null).filter((id): id is string => id != null);
+	const roles = roleIds.length > 0 ? await listRolesByIdsFromDatabase(deps.db, [...new Set(roleIds)]) : [];
+	const packedRolesArray = await packHonoApiRoles(deps, roles);
+	const packedRoles = new Map(packedRolesArray.map(role => [role.id, role]));
+
+	const chatRoomInvitationIds = validNotifications
+		.map(x => x.type === 'chatRoomInvitationReceived' ? x.invitationId : null)
+		.filter((id): id is string => id != null);
+	const chatRoomInvitations = chatRoomInvitationIds.length > 0 ? await listChatRoomInvitationsByIdsFromDatabase(deps.db, [...new Set(chatRoomInvitationIds)]) : [];
+	const packedChatRoomInvitationArray = await packChatRoomInvitationsForHonoApi(deps, chatRoomInvitations, { id: meId });
+	const packedChatRoomInvitations = new Map(packedChatRoomInvitationArray.map(invitation => [invitation.id, invitation]));
+
 	const followRequestNotifications = validNotifications.filter((x): x is T & { type: 'receiveFollowRequest'; notifierId: string } => x.type === 'receiveFollowRequest');
 	if (followRequestNotifications.length > 0) {
 		const reqs = await listFollowRequestsByFollowerIdsFromDatabase(deps.db, followRequestNotifications.map(x => x.notifierId));
-		validNotifications = validNotifications.filter(x => x.type !== 'receiveFollowRequest' || reqs.some(r => r.followerId === (x as { notifierId: string }).notifierId));
+		const followerIdsWithRequest = new Set(reqs.map(req => req.followerId));
+		validNotifications = validNotifications.filter(x => x.type !== 'receiveFollowRequest' || followerIdsWithRequest.has((x as { notifierId: string }).notifierId));
 	}
 
-	const packed = await Promise.all(validNotifications.map(x => packNotificationForHonoApi(deps, x, meId, { checkValidNotifier: false }, { packedNotes, packedUsers })));
+	const packed = await Promise.all(validNotifications.map(x => packNotificationForHonoApi(deps, x, meId, { checkValidNotifier: false }, { packedNotes, packedUsers, packedRoles, packedChatRoomInvitations })));
 
 	return packed.filter((x): x is Record<string, unknown> => x != null);
 }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import { clipFavorite, type ClipFavoriteInsert, type ClipFavoriteRow } from '@/db/schema/clip-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiClip } from '@/models/Clip.js';
@@ -28,6 +28,26 @@ export async function clipFavoriteExistsInDatabase(
 		.limit(1);
 
 	return row != null;
+}
+
+export async function listFavoritedClipIdsByUserIdAndClipIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	clipIds: MiClip['id'][],
+): Promise<MiClip['id'][]> {
+	if (clipIds.length === 0) {
+		return [];
+	}
+
+	const rows = await db
+		.select({ clipId: clipFavorite.clipId })
+		.from(clipFavorite)
+		.where(and(
+			eq(clipFavorite.userId, userId),
+			inArray(clipFavorite.clipId, clipIds),
+		));
+
+	return rows.map(row => row.clipId);
 }
 
 export async function fetchClipFavoriteFromDatabase(
@@ -72,6 +92,26 @@ export async function countClipFavoritesFromDatabase(
 		.where(eq(clipFavorite.clipId, clipId));
 
 	return row?.count ?? 0;
+}
+
+export async function countClipFavoritesByClipIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	clipIds: MiClip['id'][],
+): Promise<Map<MiClip['id'], number>> {
+	if (clipIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await db
+		.select({
+			clipId: clipFavorite.clipId,
+			count: count(),
+		})
+		.from(clipFavorite)
+		.where(inArray(clipFavorite.clipId, clipIds))
+		.groupBy(clipFavorite.clipId);
+
+	return new Map(rows.map(row => [row.clipId, row.count]));
 }
 
 export async function fetchFavoriteClipIdsFromDatabase(

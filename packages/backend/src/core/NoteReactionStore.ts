@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { noteReaction, type NoteReactionInsert, type NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -122,6 +122,22 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 		.where(and(
 			eq(noteReaction.userId, userId),
 			inArray(noteReaction.noteId, noteIds),
+		));
+}
+
+export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	noteIds: MiNote['id'][],
+	userIds: MiUser['id'][],
+): Promise<NoteReactionRow[]> {
+	if (noteIds.length === 0 || userIds.length === 0) return [];
+
+	return await db
+		.select()
+		.from(noteReaction)
+		.where(and(
+			sql`${noteReaction.noteId} = ANY(${sql.param(noteIds)})`,
+			sql`${noteReaction.userId} = ANY(${sql.param(userIds)})`,
 		));
 }
 
