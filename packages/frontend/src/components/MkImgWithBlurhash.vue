@@ -33,14 +33,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:height="imgHeight ?? undefined"
 			:width="imgWidth ?? undefined"
 			:class="$style.img"
-			:src="src ?? undefined"
+			:src="imgSrc"
 			:title="title ?? undefined"
 			:alt="alt ?? undefined"
-			loading="eager"
 			decoding="async"
 			draggable="false"
 			tabindex="-1"
 			style="-webkit-user-drag: none;"
+			@load="onLoad"
 		/>
 	</TransitionGroup>
 </div>
@@ -84,7 +84,7 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 </script>
 
 <script lang="ts" setup>
-import { computed, nextTick, onMounted, onUnmounted, useTemplateRef, watch, ref } from 'vue';
+import { computed, onMounted, onUnmounted, useTemplateRef, watch, ref } from 'vue';
 import { genId } from '@/utility/id.js';
 import { render } from 'buraha';
 import { prefer } from '@/preferences.js';
@@ -132,17 +132,28 @@ const imgHeight = ref(props.height);
 const bitmapTmp = ref<CanvasImageSource | undefined>();
 const hide = computed(() => !loaded.value || props.forceBlurhash);
 
-function waitForDecode() {
-	if (props.src != null && props.src !== '') {
-		nextTick()
-			.then(() => img.value?.decode())
-			.then(() => {
-				loaded.value = true;
-			}, error => {
-				console.log('Error occurred during decoding image', img.value, error);
-			});
-	} else {
-		loaded.value = false;
+// 読み込み前はimg要素がv-showでdisplay:noneになっており、ネイティブのloading="lazy"は
+// レイアウトボックスを持たない要素の交差判定ができず永久にフェッチを開始しない。
+// そのため、常時表示されているroot要素をIntersectionObserverで監視し、
+// ビューポート近傍に入ってから初めてsrcを結びつける（自前の遅延読み込み）
+const shouldLoad = ref(false);
+let intersectionObserver: IntersectionObserver | null = null;
+
+const imgSrc = computed(() => (shouldLoad.value && props.src != null && props.src !== '') ? props.src : undefined);
+
+function onLoad() {
+	img.value?.decode().then(() => {
+		loaded.value = true;
+	}, error => {
+		console.log('Error occurred during decoding image', img.value, error);
+	});
+}
+
+function checkAlreadyLoaded() {
+	// srcが同一URLの他要素で既にブラウザキャッシュ済みの場合、loadイベントが発火しないことがあるため、
+	// complete状態を能動的にチェックする
+	if (imgSrc.value != null && img.value?.complete) {
+		onLoad();
 	}
 }
 
@@ -232,8 +243,15 @@ canvasPromise.then(work => {
 	draw();
 });
 
-watch(() => props.src, () => {
-	waitForDecode();
+watch(imgSrc, (newSrc) => {
+	// srcが結びついていない場合はonLoadが発火しないため、ここでblurhash表示に戻す
+	if (newSrc == null) {
+		loaded.value = false;
+	} else {
+		checkAlreadyLoaded();
+	}
+}, {
+	flush: 'post',
 });
 
 watch(() => props.hash, () => {
@@ -245,10 +263,25 @@ onMounted(() => {
 	if (bitmapTmp.value) {
 		drawImage(bitmapTmp.value);
 	}
-	waitForDecode();
+
+	intersectionObserver = new IntersectionObserver((entries) => {
+		if (entries.some(entry => entry.isIntersecting)) {
+			shouldLoad.value = true;
+			intersectionObserver?.disconnect();
+			intersectionObserver = null;
+		}
+	}, {
+		rootMargin: '300px',
+	});
+	if (root.value) {
+		intersectionObserver.observe(root.value);
+	}
 });
 
 onUnmounted(() => {
+	intersectionObserver?.disconnect();
+	intersectionObserver = null;
+
 	canvasPromise.then(work => {
 		if (work instanceof WorkerMultiDispatch) {
 			work.removeListener(workerOnMessage);
