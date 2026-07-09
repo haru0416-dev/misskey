@@ -1079,253 +1079,253 @@ CREATE INDEX "IDX_abuse_report_notification_recipient_isActive" ON "abuse_report
 CREATE INDEX "IDX_abuse_report_notification_recipient_method" ON "abuse_report_notification_recipient" USING btree ("method");--> statement-breakpoint
 CREATE INDEX "IDX_abuse_report_notification_recipient_userId" ON "abuse_report_notification_recipient" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_abuse_report_notification_recipient_systemWebhookId" ON "abuse_report_notification_recipient" USING btree ("systemWebhookId");--> statement-breakpoint
-CREATE INDEX "IDX_a9021cc2e1feb5f72d3db6e9f5" ON "abuse_user_report" USING btree ("targetUserId");--> statement-breakpoint
-CREATE INDEX "IDX_04cc96756f89d0b7f9473e8cdf" ON "abuse_user_report" USING btree ("reporterId");--> statement-breakpoint
-CREATE INDEX "IDX_2b15aaf4a0dc5be3499af7ab6a" ON "abuse_user_report" USING btree ("resolved");--> statement-breakpoint
-CREATE INDEX "IDX_4ebbf7f93cdc10e8d1ef2fc6cd" ON "abuse_user_report" USING btree ("targetUserHost");--> statement-breakpoint
-CREATE INDEX "IDX_f8d8b93740ad12c4ce8213a199" ON "abuse_user_report" USING btree ("reporterHost");--> statement-breakpoint
+CREATE INDEX "IDX_ABUSE_USER_REPORT_TARGET_USER_ID" ON "abuse_user_report" USING btree ("targetUserId");--> statement-breakpoint
+CREATE INDEX "IDX_ABUSE_USER_REPORT_REPORTER_ID" ON "abuse_user_report" USING btree ("reporterId");--> statement-breakpoint
+CREATE INDEX "IDX_ABUSE_USER_REPORT_RESOLVED" ON "abuse_user_report" USING btree ("resolved");--> statement-breakpoint
+CREATE INDEX "IDX_ABUSE_USER_REPORT_TARGET_USER_HOST" ON "abuse_user_report" USING btree ("targetUserHost");--> statement-breakpoint
+CREATE INDEX "IDX_ABUSE_USER_REPORT_REPORTER_HOST" ON "abuse_user_report" USING btree ("reporterHost");--> statement-breakpoint
 CREATE INDEX "IDX_ABUSE_USER_REPORT_RESOLVED_ID" ON "abuse_user_report" USING btree ("resolved","id");--> statement-breakpoint
 CREATE INDEX "IDX_ABUSE_USER_REPORT_TARGET_HOST_ID" ON "abuse_user_report" USING btree ("targetUserHost","id");--> statement-breakpoint
 CREATE INDEX "IDX_ABUSE_USER_REPORT_REPORTER_HOST_ID" ON "abuse_user_report" USING btree ("reporterHost","id");--> statement-breakpoint
 CREATE INDEX "IDX_ABUSE_USER_REPORT_ASSIGNEE_ID" ON "abuse_user_report" USING btree ("assigneeId");--> statement-breakpoint
-CREATE INDEX "IDX_70ba8f6af34bc924fc9e12adb8" ON "access_token" USING btree ("token");--> statement-breakpoint
-CREATE INDEX "IDX_bf3a053c07d9fb5d87317c56ee" ON "access_token" USING btree ("session");--> statement-breakpoint
-CREATE INDEX "IDX_64c327441248bae40f7d92f34f" ON "access_token" USING btree ("hash");--> statement-breakpoint
-CREATE INDEX "IDX_9949557d0e1b2c19e5344c171e" ON "access_token" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_ACCESS_TOKEN_TOKEN" ON "access_token" USING btree ("token");--> statement-breakpoint
+CREATE INDEX "IDX_ACCESS_TOKEN_SESSION" ON "access_token" USING btree ("session");--> statement-breakpoint
+CREATE INDEX "IDX_ACCESS_TOKEN_HASH" ON "access_token" USING btree ("hash");--> statement-breakpoint
+CREATE INDEX "IDX_ACCESS_TOKEN_USER_ID" ON "access_token" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_ACCESS_TOKEN_APP_ID" ON "access_token" USING btree ("appId");--> statement-breakpoint
-CREATE INDEX "IDX_2da24ce20ad209f1d9dc032457" ON "ad" USING btree ("expiresAt");--> statement-breakpoint
-CREATE INDEX "IDX_3fcc2c589eaefc205e0714b99c" ON "ad" USING btree ("startsAt");--> statement-breakpoint
-CREATE INDEX "IDX_8288151386172b8109f7239ab2" ON "announcement_read" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_603a7b1e7aa0533c6c88e9bfaf" ON "announcement_read" USING btree ("announcementId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_924fa71815cfa3941d003702a0" ON "announcement_read" USING btree ("userId","announcementId");--> statement-breakpoint
-CREATE INDEX "IDX_bc1afcc8ef7e9400cdc3c0a87e" ON "announcement" USING btree ("isActive");--> statement-breakpoint
-CREATE INDEX "IDX_da795d3a83187e8832005ba19d" ON "announcement" USING btree ("forExistingUsers");--> statement-breakpoint
-CREATE INDEX "IDX_7b8d9225168e962f94ea517e00" ON "announcement" USING btree ("silence");--> statement-breakpoint
-CREATE INDEX "IDX_fd25dfe3da37df1715f11ba6ec" ON "announcement" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_084c2abb8948ef59a37dce6ac1" ON "antenna" USING btree ("lastUsedAt");--> statement-breakpoint
-CREATE INDEX "IDX_6446c571a0e8d0f05f01c78909" ON "antenna" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_36ef5192a1ce55ed0e40aa4db5" ON "antenna" USING btree ("isActive");--> statement-breakpoint
+CREATE INDEX "IDX_AD_EXPIRES_AT" ON "ad" USING btree ("expiresAt");--> statement-breakpoint
+CREATE INDEX "IDX_AD_STARTS_AT" ON "ad" USING btree ("startsAt");--> statement-breakpoint
+CREATE INDEX "IDX_ANNOUNCEMENT_READ_USER_ID" ON "announcement_read" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_ANNOUNCEMENT_READ_ANNOUNCEMENT_ID" ON "announcement_read" USING btree ("announcementId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_ANNOUNCEMENT_READ_USER_ID_ANNOUNCEMENT_ID_UNIQUE" ON "announcement_read" USING btree ("userId","announcementId");--> statement-breakpoint
+CREATE INDEX "IDX_ANNOUNCEMENT_IS_ACTIVE" ON "announcement" USING btree ("isActive");--> statement-breakpoint
+CREATE INDEX "IDX_ANNOUNCEMENT_FOR_EXISTING_USERS" ON "announcement" USING btree ("forExistingUsers");--> statement-breakpoint
+CREATE INDEX "IDX_ANNOUNCEMENT_SILENCE" ON "announcement" USING btree ("silence");--> statement-breakpoint
+CREATE INDEX "IDX_ANNOUNCEMENT_USER_ID" ON "announcement" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_ANTENNA_LAST_USED_AT" ON "antenna" USING btree ("lastUsedAt");--> statement-breakpoint
+CREATE INDEX "IDX_ANTENNA_USER_ID" ON "antenna" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_ANTENNA_IS_ACTIVE" ON "antenna" USING btree ("isActive");--> statement-breakpoint
 CREATE INDEX "IDX_ANTENNA_USER_LIST_ID" ON "antenna" USING btree ("userListId");--> statement-breakpoint
-CREATE INDEX "IDX_3f5b0899ef90527a3462d7c2cb" ON "app" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_f49922d511d666848f250663c4" ON "app" USING btree ("secret");--> statement-breakpoint
-CREATE INDEX "IDX_62cb09e1129f6ec024ef66e183" ON "auth_session" USING btree ("token");--> statement-breakpoint
+CREATE INDEX "IDX_APP_USER_ID" ON "app" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_APP_SECRET" ON "app" USING btree ("secret");--> statement-breakpoint
+CREATE INDEX "IDX_AUTH_SESSION_TOKEN" ON "auth_session" USING btree ("token");--> statement-breakpoint
 CREATE INDEX "IDX_AUTH_SESSION_USER_ID" ON "auth_session" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_AUTH_SESSION_APP_ID" ON "auth_session" USING btree ("appId");--> statement-breakpoint
-CREATE INDEX "IDX_2cd4a2743a99671308f5417759" ON "blocking" USING btree ("blockeeId");--> statement-breakpoint
-CREATE INDEX "IDX_0627125f1a8a42c9a1929edb55" ON "blocking" USING btree ("blockerId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_98a1bc5cb30dfd159de056549f" ON "blocking" USING btree ("blockerId","blockeeId");--> statement-breakpoint
-CREATE INDEX "IDX_d3ca0db011b75ac2a940a2337d" ON "channel_favorite" USING btree ("channelId");--> statement-breakpoint
-CREATE INDEX "IDX_8302bd27226605ece14842fb25" ON "channel_favorite" USING btree ("userId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_c71faf11f0a28a5c0bb506203c" ON "channel_favorite" USING btree ("userId","channelId");--> statement-breakpoint
-CREATE INDEX "IDX_0e43068c3f92cab197c3d3cd86" ON "channel_following" USING btree ("followeeId");--> statement-breakpoint
-CREATE INDEX "IDX_6d8084ec9496e7334a4602707e" ON "channel_following" USING btree ("followerId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_2e230dd45a10e671d781d99f3e" ON "channel_following" USING btree ("followerId","followeeId");--> statement-breakpoint
-CREATE INDEX "IDX_34415e3062ae7a94617496e81c" ON "channel_muting" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_4d534d7177fc59879d942e96d0" ON "channel_muting" USING btree ("channelId");--> statement-breakpoint
-CREATE INDEX "IDX_6dd314e96806b7df65ddadff72" ON "channel_muting" USING btree ("expiresAt");--> statement-breakpoint
+CREATE INDEX "IDX_BLOCKING_BLOCKEE_ID" ON "blocking" USING btree ("blockeeId");--> statement-breakpoint
+CREATE INDEX "IDX_BLOCKING_BLOCKER_ID" ON "blocking" USING btree ("blockerId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_BLOCKING_BLOCKER_ID_BLOCKEE_ID_UNIQUE" ON "blocking" USING btree ("blockerId","blockeeId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_FAVORITE_CHANNEL_ID" ON "channel_favorite" USING btree ("channelId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_FAVORITE_USER_ID" ON "channel_favorite" USING btree ("userId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_CHANNEL_FAVORITE_USER_ID_CHANNEL_ID_UNIQUE" ON "channel_favorite" USING btree ("userId","channelId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_FOLLOWING_FOLLOWEE_ID" ON "channel_following" USING btree ("followeeId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_FOLLOWING_FOLLOWER_ID" ON "channel_following" USING btree ("followerId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_CHANNEL_FOLLOWING_FOLLOWER_ID_FOLLOWEE_ID_UNIQUE" ON "channel_following" USING btree ("followerId","followeeId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_MUTING_USER_ID" ON "channel_muting" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_MUTING_CHANNEL_ID" ON "channel_muting" USING btree ("channelId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_MUTING_EXPIRES_AT" ON "channel_muting" USING btree ("expiresAt");--> statement-breakpoint
 CREATE UNIQUE INDEX "IDX_CHANNEL_MUTING_USER_ID_CHANNEL_ID_UNIQUE" ON "channel_muting" USING btree ("userId","channelId");--> statement-breakpoint
-CREATE INDEX "IDX_29ef80c6f13bcea998447fce43" ON "channel" USING btree ("lastNotedAt");--> statement-breakpoint
-CREATE INDEX "IDX_823bae55bd81b3be6e05cff438" ON "channel" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_cc7c72974f1b2f385a8921f094" ON "channel" USING btree ("isArchived");--> statement-breakpoint
-CREATE INDEX "IDX_0f58c11241e649d2a638a8de94" ON "channel" USING btree ("notesCount");--> statement-breakpoint
-CREATE INDEX "IDX_094b86cd36bb805d1aa1e8cc9a" ON "channel" USING btree ("usersCount");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_LAST_NOTED_AT" ON "channel" USING btree ("lastNotedAt");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_USER_ID" ON "channel" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_IS_ARCHIVED" ON "channel" USING btree ("isArchived");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_NOTES_COUNT" ON "channel" USING btree ("notesCount");--> statement-breakpoint
+CREATE INDEX "IDX_CHANNEL_USERS_COUNT" ON "channel" USING btree ("usersCount");--> statement-breakpoint
 CREATE INDEX "IDX_CHANNEL_BANNER_ID" ON "channel" USING btree ("bannerId");--> statement-breakpoint
-CREATE INDEX "IDX_530257863e1381a7f2f1d3282f" ON "chat_approval" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_b1d46037f23d170da5c05fdf75" ON "chat_approval" USING btree ("otherId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_12c4768a2f706fc267f2078903" ON "chat_approval" USING btree ("userId","otherId");--> statement-breakpoint
-CREATE INDEX "IDX_79a26e7a4d9afa5e4fc05f134e" ON "chat_message" USING btree ("fromUserId");--> statement-breakpoint
-CREATE INDEX "IDX_25e097b51d7622c249452c6f75" ON "chat_message" USING btree ("toUserId");--> statement-breakpoint
-CREATE INDEX "IDX_f006b8a76efd1abf9f221c175c" ON "chat_message" USING btree ("toRoomId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_APPROVAL_USER_ID" ON "chat_approval" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_APPROVAL_OTHER_ID" ON "chat_approval" USING btree ("otherId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_CHAT_APPROVAL_USER_ID_OTHER_ID_UNIQUE" ON "chat_approval" USING btree ("userId","otherId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_MESSAGE_FROM_USER_ID" ON "chat_message" USING btree ("fromUserId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_MESSAGE_TO_USER_ID" ON "chat_message" USING btree ("toUserId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_MESSAGE_TO_ROOM_ID" ON "chat_message" USING btree ("toRoomId");--> statement-breakpoint
 CREATE INDEX "IDX_CHAT_MESSAGE_FILE_ID" ON "chat_message" USING btree ("fileId");--> statement-breakpoint
-CREATE INDEX "IDX_8552bb38e7ed038c5bdd398a38" ON "chat_room_invitation" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_5f265075b215fc390a57523b12" ON "chat_room_invitation" USING btree ("roomId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_044f2a7962b8ee5bbfaa02e8a3" ON "chat_room_invitation" USING btree ("userId","roomId");--> statement-breakpoint
-CREATE INDEX "IDX_d99c5279460fb77ef58c596ce5" ON "chat_room_membership" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_c25143ebab714e930aeca1c0e8" ON "chat_room_membership" USING btree ("roomId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_185b6b5afa707b5d36d1ce3144" ON "chat_room_membership" USING btree ("userId","roomId");--> statement-breakpoint
-CREATE INDEX "IDX_f0d8ad64243fa2ca2800da0dfd" ON "chat_room" USING btree ("ownerId");--> statement-breakpoint
-CREATE INDEX "IDX_25a31662b0b0cc9af6549a9d71" ON "clip_favorite" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_ROOM_INVITATION_USER_ID" ON "chat_room_invitation" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_ROOM_INVITATION_ROOM_ID" ON "chat_room_invitation" USING btree ("roomId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_CHAT_ROOM_INVITATION_USER_ID_ROOM_ID_UNIQUE" ON "chat_room_invitation" USING btree ("userId","roomId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_ROOM_MEMBERSHIP_USER_ID" ON "chat_room_membership" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_ROOM_MEMBERSHIP_ROOM_ID" ON "chat_room_membership" USING btree ("roomId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_CHAT_ROOM_MEMBERSHIP_USER_ID_ROOM_ID_UNIQUE" ON "chat_room_membership" USING btree ("userId","roomId");--> statement-breakpoint
+CREATE INDEX "IDX_CHAT_ROOM_OWNER_ID" ON "chat_room" USING btree ("ownerId");--> statement-breakpoint
+CREATE INDEX "IDX_CLIP_FAVORITE_USER_ID" ON "clip_favorite" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_CLIP_FAVORITE_CLIP_ID" ON "clip_favorite" USING btree ("clipId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_b1754a39d0b281e07ed7c078ec" ON "clip_favorite" USING btree ("userId","clipId");--> statement-breakpoint
-CREATE INDEX "IDX_a012eaf5c87c65da1deb5fdbfa" ON "clip_note" USING btree ("noteId");--> statement-breakpoint
-CREATE INDEX "IDX_ebe99317bbbe9968a0c6f579ad" ON "clip_note" USING btree ("clipId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_6fc0ec357d55a18646262fdfff" ON "clip_note" USING btree ("noteId","clipId");--> statement-breakpoint
-CREATE INDEX "IDX_a3eac04ae2aa9e221e7596114a" ON "clip" USING btree ("lastClippedAt");--> statement-breakpoint
-CREATE INDEX "IDX_2b5ec6c574d6802c94c80313fb" ON "clip" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_860fa6f6c7df5bb887249fba22" ON "drive_file" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_92779627994ac79277f070c91e" ON "drive_file" USING btree ("userHost");--> statement-breakpoint
-CREATE INDEX "IDX_37bb9a1b4585f8a3beb24c62d6" ON "drive_file" USING btree ("md5");--> statement-breakpoint
-CREATE INDEX "IDX_a40b8df8c989d7db937ea27cf6" ON "drive_file" USING btree ("type");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_d85a184c2540d2deba33daf642" ON "drive_file" USING btree ("accessKey");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_e74022ce9a074b3866f70e0d27" ON "drive_file" USING btree ("thumbnailAccessKey");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_c55b2b7c284d9fef98026fc88e" ON "drive_file" USING btree ("webpublicAccessKey");--> statement-breakpoint
-CREATE INDEX "IDX_e5848eac4940934e23dbc17581" ON "drive_file" USING btree ("uri");--> statement-breakpoint
-CREATE INDEX "IDX_bb90d1956dafc4068c28aa7560" ON "drive_file" USING btree ("folderId");--> statement-breakpoint
-CREATE INDEX "IDX_a7eba67f8b3fa27271e85d2e26" ON "drive_file" USING btree ("isSensitive");--> statement-breakpoint
-CREATE INDEX "IDX_3b33dff77bb64b23c88151d23e" ON "drive_file" USING btree ("maybeSensitive");--> statement-breakpoint
-CREATE INDEX "IDX_8bdcd3dd2bddb78014999a16ce" ON "drive_file" USING btree ("maybePorn");--> statement-breakpoint
-CREATE INDEX "IDX_315c779174fe8247ab324f036e" ON "drive_file" USING btree ("isLink");--> statement-breakpoint
-CREATE INDEX "IDX_55720b33a61a7c806a8215b825" ON "drive_file" USING btree ("userId","folderId","id");--> statement-breakpoint
-CREATE INDEX "IDX_f4fc06e49c0171c85f1c48060d" ON "drive_folder" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_00ceffb0cdc238b3233294f08f" ON "drive_folder" USING btree ("parentId");--> statement-breakpoint
-CREATE INDEX "IDX_b37dafc86e9af007e3295c2781" ON "emoji" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "IDX_5900e907bb46516ddf2871327c" ON "emoji" USING btree ("host");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_CLIP_FAVORITE_USER_ID_CLIP_ID_UNIQUE" ON "clip_favorite" USING btree ("userId","clipId");--> statement-breakpoint
+CREATE INDEX "IDX_CLIP_NOTE_NOTE_ID" ON "clip_note" USING btree ("noteId");--> statement-breakpoint
+CREATE INDEX "IDX_CLIP_NOTE_CLIP_ID" ON "clip_note" USING btree ("clipId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_CLIP_NOTE_NOTE_ID_CLIP_ID_UNIQUE" ON "clip_note" USING btree ("noteId","clipId");--> statement-breakpoint
+CREATE INDEX "IDX_CLIP_LAST_CLIPPED_AT" ON "clip" USING btree ("lastClippedAt");--> statement-breakpoint
+CREATE INDEX "IDX_CLIP_USER_ID" ON "clip" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_USER_ID" ON "drive_file" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_USER_HOST" ON "drive_file" USING btree ("userHost");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_MD5" ON "drive_file" USING btree ("md5");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_TYPE" ON "drive_file" USING btree ("type");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_DRIVE_FILE_ACCESS_KEY_UNIQUE" ON "drive_file" USING btree ("accessKey");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_DRIVE_FILE_THUMBNAIL_ACCESS_KEY_UNIQUE" ON "drive_file" USING btree ("thumbnailAccessKey");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_DRIVE_FILE_WEBPUBLIC_ACCESS_KEY_UNIQUE" ON "drive_file" USING btree ("webpublicAccessKey");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_URI" ON "drive_file" USING btree ("uri");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_FOLDER_ID" ON "drive_file" USING btree ("folderId");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_IS_SENSITIVE" ON "drive_file" USING btree ("isSensitive");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_MAYBE_SENSITIVE" ON "drive_file" USING btree ("maybeSensitive");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_MAYBE_PORN" ON "drive_file" USING btree ("maybePorn");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_IS_LINK" ON "drive_file" USING btree ("isLink");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FILE_USER_ID_FOLDER_ID_ID" ON "drive_file" USING btree ("userId","folderId","id");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FOLDER_USER_ID" ON "drive_folder" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_DRIVE_FOLDER_PARENT_ID" ON "drive_folder" USING btree ("parentId");--> statement-breakpoint
+CREATE INDEX "IDX_EMOJI_NAME" ON "emoji" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "IDX_EMOJI_HOST" ON "emoji" USING btree ("host");--> statement-breakpoint
 CREATE INDEX "IDX_EMOJI_CATEGORY" ON "emoji" USING btree ("category");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_4f4d35e1256c84ae3d1f0eab10" ON "emoji" USING btree ("name","host");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_EMOJI_NAME_HOST_UNIQUE" ON "emoji" USING btree ("name","host");--> statement-breakpoint
 CREATE INDEX "IDX_EMOJI_ROLE_IDS" ON "emoji" USING gin ("roleIdsThatCanBeUsedThisEmojiAsReaction");--> statement-breakpoint
-CREATE INDEX "IDX_60c4af1c19a7a75f1592f93b28" ON "flash_like" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_FLASH_LIKE_USER_ID" ON "flash_like" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_FLASH_LIKE_FLASH_ID" ON "flash_like" USING btree ("flashId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_cfbfeeccb0cbedcd660b17eb07" ON "flash_like" USING btree ("userId","flashId");--> statement-breakpoint
-CREATE INDEX "IDX_3aa8ea9a8f15214ad91638c0a7" ON "flash" USING btree ("updatedAt");--> statement-breakpoint
-CREATE INDEX "IDX_9b88250fc2fd009b8f1b5623ed" ON "flash" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_12c01c0d1a79f77d9f6c15fadd" ON "follow_request" USING btree ("followeeId");--> statement-breakpoint
-CREATE INDEX "IDX_a7fd92dd6dc519e6fb435dd108" ON "follow_request" USING btree ("followerId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_d54a512b822fac7ed52800f6b4" ON "follow_request" USING btree ("followerId","followeeId");--> statement-breakpoint
-CREATE INDEX "IDX_24e0042143a18157b234df186c" ON "following" USING btree ("followeeId");--> statement-breakpoint
-CREATE INDEX "IDX_6516c5a6f3c015b4eed39978be" ON "following" USING btree ("followerId");--> statement-breakpoint
-CREATE INDEX "IDX_5108098457488634a4768e1d12" ON "following" USING btree ("notify");--> statement-breakpoint
-CREATE INDEX "IDX_4ccd2239268ebbd1b35e318754" ON "following" USING btree ("followerHost");--> statement-breakpoint
-CREATE INDEX "IDX_fcdafee716dfe9c3b5fde90f30" ON "following" USING btree ("followeeHost");--> statement-breakpoint
-CREATE INDEX "IDX_ce62b50d882d4e9dee10ad0d2f" ON "following" USING btree ("followeeId","followerHost","isFollowerHibernated");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_307be5f1d1252e0388662acb96" ON "following" USING btree ("followerId","followeeId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_FLASH_LIKE_USER_ID_FLASH_ID_UNIQUE" ON "flash_like" USING btree ("userId","flashId");--> statement-breakpoint
+CREATE INDEX "IDX_FLASH_UPDATED_AT" ON "flash" USING btree ("updatedAt");--> statement-breakpoint
+CREATE INDEX "IDX_FLASH_USER_ID" ON "flash" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOW_REQUEST_FOLLOWEE_ID" ON "follow_request" USING btree ("followeeId");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOW_REQUEST_FOLLOWER_ID" ON "follow_request" USING btree ("followerId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_FOLLOW_REQUEST_FOLLOWER_ID_FOLLOWEE_ID_UNIQUE" ON "follow_request" USING btree ("followerId","followeeId");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOWING_FOLLOWEE_ID" ON "following" USING btree ("followeeId");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOWING_FOLLOWER_ID" ON "following" USING btree ("followerId");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOWING_NOTIFY" ON "following" USING btree ("notify");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOWING_FOLLOWER_HOST" ON "following" USING btree ("followerHost");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOWING_FOLLOWEE_HOST" ON "following" USING btree ("followeeHost");--> statement-breakpoint
+CREATE INDEX "IDX_FOLLOWING_FOLLOWEE_ID_FOLLOWER_HOST_IS_FOLLOWER_HIBERNATED" ON "following" USING btree ("followeeId","followerHost","isFollowerHibernated");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_FOLLOWING_FOLLOWER_ID_FOLLOWEE_ID_UNIQUE" ON "following" USING btree ("followerId","followeeId");--> statement-breakpoint
 CREATE INDEX "IDX_FOLLOWING_FOLLOWEE_ID_ID" ON "following" USING btree ("followeeId","id");--> statement-breakpoint
 CREATE INDEX "IDX_FOLLOWING_FOLLOWER_ID_ID" ON "following" USING btree ("followerId","id");--> statement-breakpoint
-CREATE INDEX "IDX_8fd5215095473061855ceb948c" ON "gallery_like" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_GALLERY_LIKE_USER_ID" ON "gallery_like" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_GALLERY_LIKE_POST_ID" ON "gallery_like" USING btree ("postId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_df1b5f4099e99fb0bc5eae53b6" ON "gallery_like" USING btree ("userId","postId");--> statement-breakpoint
-CREATE INDEX "IDX_f631d37835adb04792e361807c" ON "gallery_post" USING btree ("updatedAt");--> statement-breakpoint
-CREATE INDEX "IDX_985b836dddd8615e432d7043dd" ON "gallery_post" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_3ca50563facd913c425e7a89ee" ON "gallery_post" USING btree ("fileIds");--> statement-breakpoint
-CREATE INDEX "IDX_f2d744d9a14d0dfb8b96cb7fc5" ON "gallery_post" USING btree ("isSensitive");--> statement-breakpoint
-CREATE INDEX "IDX_1a165c68a49d08f11caffbd206" ON "gallery_post" USING btree ("likedCount");--> statement-breakpoint
-CREATE INDEX "IDX_05cca34b985d1b8edc1d1e28df" ON "gallery_post" USING btree ("tags");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_347fec870eafea7b26c8a73bac" ON "hashtag" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "IDX_2710a55f826ee236ea1a62698f" ON "hashtag" USING btree ("mentionedUsersCount");--> statement-breakpoint
-CREATE INDEX "IDX_0e206cec573f1edff4a3062923" ON "hashtag" USING btree ("mentionedLocalUsersCount");--> statement-breakpoint
-CREATE INDEX "IDX_4c02d38a976c3ae132228c6fce" ON "hashtag" USING btree ("mentionedRemoteUsersCount");--> statement-breakpoint
-CREATE INDEX "IDX_d57f9030cd3af7f63ffb1c267c" ON "hashtag" USING btree ("attachedUsersCount");--> statement-breakpoint
-CREATE INDEX "IDX_0c44bf4f680964145f2a68a341" ON "hashtag" USING btree ("attachedLocalUsersCount");--> statement-breakpoint
-CREATE INDEX "IDX_0b03cbcd7e6a7ce068efa8ecc2" ON "hashtag" USING btree ("attachedRemoteUsersCount");--> statement-breakpoint
-CREATE INDEX "IDX_f7b9d338207e40e768e4a5265a" ON "instance" USING btree ("firstRetrievedAt");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_8d5afc98982185799b160e10eb" ON "instance" USING btree ("host");--> statement-breakpoint
-CREATE INDEX "IDX_3ede46f507c87ad698051d56a8" ON "instance" USING btree ("suspensionState");--> statement-breakpoint
-CREATE INDEX "IDX_a08ad074601d204e0f69da9a95" ON "moderation_log" USING btree ("userId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_GALLERY_LIKE_USER_ID_POST_ID_UNIQUE" ON "gallery_like" USING btree ("userId","postId");--> statement-breakpoint
+CREATE INDEX "IDX_GALLERY_POST_UPDATED_AT" ON "gallery_post" USING btree ("updatedAt");--> statement-breakpoint
+CREATE INDEX "IDX_GALLERY_POST_USER_ID" ON "gallery_post" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_GALLERY_POST_FILE_IDS" ON "gallery_post" USING btree ("fileIds");--> statement-breakpoint
+CREATE INDEX "IDX_GALLERY_POST_IS_SENSITIVE" ON "gallery_post" USING btree ("isSensitive");--> statement-breakpoint
+CREATE INDEX "IDX_GALLERY_POST_LIKED_COUNT" ON "gallery_post" USING btree ("likedCount");--> statement-breakpoint
+CREATE INDEX "IDX_GALLERY_POST_TAGS" ON "gallery_post" USING btree ("tags");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_HASHTAG_NAME_UNIQUE" ON "hashtag" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "IDX_HASHTAG_MENTIONED_USERS_COUNT" ON "hashtag" USING btree ("mentionedUsersCount");--> statement-breakpoint
+CREATE INDEX "IDX_HASHTAG_MENTIONED_LOCAL_USERS_COUNT" ON "hashtag" USING btree ("mentionedLocalUsersCount");--> statement-breakpoint
+CREATE INDEX "IDX_HASHTAG_MENTIONED_REMOTE_USERS_COUNT" ON "hashtag" USING btree ("mentionedRemoteUsersCount");--> statement-breakpoint
+CREATE INDEX "IDX_HASHTAG_ATTACHED_USERS_COUNT" ON "hashtag" USING btree ("attachedUsersCount");--> statement-breakpoint
+CREATE INDEX "IDX_HASHTAG_ATTACHED_LOCAL_USERS_COUNT" ON "hashtag" USING btree ("attachedLocalUsersCount");--> statement-breakpoint
+CREATE INDEX "IDX_HASHTAG_ATTACHED_REMOTE_USERS_COUNT" ON "hashtag" USING btree ("attachedRemoteUsersCount");--> statement-breakpoint
+CREATE INDEX "IDX_INSTANCE_FIRST_RETRIEVED_AT" ON "instance" USING btree ("firstRetrievedAt");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_INSTANCE_HOST_UNIQUE" ON "instance" USING btree ("host");--> statement-breakpoint
+CREATE INDEX "IDX_INSTANCE_SUSPENSION_STATE" ON "instance" USING btree ("suspensionState");--> statement-breakpoint
+CREATE INDEX "IDX_MODERATION_LOG_USER_ID" ON "moderation_log" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_MODERATION_LOG_TYPE_ID" ON "moderation_log" USING btree ("type","id");--> statement-breakpoint
 CREATE INDEX "IDX_MODERATION_LOG_USER_ID_ID" ON "moderation_log" USING btree ("userId","id");--> statement-breakpoint
-CREATE INDEX "IDX_c1fd1c3dfb0627aa36c253fd14" ON "muting" USING btree ("expiresAt");--> statement-breakpoint
-CREATE INDEX "IDX_ec96b4fed9dae517e0dbbe0675" ON "muting" USING btree ("muteeId");--> statement-breakpoint
-CREATE INDEX "IDX_93060675b4a79a577f31d260c6" ON "muting" USING btree ("muterId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_1eb9d9824a630321a29fd3b290" ON "muting" USING btree ("muterId","muteeId");--> statement-breakpoint
+CREATE INDEX "IDX_MUTING_EXPIRES_AT" ON "muting" USING btree ("expiresAt");--> statement-breakpoint
+CREATE INDEX "IDX_MUTING_MUTEE_ID" ON "muting" USING btree ("muteeId");--> statement-breakpoint
+CREATE INDEX "IDX_MUTING_MUTER_ID" ON "muting" USING btree ("muterId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_MUTING_MUTER_ID_MUTEE_ID_UNIQUE" ON "muting" USING btree ("muterId","muteeId");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_DRAFT_REPLY_ID" ON "note_draft" USING btree ("replyId");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_DRAFT_RENOTE_ID" ON "note_draft" USING btree ("renoteId");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_DRAFT_USER_ID" ON "note_draft" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_DRAFT_CHANNEL_ID" ON "note_draft" USING btree ("channelId");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_DRAFT_FILE_IDS" ON "note_draft" USING gin ("fileIds");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_DRAFT_VISIBLE_USER_IDS" ON "note_draft" USING gin ("visibleUserIds");--> statement-breakpoint
-CREATE INDEX "IDX_47f4b1892f5d6ba8efb3057d81" ON "note_favorite" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_0e00498f180193423c992bc437" ON "note_favorite" USING btree ("noteId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_0f4fb9ad355f3effff221ef245" ON "note_favorite" USING btree ("userId","noteId");--> statement-breakpoint
-CREATE INDEX "IDX_13761f64257f40c5636d0ff95e" ON "note_reaction" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_45145e4953780f3cd5656f0ea6" ON "note_reaction" USING btree ("noteId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_ad0c221b25672daf2df320a817" ON "note_reaction" USING btree ("userId","noteId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_FAVORITE_USER_ID" ON "note_favorite" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_FAVORITE_NOTE_ID" ON "note_favorite" USING btree ("noteId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_NOTE_FAVORITE_USER_ID_NOTE_ID_UNIQUE" ON "note_favorite" USING btree ("userId","noteId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_REACTION_USER_ID" ON "note_reaction" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_REACTION_NOTE_ID" ON "note_reaction" USING btree ("noteId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_NOTE_REACTION_USER_ID_NOTE_ID_UNIQUE" ON "note_reaction" USING btree ("userId","noteId");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_REACTION_NOTE_ID_ID" ON "note_reaction" USING btree ("noteId","id");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_REACTION_USER_ID_ID" ON "note_reaction" USING btree ("userId","id");--> statement-breakpoint
-CREATE INDEX "IDX_29c11c7deb06615076f8c95b80" ON "note_thread_muting" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_c426394644267453e76f036926" ON "note_thread_muting" USING btree ("threadId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_ae7aab18a2641d3e5f25e0c4ea" ON "note_thread_muting" USING btree ("userId","threadId");--> statement-breakpoint
-CREATE INDEX "IDX_17cb3553c700a4985dff5a30ff" ON "note" USING btree ("replyId");--> statement-breakpoint
-CREATE INDEX "IDX_52ccc804d7c69037d558bac4c9" ON "note" USING btree ("renoteId");--> statement-breakpoint
-CREATE INDEX "IDX_d4ebdef929896d6dc4a3c5bb48" ON "note" USING btree ("threadId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_153536c67d05e9adb24e99fc2b" ON "note" USING btree ("uri");--> statement-breakpoint
-CREATE INDEX "IDX_f22169eb10657bded6d875ac8f" ON "note" USING btree ("channelId");--> statement-breakpoint
-CREATE INDEX "IDX_7125a826ab192eb27e11d358a5" ON "note" USING btree ("userHost");--> statement-breakpoint
-CREATE INDEX "IDX_a6f649630f55af3888e5a42919" ON "note" USING btree ("userId","id");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_THREAD_MUTING_USER_ID" ON "note_thread_muting" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_THREAD_MUTING_THREAD_ID" ON "note_thread_muting" USING btree ("threadId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_NOTE_THREAD_MUTING_USER_ID_THREAD_ID_UNIQUE" ON "note_thread_muting" USING btree ("userId","threadId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_REPLY_ID" ON "note" USING btree ("replyId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_RENOTE_ID" ON "note" USING btree ("renoteId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_THREAD_ID" ON "note" USING btree ("threadId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_NOTE_URI_UNIQUE" ON "note" USING btree ("uri");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_CHANNEL_ID" ON "note" USING btree ("channelId");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_USER_HOST" ON "note" USING btree ("userHost");--> statement-breakpoint
+CREATE INDEX "IDX_NOTE_USER_ID_ID" ON "note" USING btree ("userId","id");--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_FILE_IDS" ON "note" USING gin ("fileIds") WITH (fastupdate=false);--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_VISIBLE_USER_IDS" ON "note" USING gin ("visibleUserIds") WITH (fastupdate=false);--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_MENTIONS" ON "note" USING gin ("mentions") WITH (fastupdate=false);--> statement-breakpoint
 CREATE INDEX "IDX_NOTE_TAGS" ON "note" USING gin ("tags") WITH (fastupdate=false);--> statement-breakpoint
-CREATE INDEX "IDX_0e61efab7f88dbb79c9166dbb4" ON "page_like" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_PAGE_LIKE_USER_ID" ON "page_like" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_PAGE_LIKE_PAGE_ID" ON "page_like" USING btree ("pageId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_4ce6fb9c70529b4c8ac46c9bfa" ON "page_like" USING btree ("userId","pageId");--> statement-breakpoint
-CREATE INDEX "IDX_af639b066dfbca78b01a920f8a" ON "page" USING btree ("updatedAt");--> statement-breakpoint
-CREATE INDEX "IDX_b82c19c08afb292de4600d99e4" ON "page" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "IDX_ae1d917992dd0c9d9bbdad06c4" ON "page" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_90148bbc2bf0854428786bfc15" ON "page" USING btree ("visibleUserIds");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_PAGE_LIKE_USER_ID_PAGE_ID_UNIQUE" ON "page_like" USING btree ("userId","pageId");--> statement-breakpoint
+CREATE INDEX "IDX_PAGE_UPDATED_AT" ON "page" USING btree ("updatedAt");--> statement-breakpoint
+CREATE INDEX "IDX_PAGE_NAME" ON "page" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "IDX_PAGE_USER_ID" ON "page" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_PAGE_VISIBLE_USER_IDS" ON "page" USING btree ("visibleUserIds");--> statement-breakpoint
 CREATE INDEX "IDX_PAGE_EYE_CATCHING_IMAGE_ID" ON "page" USING btree ("eyeCatchingImageId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_2133ef8317e4bdb839c0dcbf13" ON "page" USING btree ("userId","name");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_0b575fa9a4cfe638a925949285" ON "password_reset_request" USING btree ("token");--> statement-breakpoint
-CREATE INDEX "IDX_4bb7fd4a34492ae0e6cc8d30ac" ON "password_reset_request" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_66d2bd2ee31d14bcc23069a89f" ON "poll_vote" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_aecfbd5ef60374918e63ee95fa" ON "poll_vote" USING btree ("noteId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_50bd7164c5b78f1f4a42c4d21f" ON "poll_vote" USING btree ("userId","noteId","choice");--> statement-breakpoint
-CREATE INDEX "IDX_0610ebcfcfb4a18441a9bcdab2" ON "poll" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_7fa20a12319c7f6dc3aed98c0a" ON "poll" USING btree ("userHost");--> statement-breakpoint
-CREATE INDEX "IDX_c1240fcc9675946ea5d6c2860e" ON "poll" USING btree ("channelId");--> statement-breakpoint
-CREATE INDEX "IDX_83f0862e9bae44af52ced7099e" ON "promo_note" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_9657d55550c3d37bfafaf7d4b0" ON "promo_read" USING btree ("userId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_PAGE_USER_ID_NAME_UNIQUE" ON "page" USING btree ("userId","name");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_PASSWORD_RESET_REQUEST_TOKEN_UNIQUE" ON "password_reset_request" USING btree ("token");--> statement-breakpoint
+CREATE INDEX "IDX_PASSWORD_RESET_REQUEST_USER_ID" ON "password_reset_request" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_POLL_VOTE_USER_ID" ON "poll_vote" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_POLL_VOTE_NOTE_ID" ON "poll_vote" USING btree ("noteId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_POLL_VOTE_USER_ID_NOTE_ID_CHOICE_UNIQUE" ON "poll_vote" USING btree ("userId","noteId","choice");--> statement-breakpoint
+CREATE INDEX "IDX_POLL_USER_ID" ON "poll" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_POLL_USER_HOST" ON "poll" USING btree ("userHost");--> statement-breakpoint
+CREATE INDEX "IDX_POLL_CHANNEL_ID" ON "poll" USING btree ("channelId");--> statement-breakpoint
+CREATE INDEX "IDX_PROMO_NOTE_USER_ID" ON "promo_note" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_PROMO_READ_USER_ID" ON "promo_read" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_PROMO_READ_NOTE_ID" ON "promo_read" USING btree ("noteId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_2882b8a1a07c7d281a98b6db16" ON "promo_read" USING btree ("userId","noteId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_0ff69e8dfa9fe31bb4a4660f59" ON "registration_ticket" USING btree ("code");--> statement-breakpoint
-CREATE INDEX "IDX_beba993576db0261a15364ea96" ON "registration_ticket" USING btree ("createdById");--> statement-breakpoint
-CREATE INDEX "IDX_b6f93f2f30bdbb9a5ebdc7c718" ON "registration_ticket" USING btree ("usedById");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_PROMO_READ_USER_ID_NOTE_ID_UNIQUE" ON "promo_read" USING btree ("userId","noteId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_REGISTRATION_TICKET_CODE_UNIQUE" ON "registration_ticket" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "IDX_REGISTRATION_TICKET_CREATED_BY_ID" ON "registration_ticket" USING btree ("createdById");--> statement-breakpoint
+CREATE INDEX "IDX_REGISTRATION_TICKET_USED_BY_ID" ON "registration_ticket" USING btree ("usedById");--> statement-breakpoint
 CREATE UNIQUE INDEX "REL_b6f93f2f30bdbb9a5ebdc7c718" ON "registration_ticket" USING btree ("usedById");--> statement-breakpoint
-CREATE INDEX "IDX_fb9d21ba0abb83223263df6bcb" ON "registry_item" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_22baca135bb8a3ea1a83d13df3" ON "registry_item" USING btree ("scope");--> statement-breakpoint
-CREATE INDEX "IDX_0a72bdfcdb97c0eca11fe7ecad" ON "registry_item" USING btree ("domain");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_0d9a1738f2cf7f3b1c3334dfab" ON "relay" USING btree ("inbox");--> statement-breakpoint
+CREATE INDEX "IDX_REGISTRY_ITEM_USER_ID" ON "registry_item" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_REGISTRY_ITEM_SCOPE" ON "registry_item" USING btree ("scope");--> statement-breakpoint
+CREATE INDEX "IDX_REGISTRY_ITEM_DOMAIN" ON "registry_item" USING btree ("domain");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_RELAY_INBOX_UNIQUE" ON "relay" USING btree ("inbox");--> statement-breakpoint
 CREATE INDEX "IDX_relay_status" ON "relay" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "IDX_7eac97594bcac5ffcf2068089b" ON "renote_muting" USING btree ("muteeId");--> statement-breakpoint
-CREATE INDEX "IDX_7aa72a5fe76019bfe8e5e0e8b7" ON "renote_muting" USING btree ("muterId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_0d801c609cec4e9eb4b6b4490c" ON "renote_muting" USING btree ("muterId","muteeId");--> statement-breakpoint
-CREATE INDEX "IDX_09f4e5b9e4a2f268d3e284e4b3" ON "retention_aggregation" USING btree ("createdAt");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_f7c3576b37bd2eec966ae24477" ON "retention_aggregation" USING btree ("dateKey");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_0953deda7ce6e1448e935859e5" ON "role_assignment" USING btree ("userId","roleId");--> statement-breakpoint
-CREATE INDEX "IDX_db5b72c16227c97ca88734d5c2" ON "role_assignment" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_f0de67fd09cd3cd0aabca79994" ON "role_assignment" USING btree ("roleId");--> statement-breakpoint
-CREATE INDEX "IDX_539b6c08c05067599743bb6389" ON "role_assignment" USING btree ("expiresAt");--> statement-breakpoint
-CREATE INDEX "IDX_2c308dbdc50d94dc625670055f" ON "signin" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_RENOTE_MUTING_MUTEE_ID" ON "renote_muting" USING btree ("muteeId");--> statement-breakpoint
+CREATE INDEX "IDX_RENOTE_MUTING_MUTER_ID" ON "renote_muting" USING btree ("muterId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_RENOTE_MUTING_MUTER_ID_MUTEE_ID_UNIQUE" ON "renote_muting" USING btree ("muterId","muteeId");--> statement-breakpoint
+CREATE INDEX "IDX_RETENTION_AGGREGATION_CREATED_AT" ON "retention_aggregation" USING btree ("createdAt");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_RETENTION_AGGREGATION_DATE_KEY_UNIQUE" ON "retention_aggregation" USING btree ("dateKey");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_ROLE_ASSIGNMENT_USER_ID_ROLE_ID_UNIQUE" ON "role_assignment" USING btree ("userId","roleId");--> statement-breakpoint
+CREATE INDEX "IDX_ROLE_ASSIGNMENT_USER_ID" ON "role_assignment" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_ROLE_ASSIGNMENT_ROLE_ID" ON "role_assignment" USING btree ("roleId");--> statement-breakpoint
+CREATE INDEX "IDX_ROLE_ASSIGNMENT_EXPIRES_AT" ON "role_assignment" USING btree ("expiresAt");--> statement-breakpoint
+CREATE INDEX "IDX_SIGNIN_USER_ID" ON "signin" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_SIGNIN_USER_ID_ID" ON "signin" USING btree ("userId","id");--> statement-breakpoint
 CREATE INDEX "IDX_SW_SUBSCRIPTION_ENDPOINT" ON "sw_subscription" USING btree ("endpoint");--> statement-breakpoint
 CREATE UNIQUE INDEX "IDX_SW_SUBSCRIPTION_USER_ID_ENDPOINT_UNIQUE" ON "sw_subscription" USING btree ("userId","endpoint");--> statement-breakpoint
-CREATE INDEX "IDX_41a3c87a37aea616ee459369e1" ON "system_account" USING btree ("userId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_c362033aee0ea51011386a5a7e" ON "system_account" USING btree ("type");--> statement-breakpoint
+CREATE INDEX "IDX_SYSTEM_ACCOUNT_USER_ID" ON "system_account" USING btree ("userId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_SYSTEM_ACCOUNT_TYPE_UNIQUE" ON "system_account" USING btree ("type");--> statement-breakpoint
 CREATE INDEX "IDX_system_webhook_isActive" ON "system_webhook" USING btree ("isActive");--> statement-breakpoint
 CREATE INDEX "IDX_system_webhook_on" ON "system_webhook" USING gin ("on");--> statement-breakpoint
-CREATE INDEX "IDX_7f7f1c66f48e9a8e18a33bc515" ON "user_ip" USING btree ("userId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_361b500e06721013c124b7b6c5" ON "user_ip" USING btree ("userId","ip");--> statement-breakpoint
-CREATE INDEX "IDX_016f613dc4feb807e03e3e7da9" ON "user_list_favorite" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_IP_USER_ID" ON "user_ip" USING btree ("userId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_IP_USER_ID_IP_UNIQUE" ON "user_ip" USING btree ("userId","ip");--> statement-breakpoint
+CREATE INDEX "IDX_USER_LIST_FAVORITE_USER_ID" ON "user_list_favorite" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "IDX_USER_LIST_FAVORITE_USER_LIST_ID" ON "user_list_favorite" USING btree ("userListId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_d6765a8c2a4c17c33f9d7f948b" ON "user_list_favorite" USING btree ("userId","userListId");--> statement-breakpoint
-CREATE INDEX "IDX_021015e6683570ae9f6b0c62be" ON "user_list_membership" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_cddcaf418dc4d392ecfcca842a" ON "user_list_membership" USING btree ("userListId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_e4f3094c43f2d665e6030b0337" ON "user_list_membership" USING btree ("userId","userListId");--> statement-breakpoint
-CREATE INDEX "IDX_b7fcefbdd1c18dce86687531f9" ON "user_list" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_48a00f08598662b9ca540521eb" ON "user_list" USING btree ("isPublic");--> statement-breakpoint
-CREATE INDEX "IDX_650b49c5639b5840ee6a2b8f83" ON "user_memo" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_66ac4a82894297fd09ba61f3d3" ON "user_memo" USING btree ("targetUserId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_faef300913c738265638ba3ebc" ON "user_memo" USING btree ("userId","targetUserId");--> statement-breakpoint
-CREATE INDEX "IDX_bfbc6f79ba4007b4ce5097f08d" ON "user_note_pining" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_68881008f7c3588ad7ecae471c" ON "user_note_pining" USING btree ("noteId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_410cd649884b501c02d6e72738" ON "user_note_pining" USING btree ("userId","noteId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_4e5c4c99175638ec0761714ab0" ON "user_pending" USING btree ("code");--> statement-breakpoint
-CREATE INDEX "IDX_3befe6f999c86aff06eb0257b4" ON "user_profile" USING btree ("enableWordMute");--> statement-breakpoint
-CREATE INDEX "IDX_dce530b98e454793dac5ec2f5a" ON "user_profile" USING btree ("userHost");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_LIST_FAVORITE_USER_ID_USER_LIST_ID_UNIQUE" ON "user_list_favorite" USING btree ("userId","userListId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_LIST_MEMBERSHIP_USER_ID" ON "user_list_membership" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_LIST_MEMBERSHIP_USER_LIST_ID" ON "user_list_membership" USING btree ("userListId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_LIST_MEMBERSHIP_USER_ID_USER_LIST_ID_UNIQUE" ON "user_list_membership" USING btree ("userId","userListId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_LIST_USER_ID" ON "user_list" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_LIST_IS_PUBLIC" ON "user_list" USING btree ("isPublic");--> statement-breakpoint
+CREATE INDEX "IDX_USER_MEMO_USER_ID" ON "user_memo" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_MEMO_TARGET_USER_ID" ON "user_memo" USING btree ("targetUserId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_MEMO_USER_ID_TARGET_USER_ID_UNIQUE" ON "user_memo" USING btree ("userId","targetUserId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_NOTE_PINING_USER_ID" ON "user_note_pining" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_NOTE_PINING_NOTE_ID" ON "user_note_pining" USING btree ("noteId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_NOTE_PINING_USER_ID_NOTE_ID_UNIQUE" ON "user_note_pining" USING btree ("userId","noteId");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_PENDING_CODE_UNIQUE" ON "user_pending" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "IDX_USER_PROFILE_ENABLE_WORD_MUTE" ON "user_profile" USING btree ("enableWordMute");--> statement-breakpoint
+CREATE INDEX "IDX_USER_PROFILE_USER_HOST" ON "user_profile" USING btree ("userHost");--> statement-breakpoint
 CREATE UNIQUE INDEX "REL_6dc44f1ceb65b1e72bacef2ca2" ON "user_profile" USING btree ("pinnedPageId");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_171e64971c780ebd23fae140bb" ON "user_publickey" USING btree ("keyId");--> statement-breakpoint
-CREATE INDEX "IDX_ff9ca3b5f3ee3d0681367a9b44" ON "user_security_key" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_0d7718e562dcedd0aa5cf2c9f7" ON "user_security_key" USING btree ("publicKey");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_PUBLICKEY_KEY_ID_UNIQUE" ON "user_publickey" USING btree ("keyId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_SECURITY_KEY_USER_ID" ON "user_security_key" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_USER_SECURITY_KEY_PUBLIC_KEY" ON "user_security_key" USING btree ("publicKey");--> statement-breakpoint
 CREATE INDEX "IDX_USER_FOLLOWERS_COUNT" ON "user" USING btree ("followersCount");--> statement-breakpoint
-CREATE INDEX "IDX_80ca6e6ef65fb9ef34ea8c90f4" ON "user" USING btree ("updatedAt");--> statement-breakpoint
-CREATE INDEX "IDX_c8cc87bd0f2f4487d17c651fbf" ON "user" USING btree ("lastActiveDate");--> statement-breakpoint
-CREATE INDEX "IDX_a27b942a0d6dcff90e3ee9b5e8" ON "user" USING btree ("usernameLower");--> statement-breakpoint
-CREATE INDEX "IDX_fa99d777623947a5b05f394cae" ON "user" USING btree ("tags");--> statement-breakpoint
-CREATE INDEX "IDX_d5a1b83c7cab66f167e6888188" ON "user" USING btree ("isExplorable");--> statement-breakpoint
-CREATE INDEX "IDX_3252a5df8d5bbd16b281f7799e" ON "user" USING btree ("host");--> statement-breakpoint
-CREATE INDEX "IDX_be623adaa4c566baf5d29ce0c8" ON "user" USING btree ("uri");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_a854e557b1b14814750c7c7b0c" ON "user" USING btree ("token");--> statement-breakpoint
-CREATE UNIQUE INDEX "IDX_5deb01ae162d1d70b80d064c27" ON "user" USING btree ("usernameLower","host");--> statement-breakpoint
+CREATE INDEX "IDX_USER_UPDATED_AT" ON "user" USING btree ("updatedAt");--> statement-breakpoint
+CREATE INDEX "IDX_USER_LAST_ACTIVE_DATE" ON "user" USING btree ("lastActiveDate");--> statement-breakpoint
+CREATE INDEX "IDX_USER_USERNAME_LOWER" ON "user" USING btree ("usernameLower");--> statement-breakpoint
+CREATE INDEX "IDX_USER_TAGS" ON "user" USING btree ("tags");--> statement-breakpoint
+CREATE INDEX "IDX_USER_IS_EXPLORABLE" ON "user" USING btree ("isExplorable");--> statement-breakpoint
+CREATE INDEX "IDX_USER_HOST" ON "user" USING btree ("host");--> statement-breakpoint
+CREATE INDEX "IDX_USER_URI" ON "user" USING btree ("uri");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_TOKEN_UNIQUE" ON "user" USING btree ("token");--> statement-breakpoint
+CREATE UNIQUE INDEX "IDX_USER_USERNAME_LOWER_HOST_UNIQUE" ON "user" USING btree ("usernameLower","host");--> statement-breakpoint
 CREATE UNIQUE INDEX "REL_58f5c71eaab331645112cf8cfa" ON "user" USING btree ("avatarId");--> statement-breakpoint
 CREATE UNIQUE INDEX "REL_afc64b53f8db3707ceb34eb28e" ON "user" USING btree ("bannerId");--> statement-breakpoint
-CREATE INDEX "IDX_f272c8c8805969e6a6449c77b3" ON "webhook" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "IDX_8063a0586ed1dfbe86e982d961" ON "webhook" USING btree ("on");--> statement-breakpoint
-CREATE INDEX "IDX_5a056076f76b2efe08216ba655" ON "webhook" USING btree ("active");
+CREATE INDEX "IDX_WEBHOOK_USER_ID" ON "webhook" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "IDX_WEBHOOK_ON" ON "webhook" USING btree ("on");--> statement-breakpoint
+CREATE INDEX "IDX_WEBHOOK_ACTIVE" ON "webhook" USING btree ("active");
