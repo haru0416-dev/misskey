@@ -290,16 +290,8 @@ onMounted(() => {
 	}
 }
 
-.heatmap {
-	padding: 16px;
-	margin-bottom: 16px;
-}
-
-.retentionHeatmap {
-	padding: 16px;
-	margin-bottom: 16px;
-}
-
+.heatmap,
+.retentionHeatmap,
 .retentionLine {
 	padding: 16px;
 	margin-bottom: 16px;

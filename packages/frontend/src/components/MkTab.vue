@@ -43,6 +43,7 @@ function update(key: T['key']) {
 <style module lang="scss">
 .tabsRoot {
 	display: flex;
+	gap: 8px;
 	font-size: 90%;
 }
 
@@ -64,10 +65,6 @@ function update(key: T['key']) {
 	&:not(.active):hover {
 		color: var(--MI_THEME-fgHighlighted);
 		background: var(--MI_THEME-panelHighlight);
-	}
-
-	&:not(:first-child) {
-		margin-left: 8px;
 	}
 
 	> .icon {

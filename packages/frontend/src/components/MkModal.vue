@@ -367,18 +367,6 @@ defineExpose({
 		transition: opacity 0.3s ease-in, transform 0.3s cubic-bezier(.5,-0.5,1,.5) !important;
 	}
 }
-.transition_send_enterFrom,
-.transition_send_leaveTo {
-	> .bg {
-		opacity: 0;
-	}
-
-	> .content {
-		pointer-events: none;
-		opacity: 0;
-		transform: translateY(-300px);
-	}
-}
 
 .transition_modal_enterActive,
 .transition_modal_leaveActive {
@@ -389,19 +377,6 @@ defineExpose({
 	> .content {
 		transform-origin: var(--transformOrigin);
 		transition: opacity 0.2s, transform 0.2s !important;
-	}
-}
-.transition_modal_enterFrom,
-.transition_modal_leaveTo {
-	> .bg {
-		opacity: 0;
-	}
-
-	> .content {
-		pointer-events: none;
-		opacity: 0;
-		transform-origin: var(--transformOrigin);
-		transform: scale(0.9);
 	}
 }
 
@@ -416,29 +391,8 @@ defineExpose({
 		transition: opacity 0.1s cubic-bezier(0, 0, 0.2, 1), transform 0.1s cubic-bezier(0, 0, 0.2, 1) !important;
 	}
 }
-.transition_modalPopup_enterFrom,
-.transition_modalPopup_leaveTo {
-	> .bg {
-		opacity: 0;
-	}
 
-	> .content {
-		pointer-events: none;
-		opacity: 0;
-		transform-origin: var(--transformOrigin);
-		transform: scale(0.9);
-	}
-}
-
-.transition_modalDrawer_enterActive {
-	> .bg {
-		transition: opacity 0.2s !important;
-	}
-
-	> .content {
-		transition: transform 0.2s cubic-bezier(0,.5,0,1) !important;
-	}
-}
+.transition_modalDrawer_enterActive,
 .transition_modalDrawer_leaveActive {
 	> .bg {
 		transition: opacity 0.2s !important;
@@ -448,12 +402,43 @@ defineExpose({
 		transition: transform 0.2s cubic-bezier(0,.5,0,1) !important;
 	}
 }
+
+.transition_send_enterFrom,
+.transition_send_leaveTo,
+.transition_modal_enterFrom,
+.transition_modal_leaveTo,
+.transition_modalPopup_enterFrom,
+.transition_modalPopup_leaveTo,
 .transition_modalDrawer_enterFrom,
 .transition_modalDrawer_leaveTo {
 	> .bg {
 		opacity: 0;
 	}
+}
 
+.transition_send_enterFrom,
+.transition_send_leaveTo {
+	> .content {
+		pointer-events: none;
+		opacity: 0;
+		transform: translateY(-300px);
+	}
+}
+
+.transition_modal_enterFrom,
+.transition_modal_leaveTo,
+.transition_modalPopup_enterFrom,
+.transition_modalPopup_leaveTo {
+	> .content {
+		pointer-events: none;
+		opacity: 0;
+		transform-origin: var(--transformOrigin);
+		transform: scale(0.9);
+	}
+}
+
+.transition_modalDrawer_enterFrom,
+.transition_modalDrawer_leaveTo {
 	> .content {
 		pointer-events: none;
 		transform: translateY(100%);

@@ -259,6 +259,6 @@ function unmute() {
 }
 
 .noStyle {
-	height: auto !important;
+	height: auto;
 }
 </style>

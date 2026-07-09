@@ -764,7 +764,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 			top: 12px;
 			right: 12px;
 			padding: 0 4px;
-			margin-bottom: 0 !important;
+			margin-bottom: 0;
 			background: var(--MI_THEME-popup);
 			border-radius: 8px;
 			box-shadow: 0px 4px 32px var(--MI_THEME-shadow);
@@ -917,7 +917,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	height: 58px;
 
 	&.useSticky {
-		position: sticky !important;
+		position: sticky;
 		top: calc(22px + var(--MI-stickyTop, 0px));
 		left: 0;
 	}
