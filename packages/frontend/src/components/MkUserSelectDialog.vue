@@ -128,7 +128,7 @@ async function ok() {
 	dialogEl.value?.close();
 
 	// 最近使ったユーザー更新
-	let recents = store.s.recentlyUsedUsers;
+	let recents = store.recentlyUsedUsers;
 	recents = recents.filter(x => x !== selected.value?.id);
 	recents.unshift(selected.value.id);
 	store.set('recentlyUsedUsers', recents.splice(0, 16));
@@ -141,7 +141,7 @@ function cancel() {
 
 onMounted(() => {
 	misskeyApi('users/show', {
-		userIds: store.s.recentlyUsedUsers,
+		userIds: store.recentlyUsedUsers,
 	}).then(foundUsers => {
 		let _users = foundUsers;
 		_users = _users.filter((u) => {

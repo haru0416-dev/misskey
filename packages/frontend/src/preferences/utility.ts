@@ -4,7 +4,7 @@
  */
 
 import { ref, watch } from 'vue';
-import type { PreferencesProfile } from './manager.js';
+import type { PreferencesProfile } from './store.js';
 import type { MenuItem } from '@/types/menu.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
@@ -21,7 +21,7 @@ function canAutoBackup() {
 }
 
 export function getPreferencesProfileMenu(): MenuItem[] {
-	const autoBackupEnabled = ref(store.s.enablePreferencesAutoCloudBackup);
+	const autoBackupEnabled = ref(store.enablePreferencesAutoCloudBackup);
 
 	watch(autoBackupEnabled, () => {
 		if (autoBackupEnabled.value) {
@@ -95,7 +95,7 @@ export function getPreferencesProfileMenu(): MenuItem[] {
 		},
 	];
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menu.push({
 			text: 'Copy profile as text',
 			icon: 'ti ti-clipboard',

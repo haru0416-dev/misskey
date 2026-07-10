@@ -7,18 +7,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div ref="rootEl" :class="reversed ? '_pageScrollableReversed' : '_pageScrollable'">
 	<MkStickyContainer>
 		<template #header>
-			<MkPageHeader v-if="prefer.s.showPageTabBarBottom && (props.tabs?.length ?? 0) > 0" v-bind="pageHeaderPropsWithoutTabs"/>
+			<MkPageHeader v-if="prefer.showPageTabBarBottom && (props.tabs?.length ?? 0) > 0" v-bind="pageHeaderPropsWithoutTabs"/>
 			<MkPageHeader v-else v-model:tab="tab" v-bind="pageHeaderProps"/>
 		</template>
 		<div :class="$style.body">
-			<MkSwiper v-if="prefer.s.enableHorizontalSwipe && swipable && (props.tabs?.length ?? 1) > 1" v-model:tab="tab" :class="$style.swiper" :tabs="props.tabs ?? []">
+			<MkSwiper v-if="prefer.enableHorizontalSwipe && swipable && (props.tabs?.length ?? 1) > 1" v-model:tab="tab" :class="$style.swiper" :tabs="props.tabs ?? []">
 				<slot></slot>
 			</MkSwiper>
 			<slot v-else></slot>
 		</div>
 		<template #footer>
 			<slot name="footer"></slot>
-			<div v-if="prefer.s.showPageTabBarBottom && (props.tabs?.length ?? 0) > 0" :class="$style.footerTabs">
+			<div v-if="prefer.showPageTabBarBottom && (props.tabs?.length ?? 0) > 0" :class="$style.footerTabs">
 				<MkTabs v-model:tab="tab" :tabs="props.tabs" :centered="true" :tabHighlightUpper="true"/>
 			</div>
 		</template>

@@ -16,6 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import * as Misskey from 'misskey-js';
 import XStatusbar from './statusbar.vue';
 import { genId } from '@/utility/id.js';
@@ -26,7 +27,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
 
-const statusbars = prefer.r.statusbars;
+const { statusbars } = storeToRefs(prefer);
 
 const userLists = ref<Misskey.entities.UserList[] | null>(null);
 

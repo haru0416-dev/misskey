@@ -23,7 +23,6 @@ import { updateDeviceKind } from '@/utility/device-kind.js';
 import { reloadChannel } from '@/utility/unison-reload.js';
 import { getUrlWithoutLoginId } from '@/utility/login-id.js';
 import { getAccountFromId } from '@/utility/get-account-from-id.js';
-import { deckStore } from '@/ui/deck/deck-store.js';
 import { analytics, initAnalytics } from '@/analytics.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { fetchCustomEmojis } from '@/custom-emojis.js';
@@ -31,7 +30,7 @@ import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
 import { launchPlugins } from '@/plugin.js';
 
-export async function common(createVue: () => Promise<App<Element>>) {
+export async function common(app: App<Element>, prepareVue: () => Promise<void>) {
 	console.info(`Misskey v${version}`);
 
 	if (_DEV_) {
@@ -105,8 +104,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	html.setAttribute('lang', lang);
 	//#endregion
 
-	await store.ready;
-	await deckStore.ready;
+	await store.$persistReady;
 
 	const fetchInstanceMetaPromise = fetchInstance();
 
@@ -133,12 +131,12 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	//#endregion
 
 	//#region Sync dark mode
-	if (prefer.s.syncDeviceDarkMode) {
+	if (prefer.syncDeviceDarkMode) {
 		store.set('darkMode', isDeviceDarkmode());
 	}
 
 	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (mql) => {
-		if (prefer.s.syncDeviceDarkMode) {
+		if (prefer.syncDeviceDarkMode) {
 			store.set('darkMode', mql.matches);
 		}
 	});
@@ -146,9 +144,9 @@ export async function common(createVue: () => Promise<App<Element>>) {
 
 	if (!isSafeMode) {
 		// TODO: instance.defaultLightTheme/instance.defaultDarkThemeが不正な形式だった場合のケア
-		if (prefer.s.lightTheme == null && instance.defaultLightTheme != null)
+		if (prefer.lightTheme == null && instance.defaultLightTheme != null)
 			prefer.commit('lightTheme', JSON.parse(instance.defaultLightTheme));
-		if (prefer.s.darkTheme == null && instance.defaultDarkTheme != null)
+		if (prefer.darkTheme == null && instance.defaultDarkTheme != null)
 			prefer.commit('darkTheme', JSON.parse(instance.defaultDarkTheme));
 	}
 
@@ -157,13 +155,13 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	// NOTE: この処理は必ずサーバーテーマ適用処理より後に来ること(二重発火を防ぐため)
 	// see: https://github.com/misskey-dev/misskey/issues/16562
 	watch(
-		store.r.darkMode,
+		() => store.darkMode,
 		(darkMode) => {
 			const theme = (() => {
 				if (darkMode) {
-					return isSafeMode ? defaultDarkTheme : (prefer.s.darkTheme ?? defaultDarkTheme);
+					return isSafeMode ? defaultDarkTheme : (prefer.darkTheme ?? defaultDarkTheme);
 				} else {
-					return isSafeMode ? defaultLightTheme : (prefer.s.lightTheme ?? defaultLightTheme);
+					return isSafeMode ? defaultLightTheme : (prefer.lightTheme ?? defaultLightTheme);
 				}
 			})();
 
@@ -172,24 +170,30 @@ export async function common(createVue: () => Promise<App<Element>>) {
 		{ immediate: true },
 	);
 
-	window.document.documentElement.dataset.colorScheme = store.s.darkMode ? 'dark' : 'light';
+	window.document.documentElement.dataset.colorScheme = store.darkMode ? 'dark' : 'light';
 
 	if (!isSafeMode) {
-		watch(prefer.r.darkTheme, (theme) => {
-			if (store.s.darkMode) {
-				themeManager.updateTheme(theme ?? defaultDarkTheme);
-			}
-		});
+		watch(
+			() => prefer.darkTheme,
+			(theme) => {
+				if (store.darkMode) {
+					themeManager.updateTheme(theme ?? defaultDarkTheme);
+				}
+			},
+		);
 
-		watch(prefer.r.lightTheme, (theme) => {
-			if (!store.s.darkMode) {
-				themeManager.updateTheme(theme ?? defaultLightTheme);
-			}
-		});
+		watch(
+			() => prefer.lightTheme,
+			(theme) => {
+				if (!store.darkMode) {
+					themeManager.updateTheme(theme ?? defaultLightTheme);
+				}
+			},
+		);
 	}
 
 	watch(
-		prefer.r.overridedDeviceKind,
+		() => prefer.overridedDeviceKind,
 		(kind) => {
 			updateDeviceKind(kind);
 		},
@@ -197,7 +201,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	);
 
 	watch(
-		prefer.r.useBlurEffectForModal,
+		() => prefer.useBlurEffectForModal,
 		(v) => {
 			window.document.documentElement.style.setProperty('--MI-modalBgFilter', v ? 'blur(4px)' : 'none');
 		},
@@ -205,7 +209,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
 	);
 
 	watch(
-		prefer.r.useBlurEffect,
+		() => prefer.useBlurEffect,
 		(v) => {
 			if (v) {
 				window.document.documentElement.style.removeProperty('--MI-blur');
@@ -223,7 +227,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
 				navigator.wakeLock.request('screen');
 			}
 		});
-	if (prefer.s.keepScreenOn && 'wakeLock' in navigator) {
+	if (prefer.keepScreenOn && 'wakeLock' in navigator) {
 		navigator.wakeLock
 			.request('screen')
 			.then(onVisibilityChange)
@@ -236,7 +240,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
 			});
 	}
 
-	if (prefer.s.makeEveryTextElementsSelectable) {
+	if (prefer.makeEveryTextElementsSelectable) {
 		window.document.documentElement.classList.add('forceSelectableAll');
 	}
 
@@ -269,7 +273,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
 		});
 	});
 
-	const app = await createVue();
+	await prepareVue();
 
 	if (_DEV_) {
 		app.config.performance = true;

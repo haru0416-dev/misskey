@@ -10,8 +10,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button v-tooltip.noDelay.right="instance.name ?? i18n.ts.instance" class="_button" :class="$style.instance" @click="openInstanceMenu">
 				<img :src="instance.iconUrl || '/favicon.ico'" alt="" :class="$style.instanceIcon" style="view-transition-name: navbar-serverIcon;"/>
 			</button>
-			<button v-if="!iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.r.realtimeMode.value ? $style.on : null]" @click="toggleRealtimeMode">
-				<i v-if="store.r.realtimeMode.value" class="ti ti-bolt ti-fw"></i>
+			<button v-if="!iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
+				<i v-if="store.realtimeMode" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
 			<button v-if="!iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" class="_button" :class="[$style.widget]" @click="() => emit('widgetButtonClick')">
@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkA v-tooltip.noDelay.right="i18n.ts.timeline" :class="$style.item" :activeClass="$style.active" to="/" exact>
 				<i :class="$style.itemIcon" class="ti ti-home ti-fw" style="view-transition-name: navbar-homeIcon;"></i><span :class="$style.itemText">{{ i18n.ts.timeline }}</span>
 			</MkA>
-			<template v-for="item in prefer.r.menu.value">
+			<template v-for="item in prefer.menu">
 				<div v-if="item === '-'" :class="$style.divider"></div>
 				<component
 					:is="navbarItemDef[item].to ? 'MkA' : 'button'"
@@ -57,8 +57,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button v-if="iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" class="_button" :class="[$style.widget]" @click="() => emit('widgetButtonClick')">
 				<i class="ti ti-apps ti-fw"></i>
 			</button>
-			<button v-if="iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.r.realtimeMode.value ? $style.on : null]" @click="toggleRealtimeMode">
-				<i v-if="store.r.realtimeMode.value" class="ti ti-bolt ti-fw"></i>
+			<button v-if="iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
+				<i v-if="store.realtimeMode" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
 			<button v-tooltip.noDelay.right="i18n.ts.note" class="_button" :class="[$style.post]" data-cy-open-post-form @click="() => { os.post(); }">
@@ -78,7 +78,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</svg>
 	-->
 
-	<div v-if="!forceIconOnly && prefer.r.showNavbarSubButtons.value" :class="$style.subButtons">
+	<div v-if="!forceIconOnly && prefer.showNavbarSubButtons" :class="$style.subButtons">
 		<div :class="$style.subButton">
 			<svg viewBox="0 0 16 64" :class="$style.subButtonShape">
 				<g transform="matrix(0.333333,0,0,0.222222,0.000895785,21.3333)">
@@ -130,12 +130,12 @@ const emit = defineEmits<{
 
 const forceIconOnly = ref(!props.asDrawer && window.innerWidth <= 1279);
 const iconOnly = computed(() => {
-	return !props.asDrawer && (forceIconOnly.value || (store.r.menuDisplay.value === 'sideIcon'));
+	return !props.asDrawer && (forceIconOnly.value || (store.menuDisplay === 'sideIcon'));
 });
 
 const otherMenuItemIndicated = computed(() => {
 	for (const def in navbarItemDef) {
-		if (prefer.r.menu.value.includes(def)) continue;
+		if (prefer.menu.includes(def)) continue;
 		if (navbarItemDef[def].indicated) return true;
 	}
 	return false;
@@ -147,12 +147,12 @@ function calcViewState() {
 
 window.addEventListener('resize', calcViewState);
 
-watch(store.r.menuDisplay, () => {
+watch(() => store.menuDisplay, () => {
 	calcViewState();
 });
 
 function toggleIconOnly() {
-	if (window.document.startViewTransition && prefer.s.animation) {
+	if (window.document.startViewTransition && prefer.animation) {
 		window.document.startViewTransition(() => {
 			store.set('menuDisplay', iconOnly.value ? 'sideFull' : 'sideIcon');
 		});
@@ -166,10 +166,10 @@ function toggleRealtimeMode(ev: PointerEvent) {
 		type: 'label',
 		text: i18n.ts.realtimeMode,
 	}, {
-		text: store.s.realtimeMode ? i18n.ts.turnItOff : i18n.ts.turnItOn,
-		icon: store.s.realtimeMode ? 'ti ti-bolt-off' : 'ti ti-bolt',
+		text: store.realtimeMode ? i18n.ts.turnItOff : i18n.ts.turnItOn,
+		icon: store.realtimeMode ? 'ti ti-bolt-off' : 'ti ti-bolt',
 		action: () => {
-			store.set('realtimeMode', !store.s.realtimeMode);
+			store.set('realtimeMode', !store.realtimeMode);
 			window.location.reload();
 		},
 	}], ev.currentTarget ?? ev.target);

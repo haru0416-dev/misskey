@@ -18,6 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { defaultIdlingRenderScheduler } from '@/utility/idle-render.js';
+import { ClockScheduler } from '@/utility/clock-scheduler.js';
 
 const props = withDefaults(defineProps<{
 	showS?: boolean;
@@ -37,16 +38,20 @@ const ss = ref('');
 const ms = ref('');
 const showColon = ref(false);
 let prevSec: number | null = null;
+let colonTimerId: number | null = null;
+let mounted = false;
 
 watch(showColon, (v) => {
 	if (v) {
-		window.setTimeout(() => {
+		if (colonTimerId != null) window.clearTimeout(colonTimerId);
+		colonTimerId = window.setTimeout(() => {
 			showColon.value = false;
+			colonTimerId = null;
 		}, 30);
 	}
 });
 
-const tick = (): void => {
+const tick = (): Date => {
 	const now = props.now();
 	now.setMinutes(now.getMinutes() + now.getTimezoneOffset() + props.offset);
 	hh.value = now.getHours().toString().padStart(2, '0');
@@ -55,16 +60,39 @@ const tick = (): void => {
 	ms.value = Math.floor(now.getMilliseconds() / 10).toString().padStart(2, '0');
 	if (now.getSeconds() !== prevSec) showColon.value = true;
 	prevSec = now.getSeconds();
+	return now;
 };
 
 tick();
 
+const clockScheduler = new ClockScheduler(() => {
+	const now = tick();
+	return 1000 - now.getMilliseconds();
+});
+
+function updateScheduler(): void {
+	if (!mounted) return;
+	if (props.showMs) {
+		clockScheduler.stop();
+		defaultIdlingRenderScheduler.add(tick);
+	} else {
+		defaultIdlingRenderScheduler.delete(tick);
+		clockScheduler.start();
+	}
+}
+
+watch(() => props.showMs, updateScheduler);
+
 onMounted(() => {
-	defaultIdlingRenderScheduler.add(tick);
+	mounted = true;
+	updateScheduler();
 });
 
 onUnmounted(() => {
+	mounted = false;
 	defaultIdlingRenderScheduler.delete(tick);
+	clockScheduler.stop();
+	if (colonTimerId != null) window.clearTimeout(colonTimerId);
 });
 </script>
 

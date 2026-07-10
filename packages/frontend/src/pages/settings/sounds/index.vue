@@ -59,6 +59,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import XSound from './sound.vue';
 import type { Ref } from 'vue';
 import type { SoundType, OperationType } from '@/utility/sound.js';
@@ -75,18 +76,19 @@ import MkSwitch from '@/components/MkSwitch.vue';
 import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
 import { PREF_DEF } from '@/preferences/def.js';
 import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
-import { getInitialPrefValue } from '@/preferences/manager.js';
+import { getInitialPrefValue } from '@/preferences/store.js';
 
 const notUseSound = prefer.model('sound.notUseSound');
 const useSoundOnlyWhenActive = prefer.model('sound.useSoundOnlyWhenActive');
 const masterVolume = prefer.model('sound.masterVolume');
+const preferRefs = storeToRefs(prefer);
 
 const sounds = ref<Record<OperationType, Ref<SoundStore>>>({
-	note: prefer.r['sound.on.note'],
-	noteMy: prefer.r['sound.on.noteMy'],
-	notification: prefer.r['sound.on.notification'],
-	reaction: prefer.r['sound.on.reaction'],
-	chatMessage: prefer.r['sound.on.chatMessage'],
+	note: preferRefs['sound.on.note'],
+	noteMy: preferRefs['sound.on.noteMy'],
+	notification: preferRefs['sound.on.notification'],
+	reaction: preferRefs['sound.on.reaction'],
+	chatMessage: preferRefs['sound.on.chatMessage'],
 });
 
 function getSoundTypeName(f: SoundType): string {

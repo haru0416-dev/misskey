@@ -148,7 +148,7 @@ const emit = defineEmits<{
 
 const dialog = useTemplateRef('dialog');
 
-const page = ref(store.s.accountSetupWizard);
+const page = ref(store.accountSetupWizard);
 
 watch(page, () => {
 	store.set('accountSetupWizard', page.value);

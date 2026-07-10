@@ -8,7 +8,7 @@ import { prefer } from '@/preferences.js';
 
 export const clickAnimeDirective = {
 	mounted(el) {
-		if (!prefer.s.animation) return;
+		if (!prefer.animation) return;
 
 		const target = el.children[0];
 

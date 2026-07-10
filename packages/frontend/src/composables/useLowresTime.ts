@@ -29,6 +29,33 @@ export function useLowresTime() {
 	return computed(() => Math.max(time.value, now));
 }
 
-window.setInterval(() => {
+let intervalId: number | null = null;
+
+function updateTime() {
 	time.value = Date.now();
-}, TIME_UPDATE_INTERVAL);
+}
+
+function startTimer() {
+	updateTime();
+	if (intervalId != null) return;
+	intervalId = window.setInterval(updateTime, TIME_UPDATE_INTERVAL);
+}
+
+function stopTimer() {
+	if (intervalId == null) return;
+	window.clearInterval(intervalId);
+	intervalId = null;
+}
+
+function onVisibilityChange() {
+	if (window.document.visibilityState === 'hidden') {
+		stopTimer();
+	} else {
+		startTimer();
+	}
+}
+
+if (window.document.visibilityState !== 'hidden') {
+	startTimer();
+}
+window.document.addEventListener('visibilitychange', onVisibilityChange);

@@ -4,9 +4,10 @@
  */
 
 import { onActivated, onDeactivated, onMounted, onUnmounted } from 'vue';
+import { PollingScheduler } from './polling-scheduler.js';
 
 export function useInterval(
-	fn: () => void,
+	fn: () => void | Promise<void>,
 	interval: number,
 	options: {
 		immediate: boolean;
@@ -15,31 +16,39 @@ export function useInterval(
 ): (() => void) | undefined {
 	if (Number.isNaN(interval)) return;
 
-	let intervalId: number | null = null;
+	const scheduler = new PollingScheduler(fn, interval);
+	let enabled = false;
+	let disposed = false;
 
-	if (options.afterMounted) {
-		onMounted(() => {
-			if (options.immediate) fn();
-			intervalId = window.setInterval(fn, interval);
-		});
-	} else {
-		if (options.immediate) fn();
-		intervalId = window.setInterval(fn, interval);
-	}
-
-	const clear = () => {
-		if (intervalId) window.clearInterval(intervalId);
-		intervalId = null;
+	const activate = () => {
+		if (disposed || enabled) return;
+		enabled = true;
+		scheduler.start(options.immediate);
 	};
 
-	onActivated(() => {
-		if (intervalId) return;
-		if (options.immediate) fn();
-		intervalId = window.setInterval(fn, interval);
-	});
+	const pause = () => {
+		if (!enabled) return;
+		enabled = false;
+		scheduler.stop();
+	};
+
+	const clear = () => {
+		if (disposed) return;
+		disposed = true;
+		enabled = false;
+		scheduler.dispose();
+	};
+
+	if (options.afterMounted) {
+		onMounted(activate);
+	} else {
+		activate();
+	}
+
+	onActivated(activate);
 
 	onDeactivated(() => {
-		clear();
+		pause();
 	});
 
 	onUnmounted(() => {

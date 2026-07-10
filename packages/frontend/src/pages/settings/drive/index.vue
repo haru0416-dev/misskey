@@ -95,7 +95,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<div class="_gaps">
 								<div class="_gaps_s">
 									<XWatermarkItem
-										v-for="(preset, i) in prefer.r.watermarkPresets.value"
+										v-for="(preset, i) in prefer.watermarkPresets"
 										:key="preset.id"
 										:preset="preset"
 										@updatePreset="onUpdateWatermarkPreset(preset.id, $event)"
@@ -115,7 +115,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 								<SearchMarker :keywords="['default', 'watermark', 'preset']">
 									<MkPreferenceContainer k="defaultWatermarkPresetId">
-										<MkSelect v-model="defaultWatermarkPresetId" :items="[{ label: i18n.ts.none, value: null }, ...prefer.r.watermarkPresets.value.map(p => ({ label: p.name || i18n.ts.noName, value: p.id }))]">
+										<MkSelect v-model="defaultWatermarkPresetId" :items="[{ label: i18n.ts.none, value: null }, ...prefer.watermarkPresets.map(p => ({ label: p.name || i18n.ts.noName, value: p.id }))]">
 											<template #label><SearchLabel>{{ i18n.ts.defaultPreset }}</SearchLabel></template>
 										</MkSelect>
 									</MkPreferenceContainer>
@@ -133,7 +133,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<div class="_gaps">
 								<div class="_gaps_s">
 									<XImageFrameItem
-										v-for="(preset, i) in prefer.r.imageFramePresets.value"
+										v-for="(preset, i) in prefer.imageFramePresets"
 										:key="preset.id"
 										:preset="preset"
 										@updatePreset="onUpdateImageFramePreset(preset.id, $event)"
@@ -287,9 +287,9 @@ misskeyApi('drive').then(info => {
 	fetching.value = false;
 });
 
-if (prefer.s.uploadFolder) {
+if (prefer.uploadFolder) {
 	misskeyApi('drive/folders/show', {
-		folderId: prefer.s.uploadFolder,
+		folderId: prefer.uploadFolder,
 	}).then(response => {
 		uploadFolder.value = response;
 	});
@@ -300,9 +300,9 @@ function chooseUploadFolder() {
 		if (canceled) return;
 		prefer.commit('uploadFolder', folders[0] ? folders[0].id : null);
 		os.success();
-		if (prefer.s.uploadFolder) {
+		if (prefer.uploadFolder) {
 			uploadFolder.value = await misskeyApi('drive/folders/show', {
-				folderId: prefer.s.uploadFolder,
+				folderId: prefer.uploadFolder,
 			});
 		} else {
 			uploadFolder.value = null;
@@ -317,54 +317,54 @@ async function addWatermarkPreset() {
 		layers: [],
 	}, {
 		presetOk: (preset) => {
-			prefer.commit('watermarkPresets', [...prefer.s.watermarkPresets, preset]);
+			prefer.commit('watermarkPresets', [...prefer.watermarkPresets, preset]);
 		},
 		closed: () => dispose(),
 	});
 }
 
 function onUpdateWatermarkPreset(id: string, preset: WatermarkPreset) {
-	const index = prefer.s.watermarkPresets.findIndex(p => p.id === id);
+	const index = prefer.watermarkPresets.findIndex(p => p.id === id);
 	if (index !== -1) {
 		prefer.commit('watermarkPresets', [
-			...prefer.s.watermarkPresets.slice(0, index),
+			...prefer.watermarkPresets.slice(0, index),
 			preset,
-			...prefer.s.watermarkPresets.slice(index + 1),
+			...prefer.watermarkPresets.slice(index + 1),
 		]);
 	}
 }
 
 function onDeleteWatermarkPreset(id: string) {
-	const index = prefer.s.watermarkPresets.findIndex(p => p.id === id);
+	const index = prefer.watermarkPresets.findIndex(p => p.id === id);
 	if (index !== -1) {
 		prefer.commit('watermarkPresets', [
-			...prefer.s.watermarkPresets.slice(0, index),
-			...prefer.s.watermarkPresets.slice(index + 1),
+			...prefer.watermarkPresets.slice(0, index),
+			...prefer.watermarkPresets.slice(index + 1),
 		]);
 
-		if (prefer.s.defaultWatermarkPresetId === id) {
+		if (prefer.defaultWatermarkPresetId === id) {
 			prefer.commit('defaultWatermarkPresetId', null);
 		}
 	}
 }
 
 function onUpdateImageFramePreset(id: string, preset: ImageFramePreset) {
-	const index = prefer.s.imageFramePresets.findIndex(p => p.id === id);
+	const index = prefer.imageFramePresets.findIndex(p => p.id === id);
 	if (index !== -1) {
 		prefer.commit('imageFramePresets', [
-			...prefer.s.imageFramePresets.slice(0, index),
+			...prefer.imageFramePresets.slice(0, index),
 			preset,
-			...prefer.s.imageFramePresets.slice(index + 1),
+			...prefer.imageFramePresets.slice(index + 1),
 		]);
 	}
 }
 
 function onDeleteImageFramePreset(id: string) {
-	const index = prefer.s.imageFramePresets.findIndex(p => p.id === id);
+	const index = prefer.imageFramePresets.findIndex(p => p.id === id);
 	if (index !== -1) {
 		prefer.commit('imageFramePresets', [
-			...prefer.s.imageFramePresets.slice(0, index),
-			...prefer.s.imageFramePresets.slice(index + 1),
+			...prefer.imageFramePresets.slice(0, index),
+			...prefer.imageFramePresets.slice(index + 1),
 		]);
 	}
 }
@@ -376,7 +376,7 @@ async function addImageFramePreset() {
 		params: null,
 	}, {
 		presetOk: (preset) => {
-			prefer.commit('imageFramePresets', [...prefer.s.imageFramePresets, preset]);
+			prefer.commit('imageFramePresets', [...prefer.imageFramePresets, preset]);
 		},
 		closed: () => dispose(),
 	});

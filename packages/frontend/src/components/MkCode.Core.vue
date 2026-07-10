@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, toRef, watch } from 'vue';
 import { bundledLanguagesInfo } from 'shiki/langs';
 import type { BundledLanguage } from 'shiki/langs';
 import { getHighlighter, getTheme } from '@/utility/code-highlighter.js';
@@ -32,7 +32,7 @@ const props = withDefaults(defineProps<{
 });
 
 const highlighter = await getHighlighter();
-const darkMode = store.r.darkMode;
+const darkMode = toRef(store, 'darkMode');
 const codeLang = ref<BundledLanguage | 'aiscript'>('js');
 
 const [lightThemeName, darkThemeName] = await Promise.all([

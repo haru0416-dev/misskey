@@ -10,20 +10,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 	tabindex="0"
 	:class="[
 		$style.audioContainer,
-		(audio.isSensitive && prefer.s.highlightSensitiveMedia) && $style.sensitive,
+		(audio.isSensitive && prefer.highlightSensitiveMedia) && $style.sensitive,
 	]"
 	@contextmenu.stop
 	@keydown.stop
 >
 	<button v-if="hide" :class="$style.hidden" @click="reveal">
 		<div :class="$style.hiddenTextWrapper">
-			<b v-if="audio.isSensitive" style="display: block;"><i class="ti ti-eye-exclamation"></i> {{ i18n.ts.sensitive }}{{ prefer.s.dataSaver.media ? ` (${i18n.ts.audio}${audio.size ? ' ' + bytes(audio.size) : ''})` : '' }}</b>
-			<b v-else style="display: block;"><i class="ti ti-music"></i> {{ prefer.s.dataSaver.media && audio.size ? bytes(audio.size) : i18n.ts.audio }}</b>
+			<b v-if="audio.isSensitive" style="display: block;"><i class="ti ti-eye-exclamation"></i> {{ i18n.ts.sensitive }}{{ prefer.dataSaver.media ? ` (${i18n.ts.audio}${audio.size ? ' ' + bytes(audio.size) : ''})` : '' }}</b>
+			<b v-else style="display: block;"><i class="ti ti-music"></i> {{ prefer.dataSaver.media && audio.size ? bytes(audio.size) : i18n.ts.audio }}</b>
 			<span style="display: block;">{{ i18n.ts.clickToShow }}</span>
 		</div>
 	</button>
 
-	<div v-else-if="prefer.s.useNativeUiForVideoAudioPlayer" :class="$style.nativeAudioContainer">
+	<div v-else-if="prefer.useNativeUiForVideoAudioPlayer" :class="$style.nativeAudioContainer">
 		<audio
 			ref="audioEl"
 			preload="metadata"
@@ -88,7 +88,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { useTemplateRef, watch, computed, ref, onDeactivated, onActivated, onMounted } from 'vue';
+import { useTemplateRef, watch, computed, ref, onDeactivated, onActivated, onMounted, onUnmounted } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { MenuItem } from '@/types/menu.js';
 import type { Keymap } from '@/utility/hotkey.js';
@@ -249,7 +249,7 @@ function showMenu(ev: MouseEvent) {
 		menu.push({ type: 'divider' }, ...details);
 	}
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menu.push({ type: 'divider' }, {
 			icon: 'ti ti-hash',
 			text: i18n.ts.copyFileId,
@@ -283,10 +283,8 @@ async function toggleSensitive(file: Misskey.entities.DriveFile) {
 }
 
 // MediaControl: Common State
-const oncePlayed = ref(false);
 const isReady = ref(false);
 const isPlaying = ref(false);
-const isActuallyPlaying = ref(false);
 const elapsedTimeMs = ref(0);
 const durationMs = ref(0);
 const rangePercent = computed({
@@ -295,7 +293,9 @@ const rangePercent = computed({
 	},
 	set: (to) => {
 		if (!audioEl.value) return;
-		audioEl.value.currentTime = to * durationMs.value / 1000;
+		const currentTime = to * durationMs.value / 1000;
+		audioEl.value.currentTime = currentTime;
+		elapsedTimeMs.value = currentTime * 1000;
 	},
 });
 const volume = ref(.25);
@@ -303,7 +303,7 @@ const speed = ref(1);
 const loop = ref(false); // TODO: ドライブファイルのフラグに置き換える
 const bufferedEnd = ref(0);
 const bufferedDataRatio = computed(() => {
-	if (!audioEl.value) return 0;
+	if (!audioEl.value || !Number.isFinite(audioEl.value.duration) || audioEl.value.duration <= 0) return 0;
 	return bufferedEnd.value / audioEl.value.duration;
 });
 
@@ -315,9 +315,11 @@ function togglePlayPause() {
 		audioEl.value.pause();
 		isPlaying.value = false;
 	} else {
-		audioEl.value.play();
+		const audio = audioEl.value;
 		isPlaying.value = true;
-		oncePlayed.value = true;
+		void audio.play().catch(() => {
+			if (audioEl.value === audio) isPlaying.value = false;
+		});
 	}
 }
 
@@ -331,59 +333,107 @@ function toggleMute() {
 
 let onceInit = false;
 let mediaTickFrameId: number | null = null;
-let stopAudioElWatch: () => void;
+let stopAudioElWatch: (() => void) | null = null;
+
+function updateElapsedTime(audio: HTMLAudioElement) {
+	elapsedTimeMs.value = Number.isFinite(audio.currentTime) ? audio.currentTime * 1000 : 0;
+}
+
+function updateDuration(audio: HTMLAudioElement) {
+	durationMs.value = Number.isFinite(audio.duration) ? audio.duration * 1000 : 0;
+}
+
+function updateBufferedData(audio: HTMLAudioElement) {
+	try {
+		bufferedEnd.value = audio.buffered.length > 0 ? audio.buffered.end(0) : 0;
+	} catch {
+		bufferedEnd.value = 0;
+	}
+}
+
+function stopMediaTick() {
+	if (mediaTickFrameId == null) return;
+	window.cancelAnimationFrame(mediaTickFrameId);
+	mediaTickFrameId = null;
+}
+
+function updateMediaTick() {
+	const audio = audioEl.value;
+	if (audio == null || audio.paused || audio.ended) {
+		mediaTickFrameId = null;
+		return;
+	}
+
+	updateElapsedTime(audio);
+	mediaTickFrameId = window.requestAnimationFrame(updateMediaTick);
+}
+
+function startMediaTick() {
+	if (mediaTickFrameId != null) return;
+	const audio = audioEl.value;
+	if (audio == null || audio.paused || audio.ended) return;
+
+	updateElapsedTime(audio);
+	mediaTickFrameId = window.requestAnimationFrame(updateMediaTick);
+}
+
+function teardown() {
+	stopMediaTick();
+	stopAudioElWatch?.();
+	stopAudioElWatch = null;
+	onceInit = false;
+}
 
 function init() {
 	if (onceInit) return;
 	onceInit = true;
 
-	stopAudioElWatch = watch(audioEl, () => {
-		if (audioEl.value) {
-			isReady.value = true;
-
-			function updateMediaTick() {
-				if (audioEl.value) {
-					try {
-						bufferedEnd.value = audioEl.value.buffered.end(0);
-					} catch (err) {
-						bufferedEnd.value = 0;
-					}
-
-					elapsedTimeMs.value = audioEl.value.currentTime * 1000;
-
-					if (audioEl.value.loop !== loop.value) {
-						loop.value = audioEl.value.loop;
-					}
-				}
-				mediaTickFrameId = window.requestAnimationFrame(updateMediaTick);
-			}
-
-			updateMediaTick();
-
-			audioEl.value.addEventListener('play', () => {
-				isActuallyPlaying.value = true;
-			});
-
-			audioEl.value.addEventListener('pause', () => {
-				isActuallyPlaying.value = false;
-				isPlaying.value = false;
-			});
-
-			audioEl.value.addEventListener('ended', () => {
-				oncePlayed.value = false;
-				isActuallyPlaying.value = false;
-				isPlaying.value = false;
-			});
-
-			durationMs.value = audioEl.value.duration * 1000;
-			audioEl.value.addEventListener('durationchange', () => {
-				if (audioEl.value) {
-					durationMs.value = audioEl.value.duration * 1000;
-				}
-			});
-
-			audioEl.value.volume = volume.value;
+	stopAudioElWatch = watch(audioEl, (audio, _oldAudio, onCleanup) => {
+		stopMediaTick();
+		if (audio == null) {
+			isReady.value = false;
+			return;
 		}
+
+		const abortController = new AbortController();
+		onCleanup(() => {
+			abortController.abort();
+			stopMediaTick();
+		});
+
+		const eventOptions = { signal: abortController.signal };
+		audio.addEventListener('play', () => {
+			isPlaying.value = true;
+			startMediaTick();
+		}, eventOptions);
+		audio.addEventListener('pause', () => {
+			isPlaying.value = false;
+			updateElapsedTime(audio);
+			stopMediaTick();
+		}, eventOptions);
+		audio.addEventListener('ended', () => {
+			isPlaying.value = false;
+			updateElapsedTime(audio);
+			stopMediaTick();
+		}, eventOptions);
+		audio.addEventListener('timeupdate', () => updateElapsedTime(audio), eventOptions);
+		audio.addEventListener('durationchange', () => updateDuration(audio), eventOptions);
+		audio.addEventListener('progress', () => updateBufferedData(audio), eventOptions);
+		audio.addEventListener('loadedmetadata', () => {
+			updateElapsedTime(audio);
+			updateDuration(audio);
+			updateBufferedData(audio);
+		}, eventOptions);
+
+		isReady.value = true;
+		isPlaying.value = !audio.paused && !audio.ended;
+		updateElapsedTime(audio);
+		updateDuration(audio);
+		updateBufferedData(audio);
+		audio.volume = volume.value;
+		audio.playbackRate = speed.value;
+		audio.loop = loop.value;
+		if (isPlaying.value) startMediaTick();
 	}, {
 		immediate: true,
 	});
@@ -410,20 +460,16 @@ onActivated(() => {
 });
 
 onDeactivated(() => {
+	teardown();
 	isReady.value = false;
 	isPlaying.value = false;
-	isActuallyPlaying.value = false;
 	elapsedTimeMs.value = 0;
 	durationMs.value = 0;
 	bufferedEnd.value = 0;
-	hide.value = (prefer.s.nsfw === 'force' || prefer.s.dataSaver.media) ? true : (props.audio.isSensitive && prefer.s.nsfw !== 'ignore');
-	stopAudioElWatch();
-	onceInit = false;
-	if (mediaTickFrameId) {
-		window.cancelAnimationFrame(mediaTickFrameId);
-		mediaTickFrameId = null;
-	}
+	hide.value = (prefer.nsfw === 'force' || prefer.dataSaver.media) ? true : (props.audio.isSensitive && prefer.nsfw !== 'ignore');
 });
+
+onUnmounted(teardown);
 </script>
 
 <style lang="scss" module>

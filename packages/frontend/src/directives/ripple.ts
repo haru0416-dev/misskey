@@ -12,7 +12,7 @@ export const rippleDirective = {
 	mounted(el, binding) {
 		// 明示的に false であればバインドしない
 		if (binding.value === false) return;
-		if (!prefer.s.animation) return;
+		if (!prefer.animation) return;
 
 		el.addEventListener('click', () => {
 			const rect = el.getBoundingClientRect();

@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import type { PREF_DEF } from '@/preferences/def.js';
 import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
@@ -33,19 +33,21 @@ const isAccountOverrided = ref(prefer.isAccountOverrided(props.k));
 const isSyncEnabled = ref(prefer.isSyncEnabled(props.k));
 
 function showMenu(ev: PointerEvent, contextmenu?: boolean) {
-	const i = window.setInterval(() => {
-		isAccountOverrided.value = prefer.isAccountOverrided(props.k);
-		isSyncEnabled.value = prefer.isSyncEnabled(props.k);
-	}, 100);
+	const menu = prefer.getPerPrefMenu(props.k);
+	const stopStatusWatcher = watch([menu.overrideByAccount, menu.sync], ([overrideByAccount, sync]) => {
+		isAccountOverrided.value = overrideByAccount;
+		isSyncEnabled.value = sync;
+	}, { immediate: true });
+	const dispose = () => {
+		stopStatusWatcher();
+		menu.dispose();
+	};
+
 	if (contextmenu) {
-		os.contextMenu(prefer.getPerPrefMenu(props.k), ev).then(() => {
-			window.clearInterval(i);
-		});
+		os.contextMenu(menu.items, ev).finally(dispose);
 	} else {
-		os.popupMenu(prefer.getPerPrefMenu(props.k), ev.currentTarget ?? ev.target, {
-			onClosing: () => {
-				window.clearInterval(i);
-			},
+		os.popupMenu(menu.items, ev.currentTarget ?? ev.target, {
+			onClosing: dispose,
 		});
 	}
 }

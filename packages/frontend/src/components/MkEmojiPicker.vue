@@ -116,7 +116,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, useTemplateRef, computed, watch, onMounted } from 'vue';
+import { ref, useTemplateRef, computed, toRef, watch, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import * as Misskey from 'misskey-js';
 import {
 	emojilist,
@@ -168,9 +169,9 @@ const {
 	emojiPickerScale,
 	emojiPickerWidth,
 	emojiPickerHeight,
-} = prefer.r;
+} = storeToRefs(prefer);
 
-const recentlyUsedEmojis = store.r.recentlyUsedEmojis;
+const recentlyUsedEmojis = toRef(store, 'recentlyUsedEmojis');
 
 const recentlyUsedEmojisDef = computed(() => {
 	return recentlyUsedEmojis.value.map(getDef);
@@ -323,7 +324,7 @@ watch(q, () => {
 			}
 			if (matches.size >= max) return matches;
 
-			for (const index of Object.values(store.s.additionalUnicodeEmojiIndexes)) {
+			for (const index of Object.values(store.additionalUnicodeEmojiIndexes)) {
 				for (const emoji of emojis) {
 					if (keywords.every(keyword => index[emoji.char]?.some(k => k.includes(keyword)))) {
 						matches.add(emoji);
@@ -340,7 +341,7 @@ watch(q, () => {
 			}
 			if (matches.size >= max) return matches;
 
-			for (const index of Object.values(store.s.additionalUnicodeEmojiIndexes)) {
+			for (const index of Object.values(store.additionalUnicodeEmojiIndexes)) {
 				for (const emoji of emojis) {
 					if (index[emoji.char]?.some(k => k.startsWith(newQ))) {
 						matches.add(emoji);
@@ -357,7 +358,7 @@ watch(q, () => {
 			}
 			if (matches.size >= max) return matches;
 
-			for (const index of Object.values(store.s.additionalUnicodeEmojiIndexes)) {
+			for (const index of Object.values(store.additionalUnicodeEmojiIndexes)) {
 				for (const emoji of emojis) {
 					if (index[emoji.char]?.some(k => k.includes(newQ))) {
 						matches.add(emoji);
@@ -419,7 +420,7 @@ function computeButtonTitle(ev: PointerEvent): void {
 
 function chosen(emoji: string | Misskey.entities.EmojiSimple | UnicodeEmojiDef, ev?: PointerEvent) {
 	const el = ev && (ev.currentTarget ?? ev.target) as HTMLElement | null | undefined;
-	if (el && prefer.s.animation) {
+	if (el && prefer.animation) {
 		const rect = el.getBoundingClientRect();
 		const x = rect.left + (el.offsetWidth / 2);
 		const y = rect.top + (el.offsetHeight / 2);
@@ -433,7 +434,7 @@ function chosen(emoji: string | Misskey.entities.EmojiSimple | UnicodeEmojiDef, 
 
 	// 最近使った絵文字更新
 	if (!pinned.value?.includes(key)) {
-		let recents = store.s.recentlyUsedEmojis;
+		let recents = store.recentlyUsedEmojis;
 		recents = recents.filter((emoji) => emoji !== key);
 		recents.unshift(key);
 		store.set('recentlyUsedEmojis', recents.splice(0, 32));

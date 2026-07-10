@@ -19,10 +19,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</header>
 	<Transition
-		:enterActiveClass="prefer.s.animation ? $style.transition_toggle_enterActive : ''"
-		:leaveActiveClass="prefer.s.animation ? $style.transition_toggle_leaveActive : ''"
-		:enterFromClass="prefer.s.animation ? $style.transition_toggle_enterFrom : ''"
-		:leaveToClass="prefer.s.animation ? $style.transition_toggle_leaveTo : ''"
+		:enterActiveClass="prefer.animation ? $style.transition_toggle_enterActive : ''"
+		:leaveActiveClass="prefer.animation ? $style.transition_toggle_leaveActive : ''"
+		:enterFromClass="prefer.animation ? $style.transition_toggle_enterFrom : ''"
+		:leaveToClass="prefer.animation ? $style.transition_toggle_leaveTo : ''"
 		@enter="enter"
 		@afterEnter="afterEnter"
 		@leave="leave"

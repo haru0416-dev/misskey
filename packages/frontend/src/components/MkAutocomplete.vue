@@ -98,7 +98,7 @@ const lib = emojilist.filter(x => x.category !== 'flags');
 
 const unicodeEmojiDB = computed(() => {
 	//#region Unicode Emoji
-	const char2path = prefer.r.emojiStyle.value === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
+	const char2path = prefer.emojiStyle === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
 
 	const unicodeEmojiDB: EmojiDef[] = lib.map(x => ({
 		emoji: x.char,
@@ -106,7 +106,7 @@ const unicodeEmojiDB = computed(() => {
 		url: char2path(x.char),
 	}));
 
-	for (const index of Object.values(store.s.additionalUnicodeEmojiIndexes)) {
+	for (const index of Object.values(store.additionalUnicodeEmojiIndexes)) {
 		for (const [emoji, keywords] of Object.entries(index)) {
 			for (const k of keywords) {
 				unicodeEmojiDB.push({
@@ -204,7 +204,7 @@ function complete<T extends keyof CompleteInfo>(type: T, value: CompleteInfo[T][
 	emit('done', { type, value });
 	emit('closed');
 	if (type === 'emoji' || type === 'emojiComplete') {
-		let recents = store.s.recentlyUsedEmojis;
+		let recents = store.recentlyUsedEmojis;
 		recents = recents.filter((emoji) => emoji !== value);
 		recents.unshift(value as string);
 		store.set('recentlyUsedEmojis', recents.splice(0, 32));
@@ -287,7 +287,7 @@ function exec() {
 	} else if (props.type === 'emoji') {
 		if (!props.q || props.q === '') {
 			// 最近使った絵文字をサジェスト
-			emojis.value = store.s.recentlyUsedEmojis.map(emoji => emojiDb.value.find(dbEmoji => dbEmoji.emoji === emoji)).filter(x => x) as EmojiDef[];
+			emojis.value = store.recentlyUsedEmojis.map(emoji => emojiDb.value.find(dbEmoji => dbEmoji.emoji === emoji)).filter(x => x) as EmojiDef[];
 			return;
 		}
 

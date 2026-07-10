@@ -22,7 +22,7 @@ export const TIPS = [
 
 export function closeTip(tip: (typeof TIPS)[number]) {
 	store.set('tips', {
-		...store.r.tips.value,
+		...store.tips,
 		[tip]: true,
 	});
 }

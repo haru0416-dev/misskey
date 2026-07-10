@@ -231,7 +231,7 @@ const {
 	def: selectedFolderIdDef,
 } = useMkSelect({
 	items: computed(() => uploadFolders.value.map(folder => ({ label: folder.name, value: folder.id || '' }))),
-	initialValue: prefer.s.uploadFolder,
+	initialValue: prefer.uploadFolder,
 });
 const directoryToCategory = ref<boolean>(false);
 const registerButtonDisabled = ref<boolean>(false);

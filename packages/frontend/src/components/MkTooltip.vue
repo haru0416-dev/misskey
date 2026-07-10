@@ -5,11 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <Transition
-	:enterActiveClass="prefer.s.animation ? $style.transition_tooltip_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_tooltip_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_tooltip_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_tooltip_leaveTo : ''"
-	appear :css="prefer.s.animation"
+	:enterActiveClass="prefer.animation ? $style.transition_tooltip_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_tooltip_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_tooltip_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_tooltip_leaveTo : ''"
+	appear :css="prefer.animation"
 	@afterLeave="emit('closed')"
 >
 	<div v-show="showing" ref="el" :class="$style.root" class="_acrylic _shadow" :style="{ zIndex, maxWidth: maxWidth + 'px' }">
@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, useTemplateRef } from 'vue';
+import { nextTick, onMounted, onUnmounted, useTemplateRef, watch } from 'vue';
 import * as os from '@/os.js';
 import { calcPopupPosition } from '@/utility/popup-position.js';
 import { prefer } from '@/preferences.js';
@@ -72,22 +72,56 @@ function setPosition() {
 }
 
 let loopHandler: number | null = null;
+let mounted = false;
+
+function stopLoop() {
+	if (loopHandler == null) return;
+	window.cancelAnimationFrame(loopHandler);
+	loopHandler = null;
+}
+
+function loop() {
+	if (!mounted || !props.showing || window.document.visibilityState === 'hidden') {
+		loopHandler = null;
+		return;
+	}
+
+	setPosition();
+	loopHandler = window.requestAnimationFrame(loop);
+}
+
+function startLoop() {
+	if (!mounted || !props.showing || window.document.visibilityState === 'hidden' || loopHandler != null) return;
+	setPosition();
+	loopHandler = window.requestAnimationFrame(loop);
+}
+
+function onVisibilityChange() {
+	if (window.document.visibilityState === 'hidden') {
+		stopLoop();
+	} else {
+		nextTick(startLoop);
+	}
+}
+
+watch(() => props.showing, (showing) => {
+	if (showing) {
+		nextTick(startLoop);
+	} else {
+		stopLoop();
+	}
+});
 
 onMounted(() => {
-	nextTick(() => {
-		setPosition();
-
-		const loop = () => {
-			setPosition();
-			loopHandler = window.requestAnimationFrame(loop);
-		};
-
-		loop();
-	});
+	mounted = true;
+	window.document.addEventListener('visibilitychange', onVisibilityChange);
+	nextTick(startLoop);
 });
 
 onUnmounted(() => {
-	if (loopHandler != null) window.cancelAnimationFrame(loopHandler);
+	mounted = false;
+	window.document.removeEventListener('visibilitychange', onVisibilityChange);
+	stopLoop();
 });
 </script>
 

@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div ref="rootEl" :class="isPulling ? $style.isPulling : null">
+<div ref="rootEl">
 	<!-- 小数が含まれるとレンダリングが高頻度になりすぎパフォーマンスが悪化するためround -->
 	<div v-if="isPulling" :class="$style.frame" :style="`--frame-min-height: ${Math.round(pullDistance / (PULL_BRAKE_BASE + (pullDistance / PULL_BRAKE_FACTOR)))}px;`">
 		<div :class="$style.frameContent">
@@ -27,6 +27,7 @@ import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue';
 import { getScrollContainer } from '@shared/utility/scroll.js';
 import { i18n } from '@/i18n.js';
 import { isHorizontalSwipeSwiping } from '@/utility/touch.js';
+import { throttleByAnimationFrame } from '@/utility/throttle-by-animation-frame.js';
 
 const SCROLL_STOP = 10;
 const MAX_PULL_DISTANCE = Infinity;
@@ -41,6 +42,8 @@ const isRefreshing = ref(false);
 const pullDistance = ref(0);
 
 let startScreenY: number | null = null;
+let releaseAnimationFrameId: number | null = null;
+let releaseAnimationResolve: (() => void) | null = null;
 
 const rootEl = useTemplateRef('rootEl');
 let scrollEl: HTMLElement | null = null;
@@ -97,10 +100,7 @@ function moveStartByMouse(event: MouseEvent) {
 	pullDistance.value = 0;
 
 	window.addEventListener('mousemove', moving, { passive: true });
-	window.addEventListener('mouseup', () => {
-		window.removeEventListener('mousemove', moving);
-		onPullRelease();
-	}, { passive: true, once: true });
+	window.addEventListener('mouseup', onMouseUp, { passive: true, once: true });
 }
 
 function moveStartByTouch(event: TouchEvent) {
@@ -119,33 +119,49 @@ function moveStartByTouch(event: TouchEvent) {
 	pullDistance.value = 0;
 
 	window.addEventListener('touchmove', moving, { passive: true });
-	window.addEventListener('touchend', () => {
-		window.removeEventListener('touchmove', moving);
-		onPullRelease();
-	}, { passive: true, once: true });
+	window.addEventListener('touchend', onTouchEnd, { passive: true, once: true });
+	window.addEventListener('touchcancel', onTouchEnd, { passive: true, once: true });
+}
+
+function cancelReleaseAnimation() {
+	if (releaseAnimationFrameId != null) {
+		window.cancelAnimationFrame(releaseAnimationFrameId);
+		releaseAnimationFrameId = null;
+	}
+	if (releaseAnimationResolve != null) {
+		const resolve = releaseAnimationResolve;
+		releaseAnimationResolve = null;
+		resolve();
+	}
 }
 
 function moveBySystem(to: number): Promise<void> {
 	return new Promise(r => {
+		cancelReleaseAnimation();
 		const startHeight = pullDistance.value;
 		const overHeight = pullDistance.value - to;
-		if (overHeight < 1) {
+		if (overHeight < 1 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+			pullDistance.value = to;
 			r();
 			return;
 		}
-		const startTime = Date.now();
-		let intervalId = window.setInterval(() => {
-			const time = Date.now() - startTime;
-			if (time > RELEASE_TRANSITION_DURATION) {
+
+		releaseAnimationResolve = r;
+		const startTime = window.performance.now();
+		const animate = (timestamp: number) => {
+			const time = timestamp - startTime;
+			if (time >= RELEASE_TRANSITION_DURATION) {
 				pullDistance.value = to;
-				window.clearInterval(intervalId);
+				releaseAnimationFrameId = null;
+				releaseAnimationResolve = null;
 				r();
 				return;
 			}
 			const nextHeight = startHeight - (overHeight / RELEASE_TRANSITION_DURATION) * time;
-			if (pullDistance.value < nextHeight) return;
-			pullDistance.value = nextHeight;
-		}, 1);
+			if (pullDistance.value >= nextHeight) pullDistance.value = nextHeight;
+			releaseAnimationFrameId = window.requestAnimationFrame(animate);
+		};
+		releaseAnimationFrameId = window.requestAnimationFrame(animate);
 	});
 }
 
@@ -162,6 +178,11 @@ async function closeContent() {
 }
 
 function onPullRelease() {
+	window.removeEventListener('mousemove', moving);
+	window.removeEventListener('mouseup', onMouseUp);
+	window.removeEventListener('touchmove', moving);
+	window.removeEventListener('touchend', onTouchEnd);
+	window.removeEventListener('touchcancel', onTouchEnd);
 	startScreenY = null;
 	if (isPulledEnough.value) {
 		isPulledEnough.value = false;
@@ -186,7 +207,7 @@ function toggleScrollLockOnTouchEnd() {
 	}
 }
 
-function moving(event: MouseEvent | TouchEvent) {
+function updatePullPosition(screenY: number) {
 	if ((scrollEl?.scrollTop ?? 0) > SCROLL_STOP + pullDistance.value || isHorizontalSwipeSwiping.value) {
 		pullDistance.value = 0;
 		isPulledEnough.value = false;
@@ -195,14 +216,29 @@ function moving(event: MouseEvent | TouchEvent) {
 	}
 
 	if (startScreenY === null) {
-		startScreenY = getScreenY(event);
+		startScreenY = screenY;
 	}
-	const moveScreenY = getScreenY(event);
 
-	const moveHeight = moveScreenY - startScreenY!;
+	const moveHeight = screenY - startScreenY!;
 	pullDistance.value = Math.min(Math.max(moveHeight, 0), MAX_PULL_DISTANCE);
 
 	isPulledEnough.value = pullDistance.value >= FIRE_THRESHOLD;
+}
+
+const scheduleMoving = throttleByAnimationFrame(updatePullPosition);
+
+function moving(event: MouseEvent | TouchEvent) {
+	scheduleMoving(getScreenY(event));
+}
+
+function onMouseUp() {
+	scheduleMoving.flush();
+	onPullRelease();
+}
+
+function onTouchEnd() {
+	scheduleMoving.flush();
+	onPullRelease();
 }
 
 /**
@@ -228,6 +264,13 @@ onMounted(() => {
 
 onUnmounted(() => {
 	unlockDownScroll();
+	window.removeEventListener('mousemove', moving);
+	window.removeEventListener('mouseup', onMouseUp);
+	window.removeEventListener('touchmove', moving);
+	window.removeEventListener('touchend', onTouchEnd);
+	window.removeEventListener('touchcancel', onTouchEnd);
+	scheduleMoving.cancel();
+	cancelReleaseAnimation();
 	if (rootEl.value) rootEl.value.removeEventListener('mousedown', moveStartByMouse);
 	if (rootEl.value) rootEl.value.removeEventListener('touchstart', moveStartByTouch);
 	if (rootEl.value) rootEl.value.removeEventListener('touchend', toggleScrollLockOnTouchEnd);
@@ -235,10 +278,6 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" module>
-.isPulling {
-	will-change: contents;
-}
-
 .frame {
 	position: relative;
 	overflow: clip;
@@ -276,6 +315,12 @@ onUnmounted(() => {
 	> .text {
 		margin: 5px 0;
 		font-size: 90%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.frameContent > .icon {
+		transition: none;
 	}
 }
 </style>

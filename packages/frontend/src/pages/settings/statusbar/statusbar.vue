@@ -106,7 +106,7 @@ const props = defineProps<{
 	userLists: Misskey.entities.UserList[] | null;
 }>();
 
-const statusbar = reactive<StatusbarStore>(deepClone(prefer.s.statusbars.find(x => x.id === props._id)!));
+const statusbar = reactive<StatusbarStore>(deepClone(prefer.statusbars.find(x => x.id === props._id)!));
 
 const statusbarTypeDef = computed(() => {
 	const items = [
@@ -153,13 +153,13 @@ watch(() => statusbar.type, () => {
 watch(statusbar, save);
 
 async function save() {
-	const i = prefer.s.statusbars.findIndex(x => x.id === props._id);
-	const statusbars = deepClone(prefer.s.statusbars);
+	const i = prefer.statusbars.findIndex(x => x.id === props._id);
+	const statusbars = deepClone(prefer.statusbars);
 	statusbars[i] = deepClone(statusbar);
 	prefer.commit('statusbars', statusbars);
 }
 
 function del() {
-	prefer.commit('statusbars', prefer.s.statusbars.filter(x => x.id !== props._id));
+	prefer.commit('statusbars', prefer.statusbars.filter(x => x.id !== props._id));
 }
 </script>

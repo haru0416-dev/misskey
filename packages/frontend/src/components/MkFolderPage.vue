@@ -6,10 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <Transition
 	name="x"
-	:enterActiveClass="prefer.s.animation ? $style.transition_x_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_x_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_x_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_x_leaveTo : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_x_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_x_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_x_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_x_leaveTo : ''"
 	:duration="300" appear @afterLeave="onClosed"
 >
 	<div v-show="showing" :class="[$style.root]" :style="{ zIndex }">

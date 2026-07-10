@@ -35,7 +35,6 @@ import { watch, ref } from 'vue';
 import { genId } from '@/utility/id.js';
 import { themeManager } from '@/theme.js';
 import tinycolor from 'tinycolor2';
-import { useInterval } from '@shared/utility/use-interval.js';
 
 const props = defineProps<{
 	src: number[];
@@ -68,11 +67,5 @@ function draw(): void {
 	headY.value = _polylinePoints.at(-1)![1];
 }
 
-watch(() => props.src, draw, { immediate: true });
-
-// Vueが何故かWatchを発動させない場合があるので
-useInterval(draw, 1000, {
-	immediate: false,
-	afterMounted: true,
-});
+watch(() => props.src, draw, { deep: true, immediate: true });
 </script>

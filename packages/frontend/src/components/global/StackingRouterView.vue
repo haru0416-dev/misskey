@@ -5,11 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <TransitionGroup
-	:enterActiveClass="prefer.s.animation ? $style.transition_x_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_x_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_x_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_x_leaveTo : ''"
-	:moveClass="prefer.s.animation ? $style.transition_x_move : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_x_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_x_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_x_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_x_leaveTo : ''"
+	:moveClass="prefer.animation ? $style.transition_x_move : ''"
 	:duration="200"
 	tag="div" :class="$style.tabs"
 >
@@ -100,7 +100,7 @@ router.useListener('change', ({ resolved }) => {
 		return;
 	}
 
-	tabs.value = tabs.value.length >= prefer.s.numberOfPageCache ? [
+	tabs.value = tabs.value.length >= prefer.numberOfPageCache ? [
 		...tabs.value.slice(1),
 		{
 			fullPath: fullPath,

@@ -73,7 +73,7 @@ import { definePage } from '@/page.js';
 import { registerAsUiLib } from '@/aiscript/ui.js';
 import MkAsUi from '@/components/MkAsUi.vue';
 import { miLocalStorage } from '@/local-storage.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 
 const parser = new Parser();
 let aiscript: Interpreter;

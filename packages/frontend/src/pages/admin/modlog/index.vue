@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkInput>
 			</MkPaginationControl>
 
-			<component :is="prefer.s.enablePullToRefresh ? MkPullToRefresh : 'div'" :refresher="() => paginator.reload()">
+			<component :is="prefer.enablePullToRefresh ? MkPullToRefresh : 'div'" :refresher="() => paginator.reload()">
 				<MkLoading v-if="paginator.fetching.value"/>
 
 				<MkError v-else-if="paginator.error.value" @retry="paginator.init()"/>

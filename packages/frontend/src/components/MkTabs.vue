@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			class="_button"
 			:class="[$style.tab, {
 				[$style.active]: t.key != null && t.key === tab,
-				[$style.animate]: prefer.s.animation,
+				[$style.animate]: prefer.animation,
 			}]"
 			:style="getTabStyle(t)"
 			@mousedown="(ev) => onTabMousedown(t, ev)"
@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div :class="$style.tabInner">
 				<i v-if="t.icon" :class="[$style.tabIcon, t.icon]"></i>
 				<div
-					v-if="!t.iconOnly || (!prefer.s.animation && t.key === tab)"
+					v-if="!t.iconOnly || (!prefer.animation && t.key === tab)"
 					:class="$style.tabTitle"
 				>
 					{{ t.title }}
@@ -42,7 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div>
 	<div
 		ref="tabHighlightEl"
-		:class="[$style.tabHighlight, { [$style.animate]: prefer.s.animation, [$style.tabHighlightUpper]: tabHighlightUpper }]"
+		:class="[$style.tabHighlight, { [$style.animate]: prefer.animation, [$style.tabHighlightUpper]: tabHighlightUpper }]"
 	></div>
 </div>
 </template>

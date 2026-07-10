@@ -9,11 +9,11 @@ import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
 
 export function shouldHideFileByDefault(file: Misskey.entities.DriveFile): boolean {
-	if (prefer.s.nsfw === 'force' || prefer.s.dataSaver.media) {
+	if (prefer.nsfw === 'force' || prefer.dataSaver.media) {
 		return true;
 	}
 
-	if (file.isSensitive && prefer.s.nsfw !== 'ignore') {
+	if (file.isSensitive && prefer.nsfw !== 'ignore') {
 		return true;
 	}
 
@@ -21,7 +21,7 @@ export function shouldHideFileByDefault(file: Misskey.entities.DriveFile): boole
 }
 
 export async function canRevealFile(file: Misskey.entities.DriveFile): Promise<boolean> {
-	if (file.isSensitive && prefer.s.confirmWhenRevealingSensitiveMedia) {
+	if (file.isSensitive && prefer.confirmWhenRevealingSensitiveMedia) {
 		const { canceled } = await os.confirm({
 			type: 'question',
 			text: i18n.ts.sensitiveMediaRevealConfirm,

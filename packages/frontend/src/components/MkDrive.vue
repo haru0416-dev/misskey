@@ -93,11 +93,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 					<TransitionGroup
 						tag="div"
-						:enterActiveClass="prefer.s.animation ? $style.transition_files_enterActive : ''"
-						:leaveActiveClass="prefer.s.animation ? $style.transition_files_leaveActive : ''"
-						:enterFromClass="prefer.s.animation ? $style.transition_files_enterFrom : ''"
-						:leaveToClass="prefer.s.animation ? $style.transition_files_leaveTo : ''"
-						:moveClass="prefer.s.animation ? $style.transition_files_move : ''"
+						:enterActiveClass="prefer.animation ? $style.transition_files_enterActive : ''"
+						:leaveActiveClass="prefer.animation ? $style.transition_files_leaveActive : ''"
+						:enterFromClass="prefer.animation ? $style.transition_files_enterFrom : ''"
+						:leaveToClass="prefer.animation ? $style.transition_files_leaveTo : ''"
+						:moveClass="prefer.animation ? $style.transition_files_move : ''"
 						:class="$style.files"
 					>
 						<XFile
@@ -116,11 +116,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<TransitionGroup
 				v-else
 				tag="div"
-				:enterActiveClass="prefer.s.animation ? $style.transition_files_enterActive : ''"
-				:leaveActiveClass="prefer.s.animation ? $style.transition_files_leaveActive : ''"
-				:enterFromClass="prefer.s.animation ? $style.transition_files_enterFrom : ''"
-				:leaveToClass="prefer.s.animation ? $style.transition_files_leaveTo : ''"
-				:moveClass="prefer.s.animation ? $style.transition_files_move : ''"
+				:enterActiveClass="prefer.animation ? $style.transition_files_enterActive : ''"
+				:leaveActiveClass="prefer.animation ? $style.transition_files_leaveActive : ''"
+				:enterFromClass="prefer.animation ? $style.transition_files_enterFrom : ''"
+				:leaveToClass="prefer.animation ? $style.transition_files_leaveTo : ''"
+				:moveClass="prefer.animation ? $style.transition_files_move : ''"
 				:class="$style.files"
 			>
 				<XFile
@@ -176,7 +176,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 import { prefer } from '@/preferences.js';
 import { chooseFileFromPcAndUpload, selectDriveFolder } from '@/utility/drive.js';
 import { store } from '@/store.js';
@@ -206,7 +206,7 @@ const emit = defineEmits<{
 }>();
 
 const shouldEnableInfiniteScroll = computed(() => {
-	return prefer.r.enableInfiniteScroll.value && !props.forceDisableInfiniteScroll;
+	return prefer.enableInfiniteScroll && !props.forceDisableInfiniteScroll;
 });
 
 const folder = ref<Misskey.entities.DriveFolder | null>(null);
@@ -751,7 +751,7 @@ useGlobalEvent('driveFoldersDeleted', (folders) => {
 let connection: Misskey.IChannelConnection<Misskey.Channels['drive']> | null = null;
 
 onMounted(() => {
-	if (store.s.realtimeMode) {
+	if (store.realtimeMode) {
 		connection = useStream().useChannel('drive');
 		connection.on('fileCreated', onStreamDriveFileCreated);
 	}

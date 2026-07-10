@@ -54,13 +54,13 @@ type ModelValueType<T extends SupportedTypes> =
 <script lang="ts" setup generic="T extends SupportedTypes = 'text'">
 import { onMounted, onUnmounted, nextTick, ref, useTemplateRef, watch, computed, toRefs } from 'vue';
 import { throttle, debounce } from 'throttle-debounce';
-import { useInterval } from '@shared/utility/use-interval.js';
 import type { InputHTMLAttributes } from 'vue';
 import type { SuggestionType } from '@/utility/autocomplete.js';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { Autocomplete } from '@/utility/autocomplete.js';
 import { genId } from '@/utility/id.js';
+import { useFormControlPadding } from '@/composables/useFormControlPadding.js';
 
 const props = defineProps<{
 	modelValue: ModelValueType<T> | null;
@@ -161,25 +161,7 @@ watch([changed, invalid], ([newChanged, newInvalid]) => {
 	emit('savingStateChange', newChanged, newInvalid);
 }, { immediate: true });
 
-// このコンポーネントが作成された時、非表示状態である場合がある
-// 非表示状態だと要素の幅などは0になってしまうので、定期的に計算する
-useInterval(() => {
-	if (inputEl.value == null) return;
-
-	if (prefixEl.value) {
-		if (prefixEl.value.offsetWidth) {
-			inputEl.value.style.paddingLeft = prefixEl.value.offsetWidth + 'px';
-		}
-	}
-	if (suffixEl.value) {
-		if (suffixEl.value.offsetWidth) {
-			inputEl.value.style.paddingRight = suffixEl.value.offsetWidth + 'px';
-		}
-	}
-}, 100, {
-	immediate: true,
-	afterMounted: true,
-});
+useFormControlPadding(inputEl, prefixEl, suffixEl);
 
 onMounted(() => {
 	nextTick(() => {

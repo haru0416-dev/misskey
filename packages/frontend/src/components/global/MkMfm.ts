@@ -83,7 +83,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 		return c.match(/^[0-9a-f]{3,6}$/i) ? c : null;
 	};
 
-	const useAnim = prefer.s.advancedMfm && prefer.s.animatedMfm;
+	const useAnim = prefer.advancedMfm && prefer.animatedMfm;
 
 	/**
 	 * Gen Vue Elements from MFM AST
@@ -206,7 +206,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								return h(
 									'span',
 									{
-										class: prefer.s.advancedMfm ? 'mfm-x2' : '',
+										class: prefer.advancedMfm ? 'mfm-x2' : '',
 									},
 									genEl(token.children, scale * 2),
 								);
@@ -215,7 +215,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								return h(
 									'span',
 									{
-										class: prefer.s.advancedMfm ? 'mfm-x3' : '',
+										class: prefer.advancedMfm ? 'mfm-x3' : '',
 									},
 									genEl(token.children, scale * 3),
 								);
@@ -224,7 +224,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								return h(
 									'span',
 									{
-										class: prefer.s.advancedMfm ? 'mfm-x4' : '',
+										class: prefer.advancedMfm ? 'mfm-x4' : '',
 									},
 									genEl(token.children, scale * 4),
 								);
@@ -282,14 +282,14 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								break;
 							}
 							case 'position': {
-								if (!prefer.s.advancedMfm) break;
+								if (!prefer.advancedMfm) break;
 								const x = safeParseFloat(token.props.args.x) ?? 0;
 								const y = safeParseFloat(token.props.args.y) ?? 0;
 								style = `transform: translateX(${x}em) translateY(${y}em);`;
 								break;
 							}
 							case 'scale': {
-								if (!prefer.s.advancedMfm) {
+								if (!prefer.advancedMfm) {
 									style = '';
 									break;
 								}

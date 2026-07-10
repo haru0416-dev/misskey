@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 			<div class="_gaps_s">
 				<XPalette
-					v-for="palette in prefer.r.emojiPalettes.value"
+					v-for="palette in prefer.emojiPalettes"
 					:key="palette.id"
 					:palette="palette"
 					@updateEmojis="emojis => updatePaletteEmojis(palette.id, emojis)"
@@ -140,7 +140,7 @@ import { emojiPicker } from '@/utility/emoji-picker.js';
 const emojiPaletteForReaction = prefer.model('emojiPaletteForReaction');
 const emojiPaletteForReactionDef = computed<MkSelectItem[]>(() => [
 	{ label: `(${i18n.ts.auto})`, value: null },
-	...prefer.s.emojiPalettes.map(palette => ({
+	...prefer.emojiPalettes.map(palette => ({
 		label: palette.name === '' ? `(${i18n.ts.noName})` : palette.name,
 		value: palette.id,
 	})),
@@ -148,7 +148,7 @@ const emojiPaletteForReactionDef = computed<MkSelectItem[]>(() => [
 const emojiPaletteForMain = prefer.model('emojiPaletteForMain');
 const emojiPaletteForMainDef = computed<MkSelectItem[]>(() => [
 	{ label: `(${i18n.ts.auto})`, value: null },
-	...prefer.s.emojiPalettes.map(palette => ({
+	...prefer.emojiPalettes.map(palette => ({
 		label: palette.name === '' ? `(${i18n.ts.noName})` : palette.name,
 		value: palette.id,
 	})),
@@ -197,7 +197,7 @@ function changePalettesSyncEnabled(value: boolean) {
 
 function addPalette() {
 	prefer.commit('emojiPalettes', [
-		...prefer.s.emojiPalettes,
+		...prefer.emojiPalettes,
 		{
 			id: genId(),
 			name: '',
@@ -207,7 +207,7 @@ function addPalette() {
 }
 
 function updatePaletteEmojis(id: string, emojis: string[]) {
-	prefer.commit('emojiPalettes', prefer.s.emojiPalettes.map(palette => {
+	prefer.commit('emojiPalettes', prefer.emojiPalettes.map(palette => {
 		if (palette.id === id) {
 			return {
 				...palette,
@@ -220,7 +220,7 @@ function updatePaletteEmojis(id: string, emojis: string[]) {
 }
 
 function updatePaletteName(id: string, name: string) {
-	prefer.commit('emojiPalettes', prefer.s.emojiPalettes.map(palette => {
+	prefer.commit('emojiPalettes', prefer.emojiPalettes.map(palette => {
 		if (palette.id === id) {
 			return {
 				...palette,
@@ -233,14 +233,14 @@ function updatePaletteName(id: string, name: string) {
 }
 
 function delPalette(id: string) {
-	if (prefer.s.emojiPalettes.length === 1) {
+	if (prefer.emojiPalettes.length === 1) {
 		addPalette();
 	}
-	prefer.commit('emojiPalettes', prefer.s.emojiPalettes.filter(palette => palette.id !== id));
-	if (prefer.s.emojiPaletteForMain === id) {
+	prefer.commit('emojiPalettes', prefer.emojiPalettes.filter(palette => palette.id !== id));
+	if (prefer.emojiPaletteForMain === id) {
 		prefer.commit('emojiPaletteForMain', null);
 	}
-	if (prefer.s.emojiPaletteForReaction === id) {
+	if (prefer.emojiPaletteForReaction === id) {
 		prefer.commit('emojiPaletteForReaction', null);
 	}
 }

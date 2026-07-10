@@ -11,13 +11,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			ref="gallery"
 			:class="[
 				$style.medias,
-				...(prefer.s.showMediaListByGridInWideArea ? [$style.gridInWideArea] : []),
+				...(prefer.showMediaListByGridInWideArea ? [$style.gridInWideArea] : []),
 				count === 1 ? [$style.n1, {
-					[$style.n116_9]: prefer.s.mediaListWithOneImageAppearance === '16_9',
-					[$style.n11_1]: prefer.s.mediaListWithOneImageAppearance === '1_1',
-					[$style.n12_3]: prefer.s.mediaListWithOneImageAppearance === '2_3',
+					[$style.n116_9]: prefer.mediaListWithOneImageAppearance === '16_9',
+					[$style.n11_1]: prefer.mediaListWithOneImageAppearance === '1_1',
+					[$style.n12_3]: prefer.mediaListWithOneImageAppearance === '2_3',
 				}] : count === 2 ? $style.n2 : count === 3 ? $style.n3 : count === 4 ? $style.n4 : $style.nMany,
 			]"
+			@click="onGalleryClick"
 		>
 			<template v-for="media in mediaList.filter(media => previewable(media))">
 				<XVideo v-if="media.type.startsWith('video')" :key="`video:${media.id}`" :class="$style.media" :video="media"/>
@@ -29,18 +30,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, useTemplateRef } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
-import PhotoSwipeLightbox from 'photoswipe/lightbox';
-import PhotoSwipe from 'photoswipe';
-import 'photoswipe/style.css';
+import type PhotoSwipeLightbox from 'photoswipe/lightbox';
 import { FILE_TYPE_BROWSERSAFE } from '@shared/utility/const.js';
 import XBanner from '@/components/MkMediaBanner.vue';
 import XImage from '@/components/MkMediaImage.vue';
-import XVideo from '@/components/MkMediaVideo.vue';
 import * as os from '@/os.js';
 import { focusParent } from '@/utility/focus.js';
 import { prefer } from '@/preferences.js';
+
+const XVideo = defineAsyncComponent(() => import('@/components/MkMediaVideo.vue'));
 
 const props = defineProps<{
 	mediaList: Misskey.entities.DriveFile[];
@@ -52,6 +52,8 @@ const pswpZIndex = os.claimZIndex('middle');
 window.document.documentElement.style.setProperty('--mk-pswp-root-z-index', pswpZIndex.toString());
 const count = computed(() => props.mediaList.filter(media => previewable(media)).length);
 let lightbox: PhotoSwipeLightbox | null = null;
+let lightboxPromise: Promise<PhotoSwipeLightbox | null> | null = null;
+let isUnmounted = false;
 
 let activeEl: HTMLElement | null = null;
 
@@ -76,7 +78,7 @@ async function calcAspectRatio() {
 		return `${Math.max(ratio, img.properties.width / img.properties.height).toString()} / 1`;
 	};
 
-	switch (prefer.s.mediaListWithOneImageAppearance) {
+	switch (prefer.mediaListWithOneImageAppearance) {
 		case '16_9':
 			gallery.value.style.aspectRatio = ratioMax(16 / 9);
 			break;
@@ -92,33 +94,48 @@ async function calcAspectRatio() {
 	}
 }
 
-onMounted(() => {
-	calcAspectRatio();
+function getGalleryImages() {
+	return props.mediaList.filter(media => {
+		if (media.type === 'image/svg+xml') return true; // svgのwebpublicはpngなのでtrue
+		return media.type.startsWith('image') && FILE_TYPE_BROWSERSAFE.includes(media.type);
+	});
+}
 
-	if (gallery.value == null) return; // TSを黙らすため
+async function createLightbox(): Promise<PhotoSwipeLightbox | null> {
+	const galleryEl = gallery.value;
+	const galleryImages = getGalleryImages();
+	if (galleryEl == null || galleryImages.length === 0) return null;
 
-	lightbox = new PhotoSwipeLightbox({
-		dataSource: props.mediaList
-			.filter(media => {
-				if (media.type === 'image/svg+xml') return true; // svgのwebpublicはpngなのでtrue
-				return media.type.startsWith('image') && FILE_TYPE_BROWSERSAFE.includes(media.type);
-			})
-			.map(media => {
-				const item = {
-					src: media.url,
-					w: media.properties.width,
-					h: media.properties.height,
-					// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-					alt: media.comment || media.name,
-					// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-					comment: media.comment || media.name,
-				};
-				if (media.properties.orientation != null && media.properties.orientation >= 5) {
-					[item.w, item.h] = [item.h, item.w];
-				}
-				return item;
-			}),
-		gallery: gallery.value,
+	const modules = await Promise.all([
+		import('photoswipe/lightbox'),
+		import('photoswipe'),
+		import('photoswipe/style.css'),
+	]).catch((error: unknown) => {
+		console.error('Failed to load PhotoSwipe', error);
+		return null;
+	});
+	if (modules == null) return null;
+
+	if (isUnmounted || gallery.value !== galleryEl) return null;
+
+	const [photoSwipeLightboxModule, photoSwipeModule] = modules;
+	const instance = new photoSwipeLightboxModule.default({
+		dataSource: galleryImages.map(media => {
+			const item = {
+				src: media.url,
+				w: media.properties.width,
+				h: media.properties.height,
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				alt: media.comment || media.name,
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				comment: media.comment || media.name,
+			};
+			if (media.properties.orientation != null && media.properties.orientation >= 5) {
+				[item.w, item.h] = [item.h, item.w];
+			}
+			return item;
+		}),
+		gallery: galleryEl,
 		mainClass: 'pswp',
 		children: '.image',
 		thumbSelector: '.image',
@@ -140,10 +157,10 @@ onMounted(() => {
 		showAnimationDuration: 100,
 		hideAnimationDuration: 100,
 		returnFocus: false,
-		pswpModule: PhotoSwipe,
+		pswpModule: photoSwipeModule.default,
 	});
 
-	lightbox.addFilter('itemData', (itemData) => {
+	instance.addFilter('itemData', (itemData) => {
 		// element is children
 		const { element } = itemData;
 
@@ -167,8 +184,8 @@ onMounted(() => {
 		return itemData;
 	});
 
-	lightbox.on('uiRegister', () => {
-		lightbox?.pswp?.ui?.registerElement({
+	instance.on('uiRegister', () => {
+		instance.pswp?.ui?.registerElement({
 			name: 'altText',
 			className: 'pswp__alt-text-container',
 			appendTo: 'wrapper',
@@ -184,16 +201,16 @@ onMounted(() => {
 		});
 	});
 
-	lightbox.on('afterInit', () => {
+	instance.on('afterInit', () => {
 		activeEl = window.document.activeElement instanceof HTMLElement ? window.document.activeElement : null;
 		focusParent(activeEl, true, true);
-		lightbox?.pswp?.element?.focus({
+		instance.pswp?.element?.focus({
 			preventScroll: true,
 		});
 		window.history.pushState(null, '', '#pswp');
 	});
 
-	lightbox.on('destroy', () => {
+	instance.on('destroy', () => {
 		focusParent(activeEl, true, false);
 		activeEl = null;
 		if (window.location.hash === '#pswp') {
@@ -201,15 +218,54 @@ onMounted(() => {
 		}
 	});
 
+	instance.init();
+	lightbox = instance;
+	return instance;
+}
+
+function ensureLightbox(): Promise<PhotoSwipeLightbox | null> {
+	if (lightbox != null) return Promise.resolve(lightbox);
+	lightboxPromise ??= createLightbox();
+	return lightboxPromise;
+}
+
+async function onGalleryClick(ev: MouseEvent) {
+	if (lightbox != null || ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.altKey || ev.ctrlKey || ev.shiftKey) return;
+	if (!(ev.target instanceof Element) || gallery.value == null) return;
+
+	const imageEl = ev.target.closest<HTMLElement>('.image');
+	if (imageEl == null || !gallery.value.contains(imageEl)) return;
+
+	const imageIndex = getGalleryImages().findIndex(media => media.id === imageEl.dataset.id);
+	if (imageIndex < 0) return;
+
+	ev.preventDefault();
+	ev.stopImmediatePropagation();
+
+	const fallbackLink = imageEl.querySelector<HTMLAnchorElement>('a[href]');
+	const instance = await ensureLightbox();
+	if (instance != null) {
+		instance.loadAndOpen(imageIndex);
+	} else if (fallbackLink != null) {
+		window.location.href = fallbackLink.href;
+	}
+}
+
+onMounted(() => {
+	calcAspectRatio();
 	window.addEventListener('popstate', popstateHandler);
 
-	lightbox.init();
+	if (getGalleryImages().length > 0) {
+		void ensureLightbox();
+	}
 });
 
 onUnmounted(() => {
+	isUnmounted = true;
 	window.removeEventListener('popstate', popstateHandler);
 	lightbox?.destroy();
 	lightbox = null;
+	lightboxPromise = null;
 	activeEl = null;
 });
 
@@ -219,9 +275,9 @@ const previewable = (file: Misskey.entities.DriveFile): boolean => {
 	return (file.type.startsWith('video') || file.type.startsWith('image')) && FILE_TYPE_BROWSERSAFE.includes(file.type);
 };
 
-const openGallery = () => {
-	if (props.mediaList.filter(media => previewable(media)).length > 0) {
-		lightbox?.loadAndOpen(0);
+const openGallery = async () => {
+	if (getGalleryImages().length > 0) {
+		(await ensureLightbox())?.loadAndOpen(0);
 	}
 };
 

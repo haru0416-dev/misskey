@@ -56,10 +56,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div v-else-if="openedAtLeastOnce" :class="[$style.body, { [$style.bgSame]: bgSame }]" :style="{ maxHeight: maxHeight ? `${maxHeight}px` : undefined, overflow: maxHeight ? `auto` : undefined }" :aria-hidden="!opened">
 			<Transition
-				:enterActiveClass="prefer.s.animation ? $style.transition_toggle_enterActive : ''"
-				:leaveActiveClass="prefer.s.animation ? $style.transition_toggle_leaveActive : ''"
-				:enterFromClass="prefer.s.animation ? $style.transition_toggle_enterFrom : ''"
-				:leaveToClass="prefer.s.animation ? $style.transition_toggle_leaveTo : ''"
+				:enterActiveClass="prefer.animation ? $style.transition_toggle_enterActive : ''"
+				:leaveActiveClass="prefer.animation ? $style.transition_toggle_leaveActive : ''"
+				:enterFromClass="prefer.animation ? $style.transition_toggle_enterFrom : ''"
+				:leaveToClass="prefer.animation ? $style.transition_toggle_leaveTo : ''"
 				@enter="enter"
 				@afterEnter="afterEnter"
 				@leave="leave"
@@ -127,7 +127,7 @@ const emit = defineEmits<{
 }>();
 
 const rootEl = useTemplateRef('rootEl');
-const asPage = props.canPage && deviceKind === 'smartphone' && prefer.s['experimental.enableFolderPageView'];
+const asPage = props.canPage && deviceKind === 'smartphone' && prefer['experimental.enableFolderPageView'];
 const bgSame = ref(false);
 const opened = ref(asPage ? false : props.defaultOpen);
 const openedAtLeastOnce = ref(opened.value);

@@ -5,11 +5,22 @@
 
 import { shallowRef, computed, markRaw, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
+import { misskeyApiGet } from '@/utility/misskey-api.js';
 import { get, set } from '@/utility/idb-proxy.js';
+import { queryClient } from '@/query/client.js';
+import { queryKeys } from '@/query/keys.js';
+import { updateEmojiQueries } from '@/query/streaming.js';
 
-const storageCache = await get('emojis');
+const [storageCache, lastEmojisFetchedAt] = await Promise.all([get('emojis'), get('lastEmojisFetchedAt')]);
 export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(Array.isArray(storageCache) ? storageCache : []);
+const emojisQueryKey = queryKeys.endpoint(null, 'emojis', {});
+if (Array.isArray(storageCache)) {
+	queryClient.setQueryData(
+		emojisQueryKey,
+		{ emojis: storageCache },
+		{ updatedAt: typeof lastEmojisFetchedAt === 'number' ? lastEmojisFetchedAt : 0 },
+	);
+}
 export const customEmojiCategories = computed<[...string[], null]>(() => {
 	const categories = new Set<string>();
 	for (const emoji of customEmojis.value) {
@@ -34,30 +45,29 @@ watch(
 
 export function addCustomEmoji(emoji: Misskey.entities.EmojiSimple) {
 	customEmojis.value = [emoji, ...customEmojis.value];
+	updateEmojiQueries({ type: 'add', emoji });
 	set('emojis', customEmojis.value);
 }
 
 export function updateCustomEmojis(emojis: Misskey.entities.EmojiSimple[]) {
 	customEmojis.value = customEmojis.value.map((item) => emojis.find((search) => search.name === item.name) ?? item);
+	updateEmojiQueries({ type: 'update', emojis });
 	set('emojis', customEmojis.value);
 }
 
 export function removeCustomEmojis(emojis: Misskey.entities.EmojiSimple[]) {
 	customEmojis.value = customEmojis.value.filter((item) => !emojis.some((search) => search.name === item.name));
+	updateEmojiQueries({ type: 'delete', emojis });
 	set('emojis', customEmojis.value);
 }
 
 export async function fetchCustomEmojis(force = false) {
 	const now = Date.now();
 
-	let res;
 	if (force) {
-		res = await misskeyApi('emojis', {});
-	} else {
-		const lastFetchedAt = await get('lastEmojisFetchedAt');
-		if (lastFetchedAt && now - lastFetchedAt < 1000 * 60 * 60) return;
-		res = await misskeyApiGet('emojis', {});
+		await queryClient.invalidateQueries({ queryKey: emojisQueryKey, exact: true, refetchType: 'none' });
 	}
+	const res = await misskeyApiGet('emojis', {});
 
 	customEmojis.value = res.emojis;
 	set('emojis', res.emojis);

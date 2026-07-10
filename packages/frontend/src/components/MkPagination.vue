@@ -4,17 +4,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<component :is="prefer.s.enablePullToRefresh && pullToRefresh ? MkPullToRefresh : 'div'" :refresher="() => paginator.reload()" @contextmenu.prevent.stop="onContextmenu">
+<component :is="prefer.enablePullToRefresh && pullToRefresh ? MkPullToRefresh : 'div'" :refresher="() => paginator.reload()" @contextmenu.prevent.stop="onContextmenu">
 	<div>
 		<MkPaginationControl v-if="props.withControl" :paginator="paginator" style="margin-bottom: 10px"/>
 
-		<!-- :css="prefer.s.animation" にしたいけどバグる(おそらくvueのバグ) https://github.com/misskey-dev/misskey/issues/16078 -->
+		<!-- :css="prefer.animation" にしたいけどバグる(おそらくvueのバグ) https://github.com/misskey-dev/misskey/issues/16078 -->
 		<Transition
-			:enterActiveClass="prefer.s.animation ? $style.transition_fade_enterActive : ''"
-			:leaveActiveClass="prefer.s.animation ? $style.transition_fade_leaveActive : ''"
-			:enterFromClass="prefer.s.animation ? $style.transition_fade_enterFrom : ''"
-			:leaveToClass="prefer.s.animation ? $style.transition_fade_leaveTo : ''"
-			:mode="prefer.s.animation ? 'out-in' : undefined"
+			:enterActiveClass="prefer.animation ? $style.transition_fade_enterActive : ''"
+			:leaveActiveClass="prefer.animation ? $style.transition_fade_leaveActive : ''"
+			:enterFromClass="prefer.animation ? $style.transition_fade_enterFrom : ''"
+			:leaveToClass="prefer.animation ? $style.transition_fade_leaveTo : ''"
+			:mode="prefer.animation ? 'out-in' : undefined"
 		>
 			<MkLoading v-if="paginator.fetching.value"/>
 
@@ -85,7 +85,7 @@ const props = withDefaults(defineProps<MkPaginationOptions & {
 });
 
 const shouldEnableInfiniteScroll = computed(() => {
-	return prefer.r.enableInfiniteScroll.value && !props.forceDisableInfiniteScroll;
+	return prefer.enableInfiniteScroll && !props.forceDisableInfiniteScroll;
 });
 
 function onContextmenu(ev: PointerEvent) {

@@ -7,10 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader :actions="headerActions" :tabs="headerTabs">
 	<div class="_spacer" style="--MI_SPACER-w: 800px;">
 		<Transition
-			:enterActiveClass="prefer.s.animation ? $style.fadeEnterActive : ''"
-			:leaveActiveClass="prefer.s.animation ? $style.fadeLeaveActive : ''"
-			:enterFromClass="prefer.s.animation ? $style.fadeEnterFrom : ''"
-			:leaveToClass="prefer.s.animation ? $style.fadeLeaveTo : ''"
+			:enterActiveClass="prefer.animation ? $style.fadeEnterActive : ''"
+			:leaveActiveClass="prefer.animation ? $style.fadeLeaveActive : ''"
+			:enterFromClass="prefer.animation ? $style.fadeEnterFrom : ''"
+			:leaveToClass="prefer.animation ? $style.fadeLeaveTo : ''"
 			mode="out-in"
 		>
 			<div v-if="page" :key="page.id" class="_gaps">

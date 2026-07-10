@@ -7,6 +7,9 @@ import { computed, reactive } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { miLocalStorage } from '@/local-storage.js';
+import { $i } from '@/i.js';
+import { queryClient } from '@/query/client.js';
+import { queryKeys } from '@/query/keys.js';
 
 // TODO: 他のタブと永続化されたstateを同期
 
@@ -30,20 +33,18 @@ if (providedAt > cachedAt) {
 
 export const instance: Misskey.entities.MetaDetailed = reactive(cachedMeta ?? {});
 
-export async function fetchInstance(force = false): Promise<Misskey.entities.MetaDetailed> {
-	if (!force) {
-		const cachedAt = miLocalStorage.getItem('instanceCachedAt')
-			? parseInt(miLocalStorage.getItem('instanceCachedAt')!)
-			: 0;
+const metaParams = { detail: true } as const;
+const metaQueryKey = queryKeys.endpoint($i?.id ?? null, 'meta', metaParams);
+if (cachedMeta != null) {
+	queryClient.setQueryData(metaQueryKey, cachedMeta, { updatedAt: cachedAt });
+}
 
-		if (Date.now() - cachedAt < 1000 * 60 * 60) {
-			return instance;
-		}
+export async function fetchInstance(force = false): Promise<Misskey.entities.MetaDetailed> {
+	if (force) {
+		await queryClient.invalidateQueries({ queryKey: metaQueryKey, exact: true, refetchType: 'none' });
 	}
 
-	const meta = await misskeyApi('meta', {
-		detail: true,
-	});
+	const meta = await misskeyApi('meta', metaParams);
 
 	for (const [k, v] of Object.entries(meta)) {
 		(instance[k as keyof typeof meta] as any) = v;
