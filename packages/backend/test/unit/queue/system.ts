@@ -18,7 +18,7 @@ import { createRetentionAggregationInDatabase, listRetentionAggregationsCreatedA
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
-import { createChannelMutingInDatabase, fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { createChannelMutingInDatabase, listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createHonoChartWriters, type HonoChartWriters } from '@/server/chart-runtime.js';
@@ -218,7 +218,7 @@ describe('hono-queue-system', () => {
 			await handleHonoQueueCheckExpiredMutings(deps);
 
 			expect(await mutingExistsInDatabase(db, muterId, muteeId)).toBe(false);
-			expect(await fetchActiveMutedChannelIdsFromDatabase(db, muterId, new Date())).not.toContain(channelId);
+			expect(await listActiveMutedChannelIdsByUserIdFromDatabase(db, muterId, new Date())).not.toContain(channelId);
 
 			// userMutingsCache/mutingChannelsCacheはどちらもNestJS側と共有されるRedisKVCacheの
 			// ため、削除後にリフレッシュされ、キャッシュ済みの値からも消えていることを確認する。

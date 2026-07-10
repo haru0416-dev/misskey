@@ -7,7 +7,7 @@ import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
-import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/ClipNoteStore.js';
 import { listClipsByIdsFromDatabase } from '@/core/ClipStore.js';
 import { listFolloweeIdsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
@@ -582,7 +582,7 @@ export async function handleHonoApiNotesLocalTimeline(
 	const getFromDb = async (dbUntilId: string | null, dbSinceId: string | null, limit: number) => {
 		let mutedChannelIds: string[] = [];
 		if (me) {
-			mutedChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+			mutedChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 		}
 
 		return await listLocalTimelineNotesFromDatabase(deps.db, {
@@ -676,9 +676,10 @@ export async function handleHonoApiNotesHybridTimeline(
 
 	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
 	const followeeIdSet = new Set(followeeIds);
-	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIdSet = new Set(mutingChannelIds);
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
-		.filter(id => !mutingChannelIds.includes(id));
+		.filter(id => !mutingChannelIdSet.has(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHybridTimelineNotesFromDatabase(deps.db, {
 		me,
@@ -1109,9 +1110,10 @@ export async function handleHonoApiNotesTimeline(
 
 	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
 	const followeeIdSet = new Set(followeeIds);
-	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIdSet = new Set(mutingChannelIds);
 	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
-		.filter(id => !mutingChannelIds.includes(id));
+		.filter(id => !mutingChannelIdSet.has(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHomeTimelineNotesFromDatabase(deps.db, {
 		me,
@@ -1203,7 +1205,7 @@ export async function handleHonoApiNotesUserListTimeline(
 	const list = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (list == null) throw notesUserListTimelineNoSuchListError();
 
-	const mutedChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutedChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 
 	const notes = await listUserListTimelineNotesFromDatabase(deps.db, {
 		listId: list.id,

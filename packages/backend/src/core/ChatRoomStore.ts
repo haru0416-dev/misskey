@@ -8,6 +8,7 @@ import { chatRoom, type ChatRoomInsert, type ChatRoomRow } from '@/db/schema/cha
 import { chatRoomInvitation, type ChatRoomInvitationInsert, type ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
 import { chatRoomMembership, type ChatRoomMembershipInsert, type ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveIdPagination } from '@/misc/id-pagination.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -36,15 +37,7 @@ export function resolveChatRoomRecordPagination(
 	untilId?: string | null;
 	order: ChatRoomRecordOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveIdPagination(options);
 }
 
 function chatRoomMembershipCondition(roomId: MiChatRoom['id'], userId: MiUser['id']) {
@@ -473,6 +466,23 @@ export async function fetchChatRoomInvitationByIdOrFailFromDatabase(
 	}
 
 	return row;
+}
+
+export async function listChatRoomInvitationsByIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: ChatRoomInvitationRow['id'][],
+): Promise<ChatRoomInvitationRow[]> {
+	if (ids.length === 0) {
+		return [];
+	}
+
+	const rows = await db
+		.select()
+		.from(chatRoomInvitation)
+		.where(inArray(chatRoomInvitation.id, ids));
+	const invitationById = new Map(rows.map(row => [row.id, row]));
+
+	return ids.map(id => invitationById.get(id)).filter((row): row is ChatRoomInvitationRow => row != null);
 }
 
 export async function fetchChatRoomInvitationOrFailFromDatabase(

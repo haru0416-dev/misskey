@@ -172,10 +172,12 @@ export async function packChatMessagesDetailedForHonoApi(
 		...messages.map((m) => m.fromUser ?? m.fromUserId).filter(excludeMe),
 		...messages.map((m) => m.toUser ?? m.toUserId).filter((x): x is MiUser | string => x != null).filter(excludeMe),
 	];
+	const userIdSet = new Set(users.map(x => typeof x === 'string' ? x : x.id));
 
 	const reactedUserIds = messages.flatMap(x => x.reactions.map(r => r.split('/')[0]!));
 	for (const reactedUserId of reactedUserIds) {
-		if (!users.some(x => typeof x === 'string' ? x === reactedUserId : x.id === reactedUserId)) {
+		if (!userIdSet.has(reactedUserId)) {
+			userIdSet.add(reactedUserId);
 			users.push(reactedUserId);
 		}
 	}
@@ -272,9 +274,11 @@ export async function packChatMessagesLiteForRoomForHonoApi(
 	if (messages.length === 0) return [];
 
 	const users = messages.map(x => x.fromUser ?? x.fromUserId) as (MiUser | string)[];
+	const userIdSet = new Set(users.map(x => typeof x === 'string' ? x : x.id));
 	const reactedUserIds = messages.flatMap(x => x.reactions.map(r => r.split('/')[0]!));
 	for (const reactedUserId of reactedUserIds) {
-		if (!users.some(x => typeof x === 'string' ? x === reactedUserId : x.id === reactedUserId)) {
+		if (!userIdSet.has(reactedUserId)) {
+			userIdSet.add(reactedUserId);
 			users.push(reactedUserId);
 		}
 	}
@@ -302,8 +306,16 @@ export async function packChatRoomForHonoApi(
 ): Promise<Packed<'ChatRoom'>> {
 	const room = typeof src === 'object' ? src : await fetchChatRoomByIdOrFailFromDatabase(deps.db, src);
 
-	const membership = me && me.id !== room.ownerId ? (options?._hint_?.myMemberships?.get(room.id) ?? (await fetchChatRoomMembershipFromDatabase(deps.db, room.id, me.id))) : null;
-	const invitation = me && me.id !== room.ownerId ? (options?._hint_?.myInvitations?.get(room.id) ?? (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, me.id))) : null;
+	const membership = me && me.id !== room.ownerId
+		? options?._hint_?.myMemberships?.has(room.id)
+			? options._hint_.myMemberships.get(room.id) ?? null
+			: await fetchChatRoomMembershipFromDatabase(deps.db, room.id, me.id)
+		: null;
+	const invitation = me && me.id !== room.ownerId
+		? options?._hint_?.myInvitations?.has(room.id)
+			? options._hint_.myInvitations.get(room.id) ?? null
+			: await fetchChatRoomInvitationFromDatabase(deps.db, room.id, me.id)
+		: null;
 
 	return {
 		id: room.id,
@@ -334,9 +346,15 @@ export async function packChatRoomsForHonoApi(
 	const [packedOwners, myMemberships, myInvitations] = await Promise.all([
 		packUserLiteManyForHonoApi(deps, owners).then(users => new Map(users.map(u => [u.id, u]))),
 		listChatRoomMembershipsByRoomIdsAndUserIdFromDatabase(deps.db, _rooms.map(x => x.id), me.id)
-			.then(memberships => new Map(_rooms.map(r => [r.id, memberships.find(m => m.roomId === r.id)]))),
+			.then(memberships => {
+				const membershipByRoomId = new Map(memberships.map(membership => [membership.roomId, membership]));
+				return new Map(_rooms.map(room => [room.id, membershipByRoomId.get(room.id) ?? null]));
+			}),
 		listChatRoomInvitationsByRoomIdsAndUserIdFromDatabase(deps.db, _rooms.map(x => x.id), me.id)
-			.then(invitations => new Map(_rooms.map(r => [r.id, invitations.find(i => i.roomId === r.id)]))),
+			.then(invitations => {
+				const invitationByRoomId = new Map(invitations.map(invitation => [invitation.roomId, invitation]));
+				return new Map(_rooms.map(room => [room.id, invitationByRoomId.get(room.id) ?? null]));
+			}),
 	]);
 
 	return await Promise.all(_rooms.map(room => packChatRoomForHonoApi(deps, room, me, { _hint_: { packedOwners, myMemberships, myInvitations } })));
@@ -371,7 +389,15 @@ export async function packChatRoomInvitationsForHonoApi(
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
 	if (invitations.length === 0) return [];
-	return await Promise.all(invitations.map(invitation => packChatRoomInvitationForHonoApi(deps, invitation, me)));
+
+	const [packedRooms, packedUsers] = await Promise.all([
+		packChatRoomsForHonoApi(deps, invitations.map(invitation => invitation.room ?? invitation.roomId), me)
+			.then(rooms => new Map(rooms.map(room => [room.id, room]))),
+		packUserLiteManyForHonoApi(deps, invitations.map(invitation => invitation.user ?? invitation.userId))
+			.then(users => new Map(users.map(user => [user.id, user]))),
+	]);
+
+	return await Promise.all(invitations.map(invitation => packChatRoomInvitationForHonoApi(deps, invitation, me, { _hint_: { packedRooms, packedUsers } })));
 }
 
 export async function packChatRoomMembershipForHonoApi(
@@ -382,8 +408,8 @@ export async function packChatRoomMembershipForHonoApi(
 		populateUser?: boolean;
 		populateRoom?: boolean;
 		_hint_?: {
-			packedRooms: Map<ChatRoomMembershipRow['roomId'], Packed<'ChatRoom'>>;
-			packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
+			packedRooms?: Map<ChatRoomMembershipRow['roomId'], Packed<'ChatRoom'>>;
+			packedUsers?: Map<MiUser['id'], Packed<'UserLite'>>;
 		};
 	},
 ): Promise<Packed<'ChatRoomMembership'>> {
@@ -393,9 +419,9 @@ export async function packChatRoomMembershipForHonoApi(
 		id: membership.id,
 		createdAt: parseId(membership.id).date.toISOString(),
 		userId: membership.userId,
-		user: options?.populateUser ? (options._hint_?.packedUsers.get(membership.userId) ?? (await packUserLiteForHonoApi(deps, membership.user ?? membership.userId))) : undefined,
+		user: options?.populateUser ? (options._hint_?.packedUsers?.get(membership.userId) ?? (await packUserLiteForHonoApi(deps, membership.user ?? membership.userId))) : undefined,
 		roomId: membership.roomId,
-		room: options?.populateRoom ? (options._hint_?.packedRooms.get(membership.roomId) ?? (await packChatRoomForHonoApi(deps, membership.room ?? membership.roomId, me))) : undefined,
+		room: options?.populateRoom ? (options._hint_?.packedRooms?.get(membership.roomId) ?? (await packChatRoomForHonoApi(deps, membership.room ?? membership.roomId, me))) : undefined,
 	} as Packed<'ChatRoomMembership'>;
 }
 
@@ -407,12 +433,13 @@ export async function packChatRoomMembershipsForHonoApi(
 ): Promise<Packed<'ChatRoomMembership'>[]> {
 	if (memberships.length === 0) return [];
 
-	const users = memberships.map(x => x.user ?? x.userId) as (MiUser | string)[];
-	const rooms = memberships.map(x => x.room ?? x.roomId) as (MiChatRoom | string)[];
-
 	const [packedUsers, packedRooms] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, users).then(users => new Map(users.map(u => [u.id, u]))),
-		packChatRoomsForHonoApi(deps, rooms, me).then(rooms => new Map(rooms.map(r => [r.id, r]))),
+		options.populateUser
+			? packUserLiteManyForHonoApi(deps, memberships.map(x => x.user ?? x.userId)).then(users => new Map(users.map(u => [u.id, u])))
+			: Promise.resolve(undefined),
+		options.populateRoom
+			? packChatRoomsForHonoApi(deps, memberships.map(x => x.room ?? x.roomId), me).then(rooms => new Map(rooms.map(r => [r.id, r])))
+			: Promise.resolve(undefined),
 	]);
 
 	return await Promise.all(memberships.map(membership => packChatRoomMembershipForHonoApi(deps, membership, me, { ...options, _hint_: { packedUsers, packedRooms } })));
@@ -458,20 +485,20 @@ async function createChatRoomInvitationNotificationForHonoApi(
 	if (notifieeId === notifierId) return;
 
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, notifieeId);
-	const recieveConfig = (profile?.notificationRecieveConfig ?? {}).chatRoomInvitationReceived;
-	if (recieveConfig?.type === 'never') return;
+	const receiveConfig = (profile?.notificationRecieveConfig ?? {}).chatRoomInvitationReceived;
+	if (receiveConfig?.type === 'never') return;
 
 	const muted = await mutingExistsInDatabase(deps.db, notifieeId, notifierId);
 	if (muted) return;
 
-	if (recieveConfig?.type === 'following') {
+	if (receiveConfig?.type === 'following') {
 		if (!await followingExistsInDatabase(deps.db, notifieeId, notifierId)) return;
-	} else if (recieveConfig?.type === 'follower') {
+	} else if (receiveConfig?.type === 'follower') {
 		if (!await followingExistsInDatabase(deps.db, notifierId, notifieeId)) return;
-	} else if (recieveConfig?.type === 'mutualFollow') {
+	} else if (receiveConfig?.type === 'mutualFollow') {
 		const count = await countMutualFollowingsBetweenUsersFromDatabase(deps.db, notifieeId, notifierId);
 		if (count !== 2) return;
-	} else if (recieveConfig?.type === 'followingOrFollower') {
+	} else if (receiveConfig?.type === 'followingOrFollower') {
 		const [isFollowing, isFollower] = await Promise.all([
 			followingExistsInDatabase(deps.db, notifieeId, notifierId),
 			followingExistsInDatabase(deps.db, notifierId, notifieeId),

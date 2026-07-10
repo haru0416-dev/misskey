@@ -10,7 +10,7 @@ import type { DownloadService } from '@/core/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -45,10 +45,9 @@ async function checkRecentlyMovedForHonoApi(deps: HonoApiImportJobDependencies, 
 	if (!oldSelfIds || oldSelfIds.length === 0) return false;
 
 	const meUri = `${deps.config.url}/users/${me.id}`;
+	const oldSelfs = await listUsersByIdsFromDatabase(deps.db, oldSelfIds, { includeSuspended: true });
 
-	for (const oldSelfId of oldSelfIds) {
-		const oldSelf = await fetchUserByIdFromDatabase(deps.db, oldSelfId);
-		if (oldSelf == null) continue;
+	for (const oldSelf of oldSelfs) {
 		if (oldSelf.movedToUri !== meUri) continue;
 		if (oldSelf.movedAt && oldSelf.movedAt.getTime() + 1000 * 60 * 60 * 2 > Date.now()) return true;
 	}

@@ -73,6 +73,22 @@ export async function fetchEmojiByIdOrFailFromDatabase(
 	return row;
 }
 
+export async function listEmojisByIdsOrFailFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiEmoji['id'][],
+): Promise<MiEmoji[]> {
+	const emojis = await listEmojisByIdsFromDatabase(db, ids);
+	const emojiById = new Map(emojis.map(row => [row.id, row]));
+
+	return ids.map(id => {
+		const row = emojiById.get(id);
+		if (row == null) {
+			throw new EntityNotFoundError(MiEmoji, { id });
+		}
+		return row;
+	});
+}
+
 export async function fetchEmojiByNameAndHostFromDatabase(
 	db: MiDrizzleDatabase,
 	name: MiEmoji['name'],
@@ -109,6 +125,10 @@ const EMOJI_CACHE_TTL_MS = 1000 * 60;
 const EMOJI_CACHE_MAX_ENTRIES = 5000;
 const emojiByNameAndHostCache = new Map<string, { row: MiEmoji | null; cachedAt: number }>();
 
+function emojiCacheKey(name: MiEmoji['name'], host: MiEmoji['host']): string {
+	return `${name}@${host ?? ''}`;
+}
+
 function invalidateEmojiCache(): void {
 	emojiByNameAndHostCache.clear();
 }
@@ -125,7 +145,7 @@ export async function fetchEmojiByNameAndHostFromDatabaseCached(
 	name: MiEmoji['name'],
 	host: MiEmoji['host'],
 ): Promise<MiEmoji | null> {
-	const key = `${name}@${host ?? ''}`;
+	const key = emojiCacheKey(name, host);
 	const hit = emojiByNameAndHostCache.get(key);
 	if (hit != null && Date.now() - hit.cachedAt < EMOJI_CACHE_TTL_MS) {
 		return hit.row;
@@ -137,6 +157,57 @@ export async function fetchEmojiByNameAndHostFromDatabaseCached(
 	}
 	emojiByNameAndHostCache.set(key, { row, cachedAt: Date.now() });
 	return row;
+}
+
+export async function fetchEmojisByNamesAndHostsFromDatabaseCached(
+	db: MiDrizzleDatabase,
+	queries: readonly { name: MiEmoji['name']; host: MiEmoji['host'] }[],
+): Promise<(MiEmoji | null)[]> {
+	if (queries.length === 0) return [];
+
+	const now = Date.now();
+	const resultByKey = new Map<string, MiEmoji | null>();
+	const missingByKey = new Map<string, { name: MiEmoji['name']; host: MiEmoji['host'] }>();
+	for (const query of queries) {
+		const key = emojiCacheKey(query.name, query.host);
+		const hit = emojiByNameAndHostCache.get(key);
+		if (hit != null && now - hit.cachedAt < EMOJI_CACHE_TTL_MS) {
+			resultByKey.set(key, hit.row);
+		} else {
+			missingByKey.set(key, query);
+		}
+	}
+
+	if (missingByKey.size > 0) {
+		const namesByHost = new Map<MiEmoji['host'], Set<MiEmoji['name']>>();
+		for (const query of missingByKey.values()) {
+			const names = namesByHost.get(query.host) ?? new Set<MiEmoji['name']>();
+			names.add(query.name);
+			namesByHost.set(query.host, names);
+		}
+
+		const rows = await db
+			.select()
+			.from(emoji)
+			.where(or(...[...namesByHost.entries()].map(([host, names]) => and(
+				host == null ? isNull(emoji.host) : eq(emoji.host, host),
+				inArray(emoji.name, [...names]),
+			))));
+		const rowByKey = new Map(rows.map(row => [emojiCacheKey(row.name, row.host), row]));
+
+		if (emojiByNameAndHostCache.size + missingByKey.size > EMOJI_CACHE_MAX_ENTRIES) {
+			emojiByNameAndHostCache.clear();
+		}
+		for (const [key] of missingByKey) {
+			const row = rowByKey.get(key) ?? null;
+			resultByKey.set(key, row);
+			if (emojiByNameAndHostCache.size < EMOJI_CACHE_MAX_ENTRIES) {
+				emojiByNameAndHostCache.set(key, { row, cachedAt: now });
+			}
+		}
+	}
+
+	return queries.map(query => resultByKey.get(emojiCacheKey(query.name, query.host)) ?? null);
 }
 //#endregion
 

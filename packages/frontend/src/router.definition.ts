@@ -318,18 +318,6 @@ export const ROUTE_DEF = [
 		},
 	},
 	{
-		// Legacy Compatibility
-		path: '/authorize-follow',
-		redirect: '/lookup',
-		loginRequired: true,
-	},
-	{
-		// Mastodon Compatibility
-		path: '/authorize_interaction',
-		redirect: '/lookup',
-		loginRequired: true,
-	},
-	{
 		path: '/lookup',
 		component: page(() => import('@/pages/lookup.vue')),
 		loginRequired: true,

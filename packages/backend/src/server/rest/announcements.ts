@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
+import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase, listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase } from '@/core/AnnouncementReadStore.js';
 import { fetchAnnouncementByIdFromDatabase, listAnnouncementsForUserFromDatabase, listUnreadAnnouncementsForUserFromDatabase, resolveAnnouncementPagination, updateAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -90,8 +90,14 @@ export async function handleHonoApiAnnouncements(
 		isActive: params.isActive,
 		requestUserId: user?.id,
 	});
+	const readAnnouncementIds = user == null
+		? new Set<MiAnnouncement['id']>()
+		: new Set(await listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase(deps.db, user.id, announcements.map(announcement => announcement.id)));
 
-	return await Promise.all(announcements.map(announcement => packHonoApiAnnouncement(deps, announcement, user)));
+	return await Promise.all(announcements.map(announcement => packHonoApiAnnouncement(deps, {
+		...announcement,
+		...(user == null ? {} : { isRead: readAnnouncementIds.has(announcement.id) }),
+	}, user)));
 }
 
 export async function handleHonoApiAnnouncementShow(

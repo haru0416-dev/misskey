@@ -18,10 +18,10 @@ import type { Config } from '@/config.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import {
 	createDriveFileInDatabase,
-	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByMd5AndUserIdFromDatabase,
 	fetchDriveFileByUriAndUserIdFromDatabase,
 	listDriveFileIdsExceedingUserCapacityFromDatabase,
+	listDriveFilesByIdsFromDatabase,
 	sumDriveFileSizeByUserIdFromDatabase,
 	updateDriveFileInDatabase,
 } from '@/core/DriveFileStore.js';
@@ -395,9 +395,8 @@ async function expireOldDriveFileForHonoApi(
 		bannerId: user.bannerId,
 	});
 
-	for (const fileId of exceedFileIds) {
-		const file = await fetchDriveFileByIdFromDatabase(deps.db, fileId);
-		if (file == null) continue;
+	const files = await listDriveFilesByIdsFromDatabase(deps.db, exceedFileIds);
+	for (const file of files) {
 		startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, true);
 	}
 }

@@ -18,7 +18,7 @@ import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { decodeReactionForHonoApi } from './notes-reactions.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { packUserLiteManyForHonoApi } from './user.js';
 import { HonoApiError } from './error.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
@@ -67,13 +67,14 @@ async function packNoteReactionWithNoteForHonoApi(
 	reaction: NoteReactionRow & { note: MiNote },
 	me: { id: MiUser['id'] } | null | undefined,
 	packedUser: unknown,
+	packedNote?: Awaited<ReturnType<typeof packNoteForHonoApi>>,
 ): Promise<Record<string, unknown>> {
 	return {
 		id: reaction.id,
 		createdAt: parseId(reaction.id).date.toISOString(),
 		user: packedUser,
 		type: decodeReactionForHonoApi(reaction.reaction).reaction,
-		note: await packNoteForHonoApi(deps, reaction.note, me),
+		note: packedNote ?? await packNoteForHonoApi(deps, reaction.note, me),
 	};
 }
 
@@ -156,8 +157,9 @@ export async function handleHonoApiUsersReactions(
 	const userIds = [...new Set(collected.map(r => r.userId))];
 	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
 	const userMap = new Map(packedUsers.map(u => [u.id, u]));
+	const packedNotes = await packNoteManyForHonoApi(deps, collected.map(reaction => reaction.note), me);
 
-	return await Promise.all(collected.map(reaction =>
-		packNoteReactionWithNoteForHonoApi(deps, reaction, me, userMap.get(reaction.userId)),
+	return await Promise.all(collected.map((reaction, index) =>
+		packNoteReactionWithNoteForHonoApi(deps, reaction, me, userMap.get(reaction.userId), packedNotes[index]),
 	));
 }

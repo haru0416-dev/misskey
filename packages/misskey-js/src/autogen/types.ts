@@ -15791,8 +15791,6 @@ export interface operations {
                     untilId?: string;
                     sinceDate?: number;
                     untilDate?: number;
-                    /** @default false */
-                    allowPartial?: boolean;
                 };
             };
         };

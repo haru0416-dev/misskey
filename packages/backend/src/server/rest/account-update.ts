@@ -14,7 +14,7 @@ import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { listLocalEmojisFromDatabase } from '@/core/EmojiStore.js';
-import { recordHashtagUsageInDatabase } from '@/core/HashtagStore.js';
+import { recordHashtagUsagesInDatabase } from '@/core/HashtagStore.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { createMfmService } from '@/core/MfmService.js';
 import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
@@ -40,7 +40,7 @@ import type { MiUserKeypair } from '@/models/UserKeypair.js';
 import { acceptAllFollowRequestsForHonoApi, genLocalUserUri, type HonoApiFollowingDependencies } from './following.js';
 import { HonoApiError } from './error.js';
 import { addActivityContext, deliverNoteActivityForHonoApi, renderEmoji, renderUpdateForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
-import { isKeyWordIncludedForHonoApi, updateHashtagsRankingForHonoApi } from './notes-create.js';
+import { isKeyWordIncludedForHonoApi, updateHashtagsRankingsForHonoApi } from './notes-create.js';
 import { getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { getIdenticonUrl, packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -52,7 +52,7 @@ export type HonoApiAccountUpdateDependencies =
 	UserPackingDependencies &
 	HonoApiNoteApDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'getHtml'>;
-		/** hashtag ランキング (updateHashtagsRankingForHonoApi) 用。 */
+		/** hashtag ランキング (updateHashtagsRankingsForHonoApi) 用。 */
 		redis: Redis.Redis;
 	};
 
@@ -327,34 +327,26 @@ function getUserUriForHonoApi(config: Pick<Config, 'url'>, user: MiUser): string
 }
 
 export async function updateUsertagsForHonoApi(deps: HonoApiAccountUpdateDependencies, user: MiUser, tags: string[]): Promise<void> {
-	for (const tag of tags) {
-		const name = normalizeForSearch(tag);
-		// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget (デタッチ側でも呼ばれる)。
-		void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
-		await recordHashtagUsageInDatabase(deps.db, {
-			id: genId(),
-			name,
-			userId: user.id,
-			isLocalUser: user.host == null,
-			isRemoteUser: user.host != null,
-			isUserAttached: true,
-			increment: true,
-		});
-	}
-
-	for (const tag of user.tags.filter(x => !tags.includes(x))) {
-		const name = normalizeForSearch(tag);
-		void updateHashtagsRankingForHonoApi(deps, name, user.id).catch(() => {});
-		await recordHashtagUsageInDatabase(deps.db, {
-			id: genId(),
-			name,
-			userId: user.id,
-			isLocalUser: user.host == null,
-			isRemoteUser: user.host != null,
-			isUserAttached: true,
-			increment: false,
-		});
-	}
+	const attachedNames = [...new Set(tags.map(tag => normalizeForSearch(tag)))];
+	const detachedNames = [...new Set(user.tags.filter(tag => !tags.includes(tag)).map(tag => normalizeForSearch(tag)))];
+	// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget (デタッチ側でも呼ばれる)。
+	void updateHashtagsRankingsForHonoApi(deps, [...attachedNames, ...detachedNames], user.id).catch(() => {});
+	await recordHashtagUsagesInDatabase(deps.db, {
+		entries: attachedNames.map(name => ({ id: genId(), name })),
+		userId: user.id,
+		isLocalUser: user.host == null,
+		isRemoteUser: user.host != null,
+		isUserAttached: true,
+		increment: true,
+	});
+	await recordHashtagUsagesInDatabase(deps.db, {
+		entries: detachedNames.map(name => ({ id: genId(), name })),
+		userId: user.id,
+		isLocalUser: user.host == null,
+		isRemoteUser: user.host != null,
+		isUserAttached: true,
+		increment: false,
+	});
 }
 
 async function verifyLinkForHonoApi(deps: HonoApiAccountUpdateDependencies, url: string, user: MiLocalUser): Promise<void> {
@@ -494,13 +486,16 @@ export async function handleHonoApiIUpdate(
 			getHonoApiUserRoles(deps, user),
 			listRolesFromDatabase(deps.db),
 		]);
+		const allRoleIds = new Set(allRoles.map(role => role.id));
+		const myRoleIds = new Set(myRoles.map(role => role.id));
 		const decorationIds = decorations
-			.filter(d => d.roleIdsThatCanBeUsedThisDecoration.filter(roleId => allRoles.some(r => r.id === roleId)).length === 0 || myRoles.some(r => d.roleIdsThatCanBeUsedThisDecoration.includes(r.id)))
+			.filter(d => d.roleIdsThatCanBeUsedThisDecoration.filter(roleId => allRoleIds.has(roleId)).length === 0 || d.roleIdsThatCanBeUsedThisDecoration.some(roleId => myRoleIds.has(roleId)))
 			.map(d => d.id);
+		const decorationIdSet = new Set(decorationIds);
 
 		if (ps.avatarDecorations.length > policies.avatarDecorationLimit) throw iUpdateRestrictedByRoleError();
 
-		updates.avatarDecorations = ps.avatarDecorations.filter(d => decorationIds.includes(d.id)).map(d => ({
+		updates.avatarDecorations = ps.avatarDecorations.filter(d => decorationIdSet.has(d.id)).map(d => ({
 			id: d.id,
 			angle: d.angle ?? 0,
 			flipH: d.flipH ?? false,

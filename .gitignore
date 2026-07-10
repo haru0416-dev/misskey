@@ -1,86 +1,98 @@
-# Visual Studio Code
-/.vscode
-!/.vscode/extensions.json
-
-# Intelij-IDEA
-/.idea
-
-# Node.js
-node_modules
-report.*.json
-
-# Yarn
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-packages/frontend/.yarn/cache
-packages/backend/.yarn/cache
-packages/sw/.yarn/cache
-
-# pnpm
-.pnpm-store
-
-playwright-report
-test-results
-
-# Coverage
-coverage
-
-# config
-/.config/*
-!/.config/example.yml
-!/.config/docker_example.yml
-!/.config/docker_example.env
-!/.config/playwright-devcontainer.yml
-packages/backend/.config/
-docker-compose.yml
-./compose.yml
-.devcontainer/compose.yml
-!/.devcontainer/compose.yml
-
-# misskey
-/build
-built
-built-test
-js-built
-src-js
-/data
-/.cache-loader
-/db
-/meili_data
-npm-debug.log
-*.pem
-run.bat
-api-docs.json
-*.log
-/redis
+# Editors, OS, and design tool state
+/.vscode/
+.idea/
 *.code-workspace
 .DS_Store
-/files
-ormconfig.json
-temp
-/packages/frontend/src/**/*.stories.ts
-tsdoc-metadata.json
-misskey-assets
-
-# Vite temporary files
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-vite.config.local-dev.js.timestamp-*
-vite.config.local-dev.ts.timestamp-*
-
-# blender backups
+.favorites.json
+*.af~lock~
 *.blend1
 *.blend2
 *.blend3
 *.blend4
 *.blend5
 
-# VSCode addon
-.favorites.json
+# Package managers
+node_modules/
+/.yarn/*
+!/.yarn/patches
+!/.yarn/plugins
+!/.yarn/releases
+!/.yarn/sdks
+!/.yarn/versions
+/packages/backend/.yarn/cache/
+/packages/frontend/.yarn/cache/
+/packages/sw/.yarn/cache/
+.pnpm-store/
 
-# Affinity
-*.af~lock~
+# Reports and test output
+report.*.json
+playwright-report/
+test-results/
+coverage/
+
+# Local config and secrets
+/.config/*
+!/.config/example.yml
+!/.config/docker_example.yml
+!/.config/docker_example.env
+!/.config/playwright-devcontainer.yml
+/.claude/settings.local.json
+/.claude/.credentials.json
+/packages/backend/.config/
+*.pem
+ormconfig.json
+/docker-compose.yml
+/compose.yml
+
+# Misskey runtime data
+/data/
+/db/
+/files/
+/meili_data/
+/redis/
+misskey-assets/
+temp/
+
+# Build output and generated code
+/build/
+built/
+built-test/
+js-built/
+src-js/
+/.cache-loader/
+api-docs.json
+tsdoc-metadata.json
+/packages/frontend/build/
+/packages/frontend/src/**/*.stories.ts
+/packages/misskey-js/generator/api.json
+
+# Storybook generated files
+/packages/frontend/storybook-static/
+/packages/frontend/.storybook/changes.js
+/packages/frontend/.storybook/generate.js
+/packages/frontend/.storybook/locale.ts
+/packages/frontend/.storybook/main.js
+/packages/frontend/.storybook/preload-locale.js
+/packages/frontend/.storybook/preload-theme.js
+/packages/frontend/.storybook/themes.ts
+/packages/frontend-embed/storybook-static/
+/packages/frontend-shared/storybook-static/
+
+# Tool temporary files
+npm-debug.log
+*.log
+run.bat
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+vite.config.local-dev.js.timestamp-*
+vite.config.local-dev.ts.timestamp-*
+/.playwright-mcp/
+
+# Backend federation test local state
+/packages/backend/test-federation/certificates/
+/packages/backend/test-federation/volumes/
+/packages/backend/test-federation/.env
+/packages/backend/test-federation/docker.env
+/packages/backend/test-federation/*.test.conf
+/packages/backend/test-federation/*.test.default.yml
+/packages/backend/test-federation/.config/

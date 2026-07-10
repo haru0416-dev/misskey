@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, isNotNull, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { accessToken, type AccessTokenInsert, type AccessTokenRow } from '@/db/schema/access-token.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -107,6 +107,24 @@ export async function existsAccessTokenByAppIdAndUserIdFromDatabase(
 		.limit(1);
 
 	return row != null;
+}
+
+export async function listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	appIds: MiApp['id'][],
+): Promise<MiApp['id'][]> {
+	if (appIds.length === 0) return [];
+
+	const rows = await db
+		.select({ appId: accessToken.appId })
+		.from(accessToken)
+		.where(and(
+			eq(accessToken.userId, userId),
+			inArray(accessToken.appId, appIds),
+		));
+
+	return [...new Set(rows.map(row => row.appId).filter((id): id is MiApp['id'] => id != null))];
 }
 
 /**

@@ -181,18 +181,26 @@ export async function handleHonoApiRegistryScopesWithDomain(
 	parseHonoApiParams(registryScopesWithDomainParamDef, body);
 	const items = await listRegistryScopeAndDomainsFromDatabase(deps.db, user.id);
 	const result: { domain: string | null; scopes: string[][] }[] = [];
+	const entryByDomain = new Map<string | null, { domain: string | null; scopes: string[][] }>();
+	const scopeKeysByDomain = new Map<string | null, Set<string>>();
 
 	for (const item of items) {
-		const target = result.find(entry => entry.domain === item.domain);
-		if (target) {
-			if (target.scopes.some(scope => scope.join('.') === item.scope.join('.'))) continue;
-			target.scopes.push(item.scope);
-		} else {
-			result.push({
+		let target = entryByDomain.get(item.domain);
+		if (target == null) {
+			target = {
 				domain: item.domain,
-				scopes: [item.scope],
-			});
+				scopes: [],
+			};
+			entryByDomain.set(item.domain, target);
+			scopeKeysByDomain.set(item.domain, new Set());
+			result.push(target);
 		}
+
+		const scopeKey = item.scope.join('.');
+		const scopeKeys = scopeKeysByDomain.get(item.domain)!;
+		if (scopeKeys.has(scopeKey)) continue;
+		scopeKeys.add(scopeKey);
+		target.scopes.push(item.scope);
 	}
 
 	return result;

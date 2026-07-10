@@ -4,11 +4,12 @@
  */
 
 import { z } from 'zod';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { adjustNotesPageCountInDatabase } from '@/core/NoteStore.js';
 import {
 	fetchPageLikeByIdOrFailFromDatabase,
+	listLikedPageIdsByUserIdAndPageIdsFromDatabase,
 	listPageLikesByUserIdFromDatabase,
 	pageLikeExistsInDatabase,
 } from '@/core/PageLikeStore.js';
@@ -37,7 +38,7 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
 import { packDriveFileForHonoApi, packDriveFileManyForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
-import { packUserLiteForHonoApi } from './user.js';
+import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 /** `pageNameSchema` (旧 ajv 用 JSON Schema フラグメント) の pattern を Zod 用に再利用する。 */
@@ -63,15 +64,7 @@ export function collectReferencedNotesForHonoApi(content: MiPage['content']): st
 	return [...referencingNotes];
 }
 
-export async function packPageForHonoApi(
-	deps: HonoApiPageDependencies,
-	src: MiPage['id'] | MiPage,
-	me?: { id: MiUser['id'] } | null | undefined,
-	hint?: { packedUser?: Packed<'UserLite'> },
-): Promise<Packed<'Page'>> {
-	const meId = me ? me.id : null;
-	const pageEntity = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(deps.db, src);
-
+function collectAttachedFileIdsForHonoApi(content: MiPage['content']): string[] {
 	const attachedFiles: string[] = [];
 	const collectFiles = (items: MiPageContentBlock[]): void => {
 		for (const item of items) {
@@ -83,7 +76,25 @@ export async function packPageForHonoApi(
 			}
 		}
 	};
-	collectFiles(pageEntity.content);
+	collectFiles(content);
+	return attachedFiles;
+}
+
+export async function packPageForHonoApi(
+	deps: HonoApiPageDependencies,
+	src: MiPage['id'] | MiPage,
+	me?: { id: MiUser['id'] } | null | undefined,
+	hint?: {
+		packedUser?: Packed<'UserLite'>;
+		packedEyeCatchingImage?: Packed<'DriveFile'> | null;
+		packedAttachedFiles?: Packed<'DriveFile'>[];
+		isLiked?: boolean;
+	},
+): Promise<Packed<'Page'>> {
+	const meId = me ? me.id : null;
+	const pageEntity = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(deps.db, src);
+
+	const attachedFiles = collectAttachedFileIdsForHonoApi(pageEntity.content);
 
 	let migrated = false;
 	const migrate = (items: MiPageContentBlock[]): void => {
@@ -110,15 +121,18 @@ export async function packPageForHonoApi(
 
 	const [user, eyeCatchingImage, attachedFilesPacked, pageLikeExists] = await Promise.all([
 		hint?.packedUser ?? packUserLiteForHonoApi(deps, pageEntity.user ?? pageEntity.userId),
-		pageEntity.eyeCatchingImageId ? packDriveFileForHonoApi(deps, pageEntity.eyeCatchingImageId) : Promise.resolve(null),
-		(async () => {
-			const files = attachedFiles.length > 0
-				? (await Promise.all(attachedFiles.map(fileId => fetchDriveFileByIdAndUserIdFromDatabase(deps.db, fileId, pageEntity.userId))))
-					.filter((file): file is NonNullable<typeof file> => file != null)
-				: [];
-			return await packDriveFileManyForHonoApi(deps, files);
+		hint?.packedEyeCatchingImage !== undefined
+			? hint.packedEyeCatchingImage
+			: pageEntity.eyeCatchingImageId ? packDriveFileForHonoApi(deps, pageEntity.eyeCatchingImageId) : Promise.resolve(null),
+		hint?.packedAttachedFiles ?? (async () => {
+			const files = attachedFiles.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, attachedFiles) : [];
+			const fileById = new Map(files.map(file => [file.id, file]));
+			const orderedFiles = attachedFiles
+				.map(fileId => fileById.get(fileId))
+				.filter((file): file is NonNullable<typeof file> => file != null && file.userId === pageEntity.userId);
+			return await packDriveFileManyForHonoApi(deps, orderedFiles);
 		})(),
-		meId ? pageLikeExistsInDatabase(deps.db, meId, pageEntity.id) : Promise.resolve(undefined),
+		hint?.isLiked ?? (meId ? pageLikeExistsInDatabase(deps.db, meId, pageEntity.id) : Promise.resolve(undefined)),
 	]);
 
 	return {
@@ -152,10 +166,36 @@ export async function packPageManyForHonoApi(
 	if (pages.length === 0) return [];
 
 	const users = pages.map(({ user, userId }) => user ?? userId);
-	const packedUsers = await Promise.all(users.map(u => packUserLiteForHonoApi(deps, u)));
+	const pageIds = pages.map(pageEntity => pageEntity.id);
+	const fileIds = [...new Set(pages.flatMap(pageEntity => [
+		...(pageEntity.eyeCatchingImageId ? [pageEntity.eyeCatchingImageId] : []),
+		...collectAttachedFileIdsForHonoApi(pageEntity.content),
+	]))];
+	const [packedUsers, files, likedPageIds] = await Promise.all([
+		packUserLiteManyForHonoApi(deps, users),
+		fileIds.length > 0 ? listDriveFilesByIdsFromDatabase(deps.db, fileIds) : Promise.resolve([]),
+		me ? listLikedPageIdsByUserIdAndPageIdsFromDatabase(deps.db, me.id, pageIds) : Promise.resolve([]),
+	]);
 	const packedUserById = new Map(packedUsers.map(u => [u.id, u]));
+	const packedFiles = await packDriveFileManyForHonoApi(deps, files);
+	const packedFileById = new Map(packedFiles.map(file => [file.id, file]));
+	const fileById = new Map(files.map(file => [file.id, file]));
+	const likedPageIdSet = new Set(likedPageIds);
 
-	return await Promise.all(pages.map(pageEntity => packPageForHonoApi(deps, pageEntity, me, { packedUser: packedUserById.get(pageEntity.userId) })));
+	return await Promise.all(pages.map(pageEntity => {
+		const attachedFileIds = collectAttachedFileIdsForHonoApi(pageEntity.content);
+		return packPageForHonoApi(deps, pageEntity, me, {
+			packedUser: packedUserById.get(pageEntity.userId),
+			packedEyeCatchingImage: pageEntity.eyeCatchingImageId ? (packedFileById.get(pageEntity.eyeCatchingImageId) ?? null) : null,
+			packedAttachedFiles: attachedFileIds
+				.map(fileId => {
+					const file = fileById.get(fileId);
+					return file?.userId === pageEntity.userId ? packedFileById.get(fileId) : undefined;
+				})
+				.filter((file): file is Packed<'DriveFile'> => file != null),
+			isLiked: me ? likedPageIdSet.has(pageEntity.id) : undefined,
+		});
+	}));
 }
 
 export async function packPageLikeForHonoApi(
@@ -314,9 +354,11 @@ export async function handleHonoApiPagesUpdate(
 	if (params.content != null) {
 		const beforeReferencedNotes = collectReferencedNotesForHonoApi(before.content);
 		const afterReferencedNotes = collectReferencedNotesForHonoApi(params.content);
+		const beforeReferencedNoteSet = new Set(beforeReferencedNotes);
+		const afterReferencedNoteSet = new Set(afterReferencedNotes);
 
-		const removedNotes = beforeReferencedNotes.filter(noteId => !afterReferencedNotes.includes(noteId));
-		const addedNotes = afterReferencedNotes.filter(noteId => !beforeReferencedNotes.includes(noteId));
+		const removedNotes = beforeReferencedNotes.filter(noteId => !afterReferencedNoteSet.has(noteId));
+		const addedNotes = afterReferencedNotes.filter(noteId => !beforeReferencedNoteSet.has(noteId));
 
 		if (removedNotes.length > 0) {
 			await adjustNotesPageCountInDatabase(deps.db, removedNotes, -1);
@@ -528,12 +570,13 @@ export async function handleHonoApiIPageLikes(
 	const pageIds = likes.map(like => like.pageId);
 	const pageById = await listPagesByIdsFromDatabase(deps.db, pageIds)
 		.then(pages => new Map(pages.map(pageEntity => [pageEntity.id, pageEntity])));
-	const likesWithPages = likes.map(like => ({
-		...like,
-		page: pageById.get(like.pageId) ?? null,
-	}));
+	const packedPages = await packPageManyForHonoApi(deps, likes.map(like => pageById.get(like.pageId)).filter(page => page != null), me);
+	const packedPageById = new Map(packedPages.map(page => [page.id, page]));
 
-	return await Promise.all(likesWithPages.map(like => packPageLikeForHonoApi(deps, like, me)));
+	return await Promise.all(likes.map(async like => ({
+		id: like.id,
+		page: packedPageById.get(like.pageId) ?? (await packPageLikeForHonoApi(deps, like, me)).page,
+	})));
 }
 
 export const usersPagesParamDef = z.object({

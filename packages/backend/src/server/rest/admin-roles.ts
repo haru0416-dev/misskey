@@ -39,7 +39,7 @@ import { HonoApiError } from './error.js';
 import { createRoleAssignedNotification } from './notification.js';
 import { isHonoApiAdministrator } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
-import { packHonoApiRole } from './roles.js';
+import { packHonoApiRole, packHonoApiRoles } from './roles.js';
 import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from './user.js';
 
 export type HonoApiAdminRoleDependencies = {
@@ -237,7 +237,7 @@ export async function handleHonoApiAdminRolesList(
 ): Promise<Packed<'Role'>[]> {
 	parseHonoApiParams(adminRolesListParamDef, body);
 	const roles = await listRolesOrderByLastUsedAtDescFromDatabase(deps.db);
-	return await Promise.all(roles.map(role => packHonoApiRole(deps, role)));
+	return await packHonoApiRoles(deps, roles);
 }
 
 export async function handleHonoApiAdminRolesDelete(

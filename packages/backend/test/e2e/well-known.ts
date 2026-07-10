@@ -64,9 +64,6 @@ describe('.well-known', () => {
 				rel: 'http://webfinger.net/rel/profile-page',
 				type: 'text/html',
 				href: `${origin}/@alice`,
-			}, {
-				rel: 'http://ostatus.org/schema/1.0/subscribe',
-				template: `${origin}/authorize-follow?acct={uri}`,
 			}],
 		});
 	});

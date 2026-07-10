@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import { userSecurityKey, type UserSecurityKeyInsert, type UserSecurityKeyRow } from '@/db/schema/user-security-key.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
@@ -37,6 +37,23 @@ export async function countUserSecurityKeysByUserIdFromDatabase(
 		.where(eq(userSecurityKey.userId, userId));
 
 	return row?.count ?? 0;
+}
+
+export async function listUserIdsWithSecurityKeysFromDatabase(
+	db: MiDrizzleDatabase,
+	userIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (userIds.length === 0) {
+		return [];
+	}
+
+	const rows = await db
+		.select({ userId: userSecurityKey.userId })
+		.from(userSecurityKey)
+		.where(inArray(userSecurityKey.userId, userIds))
+		.groupBy(userSecurityKey.userId);
+
+	return rows.map(row => row.userId);
 }
 
 export async function listUserSecurityKeySummariesByUserIdFromDatabase(

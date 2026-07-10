@@ -37,6 +37,20 @@ export async function listRolesOrderByLastUsedAtDescFromDatabase(
 	return rows.map(row => deserializeRole(row));
 }
 
+export async function listRolesByIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiRole['id'][],
+): Promise<MiRole[]> {
+	if (ids.length === 0) return [];
+
+	const rows = await db
+		.select()
+		.from(role)
+		.where(inArray(role.id, ids));
+
+	return rows.map(row => deserializeRole(row));
+}
+
 export async function listPublicExplorableRolesFromDatabase(
 	db: MiDrizzleDatabase,
 ): Promise<MiRole[]> {

@@ -7,6 +7,7 @@ import { and, asc, desc, eq, gt, isNull, lt, notInArray, or, type SQL } from 'dr
 import { announcement, type AnnouncementInsert, type AnnouncementRow } from '@/db/schema/announcement.js';
 import { announcementRead } from '@/db/schema/announcement-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiUser } from '@/models/User.js';
@@ -48,21 +49,7 @@ export function resolveAnnouncementPagination(
 	untilId?: string | null;
 	order: AnnouncementOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchAnnouncementByIdFromDatabase(
