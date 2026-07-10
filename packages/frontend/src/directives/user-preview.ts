@@ -103,27 +103,33 @@ export class UserPreview {
 	}
 }
 
-interface UserPreviewDirectiveElement extends HTMLElement {
-	_userPreviewDirective_?: {
-		preview: UserPreview;
-	};
+const userPreviews = new WeakMap<HTMLElement, UserPreview>();
+
+function detachPreview(el: HTMLElement) {
+	const preview = userPreviews.get(el);
+	if (preview == null) return;
+
+	preview.detach();
+	userPreviews.delete(el);
+}
+
+function attachPreview(el: HTMLElement, user: string | Misskey.entities.UserDetailed | null | undefined) {
+	if (user == null || isTouchUsing) return;
+	userPreviews.set(el, new UserPreview(el, user));
 }
 
 export const userPreviewDirective = {
 	mounted(el, binding) {
-		if (binding.value == null) return;
-		if (isTouchUsing) return;
+		attachPreview(el, binding.value);
+	},
 
-		// TODO: 新たにプロパティを作るのをやめMapを使う
-		// ただメモリ的には↓の方が省メモリかもしれないので検討中
-		el._userPreviewDirective_ = {
-			preview: new UserPreview(el, binding.value),
-		};
+	updated(el, binding) {
+		if (binding.value === binding.oldValue) return;
+		detachPreview(el);
+		attachPreview(el, binding.value);
 	},
 
 	unmounted(el) {
-		const self = el._userPreviewDirective_;
-		if (self == null) return;
-		self.preview.detach();
+		detachPreview(el);
 	},
-} as Directive<UserPreviewDirectiveElement, string | Misskey.entities.UserDetailed | null | undefined>;
+} as Directive<HTMLElement, string | Misskey.entities.UserDetailed | null | undefined>;

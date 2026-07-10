@@ -4,7 +4,7 @@
  */
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/vue';
+import { cleanup, fireEvent, render } from '@testing-library/vue';
 import type { Ref } from 'vue';
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { useTooltip } from '@/composables/useTooltip.js';
@@ -12,6 +12,7 @@ import { useTooltip } from '@/composables/useTooltip.js';
 describe('useTooltip', () => {
 	afterEach(() => {
 		cleanup();
+		vi.useRealTimers();
 		vi.restoreAllMocks();
 	});
 
@@ -52,5 +53,59 @@ describe('useTooltip', () => {
 		expect(onShow).toHaveBeenCalledOnce();
 
 		result.unmount();
+	});
+
+	test('accepts mouse hover again after ignoring touch compatibility events', async () => {
+		vi.useFakeTimers();
+		const onShow = vi.fn();
+		const Component = defineComponent({
+			setup() {
+				const source = ref<HTMLElement | null>(null);
+				useTooltip(source, onShow, 0);
+				return () => h('button', { ref: source });
+			},
+		});
+
+		const result = render(Component);
+		await nextTick();
+		const source = result.getByRole('button');
+
+		await fireEvent.touchStart(source);
+		await fireEvent.touchEnd(source);
+		source.dispatchEvent(new MouseEvent('mouseover'));
+		await vi.runOnlyPendingTimersAsync();
+		expect(onShow).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(1000);
+		source.dispatchEvent(new MouseEvent('mouseover'));
+		await vi.runOnlyPendingTimersAsync();
+		expect(onShow).toHaveBeenCalledOnce();
+	});
+
+	test('accepts mouse hover again after a cancelled touch', async () => {
+		vi.useFakeTimers();
+		const onShow = vi.fn();
+		const Component = defineComponent({
+			setup() {
+				const source = ref<HTMLElement | null>(null);
+				useTooltip(source, onShow, 0);
+				return () => h('button', { ref: source });
+			},
+		});
+
+		const result = render(Component);
+		await nextTick();
+		const source = result.getByRole('button');
+
+		await fireEvent.touchStart(source);
+		await fireEvent.touchCancel(source);
+		source.dispatchEvent(new MouseEvent('mouseover'));
+		await vi.runOnlyPendingTimersAsync();
+		expect(onShow).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(1000);
+		source.dispatchEvent(new MouseEvent('mouseover'));
+		await vi.runOnlyPendingTimersAsync();
+		expect(onShow).toHaveBeenCalledOnce();
 	});
 });
