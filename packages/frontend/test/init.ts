@@ -84,13 +84,37 @@ for (const key in preferState) {
 	}
 }
 
-// XXX: store somehow becomes undefined in vitest?
+const prefer = new Proxy(
+	{
+		commit(key: string, value: unknown) {
+			preferState[key] = value;
+			if (preferReactive[key] == null) preferReactive[key] = ref(value);
+			else preferReactive[key].value = value;
+		},
+		model(key: string) {
+			if (preferReactive[key] == null) preferReactive[key] = ref(preferState[key]);
+			return preferReactive[key];
+		},
+	},
+	{
+		get(target, key, receiver) {
+			if (typeof key === 'string' && preferReactive[key] != null) return preferReactive[key].value;
+			if (typeof key === 'string' && Object.hasOwn(preferState, key)) return preferState[key];
+			return Reflect.get(target, key, receiver);
+		},
+		set(_target, key, value) {
+			if (typeof key !== 'string') return false;
+			preferState[key] = value;
+			if (preferReactive[key] == null) preferReactive[key] = ref(value);
+			else preferReactive[key].value = value;
+			return true;
+		},
+	},
+);
+
 vi.mock('@/preferences.js', () => {
 	return {
-		prefer: {
-			s: preferState,
-			r: preferReactive,
-		},
+		prefer,
 	};
 });
 

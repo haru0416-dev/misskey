@@ -104,7 +104,7 @@ export async function parsePluginMeta(code: string): Promise<AiScriptPluginMeta>
 
 export async function authorizePlugin(plugin: Plugin) {
 	if (plugin.permissions == null || plugin.permissions.length === 0) return;
-	if (Object.hasOwn(store.s.pluginTokens, plugin.installId)) return;
+	if (Object.hasOwn(store.pluginTokens, plugin.installId)) return;
 
 	const token = await new Promise<string>((res, rej) => {
 		let dispose: () => void;
@@ -135,7 +135,7 @@ export async function authorizePlugin(plugin: Plugin) {
 	});
 
 	store.set('pluginTokens', {
-		...store.s.pluginTokens,
+		...store.pluginTokens,
 		[plugin.installId]: token,
 	});
 }
@@ -150,7 +150,7 @@ export async function installPlugin(code: string, meta?: AiScriptPluginMeta) {
 		realMeta = meta;
 	}
 
-	if (prefer.s.plugins.some((x) => x.name === realMeta.name)) {
+	if (prefer.plugins.some((x) => x.name === realMeta.name)) {
 		throw new Error('Plugin already installed');
 	}
 
@@ -165,7 +165,7 @@ export async function installPlugin(code: string, meta?: AiScriptPluginMeta) {
 		src: code,
 	};
 
-	prefer.commit('plugins', prefer.s.plugins.concat(plugin));
+	prefer.commit('plugins', prefer.plugins.concat(plugin));
 
 	await authorizePlugin(plugin);
 
@@ -176,7 +176,7 @@ export async function uninstallPlugin(plugin: Plugin) {
 	abortPlugin(plugin);
 	prefer.commit(
 		'plugins',
-		prefer.s.plugins.filter((x) => x.installId !== plugin.installId),
+		prefer.plugins.filter((x) => x.installId !== plugin.installId),
 	);
 
 	Object.keys(window.localStorage).forEach((key) => {
@@ -185,11 +185,11 @@ export async function uninstallPlugin(plugin: Plugin) {
 		}
 	});
 
-	if (Object.hasOwn(store.s.pluginTokens, plugin.installId)) {
+	if (Object.hasOwn(store.pluginTokens, plugin.installId)) {
 		await os.apiWithDialog('i/revoke-token', {
-			token: store.s.pluginTokens[plugin.installId],
+			token: store.pluginTokens[plugin.installId],
 		});
-		const pluginTokens = { ...store.s.pluginTokens };
+		const pluginTokens = { ...store.pluginTokens };
 		delete pluginTokens[plugin.installId];
 		store.set('pluginTokens', pluginTokens);
 	}
@@ -256,7 +256,7 @@ function addPluginHandler<K extends keyof HandlerDef>(
 
 export function launchPlugins() {
 	return Promise.all(
-		prefer.s.plugins.map((plugin) => {
+		prefer.plugins.map((plugin) => {
 			if (plugin.active) {
 				return launchPlugin(plugin.installId);
 			} else {
@@ -268,7 +268,7 @@ export function launchPlugins() {
 
 async function launchPlugin(id: Plugin['installId']): Promise<void> {
 	if (isSafeMode) return;
-	const plugin = prefer.s.plugins.find((x) => x.installId === id);
+	const plugin = prefer.plugins.find((x) => x.installId === id);
 	if (!plugin) return;
 
 	// 後方互換性のため
@@ -363,7 +363,7 @@ export async function configPlugin(plugin: Plugin) {
 
 	prefer.commit(
 		'plugins',
-		prefer.s.plugins.map((x) => (x.installId === plugin.installId ? { ...x, configData: result } : x)),
+		prefer.plugins.map((x) => (x.installId === plugin.installId ? { ...x, configData: result } : x)),
 	);
 
 	reloadPlugin(plugin);
@@ -372,7 +372,7 @@ export async function configPlugin(plugin: Plugin) {
 export function changePluginActive(plugin: Plugin, active: boolean) {
 	prefer.commit(
 		'plugins',
-		prefer.s.plugins.map((x) => (x.installId === plugin.installId ? { ...x, active } : x)),
+		prefer.plugins.map((x) => (x.installId === plugin.installId ? { ...x, active } : x)),
 	);
 
 	if (active) {
@@ -405,7 +405,7 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 	}
 
 	const env: Record<string, values.Value> = {
-		...createAiScriptEnv({ ...opts, token: store.s.pluginTokens[id] }),
+		...createAiScriptEnv({ ...opts, token: store.pluginTokens[id] }),
 
 		'Plugin:register:post_form_action': values.FN_NATIVE(([title, handler]) => {
 			utils.assertString(title);

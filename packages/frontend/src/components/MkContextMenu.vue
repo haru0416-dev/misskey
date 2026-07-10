@@ -6,10 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <Transition
 	appear
-	:enterActiveClass="prefer.s.animation ? $style.transition_fade_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_fade_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_fade_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_fade_leaveTo : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_fade_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_fade_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_fade_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_fade_leaveTo : ''"
 >
 	<div ref="rootEl" :class="$style.root" :style="{ zIndex }" @contextmenu.prevent.stop="() => {}">
 		<MkMenu :items="items" :align="'left'" @close="emit('closed')"/>

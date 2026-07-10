@@ -109,7 +109,7 @@ const prev = reactive({} as typeof current);
 const jammedAudioBuffer = ref<AudioBuffer | null>(null);
 const jammedSoundNodePlaying = ref<boolean>(false);
 
-if (prefer.s['sound.masterVolume']) {
+if (prefer['sound.masterVolume']) {
 	sound.loadAudio('/client-assets/sounds/syuilo/queue-jammed.mp3').then(buf => {
 		if (!buf) throw new Error('[WidgetJobQueue] Failed to initialize AudioBuffer');
 		jammedAudioBuffer.value = buf;

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <component
-	:is="prefer.s.animation ? TransitionGroup : 'div'"
+	:is="prefer.animation ? TransitionGroup : 'div'"
 	:enterActiveClass="$style.transition_x_enterActive"
 	:leaveActiveClass="$style.transition_x_leaveActive"
 	:enterFromClass="$style.transition_x_enterFrom"
@@ -93,7 +93,7 @@ watch([() => props.reactions, () => props.maxNumber], ([newSource, maxNumber]) =
 
 	const newReactionsNames = new Set(newReactions.map(([x]) => x));
 	const sourceEntries = Object.entries(newSource);
-	const reactionAvailability = prefer.s.showAvailableReactionsFirstInNote
+	const reactionAvailability = prefer.showAvailableReactionsFirstInNote
 		? new Map(sourceEntries.map(([reaction]) => [reaction, canReact(reaction)]))
 		: null;
 	newReactions = [

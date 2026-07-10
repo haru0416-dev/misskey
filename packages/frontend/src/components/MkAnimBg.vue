@@ -85,7 +85,7 @@ onMounted(() => {
 	}
 
 	function shouldAnimate() {
-		return prefer.r.animation.value && isVisible && window.document.visibilityState === 'visible';
+		return prefer.animation && isVisible && window.document.visibilityState === 'visible';
 	}
 
 	function stop() {
@@ -131,7 +131,7 @@ onMounted(() => {
 		else stop();
 	});
 	intersectionObserver.observe(canvas);
-	stopAnimationWatch = watch(prefer.r.animation, (animation) => {
+	stopAnimationWatch = watch(() => prefer.animation, (animation) => {
 		if (animation) start();
 		else stop();
 	}, { immediate: true });

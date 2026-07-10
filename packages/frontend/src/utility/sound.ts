@@ -6,7 +6,7 @@
 import type { SoundStore } from '@/preferences/def.js';
 import { prefer } from '@/preferences.js';
 import { PREF_DEF } from '@/preferences/def.js';
-import { getInitialPrefValue } from '@/preferences/manager.js';
+import { getInitialPrefValue } from '@/preferences/store.js';
 
 let ctx: AudioContext;
 const cache = new Map<string, AudioBuffer>();
@@ -124,7 +124,7 @@ export async function loadAudio(url: string, options?: { useCache?: boolean }) {
  * @param type スプライトの種類を指定
  */
 export function playMisskeySfx(operationType: OperationType) {
-	const sound = prefer.s[`sound.on.${operationType}`];
+	const sound = prefer[`sound.on.${operationType}`];
 	playMisskeySfxFile(sound).then((succeed) => {
 		if (!succeed && sound.type === '_driveFile_') {
 			// ドライブファイルが存在しない場合はデフォルトのサウンドを再生する
@@ -164,7 +164,7 @@ async function playMisskeySfxFileInternal(soundStore: SoundStore): Promise<boole
 	if (soundStore.type === null || (soundStore.type === '_driveFile_' && !soundStore.fileUrl)) {
 		return false;
 	}
-	const masterVolume = prefer.s['sound.masterVolume'];
+	const masterVolume = prefer['sound.masterVolume'];
 	if (isMute() || masterVolume === 0 || soundStore.volume === 0) {
 		return true; // ミュート時は成功として扱う
 	}
@@ -243,13 +243,13 @@ export async function getSoundDuration(file: string): Promise<number> {
  * ミュートすべきかどうかを判断する
  */
 export function isMute(): boolean {
-	if (prefer.s['sound.notUseSound']) {
+	if (prefer['sound.notUseSound']) {
 		// サウンドを出力しない
 		return true;
 	}
 
 	// noinspection RedundantIfStatementJS
-	if (prefer.s['sound.useSoundOnlyWhenActive'] && window.document.visibilityState === 'hidden') {
+	if (prefer['sound.useSoundOnlyWhenActive'] && window.document.visibilityState === 'hidden') {
 		// ブラウザがアクティブな時のみサウンドを出力する
 		return true;
 	}

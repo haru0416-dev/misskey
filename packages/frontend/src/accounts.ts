@@ -27,9 +27,9 @@ export async function getAccounts(): Promise<
 		token: string | null;
 	}[]
 > {
-	const tokens = store.s.accountTokens;
-	const accountInfos = store.s.accountInfos;
-	const accounts = prefer.s.accounts;
+	const tokens = store.accountTokens;
+	const accountInfos = store.accountInfos;
+	const accounts = prefer.accounts;
 	return accounts.map(([host, user]) => ({
 		host,
 		id: user.id,
@@ -40,24 +40,24 @@ export async function getAccounts(): Promise<
 }
 
 async function addAccount(host: string, user: Misskey.entities.MeDetailed, token: AccountWithToken['token']) {
-	if (!prefer.s.accounts.some((x) => x[0] === host && x[1].id === user.id)) {
-		store.set('accountTokens', { ...store.s.accountTokens, [host + '/' + user.id]: token });
-		store.set('accountInfos', { ...store.s.accountInfos, [host + '/' + user.id]: user });
-		prefer.commit('accounts', [...prefer.s.accounts, [host, { id: user.id, username: user.username }]]);
+	if (!prefer.accounts.some((x) => x[0] === host && x[1].id === user.id)) {
+		store.set('accountTokens', { ...store.accountTokens, [host + '/' + user.id]: token });
+		store.set('accountInfos', { ...store.accountInfos, [host + '/' + user.id]: user });
+		prefer.commit('accounts', [...prefer.accounts, [host, { id: user.id, username: user.username }]]);
 	}
 }
 
 export async function removeAccount(host: string, id: AccountWithToken['id']) {
-	const tokens = JSON.parse(JSON.stringify(store.s.accountTokens));
+	const tokens = JSON.parse(JSON.stringify(store.accountTokens));
 	delete tokens[host + '/' + id];
 	store.set('accountTokens', tokens);
-	const accountInfos = JSON.parse(JSON.stringify(store.s.accountInfos));
+	const accountInfos = JSON.parse(JSON.stringify(store.accountInfos));
 	delete accountInfos[host + '/' + id];
 	store.set('accountInfos', accountInfos);
 
 	prefer.commit(
 		'accounts',
-		prefer.s.accounts.filter((x) => x[0] !== host || x[1].id !== id),
+		prefer.accounts.filter((x) => x[0] !== host || x[1].id !== id),
 	);
 }
 
@@ -139,7 +139,7 @@ export function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
 	for (const [key, value] of Object.entries(accountData)) {
 		($i[key as keyof typeof accountData] as any) = value;
 	}
-	store.set('accountInfos', { ...store.s.accountInfos, [host + '/' + $i.id]: $i });
+	store.set('accountInfos', { ...store.accountInfos, [host + '/' + $i.id]: $i });
 	$i.token = token;
 	miLocalStorage.setItem('account', JSON.stringify($i));
 }
@@ -150,7 +150,7 @@ export function updateCurrentAccountPartial(accountData: Partial<Misskey.entitie
 		($i[key as keyof typeof accountData] as any) = value;
 	}
 
-	store.set('accountInfos', { ...store.s.accountInfos, [host + '/' + $i.id]: $i });
+	store.set('accountInfos', { ...store.accountInfos, [host + '/' + $i.id]: $i });
 
 	miLocalStorage.setItem('account', JSON.stringify($i));
 }
@@ -163,8 +163,8 @@ export async function refreshCurrentAccount() {
 		.catch((reason) => {
 			if (reason === isAccountDeleted) {
 				removeAccount(host, me.id);
-				if (Object.keys(store.s.accountTokens).length > 0) {
-					login(Object.values(store.s.accountTokens)[0]);
+				if (Object.keys(store.accountTokens).length > 0) {
+					login(Object.values(store.accountTokens)[0]);
 				} else {
 					signout();
 				}
@@ -212,7 +212,7 @@ export async function login(token: AccountWithToken['token'], redirect?: string)
 }
 
 export async function switchAccount(host: string, id: string) {
-	const token = store.s.accountTokens[host + '/' + id];
+	const token = store.accountTokens[host + '/' + id];
 	if (token) {
 		login(token);
 	} else {
@@ -221,7 +221,7 @@ export async function switchAccount(host: string, id: string) {
 			{},
 			{
 				done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
-					store.set('accountTokens', { ...store.s.accountTokens, [host + '/' + res.id]: res.i });
+					store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
 					login(res.i);
 				},
 				closed: () => {
@@ -292,7 +292,7 @@ export async function getAccountMenu(opts: {
 						},
 						{
 							done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
-								store.set('accountTokens', { ...store.s.accountTokens, [host + '/' + res.id]: res.i });
+								store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
 
 								if (callback) {
 									fetchAccount(res.i, id).then((account) => {

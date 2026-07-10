@@ -173,7 +173,7 @@ import { prefer } from '@/preferences.js';
 
 const excludeMutingUsers = ref(false);
 const excludeInactiveUsers = ref(false);
-const withReplies = ref(prefer.s.defaultFollowWithReplies);
+const withReplies = ref(prefer.defaultFollowWithReplies);
 
 const onExportSuccess = () => {
 	os.alert({

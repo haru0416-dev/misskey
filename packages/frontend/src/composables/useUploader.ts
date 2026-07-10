@@ -121,11 +121,11 @@ export function useUploader(
 		const extension = filename.split('.').length > 1 ? '.' + filename.split('.').pop() : '';
 		const watermarkPreset =
 			uploaderFeatures.value.watermark && $i.policies.watermarkAvailable
-				? (prefer.s.watermarkPresets.find((p) => p.id === prefer.s.defaultWatermarkPresetId) ?? null)
+				? (prefer.watermarkPresets.find((p) => p.id === prefer.defaultWatermarkPresetId) ?? null)
 				: null;
 		items.value.push({
 			id,
-			name: prefer.s.keepOriginalFilename ? filename : id + extension,
+			name: prefer.keepOriginalFilename ? filename : id + extension,
 			suffix: '',
 			progress: null,
 			thumbnail: THUMBNAIL_SUPPORTED_TYPES.includes(file.type) ? window.URL.createObjectURL(file) : null,
@@ -136,9 +136,9 @@ export function useUploader(
 			uploaded: null,
 			uploadFailed: false,
 			compressionLevel: IMAGE_EDITING_SUPPORTED_TYPES.includes(file.type)
-				? prefer.s.defaultImageCompressionLevel
+				? prefer.defaultImageCompressionLevel
 				: VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(file.type)
-					? prefer.s.defaultVideoCompressionLevel
+					? prefer.defaultVideoCompressionLevel
 					: 0,
 			watermarkPreset,
 			watermarkLayers: watermarkPreset?.layers ?? null,
@@ -345,7 +345,7 @@ export function useUploader(
 						type: 'label',
 						text: i18n.ts.presets,
 					},
-					...prefer.s.watermarkPresets.map((preset) => ({
+					...prefer.watermarkPresets.map((preset) => ({
 						type: 'radioOption' as const,
 						text: preset.name,
 						active: computed(() => item.watermarkPreset?.id === preset.id),
@@ -413,7 +413,7 @@ export function useUploader(
 						type: 'label' as const,
 						text: i18n.ts.presets,
 					},
-					...prefer.s.imageFramePresets.map((preset) => ({
+					...prefer.imageFramePresets.map((preset) => ({
 						type: 'button' as const,
 						text: preset.name,
 						action: async () => {
@@ -566,7 +566,7 @@ export function useUploader(
 
 		const { filePromise, abort } = uploadFile(item.preprocessedFile ?? item.file, {
 			name: getUploadName(item),
-			folderId: options.folderId === undefined ? prefer.s.uploadFolder : options.folderId,
+			folderId: options.folderId === undefined ? prefer.uploadFolder : options.folderId,
 			isSensitive: item.isSensitive ?? false,
 			caption: item.caption ?? null,
 			onProgress: (progress) => {

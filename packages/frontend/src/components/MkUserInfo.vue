@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_panel" :class="$style.root">
-	<div :class="$style.banner" :style="user.bannerUrl ? { backgroundImage: `url(${prefer.s.disableShowingAnimatedImages ? getStaticImageUrl(user.bannerUrl) : user.bannerUrl})` } : ''"></div>
+	<div :class="$style.banner" :style="user.bannerUrl ? { backgroundImage: `url(${prefer.disableShowingAnimatedImages ? getStaticImageUrl(user.bannerUrl) : user.bannerUrl})` } : ''"></div>
 	<MkA :to="userPage(user)">
 		<MkAvatar :class="$style.avatar" :user="user" indicator/>
 	</MkA>

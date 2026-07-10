@@ -5,11 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <Transition
-	:enterActiveClass="prefer.s.animation ? $style.transition_tooltip_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_tooltip_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_tooltip_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_tooltip_leaveTo : ''"
-	appear :css="prefer.s.animation"
+	:enterActiveClass="prefer.animation ? $style.transition_tooltip_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_tooltip_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_tooltip_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_tooltip_leaveTo : ''"
+	appear :css="prefer.animation"
 	@afterLeave="emit('closed')"
 >
 	<div v-show="showing" ref="el" :class="$style.root" class="_acrylic _shadow" :style="{ zIndex, maxWidth: maxWidth + 'px' }">

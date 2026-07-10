@@ -797,7 +797,7 @@ export async function popupMenu(
 }
 
 export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<void> {
-	if (prefer.s.contextMenu === 'native' || (prefer.s.contextMenu === 'appWithShift' && !ev.shiftKey)) {
+	if (prefer.contextMenu === 'native' || (prefer.contextMenu === 'appWithShift' && !ev.shiftKey)) {
 		return;
 	}
 

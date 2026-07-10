@@ -179,7 +179,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								<MkFolder>
 									<template #label><SearchLabel>{{ i18n.ts.pinnedList }}</SearchLabel></template>
 									<!-- 複数ピン止め管理できるようにしたいけどめんどいので一旦ひとつのみ -->
-									<MkButton v-if="prefer.r.pinnedUserLists.value.length === 0" @click="setPinnedList()">{{ i18n.ts.add }}</MkButton>
+									<MkButton v-if="prefer.pinnedUserLists.length === 0" @click="setPinnedList()">{{ i18n.ts.add }}</MkButton>
 									<MkButton v-else danger @click="removePinnedList()"><i class="ti ti-trash"></i> {{ i18n.ts.remove }}</MkButton>
 								</MkFolder>
 							</SearchMarker>
@@ -839,8 +839,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 								<template #label><SearchLabel>{{ i18n.ts.additionalEmojiDictionary }}</SearchLabel></template>
 								<div class="_buttons">
 									<template v-for="lang in emojiIndexLangs" :key="lang">
-										<MkButton v-if="store.r.additionalUnicodeEmojiIndexes.value[lang]" danger @click="removeEmojiIndex(lang)"><i class="ti ti-trash"></i> {{ i18n.ts.remove }} ({{ getEmojiIndexLangName(lang) }})</MkButton>
-										<MkButton v-else @click="downloadEmojiIndex(lang)"><i class="ti ti-download"></i> {{ getEmojiIndexLangName(lang) }}{{ store.r.additionalUnicodeEmojiIndexes.value[lang] ? ` (${ i18n.ts.installed })` : '' }}</MkButton>
+										<MkButton v-if="store.additionalUnicodeEmojiIndexes[lang]" danger @click="removeEmojiIndex(lang)"><i class="ti ti-trash"></i> {{ i18n.ts.remove }} ({{ getEmojiIndexLangName(lang) }})</MkButton>
+										<MkButton v-else @click="downloadEmojiIndex(lang)"><i class="ti ti-download"></i> {{ getEmojiIndexLangName(lang) }}{{ store.additionalUnicodeEmojiIndexes[lang] ? ` (${ i18n.ts.installed })` : '' }}</MkButton>
 									</template>
 								</div>
 							</MkFolder>
@@ -863,7 +863,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, toRef, watch } from 'vue';
 import { langs } from '@shared/utility/config.js';
 import * as Misskey from 'misskey-js';
 import MkSwitch from '@/components/MkSwitch.vue';
@@ -895,8 +895,8 @@ import { suggestReload } from '@/utility/reload-suggest.js';
 const $i = ensureSignin();
 
 const lang = ref(miLocalStorage.getItem('lang'));
-const dataSaver = ref(prefer.s.dataSaver);
-const realtimeMode = store.model('realtimeMode');
+const dataSaver = ref(prefer.dataSaver);
+const realtimeMode = toRef(store, 'realtimeMode');
 
 const overridedDeviceKind = prefer.model('overridedDeviceKind');
 const pollingInterval = prefer.model('pollingInterval');
@@ -1036,7 +1036,7 @@ function getEmojiIndexLangName(targetLang: typeof emojiIndexLangs[number]) {
 
 function downloadEmojiIndex(lang: typeof emojiIndexLangs[number]) {
 	async function main() {
-		const currentIndexes = store.s.additionalUnicodeEmojiIndexes;
+		const currentIndexes = store.additionalUnicodeEmojiIndexes;
 
 		function download() {
 			switch (lang) {
@@ -1056,7 +1056,7 @@ function downloadEmojiIndex(lang: typeof emojiIndexLangs[number]) {
 
 function removeEmojiIndex(lang: string) {
 	async function main() {
-		const currentIndexes = store.s.additionalUnicodeEmojiIndexes;
+		const currentIndexes = store.additionalUnicodeEmojiIndexes;
 		delete currentIndexes[lang];
 		await store.set('additionalUnicodeEmojiIndexes', currentIndexes);
 	}
@@ -1082,7 +1082,7 @@ function removePinnedList() {
 }
 
 function enableAllDataSaver() {
-	const g = { ...prefer.s.dataSaver };
+	const g = { ...prefer.dataSaver };
 
 	(Object.keys(g) as (keyof typeof g)[]).forEach((key) => { g[key] = true; });
 
@@ -1090,7 +1090,7 @@ function enableAllDataSaver() {
 }
 
 function disableAllDataSaver() {
-	const g = { ...prefer.s.dataSaver };
+	const g = { ...prefer.dataSaver };
 
 	(Object.keys(g) as (keyof typeof g)[]).forEach((key) => { g[key] = false; });
 

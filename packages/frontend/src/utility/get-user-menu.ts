@@ -504,7 +504,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 		);
 	}
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menuItems.push(
 			{ type: 'divider' },
 			{

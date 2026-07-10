@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<path d="M190,25C195.523,25 200,29.477 200,35C200,58.415 200,116.585 200,140C200,145.523 195.523,150 190,150C155.86,150 44.14,150 10,150C4.477,150 0,145.523 0,140C0,112.727 0,37.273 0,10C0,4.477 4.477,0 10,-0C26.642,0 59.332,0 70.858,0C73.51,-0 76.054,1.054 77.929,2.929C82.74,7.74 92.26,17.26 97.071,22.071C98.946,23.946 101.49,25 104.142,25C118.808,25 168.535,25 190,25Z" style="fill:var(--MI_THEME-accentedBg);"/>
 	</svg>
 	<div :class="$style.name">{{ folder.name }}</div>
-	<div v-if="prefer.s.uploadFolder == folder.id" :class="$style.upload">
+	<div v-if="prefer.uploadFolder == folder.id" :class="$style.upload">
 		{{ i18n.ts.uploadFolder }}
 	</div>
 	<button v-if="selectMode" class="_button" :class="$style.checkboxWrapper" @click.prevent.stop="checkboxClicked">
@@ -251,7 +251,7 @@ function deleteFolder() {
 	misskeyApi('drive/folders/delete', {
 		folderId: props.folder.id,
 	}).then(() => {
-		if (prefer.s.uploadFolder === props.folder.id) {
+		if (prefer.uploadFolder === props.folder.id) {
 			prefer.commit('uploadFolder', null);
 		}
 		globalEvents.emit('driveFoldersDeleted', [props.folder]);
@@ -303,7 +303,7 @@ function onContextmenu(ev: PointerEvent) {
 		danger: true,
 		action: deleteFolder,
 	}];
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menu = menu.concat([{ type: 'divider' }, {
 			icon: 'ti ti-hash',
 			text: i18n.ts.copyFolderId,

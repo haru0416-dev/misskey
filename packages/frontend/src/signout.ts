@@ -16,7 +16,7 @@ export async function signout() {
 
 	waiting();
 
-	if (store.s.enablePreferencesAutoCloudBackup) {
+	if (store.enablePreferencesAutoCloudBackup) {
 		await cloudBackup();
 	}
 

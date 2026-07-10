@@ -30,7 +30,7 @@ export async function getTheme(
 	getName = false,
 ): Promise<ThemeRegistration | ThemeRegistrationRaw | string | null> {
 	const theme = deepClone(
-		mode === 'light' ? (prefer.s.lightTheme ?? defaultLightTheme) : (prefer.s.darkTheme ?? defaultDarkTheme),
+		mode === 'light' ? (prefer.lightTheme ?? defaultLightTheme) : (prefer.darkTheme ?? defaultDarkTheme),
 	);
 
 	if (theme.base) {

@@ -11,11 +11,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			ref="gallery"
 			:class="[
 				$style.medias,
-				...(prefer.s.showMediaListByGridInWideArea ? [$style.gridInWideArea] : []),
+				...(prefer.showMediaListByGridInWideArea ? [$style.gridInWideArea] : []),
 				count === 1 ? [$style.n1, {
-					[$style.n116_9]: prefer.s.mediaListWithOneImageAppearance === '16_9',
-					[$style.n11_1]: prefer.s.mediaListWithOneImageAppearance === '1_1',
-					[$style.n12_3]: prefer.s.mediaListWithOneImageAppearance === '2_3',
+					[$style.n116_9]: prefer.mediaListWithOneImageAppearance === '16_9',
+					[$style.n11_1]: prefer.mediaListWithOneImageAppearance === '1_1',
+					[$style.n12_3]: prefer.mediaListWithOneImageAppearance === '2_3',
 				}] : count === 2 ? $style.n2 : count === 3 ? $style.n3 : count === 4 ? $style.n4 : $style.nMany,
 			]"
 			@click="onGalleryClick"
@@ -78,7 +78,7 @@ async function calcAspectRatio() {
 		return `${Math.max(ratio, img.properties.width / img.properties.height).toString()} / 1`;
 	};
 
-	switch (prefer.s.mediaListWithOneImageAppearance) {
+	switch (prefer.mediaListWithOneImageAppearance) {
 		case '16_9':
 			gallery.value.style.aspectRatio = ratioMax(16 / 9);
 			break;

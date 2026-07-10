@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createApp, defineAsyncComponent, markRaw } from 'vue';
+import { defineAsyncComponent, markRaw } from 'vue';
 import { ui } from '@shared/utility/config.js';
 import * as Misskey from 'misskey-js';
 import { compareVersions } from 'compare-versions';
 import { common } from './common.js';
-import type { Component } from 'vue';
+import type { App, Component } from 'vue';
 import type { Keymap } from '@/utility/hotkey.js';
 import { i18n } from '@/i18n.js';
 import { alert, confirm, popup, post } from '@/os.js';
@@ -28,15 +28,15 @@ import { prefer } from '@/preferences.js';
 import { updateCurrentAccountPartial } from '@/accounts.js';
 import { unisonReload } from '@/utility/unison-reload.js';
 
-export async function mainBoot() {
-	const { isClientUpdated, lastVersion } = await common(async () => {
+export async function mainBoot(app: App<Element>, setRootComponent: (component: Component) => void) {
+	const { isClientUpdated, lastVersion } = await common(app, async () => {
 		let uiStyle = ui;
 		const searchParams = new URLSearchParams(window.location.search);
 
 		if (!$i) uiStyle = 'visitor';
 
 		if (searchParams.has('zen')) uiStyle = 'zen';
-		if (uiStyle === 'deck' && prefer.s['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/')
+		if (uiStyle === 'deck' && prefer['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/')
 			uiStyle = 'zen';
 
 		if (searchParams.has('ui')) uiStyle = searchParams.get('ui');
@@ -57,7 +57,7 @@ export async function mainBoot() {
 				break;
 		}
 
-		return createApp(rootComponent);
+		setRootComponent(rootComponent);
 	});
 
 	reactionPicker.init();
@@ -74,9 +74,9 @@ export async function mainBoot() {
 	}
 
 	try {
-		if (prefer.s.enableSeasonalScreenEffect) {
+		if (prefer.enableSeasonalScreenEffect) {
 			const month = new Date().getMonth() + 1;
-			if (prefer.s.hemisphere === 'S') {
+			if (prefer.hemisphere === 'S') {
 				// ▼南半球
 				if (month === 7 || month === 8) {
 					const SnowfallEffect = (await import('@/utility/snowfall-effect.js')).SnowfallEffect;
@@ -101,8 +101,8 @@ export async function mainBoot() {
 	}
 
 	if ($i) {
-		store.loaded.then(async () => {
-			if (store.s.accountSetupWizard !== -1) {
+		store.$persistLoaded.then(async () => {
+			if (store.accountSetupWizard !== -1) {
 				const { dispose } = popup(
 					defineAsyncComponent(() => import('@/components/MkUserSetupDialog.vue')),
 					{},
@@ -187,14 +187,14 @@ export async function mainBoot() {
 			);
 		}
 
-		if (store.s.realtimeMode) {
+		if (store.realtimeMode) {
 			const stream = useStream();
 
 			let reloadDialogShowing = false;
 			stream.on('_disconnected_', async () => {
-				if (prefer.s.serverDisconnectedBehavior === 'reload') {
+				if (prefer.serverDisconnectedBehavior === 'reload') {
 					window.location.reload();
-				} else if (prefer.s.serverDisconnectedBehavior === 'dialog') {
+				} else if (prefer.serverDisconnectedBehavior === 'dialog') {
 					if (reloadDialogShowing) return;
 					reloadDialogShowing = true;
 					const { canceled } = await confirm({
@@ -268,8 +268,8 @@ export async function mainBoot() {
 			post();
 		},
 		d: async () => {
-			const value = !store.s.darkMode;
-			if (prefer.s.syncDeviceDarkMode) {
+			const value = !store.darkMode;
+			if (prefer.syncDeviceDarkMode) {
 				const { canceled } = await confirm({
 					type: 'question',
 					text: i18n.tsx.switchDarkModeManuallyWhenSyncEnabledConfirm({ x: i18n.ts.syncDeviceDarkMode }),

@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:class="[
 		$style.videoContainer,
 		controlsShowing && $style.active,
-		(video.isSensitive && prefer.s.highlightSensitiveMedia) && $style.sensitive,
+		(video.isSensitive && prefer.highlightSensitiveMedia) && $style.sensitive,
 	]"
 	@mouseover.passive="onMouseOver"
 	@mousemove.passive="onMouseMove"
@@ -21,13 +21,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 >
 	<button v-if="hide" :class="$style.hidden" @click="reveal">
 		<div :class="$style.hiddenTextWrapper">
-			<b v-if="video.isSensitive" style="display: block;"><i class="ti ti-eye-exclamation"></i> {{ i18n.ts.sensitive }}{{ prefer.s.dataSaver.media ? ` (${i18n.ts.video}${video.size ? ' ' + bytes(video.size) : ''})` : '' }}</b>
-			<b v-else style="display: block;"><i class="ti ti-movie"></i> {{ prefer.s.dataSaver.media && video.size ? bytes(video.size) : i18n.ts.video }}</b>
+			<b v-if="video.isSensitive" style="display: block;"><i class="ti ti-eye-exclamation"></i> {{ i18n.ts.sensitive }}{{ prefer.dataSaver.media ? ` (${i18n.ts.video}${video.size ? ' ' + bytes(video.size) : ''})` : '' }}</b>
+			<b v-else style="display: block;"><i class="ti ti-movie"></i> {{ prefer.dataSaver.media && video.size ? bytes(video.size) : i18n.ts.video }}</b>
 			<span style="display: block;">{{ i18n.ts.clickToShow }}</span>
 		</div>
 	</button>
 
-	<div v-else-if="prefer.s.useNativeUiForVideoAudioPlayer" :class="$style.videoRoot">
+	<div v-else-if="prefer.useNativeUiForVideoAudioPlayer" :class="$style.videoRoot">
 		<video
 			ref="videoEl"
 			:class="$style.video"
@@ -276,7 +276,7 @@ function showMenu(ev: PointerEvent) {
 		menu.push({ type: 'divider' }, ...details);
 	}
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menu.push({ type: 'divider' }, {
 			icon: 'ti ti-hash',
 			text: i18n.ts.copyFileId,
@@ -603,7 +603,7 @@ onDeactivated(() => {
 	elapsedTimeMs.value = 0;
 	durationMs.value = 0;
 	bufferedEnd.value = 0;
-	hide.value = (prefer.s.nsfw === 'force' || prefer.s.dataSaver.media) ? true : (props.video.isSensitive && prefer.s.nsfw !== 'ignore');
+	hide.value = (prefer.nsfw === 'force' || prefer.dataSaver.media) ? true : (props.video.isSensitive && prefer.nsfw !== 'ignore');
 });
 
 onUnmounted(teardown);

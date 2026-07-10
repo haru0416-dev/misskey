@@ -11,13 +11,13 @@ import type { MkSelectItem } from '@/components/MkSelect.vue';
 export function chooseEmojiPalette() {
 	return os.select({
 		title: i18n.ts.chooseEmojiPalette,
-		default: prefer.s.emojiPaletteForMain ?? prefer.s.emojiPaletteForReaction ?? prefer.s.emojiPalettes[0]?.id,
-		items: prefer.s.emojiPalettes.map<MkSelectItem<string>>((palette) => {
+		default: prefer.emojiPaletteForMain ?? prefer.emojiPaletteForReaction ?? prefer.emojiPalettes[0]?.id,
+		items: prefer.emojiPalettes.map<MkSelectItem<string>>((palette) => {
 			let caption: string | undefined = undefined;
 
-			if (prefer.s.emojiPaletteForMain === palette.id) {
+			if (prefer.emojiPaletteForMain === palette.id) {
 				caption = i18n.ts._emojiPalette.paletteForMain;
-			} else if (prefer.s.emojiPaletteForReaction === palette.id) {
+			} else if (prefer.emojiPaletteForReaction === palette.id) {
 				caption = i18n.ts._emojiPalette.paletteForReaction;
 			}
 
@@ -35,7 +35,7 @@ export async function addToEmojiPalette(emoji: string) {
 
 	if (res.canceled || res.result == null) return;
 
-	const palette = prefer.s.emojiPalettes.find((p) => p.id === res.result);
+	const palette = prefer.emojiPalettes.find((p) => p.id === res.result);
 	if (!palette) return;
 	let emojis = [...palette.emojis];
 
@@ -43,7 +43,7 @@ export async function addToEmojiPalette(emoji: string) {
 		emojis.push(emoji);
 		prefer.commit(
 			'emojiPalettes',
-			prefer.s.emojiPalettes.map((p) => {
+			prefer.emojiPalettes.map((p) => {
 				if (p.id === palette.id) {
 					return {
 						...p,
@@ -87,7 +87,7 @@ export async function addToEmojiPalette(emoji: string) {
 
 		prefer.commit(
 			'emojiPalettes',
-			prefer.s.emojiPalettes.map((p) => {
+			prefer.emojiPalettes.map((p) => {
 				if (p.id === palette.id) {
 					return {
 						...p,

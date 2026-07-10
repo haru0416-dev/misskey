@@ -50,7 +50,7 @@ const getDate = (ymd: string) => {
 onMounted(async () => {
 	let raw = await misskeyApi('retention', { });
 
-	const vLineColor = store.s.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+	const vLineColor = store.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
 
 	const accent = tinycolor(themeManager.currentCompiledTheme!.accent);
 	const color = accent.toHex();

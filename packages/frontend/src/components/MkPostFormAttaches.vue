@@ -197,7 +197,7 @@ function showFileMenu(file: Misskey.entities.DriveFile, ev: PointerEvent | Keybo
 		action: () => { detachAndDeleteMedia(file); },
 	});
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menuItems.push({ type: 'divider' }, {
 			icon: 'ti ti-hash',
 			text: i18n.ts.copyFileId,

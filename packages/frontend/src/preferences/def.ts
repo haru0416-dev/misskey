@@ -7,7 +7,7 @@ import * as Misskey from 'misskey-js';
 import { hemisphere } from '@shared/utility/intl-const.js';
 import { DEFAULT_EMOJIS } from '@shared/utility/const.js';
 import { prefersReducedMotion } from '@shared/utility/config.js';
-import { definePreferences } from './manager.js';
+import { definePreferences } from './store.js';
 import type { Theme } from '@shared/utility/theme.js';
 import type { SoundType } from '@/utility/sound.js';
 import type { Plugin } from '@/plugin.js';

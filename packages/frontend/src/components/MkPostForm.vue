@@ -60,7 +60,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button class="_buttonPrimary" style="padding: 4px; border-radius: 8px;" @click="addVisibleUser"><i class="ti ti-plus ti-fw"></i></button>
 		</div>
 	</div>
-	<MkInfo v-if="!store.r.tips.value.postForm" :class="$style.showHowToUse" closable @close="closeTip('postForm')">
+	<MkInfo v-if="!store.tips.postForm" :class="$style.showHowToUse" closable @close="closeTip('postForm')">
 		<button class="_textButton" @click="showTour">{{ i18n.ts._postForm.showHowToUse }}</button>
 	</MkInfo>
 	<MkInfo v-if="scheduledAt != null" :class="$style.scheduledAt">
@@ -114,7 +114,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { watch, nextTick, onMounted, defineAsyncComponent, provide, shallowRef, ref, computed, useTemplateRef, onUnmounted, onBeforeUnmount } from 'vue';
+import { watch, nextTick, onMounted, defineAsyncComponent, provide, shallowRef, ref, computed, toRef, useTemplateRef, onUnmounted, onBeforeUnmount } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { toASCII } from 'punycode.js';
@@ -199,18 +199,18 @@ const text = ref(props.initialText ?? '');
 const files = ref(props.initialFiles ?? []);
 const poll = ref<PollEditorModelValue | null>(null);
 const useCw = ref<boolean>(!!props.initialCw);
-const showPreview = ref(store.s.showPreview);
+const showPreview = ref(store.showPreview);
 watch(showPreview, () => store.set('showPreview', showPreview.value));
-const showAddMfmFunction = ref(prefer.s.enableQuickAddMfmFunction);
+const showAddMfmFunction = ref(prefer.enableQuickAddMfmFunction);
 watch(showAddMfmFunction, () => prefer.commit('enableQuickAddMfmFunction', showAddMfmFunction.value));
 const cw = ref<string | null>(props.initialCw ?? null);
-const localOnly = ref(props.initialLocalOnly ?? (prefer.s.rememberNoteVisibility ? store.s.localOnly : prefer.s.defaultNoteLocalOnly));
-const visibility = ref(props.initialVisibility ?? (prefer.s.rememberNoteVisibility ? store.s.visibility : prefer.s.defaultNoteVisibility));
+const localOnly = ref(props.initialLocalOnly ?? (prefer.rememberNoteVisibility ? store.localOnly : prefer.defaultNoteLocalOnly));
+const visibility = ref(props.initialVisibility ?? (prefer.rememberNoteVisibility ? store.visibility : prefer.defaultNoteVisibility));
 const visibleUsers = ref<Misskey.entities.UserDetailed[]>([]);
 if (props.initialVisibleUsers) {
 	props.initialVisibleUsers.forEach(u => pushVisibleUser(u));
 }
-const reactionAcceptance = ref(store.s.reactionAcceptance);
+const reactionAcceptance = ref(store.reactionAcceptance);
 const scheduledAt = ref<number | null>(null);
 const draghover = ref(false);
 const quoteId = ref<string | null>(null);
@@ -333,8 +333,8 @@ const canSaveAsServerDraft = computed((): boolean => {
 	return canPost.value && (textLength.value > 0 || files.value.length > 0 || poll.value != null);
 });
 
-const withHashtags = store.model('postFormWithHashtags');
-const hashtags = store.model('postFormHashtags');
+const withHashtags = toRef(store, 'postFormWithHashtags');
+const hashtags = toRef(store, 'postFormHashtags');
 
 watch(text, () => {
 	checkMissingMention();
@@ -422,7 +422,7 @@ if (props.specified) {
 }
 
 // keep cw when reply
-if (prefer.s.keepCw && replyTargetNote.value && replyTargetNote.value.cw) {
+if (prefer.keepCw && replyTargetNote.value && replyTargetNote.value.cw) {
 	useCw.value = true;
 	cw.value = replyTargetNote.value.cw;
 }
@@ -538,7 +538,7 @@ function setVisibility() {
 	}, {
 		changeVisibility: v => {
 			visibility.value = v;
-			if (prefer.s.rememberNoteVisibility) {
+			if (prefer.rememberNoteVisibility) {
 				store.set('visibility', visibility.value);
 			}
 		},
@@ -586,7 +586,7 @@ async function toggleLocalOnly() {
 	}
 
 	localOnly.value = !localOnly.value;
-	if (prefer.s.rememberNoteVisibility) {
+	if (prefer.rememberNoteVisibility) {
 		store.set('localOnly', localOnly.value);
 	}
 }
@@ -956,7 +956,7 @@ async function post(ev?: PointerEvent) {
 	if (ev != null) {
 		const el = (ev.currentTarget ?? ev.target) as HTMLElement | null;
 
-		if (el && prefer.s.animation) {
+		if (el && prefer.animation) {
 			const rect = el.getBoundingClientRect();
 			const x = rect.left + (el.offsetWidth / 2);
 			const y = rect.top + (el.offsetHeight / 2);
@@ -1166,14 +1166,16 @@ function cancel() {
 
 function insertMention() {
 	os.selectUser({ localOnly: localOnly.value, includeSelf: true }).then(user => {
-		if (textareaEl.value == null) return;
-
-		const mention = '@' + Misskey.acct.toString(user) + ' ';
-		const start = textareaEl.value.selectionStart;
-		const end = textareaEl.value.selectionEnd;
-		textareaEl.value.setRangeText(mention, start, end, 'end');
-		textareaEl.value.dispatchEvent(new Event('input', { bubbles: true }));
+		insertTextAtCursor(textareaEl.value, '@' + Misskey.acct.toString(user) + ' ');
 	});
+}
+
+function insertTextAtCursor(textarea: HTMLTextAreaElement | null, value: string) {
+	if (textarea == null) return;
+	const start = textarea.selectionStart ?? textarea.value.length;
+	const end = textarea.selectionEnd ?? start;
+	textarea.setRangeText(value, start, end, 'end');
+	textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 async function insertEmoji(ev: PointerEvent) {

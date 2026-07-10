@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-adaptive-border class="rfqxtzch _panel">
 			<div class="toggle">
 				<div class="toggleWrapper">
-					<div class="toggle" :class="store.r.darkMode.value ? 'checked' : null" @click="toggleDarkMode()">
+					<div class="toggle" :class="store.darkMode ? 'checked' : null" @click="toggleDarkMode()">
 						<span class="before">{{ i18n.ts.light }}</span>
 						<span class="after">{{ i18n.ts.dark }}</span>
 						<span class="toggle__handler">
@@ -42,7 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkInfo v-if="isSafeMode" warn>{{ i18n.ts.themeIsDefaultBecauseSafeMode }}</MkInfo>
 
 		<div v-else class="_gaps">
-			<template v-if="!store.r.darkMode.value">
+			<template v-if="!store.darkMode">
 				<SearchMarker :keywords="['light', 'theme']">
 					<MkFolder :defaultOpen="true" :max-height="500">
 						<template #icon><i class="ti ti-sun"></i></template>
@@ -206,6 +206,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import JSON5 from 'json5';
 import defaultLightTheme from '@shared/themes/l-light.json5';
 import defaultDarkTheme from '@shared/themes/d-green-lime.json5';
@@ -230,7 +231,7 @@ import { prefer } from '@/preferences.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { checkDragDataType, getDragData, getPlainDragData, setDragData, setPlainDragData } from '@/drag-and-drop.js';
 
-const installedThemes = prefer.r.themes;
+const { themes: installedThemes, darkTheme, lightTheme } = storeToRefs(prefer);
 const builtinThemes = ref<Theme[]>([]);
 getBuiltinThemes().then(themes => {
 	builtinThemes.value = themes;
@@ -244,7 +245,6 @@ const installedLightThemes = computed(() => installedThemes.value.filter(t => t.
 const builtinLightThemes = computed(() => builtinThemes.value.filter(t => t.base === 'light'));
 const themes = computed(() => uniqueBy([instanceDarkTheme.value, instanceLightTheme.value, ...builtinThemes.value, ...installedThemes.value].filter(x => x != null), theme => theme.id));
 
-const darkTheme = prefer.r.darkTheme;
 const darkThemeName = computed(() => darkTheme.value?.name ?? defaultDarkTheme.name);
 const darkThemeId = computed({
 	get() {
@@ -257,7 +257,6 @@ const darkThemeId = computed({
 		}
 	},
 });
-const lightTheme = prefer.r.lightTheme;
 const lightThemeName = computed(() => lightTheme.value?.name ?? defaultLightTheme.name);
 const lightThemeId = computed({
 	get() {
@@ -281,7 +280,7 @@ watch(syncDeviceDarkMode, () => {
 });
 
 async function toggleDarkMode() {
-	const value = !store.r.darkMode.value;
+	const value = !store.darkMode;
 	if (syncDeviceDarkMode.value) {
 		const { canceled } = await os.confirm({
 			type: 'question',

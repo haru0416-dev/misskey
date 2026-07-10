@@ -6,10 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div>
 	<Transition
-		:enterActiveClass="prefer.s.animation ? $style.transition_toast_enterActive : ''"
-		:leaveActiveClass="prefer.s.animation ? $style.transition_toast_leaveActive : ''"
-		:enterFromClass="prefer.s.animation ? $style.transition_toast_enterFrom : ''"
-		:leaveToClass="prefer.s.animation ? $style.transition_toast_leaveTo : ''"
+		:enterActiveClass="prefer.animation ? $style.transition_toast_enterActive : ''"
+		:leaveActiveClass="prefer.animation ? $style.transition_toast_leaveActive : ''"
+		:enterFromClass="prefer.animation ? $style.transition_toast_enterFrom : ''"
+		:leaveToClass="prefer.animation ? $style.transition_toast_leaveTo : ''"
 		appear @afterLeave="emit('closed')"
 	>
 		<div v-if="showing" class="_acrylic" :class="$style.root" :style="{ zIndex }">

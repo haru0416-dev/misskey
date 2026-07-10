@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { PREF, Scope, StorageProvider, ValueOf } from '@/preferences/manager.js';
+import type { PREF, Scope, StorageProvider, ValueOf } from '@/preferences/store.js';
 import { cloudBackup } from '@/preferences/utility.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { isSameScope, PreferencesManager } from '@/preferences/manager.js';
+import { createPreferencesStore, isSameScope, preferencesEvents } from '@/preferences/store.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { TAB_ID } from '@/tab-id.js';
 import { DeferredTaskScheduler } from '@/utility/deferred-task-scheduler.js';
+import { pinia } from '@/store/pinia.js';
 
 // クラウド同期用グループ名
 const syncGroup = 'default';
@@ -105,7 +106,7 @@ const io: StorageProvider = {
 	},
 };
 
-export const prefer = new PreferencesManager(io, $i);
+export const prefer = createPreferencesStore(io, $i, pinia);
 
 //#region タブ間同期
 let latestPreferencesUpdate: {
@@ -121,7 +122,7 @@ type PreferencesChannelMessage = {
 
 const preferencesChannel = new BroadcastChannel('preferences');
 
-prefer.on('committed', () => {
+preferencesEvents.on('committed', () => {
 	latestPreferencesUpdate = {
 		tabId: TAB_ID,
 		timestamp: Date.now(),
@@ -152,28 +153,31 @@ preferencesChannel.addEventListener('message', (ev: MessageEvent<PreferencesChan
 
 //#region 遅延クラウドバックアップ
 let latestBackupAt = 0;
-const backupScheduler = new DeferredTaskScheduler(async () => {
-	if ($i == null) return;
-	if (!store.s.enablePreferencesAutoCloudBackup) return;
-	if (prefer.profile.modifiedAt <= latestBackupAt) return;
+const backupScheduler = new DeferredTaskScheduler(
+	async () => {
+		if ($i == null) return;
+		if (!store.enablePreferencesAutoCloudBackup) return;
+		if (prefer.profile.modifiedAt <= latestBackupAt) return;
 
-	const backedUpModifiedAt = prefer.profile.modifiedAt;
-	try {
-		await cloudBackup();
-		latestBackupAt = Math.max(latestBackupAt, backedUpModifiedAt);
-	} catch {
-		if (store.s.enablePreferencesAutoCloudBackup) backupScheduler.request();
-	}
-}, 1000 * 60 * 3);
+		const backedUpModifiedAt = prefer.profile.modifiedAt;
+		try {
+			await cloudBackup();
+			latestBackupAt = Math.max(latestBackupAt, backedUpModifiedAt);
+		} catch {
+			if (store.enablePreferencesAutoCloudBackup) backupScheduler.request();
+		}
+	},
+	1000 * 60 * 3,
+);
 
 function requestBackup(): void {
 	if ($i == null) return;
-	if (!store.s.enablePreferencesAutoCloudBackup) return;
+	if (!store.enablePreferencesAutoCloudBackup) return;
 	backupScheduler.request();
 }
 
-prefer.on('saved', requestBackup);
-requestBackup();
+preferencesEvents.on('saved', requestBackup);
+void store.$persistReady.then(requestBackup);
 //#endregion
 
 if (_DEV_) {

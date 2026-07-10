@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root">
 	<div
-		v-for="x in prefer.r.statusbars.value" :key="x.id" :class="[$style.item, { [$style.black]: x.black,
+		v-for="x in prefer.statusbars" :key="x.id" :class="[$style.item, { [$style.black]: x.black,
 			[$style.verySmall]: x.size === 'verySmall',
 			[$style.small]: x.size === 'small',
 			[$style.large]: x.size === 'large',

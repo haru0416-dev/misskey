@@ -5,10 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <Transition
-	:enterActiveClass="prefer.s.animation ? $style.transition_menuDrawerBg_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_menuDrawerBg_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_menuDrawerBg_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_menuDrawerBg_leaveTo : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_menuDrawerBg_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_menuDrawerBg_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_menuDrawerBg_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_menuDrawerBg_leaveTo : ''"
 >
 	<div
 		v-if="drawerMenuShowing"
@@ -20,10 +20,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </Transition>
 
 <Transition
-	:enterActiveClass="prefer.s.animation ? $style.transition_menuDrawer_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_menuDrawer_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_menuDrawer_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_menuDrawer_leaveTo : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_menuDrawer_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_menuDrawer_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_menuDrawer_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_menuDrawer_leaveTo : ''"
 >
 	<div v-if="drawerMenuShowing" :class="$style.menuDrawer">
 		<slot name="drawerMenu"></slot>
@@ -31,10 +31,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </Transition>
 
 <Transition
-	:enterActiveClass="prefer.s.animation ? $style.transition_widgetsDrawerBg_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_widgetsDrawerBg_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_widgetsDrawerBg_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_widgetsDrawerBg_leaveTo : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_widgetsDrawerBg_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_widgetsDrawerBg_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_widgetsDrawerBg_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_widgetsDrawerBg_leaveTo : ''"
 >
 	<div
 		v-if="widgetsShowing"
@@ -46,10 +46,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </Transition>
 
 <Transition
-	:enterActiveClass="prefer.s.animation ? $style.transition_widgetsDrawer_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_widgetsDrawer_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_widgetsDrawer_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_widgetsDrawer_leaveTo : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_widgetsDrawer_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_widgetsDrawer_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_widgetsDrawer_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_widgetsDrawer_leaveTo : ''"
 >
 	<div v-if="widgetsShowing" :class="$style.widgetsDrawer">
 		<button class="_button" :class="$style.widgetsCloseButton" @click="widgetsShowing = false"><i class="ti ti-x"></i></button>
@@ -66,15 +66,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 />
 
 <component
-	:is="prefer.s.animation ? TransitionGroup : 'div'"
+	:is="prefer.animation ? TransitionGroup : 'div'"
 	tag="div"
 	:class="[$style.notifications, {
-		[$style.notificationsPosition_leftTop]: prefer.s.notificationPosition === 'leftTop',
-		[$style.notificationsPosition_leftBottom]: prefer.s.notificationPosition === 'leftBottom',
-		[$style.notificationsPosition_rightTop]: prefer.s.notificationPosition === 'rightTop',
-		[$style.notificationsPosition_rightBottom]: prefer.s.notificationPosition === 'rightBottom',
-		[$style.notificationsStackAxis_vertical]: prefer.s.notificationStackAxis === 'vertical',
-		[$style.notificationsStackAxis_horizontal]: prefer.s.notificationStackAxis === 'horizontal',
+		[$style.notificationsPosition_leftTop]: prefer.notificationPosition === 'leftTop',
+		[$style.notificationsPosition_leftBottom]: prefer.notificationPosition === 'leftBottom',
+		[$style.notificationsPosition_rightTop]: prefer.notificationPosition === 'rightTop',
+		[$style.notificationsPosition_rightBottom]: prefer.notificationPosition === 'rightBottom',
+		[$style.notificationsStackAxis_vertical]: prefer.notificationStackAxis === 'vertical',
+		[$style.notificationsStackAxis_horizontal]: prefer.notificationStackAxis === 'horizontal',
 	}]"
 	:moveClass="$style.transition_notification_move"
 	:enterActiveClass="$style.transition_notification_enterActive"
@@ -133,7 +133,7 @@ function onNotification(notification: Misskey.entities.Notification, isClient = 
 	if (window.document.visibilityState === 'visible') {
 		if (!isClient && notification.type !== 'test') {
 			// サーバーサイドのテスト通知の際は自動で既読をつけない（テストできないので）
-			if (store.s.realtimeMode) {
+			if (store.realtimeMode) {
 				useStream().send('readNotification');
 			}
 		}
@@ -159,7 +159,7 @@ function exitSafeMode() {
 }
 
 if ($i) {
-	if (store.s.realtimeMode) {
+	if (store.realtimeMode) {
 		const connection = useStream().useChannel('main');
 		connection.on('notification', onNotification);
 	}

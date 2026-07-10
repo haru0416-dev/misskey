@@ -47,6 +47,7 @@
 		"mfm-js": "workspace:*",
 		"misskey-js": "workspace:*",
 		"photoswipe": "5.4.4",
+		"pinia": "3.0.4",
 		"punycode.js": "2.3.1",
 		"qr-code-styling": "1.9.2",
 		"qr-scanner": "1.4.2",

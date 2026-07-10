@@ -6,13 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div ref="root" :class="['chromatic-ignore', $style.root, { [$style.cover]: cover }]" :title="title ?? ''">
 	<TransitionGroup
-		:duration="prefer.s.animation && props.transition?.duration || undefined"
-		:enterActiveClass="prefer.s.animation && props.transition?.enterActiveClass || undefined"
-		:leaveActiveClass="prefer.s.animation && (props.transition?.leaveActiveClass ?? $style.transition_leaveActive) || undefined"
-		:enterFromClass="prefer.s.animation && props.transition?.enterFromClass || undefined"
-		:leaveToClass="prefer.s.animation && props.transition?.leaveToClass || undefined"
-		:enterToClass="prefer.s.animation && props.transition?.enterToClass || undefined"
-		:leaveFromClass="prefer.s.animation && props.transition?.leaveFromClass || undefined"
+		:duration="prefer.animation && props.transition?.duration || undefined"
+		:enterActiveClass="prefer.animation && props.transition?.enterActiveClass || undefined"
+		:leaveActiveClass="prefer.animation && (props.transition?.leaveActiveClass ?? $style.transition_leaveActive) || undefined"
+		:enterFromClass="prefer.animation && props.transition?.enterFromClass || undefined"
+		:leaveToClass="prefer.animation && props.transition?.leaveToClass || undefined"
+		:enterToClass="prefer.animation && props.transition?.enterToClass || undefined"
+		:leaveFromClass="prefer.animation && props.transition?.leaveFromClass || undefined"
 	>
 		<canvas
 			v-show="hide"

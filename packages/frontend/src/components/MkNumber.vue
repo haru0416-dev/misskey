@@ -18,7 +18,7 @@ const props = defineProps<{
 
 const tweened = ref(0);
 
-watch([() => props.value, prefer.r.animation], ([to, shouldAnimate], _oldValue, onCleanup) => {
+watch([() => props.value, () => prefer.animation], ([to, shouldAnimate], _oldValue, onCleanup) => {
 	const from = tweened.value;
 	if (!shouldAnimate || from === to) {
 		tweened.value = to;

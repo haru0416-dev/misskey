@@ -13,8 +13,22 @@ if (import.meta.env.DEV) {
 }
 
 import '@/style.scss';
-import { mainBoot } from '@/boot/main-boot.js';
-import { subBoot } from '@/boot/sub-boot.js';
+import { createApp, defineComponent, h, markRaw, shallowRef } from 'vue';
+import type { Component } from 'vue';
+import { installPinia } from '@/store/pinia.js';
+
+const rootComponent = shallowRef<Component | null>(null);
+const app = createApp(
+	defineComponent({
+		name: 'MisskeyRoot',
+		setup: () => () => (rootComponent.value == null ? null : h(rootComponent.value)),
+	}),
+);
+installPinia(app);
+
+function setRootComponent(component: Component): void {
+	rootComponent.value = markRaw(component);
+}
 
 const subBootPaths = [
 	'/share',
@@ -27,7 +41,9 @@ const subBootPaths = [
 ];
 
 if (subBootPaths.some((i) => window.location.pathname === i || window.location.pathname.startsWith(i + '/'))) {
-	subBoot();
+	const { subBoot } = await import('@/boot/sub-boot.js');
+	await subBoot(app, setRootComponent);
 } else {
-	mainBoot();
+	const { mainBoot } = await import('@/boot/main-boot.js');
+	await mainBoot(app, setRootComponent);
 }

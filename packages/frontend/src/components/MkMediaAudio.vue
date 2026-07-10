@@ -10,20 +10,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 	tabindex="0"
 	:class="[
 		$style.audioContainer,
-		(audio.isSensitive && prefer.s.highlightSensitiveMedia) && $style.sensitive,
+		(audio.isSensitive && prefer.highlightSensitiveMedia) && $style.sensitive,
 	]"
 	@contextmenu.stop
 	@keydown.stop
 >
 	<button v-if="hide" :class="$style.hidden" @click="reveal">
 		<div :class="$style.hiddenTextWrapper">
-			<b v-if="audio.isSensitive" style="display: block;"><i class="ti ti-eye-exclamation"></i> {{ i18n.ts.sensitive }}{{ prefer.s.dataSaver.media ? ` (${i18n.ts.audio}${audio.size ? ' ' + bytes(audio.size) : ''})` : '' }}</b>
-			<b v-else style="display: block;"><i class="ti ti-music"></i> {{ prefer.s.dataSaver.media && audio.size ? bytes(audio.size) : i18n.ts.audio }}</b>
+			<b v-if="audio.isSensitive" style="display: block;"><i class="ti ti-eye-exclamation"></i> {{ i18n.ts.sensitive }}{{ prefer.dataSaver.media ? ` (${i18n.ts.audio}${audio.size ? ' ' + bytes(audio.size) : ''})` : '' }}</b>
+			<b v-else style="display: block;"><i class="ti ti-music"></i> {{ prefer.dataSaver.media && audio.size ? bytes(audio.size) : i18n.ts.audio }}</b>
 			<span style="display: block;">{{ i18n.ts.clickToShow }}</span>
 		</div>
 	</button>
 
-	<div v-else-if="prefer.s.useNativeUiForVideoAudioPlayer" :class="$style.nativeAudioContainer">
+	<div v-else-if="prefer.useNativeUiForVideoAudioPlayer" :class="$style.nativeAudioContainer">
 		<audio
 			ref="audioEl"
 			preload="metadata"
@@ -249,7 +249,7 @@ function showMenu(ev: MouseEvent) {
 		menu.push({ type: 'divider' }, ...details);
 	}
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menu.push({ type: 'divider' }, {
 			icon: 'ti ti-hash',
 			text: i18n.ts.copyFileId,
@@ -466,7 +466,7 @@ onDeactivated(() => {
 	elapsedTimeMs.value = 0;
 	durationMs.value = 0;
 	bufferedEnd.value = 0;
-	hide.value = (prefer.s.nsfw === 'force' || prefer.s.dataSaver.media) ? true : (props.audio.isSensitive && prefer.s.nsfw !== 'ignore');
+	hide.value = (prefer.nsfw === 'force' || prefer.dataSaver.media) ? true : (props.audio.isSensitive && prefer.nsfw !== 'ignore');
 });
 
 onUnmounted(teardown);
