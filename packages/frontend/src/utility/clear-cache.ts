@@ -15,8 +15,6 @@ export async function clearCache() {
 	os.waiting();
 	miLocalStorage.removeItem('instance');
 	miLocalStorage.removeItem('instanceCachedAt');
-	miLocalStorage.removeItem('emojis');
-	miLocalStorage.removeItem('lastEmojisFetchedAt');
 	clearAppliedThemeCache();
 	await misskeyApiGet('clear-browser-cache', {}).catch(() => {
 		// ignore

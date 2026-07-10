@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, lt, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
 import { pageLike, type PageLikeInsert, type PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiPage } from '@/models/Page.js';
@@ -94,6 +94,24 @@ export async function deletePageLikeByIdFromDatabase(
 	await db
 		.delete(pageLike)
 		.where(eq(pageLike.id, id));
+}
+
+export async function listLikedPageIdsByUserIdAndPageIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	pageIds: MiPage['id'][],
+): Promise<MiPage['id'][]> {
+	if (pageIds.length === 0) return [];
+
+	const rows = await db
+		.select({ pageId: pageLike.pageId })
+		.from(pageLike)
+		.where(and(
+			eq(pageLike.userId, userId),
+			inArray(pageLike.pageId, pageIds),
+		));
+
+	return rows.map(row => row.pageId);
 }
 
 export async function listPageLikesByUserIdFromDatabase(

@@ -4,14 +4,14 @@
  */
 
 import { z } from 'zod';
-import { flashLikeExistsInDatabase, listFlashLikesByUserIdFromDatabase, listLikedFlashIdsByUserIdFromDatabase } from '@/core/FlashLikeStore.js';
+import { flashLikeExistsInDatabase, listFlashLikesByUserIdFromDatabase, listLikedFlashIdsByUserIdAndFlashIdsFromDatabase } from '@/core/FlashLikeStore.js';
 import {
 	createFlashInDatabase,
 	deleteFlashInDatabase,
 	fetchFlashByIdFromDatabase,
 	fetchFlashByIdOrFailFromDatabase,
-	listFeaturedFlashsFromDatabase,
-	listFlashsWithPaginationFromDatabase,
+	listFeaturedFlashesFromDatabase,
+	listFlashesWithPaginationFromDatabase,
 	resolveFlashPagination,
 	updateFlashInDatabase,
 } from '@/core/FlashStore.js';
@@ -78,7 +78,7 @@ export async function packFlashForHonoApi(
 	deps: HonoApiFlashDependencies,
 	src: MiFlash['id'] | MiFlash,
 	me?: { id: MiUser['id'] } | null,
-	hint?: { packedUser?: Packed<'UserLite'>; likedFlashIds?: MiFlash['id'][] },
+	hint?: { packedUser?: Packed<'UserLite'>; likedFlashIds?: Set<MiFlash['id']> },
 ): Promise<Record<string, unknown>> {
 	const meId = me ? me.id : null;
 	const flash = typeof src === 'object' ? src : await fetchFlashByIdOrFailFromDatabase(deps.db, src);
@@ -87,7 +87,7 @@ export async function packFlashForHonoApi(
 
 	let isLiked: boolean | undefined;
 	if (meId) {
-		isLiked = hint?.likedFlashIds ? hint.likedFlashIds.includes(flash.id) : await flashLikeExistsInDatabase(deps.db, meId, flash.id);
+		isLiked = hint?.likedFlashIds ? hint.likedFlashIds.has(flash.id) : await flashLikeExistsInDatabase(deps.db, meId, flash.id);
 	}
 
 	return {
@@ -110,14 +110,20 @@ export async function packFlashManyForHonoApi(
 	flashes: MiFlash[],
 	me?: { id: MiUser['id'] } | null,
 ): Promise<Record<string, unknown>[]> {
-	const userIds = flashes.map(f => f.userId);
-	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
+	if (flashes.length === 0) return [];
+
+	const userIds = [...new Set(flashes.map(flash => flash.userId))];
+	const flashIds = flashes.map(flash => flash.id);
+	const [packedUsers, likedFlashIds] = await Promise.all([
+		packUserLiteManyForHonoApi(deps, userIds),
+		me ? listLikedFlashIdsByUserIdAndFlashIdsFromDatabase(deps.db, me.id, flashIds) : Promise.resolve([]),
+	]);
 	const userById = new Map(packedUsers.map(u => [u.id, u]));
-	const likedFlashIds = me ? await listLikedFlashIdsByUserIdFromDatabase(deps.db, me.id) : [];
+	const likedFlashIdSet = new Set(likedFlashIds);
 
 	return await Promise.all(flashes.map(flash => packFlashForHonoApi(deps, flash, me, {
 		packedUser: userById.get(flash.userId),
-		likedFlashIds,
+		likedFlashIds: likedFlashIdSet,
 	})));
 }
 
@@ -209,7 +215,7 @@ export async function handleHonoApiFlashFeatured(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashFeaturedParamDef, body);
-	const result = await listFeaturedFlashsFromDatabase(deps.db, {
+	const result = await listFeaturedFlashesFromDatabase(deps.db, {
 		offset: params.offset,
 		limit: params.limit,
 	});
@@ -240,7 +246,7 @@ export async function handleHonoApiFlashMy(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashMyParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
-	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
+	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
 		limit: params.limit,
 		order: pagination.order,
@@ -306,9 +312,12 @@ export async function handleHonoApiFlashMyLikes(
 		search: params.search,
 	});
 
+	const packedFlashes = await packFlashManyForHonoApi(deps, likes.map(like => like.flash), me);
+	const packedFlashById = new Map(packedFlashes.map(flash => [flash.id, flash]));
+
 	return await Promise.all(likes.map(async like => ({
 		id: like.id,
-		flash: await packFlashForHonoApi(deps, like.flash, me),
+		flash: packedFlashById.get(like.flashId) ?? await packFlashForHonoApi(deps, like.flash, me),
 	})));
 }
 
@@ -337,7 +346,7 @@ export async function handleHonoApiFlashSearch(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(flashSearchParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
-	const result = await listFlashsWithPaginationFromDatabase(deps.db, {
+	const result = await listFlashesWithPaginationFromDatabase(deps.db, {
 		visibility: 'public',
 		searchQuery: params.query,
 		limit: params.limit,
@@ -395,7 +404,7 @@ export async function handleHonoApiUsersFlashs(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(usersFlashsParamDef, body);
 	const pagination = resolveFlashPagination({ gen: time => genId(time) }, params);
-	const flashes = await listFlashsWithPaginationFromDatabase(deps.db, {
+	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
 		visibility: 'public',
 		limit: params.limit,

@@ -1,10 +1,14 @@
 ## Unreleased
 
 ### General
+- Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除
 - Enhance: ゲーム機能を削除
 - Enhance: フロントエンド/ビルドツール周辺の未使用依存パッケージ19個を削除 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
 
 ### Client
+- Enhance: 旧 `/authorize-follow` と Mastodon 互換の `/authorize_interaction` リダイレクト、未使用の LocalStorage 絵文字キャッシュキー、旧カスタムテーマの `kind` フィールド互換、非推奨の `i18n.t()` API を削除。リモートログイン時は `/lookup?uri=` を使用
+- Enhance: タイムライン等の画像をビューポート近傍まで読み込まないように変更 (IntersectionObserver による自前遅延読み込みを導入。あわせて、同一URLの画像がページ内の別要素で既にブラウザキャッシュ済みの場合に `load` イベントが発火せずBlurhashプレースホルダーのまま表示が固まる問題を修正)
+- Enhance: 管理画面・アクティビティページ等19箇所で個別に読み込まれていた chart.js 本体とプラグイン群を専用の共有チャンクに分離 (該当ページのコード変更でキャッシュが無効化されるのを防止)
 - Enhance: Service Worker のバンドルサイズを46%削減 (30.2KB→16.3KB minified)。SWでは使用しないWebSocketストリーミング系コードが `misskey-js` の全体importで混入していたのを、subpath import + type-only import に分離して排除
 - Enhance: ストリーミングのメッセージ受信処理を高速化 (misskey-js のチャンネル振り分けを受信毎の線形探索+配列生成から Map による O(1) 参照に変更。接続チャンネル数が多いほど効果大)
 - Enhance: ストリーミングの自動再接続処理を内製化し、2020年から未メンテの `reconnecting-websocket` 依存を削除 (指数バックオフ・接続タイムアウト・未接続時の送信バッファリングなど従来挙動を維持、再接続の回帰テストを追加)
@@ -12,6 +16,25 @@
 - Fix: 埋め込みウィジェット (frontend-embed) のサーバー提供コンテキスト判定 (`assertServerContext`) で、値が存在するキーだけを見て null 値を見落とすことがあった問題を修正 (通常クライアント側の実装と揃え、値が null でないことも確認するように)
 
 ### Server
+- Enhance: 旧音声 MIME エイリアス (`audio/x-flac` / `audio/vnd.wave`)、OStatus の WebFinger subscribe リンク、`channels/timeline` の未使用 `allowPartial` パラメータを削除
+- Enhance: `notes/reactions`/`users/reactions` と `i/favorites`、通知、ノート下書き/Pages/Gallery/Play/Clips/Chat/ブロック/ミュート/ロール/ユーザー詳細/ユーザーリスト/管理ユーザー一覧の pack 処理をバッチ化し、一覧取得時のDBアクセスを削減
+- Enhance: ドライブファイルの詳細 pack と管理ドライブのファイル一覧でフォルダ詳細の pack 処理をバッチ化し、フォルダ数・ファイル数集計のDBアクセスを削減
+- Enhance: 絵文字の一括更新通知で更新後の絵文字取得を一括化し、管理操作時のDBアクセスを削減
+- Enhance: お知らせ一覧の既読状態取得をバッチ化し、ログイン中の一覧取得時のDBアクセスを削減
+- Enhance: `my/apps` の認可状態取得をバッチ化し、アプリ一覧取得時のDBアクセスを削減
+- Enhance: アカウント移行時のブロック/ミュート/ロール/ユーザーリスト引き継ぎ処理を効率化し、大量の関係データを持つアカウントの移行時のCPUコストと不要なDBアクセスを削減
+- Enhance: 複数の通報を system webhook へ通知する際のユーザー情報 pack を一括化し、通知時のDBアクセスを削減
+- Enhance: ホーム/ソーシャルタイムライン取得時のチャンネルミュート判定を効率化
+- Enhance: ActivityPub Note 生成時の添付ファイル順序復元とカスタム絵文字取得を効率化
+- Enhance: ノート差分取得時のリアクションバッファ取得と絵文字解決を効率化
+- Enhance: フォロー通知作成時のミュート判定、フォローリクエスト一覧のユーザー pack、一括承認時のユーザー/profile取得、move後の自動承認/インポート判定を効率化
+- Enhance: ドライブ容量超過時の古いファイル削除準備で対象ファイル取得を一括化
+- Enhance: ユーザー詳細一覧の `alsoKnownAs` 解決を一括化し、remote alias を持つユーザーを含む一覧取得時のDBアクセスを削減
+- Enhance: ユーザー・ノート・Webhook の pack 時のカスタム絵文字解決でキャッシュ未命中分を一括取得し、絵文字数に比例するDBアクセスを削減
+- Enhance: ノート作成時の mention 解決・hashtag 記録/ランキング・fanout・通知受信判定・通知用ノートpackを一括化し、多数フォロワーへの通知保存を上限付き Redis pipeline 化
+- Enhance: ノート・フォロー・ブロックイベントの UserWebhook 取得を対象ユーザーで絞り込み、不要な全件取得を削減
+- Enhance: レジストリスコープ一覧、Play一覧のliked判定、ページ更新、絵文字エイリアス一括削除、アバターデコレーション更新時の配列探索を効率化
+- Enhance: `pinned-users`、単一ページの添付ファイル取得、ブロック時のユーザーリスト整理、招待コード一括作成のDBアクセスを一括化
 - Enhance: `admin/meta` の廃止予定だった `summalyProxy` フィールド (および `admin/update-meta` の同名パラメータ) を削除。`urlPreviewSummaryProxyUrl` を使用すること
 - Enhance: ユーザー一覧系エンドポイント (フォロワー/フォロー/ユーザー検索等) を高速化 (1ユーザー毎に発行していたロール・アサイン・ピン留めのクエリをリスト単位の3クエリに集約。負荷計測でp50 122→78ms、DBラウンドトリップ 68k→20k回/3分)
 - Enhance: 全文検索・ユーザー検索を pg_trgm でインデックス化 (ノート本文の LIKE フォールバック・ユーザー名/自己紹介の中間一致が行数線形の全表走査だったのを GIN trgm 4本でビットマップスキャン化。検索クエリ mean 4.26→0.55ms)
@@ -34,7 +57,7 @@
 - Enhance: ワードミュート等の正規表現マッチングでコンパイル済みインスタンスを使い回すように変更 (ノート×ユーザー数分のRE2再コンパイルを回避)
 - Enhance: `following`/`note_reaction` テーブルにページング用の複合インデックスを追加し、フォロワー一覧・リアクション一覧の大規模データでの応答を改善
 - Enhance: RSSフィード生成・ActivityPub受信ノートの添付ファイル取得を一括化/並列化
-- Enhance: タイムライン等の複数ノート取得時のデータベース/Redisアクセスを一括化 (ノート毎に個別発行していた投稿者・添付ファイル・チャンネル・自分のリアクション・リアクションバッファの取得をリクエスト単位でバッチ化。20件のタイムラインで最大100クエリ超→数クエリに削減)
+- Enhance: タイムライン等の複数ノート取得時のデータベース/Redisアクセスを一括化 (ノート毎に個別発行していた投稿者・添付ファイル・チャンネル・投票データ・カスタム絵文字・followers公開判定・自分のリアクション・リアクションバッファの取得をリクエスト単位でバッチ化。20件のタイムラインで最大100クエリ超→数クエリに削減)
 - Enhance: パスワードのハッシュ化/照合を Bun ランタイムではネイティブ実装 (`Bun.password`) で行うように変更しサインイン/サインアップを高速化 (既存の bcrypt ハッシュとは互換で、Node 実行時や72バイト超のパスワードは従来どおり bcryptjs で処理)
 - Enhance: バックエンドの依存パッケージを整理し、未メンテのライブラリ16個を削除 (`got`/`fluent-ffmpeg`/`deep-email-validator`/`ratelimiter`/`probe-image-size`/`tinycolor2`/`stringz`/`tmp` 等を fetch・ffmpeg 直接起動・自前実装・`sharp`・`Intl.Segmenter` 等へ置き換え。レート制限は従来と同一の Redis キー形式・アルゴリズムを維持)
 - Change: アバター未設定ユーザーの identicon の模様が変わるように (乱数生成器の変更のため。配色パレット等は不変)

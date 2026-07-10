@@ -31,6 +31,7 @@ import { listUsersByHostWithPaginationFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiInstance, MiMeta } from '@/models/_.js';
@@ -38,7 +39,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import type Logger from '@/logger.js';
 import { startHonoApiAdminDriveFileDeletion, type HonoApiAdminDriveDependencies } from './admin-drive.js';
-import { packFollowingsForHonoApi, resolveHonoApiIdPagination, type FollowingListItem } from './following.js';
+import { packFollowingsForHonoApi, type FollowingListItem } from './following.js';
 import { isHonoApiModerator } from './role-policy.js';
 import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -572,7 +573,7 @@ export async function handleHonoApiFederationFollowers(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'followee', params.host, {
 		limit: params.limit,
 		order: pagination.order,
@@ -588,7 +589,7 @@ export async function handleHonoApiFederationFollowing(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'follower', params.host, {
 		limit: params.limit,
 		order: pagination.order,

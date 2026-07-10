@@ -115,8 +115,7 @@ export class FileServerFileResolver {
 			fileRole: 'original',
 			file,
 			filename: file.name,
-			// 古いファイルは修正前のmimeを持っているのでできるだけ修正してあげる
-			mime: this.fileInfoService.fixMime(file.type),
+			mime: file.type,
 			ext: null,
 			path,
 		};

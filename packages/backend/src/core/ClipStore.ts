@@ -7,6 +7,7 @@ import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-or
 import { clip, type ClipInsert, type ClipRow } from '@/db/schema/clip.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { MiClip } from '@/models/Clip.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -47,21 +48,7 @@ export function resolveClipPagination(
 	untilId?: string | null;
 	order: ClipOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 export async function countClipsByUserIdFromDatabase(

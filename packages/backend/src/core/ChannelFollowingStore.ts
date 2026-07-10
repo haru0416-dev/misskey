@@ -90,7 +90,7 @@ export async function listFollowerUserIdsByChannelIdFromDatabase(
 	return rows.map(row => row.followerId);
 }
 
-export async function fetchFollowingChannelIdsInDatabase(
+export async function fetchFollowedChannelIdsByUserIdAndChannelIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	channelIds: MiChannel['id'][],

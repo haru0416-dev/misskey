@@ -5,8 +5,8 @@
 
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
-import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
+import { listDriveFilesByIdsFromDatabase, listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
 import {
 	countNoteDraftsByUserIdFromDatabase,
 	createNoteDraftInDatabase,
@@ -16,7 +16,7 @@ import {
 	resolveNoteDraftPagination,
 	updateNoteDraftInDatabase,
 } from '@/core/NoteDraftStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import type { PostScheduledNoteQueue } from '@/core/queues.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
@@ -30,10 +30,10 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { isVisibleForMeForHonoApi, packNoteForHonoApi, type HonoApiNoteDependencies } from './note.js';
-import { packDriveFileManyByIdsForHonoApi } from './drive-file.js';
+import { isVisibleForMeForHonoApi, packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import { packDriveFileManyByIdsForHonoApi, packDriveFileManyForHonoApi } from './drive-file.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
-import { packUserLiteForHonoApi } from './user.js';
+import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiNoteDraftDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies & {
@@ -302,8 +302,17 @@ async function packNoteDraftForHonoApi(
 	deps: HonoApiNoteDraftDependencies,
 	draft: MiNoteDraft,
 	me: { id: string } | null | undefined,
+	hint?: {
+		packedUser?: Packed<'UserLite'>;
+		packedFiles?: Map<string, Packed<'DriveFile'>>;
+		channel?: NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFromDatabase>>> | null;
+		reply?: Packed<'Note'> | null;
+		renote?: Packed<'Note'> | null;
+	},
 ): Promise<Packed<'NoteDraft'>> {
-	const channel = draft.channelId ? await fetchChannelByIdFromDatabase(deps.db, draft.channelId) : null;
+	const channel = draft.channelId
+		? (hint?.channel !== undefined ? hint.channel : await fetchChannelByIdFromDatabase(deps.db, draft.channelId))
+		: null;
 
 	async function nullIfEntityNotFound<T>(promise: Promise<T>): Promise<T | null> {
 		try {
@@ -315,10 +324,16 @@ async function packNoteDraftForHonoApi(
 	}
 
 	const [user, files, reply, renote] = await Promise.all([
-		packUserLiteForHonoApi(deps, draft.userId),
-		packDriveFileManyByIdsForHonoApi(deps, draft.fileIds),
-		draft.replyId ? nullIfEntityNotFound(packNoteForHonoApi(deps, draft.replyId, me, { detail: false })) : Promise.resolve(undefined),
-		draft.renoteId ? nullIfEntityNotFound(packNoteForHonoApi(deps, draft.renoteId, me, { detail: true })) : Promise.resolve(undefined),
+		hint?.packedUser ?? packUserLiteForHonoApi(deps, draft.userId),
+		hint?.packedFiles
+			? draft.fileIds.map(fileId => hint.packedFiles?.get(fileId)).filter((file): file is Packed<'DriveFile'> => file != null)
+			: packDriveFileManyByIdsForHonoApi(deps, draft.fileIds),
+		draft.replyId
+			? (hint?.reply !== undefined ? hint.reply : nullIfEntityNotFound(packNoteForHonoApi(deps, draft.replyId, me, { detail: false })))
+			: Promise.resolve(undefined),
+		draft.renoteId
+			? (hint?.renote !== undefined ? hint.renote : nullIfEntityNotFound(packNoteForHonoApi(deps, draft.renoteId, me, { detail: true })))
+			: Promise.resolve(undefined),
 	]);
 
 	return {
@@ -357,6 +372,48 @@ async function packNoteDraftForHonoApi(
 		reply: draft.replyId ? reply : undefined,
 		renote: draft.renoteId ? renote : undefined,
 	} satisfies Packed<'NoteDraft'>;
+}
+
+async function packNoteDraftManyForHonoApi(
+	deps: HonoApiNoteDraftDependencies,
+	drafts: MiNoteDraft[],
+	me: { id: string } | null | undefined,
+): Promise<Packed<'NoteDraft'>[]> {
+	if (drafts.length === 0) return [];
+
+	const userSources = [...new Set(drafts.map(draft => draft.userId))];
+	const fileIds = [...new Set(drafts.flatMap(draft => draft.fileIds))];
+	const channelIds = [...new Set(drafts.map(draft => draft.channelId).filter((id): id is string => id != null))];
+	const replyIds = [...new Set(drafts.map(draft => draft.replyId).filter((id): id is string => id != null))];
+	const renoteIds = [...new Set(drafts.map(draft => draft.renoteId).filter((id): id is string => id != null))];
+
+	const [packedUsers, files, channels, replyNotes, renoteNotes] = await Promise.all([
+		packUserLiteManyForHonoApi(deps, userSources),
+		fileIds.length > 0 ? listDriveFilesByIdsFromDatabase(deps.db, fileIds) : Promise.resolve([]),
+		channelIds.length > 0 ? listChannelsByIdsFromDatabase(deps.db, channelIds) : Promise.resolve([]),
+		replyIds.length > 0 ? listNotesByIdsFromDatabase(deps.db, replyIds) : Promise.resolve([]),
+		renoteIds.length > 0 ? listNotesByIdsFromDatabase(deps.db, renoteIds) : Promise.resolve([]),
+	]);
+
+	const [packedFiles, packedReplies, packedRenotes] = await Promise.all([
+		packDriveFileManyForHonoApi(deps, files),
+		packNoteManyForHonoApi(deps, replyNotes, me, { detail: false }),
+		packNoteManyForHonoApi(deps, renoteNotes, me, { detail: true }),
+	]);
+
+	const userById = new Map(packedUsers.map(user => [user.id, user]));
+	const fileById = new Map(packedFiles.map(file => [file.id, file]));
+	const channelById = new Map(channels.map(channel => [channel.id, channel]));
+	const replyById = new Map(packedReplies.map(note => [note.id, note]));
+	const renoteById = new Map(packedRenotes.map(note => [note.id, note]));
+
+	return await Promise.all(drafts.map(draft => packNoteDraftForHonoApi(deps, draft, me, {
+		packedUser: userById.get(draft.userId),
+		packedFiles: fileById,
+		channel: draft.channelId ? (channelById.get(draft.channelId) ?? null) : null,
+		reply: draft.replyId ? (replyById.get(draft.replyId) ?? null) : undefined,
+		renote: draft.renoteId ? (renoteById.get(draft.renoteId) ?? null) : undefined,
+	})));
 }
 
 export async function handleHonoApiNotesDraftsCreate(
@@ -543,5 +600,5 @@ export async function handleHonoApiNotesDraftsList(
 		...pagination,
 	});
 
-	return await Promise.all(drafts.map(draft => packNoteDraftForHonoApi(deps, draft, me)));
+	return await packNoteDraftManyForHonoApi(deps, drafts, me);
 }

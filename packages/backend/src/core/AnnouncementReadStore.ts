@@ -40,6 +40,24 @@ export async function announcementReadExistsInDatabase(
 	return row != null;
 }
 
+export async function listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	announcementIds: MiAnnouncement['id'][],
+): Promise<MiAnnouncement['id'][]> {
+	if (announcementIds.length === 0) return [];
+
+	const rows = await db
+		.select({ announcementId: announcementRead.announcementId })
+		.from(announcementRead)
+		.where(and(
+			eq(announcementRead.userId, userId),
+			inArray(announcementRead.announcementId, announcementIds),
+		));
+
+	return rows.map(row => row.announcementId);
+}
+
 export async function createAnnouncementReadInDatabase(
 	db: MiDrizzleDatabase,
 	data: AnnouncementReadInsert,

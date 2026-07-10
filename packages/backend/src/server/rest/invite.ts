@@ -8,6 +8,7 @@ import type { Config } from '@/config.js';
 import {
 	countRegistrationTicketsCreatedSinceFromDatabase,
 	createRegistrationTicketInDatabase,
+	createRegistrationTicketsInDatabase,
 	deleteRegistrationTicketInDatabase,
 	fetchRegistrationTicketByIdFromDatabase,
 	listRegistrationTicketsCreatedByFromDatabase,
@@ -145,7 +146,7 @@ export async function handleHonoApiAdminInviteCreate(
 		throw adminInviteCreateInvalidDateTimeError();
 	}
 
-	const tickets = await Promise.all(Array.from({ length: params.count }, () => createRegistrationTicketInDatabase(deps.db, {
+	const tickets = await createRegistrationTicketsInDatabase(deps.db, Array.from({ length: params.count }, () => ({
 		id: genId(),
 		createdById: me.id,
 		expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,

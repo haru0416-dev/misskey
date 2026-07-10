@@ -38,36 +38,6 @@ function applyFollowingPaginationCondition(
 	}
 }
 
-export function resolveFollowingPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId?: string | null;
-	untilId?: string | null;
-	order: FollowingOrder;
-} {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
-}
-
 export async function listFollowingsByFollowerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
@@ -125,6 +95,24 @@ export async function listFolloweeIdsByFollowerIdFromDatabase(
 	return rows.map(row => row.followeeId);
 }
 
+export async function listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followerId: MiUser['id'],
+	followeeIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (followeeIds.length === 0) return [];
+
+	const rows = await db
+		.select({ followeeId: following.followeeId })
+		.from(following)
+		.where(and(
+			eq(following.followerId, followerId),
+			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
+		));
+
+	return rows.map(row => row.followeeId);
+}
+
 export async function listLocalFollowerFollowingsByFolloweeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
@@ -160,6 +148,43 @@ export async function listFollowerIdsByFolloweeIdFromDatabase(
 		.where(eq(following.followeeId, followeeId));
 
 	return rows.map(row => row.followerId);
+}
+
+export async function listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followeeId: MiUser['id'],
+	followerIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (followerIds.length === 0) return [];
+
+	const rows = await db
+		.select({ followerId: following.followerId })
+		.from(following)
+		.where(and(
+			eq(following.followeeId, followeeId),
+			sql`${following.followerId} = ANY(${sql.param(followerIds)})`,
+		));
+
+	return rows.map(row => row.followerId);
+}
+
+export async function listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followerIds: MiUser['id'][],
+	followeeIds: MiUser['id'][],
+): Promise<Pick<MiFollowing, 'followerId' | 'followeeId'>[]> {
+	if (followerIds.length === 0 || followeeIds.length === 0) return [];
+
+	return await db
+		.select({
+			followerId: following.followerId,
+			followeeId: following.followeeId,
+		})
+		.from(following)
+		.where(and(
+			sql`${following.followerId} = ANY(${sql.param(followerIds)})`,
+			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
+		));
 }
 
 export async function listNotificationFollowerIdsByFolloweeIdFromDatabase(

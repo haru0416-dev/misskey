@@ -5,13 +5,15 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { countDriveFilesByFolderIdFromDatabase, driveFileExistsByMd5AndUserIdFromDatabase, sumDriveFileSizeByUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import { countDriveFilesByFolderIdFromDatabase, countDriveFilesGroupedByFolderIdsFromDatabase, driveFileExistsByMd5AndUserIdFromDatabase, sumDriveFileSizeByUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import {
+	countChildDriveFoldersGroupedByParentIdsFromDatabase,
 	countDriveFoldersByParentIdFromDatabase,
 	createDriveFolderInDatabase,
 	deleteDriveFolderByIdFromDatabase,
 	fetchDriveFolderByIdAndUserIdFromDatabase,
 	fetchDriveFolderByIdOrFailFromDatabase,
+	listDriveFoldersByIdsFromDatabase,
 	listDriveFoldersByNameFromDatabase,
 	listDriveFoldersByUserIdFromDatabase,
 	resolveDriveFolderPagination,
@@ -174,6 +176,40 @@ function driveFoldersDeleteHasChildrenError(): HonoApiError {
 	});
 }
 
+function packDriveFolderBaseForHonoApi(folder: DriveFolderRow): HonoApiPackedDriveFolder {
+	return {
+		id: folder.id,
+		createdAt: parseId(folder.id).date.toISOString(),
+		name: folder.name,
+		parentId: folder.parentId,
+	};
+}
+
+async function resolveDriveFoldersForHonoApi(
+	deps: HonoApiDriveDependencies,
+	srcs: (DriveFolderRow['id'] | DriveFolderRow)[],
+): Promise<DriveFolderRow[]> {
+	const folderById = new Map<DriveFolderRow['id'], DriveFolderRow>();
+	const ids: DriveFolderRow['id'][] = [];
+
+	for (const src of srcs) {
+		if (typeof src === 'object') {
+			folderById.set(src.id, src);
+		} else if (!folderById.has(src)) {
+			ids.push(src);
+		}
+	}
+
+	for (const folder of await listDriveFoldersByIdsFromDatabase(deps.db, [...new Set(ids)])) {
+		folderById.set(folder.id, folder);
+	}
+
+	return await Promise.all(srcs.map(async src => {
+		if (typeof src === 'object') return src;
+		return folderById.get(src) ?? await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src);
+	}));
+}
+
 export async function packDriveFolderForHonoApi(
 	deps: HonoApiDriveDependencies,
 	src: DriveFolderRow['id'] | DriveFolderRow,
@@ -188,12 +224,7 @@ export async function packDriveFolderForHonoApi(
 		? src
 		: await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src);
 
-	const packed: HonoApiPackedDriveFolder = {
-		id: folder.id,
-		createdAt: parseId(folder.id).date.toISOString(),
-		name: folder.name,
-		parentId: folder.parentId,
-	};
+	const packed = packDriveFolderBaseForHonoApi(folder);
 
 	if (!opts.detail) return packed;
 
@@ -209,6 +240,46 @@ export async function packDriveFolderForHonoApi(
 		filesCount,
 		...(parent == null ? {} : { parent }),
 	};
+}
+
+export async function packDriveFoldersManyForHonoApi(
+	deps: HonoApiDriveDependencies,
+	srcs: (DriveFolderRow['id'] | DriveFolderRow)[],
+	options?: {
+		detail: boolean;
+	},
+): Promise<HonoApiPackedDriveFolder[]> {
+	const opts = Object.assign({
+		detail: false,
+	}, options);
+	const folders = await resolveDriveFoldersForHonoApi(deps, srcs);
+
+	if (!opts.detail) {
+		return folders.map(folder => packDriveFolderBaseForHonoApi(folder));
+	}
+
+	const folderIds = [...new Set(folders.map(folder => folder.id))];
+	const parentIds = [...new Set(folders.map(folder => folder.parentId).filter((id): id is DriveFolderRow['id'] => id != null))];
+	const [folderCounts, fileCounts, parents] = await Promise.all([
+		countChildDriveFoldersGroupedByParentIdsFromDatabase(deps.db, folderIds),
+		countDriveFilesGroupedByFolderIdsFromDatabase(deps.db, folderIds),
+		parentIds.length === 0 ? Promise.resolve([]) : packDriveFoldersManyForHonoApi(deps, parentIds, { detail: true }),
+	]);
+	const folderCountById = new Map(folderCounts.map(row => [row.parentId, row.count]));
+	const fileCountById = new Map(fileCounts.map(row => [row.folderId, row.count]));
+	const parentById = new Map(parents.map(parent => [parent.id, parent]));
+
+	return folders.map(folder => {
+		const packed = packDriveFolderBaseForHonoApi(folder);
+		const parent = folder.parentId == null ? null : parentById.get(folder.parentId);
+
+		return {
+			...packed,
+			foldersCount: folderCountById.get(folder.id) ?? 0,
+			filesCount: fileCountById.get(folder.id) ?? 0,
+			...(parent == null ? {} : { parent }),
+		};
+	});
 }
 
 export async function handleHonoApiDriveFilesCheckExistence(
@@ -264,7 +335,7 @@ export async function handleHonoApiDriveFolders(
 		...pagination,
 	});
 
-	return await Promise.all(folders.map(folder => packDriveFolderForHonoApi(deps, folder)));
+	return await packDriveFoldersManyForHonoApi(deps, folders);
 }
 
 export async function handleHonoApiDriveFoldersFind(
@@ -279,7 +350,7 @@ export async function handleHonoApiDriveFoldersFind(
 		parentId: params.parentId ?? null,
 	});
 
-	return await Promise.all(folders.map(folder => packDriveFolderForHonoApi(deps, folder)));
+	return await packDriveFoldersManyForHonoApi(deps, folders);
 }
 
 export async function handleHonoApiDriveFoldersShow(

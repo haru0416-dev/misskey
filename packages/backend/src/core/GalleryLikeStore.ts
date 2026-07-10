@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, lt, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
 import { galleryLike, type GalleryLikeInsert, type GalleryLikeRow } from '@/db/schema/gallery-like.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
@@ -94,6 +94,24 @@ export async function deleteGalleryLikeByIdFromDatabase(
 	await db
 		.delete(galleryLike)
 		.where(eq(galleryLike.id, id));
+}
+
+export async function listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	postIds: MiGalleryPost['id'][],
+): Promise<MiGalleryPost['id'][]> {
+	if (postIds.length === 0) return [];
+
+	const rows = await db
+		.select({ postId: galleryLike.postId })
+		.from(galleryLike)
+		.where(and(
+			eq(galleryLike.userId, userId),
+			inArray(galleryLike.postId, postIds),
+		));
+
+	return rows.map(row => row.postId);
 }
 
 export async function listGalleryLikesByUserIdFromDatabase(

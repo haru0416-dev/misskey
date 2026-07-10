@@ -193,12 +193,13 @@ export async function extractEmojisForHonoApi(deps: HonoApiApPersonDependencies,
 	const emojiTags = toArray(tags).filter(isEmoji);
 
 	const existingEmojis = await listEmojisByHostAndNamesFromDatabase(deps.db, punyHost, emojiTags.map(tag => tag.name.replaceAll(':', '')));
+	const existingEmojiByName = new Map(existingEmojis.map(emoji => [emoji.name, emoji]));
 
 	return await Promise.all(emojiTags.map(async (tag): Promise<MiEmoji> => {
 		const name = tag.name.replaceAll(':', '');
 		const icon = toSingle(tag.icon) as { url?: string } | undefined;
 
-		const exists = existingEmojis.find(x => x.name === name);
+		const exists = existingEmojiByName.get(name);
 
 		if (exists) {
 			if ((exists.updatedAt == null)

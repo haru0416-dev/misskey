@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
-import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
+import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DbQueue } from '@/core/queues.js';
 import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/RoleStore.js';
@@ -330,7 +330,7 @@ async function publishHonoApiEmojiUpdated(
 	deps: HonoApiEmojiDependencies,
 	ids: MiEmoji['id'][],
 ): Promise<void> {
-	const emojis = await Promise.all(ids.map(id => fetchEmojiByIdOrFailFromDatabase(deps.db, id)));
+	const emojis = await listEmojisByIdsOrFailFromDatabase(deps.db, ids);
 	if (deps.publishBroadcastStream == null) return;
 
 	deps.publishBroadcastStream('emojiUpdated', {
@@ -692,11 +692,12 @@ export async function handleHonoApiAdminEmojiRemoveAliasesBulk(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiAliasesBulkParamDef, body);
 	const emojis = await listEmojisByIdsFromDatabase(deps.db, params.ids);
+	const aliasesToRemove = new Set(params.aliases);
 
 	for (const emoji of emojis) {
 		await updateEmojiInDatabase(deps.db, emoji.id, {
 			updatedAt: new Date(),
-			aliases: emoji.aliases.filter(alias => !params.aliases.includes(alias)),
+			aliases: emoji.aliases.filter(alias => !aliasesToRemove.has(alias)),
 		});
 	}
 

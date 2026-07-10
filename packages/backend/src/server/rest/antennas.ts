@@ -18,7 +18,7 @@ import {
 	listAntennasByUserIdFromDatabase,
 	updateAntennaInDatabase,
 } from '@/core/AntennaStore.js';
-import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listUserListIdsContainingUserFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
@@ -557,7 +557,7 @@ export async function handleHonoApiAntennasNotes(
 
 	if (noteIds.length === 0) return [];
 
-	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 
 	const notes = await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
 		ids: noteIds,

@@ -13,8 +13,7 @@ import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersB
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
 import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
-import { deleteUserListMembershipInDatabase } from '@/core/UserListMembershipStore.js';
-import { listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
+import { deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import type { IActivity, IBlock, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
@@ -30,7 +29,7 @@ import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
 import { addActivityContext, genLocalUserUri, isLocalUser, isRemoteUser, refreshUserFollowingsCache, renderFollow, renderReject, renderUndo } from './following.js';
-import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAccountBlockingDependencies = UserPackingDependencies & {
@@ -110,10 +109,11 @@ async function enqueueUnfollowWebhook(
 	userId: MiUser['id'],
 	user: Packed<'UserDetailedNotMe'>,
 ): Promise<void> {
-	const webhooks = (await listWebhooksFromDatabase(deps.db, {
+	const webhooks = await listWebhooksFromDatabase(deps.db, {
+		userId,
 		isActive: true,
 		on: ['unfollow'],
-	})).filter(webhook => webhook.userId === userId && webhook.on.includes('unfollow'));
+	});
 
 	await Promise.all(webhooks.map(webhook => {
 		const data: UserWebhookDeliverJobData<'unfollow'> = {
@@ -306,22 +306,26 @@ export async function removeFromList(
 	listOwner: MiUser,
 	user: MiUser,
 ): Promise<void> {
-	const userLists = await listUserListsByUserIdFromDatabase(deps.db, listOwner.id);
-	await Promise.all(userLists.map(userList => deleteUserListMembershipInDatabase(deps.db, user.id, userList.id)));
+	await deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase(deps.db, user.id, listOwner.id);
 }
 
 async function packHonoApiBlocking(
 	deps: HonoApiAccountBlockingDependencies,
 	blocking: MiBlocking,
 	me: { id: MiUser['id'] },
+	packedBlockee?: UserDetailedNotMeHonoApiResponse,
 ): Promise<HonoApiBlockingResponse> {
-	const blockee = blocking.blockee ?? await fetchUserByIdOrFailFromDatabase(deps.db, blocking.blockeeId);
+	const blockee = packedBlockee ?? await packUserDetailedNotMeForHonoApi(
+		deps,
+		blocking.blockee ?? await fetchUserByIdOrFailFromDatabase(deps.db, blocking.blockeeId),
+		me,
+	);
 
 	return {
 		id: blocking.id,
 		createdAt: parseId(blocking.id).date.toISOString(),
 		blockeeId: blocking.blockeeId,
-		blockee: await packUserDetailedNotMeForHonoApi(deps, blockee, me),
+		blockee,
 	};
 }
 
@@ -458,5 +462,6 @@ export async function handleHonoApiBlockingList(
 		limit: params.limit,
 	});
 
-	return await Promise.all(blockings.map(blocking => packHonoApiBlocking(deps, blocking, me) as Promise<Packed<'Blocking'>>));
+	const blockees = await packUserDetailedNotMeManyForHonoApi(deps, blockings.map(blocking => blocking.blockee ?? blocking.blockeeId), me);
+	return await Promise.all(blockings.map((blocking, index) => packHonoApiBlocking(deps, blocking, me, blockees[index]) as Promise<Packed<'Blocking'>>));
 }

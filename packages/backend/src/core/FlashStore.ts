@@ -6,6 +6,7 @@
 import { and, asc, desc, eq, gt, lt, or, sql, type SQL } from 'drizzle-orm';
 import { flash, type FlashInsert, type FlashRow } from '@/db/schema/flash.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { MiFlash, type FlashVisibility } from '@/models/Flash.js';
@@ -68,21 +69,7 @@ export function resolveFlashPagination(
 	untilId?: string | null;
 	order: FlashOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchFlashByIdFromDatabase(
@@ -167,7 +154,7 @@ export async function decrementFlashLikedCountInDatabase(
 		.where(eq(flash.id, id));
 }
 
-export async function listFlashsWithPaginationFromDatabase(
+export async function listFlashesWithPaginationFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
 		userId?: MiUser['id'];
@@ -206,7 +193,7 @@ export async function listFlashsWithPaginationFromDatabase(
 	return rows.map(deserializeFlash);
 }
 
-export async function listFeaturedFlashsFromDatabase(
+export async function listFeaturedFlashesFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
 		offset?: number;

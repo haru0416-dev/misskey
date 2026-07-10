@@ -232,7 +232,6 @@ export const endpointMetas = {
 				untilId: { type: 'string', format: 'misskey:id' },
 				sinceDate: { type: 'integer' },
 				untilDate: { type: 'integer' },
-				allowPartial: { type: 'boolean', default: false }, // true is recommended but for compatibility false by default
 			},
 			required: ['channelId'],
 		} as const,

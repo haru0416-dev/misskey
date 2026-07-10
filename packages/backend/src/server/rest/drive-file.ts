@@ -13,7 +13,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 import { uniqueByKey } from '@/misc/unique-by-key.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
-import { packDriveFolderForHonoApi, type HonoApiDriveDependencies } from './drive.js';
+import { packDriveFolderForHonoApi, packDriveFoldersManyForHonoApi, type HonoApiDriveDependencies } from './drive.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from './user.js';
 
 export type HonoApiDriveFileDependencies = HonoApiDriveDependencies & UserPackingDependencies;
@@ -138,14 +138,21 @@ export async function packDriveFileManyForHonoApi(
 	options?: DriveFilePackOptions,
 ): Promise<Packed<'DriveFile'>[]> {
 	let userMap: Map<string, Packed<'UserLite'>> | null = null;
+	let folderMap: Map<string, Packed<'DriveFolder'>> | null = null;
 	if (options?.withUser) {
 		const userIds = uniqueByKey(files.map(f => f.userId).filter((id): id is string => id != null), id => id);
 		const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
 		userMap = new Map(packedUsers.map(user => [user.id, user]));
 	}
+	if (options?.detail) {
+		const folderIds = uniqueByKey(files.map(f => f.folderId).filter((id): id is string => id != null), id => id);
+		const packedFolders = await packDriveFoldersManyForHonoApi(deps, folderIds, { detail: true });
+		folderMap = new Map(packedFolders.map(folder => [folder.id, folder]));
+	}
 
 	const items = await Promise.all(files.map(file => packDriveFileForHonoApi(deps, file, options, {
 		packedUser: file.userId ? (userMap?.get(file.userId) ?? undefined) : undefined,
+		packedFolder: file.folderId ? (folderMap?.get(file.folderId) ?? undefined) : undefined,
 	})));
 
 	return items.filter((item): item is Packed<'DriveFile'> => item != null);

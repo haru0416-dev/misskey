@@ -19,6 +19,18 @@ vi.stubGlobal(
 	},
 );
 
+vi.stubGlobal(
+	'IntersectionObserver',
+	class IntersectionObserver {
+		observe() {}
+		unobserve() {}
+		disconnect() {}
+		takeRecords(): IntersectionObserverEntry[] {
+			return [];
+		}
+	},
+);
+
 // XXX: localStorageがない場合がある
 const localStorageMock = (() => {
 	const store = new Map<string, string>();

@@ -9,8 +9,9 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { Config } from '@/config.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
-import { resolveHonoApiIdPagination } from './following.js';
 import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -61,7 +62,7 @@ export async function handleHonoApiAdminShowModerationLogs(
 	body: Record<string, unknown>,
 ): Promise<HonoApiModerationLogResponse[]> {
 	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body);
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const logs = await listModerationLogsFromDatabase(deps.db, {
 		limit: params.limit,
 		order: pagination.order,

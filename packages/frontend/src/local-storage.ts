@@ -37,8 +37,6 @@ export type Keys =
 	| `miux:${string}`
 	| `ui:folder:${string}`
 	| `aiscript:${string}`
-	| 'lastEmojisFetchedAt' // DEPRECATED, stored in indexeddb (13.9.0~)
-	| 'emojis' // DEPRECATED, stored in indexeddb (13.9.0~);
 	| `channelLastReadedAt:${string}`
 	| `idbfallback::${string}`;
 

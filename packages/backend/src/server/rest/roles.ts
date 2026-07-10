@@ -4,21 +4,21 @@
  */
 
 import { z } from 'zod';
-import { countActiveRoleAssignmentsByRoleIdFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { countActiveRoleAssignmentsByRoleIdFromDatabase, countActiveRoleAssignmentsByRoleIdsFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { fetchPublicExplorableRoleByIdFromDatabase, fetchPublicRoleByIdFromDatabase, listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { resolveHonoApiIdPagination } from './following.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -86,8 +86,11 @@ export const rolesNotesParamDef = z.object({
 export async function packHonoApiRole(
 	deps: HonoApiRoleDependencies,
 	role: MiRole,
+	options?: {
+		assignedCount?: number;
+	},
 ): Promise<Packed<'Role'>> {
-	const assignedCount = await countActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id);
+	const assignedCount = options?.assignedCount ?? await countActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id);
 	const policies = { ...role.policies };
 
 	for (const [key, value] of Object.entries(DEFAULT_POLICIES)) {
@@ -123,13 +126,23 @@ export async function packHonoApiRole(
 	};
 }
 
+export async function packHonoApiRoles(
+	deps: HonoApiRoleDependencies,
+	roles: MiRole[],
+): Promise<Packed<'Role'>[]> {
+	const assignedCountByRoleId = await countActiveRoleAssignmentsByRoleIdsFromDatabase(deps.db, roles.map(role => role.id));
+	return await Promise.all(roles.map(role => packHonoApiRole(deps, role, {
+		assignedCount: assignedCountByRoleId.get(role.id) ?? 0,
+	})));
+}
+
 export async function handleHonoApiRolesList(
 	deps: HonoApiRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>[]> {
 	parseHonoApiParams(rolesListParamDef, body);
 	const roles = await listPublicExplorableRolesFromDatabase(deps.db);
-	return await Promise.all(roles.map(role => packHonoApiRole(deps, role)));
+	return await packHonoApiRoles(deps, roles);
 }
 
 export async function handleHonoApiRolesShow(
@@ -152,7 +165,7 @@ export async function handleHonoApiRolesUsers(
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
-	const pagination = resolveHonoApiIdPagination(params);
+	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -192,7 +205,7 @@ export async function handleHonoApiRolesNotes(
 
 	if (noteIds.length === 0) return [];
 
-	const mutingChannelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 
 	const notes = await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
 		ids: noteIds,

@@ -22,6 +22,7 @@ type WebhookUpdate = Partial<Pick<
 
 function webhookFilterCondition(options: {
 	ids?: MiWebhook['id'][];
+	userId?: MiUser['id'];
 	isActive?: MiWebhook['active'];
 	on?: WebhookEventTypes[];
 }): SQL | undefined {
@@ -29,6 +30,9 @@ function webhookFilterCondition(options: {
 
 	if (options.ids != null && options.ids.length > 0) {
 		conditions.push(inArray(webhook.id, options.ids));
+	}
+	if (options.userId != null) {
+		conditions.push(eq(webhook.userId, options.userId));
 	}
 
 	if (options.isActive !== undefined) {
@@ -58,12 +62,13 @@ export async function fetchWebhookByIdAndUserIdFromDatabase(
 
 /**
  * UserWebhookService.getActiveWebhooks / fetchWebhooks 向け。
- * ids/isActive/on によるフィルタを掛けて一覧を返す (フィルタなしなら全件)。
+ * ids/userId/isActive/on によるフィルタを掛けて一覧を返す (フィルタなしなら全件)。
  */
 export async function listWebhooksFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
 		ids?: MiWebhook['id'][];
+		userId?: MiUser['id'];
 		isActive?: MiWebhook['active'];
 		on?: WebhookEventTypes[];
 	} = {},

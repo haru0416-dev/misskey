@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { pollVote, type PollVoteInsert, type PollVoteRow } from '@/db/schema/poll-vote.js';
 import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -46,6 +46,42 @@ export async function fetchPollVoteByNoteAndUserFromDatabase(
 		.limit(1);
 
 	return row == null ? null : deserializePollVote(row);
+}
+
+export async function listPollVotesByNoteIdsAndUserFromDatabase(
+	db: MiDrizzleDatabase,
+	noteIds: MiNote['id'][],
+	userId: MiUser['id'],
+): Promise<MiPollVote[]> {
+	if (noteIds.length === 0) return [];
+
+	const rows = await db
+		.select()
+		.from(pollVote)
+		.where(and(
+			inArray(pollVote.noteId, noteIds),
+			eq(pollVote.userId, userId),
+		));
+
+	return rows.map(row => deserializePollVote(row));
+}
+
+export async function listPollVotesByNoteIdsAndUserIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	noteIds: MiNote['id'][],
+	userIds: MiUser['id'][],
+): Promise<MiPollVote[]> {
+	if (noteIds.length === 0 || userIds.length === 0) return [];
+
+	const rows = await db
+		.select()
+		.from(pollVote)
+		.where(and(
+			sql`${pollVote.noteId} = ANY(${sql.param(noteIds)})`,
+			sql`${pollVote.userId} = ANY(${sql.param(userIds)})`,
+		));
+
+	return rows.map(row => deserializePollVote(row));
 }
 
 export async function createPollVoteInDatabase(

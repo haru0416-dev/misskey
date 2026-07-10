@@ -11,7 +11,7 @@ import type * as Redis from 'ioredis';
 import { loadConfig, type Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updateHashtagsRankingForHonoApi } from '@/server/rest/notes-create.js';
+import { updateHashtagsRankingForHonoApi, updateHashtagsRankingsForHonoApi } from '@/server/rest/notes-create.js';
 import { formatHashtagUsersWindow, getCurrentFeaturedWindow, HASHTAG_RANKING_WINDOW } from '@/server/rest/hashtags.js';
 
 describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 相当)', () => {
@@ -83,6 +83,22 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 			await sleep(100);
 		}
 		expect(await pollFeaturedScore(tag)).toBe(2);
+	});
+
+	test('複数タグを一括更新し、重複入力は1回だけ加算する', async () => {
+		const tags = [uniqueTag(), uniqueTag()];
+		const userId = genId();
+
+		await updateHashtagsRankingsForHonoApi(
+			{ meta: { hiddenTags: [], sensitiveWords: [] }, redis },
+			[tags[0], tags[1], tags[0]],
+			userId,
+		);
+
+		for (const tag of tags) {
+			expect(await pollFeaturedScore(tag)).toBe(1);
+			expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(1);
+		}
 	});
 
 	test('hiddenTags に含まれるタグは一切書き込まれない', async () => {

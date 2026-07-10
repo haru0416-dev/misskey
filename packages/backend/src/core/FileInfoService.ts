@@ -319,18 +319,6 @@ export function createFileInfoService(
 		return fs.promises.access(path).then(() => true, () => false);
 	}
 
-	function fixMime(mime: string): string {
-		// see https://github.com/misskey-dev/misskey/pull/10686
-		if (mime === 'audio/x-flac') {
-			return 'audio/flac';
-		}
-		if (mime === 'audio/vnd.wave') {
-			return 'audio/wav';
-		}
-
-		return mime;
-	}
-
 	/**
 	 * ビデオファイルにビデオトラックがあるかどうかチェック
 	 * （ない場合：m4a, webmなど）
@@ -386,7 +374,7 @@ export function createFileInfoService(
 			}
 
 			return {
-				mime: fixMime(type.mime),
+				mime: type.mime,
 				ext: type.ext,
 			};
 		}
@@ -483,7 +471,7 @@ export function createFileInfoService(
 		return blurhash.encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
 	}
 
-	return { getFileInfo, fixMime, detectType, checkSvg, getFileSize };
+	return { getFileInfo, detectType, checkSvg, getFileSize };
 }
 
 export type FileInfoService = ReturnType<typeof createFileInfoService>;

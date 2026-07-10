@@ -15,12 +15,12 @@ import {
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAd } from '@/models/Ad.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { resolveHonoApiIdPagination } from './following.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminAdDependencies = {
@@ -145,7 +145,7 @@ export async function handleHonoApiAdminAdList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>[]> {
 	const params = parseHonoApiParams(adminAdListParamDef, body);
-	const { sinceId, untilId } = resolveHonoApiIdPagination(params);
+	const { sinceId, untilId } = resolveDateIdPagination({ gen: time => genId(time) }, params);
 	const ads = await listAdsFromDatabase(deps.db, {
 		limit: params.limit,
 		sinceId,

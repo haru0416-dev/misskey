@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, eq, gt } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray } from 'drizzle-orm';
 import { clipNote, type ClipNoteInsert, type ClipNoteRow } from '@/db/schema/clip-note.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiClip } from '@/models/Clip.js';
@@ -24,6 +24,26 @@ export async function countClipNotesByClipIdFromDatabase(
 		.where(eq(clipNote.clipId, clipId));
 
 	return row?.count ?? 0;
+}
+
+export async function countClipNotesByClipIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	clipIds: MiClip['id'][],
+): Promise<Map<MiClip['id'], number>> {
+	if (clipIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await db
+		.select({
+			clipId: clipNote.clipId,
+			count: count(),
+		})
+		.from(clipNote)
+		.where(inArray(clipNote.clipId, clipIds))
+		.groupBy(clipNote.clipId);
+
+	return new Map(rows.map(row => [row.clipId, row.count]));
 }
 
 export async function listClipNotesByClipIdFromDatabase(

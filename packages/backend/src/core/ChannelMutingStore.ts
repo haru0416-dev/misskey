@@ -37,7 +37,7 @@ export async function channelMutingExistsInDatabase(
 	return row != null;
 }
 
-export async function fetchMutedChannelIdsFromDatabase(
+export async function listMutedChannelIdsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiChannel['id'][]> {
@@ -49,7 +49,7 @@ export async function fetchMutedChannelIdsFromDatabase(
 	return rows.map(row => row.channelId);
 }
 
-export async function fetchActiveMutedChannelIdsFromDatabase(
+export async function listActiveMutedChannelIdsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	now: Date,
@@ -65,7 +65,7 @@ export async function fetchActiveMutedChannelIdsFromDatabase(
 	return rows.map(row => row.channelId);
 }
 
-export async function fetchMutedChannelIdsInDatabase(
+export async function fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	channelIds: MiChannel['id'][],
@@ -85,7 +85,7 @@ export async function fetchMutedChannelIdsInDatabase(
 	return new Set(rows.map(row => row.channelId));
 }
 
-export async function fetchExpiredChannelMutingsFromDatabase(
+export async function listExpiredChannelMutingsFromDatabase(
 	db: MiDrizzleDatabase,
 	now: Date,
 ): Promise<ChannelMutingRow[]> {
