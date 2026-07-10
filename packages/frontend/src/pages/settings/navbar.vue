@@ -55,7 +55,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, ref, toRef } from 'vue';
 import MkRadios from '@/components/MkRadios.vue';
 import MkButton from '@/components/MkButton.vue';
 import FormSlot from '@/components/form/slot.vue';
@@ -69,16 +69,16 @@ import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
-import { getInitialPrefValue } from '@/preferences/manager.js';
+import { getInitialPrefValue } from '@/preferences/store.js';
 import { genId } from '@/utility/id.js';
 
-const items = ref(prefer.s.menu.map(x => ({
+const items = ref(prefer.menu.map(x => ({
 	id: genId(),
 	type: x,
 })));
 const itemTypeValues = computed(() => items.value.map(x => x.type));
 
-const menuDisplay = store.model('menuDisplay');
+const menuDisplay = toRef(store, 'menuDisplay');
 const showNavbarSubButtons = prefer.model('showNavbarSubButtons');
 
 async function addItem() {

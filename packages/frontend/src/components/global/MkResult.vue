@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<Transition :name="prefer.s.animation ? '_transition_zoom' : ''" appear>
+<Transition :name="prefer.animation ? '_transition_zoom' : ''" appear>
 	<div :class="$style.root" class="_gaps">
 		<img v-if="type === 'empty' && instance.infoImageUrl" :src="instance.infoImageUrl" draggable="false" :class="$style.img"/>
 		<MkSystemIcon v-else-if="type === 'empty'" type="info" :class="$style.icon"/>

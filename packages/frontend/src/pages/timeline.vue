@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkTip v-if="isBasicTimeline(src)" :k="`tl.${src}`" style="margin-bottom: var(--MI-margin);">
 			{{ i18n.ts._timelineDescription[src] }}
 		</MkTip>
-		<MkPostForm v-if="prefer.r.showFixedPostForm.value" :class="$style.postForm" class="_panel" fixed style="margin-bottom: var(--MI-margin);"/>
+		<MkPostForm v-if="prefer.showFixedPostForm" :class="$style.postForm" class="_panel" fixed style="margin-bottom: var(--MI-margin);"/>
 		<MkStreamingNotesTimeline
 			ref="tlComponent"
 			:key="src + withRenotes + withReplies + onlyFiles + withSensitive"
@@ -52,18 +52,18 @@ type TimelinePageSrc = BasicTimelineType | `list:${string}`;
 
 const srcWhenNotSignin = ref<'local' | 'global'>(isAvailableBasicTimeline('local') ? 'local' : 'global');
 const src = computed<TimelinePageSrc>({
-	get: () => ($i ? store.r.tl.value.src : srcWhenNotSignin.value),
+	get: () => ($i ? store.tl.src : srcWhenNotSignin.value),
 	set: (x) => saveSrc(x),
 });
 const withRenotes = computed<boolean>({
-	get: () => store.r.tl.value.filter.withRenotes,
+	get: () => store.tl.filter.withRenotes,
 	set: (x) => saveTlFilter('withRenotes', x),
 });
 
 // computed内での無限ループを防ぐためのフラグ
 const localSocialTLFilterSwitchStore = ref<'withReplies' | 'onlyFiles' | false>(
-	store.r.tl.value.filter.withReplies ? 'withReplies' :
-	store.r.tl.value.filter.onlyFiles ? 'onlyFiles' :
+	store.tl.filter.withReplies ? 'withReplies' :
+	store.tl.filter.onlyFiles ? 'onlyFiles' :
 	false,
 );
 
@@ -73,7 +73,7 @@ const withReplies = computed<boolean>({
 		if (['local', 'social'].includes(src.value) && localSocialTLFilterSwitchStore.value === 'onlyFiles') {
 			return false;
 		} else {
-			return store.r.tl.value.filter.withReplies;
+			return store.tl.filter.withReplies;
 		}
 	},
 	set: (x) => saveTlFilter('withReplies', x),
@@ -83,7 +83,7 @@ const onlyFiles = computed<boolean>({
 		if (['local', 'social'].includes(src.value) && localSocialTLFilterSwitchStore.value === 'withReplies') {
 			return false;
 		} else {
-			return store.r.tl.value.filter.onlyFiles;
+			return store.tl.filter.onlyFiles;
 		}
 	},
 	set: (x) => saveTlFilter('onlyFiles', x),
@@ -100,7 +100,7 @@ watch([withReplies, onlyFiles], ([withRepliesTo, onlyFilesTo]) => {
 });
 
 const withSensitive = computed<boolean>({
-	get: () => store.r.tl.value.filter.withSensitive,
+	get: () => store.tl.filter.withSensitive,
 	set: (x) => saveTlFilter('withSensitive', x),
 });
 
@@ -171,11 +171,11 @@ async function chooseChannel(ev: PointerEvent): Promise<void> {
 }
 
 function saveSrc(newSrc: TimelinePageSrc): void {
-	const out = deepMerge({ src: newSrc }, store.s.tl);
+	const out = deepMerge({ src: newSrc }, store.tl);
 
 	if (newSrc.startsWith('userList:')) {
 		const id = newSrc.substring('userList:'.length);
-		out.userList = prefer.r.pinnedUserLists.value.find(l => l.id === id) ?? null;
+		out.userList = prefer.pinnedUserLists.find(l => l.id === id) ?? null;
 	}
 
 	store.set('tl', out);
@@ -184,9 +184,9 @@ function saveSrc(newSrc: TimelinePageSrc): void {
 	}
 }
 
-function saveTlFilter(key: keyof typeof store.s.tl.filter, newValue: boolean) {
+function saveTlFilter(key: keyof typeof store.tl.filter, newValue: boolean) {
 	if (key !== 'withReplies' || $i) {
-		const out = deepMerge({ filter: { [key]: newValue } }, store.s.tl);
+		const out = deepMerge({ filter: { [key]: newValue } }, store.tl);
 		store.set('tl', out);
 	}
 }
@@ -264,7 +264,7 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 	return items;
 });
 
-const headerTabs = computed(() => [...(prefer.r.pinnedUserLists.value.map(l => ({
+const headerTabs = computed(() => [...(prefer.pinnedUserLists.map(l => ({
 	key: 'list:' + l.id,
 	title: l.name,
 	icon: 'ti ti-star',

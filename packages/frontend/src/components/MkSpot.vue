@@ -4,9 +4,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div ref="rootEl" :class="$style.root" :style="{ zIndex }">
+<div :class="$style.root" :style="{ zIndex }">
 	<div :class="[$style.bg]"></div>
-	<div ref="spotEl" :class="$style.spot"></div>
+	<div :class="$style.spot"></div>
 	<div ref="bodyEl" :class="$style.body" class="_panel _shadow">
 		<div class="_gaps_s">
 			<div><b>{{ title }}</b></div>
@@ -22,11 +22,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, useTemplateRef } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import { calcPopupPosition } from '@/utility/popup-position.js';
 import * as os from '@/os.js';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
+import { throttleByAnimationFrame } from '@/utility/throttle-by-animation-frame.js';
 
 const props = withDefaults(defineProps<{
 	title: string;
@@ -54,9 +55,7 @@ function next() {
 	emit('next');
 }
 
-const rootEl = useTemplateRef('rootEl');
 const bodyEl = useTemplateRef('bodyEl');
-const spotEl = useTemplateRef('spotEl');
 const zIndex = os.claimZIndex('high');
 const spotX = ref(0);
 const spotY = ref(0);
@@ -64,7 +63,6 @@ const spotWidth = ref(0);
 const spotHeight = ref(0);
 
 function setPosition() {
-	if (spotEl.value == null) return;
 	if (bodyEl.value == null) return;
 	if (props.anchorElement == null) return;
 
@@ -88,23 +86,31 @@ function setPosition() {
 	bodyEl.value.style.top = data.top + 'px';
 }
 
-let loopHandler: number | null = null;
+const schedulePosition = throttleByAnimationFrame(setPosition);
+let resizeObserver: ResizeObserver | null = null;
+
+watch(() => props.anchorElement, (newAnchor, oldAnchor) => {
+	if (oldAnchor != null) resizeObserver?.unobserve(oldAnchor);
+	if (newAnchor != null) resizeObserver?.observe(newAnchor);
+	schedulePosition();
+}, { flush: 'post' });
+
+watch(() => [props.direction, props.x, props.y], schedulePosition, { flush: 'post' });
 
 onMounted(() => {
-	nextTick(() => {
-		setPosition();
-
-		const loop = () => {
-			setPosition();
-			loopHandler = window.requestAnimationFrame(loop);
-		};
-
-		loop();
-	});
+	resizeObserver = new ResizeObserver(schedulePosition);
+	if (props.anchorElement != null) resizeObserver.observe(props.anchorElement);
+	if (bodyEl.value != null) resizeObserver.observe(bodyEl.value);
+	window.addEventListener('resize', schedulePosition, { passive: true });
+	window.addEventListener('scroll', schedulePosition, { passive: true, capture: true });
+	nextTick(schedulePosition);
 });
 
 onUnmounted(() => {
-	if (loopHandler != null) window.cancelAnimationFrame(loopHandler);
+	resizeObserver?.disconnect();
+	window.removeEventListener('resize', schedulePosition);
+	window.removeEventListener('scroll', schedulePosition, { capture: true });
+	schedulePosition.cancel();
 });
 </script>
 
@@ -160,6 +166,13 @@ onUnmounted(() => {
 	50% {
 		background: transparent;
 		border: 1px solid transparent;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.spot {
+		animation: none;
+		transition: none;
 	}
 }
 </style>

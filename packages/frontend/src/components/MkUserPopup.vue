@@ -5,16 +5,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <Transition
-	:enterActiveClass="prefer.s.animation ? $style.transition_popup_enterActive : ''"
-	:leaveActiveClass="prefer.s.animation ? $style.transition_popup_leaveActive : ''"
-	:enterFromClass="prefer.s.animation ? $style.transition_popup_enterFrom : ''"
-	:leaveToClass="prefer.s.animation ? $style.transition_popup_leaveTo : ''"
+	:enterActiveClass="prefer.animation ? $style.transition_popup_enterActive : ''"
+	:leaveActiveClass="prefer.animation ? $style.transition_popup_leaveActive : ''"
+	:enterFromClass="prefer.animation ? $style.transition_popup_enterFrom : ''"
+	:leaveToClass="prefer.animation ? $style.transition_popup_leaveTo : ''"
 	appear @afterLeave="emit('closed')"
 >
 	<div v-if="showing" :class="$style.root" class="_popup _shadow" :style="{ zIndex, top: top + 'px', left: left + 'px' }" @mouseover="() => { emit('mouseover'); }" @mouseleave="() => { emit('mouseleave'); }">
 		<MkError v-if="error" @retry="fetchUser()"/>
 		<div v-else-if="user != null">
-			<div :class="$style.banner" :style="user.bannerUrl ? { backgroundImage: `url(${prefer.s.disableShowingAnimatedImages ? getStaticImageUrl(user.bannerUrl) : user.bannerUrl})` } : ''">
+			<div :class="$style.banner" :style="user.bannerUrl ? { backgroundImage: `url(${prefer.disableShowingAnimatedImages ? getStaticImageUrl(user.bannerUrl) : user.bannerUrl})` } : ''">
 				<span v-if="$i && $i.id != user.id && user.isFollowed" :class="$style.followed">{{ i18n.ts.followsYou }}</span>
 			</div>
 			<svg viewBox="0 0 128 128" :class="$style.avatarBack">

@@ -82,7 +82,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import tinycolor from 'tinycolor2';
 import { themeManager } from '@/theme.js';
-import { defaultIdlingRenderScheduler } from '@/utility/idle-render.js';
+import { ClockScheduler } from '@/utility/clock-scheduler.js';
 
 // https://stackoverflow.com/questions/1878907/how-can-i-find-the-difference-between-two-angles
 const angleDiff = (a: number, b: number) => {
@@ -153,9 +153,10 @@ const disableSAnimate = ref(false);
 let sOneRound = false;
 const sLine = ref<SVGPathElement>();
 
-function tick() {
+function tick(): number | null {
 	const now = props.now();
 	now.setMinutes(now.getMinutes() + now.getTimezoneOffset() + props.offset);
+	const nextTickDelay = 1000 - now.getMilliseconds();
 	const previousS = s.value;
 	const previousM = m.value;
 	const previousH = h.value;
@@ -163,13 +164,12 @@ function tick() {
 	m.value = now.getMinutes();
 	h.value = now.getHours();
 	if (previousS === s.value && previousM === m.value && previousH === h.value) {
-		return;
+		return nextTickDelay;
 	}
 	hAngle.value = Math.PI * (h.value % (props.twentyfour ? 24 : 12) + (m.value + s.value / 60) / 60) / (props.twentyfour ? 12 : 6);
 	mAngle.value = Math.PI * (m.value + s.value / 60) / 30;
-	if (sOneRound && sLine.value) { // 秒針が一周した際のアニメーションをよしなに処理する(これが無いと秒が59->0になったときに期待したアニメーションにならない)
+	if (sOneRound && sLine.value && props.sAnimation !== 'none') { // 秒針が一周した際のアニメーションをよしなに処理する(これが無いと秒が59->0になったときに期待したアニメーションにならない)
 		sAngle.value = Math.PI * 60 / 30;
-		defaultIdlingRenderScheduler.delete(tick);
 		sLine.value.addEventListener('transitionend', () => {
 			disableSAnimate.value = true;
 			requestAnimationFrame(() => {
@@ -177,17 +177,21 @@ function tick() {
 				requestAnimationFrame(() => {
 					disableSAnimate.value = false;
 					if (enabled) {
-						defaultIdlingRenderScheduler.add(tick);
+						clockScheduler.resume();
 					}
 				});
 			});
 		}, { once: true });
+		sOneRound = false;
+		return null;
 	} else {
 		sAngle.value = Math.PI * s.value / 30;
 	}
 	sOneRound = s.value === 59;
+	return nextTickDelay;
 }
 
+const clockScheduler = new ClockScheduler(tick);
 tick();
 
 function calcColors() {
@@ -204,13 +208,13 @@ function calcColors() {
 calcColors();
 
 onMounted(() => {
-	defaultIdlingRenderScheduler.add(tick);
+	clockScheduler.start();
 	themeManager.on('themeChanged', calcColors);
 });
 
 onBeforeUnmount(() => {
 	enabled = false;
-	defaultIdlingRenderScheduler.delete(tick);
+	clockScheduler.stop();
 	themeManager.off('themeChanged', calcColors);
 });
 </script>

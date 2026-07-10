@@ -59,7 +59,7 @@ const props = withDefaults(defineProps<{
 	withOuterStyle: true,
 });
 
-const show = ref(props.forceShow === true ? true : !prefer.s.dataSaver.code);
+const show = ref(props.forceShow === true ? true : !prefer.dataSaver.code);
 
 const XCode = defineAsyncComponent(() => import('@/components/MkCode.Core.vue'));
 

@@ -5,6 +5,7 @@
 
 import * as Misskey from 'misskey-js';
 import { shallowRef, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import MkEmojiPickerDialog from '@/components/MkEmojiPickerDialog.vue';
 import { popup } from '@/os.js';
 import { prefer } from '@/preferences.js';
@@ -13,8 +14,9 @@ class ReactionPicker {
 	private reactionsRef = ref<string[]>([]);
 
 	public init() {
+		const { emojiPaletteForReaction, emojiPalettes } = storeToRefs(prefer);
 		watch(
-			[prefer.r.emojiPaletteForReaction, prefer.r.emojiPalettes],
+			[emojiPaletteForReaction, emojiPalettes],
 			([newId, newPalettes]) => {
 				this.reactionsRef.value =
 					newId == null ? newPalettes[0].emojis : (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);

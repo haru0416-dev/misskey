@@ -154,7 +154,7 @@ function onDrop(ev: DragEvent): void {
 
 function onKeydown(ev: KeyboardEvent) {
 	if (ev.key === 'Enter') {
-		if (prefer.s['chat.sendOnEnter']) {
+		if (prefer['chat.sendOnEnter']) {
 			if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
 				send();
 			}

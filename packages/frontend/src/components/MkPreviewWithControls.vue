@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root">
 	<div :class="$style.container">
-		<div :class="[$style.preview, prefer.s.animation ? $style.animatedBg : null]">
+		<div :class="[$style.preview, prefer.animation ? $style.animatedBg : null]">
 			<div :class="$style.previewContent">
 				<slot name="preview"></slot>
 			</div>

@@ -42,7 +42,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 import { pleaseLogin } from '@/utility/please-login.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
@@ -121,7 +121,7 @@ async function onClick() {
 			});
 			hasPendingFollowRequestFromYou.value = false;
 		} else {
-			if (prefer.s.alwaysConfirmFollow) {
+			if (prefer.alwaysConfirmFollow) {
 				const { canceled } = await os.confirm({
 					type: 'question',
 					text: i18n.tsx.followConfirm({ name: props.user.name || props.user.username }),
@@ -135,11 +135,11 @@ async function onClick() {
 
 			await misskeyApi('following/create', {
 				userId: props.user.id,
-				withReplies: prefer.s.defaultFollowWithReplies,
+				withReplies: prefer.defaultFollowWithReplies,
 			});
 			emit('update:user', {
 				...props.user,
-				withReplies: prefer.s.defaultFollowWithReplies,
+				withReplies: prefer.defaultFollowWithReplies,
 			});
 			hasPendingFollowRequestFromYou.value = true;
 

@@ -96,6 +96,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { nextTick, ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import { isSafeMode } from '@shared/utility/config.js';
 import type { Plugin } from '@/plugin.js';
 import FormLink from '@/components/form/link.vue';
@@ -113,7 +114,7 @@ import { changePluginActive, configPlugin, pluginLogs, uninstallPlugin, reloadPl
 import { prefer } from '@/preferences.js';
 import * as os from '@/os.js';
 
-const plugins = prefer.r.plugins;
+const { plugins } = storeToRefs(prefer);
 
 async function uninstall(plugin: Plugin) {
 	const { canceled } = await os.confirm({

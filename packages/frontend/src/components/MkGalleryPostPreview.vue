@@ -42,7 +42,7 @@ const props = defineProps<{
 }>();
 
 const hover = ref(false);
-const safe = computed(() => prefer.s.nsfw === 'ignore' || prefer.s.nsfw === 'respect' && !props.post.isSensitive);
+const safe = computed(() => prefer.nsfw === 'ignore' || prefer.nsfw === 'respect' && !props.post.isSensitive);
 const show = computed(() => safe.value || hover.value);
 
 function enterHover(): void {

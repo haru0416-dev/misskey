@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="[$style.root, { [$style.isMe]: isMe }]">
-	<MkAvatar :class="[$style.avatar, prefer.s.useStickyIcons ? $style.useSticky : null]" :user="message.fromUser!" :link="!isMe" :preview="false"/>
+	<MkAvatar :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="message.fromUser!" :link="!isMe" :preview="false"/>
 	<div :class="[$style.body, message.file != null ? $style.fullWidth : null]" @contextmenu.stop="onContextmenu">
-		<div :class="$style.header"><MkUserName v-if="!isMe && prefer.s['chat.showSenderName'] && message.fromUser != null" :user="message.fromUser"/></div>
+		<div :class="$style.header"><MkUserName v-if="!isMe && prefer['chat.showSenderName'] && message.fromUser != null" :user="message.fromUser"/></div>
 		<MkFukidashi :class="$style.fukidashi" :tail="isMe ? 'right' : 'left'" :fullWidth="message.file != null" :accented="isMe">
 			<Mfm
 				v-if="message.text"
@@ -29,11 +29,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkA v-if="isSearchResult && 'toUser' in message && message.toUser != null && isMe" :to="`/chat/user/${message.toUserId}`">@{{ message.toUser.username }}</MkA>
 		</div>
 		<TransitionGroup
-			:enterActiveClass="prefer.s.animation ? $style.transition_reaction_enterActive : ''"
-			:leaveActiveClass="prefer.s.animation ? $style.transition_reaction_leaveActive : ''"
-			:enterFromClass="prefer.s.animation ? $style.transition_reaction_enterFrom : ''"
-			:leaveToClass="prefer.s.animation ? $style.transition_reaction_leaveTo : ''"
-			:moveClass="prefer.s.animation ? $style.transition_reaction_move : ''"
+			:enterActiveClass="prefer.animation ? $style.transition_reaction_enterActive : ''"
+			:leaveActiveClass="prefer.animation ? $style.transition_reaction_leaveActive : ''"
+			:enterFromClass="prefer.animation ? $style.transition_reaction_enterFrom : ''"
+			:leaveToClass="prefer.animation ? $style.transition_reaction_leaveTo : ''"
+			:moveClass="prefer.animation ? $style.transition_reaction_move : ''"
 			tag="div" :class="$style.reactions"
 		>
 			<div v-for="record in message.reactions" :key="record.reaction + record.user.id" :class="[$style.reaction, record.user.id === $i.id ? $style.reactionMy : null]" @click="onReactionClick(record)">

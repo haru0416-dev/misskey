@@ -72,7 +72,7 @@ function onDriveFileCreated(file: Misskey.entities.DriveFile) {
 }
 
 const thumbnail = (image: Misskey.entities.DriveFile): string => {
-	return prefer.s.disableShowingAnimatedImages
+	return prefer.disableShowingAnimatedImages
 		? getStaticImageUrl(image.url)
 		: image.thumbnailUrl ?? image.url;
 };

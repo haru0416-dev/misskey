@@ -168,7 +168,7 @@ export function getDriveFileMenu(
 		},
 	);
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menuItems.push(
 			{ type: 'divider' },
 			{

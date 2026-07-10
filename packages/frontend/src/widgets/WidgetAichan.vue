@@ -15,6 +15,7 @@ import { useWidgetPropsManager } from './widget.js';
 import { i18n } from '@/i18n.js';
 import type { WidgetComponentProps, WidgetComponentEmits, WidgetComponentExpose } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
+import { throttleByAnimationFrame } from '@/utility/throttle-by-animation-frame.js';
 
 const name = 'aichan';
 
@@ -42,7 +43,7 @@ const live2d = useTemplateRef('live2d');
 const touched = () => {
 };
 
-const onMousemove = (ev: MouseEvent) => {
+const moveCursor = (ev: MouseEvent) => {
 	if (!live2d.value || !live2d.value.contentWindow) return;
 
 	const iframeRect = live2d.value.getBoundingClientRect();
@@ -55,12 +56,15 @@ const onMousemove = (ev: MouseEvent) => {
 	}, '*');
 };
 
+const onMousemove = throttleByAnimationFrame(moveCursor);
+
 onMounted(() => {
 	window.addEventListener('mousemove', onMousemove, { passive: true });
 });
 
 onUnmounted(() => {
 	window.removeEventListener('mousemove', onMousemove);
+	onMousemove.cancel();
 });
 
 defineExpose<WidgetComponentExpose>({

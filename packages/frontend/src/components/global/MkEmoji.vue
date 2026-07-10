@@ -31,9 +31,9 @@ const props = defineProps<{
 
 const react = inject(DI.mfmEmojiReactCallback, null);
 
-const char2path = prefer.s.emojiStyle === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
+const char2path = prefer.emojiStyle === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
 
-const useOsNativeEmojis = computed(() => prefer.s.emojiStyle === 'native');
+const useOsNativeEmojis = computed(() => prefer.emojiStyle === 'native');
 const url = computed(() => char2path(props.emoji));
 const colorizedNativeEmoji = computed(() => colorizeEmoji(props.emoji));
 const isMuted = checkMutedEmoji(props.emoji);

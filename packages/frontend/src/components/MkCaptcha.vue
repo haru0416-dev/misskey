@@ -182,7 +182,7 @@ async function requestRender() {
 
 		captchaWidgetId.value = captcha.value.render(elem, {
 			sitekey: props.sitekey,
-			theme: store.s.darkMode ? 'dark' : 'light',
+			theme: store.darkMode ? 'dark' : 'light',
 			callback: callback,
 			'expired-callback': () => callback(undefined),
 			'error-callback': () => callback(undefined),

@@ -74,24 +74,24 @@ export type Column = {
 	timelineNameCache?: string;
 };
 
-const _currentProfile = prefer.s['deck.profiles'].find((p) => p.name === prefer.s['deck.profile']);
+const _currentProfile = prefer['deck.profiles'].find((p) => p.name === prefer['deck.profile']);
 const __currentProfile = _currentProfile ? deepClone(_currentProfile) : null;
 export const columns = ref(__currentProfile ? __currentProfile.columns : []);
 export const layout = ref(__currentProfile ? __currentProfile.layout : []);
 
-if (prefer.s['deck.profile'] == null) {
+if (prefer['deck.profile'] == null) {
 	addProfile('Main');
 }
 
 export function forceSaveCurrentDeckProfile() {
-	const currentProfile = prefer.s['deck.profiles'].find((p) => p.name === prefer.s['deck.profile']);
+	const currentProfile = prefer['deck.profiles'].find((p) => p.name === prefer['deck.profile']);
 	if (currentProfile == null) return;
 
 	const newProfile = deepClone(currentProfile);
 	newProfile.columns = columns.value;
 	newProfile.layout = layout.value;
 
-	const newProfiles = prefer.s['deck.profiles'].filter((p) => p.name !== prefer.s['deck.profile']);
+	const newProfiles = prefer['deck.profiles'].filter((p) => p.name !== prefer['deck.profile']);
 	newProfiles.push(newProfile);
 	prefer.commit('deck.profiles', newProfiles);
 }
@@ -110,7 +110,7 @@ function switchProfile(profile: DeckProfile) {
 
 function addProfile(name: string) {
 	if (name.trim() === '') return;
-	if (prefer.s['deck.profiles'].find((p) => p.name === name)) return;
+	if (prefer['deck.profiles'].find((p) => p.name === name)) return;
 
 	const newProfile: DeckProfile = {
 		id: genId(),
@@ -118,7 +118,7 @@ function addProfile(name: string) {
 		columns: [],
 		layout: [],
 	};
-	prefer.commit('deck.profiles', [...prefer.s['deck.profiles'], newProfile]);
+	prefer.commit('deck.profiles', [...prefer['deck.profiles'], newProfile]);
 	switchProfile(newProfile);
 }
 
@@ -127,13 +127,13 @@ function createFirstProfile() {
 }
 
 export function deleteProfile(name: string): void {
-	const newProfiles = prefer.s['deck.profiles'].filter((p) => p.name !== name);
+	const newProfiles = prefer['deck.profiles'].filter((p) => p.name !== name);
 	prefer.commit('deck.profiles', newProfiles);
 
-	if (prefer.s['deck.profiles'].length === 0) {
+	if (prefer['deck.profiles'].length === 0) {
 		createFirstProfile();
 	} else {
-		switchProfile(prefer.s['deck.profiles'][0]);
+		switchProfile(prefer['deck.profiles'][0]);
 	}
 }
 
@@ -336,21 +336,21 @@ export function updateColumn(id: Column['id'], column: Partial<Column>) {
 }
 
 export function switchProfileMenu(ev: PointerEvent) {
-	const items: MenuItem[] = prefer.s['deck.profile']
+	const items: MenuItem[] = prefer['deck.profile']
 		? [
 				{
-					text: prefer.s['deck.profile'],
+					text: prefer['deck.profile'],
 					active: true,
 					action: () => {},
 				},
 			]
 		: [];
 
-	const profiles = prefer.s['deck.profiles'];
+	const profiles = prefer['deck.profiles'];
 
 	items.push(
 		...profiles
-			.filter((p) => p.name !== prefer.s['deck.profile'])
+			.filter((p) => p.name !== prefer['deck.profile'])
 			.map((p) => ({
 				text: p.name,
 				action: () => {

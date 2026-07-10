@@ -34,7 +34,7 @@ export function mute(emoji: string) {
 	const emojiMuteKey = isCustomEmoji
 		? makeEmojiMuteKey({ name: extractCustomEmojiName(emoji), host: extractCustomEmojiHost(emoji) })
 		: emoji;
-	const mutedEmojis = prefer.r.mutingEmojis.value;
+	const mutedEmojis = prefer.mutingEmojis;
 	if (!mutedEmojis.includes(emojiMuteKey)) {
 		return prefer.commit('mutingEmojis', [...mutedEmojis, emojiMuteKey]);
 	}
@@ -46,7 +46,7 @@ export function unmute(emoji: string) {
 	const emojiMuteKey = isCustomEmoji
 		? makeEmojiMuteKey({ name: extractCustomEmojiName(emoji), host: extractCustomEmojiHost(emoji) })
 		: emoji;
-	const mutedEmojis = prefer.r.mutingEmojis.value;
+	const mutedEmojis = prefer.mutingEmojis;
 	prefer.commit(
 		'mutingEmojis',
 		mutedEmojis.filter((e) => e !== emojiMuteKey),
@@ -58,5 +58,5 @@ export function checkMuted(emoji: string) {
 	const emojiMuteKey = isCustomEmoji
 		? makeEmojiMuteKey({ name: extractCustomEmojiName(emoji), host: extractCustomEmojiHost(emoji) })
 		: emoji;
-	return computed(() => prefer.r.mutingEmojis.value.includes(emojiMuteKey));
+	return computed(() => prefer.mutingEmojis.includes(emojiMuteKey));
 }

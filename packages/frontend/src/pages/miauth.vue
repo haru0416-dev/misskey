@@ -31,6 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkAuthConfirm from '@/components/MkAuthConfirm.vue';
+import PageWithAnimBg from '@/components/global/PageWithAnimBg.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';

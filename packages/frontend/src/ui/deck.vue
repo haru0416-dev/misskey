@@ -5,13 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="[$style.root]">
-	<XTitlebar v-if="prefer.r.showTitlebar.value" style="flex-shrink: 0;"/>
+	<XTitlebar v-if="prefer.showTitlebar" style="flex-shrink: 0;"/>
 
 	<div :class="$style.nonTitlebarArea">
-		<XSidebar v-if="!isMobile && prefer.r['deck.navbarPosition'].value === 'left'"/>
+		<XSidebar v-if="!isMobile && prefer['deck.navbarPosition'] === 'left'"/>
 
-		<div :class="[$style.main, { [$style.withWallpaper]: withWallpaper, [$style.withSidebarAndTitlebar]: !isMobile && prefer.r['deck.navbarPosition'].value === 'left' && prefer.r.showTitlebar.value }]" :style="{ backgroundImage: prefer.s['deck.wallpaper'] != null ? `url(${ prefer.s['deck.wallpaper'] })` : '' }">
-			<XNavbarH v-if="!isMobile && prefer.r['deck.navbarPosition'].value === 'top'" :acrylic="withWallpaper"/>
+		<div :class="[$style.main, { [$style.withWallpaper]: withWallpaper, [$style.withSidebarAndTitlebar]: !isMobile && prefer['deck.navbarPosition'] === 'left' && prefer.showTitlebar }]" :style="{ backgroundImage: prefer['deck.wallpaper'] != null ? `url(${ prefer['deck.wallpaper'] })` : '' }">
+			<XNavbarH v-if="!isMobile && prefer['deck.navbarPosition'] === 'top'" :acrylic="withWallpaper"/>
 
 			<XReloadSuggestion v-if="shouldSuggestReload"/>
 			<XPreferenceRestore v-if="shouldSuggestRestoreBackup"/>
@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<XStatusBars/>
 			<div :class="$style.columnsWrapper">
 				<!-- passive: https://bugs.webkit.org/show_bug.cgi?id=281300 -->
-				<div ref="columnsEl" :class="[$style.columns, { [$style.center]: prefer.r['deck.columnAlign'].value === 'center', [$style.snapScroll]: snapScroll }]" @contextmenu.self.prevent="onContextmenu" @wheel.passive.self="onWheel">
+				<div ref="columnsEl" :class="[$style.columns, { [$style.center]: prefer['deck.columnAlign'] === 'center', [$style.snapScroll]: snapScroll }]" @contextmenu.self.prevent="onContextmenu" @wheel.passive.self="onWheel">
 					<!-- sectionを利用しているのは、deck.vue側でcolumnに対してfirst-of-typeを効かせるため -->
 					<section
 						v-for="ids in layout"
@@ -42,15 +42,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div v-if="layout.length === 0" class="_panel _gaps" :class="$style.onboarding">
 						<div>{{ i18n.ts._deck.introduction }}</div>
 						<div>{{ i18n.ts._deck.introduction2 }}</div>
-						<MkInfo v-if="!store.r.tips.value.deck" closable @close="closeTip('deck')">
+						<MkInfo v-if="!store.tips.deck" closable @close="closeTip('deck')">
 							<button class="_textButton" @click="showTour">{{ i18n.ts._deck.showHowToUse }}</button>
 						</MkInfo>
 					</div>
 				</div>
 
-				<div v-if="prefer.r['deck.menuPosition'].value === 'right'" :class="$style.sideMenu">
+				<div v-if="prefer['deck.menuPosition'] === 'right'" :class="$style.sideMenu">
 					<div :class="$style.sideMenuTop">
-						<button ref="swicthProfileButtonEl" v-tooltip.noDelay.left="`${i18n.ts._deck.profile}: ${prefer.s['deck.profile']}`" :class="$style.sideMenuButton" class="_button" @click="switchProfileMenu"><i class="ti ti-caret-down"></i></button>
+						<button ref="swicthProfileButtonEl" v-tooltip.noDelay.left="`${i18n.ts._deck.profile}: ${prefer['deck.profile']}`" :class="$style.sideMenuButton" class="_button" @click="switchProfileMenu"><i class="ti ti-caret-down"></i></button>
 						<button v-tooltip.noDelay.left="i18n.ts._deck.deleteProfile" :class="$style.sideMenuButton" class="_button" @click="deleteProfile"><i class="ti ti-trash"></i></button>
 					</div>
 					<div :class="$style.sideMenuMiddle">
@@ -62,9 +62,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</div>
 
-			<div v-if="prefer.r['deck.menuPosition'].value === 'bottom'" :class="$style.bottomMenu">
+			<div v-if="prefer['deck.menuPosition'] === 'bottom'" :class="$style.bottomMenu">
 				<div :class="$style.bottomMenuLeft">
-					<button ref="swicthProfileButtonEl" v-tooltip.noDelay.top="`${i18n.ts._deck.profile}: ${prefer.s['deck.profile']}`" :class="$style.bottomMenuButton" class="_button" @click="switchProfileMenu"><i class="ti ti-caret-down"></i></button>
+					<button ref="swicthProfileButtonEl" v-tooltip.noDelay.top="`${i18n.ts._deck.profile}: ${prefer['deck.profile']}`" :class="$style.bottomMenuButton" class="_button" @click="switchProfileMenu"><i class="ti ti-caret-down"></i></button>
 					<button v-tooltip.noDelay.top="i18n.ts._deck.deleteProfile" :class="$style.bottomMenuButton" class="_button" @click="deleteProfile"><i class="ti ti-trash"></i></button>
 				</div>
 				<div :class="$style.bottomMenuMiddle">
@@ -75,18 +75,23 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</div>
 
-			<XNavbarH v-if="!isMobile && prefer.r['deck.navbarPosition'].value === 'bottom'" :acrylic="withWallpaper"/>
+			<XNavbarH v-if="!isMobile && prefer['deck.navbarPosition'] === 'bottom'" :acrylic="withWallpaper"/>
 
 			<XMobileFooterMenu v-if="isMobile" v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
 		</div>
 	</div>
 
-	<XCommon v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
+	<XCommon v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing">
+		<template #drawerMenu>
+			<XSidebar style="height: 100%;" :asDrawer="true" :showWidgetButton="false"/>
+		</template>
+	</XCommon>
 </div>
 </template>
 
 <script lang="ts" setup>
 import { defineAsyncComponent, ref, useTemplateRef } from 'vue';
+import { storeToRefs } from 'pinia';
 import XCommon from './_common_/common.vue';
 import { genId } from '@/utility/id.js';
 import XSidebar from '@/ui/_common_/navbar.vue';
@@ -142,7 +147,7 @@ const columnComponents = {
 mainRouter.navHook = (path, flag): boolean => {
 	if (flag === 'forcePage') return false;
 	const noMainColumn = !columns.value.some(x => x.type === 'main');
-	if (prefer.s['deck.navWindow'] || noMainColumn) {
+	if (prefer['deck.navWindow'] || noMainColumn) {
 		os.pageWindow(path);
 		return true;
 	}
@@ -156,10 +161,10 @@ window.addEventListener('resize', () => {
 
 // ポインターイベント非対応用に初期値はUAから出す
 const snapScroll = ref(deviceKind === 'smartphone' || deviceKind === 'tablet');
-const withWallpaper = prefer.s['deck.wallpaper'] != null;
+const withWallpaper = prefer['deck.wallpaper'] != null;
 const drawerMenuShowing = ref(false);
 const widgetsShowing = ref(false);
-const gap = prefer.r['deck.columnGap'];
+const gap = storeToRefs(prefer)['deck.columnGap'];
 
 function showSettings() {
 	os.pageWindow('/settings/deck');
@@ -211,15 +216,15 @@ function onWheel(ev: WheelEvent) {
 }
 
 async function deleteProfile() {
-	if (prefer.s['deck.profile'] == null) return;
+	if (prefer['deck.profile'] == null) return;
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
-		text: i18n.tsx.deleteAreYouSure({ x: prefer.s['deck.profile'] }),
+		text: i18n.tsx.deleteAreYouSure({ x: prefer['deck.profile'] }),
 	});
 	if (canceled) return;
 
-	await deleteProfile_(prefer.s['deck.profile']);
+	await deleteProfile_(prefer['deck.profile']);
 
 	os.success();
 }

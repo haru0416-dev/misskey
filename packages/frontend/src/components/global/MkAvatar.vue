@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <component :is="link ? MkA : 'span'" v-user-preview="preview ? user.id : undefined" v-bind="bound" class="_noSelect" :class="[$style.root, { [$style.animation]: animation, [$style.cat]: user.isCat, [$style.square]: squareAvatars }]" :style="{ color }" :title="acct(user)" @click="onClick">
-	<MkImgWithBlurhash v-if="prefer.s.enableHighQualityImagePlaceholders" :class="$style.inner" :src="url" :hash="user.avatarBlurhash" :cover="true" :onlyAvgColor="true"/>
+	<MkImgWithBlurhash v-if="prefer.enableHighQualityImagePlaceholders" :class="$style.inner" :src="url" :hash="user.avatarBlurhash" :cover="true" :onlyAvgColor="true"/>
 	<img v-else :class="$style.inner" :src="url" alt="" decoding="async" style="pointer-events: none;"/>
 	<MkUserOnlineIndicator v-if="indicator" :class="$style.indicator" :user="user"/>
 	<div v-if="user.isCat" :class="[$style.ears]">
@@ -53,8 +53,8 @@ import { acct, userPage } from '@/filters/user.js';
 import MkUserOnlineIndicator from '@/components/MkUserOnlineIndicator.vue';
 import { prefer } from '@/preferences.js';
 
-const animation = ref(prefer.s.animation);
-const squareAvatars = ref(prefer.s.squareAvatars);
+const animation = ref(prefer.animation);
+const squareAvatars = ref(prefer.squareAvatars);
 
 type Decoration = Misskey.entities.UserDetailed['avatarDecorations'][number];
 type DecorationEditorDecoration = Omit<Misskey.entities.UserDetailed['avatarDecorations'][number], 'id'> & { blink?: boolean; };
@@ -80,14 +80,14 @@ const emit = defineEmits<{
 	(ev: 'click', v: PointerEvent): void;
 }>();
 
-const showDecoration = props.forceShowDecoration || prefer.s.showAvatarDecorations;
+const showDecoration = props.forceShowDecoration || prefer.showAvatarDecorations;
 
 const bound = computed(() => props.link
 	? { to: userPage(props.user), target: props.target }
 	: {});
 
 const url = computed(() => {
-	if (prefer.s.disableShowingAnimatedImages || prefer.s.dataSaver.avatar) return getStaticImageUrl(props.user.avatarUrl);
+	if (prefer.disableShowingAnimatedImages || prefer.dataSaver.avatar) return getStaticImageUrl(props.user.avatarUrl);
 	return props.user.avatarUrl;
 });
 
@@ -97,7 +97,7 @@ function onClick(ev: PointerEvent): void {
 }
 
 function getDecorationUrl(decoration: Decoration | DecorationEditorDecoration) {
-	if (prefer.s.disableShowingAnimatedImages || prefer.s.dataSaver.avatar) return getStaticImageUrl(decoration.url);
+	if (prefer.disableShowingAnimatedImages || prefer.dataSaver.avatar) return getStaticImageUrl(decoration.url);
 	return decoration.url;
 }
 

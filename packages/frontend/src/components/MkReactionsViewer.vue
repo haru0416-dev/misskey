@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <component
-	:is="prefer.s.animation ? TransitionGroup : 'div'"
+	:is="prefer.animation ? TransitionGroup : 'div'"
 	:enterActiveClass="$style.transition_x_enterActive"
 	:leaveActiveClass="$style.transition_x_leaveActive"
 	:enterFromClass="$style.transition_x_enterFrom"
@@ -91,25 +91,31 @@ watch([() => props.reactions, () => props.maxNumber], ([newSource, maxNumber]) =
 		}
 	}
 
-	const newReactionsNames = newReactions.map(([x]) => x);
+	const newReactionsNames = new Set(newReactions.map(([x]) => x));
+	const sourceEntries = Object.entries(newSource);
+	const reactionAvailability = prefer.showAvailableReactionsFirstInNote
+		? new Map(sourceEntries.map(([reaction]) => [reaction, canReact(reaction)]))
+		: null;
 	newReactions = [
 		...newReactions,
-		...Object.entries(newSource)
+		...sourceEntries
 			.sort(([emojiA, countA], [emojiB, countB]) => {
-				if (prefer.s.showAvailableReactionsFirstInNote) {
-					if (!canReact(emojiA) && canReact(emojiB)) return 1;
-					if (canReact(emojiA) && !canReact(emojiB)) return -1;
+				if (reactionAvailability != null) {
+					const emojiAIsAvailable = reactionAvailability.get(emojiA) ?? false;
+					const emojiBIsAvailable = reactionAvailability.get(emojiB) ?? false;
+					if (!emojiAIsAvailable && emojiBIsAvailable) return 1;
+					if (emojiAIsAvailable && !emojiBIsAvailable) return -1;
 					return countB - countA;
 				} else {
 					return countB - countA;
 				}
 			})
-			.filter(([y], i) => i < maxNumber && !newReactionsNames.includes(y)),
+			.filter(([y], i) => i < maxNumber && !newReactionsNames.has(y)),
 	];
 
 	newReactions = newReactions.slice(0, props.maxNumber);
 
-	if (props.myReaction && !newReactions.map(([x]) => x).includes(props.myReaction)) {
+	if (props.myReaction && !newReactions.some(([reaction]) => reaction === props.myReaction)) {
 		newReactions.push([props.myReaction, newSource[props.myReaction]]);
 	}
 

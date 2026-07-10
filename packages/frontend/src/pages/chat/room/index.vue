@@ -32,11 +32,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 
 				<TransitionGroup
-					:enterActiveClass="prefer.s.animation ? $style.transition_x_enterActive : ''"
-					:leaveActiveClass="prefer.s.animation ? $style.transition_x_leaveActive : ''"
-					:enterFromClass="prefer.s.animation ? $style.transition_x_enterFrom : ''"
-					:leaveToClass="prefer.s.animation ? $style.transition_x_leaveTo : ''"
-					:moveClass="prefer.s.animation ? $style.transition_x_move : ''"
+					:enterActiveClass="prefer.animation ? $style.transition_x_enterActive : ''"
+					:leaveActiveClass="prefer.animation ? $style.transition_x_leaveActive : ''"
+					:enterFromClass="prefer.animation ? $style.transition_x_enterFrom : ''"
+					:leaveToClass="prefer.animation ? $style.transition_x_leaveTo : ''"
+					:moveClass="prefer.animation ? $style.transition_x_move : ''"
 					tag="div" class="_gaps"
 				>
 					<template v-for="item in timeline.toReversed()" :key="item.id">

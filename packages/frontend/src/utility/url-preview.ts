@@ -7,9 +7,7 @@ import { hostname } from '@shared/utility/config.js';
 import { instance } from '@/instance.js';
 import { prefer } from '@/preferences.js';
 
-export const isEnabledUrlPreview = computed(
-	() => instance.enableUrlPreview && !prefer.r.dataSaver.value.disableUrlPreview,
-);
+export const isEnabledUrlPreview = computed(() => instance.enableUrlPreview && !prefer.dataSaver.disableUrlPreview);
 
 export function transformPlayerUrl(url: string): string {
 	const urlObj = new URL(url);

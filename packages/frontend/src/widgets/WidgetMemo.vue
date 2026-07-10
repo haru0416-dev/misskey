@@ -50,7 +50,7 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 	emit,
 );
 
-const text = ref<string | null>(store.s.memo);
+const text = ref<string | null>(store.memo);
 const changed = ref(false);
 let timeoutId: number | null = null;
 
@@ -65,8 +65,8 @@ const onChange = () => {
 	timeoutId = window.setTimeout(saveMemo, 1000);
 };
 
-watch(() => store.r.memo, newText => {
-	text.value = newText.value;
+watch(() => store.memo, newText => {
+	text.value = newText;
 });
 
 defineExpose<WidgetComponentExpose>({

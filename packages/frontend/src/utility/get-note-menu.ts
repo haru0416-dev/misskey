@@ -5,7 +5,7 @@
 
 import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
-import { claimAchievement } from './achievements.js';
+import { claimAchievement } from './claim-achievement.js';
 import type { Ref, ShallowRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import { $i } from '@/i.js';
@@ -319,7 +319,7 @@ export function getNoteMenu(props: {
 
 	async function translate(): Promise<void> {
 		if (props.translation.value != null) return;
-		if (prefer.s['experimental.enableWebTranslatorApi'] && isInBrowserTranslationAvailable && appearNote.text != null) {
+		if (prefer['experimental.enableWebTranslatorApi'] && isInBrowserTranslationAvailable && appearNote.text != null) {
 			props.translating.value = true;
 			try {
 				// @ts-expect-error 実験的なAPIなので型定義がない
@@ -432,7 +432,7 @@ export function getNoteMenu(props: {
 		}
 
 		if (
-			(prefer.s['experimental.enableWebTranslatorApi'] && isInBrowserTranslationAvailable) ||
+			(prefer['experimental.enableWebTranslatorApi'] && isInBrowserTranslationAvailable) ||
 			($i.policies.canUseTranslator && instance.translatorAvailable)
 		) {
 			menuItems.push({
@@ -640,7 +640,7 @@ export function getNoteMenu(props: {
 		);
 	}
 
-	if (prefer.s.devMode) {
+	if (prefer.devMode) {
 		menuItems.push(
 			{ type: 'divider' },
 			{
@@ -695,7 +695,7 @@ export function getRenoteMenu(props: {
 					icon: 'ti ti-repeat',
 					action: () => {
 						const el = props.renoteButton.value;
-						if (el && prefer.s.animation) {
+						if (el && prefer.animation) {
 							const rect = el.getBoundingClientRect();
 							const x = rect.left + el.offsetWidth / 2;
 							const y = rect.top + el.offsetHeight / 2;
@@ -743,7 +743,7 @@ export function getRenoteMenu(props: {
 					icon: 'ti ti-repeat',
 					action: () => {
 						const el = props.renoteButton.value;
-						if (el && prefer.s.animation) {
+						if (el && prefer.animation) {
 							const rect = el.getBoundingClientRect();
 							const x = rect.left + el.offsetWidth / 2;
 							const y = rect.top + el.offsetHeight / 2;
@@ -756,10 +756,10 @@ export function getRenoteMenu(props: {
 							);
 						}
 
-						const configuredVisibility = prefer.s.rememberNoteVisibility
-							? store.s.visibility
-							: prefer.s.defaultNoteVisibility;
-						const localOnly = prefer.s.rememberNoteVisibility ? store.s.localOnly : prefer.s.defaultNoteLocalOnly;
+						const configuredVisibility = prefer.rememberNoteVisibility
+							? store.visibility
+							: prefer.defaultNoteVisibility;
+						const localOnly = prefer.rememberNoteVisibility ? store.localOnly : prefer.defaultNoteLocalOnly;
 
 						let visibility = appearNote.visibility;
 						visibility = smallerVisibility(visibility, configuredVisibility);
@@ -810,7 +810,7 @@ export function getRenoteMenu(props: {
 						text: channel.name,
 						action: () => {
 							const el = props.renoteButton.value;
-							if (el && prefer.s.animation) {
+							if (el && prefer.animation) {
 								const rect = el.getBoundingClientRect();
 								const x = rect.left + el.offsetWidth / 2;
 								const y = rect.top + el.offsetHeight / 2;

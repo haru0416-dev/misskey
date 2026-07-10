@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root" :style="{ zIndex, top: top + 'px', left: left + 'px' }">
-	<Transition :name="prefer.s.animation ? '_transition_zoom' : ''" @afterLeave="emit('closed')">
+	<Transition :name="prefer.animation ? '_transition_zoom' : ''" @afterLeave="emit('closed')">
 		<MkUrlPreview v-if="showing" class="_popup _shadow" :url="url" :showActions="false"/>
 	</Transition>
 </div>

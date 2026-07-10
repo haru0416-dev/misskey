@@ -70,9 +70,9 @@ export type GetMkSelectValueTypesFromDef<T extends MkSelectItem[]> = T[number] e
 
 <script lang="ts" setup generic="const ITEMS extends MkSelectItem[], MODELT extends OptionValue">
 import { onMounted, nextTick, ref, watch, computed, toRefs, useTemplateRef } from 'vue';
-import { useInterval } from '@shared/utility/use-interval.js';
 import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
+import { useFormControlPadding } from '@/composables/useFormControlPadding.js';
 
 const props = defineProps<{
 	items: ITEMS;
@@ -109,25 +109,7 @@ const height =
 
 const focus = () => container.value?.focus();
 
-// このコンポーネントが作成された時、非表示状態である場合がある
-// 非表示状態だと要素の幅などは0になってしまうので、定期的に計算する
-useInterval(() => {
-	if (inputEl.value == null) return;
-
-	if (prefixEl.value) {
-		if (prefixEl.value.offsetWidth) {
-			inputEl.value.style.paddingLeft = prefixEl.value.offsetWidth + 'px';
-		}
-	}
-	if (suffixEl.value) {
-		if (suffixEl.value.offsetWidth) {
-			inputEl.value.style.paddingRight = suffixEl.value.offsetWidth + 'px';
-		}
-	}
-}, 100, {
-	immediate: true,
-	afterMounted: true,
-});
+useFormControlPadding(inputEl, prefixEl, suffixEl);
 
 onMounted(() => {
 	nextTick(() => {

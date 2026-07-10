@@ -216,7 +216,7 @@ export function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 
 			misskeyApi('drive/files/upload-from-url', {
 				url: url,
-				folderId: prefer.s.uploadFolder,
+				folderId: prefer.uploadFolder,
 				marker,
 			});
 
