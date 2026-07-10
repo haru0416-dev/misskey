@@ -169,7 +169,7 @@ async function renderChart() {
 						isoWeekday: 0,
 						displayFormats: {
 							day: 'M/d',
-							month: 'Y/M',
+							month: 'y/M',
 							week: 'M/d',
 						},
 					},

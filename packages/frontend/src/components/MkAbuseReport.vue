@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</template>
 			<template v-if="report.targetUser.host != null">
 				<MkButton :disabled="report.forwarded" primary @click="forward"><i class="ti ti-corner-up-right"></i> {{ i18n.ts._abuseUserReport.forward }}</MkButton>
-				<div v-tooltip:dialog="i18n.ts._abuseUserReport.forwardDescription" class="_button _help"><i class="ti ti-help-circle"></i></div>
+				<button v-tooltip:dialog="i18n.ts._abuseUserReport.forwardDescription" type="button" class="_button _help" :aria-label="i18n.ts._abuseUserReport.forwardDescription"><i class="ti ti-help-circle"></i></button>
 			</template>
 			<button class="_button" style="margin-left: auto; width: 34px;" @click="showMenu"><i class="ti ti-dots"></i></button>
 		</div>

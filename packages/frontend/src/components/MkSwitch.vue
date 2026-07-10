@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<span @click="toggle">
 				<slot name="label"></slot><slot></slot>
 			</span>
-			<span v-if="helpText" v-tooltip:dialog="helpText" class="_button _help" :class="$style.help"><i class="ti ti-help-circle"></i></span>
+			<button v-if="helpText" v-tooltip:dialog="helpText" type="button" class="_button _help" :class="$style.help" :aria-label="helpText"><i class="ti ti-help-circle"></i></button>
 		</span>
 		<p :class="$style.caption"><slot name="caption"></slot></p>
 	</span>

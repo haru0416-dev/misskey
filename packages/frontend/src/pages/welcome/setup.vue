@@ -54,11 +54,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<div>{{ i18n.ts._serverSetupWizard.firstCreateAccount }}</div>
 					</div>
 					<MkInput v-model="setupPassword" type="password" data-cy-admin-initial-password>
-						<template #label>{{ i18n.ts.initialPasswordForSetup }} <div v-tooltip:dialog="i18n.ts.initialPasswordForSetupDescription" class="_button _help"><i class="ti ti-help-circle"></i></div></template>
+						<template #label>{{ i18n.ts.initialPasswordForSetup }} <button v-tooltip:dialog="i18n.ts.initialPasswordForSetupDescription" type="button" class="_button _help" :aria-label="i18n.ts.initialPasswordForSetupDescription"><i class="ti ti-help-circle"></i></button></template>
 						<template #prefix><i class="ti ti-lock"></i></template>
 					</MkInput>
 					<MkInput v-model="username" pattern="^[a-zA-Z0-9_]{1,20}$" :spellcheck="false" required data-cy-admin-username>
-						<template #label>{{ i18n.ts.username }} <div v-tooltip:dialog="i18n.ts.usernameInfo" class="_button _help"><i class="ti ti-help-circle"></i></div></template>
+						<template #label>{{ i18n.ts.username }} <button v-tooltip:dialog="i18n.ts.usernameInfo" type="button" class="_button _help" :aria-label="i18n.ts.usernameInfo"><i class="ti ti-help-circle"></i></button></template>
 						<template #prefix>@</template>
 						<template #suffix>@{{ host }}</template>
 					</MkInput>
