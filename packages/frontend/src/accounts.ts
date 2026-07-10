@@ -17,6 +17,7 @@ import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import type { AccountWithToken } from '@/i.js';
 import { signout } from '@/signout.js';
+import { updateUserQueries } from '@/query/streaming.js';
 
 export async function getAccounts(): Promise<
 	{
@@ -142,6 +143,7 @@ export function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
 	store.set('accountInfos', { ...store.accountInfos, [host + '/' + $i.id]: $i });
 	$i.token = token;
 	miLocalStorage.setItem('account', JSON.stringify($i));
+	updateUserQueries($i.id, $i);
 }
 
 export function updateCurrentAccountPartial(accountData: Partial<Misskey.entities.MeDetailed>) {
@@ -153,6 +155,7 @@ export function updateCurrentAccountPartial(accountData: Partial<Misskey.entitie
 	store.set('accountInfos', { ...store.accountInfos, [host + '/' + $i.id]: $i });
 
 	miLocalStorage.setItem('account', JSON.stringify($i));
+	updateUserQueries($i.id, { id: $i.id, ...accountData });
 }
 
 export async function refreshCurrentAccount() {

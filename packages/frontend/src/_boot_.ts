@@ -16,6 +16,7 @@ import '@/style.scss';
 import { createApp, defineComponent, h, markRaw, shallowRef } from 'vue';
 import type { Component } from 'vue';
 import { installPinia } from '@/store/pinia.js';
+import { installQueryClient } from '@/query/client.js';
 
 const rootComponent = shallowRef<Component | null>(null);
 const app = createApp(
@@ -25,6 +26,7 @@ const app = createApp(
 	}),
 );
 installPinia(app);
+installQueryClient(app);
 
 function setRootComponent(component: Component): void {
 	rootComponent.value = markRaw(component);

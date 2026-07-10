@@ -6,6 +6,8 @@
 - Enhance: フロントエンド/ビルドツール周辺の未使用依存パッケージ19個を削除 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
 
 ### Client
+- Enhance: Paginator のカーソル計算・重複排除・リアクティビティを最適化し、重複取得と古いリクエストの競合を抑制
+- Enhance: TanStack Query を導入し、主要な参照APIと共有キャッシュの重複取得・無効化・Streaming同期を統合
 - Enhance: クライアントの状態・設定管理を Pinia ベースへ移行し、永続化書き込みのバッチ化とアカウント単位のタブ間同期を改善
 - Enhance: 旧 `/authorize-follow` と Mastodon 互換の `/authorize_interaction` リダイレクト、未使用の LocalStorage 絵文字キャッシュキー、旧カスタムテーマの `kind` フィールド互換、非推奨の `i18n.t()` API を削除。リモートログイン時は `/lookup?uri=` を使用
 - Enhance: タイムライン等の画像をビューポート近傍まで読み込まないように変更 (IntersectionObserver による自前遅延読み込みを導入。あわせて、同一URLの画像がページ内の別要素で既にブラウザキャッシュ済みの場合に `load` イベントが発火せずBlurhashプレースホルダーのまま表示が固まる問題を修正)

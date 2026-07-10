@@ -22,6 +22,7 @@
 		"@sentry/vue": "10.59.0",
 		"@simplewebauthn/browser": "13.3.0",
 		"@syuilo/aiscript": "workspace:*",
+		"@tanstack/vue-query": "5.101.2",
 		"@vitejs/plugin-vue": "6.0.7",
 		"analytics": "0.8.19",
 		"buraha": "0.0.1",

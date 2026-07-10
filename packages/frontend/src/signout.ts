@@ -10,6 +10,7 @@ import { waiting } from '@/os.js';
 import { unisonReload } from '@/utility/unison-reload.js';
 import { clear } from '@/utility/idb-proxy.js';
 import { $i } from '@/i.js';
+import { queryClient } from '@/query/client.js';
 
 export async function signout() {
 	if (!$i) return;
@@ -21,6 +22,7 @@ export async function signout() {
 	}
 
 	localStorage.clear();
+	queryClient.clear();
 
 	const idbAbortController = new AbortController();
 	const timeout = window.setTimeout(() => idbAbortController.abort(), 5000);
