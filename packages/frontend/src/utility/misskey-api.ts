@@ -7,7 +7,49 @@ import * as Misskey from 'misskey-js';
 import { ref } from 'vue';
 import { apiUrl } from '@shared/utility/config.js';
 import { $i } from '@/i.js';
+import { fetchMisskeyQuery, invalidateAfterMutation, isCachedEndpoint } from '@/query/api.js';
 export const pendingApiRequestsCount = ref(0);
+
+function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
+	method: 'GET' | 'POST',
+	endpoint: E,
+	data: P,
+	token?: string | null | undefined,
+	signal?: AbortSignal,
+): Promise<_ResT> {
+	pendingApiRequestsCount.value++;
+
+	const onFinally = () => {
+		pendingApiRequestsCount.value--;
+	};
+
+	const payload = { ...(data ?? {}) } as Record<string, unknown> & { i?: string | null };
+	if (method === 'POST') {
+		if ($i) payload.i = $i.token;
+		if (token !== undefined) payload.i = token;
+	}
+	const query = new URLSearchParams(payload as Record<string, string>);
+
+	const promise = window
+		.fetch(method === 'POST' ? `${apiUrl}/${endpoint}` : `${apiUrl}/${endpoint}?${query}`, {
+			method,
+			...(method === 'POST' ? { body: JSON.stringify(payload) } : {}),
+			credentials: 'omit',
+			cache: method === 'POST' ? 'no-cache' : 'default',
+			...(method === 'POST' ? { headers: { 'Content-Type': 'application/json' } } : {}),
+			signal,
+		})
+		.then(async (res) => {
+			const body = res.status === 204 ? null : await res.json();
+
+			if (res.status === 200) return body as _ResT;
+			if (res.status === 204) return undefined as _ResT;
+			throw body.error;
+		});
+
+	promise.then(onFinally, onFinally);
+	return promise;
+}
 
 // Implements Misskey.api.ApiClient.request
 export function misskeyApi<
@@ -22,46 +64,20 @@ export function misskeyApi<
 	signal?: AbortSignal,
 ): Promise<_ResT> {
 	if (endpoint.includes('://')) throw new Error('invalid endpoint');
-	pendingApiRequestsCount.value++;
 
-	const onFinally = () => {
-		pendingApiRequestsCount.value--;
-	};
+	if (token === undefined && data.i === undefined && signal == null && isCachedEndpoint(endpoint)) {
+		return fetchMisskeyQuery({
+			accountId: $i?.id ?? null,
+			endpoint,
+			params: data,
+			queryFn: (querySignal) => requestMisskeyApi<_ResT, E, P>('POST', endpoint, data, token, querySignal),
+		}) as Promise<_ResT>;
+	}
 
-	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Append a credential
-		if ($i) data.i = $i.token;
-		if (token !== undefined) data.i = token;
-
-		// Send request
-		window
-			.fetch(`${apiUrl}/${endpoint}`, {
-				method: 'POST',
-				body: JSON.stringify(data),
-				credentials: 'omit',
-				cache: 'no-cache',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				signal,
-			})
-			.then(async (res) => {
-				const body = res.status === 204 ? null : await res.json();
-
-				if (res.status === 200) {
-					resolve(body);
-				} else if (res.status === 204) {
-					resolve(undefined as _ResT); // void -> undefined
-				} else {
-					reject(body.error);
-				}
-			})
-			.catch(reject);
+	return requestMisskeyApi<_ResT, E, P>('POST', endpoint, data, token, signal).then((response) => {
+		invalidateAfterMutation($i?.id ?? null, endpoint);
+		return response;
 	});
-
-	promise.then(onFinally, onFinally);
-
-	return promise;
 }
 
 // Implements Misskey.api.ApiClient.request
@@ -71,37 +87,14 @@ export function misskeyApiGet<
 	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(endpoint: E, data: P = {} as any): Promise<_ResT> {
-	pendingApiRequestsCount.value++;
-
-	const onFinally = () => {
-		pendingApiRequestsCount.value--;
-	};
-
-	const query = new URLSearchParams(data as any);
-
-	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Send request
-		window
-			.fetch(`${apiUrl}/${endpoint}?${query}`, {
-				method: 'GET',
-				credentials: 'omit',
-				cache: 'default',
-			})
-			.then(async (res) => {
-				const body = res.status === 204 ? null : await res.json();
-
-				if (res.status === 200) {
-					resolve(body);
-				} else if (res.status === 204) {
-					resolve(undefined as _ResT); // void -> undefined
-				} else {
-					reject(body.error);
-				}
-			})
-			.catch(reject);
-	});
-
-	promise.then(onFinally, onFinally);
-
-	return promise;
+	if (endpoint.includes('://')) throw new Error('invalid endpoint');
+	if (isCachedEndpoint(endpoint)) {
+		return fetchMisskeyQuery({
+			accountId: null,
+			endpoint,
+			params: data,
+			queryFn: (signal) => requestMisskeyApi<_ResT, E, P>('GET', endpoint, data, undefined, signal),
+		}) as Promise<_ResT>;
+	}
+	return requestMisskeyApi<_ResT, E, P>('GET', endpoint, data, undefined);
 }

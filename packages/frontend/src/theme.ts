@@ -200,7 +200,7 @@ export async function addTheme(theme: Theme): Promise<void> {
 	if (builtinThemes.some((t) => t.id === theme.id)) {
 		throw new Error('builtin theme');
 	}
-	const themes = prefer.s.themes;
+	const themes = prefer.themes;
 	if (themes.some((t) => t.id === theme.id)) {
 		throw new Error('already exists');
 	}
@@ -209,7 +209,7 @@ export async function addTheme(theme: Theme): Promise<void> {
 
 export async function removeTheme(theme: Theme): Promise<void> {
 	if ($i == null) return;
-	const themes = prefer.s.themes.filter((t) => t.id !== theme.id);
+	const themes = prefer.themes.filter((t) => t.id !== theme.id);
 	prefer.commit('themes', themes);
 }
 

@@ -4,6 +4,7 @@
  */
 
 import { shallowRef, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import MkEmojiPickerDialog from '@/components/MkEmojiPickerDialog.vue';
 import { popup } from '@/os.js';
 import { prefer } from '@/preferences.js';
@@ -18,8 +19,9 @@ class EmojiPicker {
 	private emojisRef = ref<string[]>([]);
 
 	public init() {
+		const { emojiPaletteForMain, emojiPalettes } = storeToRefs(prefer);
 		watch(
-			[prefer.r.emojiPaletteForMain, prefer.r.emojiPalettes],
+			[emojiPaletteForMain, emojiPalettes],
 			([newId, newPalettes]) => {
 				this.emojisRef.value =
 					newId == null ? newPalettes[0].emojis : (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);

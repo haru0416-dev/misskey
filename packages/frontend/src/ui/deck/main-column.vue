@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <XColumn
-	v-if="prefer.s['deck.alwaysShowMainColumn'] || mainRouter.currentRoute.value.name !== 'index'"
+	v-if="prefer['deck.alwaysShowMainColumn'] || mainRouter.currentRoute.value.name !== 'index'"
 	:column="column"
 	:isStacked="isStacked"
 	:handleScrollToTop="false"
@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</template>
 
 	<div ref="rootEl" style="height: 100%;">
-		<StackingRouterView v-if="prefer.s['experimental.stackingRouterView']" @contextmenu.stop="onContextmenu"/>
+		<StackingRouterView v-if="prefer['experimental.stackingRouterView']" @contextmenu.stop="onContextmenu"/>
 		<RouterView v-else @contextmenu.stop="onContextmenu"/>
 	</div>
 </XColumn>

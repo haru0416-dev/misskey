@@ -127,6 +127,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref } from 'vue';
 import { host, version } from '@shared/utility/config.js';
 import MkButton from '@/components/MkButton.vue';
+import PageWithAnimBg from '@/components/global/PageWithAnimBg.vue';
 import MkInput from '@/components/MkInput.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

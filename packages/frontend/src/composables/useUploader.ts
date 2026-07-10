@@ -4,8 +4,6 @@
  */
 
 import * as Misskey from 'misskey-js';
-import { readAndCompressImage } from '@misskey-dev/browser-image-resizer';
-import isAnimated from 'is-file-animated';
 import { EventEmitter } from 'eventemitter3';
 import { computed, markRaw, onMounted, onUnmounted, ref, triggerRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
@@ -123,11 +121,11 @@ export function useUploader(
 		const extension = filename.split('.').length > 1 ? '.' + filename.split('.').pop() : '';
 		const watermarkPreset =
 			uploaderFeatures.value.watermark && $i.policies.watermarkAvailable
-				? (prefer.s.watermarkPresets.find((p) => p.id === prefer.s.defaultWatermarkPresetId) ?? null)
+				? (prefer.watermarkPresets.find((p) => p.id === prefer.defaultWatermarkPresetId) ?? null)
 				: null;
 		items.value.push({
 			id,
-			name: prefer.s.keepOriginalFilename ? filename : id + extension,
+			name: prefer.keepOriginalFilename ? filename : id + extension,
 			suffix: '',
 			progress: null,
 			thumbnail: THUMBNAIL_SUPPORTED_TYPES.includes(file.type) ? window.URL.createObjectURL(file) : null,
@@ -138,9 +136,9 @@ export function useUploader(
 			uploaded: null,
 			uploadFailed: false,
 			compressionLevel: IMAGE_EDITING_SUPPORTED_TYPES.includes(file.type)
-				? prefer.s.defaultImageCompressionLevel
+				? prefer.defaultImageCompressionLevel
 				: VIDEO_COMPRESSION_SUPPORTED_TYPES.includes(file.type)
-					? prefer.s.defaultVideoCompressionLevel
+					? prefer.defaultVideoCompressionLevel
 					: 0,
 			watermarkPreset,
 			watermarkLayers: watermarkPreset?.layers ?? null,
@@ -347,7 +345,7 @@ export function useUploader(
 						type: 'label',
 						text: i18n.ts.presets,
 					},
-					...prefer.s.watermarkPresets.map((preset) => ({
+					...prefer.watermarkPresets.map((preset) => ({
 						type: 'radioOption' as const,
 						text: preset.name,
 						active: computed(() => item.watermarkPreset?.id === preset.id),
@@ -415,7 +413,7 @@ export function useUploader(
 						type: 'label' as const,
 						text: i18n.ts.presets,
 					},
-					...prefer.s.imageFramePresets.map((preset) => ({
+					...prefer.imageFramePresets.map((preset) => ({
 						type: 'button' as const,
 						text: preset.name,
 						action: async () => {
@@ -568,7 +566,7 @@ export function useUploader(
 
 		const { filePromise, abort } = uploadFile(item.preprocessedFile ?? item.file, {
 			name: getUploadName(item),
-			folderId: options.folderId === undefined ? prefer.s.uploadFolder : options.folderId,
+			folderId: options.folderId === undefined ? prefer.uploadFolder : options.folderId,
 			isSensitive: item.isSensitive ?? false,
 			caption: item.caption ?? null,
 			onProgress: (progress) => {
@@ -736,13 +734,18 @@ export function useUploader(
 		}
 
 		const compressionSettings = getCompressionSettings(item.compressionLevel);
-		const needsCompress =
+		const compressionTools =
 			item.compressionLevel !== 0 &&
-			compressionSettings &&
-			IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type) &&
-			!(await isAnimated(preprocessedFile));
+			compressionSettings != null &&
+			IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type)
+				? await import('@/utility/image-compression.js')
+				: null;
 
-		if (needsCompress) {
+		if (
+			compressionSettings != null &&
+			compressionTools != null &&
+			!(await compressionTools.isAnimated(preprocessedFile))
+		) {
 			const config = {
 				mimeType: (isWebpSupported() ? 'image/webp' : 'image/jpeg') as 'image/webp' | 'image/jpeg',
 				maxWidth: compressionSettings.maxWidth,
@@ -751,7 +754,7 @@ export function useUploader(
 			};
 
 			try {
-				const result = await readAndCompressImage(preprocessedFile, config);
+				const result = await compressionTools.readAndCompressImage(preprocessedFile, config);
 				if (result.size < preprocessedFile.size || preprocessedFile.type === 'image/webp') {
 					// The compression may not always reduce the file size
 					// (and WebP is not browser safe yet)

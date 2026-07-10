@@ -22,8 +22,6 @@ export function useTooltip(
 
 	let changeShowingState: (() => void) | null;
 
-	let autoHidingTimer: number | null = null;
-
 	const open = () => {
 		close();
 		if (!isHovering) return;
@@ -36,19 +34,6 @@ export function useTooltip(
 		changeShowingState = () => {
 			showing.value = false;
 		};
-
-		autoHidingTimer = window.setInterval(() => {
-			if (
-				elRef.value == null ||
-				!window.document.body.contains(elRef.value instanceof Element ? elRef.value : elRef.value.$el)
-			) {
-				if (!isHovering) return;
-				isHovering = false;
-				window.clearTimeout(timeoutId);
-				close();
-				if (autoHidingTimer != null) window.clearInterval(autoHidingTimer);
-			}
-		}, 1000);
 	};
 
 	const close = () => {
@@ -69,7 +54,6 @@ export function useTooltip(
 		if (!isHovering) return;
 		isHovering = false;
 		window.clearTimeout(timeoutId);
-		if (autoHidingTimer != null) window.clearInterval(autoHidingTimer);
 		close();
 	};
 
@@ -84,22 +68,30 @@ export function useTooltip(
 		if (!isHovering) return;
 		isHovering = false;
 		window.clearTimeout(timeoutId);
-		if (autoHidingTimer != null) window.clearInterval(autoHidingTimer);
 		close();
 	};
 
 	const stop = watch(
 		elRef,
-		() => {
-			if (elRef.value) {
-				stop();
-				const el = elRef.value instanceof Element ? elRef.value : elRef.value.$el;
-				el.addEventListener('mouseover', onMouseover, { passive: true });
-				el.addEventListener('mouseleave', onMouseleave, { passive: true });
-				el.addEventListener('touchstart', onTouchstart, { passive: true });
-				el.addEventListener('touchend', onTouchend, { passive: true });
-				el.addEventListener('click', close, { passive: true });
-			}
+		(value, _oldValue, onCleanup) => {
+			if (value == null) return;
+			const el = value instanceof Element ? value : value.$el;
+			el.addEventListener('mouseover', onMouseover, { passive: true });
+			el.addEventListener('mouseleave', onMouseleave, { passive: true });
+			el.addEventListener('touchstart', onTouchstart, { passive: true });
+			el.addEventListener('touchend', onTouchend, { passive: true });
+			el.addEventListener('click', close, { passive: true });
+
+			onCleanup(() => {
+				isHovering = false;
+				window.clearTimeout(timeoutId);
+				close();
+				el.removeEventListener('mouseover', onMouseover);
+				el.removeEventListener('mouseleave', onMouseleave);
+				el.removeEventListener('touchstart', onTouchstart);
+				el.removeEventListener('touchend', onTouchend);
+				el.removeEventListener('click', close);
+			});
 		},
 		{
 			immediate: true,
@@ -108,6 +100,6 @@ export function useTooltip(
 	);
 
 	onUnmounted(() => {
-		close();
+		stop();
 	});
 }

@@ -8,11 +8,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 	ref="buttonEl"
 	v-ripple="canToggle"
 	class="_button"
-	:class="[$style.root, { [$style.reacted]: myReaction == reaction, [$style.canToggle]: canToggle, [$style.small]: prefer.s.reactionsDisplaySize === 'small', [$style.large]: prefer.s.reactionsDisplaySize === 'large' }]"
+	:class="[$style.root, { [$style.reacted]: myReaction == reaction, [$style.canToggle]: canToggle, [$style.small]: prefer.reactionsDisplaySize === 'small', [$style.large]: prefer.reactionsDisplaySize === 'large' }]"
 	@click="toggleReaction()"
 	@contextmenu.prevent.stop="menu"
 >
-	<MkReactionIcon style="pointer-events: none;" :class="prefer.s.limitWidthOfReaction ? $style.limitWidth : ''" :reaction="reaction" :emojiUrl="reactionEmojis[reaction.substring(1, reaction.length - 1)]"/>
+	<MkReactionIcon style="pointer-events: none;" :class="prefer.limitWidthOfReaction ? $style.limitWidth : ''" :reaction="reaction" :emojiUrl="reactionEmojis[reaction.substring(1, reaction.length - 1)]"/>
 	<span :class="$style.count">{{ count }}</span>
 </button>
 </template>
@@ -23,7 +23,6 @@ import * as Misskey from 'misskey-js';
 import { getUnicodeEmojiOrNull } from '@shared/utility/emojilist.js';
 import MkCustomEmojiDetailedDialog from './MkCustomEmojiDetailedDialog.vue';
 import type { MenuItem } from '@/types/menu';
-import XDetails from '@/components/MkReactionsViewer.Details.vue';
 import MkReactionIcon from '@/components/MkReactionIcon.vue';
 import * as os from '@/os.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
@@ -117,7 +116,7 @@ async function toggleReaction() {
 			}
 		});
 	} else {
-		if (prefer.s.confirmOnReact) {
+		if (prefer.confirmOnReact) {
 			const confirm = await os.confirm({
 				type: 'question',
 				text: i18n.tsx.reactAreYouSure({ emoji: props.reaction.replace('@.', '') }),
@@ -214,7 +213,7 @@ async function menu(ev: PointerEvent) {
 }
 
 function anime() {
-	if (window.document.hidden || !prefer.s.animation || buttonEl.value == null) return;
+	if (window.document.hidden || !prefer.animation || buttonEl.value == null) return;
 
 	const rect = buttonEl.value.getBoundingClientRect();
 	const x = rect.left + 16;
@@ -236,12 +235,15 @@ if (!mock) {
 	useTooltip(buttonEl, async (showing) => {
 		if (buttonEl.value == null) return;
 
-		const reactions = await misskeyApiGet('notes/reactions', {
-			noteId: props.noteId,
-			type: props.reaction,
-			limit: 10,
-			_cacheKey_: props.count,
-		});
+		const [reactions, XDetails] = await Promise.all([
+			misskeyApiGet('notes/reactions', {
+				noteId: props.noteId,
+				type: props.reaction,
+				limit: 10,
+				_cacheKey_: props.count,
+			}),
+			import('@/components/MkReactionsViewer.Details.vue').then((x) => x.default),
+		]);
 
 		const users = reactions.map(x => x.user);
 

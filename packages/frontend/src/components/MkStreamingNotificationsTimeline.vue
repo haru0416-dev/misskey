@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<component :is="prefer.s.enablePullToRefresh ? MkPullToRefresh : 'div'" :refresher="() => reload()">
+<component :is="prefer.enablePullToRefresh ? MkPullToRefresh : 'div'" :refresher="() => reload()">
 	<MkLoading v-if="paginator.fetching.value"/>
 
 	<MkError v-else-if="paginator.error.value" @retry="paginator.init()"/>
@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div v-else ref="rootEl">
 		<component
-			:is="prefer.s.animation ? TransitionGroup : 'div'" :class="[$style.notifications]"
+			:is="prefer.animation ? TransitionGroup : 'div'" :class="[$style.notifications]"
 			:enterActiveClass="$style.transition_x_enterActive"
 			:leaveActiveClass="$style.transition_x_leaveActive"
 			:enterFromClass="$style.transition_x_enterFrom"
@@ -33,7 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<XNotification v-else :class="$style.content" :notification="notification" :withTime="true" :full="true"/>
 			</div>
 		</component>
-		<button v-show="paginator.canFetchOlder.value" key="_more_" v-appear="prefer.s.enableInfiniteScroll ? paginator.fetchOlder : null" :disabled="paginator.fetchingOlder.value" class="_button" :class="$style.more" @click="paginator.fetchOlder">
+		<button v-show="paginator.canFetchOlder.value" key="_more_" v-appear="prefer.enableInfiniteScroll ? paginator.fetchOlder : null" :disabled="paginator.fetchingOlder.value" class="_button" :class="$style.more" @click="paginator.fetchOlder">
 			<div v-if="!paginator.fetchingOlder.value">{{ i18n.ts.loadMore }}</div>
 			<MkLoading v-else/>
 		</button>
@@ -64,7 +64,7 @@ const props = defineProps<{
 
 const rootEl = useTemplateRef('rootEl');
 
-const paginator = prefer.s.useGroupedNotifications ? markRaw(new Paginator('i/notifications-grouped', {
+const paginator = prefer.useGroupedNotifications ? markRaw(new Paginator('i/notifications-grouped', {
 	limit: 20,
 	computedParams: computed(() => ({
 		excludeTypes: props.excludeTypes ?? undefined,
@@ -78,12 +78,12 @@ const paginator = prefer.s.useGroupedNotifications ? markRaw(new Paginator('i/no
 
 const MIN_POLLING_INTERVAL = 1000 * 10;
 const POLLING_INTERVAL =
-	prefer.s.pollingInterval === 1 ? MIN_POLLING_INTERVAL * 1.5 * 1.5 :
-	prefer.s.pollingInterval === 2 ? MIN_POLLING_INTERVAL * 1.5 :
-	prefer.s.pollingInterval === 3 ? MIN_POLLING_INTERVAL :
+	prefer.pollingInterval === 1 ? MIN_POLLING_INTERVAL * 1.5 * 1.5 :
+	prefer.pollingInterval === 2 ? MIN_POLLING_INTERVAL * 1.5 :
+	prefer.pollingInterval === 3 ? MIN_POLLING_INTERVAL :
 	MIN_POLLING_INTERVAL;
 
-if (!store.s.realtimeMode) {
+if (!store.realtimeMode) {
 	useInterval(async () => {
 		paginator.fetchNewer({
 			toQueue: false,
@@ -140,7 +140,7 @@ watch(visibility, () => {
 function onNotification(notification: Misskey.entities.Notification) {
 	const isMuted = props.excludeTypes ? props.excludeTypes.includes(notification.type as typeof notificationTypes[number]) : false;
 	if (isMuted || window.document.visibilityState === 'visible') {
-		if (store.s.realtimeMode) {
+		if (store.realtimeMode) {
 			useStream().send('readNotification');
 		}
 	}
@@ -169,7 +169,7 @@ onMounted(() => {
 		}, { immediate: false, deep: true });
 	}
 
-	if (store.s.realtimeMode) {
+	if (store.realtimeMode) {
 		connection = useStream().useChannel('main');
 		connection.on('notification', onNotification);
 		connection.on('notificationFlushed', reload);

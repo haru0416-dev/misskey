@@ -49,6 +49,7 @@ import MkExtensionInstaller from '@/components/MkExtensionInstaller.vue';
 import MkButton from '@/components/MkButton.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';
 import MkUrl from '@/components/global/MkUrl.vue';
+import PageWithAnimBg from '@/components/global/PageWithAnimBg.vue';
 import FormSection from '@/components/form/section.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

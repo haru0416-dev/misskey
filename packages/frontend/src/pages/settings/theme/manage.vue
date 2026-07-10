@@ -26,6 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import JSON5 from 'json5';
 import type { Theme } from '@shared/utility/theme.js';
 import MkTextarea from '@/components/MkTextarea.vue';
@@ -42,7 +43,7 @@ import { useMkSelect } from '@/composables/useMkSelect.js';
 import type { MkSelectItem } from '@/components/MkSelect.vue';
 import { prefer } from '@/preferences';
 
-const installedThemes = prefer.r.themes;
+const { themes: installedThemes } = storeToRefs(prefer);
 const builtinThemes = ref<Theme[]>([]);
 getBuiltinThemes().then(themes => {
 	builtinThemes.value = themes;

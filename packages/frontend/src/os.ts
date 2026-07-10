@@ -20,16 +20,17 @@ import type { MkDialogReturnType } from '@/components/MkDialog.vue';
 import type { OverloadToUnion } from '@/types/overload-to-union.js';
 import type MkRoleSelectDialog_TypeReferenceOnly from '@/components/MkRoleSelectDialog.vue';
 import type MkEmojiPickerDialog_TypeReferenceOnly from '@/components/MkEmojiPickerDialog.vue';
+import type MkPopupMenu_TypeReferenceOnly from '@/components/MkPopupMenu.vue';
+import type MkContextMenu_TypeReferenceOnly from '@/components/MkContextMenu.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { $i } from '@/i.js';
+import { executeMisskeyMutation } from '@/query/mutation.js';
 import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
 import MkPostFormDialog from '@/components/MkPostFormDialog.vue';
 import MkWaitingDialog from '@/components/MkWaitingDialog.vue';
-import MkPageWindow from '@/components/MkPageWindow.vue';
 import MkToast from '@/components/MkToast.vue';
 import MkDialog from '@/components/MkDialog.vue';
-import MkPopupMenu from '@/components/MkPopupMenu.vue';
-import MkContextMenu from '@/components/MkContextMenu.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { pleaseLogin } from '@/utility/please-login.js';
 import { showMovedDialog } from '@/utility/show-moved-dialog.js';
@@ -45,7 +46,11 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 	token?: string | null | undefined,
 	customErrors?: ApiWithDialogCustomErrors,
 ) => {
-	const promise = misskeyApi(endpoint, data, token);
+	const promise = executeMisskeyMutation({
+		accountId: $i?.id ?? null,
+		endpoint,
+		mutationFn: () => misskeyApi(endpoint, data, token),
+	});
 	promiseDialog(promise, null, async (err) => {
 		let title: string | undefined;
 		let text = err.message + '\n' + err.id;
@@ -225,6 +230,11 @@ export async function popupAsyncWithDialog<T extends Component>(
 	props: ComponentProps<T>,
 	events: Partial<ComponentEmitsObject<T>> = {},
 ): Promise<{ dispose: () => void }> {
+	const component = await resolveComponentWithDialog(componentFetching);
+	return popup(component, props, events);
+}
+
+async function resolveComponentWithDialog<T extends Component>(componentFetching: Promise<T>): Promise<T> {
 	let component: T;
 	let closeWaiting = () => {};
 
@@ -248,19 +258,23 @@ export async function popupAsyncWithDialog<T extends Component>(
 	window.clearTimeout(timer);
 	closeWaiting();
 
-	return popup(component, props, events);
+	return component;
 }
 
-export function pageWindow(path: string) {
-	const { dispose } = popup(
-		MkPageWindow,
-		{
-			initialPath: path,
-		},
-		{
-			closed: () => dispose(),
-		},
-	);
+export async function pageWindow(path: string): Promise<void> {
+	try {
+		const { dispose } = await popupAsyncWithDialog(
+			import('@/components/MkPageWindow.vue').then((x) => x.default),
+			{
+				initialPath: path,
+			},
+			{
+				closed: () => dispose(),
+			},
+		);
+	} catch {
+		// popupAsyncWithDialog displays the load error to the user.
+	}
 }
 
 export function toast(message: string) {
@@ -704,7 +718,38 @@ export async function cropImageFile<F extends File | Blob>(
 	});
 }
 
-export function popupMenu(
+let popupMenuComponentPromise: Promise<typeof MkPopupMenu_TypeReferenceOnly> | null = null;
+let contextMenuComponentPromise: Promise<typeof MkContextMenu_TypeReferenceOnly> | null = null;
+
+function fetchPopupMenuComponent(): Promise<typeof MkPopupMenu_TypeReferenceOnly> {
+	popupMenuComponentPromise ??= import('@/components/MkPopupMenu.vue')
+		.then((x) => x.default)
+		.catch((error: unknown) => {
+			popupMenuComponentPromise = null;
+			throw error;
+		});
+	return popupMenuComponentPromise;
+}
+
+function fetchContextMenuComponent(): Promise<typeof MkContextMenu_TypeReferenceOnly> {
+	contextMenuComponentPromise ??= import('@/components/MkContextMenu.vue')
+		.then((x) => x.default)
+		.catch((error: unknown) => {
+			contextMenuComponentPromise = null;
+			throw error;
+		});
+	return contextMenuComponentPromise;
+}
+
+export function preloadPopupMenu(): void {
+	void fetchPopupMenuComponent().catch(() => {});
+}
+
+export function preloadContextMenu(): void {
+	void fetchContextMenuComponent().catch(() => {});
+}
+
+export async function popupMenu(
 	items: (MenuItem | null)[],
 	anchorElement?: HTMLElement | EventTarget | null,
 	options?: {
@@ -721,66 +766,80 @@ export function popupMenu(
 	}
 
 	let returnFocusTo = getHTMLElementOrNull(anchorElement) ?? getHTMLElementOrNull(window.document.activeElement);
-	return new Promise((resolve) =>
-		nextTick(() => {
-			const { dispose } = popup(
-				MkPopupMenu,
-				{
-					items: items.filter((x) => x != null),
-					anchorElement,
-					width: options?.width,
-					align: options?.align,
-					returnFocusTo,
-					debugDisablePredictionCone: options?.debugDisablePredictionCone,
-					debugShowPredictionCone: options?.debugShowPredictionCone,
+	let component: typeof MkPopupMenu_TypeReferenceOnly;
+	try {
+		component = await resolveComponentWithDialog(fetchPopupMenuComponent());
+	} catch {
+		returnFocusTo = null;
+		return;
+	}
+
+	await nextTick();
+	return new Promise((resolve) => {
+		const { dispose } = popup(
+			component,
+			{
+				items: items.filter((x) => x != null),
+				anchorElement,
+				width: options?.width,
+				align: options?.align,
+				returnFocusTo,
+				debugDisablePredictionCone: options?.debugDisablePredictionCone,
+				debugShowPredictionCone: options?.debugShowPredictionCone,
+			},
+			{
+				closed: () => {
+					resolve();
+					dispose();
+					returnFocusTo = null;
+					options?.onClosed?.();
 				},
-				{
-					closed: () => {
-						resolve();
-						dispose();
-						returnFocusTo = null;
-						options?.onClosed?.();
-					},
-					closing: () => {
-						options?.onClosing?.();
-					},
+				closing: () => {
+					options?.onClosing?.();
 				},
-			);
-		}),
-	);
+			},
+		);
+	});
 }
 
-export function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<void> {
-	if (prefer.s.contextMenu === 'native' || (prefer.s.contextMenu === 'appWithShift' && !ev.shiftKey)) {
-		return Promise.resolve();
+export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<void> {
+	if (prefer.contextMenu === 'native' || (prefer.contextMenu === 'appWithShift' && !ev.shiftKey)) {
+		return;
 	}
 
 	let returnFocusTo =
 		getHTMLElementOrNull(ev.currentTarget ?? ev.target) ?? getHTMLElementOrNull(window.document.activeElement);
 	ev.preventDefault();
-	return new Promise((resolve) =>
-		nextTick(() => {
-			const { dispose } = popup(
-				MkContextMenu,
-				{
-					items,
-					ev,
-				},
-				{
-					closed: () => {
-						resolve();
-						dispose();
+	let component: typeof MkContextMenu_TypeReferenceOnly;
+	try {
+		component = await resolveComponentWithDialog(fetchContextMenuComponent());
+	} catch {
+		returnFocusTo = null;
+		return;
+	}
 
-						// MkModalを通していないのでここでフォーカスを戻す処理を行う
-						if (returnFocusTo != null) {
-							focusParent(returnFocusTo, true, false);
-							returnFocusTo = null;
-						}
-					},
+	await nextTick();
+	return new Promise((resolve) => {
+		const { dispose } = popup(
+			component,
+			{
+				items,
+				ev,
+			},
+			{
+				closed: () => {
+					resolve();
+					dispose();
+
+					// MkModalを通していないのでここでフォーカスを戻す処理を行う
+					if (returnFocusTo != null) {
+						focusParent(returnFocusTo, true, false);
+						returnFocusTo = null;
+					}
 				},
-			);
-		}),
-	);
+			},
+		);
+	});
 }
 
 export async function post(props: PostFormProps = {}): Promise<void> {

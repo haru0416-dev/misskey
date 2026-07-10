@@ -34,7 +34,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
+import { onUnmounted, ref, watch } from 'vue';
+import type { AnimationFrameThrottled } from '@/utility/throttle-by-animation-frame.js';
+import { throttleByAnimationFrame } from '@/utility/throttle-by-animation-frame.js';
+
 const props = defineProps<{
 	activity: {
 		total: number;
@@ -52,25 +55,25 @@ const pointsNote = ref<string>();
 const pointsReply = ref<string>();
 const pointsRenote = ref<string>();
 const pointsTotal = ref<string>();
+let activity = props.activity.slice().reverse();
+let peak = Math.max(0, ...activity.map(d => d.total));
+let dragHandler: AnimationFrameThrottled<[MouseEvent]> | null = null;
 
-function dragListen(fn: (ev: MouseEvent | TouchEvent) => void) {
-	window.addEventListener('mousemove', fn);
-	window.addEventListener('mouseleave', dragClear.bind(null, fn));
-	window.addEventListener('mouseup', dragClear.bind(null, fn));
+function startDragging(handler: AnimationFrameThrottled<[MouseEvent]>) {
+	stopDragging();
+	dragHandler = handler;
+	window.addEventListener('mousemove', dragHandler);
+	window.addEventListener('mouseleave', stopDragging);
+	window.addEventListener('mouseup', stopDragging);
 }
 
-function dragClear(fn: (ev: MouseEvent | TouchEvent) => void) {
-	window.removeEventListener('mousemove', fn);
-	window.removeEventListener('mouseleave', dragClear as any);
-	window.removeEventListener('mouseup', dragClear as any);
-}
-
-function getPositionX(event: MouseEvent | TouchEvent) {
-	return 'touches' in event && event.touches.length > 0 ? event.touches[0].clientX : 'clientX' in event ? event.clientX : 0;
-}
-
-function getPositionY(event: MouseEvent | TouchEvent) {
-	return 'touches' in event && event.touches.length > 0 ? event.touches[0].clientY : 'clientY' in event ? event.clientY : 0;
+function stopDragging() {
+	if (dragHandler == null) return;
+	dragHandler.flush();
+	window.removeEventListener('mousemove', dragHandler);
+	window.removeEventListener('mouseleave', stopDragging);
+	window.removeEventListener('mouseup', stopDragging);
+	dragHandler = null;
 }
 
 function onMousedown(ev: MouseEvent) {
@@ -80,34 +83,58 @@ function onMousedown(ev: MouseEvent) {
 	const basePos = pos.value;
 
 	// 動かした時
-	dragListen(me => {
-		const x = getPositionX(me);
-		const y = getPositionY(me);
-
-		let moveLeft = x - clickX;
-		let moveTop = y - clickY;
+	startDragging(throttleByAnimationFrame(me => {
+		const moveLeft = me.clientX - clickX;
+		const moveTop = me.clientY - clickY;
 
 		zoom.value = Math.max(1, baseZoom + (-moveTop / 20));
-		pos.value = Math.min(0, basePos + moveLeft);
-		if (pos.value < -(((props.activity.length - 1) * zoom.value) - viewBoxX.value)) pos.value = -(((props.activity.length - 1) * zoom.value) - viewBoxX.value);
+		const minPos = Math.min(0, viewBoxX.value - ((activity.length - 1) * zoom.value));
+		pos.value = Math.max(minPos, Math.min(0, basePos + moveLeft));
 
 		render();
-	});
+	}));
 }
 
 function render() {
-	const peak = Math.max(...props.activity.map(d => d.total));
-	if (peak !== 0) {
-		const activity = props.activity.slice().reverse();
-		pointsNote.value = activity.map((d, i) => `${(i * zoom.value) + pos.value},${(1 - (d.notes / peak)) * viewBoxY.value}`).join(' ');
-		pointsReply.value = activity.map((d, i) => `${(i * zoom.value) + pos.value},${(1 - (d.replies / peak)) * viewBoxY.value}`).join(' ');
-		pointsRenote.value = activity.map((d, i) => `${(i * zoom.value) + pos.value},${(1 - (d.renotes / peak)) * viewBoxY.value}`).join(' ');
-		pointsTotal.value = activity.map((d, i) => `${(i * zoom.value) + pos.value},${(1 - (d.total / peak)) * viewBoxY.value}`).join(' ');
+	if (peak === 0) {
+		pointsNote.value = undefined;
+		pointsReply.value = undefined;
+		pointsRenote.value = undefined;
+		pointsTotal.value = undefined;
+		return;
 	}
+
+	const nextPointsNote: string[] = [];
+	const nextPointsReply: string[] = [];
+	const nextPointsRenote: string[] = [];
+	const nextPointsTotal: string[] = [];
+	for (let i = 0; i < activity.length; i++) {
+		const data = activity[i];
+		const x = (i * zoom.value) + pos.value;
+		nextPointsNote.push(`${x},${(1 - (data.notes / peak)) * viewBoxY.value}`);
+		nextPointsReply.push(`${x},${(1 - (data.replies / peak)) * viewBoxY.value}`);
+		nextPointsRenote.push(`${x},${(1 - (data.renotes / peak)) * viewBoxY.value}`);
+		nextPointsTotal.push(`${x},${(1 - (data.total / peak)) * viewBoxY.value}`);
+	}
+	pointsNote.value = nextPointsNote.join(' ');
+	pointsReply.value = nextPointsReply.join(' ');
+	pointsRenote.value = nextPointsRenote.join(' ');
+	pointsTotal.value = nextPointsTotal.join(' ');
 }
 
-onMounted(() => {
+watch(() => props.activity, (nextActivity) => {
+	activity = nextActivity.slice().reverse();
+	peak = Math.max(0, ...activity.map(d => d.total));
 	render();
+}, { immediate: true });
+
+onUnmounted(() => {
+	if (dragHandler == null) return;
+	dragHandler.cancel();
+	window.removeEventListener('mousemove', dragHandler);
+	window.removeEventListener('mouseleave', stopDragging);
+	window.removeEventListener('mouseup', stopDragging);
+	dragHandler = null;
 });
 </script>
 

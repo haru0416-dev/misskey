@@ -95,7 +95,7 @@ const url = computed(() => {
 				false,
 				true,
 			);
-	return prefer.s.disableShowingAnimatedImages
+	return prefer.disableShowingAnimatedImages
 		? getStaticImageUrl(proxied)
 		: proxied;
 });

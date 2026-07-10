@@ -29,7 +29,6 @@ import MkResult from './global/MkResult.vue';
 import MkSystemIcon from './global/MkSystemIcon.vue';
 import MkTip from './global/MkTip.vue';
 import PageWithHeader from './global/PageWithHeader.vue';
-import PageWithAnimBg from './global/PageWithAnimBg.vue';
 import SearchMarker from './global/SearchMarker.vue';
 import SearchLabel from './global/SearchLabel.vue';
 import SearchText from './global/SearchText.vue';
@@ -70,7 +69,6 @@ export const components = {
 	MkSystemIcon: MkSystemIcon,
 	MkTip: MkTip,
 	PageWithHeader: PageWithHeader,
-	PageWithAnimBg: PageWithAnimBg,
 	SearchMarker: SearchMarker,
 	SearchLabel: SearchLabel,
 	SearchText: SearchText,
@@ -105,7 +103,6 @@ declare module 'vue' {
 		MkSystemIcon: typeof MkSystemIcon;
 		MkTip: typeof MkTip;
 		PageWithHeader: typeof PageWithHeader;
-		PageWithAnimBg: typeof PageWithAnimBg;
 		SearchMarker: typeof SearchMarker;
 		SearchLabel: typeof SearchLabel;
 		SearchText: typeof SearchText;

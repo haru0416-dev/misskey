@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div>
-	<Transition :name="prefer.s.animation ? '_transition_zoom' : ''" mode="out-in">
+	<Transition :name="prefer.animation ? '_transition_zoom' : ''" mode="out-in">
 		<MkLoading v-if="fetching"/>
 		<div v-else :class="$style.root" class="_panel">
 			<MkA v-for="user in moderators" :key="user.id" class="user" :to="`/admin/user/${user.id}`">

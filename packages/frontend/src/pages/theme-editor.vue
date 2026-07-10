@@ -203,7 +203,7 @@ async function saveAs() {
 	if (description.value) theme.value.desc = description.value;
 	await addTheme(theme.value);
 	themeManager.updateTheme(theme.value);
-	if (store.s.darkMode) {
+	if (store.darkMode) {
 		prefer.commit('darkTheme', theme.value);
 	} else {
 		prefer.commit('lightTheme', theme.value);

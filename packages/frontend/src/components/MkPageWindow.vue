@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</template>
 
 	<div :class="$style.root" class="_forceShrinkSpacer">
-		<StackingRouterView v-if="prefer.s['experimental.stackingRouterView']" :key="reloadCount.toString() + ':stacking'" :router="windowRouter"/>
+		<StackingRouterView v-if="prefer['experimental.stackingRouterView']" :key="reloadCount.toString() + ':stacking'" :router="windowRouter"/>
 		<RouterView v-else :key="reloadCount.toString() + ':non-stacking'" :router="windowRouter"/>
 	</div>
 </MkWindow>
@@ -38,7 +38,7 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
 import { provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { openingWindowsCount } from '@/os.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 import { createRouter, mainRouter } from '@/router.js';
 import { analytics } from '@/analytics.js';
 import { DI } from '@/di.js';

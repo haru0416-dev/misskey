@@ -55,7 +55,7 @@ import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js'
 provide('shouldHeaderThin', true);
 provide('shouldOmitHeaderTitle', true);
 
-const withWallpaper = prefer.s['deck.wallpaper'] != null;
+const withWallpaper = prefer['deck.wallpaper'] != null;
 
 const props = withDefaults(defineProps<{
 	column: Column;

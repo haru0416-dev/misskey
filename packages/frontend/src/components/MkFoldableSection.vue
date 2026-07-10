@@ -14,10 +14,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</button>
 	</header>
 	<Transition
-		:enterActiveClass="prefer.s.animation ? $style.folderToggleEnterActive : ''"
-		:leaveActiveClass="prefer.s.animation ? $style.folderToggleLeaveActive : ''"
-		:enterFromClass="prefer.s.animation ? $style.folderToggleEnterFrom : ''"
-		:leaveToClass="prefer.s.animation ? $style.folderToggleLeaveTo : ''"
+		:enterActiveClass="prefer.animation ? $style.folderToggleEnterActive : ''"
+		:leaveActiveClass="prefer.animation ? $style.folderToggleLeaveActive : ''"
+		:enterFromClass="prefer.animation ? $style.folderToggleEnterFrom : ''"
+		:leaveToClass="prefer.animation ? $style.folderToggleLeaveTo : ''"
 		@enter="enter"
 		@afterEnter="afterEnter"
 		@leave="leave"

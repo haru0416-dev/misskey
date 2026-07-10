@@ -43,7 +43,7 @@ const emit = defineEmits<{
 	(ev: 'swiped', newKey: string, direction: 'left' | 'right'): void;
 }>();
 
-const shouldAnimate = computed(() => prefer.r.enableHorizontalSwipe.value || prefer.r.animation.value);
+const shouldAnimate = computed(() => prefer.enableHorizontalSwipe || prefer.animation);
 
 // ▼ しきい値 ▼ //
 
@@ -72,7 +72,7 @@ let swipeAborted = false;
 let swipeDirectionLocked: 'horizontal' | 'vertical' | null = null;
 
 function touchStart(event: TouchEvent) {
-	if (!prefer.r.enableHorizontalSwipe.value) return;
+	if (!prefer.enableHorizontalSwipe) return;
 
 	if (event.touches.length !== 1) return;
 
@@ -84,7 +84,7 @@ function touchStart(event: TouchEvent) {
 }
 
 function touchMove(event: TouchEvent) {
-	if (!prefer.r.enableHorizontalSwipe.value) return;
+	if (!prefer.enableHorizontalSwipe) return;
 
 	if (event.touches.length !== 1) return;
 
@@ -144,7 +144,7 @@ function touchEnd(event: TouchEvent) {
 		return;
 	}
 
-	if (!prefer.r.enableHorizontalSwipe.value) return;
+	if (!prefer.enableHorizontalSwipe) return;
 
 	if (event.touches.length !== 0) return;
 

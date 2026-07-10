@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkLoading v-if="!loaded"/>
-<Transition :name="prefer.s.animation ? '_transition_zoom' : ''" appear>
+<Transition :name="prefer.animation ? '_transition_zoom' : ''" appear>
 	<div v-show="loaded" :class="$style.root">
 		<img v-if="instance.serverErrorImageUrl" :src="instance.serverErrorImageUrl" draggable="false" :class="$style.img"/>
 		<div class="_gaps">
