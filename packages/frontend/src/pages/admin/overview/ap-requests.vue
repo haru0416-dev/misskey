@@ -22,7 +22,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, useTemplateRef, ref } from 'vue';
 import { Chart } from 'chart.js';
-import gradient from 'chartjs-plugin-gradient';
 import isChromatic from 'chromatic';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useChartTooltip } from '@/composables/useChartTooltip.js';
@@ -158,9 +157,6 @@ onMounted(async () => {
 						label: context => `${context.dataset.label}: ${Math.abs(context.parsed.y)}`,
 					},
 				},
-				...({ // TSを黙らすため
-					gradient,
-				}),
 			},
 		},
 		plugins: [chartVLine(vLineColor)],
@@ -246,9 +242,6 @@ onMounted(async () => {
 					},
 					external: externalTooltipHandler2,
 				},
-				...({ // TSを黙らすため
-					gradient,
-				}),
 			},
 		},
 		plugins: [chartVLine(vLineColor)],
@@ -273,4 +266,3 @@ onMounted(async () => {
 	}
 }
 </style>
-

@@ -25,7 +25,6 @@ export class I18n<T extends ILocale> {
 		devMode = false,
 	) {
 		this.devMode = devMode;
-
 	}
 
 	public get ts(): T {
@@ -182,5 +181,4 @@ export class I18n<T extends ILocale> {
 
 		return (this.tsxCache = build(this.locale));
 	}
-
 }
