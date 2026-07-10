@@ -49,6 +49,7 @@
 - Enhance: アナログ・デジタル時計の通常更新を高頻度描画から秒境界タイマーへ変更
 - Enhance: 設定クラウドバックアップを常駐ポーリングから設定保存時の遅延実行へ変更
 - Enhance: プル・トゥ・リフレッシュの1msタイマーと入力追従をフレーム単位へ集約
+- Enhance: 長いノート一覧とストリーミングタイムラインを仮想化し、スクロール時のDOM要素数と描画負荷を削減
 
 ### Server
 - Enhance: 旧音声 MIME エイリアス (`audio/x-flac` / `audio/vnd.wave`)、OStatus の WebFinger subscribe リンク、`channels/timeline` の未使用 `allowPartial` パラメータを削除

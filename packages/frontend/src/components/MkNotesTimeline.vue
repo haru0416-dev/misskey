@@ -8,30 +8,50 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #empty><MkResult type="empty" :text="i18n.ts.noNotes"/></template>
 
 	<template #default="{ items: notes }">
-		<div :class="[$style.root, { [$style.noGap]: noGap, '_gaps': !noGap }]">
-			<template v-for="(note, i) in notes" :key="note.id">
+		<div
+			ref="rootEl"
+			data-cy-notes-timeline
+			:class="[$style.root, { [$style.noGap]: noGap }]"
+			:style="canVirtualize ? { height: `${virtualizer.getTotalSize()}px` } : undefined"
+		>
+			<template v-if="canVirtualize">
 				<div
-					v-if="i > 0 && isSeparatorNeeded(paginator.items.value[i - 1].createdAt, note.createdAt)"
-					:data-scroll-anchor="note.id"
-					:class="{ '_gaps': !noGap }"
+					v-for="row in virtualRows"
+					:key="row.note.id"
+					:ref="measureElement"
+					:data-index="row.index"
+					:data-scroll-anchor="row.note.id"
+					:class="[$style.row, { [$style.gapped]: !noGap, [$style.last]: row.index === notes.length - 1 }]"
+					:style="{ transform: `translateY(${row.start - scrollMargin}px)` }"
 				>
-					<div :class="[$style.date, { [$style.noGap]: noGap }]">
-						<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(paginator.items.value[i - 1].createdAt, note.createdAt)?.prevText }}</span>
+					<div v-if="row.previousNote && isSeparatorNeeded(row.previousNote.createdAt, row.note.createdAt)" :class="[$style.date, { [$style.noGap]: noGap }]">
+						<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(row.previousNote.createdAt, row.note.createdAt)?.prevText }}</span>
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getSeparatorInfo(paginator.items.value[i - 1].createdAt, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span>{{ getSeparatorInfo(row.previousNote.createdAt, row.note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+					</div>
+					<MkNote :class="$style.note" :note="row.note" :withHardMute="true"/>
+					<div v-if="row.note._shouldInsertAd_" :class="$style.ad">
+						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
+					</div>
+				</div>
+			</template>
+			<template v-else>
+				<div
+					v-for="(note, i) in notes"
+					:key="note.id"
+					:data-scroll-anchor="note.id"
+					:class="[$style.rowFallback, { [$style.gapped]: !noGap, [$style.last]: i === notes.length - 1 }]"
+				>
+					<div v-if="i > 0 && isSeparatorNeeded(notes[i - 1].createdAt, note.createdAt)" :class="[$style.date, { [$style.noGap]: noGap }]">
+						<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(notes[i - 1].createdAt, note.createdAt)?.prevText }}</span>
+						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
+						<span>{{ getSeparatorInfo(notes[i - 1].createdAt, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
 					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
 					<div v-if="note._shouldInsertAd_" :class="$style.ad">
 						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					</div>
 				</div>
-				<div v-else-if="note._shouldInsertAd_" :class="{ '_gaps': !noGap }" :data-scroll-anchor="note.id">
-					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
-					<div :class="$style.ad">
-						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
-					</div>
-				</div>
-				<MkNote v-else :class="$style.note" :note="note" :withHardMute="true" :data-scroll-anchor="note.id"/>
 			</template>
 		</div>
 	</template>
@@ -39,7 +59,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup generic="T extends IPaginator<Misskey.entities.Note>">
+import { useVirtualizer } from '@tanstack/vue-virtual';
 import * as Misskey from 'misskey-js';
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
+import { getScrollContainer } from '@shared/utility/scroll.js';
 import type { MkPaginationOptions } from '@/components/MkPagination.vue';
 import type { IPaginator } from '@/utility/paginator.js';
 import MkNote from '@/components/MkNote.vue';
@@ -59,6 +83,55 @@ const props = withDefaults(defineProps<MkPaginationOptions & {
 	forceDisableInfiniteScroll: false,
 });
 
+const rootEl = useTemplateRef('rootEl');
+const scrollElement = shallowRef<HTMLElement | null>(null);
+const scrollMargin = ref(0);
+const canVirtualize = computed(() => scrollElement.value != null);
+
+const virtualizer = useVirtualizer(computed(() => ({
+	count: props.paginator.items.value.length,
+	getScrollElement: () => scrollElement.value,
+	estimateSize: () => 220,
+	getItemKey: (index) => props.paginator.items.value[index]?.id ?? index,
+	overscan: 5,
+	scrollMargin: scrollMargin.value,
+})));
+
+const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virtualItem) => ({
+	index: virtualItem.index,
+	start: virtualItem.start,
+	note: props.paginator.items.value[virtualItem.index],
+	previousNote: props.paginator.items.value[virtualItem.index - 1],
+})));
+
+function measureElement(node: Element | ComponentPublicInstance | null) {
+	if (node instanceof Element) virtualizer.value.measureElement(node);
+}
+
+function updateScrollMargin() {
+	if (!rootEl.value || !scrollElement.value) return;
+	const rootRect = rootEl.value.getBoundingClientRect();
+	const scrollRect = scrollElement.value.getBoundingClientRect();
+	scrollMargin.value = rootRect.top - scrollRect.top + scrollElement.value.scrollTop;
+}
+
+watch(rootEl, (el) => {
+	scrollElement.value = getScrollContainer(el);
+	nextTick(updateScrollMargin);
+});
+
+watch(() => props.paginator.items.value.length, () => {
+	nextTick(updateScrollMargin);
+});
+
+onMounted(() => {
+	window.addEventListener('resize', updateScrollMargin, { passive: true });
+});
+
+onUnmounted(() => {
+	window.removeEventListener('resize', updateScrollMargin);
+});
+
 useGlobalEvent('noteDeleted', (noteId) => {
 	props.paginator.removeItem(noteId);
 });
@@ -75,6 +148,7 @@ defineExpose({
 <style lang="scss" module>
 .root {
 	container-type: inline-size;
+	position: relative;
 
 	&.noGap {
 		background: var(--MI_THEME-panel);
@@ -99,6 +173,29 @@ defineExpose({
 			border-radius: var(--MI-radius);
 		}
 	}
+}
+
+.row,
+.rowFallback {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	width: 100%;
+
+	&.gapped {
+		gap: var(--MI-margin);
+		padding-bottom: var(--MI-margin);
+
+		&.last {
+			padding-bottom: 0;
+		}
+	}
+}
+
+.row {
+	position: absolute;
+	top: 0;
+	left: 0;
 }
 
 .date {
