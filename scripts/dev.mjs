@@ -28,6 +28,7 @@ await bun(['run', '--bun', '--filter', 'i18n', 'build']);
 await Promise.all([
 	bun(['run', 'build-pre']),
 	bun(['run', 'build-assets']),
+	bun(['run', '--bun', '--filter', 'mfm-js', 'build']),
 	// icons-subsetterは開発段階では使用されないが、型エラーを抑制するためにはじめの一度だけビルドする
 	bun(['run', '--bun', '--filter', 'icons-subsetter', 'build']),
 	bun(['run', '--bun', '--filter', 'misskey-js', 'build']),
@@ -64,6 +65,12 @@ execa('bun', ['run', '--bun', '--filter', 'sw', 'watch'], {
 });
 
 execa('bun', ['run', '--bun', '--filter', 'misskey-js', 'watch', '--no-clean'], {
+	cwd: rootDir,
+	stdout: process.stdout,
+	stderr: process.stderr,
+});
+
+execa('bun', ['run', '--bun', '--filter', 'mfm-js', 'watch'], {
 	cwd: rootDir,
 	stdout: process.stdout,
 	stderr: process.stderr,
