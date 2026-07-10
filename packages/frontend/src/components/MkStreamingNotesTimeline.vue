@@ -36,13 +36,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 				:style="{ transform: `translateY(${row.start - scrollMargin}px)` }"
 			>
 				<div :class="[$style.rowContent, { [$style.rowEntering]: enteringNoteIds.has(row.note.id), [$style.rowLeaving]: leavingNoteIds.has(row.note.id) }]">
-					<div v-if="row.previousNote && isSeparatorNeeded(row.previousNote.createdAt, row.note.createdAt)" :class="$style.date">
-						<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(row.previousNote.createdAt, row.note.createdAt)?.prevText }}</span>
+					<div v-if="row.separatorInfo" :class="$style.date">
+						<span><i class="ti ti-chevron-up"></i> {{ row.separatorInfo.prevText }}</span>
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getSeparatorInfo(row.previousNote.createdAt, row.note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span>{{ row.separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
 					<MkNote :class="$style.note" :note="row.note" :withHardMute="true"/>
-					<div v-if="row.note._shouldInsertAd_ && !row.previousNoteDateSeparated" :class="$style.ad">
+					<div v-if="row.note._shouldInsertAd_ && !row.separatorInfo" :class="$style.ad">
 						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					</div>
 				</div>
@@ -230,13 +230,12 @@ onMounted(() => {
 function isTop() {
 	if (scrollElement.value == null) return true;
 	if (rootEl.value == null) return true;
-	const scrollTop = scrollElement.value.scrollTop;
-	const tlTop = rootEl.value.offsetTop - scrollElement.value.offsetTop;
-	return scrollTop <= tlTop;
+	return scrollElement.value.scrollTop <= rootScrollMargin.value + 1;
 }
 
 const scrollElement = shallowRef<HTMLElement | null>(null);
 const scrollMargin = ref(0);
+const rootScrollMargin = ref(0);
 const canVirtualize = computed(() => scrollElement.value != null);
 
 const virtualizer = useVirtualizer(computed(() => ({
@@ -246,17 +245,21 @@ const virtualizer = useVirtualizer(computed(() => ({
 	getItemKey: (index) => paginator.items.value[index]?.id ?? index,
 	overscan: 5,
 	scrollMargin: scrollMargin.value,
+	useScrollendEvent: true,
+	useAnimationFrameWithResizeObserver: true,
 })));
 
 const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virtualItem) => {
 	const note = paginator.items.value[virtualItem.index];
 	const previousNote = paginator.items.value[virtualItem.index - 1];
+	const separatorInfo = previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
+		? getSeparatorInfo(previousNote.createdAt, note.createdAt)
+		: null;
 	return {
 		index: virtualItem.index,
 		start: virtualItem.start,
 		note,
-		previousNote,
-		previousNoteDateSeparated: previousNote != null && isSeparatorNeeded(previousNote.createdAt, note.createdAt),
+		separatorInfo,
 	};
 }));
 
@@ -268,11 +271,23 @@ function measureElement(node: Element | ComponentPublicInstance | null) {
 	if (node instanceof Element) virtualizer.value.measureElement(node);
 }
 
-function updateScrollMargin() {
-	if (!notesEl.value || !scrollElement.value) return;
+function updateScrollMargins() {
+	if (!rootEl.value || !notesEl.value || !scrollElement.value) return;
+	const rootRect = rootEl.value.getBoundingClientRect();
 	const notesRect = notesEl.value.getBoundingClientRect();
 	const scrollRect = scrollElement.value.getBoundingClientRect();
-	scrollMargin.value = notesRect.top - scrollRect.top + scrollElement.value.scrollTop;
+	const scrollTop = scrollElement.value.scrollTop;
+	rootScrollMargin.value = rootRect.top - scrollRect.top + scrollTop;
+	scrollMargin.value = notesRect.top - scrollRect.top + scrollTop;
+}
+
+let scrollMarginFrame: number | null = null;
+function scheduleScrollMarginUpdate() {
+	if (scrollMarginFrame != null) return;
+	scrollMarginFrame = window.requestAnimationFrame(() => {
+		scrollMarginFrame = null;
+		updateScrollMargins();
+	});
 }
 
 function markNoteEntering(noteId: string) {
@@ -319,12 +334,12 @@ watch(rootEl, (el) => {
 	if (nextScrollElement === scrollElement.value) return;
 	scrollElement.value?.removeEventListener('scroll', onScrollContainerScroll);
 	scrollElement.value = nextScrollElement;
-	scrollElement.value?.addEventListener('scroll', onScrollContainerScroll, { passive: true }); // ほんとはscrollendにしたいけどiosが非対応
-	nextTick(updateScrollMargin);
+	// 先頭へ戻った瞬間にキューを開放するため、スクロール中も軽量な位置判定だけを行う。
+	scrollElement.value?.addEventListener('scroll', onScrollContainerScroll, { passive: true });
+	nextTick(scheduleScrollMarginUpdate);
 }, { immediate: true });
 
-watch(notesEl, () => nextTick(updateScrollMargin));
-watch(() => paginator.items.value.length, () => nextTick(updateScrollMargin));
+watch(notesEl, () => nextTick(scheduleScrollMarginUpdate));
 watch(() => paginator.queuedAheadItemsCount.value, async () => {
 	const previousNotesTop = notesEl.value?.getBoundingClientRect().top;
 	await nextTick();
@@ -332,16 +347,17 @@ watch(() => paginator.queuedAheadItemsCount.value, async () => {
 		const notesTopDelta = notesEl.value.getBoundingClientRect().top - previousNotesTop;
 		scrollElement.value.scrollTop += notesTopDelta;
 	}
-	updateScrollMargin();
+	scheduleScrollMarginUpdate();
 });
 
 onMounted(() => {
-	window.addEventListener('resize', updateScrollMargin, { passive: true });
+	window.addEventListener('resize', scheduleScrollMarginUpdate, { passive: true });
 });
 
 onUnmounted(() => {
 	scrollElement.value?.removeEventListener('scroll', onScrollContainerScroll);
-	window.removeEventListener('resize', updateScrollMargin);
+	window.removeEventListener('resize', scheduleScrollMarginUpdate);
+	if (scrollMarginFrame != null) window.cancelAnimationFrame(scrollMarginFrame);
 	for (const timer of animationTimers.values()) window.clearTimeout(timer);
 	animationTimers.clear();
 });
