@@ -7,6 +7,7 @@ on:
       - develop
     paths:
       - packages/aiscript/**
+      - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
       - packages/frontend-embed/**
@@ -32,6 +33,7 @@ on:
   pull_request:
     paths:
       - packages/aiscript/**
+      - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
       - packages/frontend-embed/**
@@ -106,6 +108,7 @@ jobs:
       matrix:
         workspace:
           - '@syuilo/aiscript'
+          - mfm-js
           - backend
           - frontend
           - sw

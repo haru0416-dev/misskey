@@ -15,7 +15,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, useTemplateRef, ref } from 'vue';
 import { Chart } from 'chart.js';
-import gradient from 'chartjs-plugin-gradient';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { store } from '@/store.js';
 import { useChartTooltip } from '@/composables/useChartTooltip.js';
@@ -138,9 +137,6 @@ async function renderChart() {
 					},
 					external: externalTooltipHandler,
 				},
-				...({ // TSを黙らすため
-					gradient,
-				}),
 			},
 		},
 		plugins: [chartVLine(vLineColor)],

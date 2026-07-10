@@ -15,6 +15,7 @@
 		"packages/i18n",
 		"packages/icons-subsetter",
 		"packages/aiscript",
+		"packages/mfm-js",
 		"packages/sw",
 		"packages/misskey-js",
 		"packages/misskey-js/generator",
@@ -28,8 +29,8 @@
 		"compile-config": "cd packages/backend && bun run compile-config",
 		"build-pre": "bun scripts/build-pre.mjs",
 		"build-assets": "bun ./scripts/build-assets.mjs",
-		"build:frontend-deps": "bun run --bun --filter '@syuilo/aiscript' build && bun run --bun --filter i18n build && bun run --bun --filter icons-subsetter build && bun run --bun --filter misskey-js build",
-		"build:backend-deps": "bun run --bun --filter i18n build && bun run --bun --filter misskey-js build",
+		"build:frontend-deps": "bun run --bun --filter '@syuilo/aiscript' build && bun run --bun --filter mfm-js build && bun run --bun --filter i18n build && bun run --bun --filter icons-subsetter build && bun run --bun --filter misskey-js build",
+		"build:backend-deps": "bun run --bun --filter mfm-js build && bun run --bun --filter i18n build && bun run --bun --filter misskey-js build",
 		"build": "bun run build-pre && bun run --bun --filter '*' --if-present build && bun run build-assets",
 		"build-storybook": "bun run build:frontend-deps && bun run --bun --filter frontend build-storybook",
 		"build-misskey-js-with-types": "bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build && bun run --bun --filter backend generate-api-json --no-build && cp packages/backend/built/api.json packages/misskey-js/generator/api.json && bun run --bun --filter misskey-js update-autogen-code && bun run --bun --filter misskey-js build && bun run --bun --filter misskey-js api",
@@ -65,10 +66,9 @@
 		"cleanall": "bun run clean-all"
 	},
 	"dependencies": {
-		"esbuild": "0.28.1",
 		"execa": "9.6.1",
 		"ignore-walk": "9.0.0",
-		"js-yaml": "5.2.0",
+		"js-yaml": "5.2.1",
 		"tar": "7.5.19"
 	},
 	"devDependencies": {

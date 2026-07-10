@@ -21,7 +21,6 @@ import {
 	SubTitle,
 	Filler,
 } from 'chart.js';
-import gradient from 'chartjs-plugin-gradient';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 import { themeManager } from '@/theme.js';
@@ -48,7 +47,6 @@ export function initChart() {
 		MatrixController,
 		MatrixElement,
 		zoomPlugin,
-		gradient,
 	);
 
 	// フォントカラー

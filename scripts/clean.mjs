@@ -14,6 +14,7 @@ const buildOutputs = [
 	'packages/frontend/built',
 	'packages/frontend-embed/built',
 	'packages/icons-subsetter/built',
+	'packages/mfm-js/built',
 	'packages/i18n/built',
 	'packages/sw/built',
 	'packages/misskey-js/built',
