@@ -139,7 +139,7 @@ export const FN_NATIVE = (fn: VNativeFn['native'], fnSync?: VNativeFn['nativeSyn
 	nativeSync: fnSync,
 });
 
-export const ERROR = (name: string, info?: Value): Value => ({
+export const ERROR = (name: string, info?: Value): VError => ({
 	type: 'error' as const,
 	value: name,
 	info: info,

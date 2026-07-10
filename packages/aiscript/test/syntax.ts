@@ -1130,6 +1130,15 @@ describe('meta', () => {
 				['x', 42]
 			]));
 		});
+
+		test.concurrent('negative', async () => {
+			const res = getMeta(`
+			### x -42
+			`);
+			eq(res, new Map([
+				['x', -42]
+			]));
+		});
 	});
 
 	describe('Boolean', () => {
@@ -1847,4 +1856,3 @@ describe('exists', () => {
 		eq(res, ARR([BOOL(true), BOOL(false)]));
 	});
 });
-

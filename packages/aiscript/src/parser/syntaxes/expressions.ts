@@ -11,6 +11,14 @@ import type { ITokenStream } from '../streams/token-stream.js';
 
 export function parseExpr(s: ITokenStream, isStatic: boolean): Ast.Expression {
 	if (isStatic) {
+		if (s.is(TokenKind.Minus)) {
+			const startPos = s.getPos();
+			s.next();
+			s.expect(TokenKind.NumberLiteral);
+			const value = -Number(s.getTokenValue());
+			s.next();
+			return NODE('num', { value }, startPos, s.getPos());
+		}
 		return parseAtom(s, true);
 	} else {
 		return parsePratt(s, 0);

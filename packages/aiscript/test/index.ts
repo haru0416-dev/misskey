@@ -220,11 +220,8 @@ describe('Object', () => {
 		eq(res, NUM(42));
 	});
 
-	// 未実装
-	// issues: https://github.com/aiscript-dev/aiscript/issues/62
-	//         https://github.com/aiscript-dev/aiscript/issues/225
-	test.concurrent.skip('expression key', async () => {
-		const res = await exe(`
+	test.concurrent('unsupported expression key is rejected', async () => {
+		await assert.rejects(() => exe(`
 		let key = "藍"
 
 		let obj = {
@@ -232,8 +229,7 @@ describe('Object', () => {
 		}
 
 		<: obj<key>
-		`);
-		eq(res, NUM(42));
+		`), AiScriptSyntaxError);
 	});
 });
 
