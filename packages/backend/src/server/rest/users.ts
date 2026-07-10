@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
-import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdsFromDatabase } from '@/core/UserListMembershipStore.js';
 import { deleteUserListByIdInDatabase, fetchPublicUserListByIdFromDatabase, fetchUserListByIdAndUserIdFromDatabase, fetchUserListByIdOrFailFromDatabase, listUserListsByUserIdFromDatabase, updateUserListInDatabase } from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
@@ -86,9 +86,12 @@ type UsersListsUpdateParams = {
 async function packUserListForHonoApi(
 	deps: HonoApiUsersDependencies,
 	src: MiUserList['id'] | MiUserList,
+	options?: {
+		userIds?: string[];
+	},
 ): Promise<HonoApiPackedUserList> {
 	const userList = typeof src === 'object' ? src : await fetchUserListByIdOrFailFromDatabase(deps.db, src);
-	const userIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id);
+	const userIds = options?.userIds ?? await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id);
 
 	return {
 		id: userList.id,
@@ -97,6 +100,16 @@ async function packUserListForHonoApi(
 		userIds,
 		isPublic: userList.isPublic,
 	};
+}
+
+async function packUserListsManyForHonoApi(
+	deps: HonoApiUsersDependencies,
+	userLists: MiUserList[],
+): Promise<HonoApiPackedUserList[]> {
+	const userIdsByListId = await listUserListMembershipUserIdsByUserListIdsFromDatabase(deps.db, userLists.map(userList => userList.id));
+	return await Promise.all(userLists.map(userList => packUserListForHonoApi(deps, userList, {
+		userIds: userIdsByListId.get(userList.id) ?? [],
+	})));
 }
 
 export async function handleHonoApiUsersAchievements(
@@ -146,7 +159,7 @@ export async function handleHonoApiUsersListsList(
 		? await listUserListsByUserIdFromDatabase(deps.db, me!.id)
 		: await listUserListsByUserIdFromDatabase(deps.db, params.userId, { publicOnly: true });
 
-	return await Promise.all(userLists.map(userList => packUserListForHonoApi(deps, userList)));
+	return await packUserListsManyForHonoApi(deps, userLists);
 }
 
 export async function handleHonoApiUsersListsShow(

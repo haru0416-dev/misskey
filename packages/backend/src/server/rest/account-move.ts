@@ -127,12 +127,15 @@ async function enqueueRelationshipJobForHonoApi(
 }
 
 async function copyBlockingForHonoApi(deps: HonoApiAccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
-	const srcBlockerIds = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, src.id);
-	const dstBlockerIds = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, dst.id);
+	const [srcBlockerIds, dstBlockerIds] = await Promise.all([
+		listBlockerIdsByBlockeeIdFromDatabase(deps.db, src.id),
+		listBlockerIdsByBlockeeIdFromDatabase(deps.db, dst.id),
+	]);
+	const dstBlockerIdSet = new Set(dstBlockerIds);
 
 	const blockJobs: { from: ThinUser; to: ThinUser }[] = [];
 	for (const blockerId of srcBlockerIds) {
-		if (dstBlockerIds.includes(blockerId)) continue;
+		if (dstBlockerIdSet.has(blockerId)) continue;
 		blockJobs.push({ from: { id: blockerId }, to: { id: dst.id } });
 	}
 	await enqueueRelationshipJobForHonoApi(deps, 'block', blockJobs);
@@ -143,6 +146,7 @@ async function copyMutingsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 	if (oldMutings.length === 0) return;
 
 	const existingMutingsMuterUserIds = await listPermanentMuterIdsByMuteeIdFromDatabase(deps.db, dst.id);
+	const existingMutingsMuterUserIdSet = new Set(existingMutingsMuterUserIds);
 
 	const newMutings = new Map<string, { muterId: string; muteeId: string; expiresAt: Date | null }>();
 	const nextId = (): string => {
@@ -153,7 +157,7 @@ async function copyMutingsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 		return id;
 	};
 	for (const muting of oldMutings) {
-		if (existingMutingsMuterUserIds.includes(muting.muterId)) continue;
+		if (existingMutingsMuterUserIdSet.has(muting.muterId)) continue;
 		newMutings.set(nextId(), {
 			muterId: muting.muterId,
 			muteeId: dst.id,
@@ -165,15 +169,17 @@ async function copyMutingsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 }
 
 async function copyRolesForHonoApi(deps: HonoApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
-	const [oldRoleAssignments, roles] = await Promise.all([
-		listRoleAssignmentsByUserIdFromDatabase(deps.db, src.id),
-		listRolesFromDatabase(deps.db),
-	]);
+	const oldRoleAssignments = await listRoleAssignmentsByUserIdFromDatabase(deps.db, src.id);
 	if (oldRoleAssignments.length === 0) return;
 
 	const now = Date.now();
-	for (const oldRoleAssignment of oldRoleAssignments.filter(a => a.expiresAt == null || a.expiresAt.getTime() > now)) {
-		const role = roles.find(r => r.id === oldRoleAssignment.roleId);
+	const activeOldRoleAssignments = oldRoleAssignments.filter(a => a.expiresAt == null || a.expiresAt.getTime() > now);
+	if (activeOldRoleAssignments.length === 0) return;
+
+	const roles = await listRolesFromDatabase(deps.db);
+	const roleById = new Map(roles.map(role => [role.id, role]));
+	for (const oldRoleAssignment of activeOldRoleAssignments) {
+		const role = roleById.get(oldRoleAssignment.roleId);
 		if (role == null) continue;
 		if (!role.preserveAssignmentOnMoveAccount) continue;
 
@@ -200,6 +206,7 @@ async function updateListsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 	if (oldMemberships.length === 0) return;
 
 	const existingUserListIds = (await listUserListMembershipsByUserIdFromDatabase(deps.db, dst.id)).map(m => m.userListId);
+	const existingUserListIdSet = new Set(existingUserListIds);
 
 	const newMemberships = new Map<string, { userId: string; userListId: string; userListUserId: string }>();
 	const nextId = (): string => {
@@ -210,7 +217,7 @@ async function updateListsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 		return id;
 	};
 	for (const membership of oldMemberships) {
-		if (existingUserListIds.includes(membership.userListId)) continue;
+		if (existingUserListIdSet.has(membership.userListId)) continue;
 		newMemberships.set(nextId(), {
 			userId: dst.id,
 			userListId: membership.userListId,

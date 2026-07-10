@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql, type SQL } from 'drizzle-orm';
 import { hashtag, type HashtagInsert, type HashtagRow } from '@/db/schema/hashtag.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
@@ -157,11 +157,10 @@ export async function searchHashtagNamesFromDatabase(
 	return rows.map(row => row.name);
 }
 
-export async function recordHashtagUsageInDatabase(
+export async function recordHashtagUsagesInDatabase(
 	db: MiDrizzleDatabase,
 	data: {
-		id: MiHashtag['id'];
-		name: MiHashtag['name'];
+		entries: { id: MiHashtag['id']; name: MiHashtag['name'] }[];
 		userId: MiUser['id'];
 		isLocalUser: boolean;
 		isRemoteUser: boolean;
@@ -169,6 +168,9 @@ export async function recordHashtagUsageInDatabase(
 		increment: boolean;
 	},
 ): Promise<void> {
+	const entries = [...new Map(data.entries.map(entry => [entry.name, entry])).values()];
+	if (entries.length === 0) return;
+
 	if (!data.increment) {
 		const set: HashtagUpdateSet = {};
 
@@ -192,15 +194,15 @@ export async function recordHashtagUsageInDatabase(
 			await db
 				.update(hashtag)
 				.set(set)
-				.where(eq(hashtag.name, data.name));
+				.where(inArray(hashtag.name, entries.map(entry => entry.name)));
 		}
 
 		return;
 	}
 
-	const insertData: HashtagInsert = data.isUserAttached ? {
-		id: data.id,
-		name: data.name,
+	const insertData: HashtagInsert[] = entries.map(entry => data.isUserAttached ? {
+		id: entry.id,
+		name: entry.name,
 		mentionedUserIds: [],
 		mentionedUsersCount: 0,
 		mentionedLocalUserIds: [],
@@ -214,8 +216,8 @@ export async function recordHashtagUsageInDatabase(
 		attachedRemoteUserIds: data.isRemoteUser ? [data.userId] : [],
 		attachedRemoteUsersCount: data.isRemoteUser ? 1 : 0,
 	} : {
-		id: data.id,
-		name: data.name,
+		id: entry.id,
+		name: entry.name,
 		mentionedUserIds: [data.userId],
 		mentionedUsersCount: 1,
 		mentionedLocalUserIds: data.isLocalUser ? [data.userId] : [],
@@ -228,7 +230,7 @@ export async function recordHashtagUsageInDatabase(
 		attachedLocalUsersCount: 0,
 		attachedRemoteUserIds: [],
 		attachedRemoteUsersCount: 0,
-	};
+	});
 
 	const set: HashtagUpdateSet = {};
 

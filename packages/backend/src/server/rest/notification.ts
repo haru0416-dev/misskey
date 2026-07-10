@@ -171,6 +171,41 @@ export async function xaddHonoApiNotification(
 	}
 }
 
+export async function xaddHonoApiNotifications(
+	deps: HonoApiNotificationDependencies,
+	items: readonly {
+		userId: MiUser['id'];
+		notification: { id: string } & Record<string, unknown>;
+	}[],
+): Promise<void> {
+	if (items.length === 0) return;
+
+	const batchSize = 1000;
+	for (let offset = 0; offset < items.length; offset += batchSize) {
+		const batch = items.slice(offset, offset + batchSize);
+		const pipeline = deps.redis.pipeline();
+		for (const item of batch) {
+			pipeline.xadd(
+				`notificationTimeline:${item.userId}`,
+				'MAXLEN', '~', deps.config.perUserNotificationsMaxCount.toString(),
+				toXListId(item.notification.id),
+				'data', JSON.stringify(item.notification),
+			);
+		}
+		const results = await pipeline.exec();
+		if (results == null) throw new Error('Failed to append notifications');
+
+		await Promise.all(results.map(([error], index) => {
+			if (error == null) return Promise.resolve();
+			if (error instanceof ReplyError) {
+				const item = batch[index]!;
+				return xaddHonoApiNotification(deps, item.userId, item.notification).then(() => undefined);
+			}
+			return Promise.reject(error);
+		}));
+	}
+}
+
 async function xaddNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],

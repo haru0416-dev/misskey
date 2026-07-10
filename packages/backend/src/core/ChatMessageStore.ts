@@ -8,6 +8,7 @@ import { chatMessage, type ChatMessageInsert, type ChatMessageRow } from '@/db/s
 import { chatRoom } from '@/db/schema/chat-room.js';
 import { chatRoomMembership } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
@@ -54,21 +55,7 @@ export function resolveChatMessagePagination(
 	untilId?: string | null;
 	order: ChatMessageOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 function chatMessageBetweenUsersCondition(meId: MiUser['id'], otherId: MiUser['id']): SQL {

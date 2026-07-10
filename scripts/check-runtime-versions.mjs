@@ -56,8 +56,8 @@ const checks = [
 		backendPackageJson.scripts?.migrate === 'bun run compile-config && bun ./built/migration-runner.js up',
 	],
 	[
-		'backend migration revert must run through the Bun migration runner',
-		backendPackageJson.scripts?.revert === 'bun run compile-config && bun ./built/migration-runner.js down',
+		'backend package.json must not expose a migration revert script',
+		backendPackageJson.scripts?.revert == null,
 	],
 	[
 		'backend must use the Bun-compatible re2js package instead of native re2',

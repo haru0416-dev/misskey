@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { userListMembership, type UserListMembershipInsert, type UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { UpdateValuesMissingError } from '@/misc/db-errors.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
@@ -47,21 +48,7 @@ export function resolveUserListMembershipPagination(
 	untilId?: string | null;
 	order: UserListMembershipOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 /**
@@ -109,7 +96,7 @@ export async function listUserListIdsContainingUserFromDatabase(
 		.from(userListMembership)
 		.where(and(
 			eq(userListMembership.userId, userId),
-			inArray(userListMembership.userListId, candidateUserListIds),
+			sql`${userListMembership.userListId} = ANY(${sql.param(candidateUserListIds)})`,
 		));
 
 	return new Set(rows.map(row => row.userListId));
@@ -179,6 +166,34 @@ export async function listUserListMembershipUserIdsByUserListIdFromDatabase(
 	return rows.map(row => row.userId);
 }
 
+export async function listUserListMembershipUserIdsByUserListIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	userListIds: MiUserList['id'][],
+): Promise<Map<MiUserList['id'], MiUser['id'][]>> {
+	if (userListIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await db
+		.select({
+			userListId: userListMembership.userListId,
+			userId: userListMembership.userId,
+		})
+		.from(userListMembership)
+		.where(inArray(userListMembership.userListId, userListIds));
+	const userIdsByListId = new Map<MiUserList['id'], MiUser['id'][]>();
+	for (const row of rows) {
+		let userIds = userIdsByListId.get(row.userListId);
+		if (userIds == null) {
+			userIds = [];
+			userIdsByListId.set(row.userListId, userIds);
+		}
+		userIds.push(row.userId);
+	}
+
+	return userIdsByListId;
+}
+
 export async function listUserListMembershipsByUserListIdWithPaginationFromDatabase(
 	db: MiDrizzleDatabase,
 	userListId: MiUserList['id'],
@@ -227,6 +242,19 @@ export async function deleteUserListMembershipInDatabase(
 	await db
 		.delete(userListMembership)
 		.where(userListMembershipUserAndListCondition(userId, userListId));
+}
+
+export async function deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	listOwnerId: MiUser['id'],
+): Promise<void> {
+	await db
+		.delete(userListMembership)
+		.where(and(
+			eq(userListMembership.userId, userId),
+			eq(userListMembership.userListUserId, listOwnerId),
+		));
 }
 
 /**

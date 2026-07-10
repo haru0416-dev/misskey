@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, count, eq, sql, type SQL } from 'drizzle-orm';
 import { userProfile, type UserProfileInsert, type UserProfileRow } from '@/db/schema/user-profile.js';
 import { userSecurityKey } from '@/db/schema/user-security-key.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -113,7 +113,7 @@ export async function listUserProfilesByUserIdsFromDatabase(
 	const rows = await db
 		.select()
 		.from(userProfile)
-		.where(inArray(userProfile.userId, userIds));
+		.where(sql`${userProfile.userId} = ANY(${sql.param(userIds)})`);
 
 	return rows.map(row => deserializeUserProfile(row));
 }

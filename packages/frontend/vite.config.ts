@@ -236,6 +236,12 @@ export function getConfig(): UserConfig {
 								test: /node_modules[\\/]photoswipe/,
 							},
 							{
+								// chart.js本体とプラグイン群は管理画面/アクティビティpage等19箇所から利用されるため、
+								// 個別ページのコード変更でvendorチャンクのハッシュが変わりキャッシュが無効化されるのを防ぐ
+								name: 'chart',
+								test: /node_modules[\\/](chart\.js|chartjs-[^\\/]+)[\\/]/,
+							},
+							{
 								// split i18n related module to distinct module
 								name: 'i18n',
 								includeDependenciesRecursively: false,

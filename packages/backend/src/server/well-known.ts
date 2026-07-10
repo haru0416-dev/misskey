@@ -139,24 +139,18 @@ function webFingerResponse(deps: WellKnownDependencies, user: MiUser, accept: st
 		type: 'text/html',
 		href: `${deps.config.url}/@${user.username}`,
 	};
-	const subscribe = {
-		rel: 'http://ostatus.org/schema/1.0/subscribe',
-		template: `${deps.config.url}/authorize-follow?acct={uri}`,
-	};
-
 	if (wantsXrd(accept)) {
 		return textResponse(XRD(
 			{ element: 'Subject', value: subject },
 			{ element: 'Link', attributes: self },
 			{ element: 'Link', attributes: profilePage },
-			{ element: 'Link', attributes: subscribe },
 		), xrd, headers);
 	}
 
 	headers.set('Content-Type', jrd);
 	return jsonResponse({
 		subject,
-		links: [self, profilePage, subscribe],
+		links: [self, profilePage],
 	}, headers);
 }
 

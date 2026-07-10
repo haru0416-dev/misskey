@@ -93,9 +93,7 @@ function openRemote(options: OpenOnRemoteOptions, targetHost?: string): void {
 			let _path: string;
 
 			if (options.type === 'lookup') {
-				// TODO: v2024.7.0以降が浸透してきたら正式なURLに変更する▼
-				// _path = `/lookup?uri=${encodeURIComponent(_path)}`;
-				_path = `/authorize-follow?acct=${encodeURIComponent(options.url)}`;
+				_path = `/lookup?uri=${encodeURIComponent(options.url)}`;
 			} else {
 				_path = options.path;
 			}

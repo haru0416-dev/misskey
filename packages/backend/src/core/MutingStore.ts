@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { muting, type MutingInsert, type MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiMuting } from '@/models/Muting.js';
 import type { MiUser } from '@/models/User.js';
@@ -48,21 +49,7 @@ export function resolveMutingPagination(
 	untilId?: string | null;
 	order: MutingOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 export async function countMutingsByMuterIdFromDatabase(
@@ -92,6 +79,24 @@ export async function mutingExistsInDatabase(
 		.limit(1);
 
 	return row != null;
+}
+
+export async function listMuterIdsByMuteeIdAndMuterIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	muteeId: MiUser['id'],
+	muterIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (muterIds.length === 0) return [];
+
+	const rows = await db
+		.select({ muterId: muting.muterId })
+		.from(muting)
+		.where(and(
+			eq(muting.muteeId, muteeId),
+			sql`${muting.muterId} = ANY(${sql.param(muterIds)})`,
+		));
+
+	return rows.map(row => row.muterId);
 }
 
 export async function fetchMutingByIdOrFailFromDatabase(

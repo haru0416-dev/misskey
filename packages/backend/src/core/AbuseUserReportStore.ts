@@ -6,6 +6,7 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, type SQL } from 'drizzle-orm';
 import { abuseUserReport, type AbuseUserReportInsert, type AbuseUserReportRow } from '@/db/schema/abuse-user-report.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { AbuseReportResolveType, MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -48,21 +49,7 @@ export function resolveAbuseUserReportPagination(
 	untilId?: string | null;
 	order: AbuseUserReportOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchAbuseUserReportByIdFromDatabase(

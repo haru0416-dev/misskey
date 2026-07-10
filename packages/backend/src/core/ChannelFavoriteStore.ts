@@ -49,7 +49,7 @@ export async function deleteChannelFavoriteFromDatabase(
 		.where(channelFavoriteCondition(userId, channelId));
 }
 
-export async function fetchFavoriteChannelIdsFromDatabase(
+export async function listFavoritedChannelIdsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiChannel['id'][]> {
@@ -61,7 +61,7 @@ export async function fetchFavoriteChannelIdsFromDatabase(
 	return rows.map(row => row.channelId);
 }
 
-export async function fetchFavoritedChannelIdsInDatabase(
+export async function fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	channelIds: MiChannel['id'][],

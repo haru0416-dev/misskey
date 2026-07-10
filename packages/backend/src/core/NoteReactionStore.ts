@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { noteReaction, type NoteReactionInsert, type NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -52,21 +53,7 @@ export function resolveNoteReactionPagination(
 	untilId?: string | null;
 	order: NoteReactionOrder;
 } {
-	if (options.sinceId && options.untilId) {
-		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceId) {
-		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
-	} else if (options.untilId) {
-		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else if (options.sinceDate && options.untilDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else if (options.sinceDate) {
-		return { sinceId: idService.gen(options.sinceDate), untilId: null, order: 'asc' };
-	} else if (options.untilDate) {
-		return { sinceId: null, untilId: idService.gen(options.untilDate), order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
-	}
+	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchNoteReactionByIdFromDatabase(
@@ -122,6 +109,22 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 		.where(and(
 			eq(noteReaction.userId, userId),
 			inArray(noteReaction.noteId, noteIds),
+		));
+}
+
+export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	noteIds: MiNote['id'][],
+	userIds: MiUser['id'][],
+): Promise<NoteReactionRow[]> {
+	if (noteIds.length === 0 || userIds.length === 0) return [];
+
+	return await db
+		.select()
+		.from(noteReaction)
+		.where(and(
+			sql`${noteReaction.noteId} = ANY(${sql.param(noteIds)})`,
+			sql`${noteReaction.userId} = ANY(${sql.param(userIds)})`,
 		));
 }
 

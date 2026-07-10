@@ -133,24 +133,24 @@ function renderFlag(config: Config, user: MiLocalUser, object: IObject | string,
 	};
 }
 
-async function packAbuseReportForSystemWebhook<T extends 'abuseReport' | 'abuseReportResolved'>(
+async function packAbuseReportsForSystemWebhook<T extends 'abuseReport' | 'abuseReportResolved'>(
 	deps: HonoApiAdminAbuseReportsDependencies,
-	report: MiAbuseUserReport,
-): Promise<SystemWebhookPayload<T>> {
+	reports: MiAbuseUserReport[],
+): Promise<SystemWebhookPayload<T>[]> {
 	const userIds = [...new Set([
-		report.reporterId,
-		report.targetUserId,
-		report.assigneeId,
-	].filter(x => x != null))];
+		...reports.map(report => report.reporterId),
+		...reports.map(report => report.targetUserId),
+		...reports.map(report => report.assigneeId),
+	].filter((x): x is string => x != null))];
 	const users = userIds.length > 0 ? await packUserLiteManyForHonoApi(deps, userIds) : [];
 	const usersMap = new Map(users.map(user => [user.id, user]));
 
-	return {
+	return reports.map(report => ({
 		...report,
 		reporter: usersMap.get(report.reporterId) ?? null,
 		targetUser: usersMap.get(report.targetUserId) ?? null,
 		assignee: report.assigneeId == null ? null : usersMap.get(report.assigneeId) ?? null,
-	} as SystemWebhookPayload<T>;
+	}) as SystemWebhookPayload<T>);
 }
 
 export async function notifyAbuseReportSystemWebhookForHonoApi(
@@ -172,8 +172,8 @@ export async function notifyAbuseReportSystemWebhookForHonoApi(
 	const targetWebhooks = webhooks.filter(webhook => !excludes.has(webhook.id));
 	if (targetWebhooks.length === 0) return;
 
-	await Promise.all(reports.map(async report => {
-		const content = await packAbuseReportForSystemWebhook(deps, report);
+	const contents = await packAbuseReportsForSystemWebhook<typeof type>(deps, reports);
+	await Promise.all(contents.map(async content => {
 		await Promise.all(targetWebhooks
 			.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, type, content)));
 	}));

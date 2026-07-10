@@ -5,7 +5,7 @@
 
 import type * as Redis from 'ioredis';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { fetchActiveMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
@@ -131,7 +131,7 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 				listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, me.id).then(ids => new Set(ids)),
 				listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id).then(ids => new Set(ids)),
 				fetchUserProfileByUserIdFromDatabase(deps.db, me.id).then(p => new Set(p?.mutedInstances ?? [])),
-				fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date()).then(ids => new Set(ids)),
+				listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date()).then(ids => new Set(ids)),
 			]);
 
 			const parentFilter = filter;

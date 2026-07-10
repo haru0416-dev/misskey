@@ -5,19 +5,19 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { fetchFavoriteChannelIdsFromDatabase, fetchFavoritedChannelIdsInDatabase } from '@/core/ChannelFavoriteStore.js';
+import { fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase, listFavoritedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFavoriteStore.js';
 import {
 	createChannelFollowingInDatabase,
 	deleteChannelFollowingFromDatabase,
-	fetchFollowingChannelIdsInDatabase,
+	fetchFollowedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	listChannelFollowingsByFollowerIdFromDatabase,
 } from '@/core/ChannelFollowingStore.js';
 import {
 	channelMutingExistsInDatabase,
 	createChannelMutingInDatabase,
 	deleteChannelMutingFromDatabase,
-	fetchActiveMutedChannelIdsFromDatabase,
-	fetchMutedChannelIdsInDatabase,
+	listActiveMutedChannelIdsByUserIdFromDatabase,
+	fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	updateChannelMutingExpirationInDatabase,
 } from '@/core/ChannelMutingStore.js';
 import {
@@ -309,9 +309,9 @@ async function buildChannelPackHint(
 	const [bannerFiles, followings, favorites, muting] = await Promise.all([
 		listDriveFilesByIdsFromDatabase(deps.db, channels.map(channel => channel.bannerId).filter(id => id != null))
 			.then(files => new Map(files.map(file => [file.id, file]))),
-		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchFollowingChannelIdsInDatabase(deps.db, me.id, channelIds),
-		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchFavoritedChannelIdsInDatabase(deps.db, me.id, channelIds),
-		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchMutedChannelIdsInDatabase(deps.db, me.id, channelIds),
+		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchFollowedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
+		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
+		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
 	]);
 
 	return {
@@ -458,7 +458,7 @@ export async function handleHonoApiChannelsMyFavorites(
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel[]> {
 	parseHonoApiParams(emptyParamDef, body);
-	const channelIds = await fetchFavoriteChannelIdsFromDatabase(deps.db, me.id);
+	const channelIds = await listFavoritedChannelIdsByUserIdFromDatabase(deps.db, me.id);
 	if (channelIds.length === 0) return [];
 
 	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds)
@@ -652,7 +652,7 @@ export async function handleHonoApiChannelsMuteList(
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedChannel[]> {
 	parseHonoApiParams(emptyParamDef, body);
-	const channelIds = await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date());
+	const channelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 	if (channelIds.length === 0) return [];
 
 	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds)
@@ -691,7 +691,7 @@ export async function handleHonoApiChannelsTimeline(
 
 	let mutingChannelIds: string[] = [];
 	if (me) {
-		mutingChannelIds = (await fetchActiveMutedChannelIdsFromDatabase(deps.db, me.id, new Date()))
+		mutingChannelIds = (await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date()))
 			.filter(id => id !== channel.id);
 	}
 

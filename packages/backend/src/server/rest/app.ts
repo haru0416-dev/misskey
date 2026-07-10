@@ -14,6 +14,7 @@ import {
 	existsAccessTokenByTokenFromDatabase,
 	listAccessTokensByUserIdFromDatabase,
 	listAccessTokensWithAppByUserIdFromDatabase,
+	listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase,
 	type AccessTokenOrderField,
 } from '@/core/AccessTokenStore.js';
 import type { AppRow } from '@/db/schema/app.js';
@@ -82,6 +83,7 @@ export async function packHonoApiApp(
 	me?: { id: MiUser['id'] } | null | undefined,
 	options?: {
 		includeSecret?: boolean;
+		isAuthorized?: boolean;
 	},
 ): Promise<Packed<'App'>> {
 	const opts = {
@@ -97,7 +99,7 @@ export async function packHonoApiApp(
 		permission: app.permission,
 		...(opts.includeSecret ? { secret: app.secret } : {}),
 		...(me ? {
-			isAuthorized: await existsAccessTokenByAppIdAndUserIdFromDatabase(deps.db, app.id, me.id),
+			isAuthorized: opts.isAuthorized ?? await existsAccessTokenByAppIdAndUserIdFromDatabase(deps.db, app.id, me.id),
 		} : {}),
 	};
 }
@@ -150,8 +152,11 @@ export async function handleHonoApiMyApps(
 		limit: params.limit,
 		offset: params.offset,
 	});
+	const authorizedAppIds = new Set(await listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase(deps.db, user.id, apps.map(app => app.id)));
 
-	return await Promise.all(apps.map(app => packHonoApiApp(deps, app, user)));
+	return await Promise.all(apps.map(app => packHonoApiApp(deps, app, user, {
+		isAuthorized: authorizedAppIds.has(app.id),
+	})));
 }
 
 export async function handleHonoApiIApps(

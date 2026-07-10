@@ -8,28 +8,6 @@ import type { ILocale, ParameterizedString } from 'i18n';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TODO = any;
 
-type FlattenKeys<T extends ILocale, TPrediction> = keyof {
-	[K in keyof T as T[K] extends ILocale
-		? FlattenKeys<T[K], TPrediction> extends infer C extends string
-			? `${K & string}.${C}`
-			: never
-		: T[K] extends TPrediction
-			? K
-			: never]: T[K];
-};
-
-type ParametersOf<
-	T extends ILocale,
-	TKey extends FlattenKeys<T, ParameterizedString>,
-> = TKey extends `${infer K}.${infer C}`
-	? // @ts-expect-error -- C は明らかに FlattenKeys<T[K], ParameterizedString> になるが、型システムはここでは TKey がドット区切りであることのコンテキストを持たないので、型システムに合法にて示すことはできない。
-		ParametersOf<T[K], C>
-	: TKey extends keyof T
-		? T[TKey] extends ParameterizedString<infer P>
-			? P
-			: never
-		: never;
-
 type Tsx<T extends ILocale> = {
 	// `string extends T[K] ? never : K` part removes non-parameterized string keys from Tsx type.
 	readonly [K in keyof T as string extends T[K] ? never : K]: T[K] extends ParameterizedString<infer P>
@@ -48,9 +26,6 @@ export class I18n<T extends ILocale> {
 	) {
 		this.devMode = devMode;
 
-		//#region BIND
-		this.t = this.t.bind(this);
-		//#endregion
 	}
 
 	public get ts(): T {
@@ -208,55 +183,4 @@ export class I18n<T extends ILocale> {
 		return (this.tsxCache = build(this.locale));
 	}
 
-	/**
-	 * @deprecated なるべくこのメソッド使うよりも ts 直接参照の方が vue のキャッシュ効いてパフォーマンスが良いかも
-	 */
-	public t<TKey extends FlattenKeys<T, string>>(key: TKey): string;
-	/**
-	 * @deprecated なるべくこのメソッド使うよりも tsx 直接参照の方が vue のキャッシュ効いてパフォーマンスが良いかも
-	 */
-	public t<TKey extends FlattenKeys<T, ParameterizedString>>(
-		key: TKey,
-		args: { readonly [_ in ParametersOf<T, TKey>]: string | number },
-	): string;
-	public t(key: string, args?: { readonly [_: string]: string | number }) {
-		let str: string | ParameterizedString | ILocale = this.locale;
-
-		for (const k of key.split('.')) {
-			str = (str as TODO)[k];
-
-			if (this.devMode) {
-				if (typeof str === 'undefined') {
-					console.error(`Unexpected locale key: ${key}`);
-					return key;
-				}
-			}
-		}
-
-		if (args) {
-			if (this.devMode) {
-				const missing = Array.from((str as string).matchAll(/\{(\w+)\}/g), ([, parameter]) => parameter).filter(
-					(parameter) => !Object.hasOwn(args, parameter),
-				);
-
-				if (missing.length) {
-					console.error(`Missing locale parameters: ${missing.join(', ')} at ${key}`);
-				}
-			}
-
-			for (const [k, v] of Object.entries(args)) {
-				const search = `{${k}}`;
-
-				if (this.devMode) {
-					if (!(str as string).includes(search)) {
-						console.error(`Unexpected locale parameter: ${k} at ${key}`);
-					}
-				}
-
-				str = (str as string).replace(search, v.toString());
-			}
-		}
-
-		return str;
-	}
 }

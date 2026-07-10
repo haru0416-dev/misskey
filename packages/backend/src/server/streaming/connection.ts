@@ -7,7 +7,7 @@ import type { EventEmitter } from 'node:events';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
-import { fetchMutedChannelIdsFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
@@ -71,7 +71,7 @@ async function fetchStreamConnectionSnapshot(deps: HonoStreamConnectionDependenc
 		fetchUserProfileByUserIdFromDatabase(deps.db, userId),
 		listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, userId),
 		listFollowedChannelIdsByUserIdFromDatabase(deps.db, userId),
-		fetchMutedChannelIdsFromDatabase(deps.db, userId),
+		listMutedChannelIdsByUserIdFromDatabase(deps.db, userId),
 		listMuteeIdsByMuterIdFromDatabase(deps.db, userId),
 		listBlockerIdsByBlockeeIdFromDatabase(deps.db, userId),
 		listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, userId),
