@@ -12,7 +12,6 @@ import { DB_MAX_NOTE_TEXT_LENGTH, MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
-import { extractMentions } from '@/misc/extract-mentions.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
@@ -236,7 +235,7 @@ function containsTooManyMentionsError(): HonoApiError {
 
 async function extractMentionedUsersForHonoApi(deps: HonoApiNotesCreateDependencies, user: { host: MiUser['host'] }, tokens: mfm.MfmNode[]): Promise<MiUser[]> {
 	if (tokens == null) return [];
-	const mentions = extractMentions(tokens);
+	const mentions = mfm.extractMentions(tokens);
 	const accounts = mentions.map(mention => {
 		const host = mention.host ?? user.host;
 		return {
