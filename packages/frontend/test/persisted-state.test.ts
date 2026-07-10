@@ -65,14 +65,12 @@ type TestIoOptions = {
 	sourceId: string;
 	accountId?: string | null;
 	storage?: Map<string, unknown>;
-	legacyStorage?: Map<string, string>;
 	accountValues?: Record<string, unknown> | Promise<Record<string, unknown>>;
 	hub?: ChannelHub;
 };
 
 function createTestIo(options: TestIoOptions) {
 	const storage = options.storage ?? new Map<string, unknown>();
-	const legacyStorage = options.legacyStorage ?? new Map<string, string>();
 	const hub = options.hub ?? new ChannelHub();
 	const setCalls: [string, unknown][] = [];
 	const accountSetCalls: [string, string, unknown][] = [];
@@ -84,17 +82,13 @@ function createTestIo(options: TestIoOptions) {
 			setCalls.push([key, value]);
 			storage.set(key, value);
 		},
-		getLegacyItem: (key) => legacyStorage.get(key) ?? null,
-		removeLegacyItem: (key) => {
-			legacyStorage.delete(key);
-		},
 		loadAccount: async () => options.accountValues ?? {},
 		saveAccount: async (namespace, key, value) => {
 			accountSetCalls.push([namespace, key, value]);
 		},
 		createChannel: (name) => hub.create(name),
 	};
-	return { io, storage, legacyStorage, setCalls, accountSetCalls, hub };
+	return { io, storage, setCalls, accountSetCalls, hub };
 }
 
 function createStore<S extends Record<string, unknown>>(
@@ -114,11 +108,11 @@ describe('Pinia persisted state plugin', () => {
 		vi.restoreAllMocks();
 	});
 
-	test('hydrates legacy Pizzax storage and merges new default object fields', async () => {
-		const legacyStorage = new Map([['pizzax::test', JSON.stringify({ nested: { existing: true } })]]);
-		const fixture = createTestIo({ sourceId: 'tab-a', legacyStorage });
+	test('hydrates persisted state and merges new default object fields', async () => {
+		const storage = new Map([['pinia::test::device', { nested: { existing: true } }]]);
+		const fixture = createTestIo({ sourceId: 'tab-a', storage });
 		const store = createStore(
-			'legacy-hydration',
+			'persisted-hydration',
 			() => ({ nested: { existing: false, addedLater: true } }),
 			{
 				namespace: 'test',
@@ -130,8 +124,7 @@ describe('Pinia persisted state plugin', () => {
 		await store.$persistReady;
 
 		expect(store.nested).toEqual({ existing: true, addedLater: true });
-		expect(fixture.storage.get('pizzax::test')).toEqual({ nested: { existing: true } });
-		expect(fixture.legacyStorage.has('pizzax::test')).toBe(false);
+		expect(fixture.storage.get('pinia::test::device')).toEqual({ nested: { existing: true } });
 	});
 
 	test('batches same-tick writes into one storage operation', async () => {
@@ -154,7 +147,7 @@ describe('Pinia persisted state plugin', () => {
 		await store.$persistFlush();
 
 		expect(fixture.setCalls).toHaveLength(1);
-		expect(fixture.storage.get('pizzax::batch')).toEqual({ first: 1, second: 2 });
+		expect(fixture.storage.get('pinia::batch::device')).toEqual({ first: 1, second: 2 });
 	});
 
 	test('coalesces a burst of writes to the latest value', async () => {
@@ -174,7 +167,7 @@ describe('Pinia persisted state plugin', () => {
 		await store.$persistFlush();
 
 		expect(fixture.setCalls).toHaveLength(1);
-		expect(fixture.storage.get('pizzax::burst')).toEqual({ value: 100 });
+		expect(fixture.storage.get('pinia::burst::device')).toEqual({ value: 100 });
 	});
 
 	test('continues processing writes after a storage failure', async () => {
@@ -182,7 +175,7 @@ describe('Pinia persisted state plugin', () => {
 		const set = fixture.io.set;
 		let shouldFail = true;
 		fixture.io.set = async (key, value) => {
-			if (key === 'pizzax::recovery' && shouldFail) {
+			if (key === 'pinia::recovery::device' && shouldFail) {
 				shouldFail = false;
 				throw new Error('storage unavailable');
 			}
@@ -204,7 +197,7 @@ describe('Pinia persisted state plugin', () => {
 		store.value = 2;
 		await expect(store.$persistFlush()).resolves.toBeUndefined();
 
-		expect(fixture.storage.get('pizzax::recovery')).toEqual({ value: 2 });
+		expect(fixture.storage.get('pinia::recovery::device')).toEqual({ value: 2 });
 	});
 
 	test('syncs device-account state only to tabs using the same account', async () => {
@@ -227,8 +220,12 @@ describe('Pinia persisted state plugin', () => {
 
 		expect(second.value).toBe(42);
 		expect(other.value).toBe(0);
-		expect(secondFixture.setCalls.filter(([key]) => key === 'pizzax::account-sync::account-a')).toHaveLength(0);
-		expect(otherFixture.setCalls.filter(([key]) => key === 'pizzax::account-sync::account-b')).toHaveLength(0);
+		expect(
+			secondFixture.setCalls.filter(([key]) => key === 'pinia::account-sync::device-account::account-a'),
+		).toHaveLength(0);
+		expect(
+			otherFixture.setCalls.filter(([key]) => key === 'pinia::account-sync::device-account::account-b'),
+		).toHaveLength(0);
 	});
 
 	test('orders a local update after the latest remote update even when clocks are equal', async () => {
@@ -281,7 +278,7 @@ describe('Pinia persisted state plugin', () => {
 		await store.$persistFlush();
 
 		expect(store.value).toBe('local');
-		expect(fixture.storage.get('pizzax::late-cloud::cache::account-a')).toEqual({ value: 'local' });
+		expect(fixture.storage.get('pinia::late-cloud::account-cache::account-a')).toEqual({ value: 'local' });
 		expect(fixture.accountSetCalls).toEqual([['late-cloud', 'value', 'local']]);
 	});
 

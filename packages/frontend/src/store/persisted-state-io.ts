@@ -14,8 +14,6 @@ export const persistedStateIo: PersistedStateIo = {
 	currentAccountId: () => $i?.id ?? null,
 	get,
 	set,
-	getLegacyItem: (key) => localStorage.getItem(key),
-	removeLegacyItem: (key) => localStorage.removeItem(key),
 	loadAccount: (namespace) => misskeyApi('i/registry/get-all', { scope: ['client', namespace] }),
 	saveAccount: (namespace, key, value) =>
 		misskeyApi('i/registry/set', {

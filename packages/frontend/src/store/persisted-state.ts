@@ -33,8 +33,6 @@ export type PersistedStateIo = {
 	currentAccountId: () => string | null;
 	get: (key: string) => Promise<unknown>;
 	set: (key: string, value: unknown) => Promise<void>;
-	getLegacyItem: (key: string) => string | null;
-	removeLegacyItem: (key: string) => void;
 	loadAccount: (namespace: string) => Promise<Record<string, unknown>>;
 	saveAccount: (namespace: string, key: string, value: unknown) => Promise<void>;
 	createChannel: (name: string) => PersistedStateChannel | null;
@@ -156,22 +154,20 @@ class PersistedStateController {
 	}
 
 	private get deviceStateKeyName(): string {
-		return `pizzax::${this.definition.namespace}`;
+		return `pinia::${this.definition.namespace}::device`;
 	}
 
 	private get deviceAccountStateKeyName(): string {
 		const accountId = this.io.currentAccountId();
-		return accountId == null ? '' : `pizzax::${this.definition.namespace}::${accountId}`;
+		return accountId == null ? '' : `pinia::${this.definition.namespace}::device-account::${accountId}`;
 	}
 
 	private get registryCacheKeyName(): string {
 		const accountId = this.io.currentAccountId();
-		return accountId == null ? '' : `pizzax::${this.definition.namespace}::cache::${accountId}`;
+		return accountId == null ? '' : `pinia::${this.definition.namespace}::account-cache::${accountId}`;
 	}
 
 	private async initialize(): Promise<void> {
-		await this.migrateLegacyStorage();
-
 		const accountId = this.io.currentAccountId();
 		const [deviceStateRaw, deviceAccountStateRaw, registryCacheRaw] = await Promise.all([
 			this.io.get(this.deviceStateKeyName),
@@ -356,18 +352,6 @@ class PersistedStateController {
 			}
 		} finally {
 			this.applyingExternalState = false;
-		}
-	}
-
-	private async migrateLegacyStorage(): Promise<void> {
-		const keys = [this.deviceStateKeyName, this.deviceAccountStateKeyName, this.registryCacheKeyName].filter(
-			(key) => key !== '',
-		);
-		for (const key of keys) {
-			const value = this.io.getLegacyItem(key);
-			if (value == null) continue;
-			await this.io.set(key, JSON.parse(value));
-			this.io.removeLegacyItem(key);
 		}
 	}
 
