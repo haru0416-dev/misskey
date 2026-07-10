@@ -235,10 +235,7 @@ export async function updateFederatedInstanceAndCache(
 	return updated;
 }
 
-export async function tryLockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redis, 'set' | 'del'> }, host: string): Promise<string | null> {
-	// TODO: マイグレーションなのであとで消す (2024.3.1)
-	await deps.redis.del(`fetchInstanceMetadata:mutex:${host}`);
-
+export async function tryLockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redis, 'set'> }, host: string): Promise<string | null> {
 	return await deps.redis.set(
 		`fetchInstanceMetadata:mutex:v2:${host}`, '1',
 		'EX', 30,

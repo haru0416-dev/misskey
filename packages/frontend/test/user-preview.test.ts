@@ -4,6 +4,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/vue';
+import { defineComponent } from 'vue';
 import type { Ref } from 'vue';
 
 const { popupMock } = vi.hoisted(() => ({
@@ -14,7 +16,7 @@ vi.mock('@/os.js', () => ({
 	popup: popupMock,
 }));
 
-import { UserPreview } from '@/directives/user-preview.js';
+import { UserPreview, userPreviewDirective } from '@/directives/user-preview.js';
 
 describe('UserPreview', () => {
 	beforeEach(() => {
@@ -22,7 +24,9 @@ describe('UserPreview', () => {
 	});
 
 	afterEach(() => {
+		cleanup();
 		document.body.replaceChildren();
+		vi.useRealTimers();
 		vi.restoreAllMocks();
 		popupMock.mockReset();
 	});
@@ -49,5 +53,41 @@ describe('UserPreview', () => {
 
 		source.dispatchEvent(new MouseEvent('mouseover'));
 		expect(popupMock).toHaveBeenCalledOnce();
+	});
+
+	test('replaces and removes previews when the directive value changes', async () => {
+		vi.useFakeTimers();
+		const Component = defineComponent({
+			props: {
+				user: {
+					type: String,
+					default: null,
+				},
+			},
+			template: '<a v-user-preview="user">User</a>',
+		});
+		const result = render(Component, {
+			props: { user: 'user-1' },
+			global: {
+				directives: {
+					'user-preview': userPreviewDirective,
+				},
+			},
+		});
+		const source = result.getByText('User');
+
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(500);
+		expect(popupMock.mock.calls[0]?.[1].q).toBe('user-1');
+
+		await result.rerender({ user: 'user-2' });
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(500);
+		expect(popupMock.mock.calls[1]?.[1].q).toBe('user-2');
+
+		await result.rerender({ user: null });
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(500);
+		expect(popupMock).toHaveBeenCalledTimes(2);
 	});
 });

@@ -5,14 +5,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_selectable">
-	<div :class="$style.label" @click="focus"><slot name="label"></slot></div>
+	<div :id="labelId" :class="$style.label" @click="focus"><slot name="label"></slot></div>
 	<div :class="[$style.input, { [$style.inline]: inline, [$style.disabled]: disabled, [$style.focused]: focused }]">
 		<div ref="prefixEl" :class="$style.prefix"><slot name="prefix"></slot></div>
 		<input
+			:id="inputId"
 			ref="inputEl"
 			v-model="v"
 			v-adaptive-border
 			:class="$style.inputCore"
+			:aria-labelledby="$slots.label ? labelId : undefined"
+			:aria-describedby="$slots.caption ? captionId : undefined"
 			:type="type"
 			:disabled="disabled"
 			:required="required"
@@ -24,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:spellcheck="spellcheck"
 			:inputmode="inputmode"
 			:step="step"
-			:list="id"
+			:list="datalist ? datalistId : undefined"
 			:min="min"
 			:max="max"
 			@focus="focused = true"
@@ -32,12 +35,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@keydown="onKeydown($event)"
 			@input="onInput"
 		>
-		<datalist v-if="datalist" :id="id">
+		<datalist v-if="datalist" :id="datalistId">
 			<option v-for="data in datalist" :key="data" :value="data"></option>
 		</datalist>
 		<div ref="suffixEl" :class="$style.suffix"><slot name="suffix"></slot></div>
 	</div>
-	<div :class="$style.caption"><slot name="caption"></slot></div>
+	<div :id="captionId" :class="$style.caption"><slot name="caption"></slot></div>
 
 	<MkButton v-if="manualSave && changed" primary :class="$style.save" @click="updated"><i class="ti ti-check"></i> {{ i18n.ts.save }}</MkButton>
 </div>
@@ -106,6 +109,10 @@ const filled = computed(() => v.value !== '' && v.value != null);
 const inputEl = useTemplateRef('inputEl');
 const prefixEl = useTemplateRef('prefixEl');
 const suffixEl = useTemplateRef('suffixEl');
+const inputId = `${id}-input`;
+const labelId = `${id}-label`;
+const captionId = `${id}-caption`;
+const datalistId = `${id}-datalist`;
 const height =
 	props.small ? 33 :
 	props.large ? 39 :
@@ -247,6 +254,11 @@ defineExpose({
 	box-shadow: none;
 	box-sizing: border-box;
 	transition: border-color 0.1s ease-out;
+
+	&:focus-visible {
+		outline: 2px solid var(--MI_THEME-focus);
+		outline-offset: 2px;
+	}
 
 	&:hover {
 		border-color: var(--MI_THEME-inputBorderHover) !important;

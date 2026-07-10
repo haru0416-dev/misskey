@@ -5,13 +5,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_selectable">
-	<div :class="$style.label" @click="focus"><slot name="label"></slot></div>
+	<div :id="labelId" :class="$style.label" @click="focus"><slot name="label"></slot></div>
 	<div :class="{ [$style.disabled]: disabled, [$style.focused]: focused, [$style.tall]: tall, [$style.pre]: pre }" style="position: relative;">
 		<textarea
+			:id="inputId"
 			ref="inputEl"
 			v-model="v"
 			v-adaptive-border
 			:class="[$style.textarea, { _monospace: code }]"
+			:aria-labelledby="$slots.label ? labelId : undefined"
+			:aria-describedby="$slots.caption ? captionId : undefined"
 			:disabled="disabled"
 			:required="required"
 			:readonly="readonly"
@@ -25,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@input="onInput"
 		></textarea>
 	</div>
-	<div :class="$style.caption"><slot name="caption"></slot></div>
+	<div :id="captionId" :class="$style.caption"><slot name="caption"></slot></div>
 	<button v-if="mfmPreview" style="font-size: 0.85em;" class="_textButton" type="button" @click="preview = !preview">{{ i18n.ts.preview }}</button>
 	<div v-if="mfmPreview" v-show="preview" v-panel :class="$style.mfmPreview">
 		<Mfm :text="v"/>
@@ -42,6 +45,7 @@ import type { SuggestionType } from '@/utility/autocomplete.js';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { Autocomplete } from '@/utility/autocomplete.js';
+import { genId } from '@/utility/id.js';
 
 const props = defineProps<{
 	modelValue: string | null;
@@ -78,6 +82,10 @@ const invalid = ref(false);
 const filled = computed(() => v.value !== '' && v.value != null);
 const inputEl = useTemplateRef('inputEl');
 const preview = ref(false);
+const id = genId();
+const inputId = `${id}-textarea`;
+const labelId = `${id}-label`;
+const captionId = `${id}-caption`;
 let autocompleteWorker: Autocomplete | null = null;
 
 function focus() {
@@ -193,6 +201,11 @@ onUnmounted(() => {
 	box-shadow: none;
 	box-sizing: border-box;
 	transition: border-color 0.1s ease-out;
+
+	&:focus-visible {
+		outline: 2px solid var(--MI_THEME-focus);
+		outline-offset: 2px;
+	}
 
 	&:hover {
 		border-color: var(--MI_THEME-inputBorderHover) !important;

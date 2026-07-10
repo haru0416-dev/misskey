@@ -108,7 +108,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								</dt>
 								<dd class="value">
 									<Mfm :text="field.value" :author="user" :colored="false" class="_selectable"/>
-									<i v-if="user.verifiedLinks.includes(field.value)" v-tooltip:dialog="i18n.ts.verifiedLink" class="ti ti-circle-check" :class="$style.verifiedLink"></i>
+									<button v-if="user.verifiedLinks.includes(field.value)" v-tooltip:dialog="i18n.ts.verifiedLink" type="button" class="_button" :class="$style.verifiedLink" :aria-label="i18n.ts.verifiedLink"><i class="ti ti-circle-check"></i></button>
 								</dd>
 							</dl>
 						</div>

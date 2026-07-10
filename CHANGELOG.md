@@ -4,6 +4,7 @@
 - Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除
 - Enhance: ゲーム機能を削除
 - Enhance: フロントエンド/ビルドツール周辺の未使用依存パッケージ19個を削除 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
+- Enhance: メンション抽出処理を共通化し、同一アカウントへの重複した検索や処理を抑制
 
 ### Client
 - Enhance: Paginator のカーソル計算・重複排除・リアクティビティを最適化し、重複取得と古いリクエストの競合を抑制
@@ -49,6 +50,11 @@
 - Enhance: アナログ・デジタル時計の通常更新を高頻度描画から秒境界タイマーへ変更
 - Enhance: 設定クラウドバックアップを常駐ポーリングから設定保存時の遅延実行へ変更
 - Enhance: プル・トゥ・リフレッシュの1msタイマーと入力追従をフレーム単位へ集約
+- Fix: グラフの年月フォーマットでdate-fnsの非推奨トークン警告が発生する問題を修正
+- Enhance: 長いノート一覧とストリーミングタイムラインを仮想化し、スクロール時のDOM要素数と描画負荷を削減
+- Enhance: 入力欄・テキストエリア・選択欄のラベル関連付けとキーボードフォーカス表示を改善
+- Fix: 同じ要素のユーザープレビュー対象が変わっても古いユーザーが表示され続ける問題を修正
+- Fix: ツールチップをキーボードで利用できない問題と、タッチ操作のキャンセルや入力方式の切り替え後に表示状態が残る・表示されなくなる問題を修正
 
 ### Server
 - Enhance: 旧音声 MIME エイリアス (`audio/x-flac` / `audio/vnd.wave`)、OStatus の WebFinger subscribe リンク、`channels/timeline` の未使用 `allowPartial` パラメータを削除
@@ -146,6 +152,7 @@
 - Fix: Bun ランタイムで外部リクエスト (`HttpRequestService`) の private アドレスブロック (SSRF 対策) が一切機能していなかった問題を修正。Bun の `node:http` 互換レイヤーはカスタム `http.Agent.createConnection` を呼ばないため、`node-fetch` の `agent` オプション経由の socket レベル遮断が無効化されていた。宛先ホスト名を送信前に DNS 解決して private/非ユニキャストアドレスを遮断する事前チェックに変更し、あわせて `node-fetch` をグローバル `fetch` に置き換えて本番依存から除去 (レスポンスサイズ上限も自前実装で維持)
 - Enhance: REST API のリクエストパラメータ検証を `ajv` (JSON Schema) から `Zod` に全面移行し、本番依存から `ajv` を除去。あわせて `users/show`/`notes/create` の OpenAPI 仕様生成 (misskey-js 型生成) を Zod スキーマ由来に統一し、これまで独立して二重管理されていたパラメータ定義の重複を解消
 - Enhance: ID生成方式を `uuidv7` 固定に簡素化し、設定ファイルの `id` 項目 (aid/aidx/meid/meidg/objectid/ulid の選択) を削除。本フォークは常に `uuidv7` のみを使用していたための整理
+- Enhance: 連合インスタンスのメタデータ更新時に旧形式のRedisロックキーを毎回削除していた移行処理を除去
 
 ## 2026.6.1
 

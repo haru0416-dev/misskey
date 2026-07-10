@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	appear :css="prefer.animation"
 	@afterLeave="emit('closed')"
 >
-	<div v-show="showing" ref="el" :class="$style.root" class="_acrylic _shadow" :style="{ zIndex, maxWidth: maxWidth + 'px' }">
+	<div :id="id" v-show="showing" ref="el" role="tooltip" :class="$style.root" class="_acrylic _shadow" :style="{ zIndex, maxWidth: maxWidth + 'px' }">
 		<slot>
 			<template v-if="text">
 				<Mfm v-if="asMfm" :text="text"/>
@@ -31,6 +31,7 @@ import { prefer } from '@/preferences.js';
 
 const props = withDefaults(defineProps<{
 	showing: boolean;
+	id?: string;
 	anchorElement?: HTMLElement;
 	x?: number;
 	y?: number;

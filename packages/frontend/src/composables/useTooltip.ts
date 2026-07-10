@@ -6,6 +6,8 @@
 import { ref, watch, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
 
+const MOUSEOVER_IGNORE_DURATION = 1000;
+
 export function useTooltip(
 	elRef: Ref<HTMLElement | { $el: HTMLElement } | null | undefined>,
 	onShow: (showing: Ref<boolean>) => void,
@@ -13,10 +15,9 @@ export function useTooltip(
 ): void {
 	let isHovering = false;
 
-	// iOS(Androidも？)では、要素をタップした直後に(おせっかいで)mouseoverイベントを発火させたりするため、それを無視するためのフラグ
-	// 無視しないと、画面に触れてないのにツールチップが出たりし、ユーザビリティが損なわれる
-	// TODO: 一度でもタップすると二度とマウスでツールチップ出せなくなるのをどうにかする 定期的にfalseに戻すとか...？
-	let shouldIgnoreMouseover = false;
+	// タッチ直後にブラウザが互換mouseoverを発火する場合があるため、短時間だけ無視する。
+	// 永続的に無視するとハイブリッド端末でマウスへ戻した後もツールチップが使えなくなる。
+	let ignoreMouseoverUntil = 0;
 
 	let timeoutId: number;
 
@@ -45,7 +46,7 @@ export function useTooltip(
 
 	const onMouseover = () => {
 		if (isHovering) return;
-		if (shouldIgnoreMouseover) return;
+		if (Date.now() < ignoreMouseoverUntil) return;
 		isHovering = true;
 		timeoutId = window.setTimeout(open, delay);
 	};
@@ -58,13 +59,14 @@ export function useTooltip(
 	};
 
 	const onTouchstart = () => {
-		shouldIgnoreMouseover = true;
+		ignoreMouseoverUntil = Date.now() + MOUSEOVER_IGNORE_DURATION;
 		if (isHovering) return;
 		isHovering = true;
 		timeoutId = window.setTimeout(open, delay);
 	};
 
 	const onTouchend = () => {
+		ignoreMouseoverUntil = Date.now() + MOUSEOVER_IGNORE_DURATION;
 		if (!isHovering) return;
 		isHovering = false;
 		window.clearTimeout(timeoutId);
@@ -80,6 +82,7 @@ export function useTooltip(
 			el.addEventListener('mouseleave', onMouseleave, { passive: true });
 			el.addEventListener('touchstart', onTouchstart, { passive: true });
 			el.addEventListener('touchend', onTouchend, { passive: true });
+			el.addEventListener('touchcancel', onTouchend, { passive: true });
 			el.addEventListener('click', close, { passive: true });
 
 			onCleanup(() => {
@@ -90,6 +93,7 @@ export function useTooltip(
 				el.removeEventListener('mouseleave', onMouseleave);
 				el.removeEventListener('touchstart', onTouchstart);
 				el.removeEventListener('touchend', onTouchend);
+				el.removeEventListener('touchcancel', onTouchend);
 				el.removeEventListener('click', close);
 			});
 		},

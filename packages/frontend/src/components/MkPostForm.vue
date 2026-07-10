@@ -127,7 +127,6 @@ import type { UploaderItem } from '@/composables/useUploader.js';
 import XTextCounter from '@/components/MkPostForm.TextCounter.vue';
 import MkNoteSimple from '@/components/MkNoteSimple.vue';
 import { erase, unique } from '@/utility/array.js';
-import { extractMentions } from '@/utility/extract-mentions.js';
 import { formatTimeString } from '@/utility/format-time-string.js';
 import { Autocomplete } from '@/utility/autocomplete.js';
 import * as os from '@/os.js';
@@ -363,7 +362,7 @@ if (replyTargetNote.value && replyTargetNote.value.text != null) {
 	const ast = mfm.parse(replyTargetNote.value.text);
 	const otherHost = replyTargetNote.value.user.host;
 
-	for (const x of extractMentions(ast)) {
+	for (const x of mfm.extractMentions(ast)) {
 		const mention = x.host ?
 			`@${x.username}@${toASCII(x.host)}` :
 			(otherHost == null || otherHost === host) ?
@@ -444,7 +443,7 @@ function checkMissingMention() {
 	if (visibility.value === 'specified') {
 		const ast = mfm.parse(text.value);
 
-		for (const x of extractMentions(ast)) {
+		for (const x of mfm.extractMentions(ast)) {
 			if (!visibleUsers.value.some(u => (u.username === x.username) && (u.host === x.host))) {
 				hasNotSpecifiedMentions.value = true;
 				return;
@@ -457,7 +456,7 @@ function checkMissingMention() {
 function addMissingMention() {
 	const ast = mfm.parse(text.value);
 
-	for (const x of extractMentions(ast)) {
+	for (const x of mfm.extractMentions(ast)) {
 		if (!visibleUsers.value.some(u => (u.username === x.username) && (u.host === x.host))) {
 			misskeyApi('users/show', { username: x.username, host: x.host }).then(user => {
 				pushVisibleUser(user);

@@ -50,11 +50,13 @@ describe('MkTooltip', () => {
 
 		const result = render(MkTooltip, {
 			props: {
+				id: 'tooltip-test',
 				showing: false,
 				text: 'tooltip',
 			},
 		});
 		await nextTick();
+		expect(result.getByRole('tooltip', { hidden: true }).id).toBe('tooltip-test');
 		expect(calcPopupPositionMock).not.toHaveBeenCalled();
 		expect(frames.size).toBe(0);
 

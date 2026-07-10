@@ -33,7 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 				<slot :items="getValue(paginator.items)" :fetching="paginator.fetching.value || paginator.fetchingOlder.value"></slot>
 				<div v-if="direction === 'down' || direction === 'both'" v-show="downButtonVisible">
-					<MkButton v-if="!downButtonLoading" v-appear="shouldEnableInfiniteScroll ? downButtonClick : null" :class="$style.more" primary rounded @click="downButtonClick">
+					<MkButton v-if="!downButtonLoading" v-appear="shouldEnableInfiniteScroll ? downButtonClick : null" data-cy-pagination-down :class="$style.more" primary rounded @click="downButtonClick">
 						{{ i18n.ts.loadMore }}
 					</MkButton>
 					<MkLoading v-else/>

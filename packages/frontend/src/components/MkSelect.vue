@@ -5,15 +5,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div>
-	<div :class="$style.label" @click="focus"><slot name="label"></slot></div>
+	<div :id="labelId" :class="$style.label" @click="focus"><slot name="label"></slot></div>
 	<div
+		:id="selectId"
 		ref="container"
+		role="button"
 		tabindex="0"
-		:class="[$style.input, { [$style.inline]: inline, [$style.disabled]: disabled, [$style.focused]: focused || opening }]"
+		:class="[$style.input, { [$style.inline]: inline, [$style.disabled]: disabled || readonly, [$style.focused]: focused || opening }]"
+		:aria-labelledby="$slots.label ? `${labelId} ${valueId}` : valueId"
+		:aria-describedby="$slots.caption ? captionId : undefined"
+		:aria-disabled="disabled || readonly"
+		:aria-expanded="opening"
+		aria-haspopup="menu"
 		@focus="focused = true"
 		@blur="focused = false"
 		@mousedown.prevent="show"
-		@keydown.space.enter="show"
+		@keydown.enter.prevent="show"
+		@keydown.space.prevent="show"
+		@keydown.down.prevent="show"
 	>
 		<div ref="prefixEl" :class="$style.prefix"><slot name="prefix"></slot></div>
 		<div
@@ -28,14 +37,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@mousedown.prevent="() => {}"
 			@keydown.prevent="() => {}"
 		>
-			<div style="pointer-events: none;">{{ currentValueText ?? '' }}</div>
+			<div :id="valueId" style="pointer-events: none;">{{ currentValueText ?? '' }}</div>
 			<div style="display: none;">
 				<slot></slot>
 			</div>
 		</div>
 		<div ref="suffixEl" :class="$style.suffix"><i class="ti ti-chevron-down" :class="[$style.chevron, { [$style.chevronOpening]: opening }]"></i></div>
 	</div>
-	<div :class="$style.caption"><slot name="caption"></slot></div>
+	<div :id="captionId" :class="$style.caption"><slot name="caption"></slot></div>
 </div>
 </template>
 
@@ -73,6 +82,7 @@ import { onMounted, nextTick, ref, watch, computed, toRefs, useTemplateRef } fro
 import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
 import { useFormControlPadding } from '@/composables/useFormControlPadding.js';
+import { genId } from '@/utility/id.js';
 
 const props = defineProps<{
 	items: ITEMS;
@@ -102,6 +112,11 @@ const inputEl = useTemplateRef('inputEl');
 const prefixEl = useTemplateRef('prefixEl');
 const suffixEl = useTemplateRef('suffixEl');
 const container = useTemplateRef('container');
+const id = genId();
+const selectId = `${id}-select`;
+const labelId = `${id}-label`;
+const valueId = `${id}-value`;
+const captionId = `${id}-caption`;
 const height =
 	props.small ? 33 :
 	props.large ? 39 :
@@ -230,8 +245,9 @@ function show() {
 		}
 	}
 
-	&:focus {
-		outline: none;
+	&:focus-visible {
+		outline: 2px solid var(--MI_THEME-focus);
+		outline-offset: 2px;
 	}
 
 	&:hover {
