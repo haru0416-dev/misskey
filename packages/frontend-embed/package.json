@@ -9,7 +9,6 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
-		"@misskey-dev/emoji-data": "17.0.6",
 		"@rollup/plugin-json": "6.1.0",
 		"@rollup/pluginutils": "5.4.0",
 		"@vitejs/plugin-vue": "6.0.7",
@@ -17,7 +16,7 @@
 		"i18n": "workspace:*",
 		"icons-subsetter": "workspace:*",
 		"json5": "2.2.3",
-		"mfm-js": "0.26.0",
+		"mfm-js": "workspace:*",
 		"misskey-js": "workspace:*",
 		"punycode.js": "2.3.1",
 		"shiki": "4.2.0",
