@@ -51,6 +51,7 @@
 - Enhance: プル・トゥ・リフレッシュの1msタイマーと入力追従をフレーム単位へ集約
 - Fix: グラフの年月フォーマットでdate-fnsの非推奨トークン警告が発生する問題を修正
 - Enhance: 長いノート一覧とストリーミングタイムラインを仮想化し、スクロール時のDOM要素数と描画負荷を削減
+- Enhance: 入力欄・テキストエリア・選択欄のラベル関連付けとキーボードフォーカス表示を改善
 
 ### Server
 - Enhance: 旧音声 MIME エイリアス (`audio/x-flac` / `audio/vnd.wave`)、OStatus の WebFinger subscribe リンク、`channels/timeline` の未使用 `allowPartial` パラメータを削除
