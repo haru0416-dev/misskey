@@ -12,6 +12,8 @@ export type Failure = { success: false };
 
 export type Result<T> = Success<T> | Failure;
 
+const failed: Failure = { success: false };
+
 interface State {
 	trace?: boolean;
 	linkLabel?: boolean;
@@ -30,7 +32,7 @@ export function success<T>(index: number, value: T): Success<T> {
 }
 
 export function failure(): Failure {
-	return { success: false };
+	return failed;
 }
 
 export class Parser<T> {
@@ -121,10 +123,7 @@ export class Parser<T> {
 
 export function str<T extends string>(value: T): Parser<T> {
 	return new Parser((input, index, _state) => {
-		if (input.length - index < value.length) {
-			return failure();
-		}
-		if (input.substr(index, value.length) !== value) {
+		if (!input.startsWith(value, index)) {
 			return failure();
 		}
 		return success(index + value.length, value);
@@ -132,10 +131,11 @@ export function str<T extends string>(value: T): Parser<T> {
 }
 
 export function regexp<T extends RegExp>(pattern: T): Parser<string> {
-	const re = RegExp(`^(?:${pattern.source})`, pattern.flags);
+	const flags = pattern.flags.replaceAll('g', '').replaceAll('y', '') + 'y';
+	const re = RegExp(pattern.source, flags);
 	return new Parser((input, index, _state) => {
-		const text = input.slice(index);
-		const result = re.exec(text);
+		re.lastIndex = index;
+		const result = re.exec(input);
 		if (result == null) {
 			return failure();
 		}
@@ -209,27 +209,23 @@ export const char = new Parser((input, index, _state) => {
 	return success(index + 1, value);
 });
 
-export const lineBegin = new Parser((input, index, state) => {
+export const lineBegin = new Parser((input, index, _state) => {
 	if (index === 0) {
 		return success(index, null);
 	}
-	if (cr.handler(input, index - 1, state).success) {
-		return success(index, null);
-	}
-	if (lf.handler(input, index - 1, state).success) {
+	const previous = input.charCodeAt(index - 1);
+	if (previous === 0x0d || previous === 0x0a) {
 		return success(index, null);
 	}
 	return failure();
 });
 
-export const lineEnd = new Parser((input, index, state) => {
+export const lineEnd = new Parser((input, index, _state) => {
 	if (index === input.length) {
 		return success(index, null);
 	}
-	if (cr.handler(input, index, state).success) {
-		return success(index, null);
-	}
-	if (lf.handler(input, index, state).success) {
+	const current = input.charCodeAt(index);
+	if (current === 0x0d || current === 0x0a) {
 		return success(index, null);
 	}
 	return failure();
