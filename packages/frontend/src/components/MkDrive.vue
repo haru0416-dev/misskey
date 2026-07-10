@@ -176,7 +176,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 import { prefer } from '@/preferences.js';
 import { chooseFileFromPcAndUpload, selectDriveFolder } from '@/utility/drive.js';
 import { store } from '@/store.js';

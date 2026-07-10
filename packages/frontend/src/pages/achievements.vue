@@ -17,7 +17,7 @@ import MkAchievements from '@/components/MkAchievements.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { ensureSignin } from '@/i.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 
 const $i = ensureSignin();
 

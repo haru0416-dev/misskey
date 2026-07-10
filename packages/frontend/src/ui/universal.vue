@@ -28,7 +28,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 
-	<XCommon v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
+	<XCommon v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing">
+		<template #drawerMenu>
+			<XSidebar style="height: 100%;" :asDrawer="true" :showWidgetButton="false"/>
+		</template>
+	</XCommon>
 </div>
 </template>
 

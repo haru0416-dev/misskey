@@ -273,7 +273,7 @@ import { getNoteClipMenu, getNoteMenu, getRenoteMenu } from '@/utility/get-note-
 import { noteEvents, useNoteCapture } from '@/composables/useNoteCapture.js';
 import { deepClone } from '@/utility/clone.js';
 import { useTooltip } from '@/composables/useTooltip.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import { showMovedDialog } from '@/utility/show-moved-dialog.js';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';

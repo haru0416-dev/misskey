@@ -179,7 +179,7 @@ import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
 import { langmap } from '@/utility/langmap.js';
 import { definePage } from '@/page.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 import { store } from '@/store.js';
 import MkInfo from '@/components/MkInfo.vue';
 import MkTextarea from '@/components/MkTextarea.vue';

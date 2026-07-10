@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</template>
 		</I18n>
 		<div :class="$style.renoteInfo">
-			<button ref="renoteTime" :class="$style.renoteTime" class="_button" @mousedown.prevent="showRenoteMenu()">
+			<button ref="renoteTime" :class="$style.renoteTime" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showRenoteMenu()">
 				<i class="ti ti-dots" :class="$style.renoteMenu"></i>
 				<MkTime :time="note.createdAt"/>
 			</button>
@@ -136,6 +136,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 					ref="renoteButton"
 					:class="$style.footerButton"
 					class="_button"
+					@pointerenter="preloadNotePopupMenu"
+					@focus="preloadNotePopupMenu"
 					@mousedown.prevent="renote()"
 				>
 					<i class="ti ti-repeat"></i>
@@ -151,10 +153,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<i v-else class="ti ti-plus"></i>
 					<p v-if="(appearNote.reactionAcceptance === 'likeOnly' || prefer.s.showReactionsCount) && $appearNote.reactionCount > 0" :class="$style.footerButtonCount">{{ number($appearNote.reactionCount) }}</p>
 				</button>
-				<button v-if="prefer.s.showClipButtonInNoteFooter" ref="clipButton" :class="$style.footerButton" class="_button" @mousedown.prevent="clip()">
+				<button v-if="prefer.s.showClipButtonInNoteFooter" ref="clipButton" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="clip()">
 					<i class="ti ti-paperclip"></i>
 				</button>
-				<button ref="menuButton" :class="$style.footerButton" class="_button" @mousedown.prevent="showMenu()">
+				<button ref="menuButton" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showMenu()">
 					<i class="ti ti-dots"></i>
 				</button>
 			</footer>
@@ -210,11 +212,9 @@ import MkNoteSub from '@/components/MkNoteSub.vue';
 import MkNoteHeader from '@/components/MkNoteHeader.vue';
 import MkNoteSimple from '@/components/MkNoteSimple.vue';
 import MkReactionsViewer from '@/components/MkReactionsViewer.vue';
-import MkReactionsViewerDetails from '@/components/MkReactionsViewer.Details.vue';
 import MkMediaList from '@/components/MkMediaList.vue';
 import MkCwButton from '@/components/MkCwButton.vue';
 import MkPoll from '@/components/MkPoll.vue';
-import MkUsersTooltip from '@/components/MkUsersTooltip.vue';
 import MkUrlPreview from '@/components/MkUrlPreview.vue';
 import MkInstanceTicker from '@/components/MkInstanceTicker.vue';
 import { pleaseLogin } from '@/utility/please-login.js';
@@ -229,11 +229,10 @@ import { reactionPicker } from '@/utility/reaction-picker.js';
 import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
-import { getAbuseNoteMenu, getCopyNoteLinkMenu, getNoteClipMenu, getNoteMenu, getRenoteMenu } from '@/utility/get-note-menu.js';
 import { noteEvents, useNoteCapture } from '@/composables/useNoteCapture.js';
 import { deepClone } from '@/utility/clone.js';
 import { useTooltip } from '@/composables/useTooltip.js';
-import { claimAchievement } from '@/utility/achievements.js';
+import { claimAchievement } from '@/utility/claim-achievement.js';
 import { getNoteSummary } from '@/utility/get-note-summary.js';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import { showMovedDialog } from '@/utility/show-moved-dialog.js';
@@ -244,6 +243,25 @@ import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { DI } from '@/di.js';
 import { globalEvents } from '@/events.js';
+
+async function loadNoteMenuModule(): Promise<typeof import('@/utility/get-note-menu.js') | null> {
+	try {
+		return await import('@/utility/get-note-menu.js');
+	} catch (error) {
+		console.error('Failed to load note menu module', error);
+		void os.alert({
+			type: 'error',
+			title: i18n.ts.somethingHappened,
+			text: 'CODE: ASYNC_MODULE_LOAD_FAIL',
+		});
+		return null;
+	}
+}
+
+function preloadNotePopupMenu(): void {
+	os.preloadPopupMenu();
+	void import('@/utility/get-note-menu.js').catch(() => {});
+}
 
 const props = withDefaults(defineProps<{
 	note: Misskey.entities.Note;
@@ -425,10 +443,13 @@ provide(DI.mfmEmojiReactCallback, (reaction) => {
 
 if (!props.mock) {
 	useTooltip(renoteButton, async (showing) => {
-		const renotes = await misskeyApi('notes/renotes', {
-			noteId: appearNote.id,
-			limit: 11,
-		});
+		const [renotes, MkUsersTooltip] = await Promise.all([
+			misskeyApi('notes/renotes', {
+				noteId: appearNote.id,
+				limit: 11,
+			}),
+			import('@/components/MkUsersTooltip.vue').then((x) => x.default),
+		]);
 
 		const users = renotes.map(x => x.user);
 
@@ -446,11 +467,14 @@ if (!props.mock) {
 
 	if (appearNote.reactionAcceptance === 'likeOnly') {
 		useTooltip(reactButton, async (showing) => {
-			const reactions = await misskeyApiGet('notes/reactions', {
-				noteId: appearNote.id,
-				limit: 10,
-				_cacheKey_: $appearNote.reactionCount,
-			});
+			const [reactions, MkReactionsViewerDetails] = await Promise.all([
+				misskeyApiGet('notes/reactions', {
+					noteId: appearNote.id,
+					limit: 10,
+					_cacheKey_: $appearNote.reactionCount,
+				}),
+				import('@/components/MkReactionsViewer.Details.vue').then((x) => x.default),
+			]);
 
 			const users = reactions.map(x => x.user);
 
@@ -477,7 +501,11 @@ async function renote() {
 
 	showMovedDialog();
 
-	const { menu } = getRenoteMenu({ note: note, renoteButton, mock: props.mock });
+	os.preloadPopupMenu();
+	const noteMenuModule = await loadNoteMenuModule();
+	if (noteMenuModule == null) return;
+
+	const { menu } = noteMenuModule.getRenoteMenu({ note: note, renoteButton, mock: props.mock });
 	os.popupMenu(menu, renoteButton.value);
 
 	subscribeManuallyToNoteCapture();
@@ -595,7 +623,7 @@ function toggleReact() {
 	}
 }
 
-function onContextmenu(ev: PointerEvent): void {
+async function onContextmenu(ev: PointerEvent): Promise<void> {
 	if (props.mock) {
 		return;
 	}
@@ -607,17 +635,28 @@ function onContextmenu(ev: PointerEvent): void {
 		ev.preventDefault();
 		react();
 	} else {
-		const { menu, cleanup } = getNoteMenu({ note: note, translating, translation, currentClip: currentClip?.value, currentAntenna: currentAntenna?.value ?? undefined });
+		if (prefer.s.contextMenu === 'native' || (prefer.s.contextMenu === 'appWithShift' && !ev.shiftKey)) return;
+
+		ev.preventDefault();
+		os.preloadContextMenu();
+		const noteMenuModule = await loadNoteMenuModule();
+		if (noteMenuModule == null) return;
+
+		const { menu, cleanup } = noteMenuModule.getNoteMenu({ note: note, translating, translation, currentClip: currentClip?.value, currentAntenna: currentAntenna?.value ?? undefined });
 		os.contextMenu(menu, ev).then(focus).finally(cleanup);
 	}
 }
 
-function showMenu(): void {
+async function showMenu(): Promise<void> {
 	if (props.mock) {
 		return;
 	}
 
-	const { menu, cleanup } = getNoteMenu({ note: note, translating, translation, currentClip: currentClip?.value, currentAntenna: currentAntenna?.value ?? undefined });
+	os.preloadPopupMenu();
+	const noteMenuModule = await loadNoteMenuModule();
+	if (noteMenuModule == null) return;
+
+	const { menu, cleanup } = noteMenuModule.getNoteMenu({ note: note, translating, translation, currentClip: currentClip?.value, currentAntenna: currentAntenna?.value ?? undefined });
 	os.popupMenu(menu, menuButton.value).then(focus).finally(cleanup);
 }
 
@@ -626,7 +665,11 @@ async function clip(): Promise<void> {
 		return;
 	}
 
-	os.popupMenu(await getNoteClipMenu({ note: note, currentClip: currentClip?.value }), clipButton.value).then(focus);
+	os.preloadPopupMenu();
+	const noteMenuModule = await loadNoteMenuModule();
+	if (noteMenuModule == null) return;
+
+	os.popupMenu(await noteMenuModule.getNoteClipMenu({ note: note, currentClip: currentClip?.value }), clipButton.value).then(focus);
 }
 
 async function showRenoteMenu() {
@@ -635,6 +678,11 @@ async function showRenoteMenu() {
 	}
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
 	if (!isLoggedIn) return;
+
+	os.preloadPopupMenu();
+	const noteMenuModule = await loadNoteMenuModule();
+	if (noteMenuModule == null) return;
+	const { getAbuseNoteMenu, getCopyNoteLinkMenu } = noteMenuModule;
 
 	function getUnrenote(): MenuItem {
 		return {

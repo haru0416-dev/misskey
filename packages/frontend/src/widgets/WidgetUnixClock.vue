@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
 import { i18n } from '@/i18n.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
@@ -59,7 +59,10 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 	emit,
 );
 
-let intervalId: number | null = null;
+let animationFrameId: number | null = null;
+let secondTimerId: number | null = null;
+let colonTimerId: number | null = null;
+let mounted = false;
 const ss = ref('');
 const ms = ref('');
 const showColon = ref(false);
@@ -67,7 +70,9 @@ let prevSec: string | null = null;
 
 watch(showColon, (v) => {
 	if (v) {
-		window.setTimeout(() => {
+		if (colonTimerId != null) window.clearTimeout(colonTimerId);
+		colonTimerId = window.setTimeout(() => {
+			colonTimerId = null;
 			showColon.value = false;
 		}, 30);
 	}
@@ -81,17 +86,87 @@ const tick = () => {
 	prevSec = ss.value;
 };
 
-tick();
+function clearUpdateTimer() {
+	if (animationFrameId != null) {
+		window.cancelAnimationFrame(animationFrameId);
+		animationFrameId = null;
+	}
+	if (secondTimerId != null) {
+		window.clearTimeout(secondTimerId);
+		secondTimerId = null;
+	}
+}
+
+function scheduleSecondTick() {
+	const delay = 1000 - (Date.now() % 1000);
+	secondTimerId = window.setTimeout(onSecondTick, delay);
+}
+
+function onAnimationFrame() {
+	animationFrameId = null;
+	if (!mounted || window.document.hidden || !widgetProps.showMs) return;
+	tick();
+	animationFrameId = window.requestAnimationFrame(onAnimationFrame);
+}
+
+function onSecondTick() {
+	secondTimerId = null;
+	if (!mounted || window.document.hidden || widgetProps.showMs) return;
+	tick();
+	scheduleSecondTick();
+}
+
+function scheduleUpdates() {
+	clearUpdateTimer();
+	if (!mounted || window.document.hidden) return;
+	if (widgetProps.showMs) {
+		animationFrameId = window.requestAnimationFrame(onAnimationFrame);
+	} else {
+		scheduleSecondTick();
+	}
+}
+
+function restartUpdates() {
+	tick();
+	scheduleUpdates();
+}
+
+function onVisibilityChange() {
+	if (window.document.hidden) {
+		clearUpdateTimer();
+		if (colonTimerId != null) {
+			window.clearTimeout(colonTimerId);
+			colonTimerId = null;
+		}
+		showColon.value = false;
+	} else {
+		restartUpdates();
+	}
+}
 
 watch(() => widgetProps.showMs, () => {
-	if (intervalId) window.clearInterval(intervalId);
-	intervalId = window.setInterval(tick, widgetProps.showMs ? 10 : 1000);
-}, { immediate: true });
+	if (mounted) restartUpdates();
+});
+
+tick();
+
+onMounted(() => {
+	mounted = true;
+	window.document.addEventListener('visibilitychange', onVisibilityChange);
+	if (window.document.hidden) {
+		onVisibilityChange();
+	} else {
+		scheduleUpdates();
+	}
+});
 
 onUnmounted(() => {
-	if (intervalId) {
-		window.clearInterval(intervalId);
-		intervalId = null;
+	mounted = false;
+	window.document.removeEventListener('visibilitychange', onVisibilityChange);
+	clearUpdateTimer();
+	if (colonTimerId != null) {
+		window.clearTimeout(colonTimerId);
+		colonTimerId = null;
 	}
 });
 

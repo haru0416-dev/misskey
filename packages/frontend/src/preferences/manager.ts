@@ -104,6 +104,7 @@ export type PreferencesDefinition = Record<string, PreferencesDefinitionRecord<u
 
 type PreferencesManagerEvents = {
 	committed: <K extends keyof PREF>(ctx: { key: K; value: ValueOf<K>; oldValue: ValueOf<K> }) => void;
+	saved: () => void;
 };
 
 export function definePreferences<T extends Record<string, unknown>>(x: {
@@ -424,6 +425,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 		this.profile.modifiedAt = Date.now();
 		this.profile.version = version;
 		this.io.save({ profile: this.profile });
+		this.emit('saved');
 	}
 
 	public getMatchedRecordOf<K extends keyof PREF>(key: K): PrefRecord<K> {
@@ -629,9 +631,14 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 		this.fetchCloudValues();
 	}
 
-	public getPerPrefMenu<K extends keyof PREF>(key: K): MenuItem[] {
+	public getPerPrefMenu<K extends keyof PREF>(key: K): {
+		items: MenuItem[];
+		overrideByAccount: Ref<boolean>;
+		sync: Ref<boolean>;
+		dispose: () => void;
+	} {
 		const overrideByAccount = ref(this.isAccountOverrided(key));
-		watch(overrideByAccount, () => {
+		const stopOverrideByAccountWatcher = watch(overrideByAccount, () => {
 			if (overrideByAccount.value) {
 				this.setAccountOverride(key);
 			} else {
@@ -640,7 +647,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 		});
 
 		const sync = ref(this.isSyncEnabled(key));
-		watch(sync, () => {
+		const stopSyncWatcher = watch(sync, () => {
 			if (sync.value) {
 				this.enableSync(key).then((res) => {
 					if (res == null) return;
@@ -651,37 +658,45 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 			}
 		});
 
-		return [
-			{
-				icon: 'ti ti-copy',
-				text: i18n.ts.copyPreferenceId,
-				action: () => {
-					copyToClipboard(key);
+		return {
+			items: [
+				{
+					icon: 'ti ti-copy',
+					text: i18n.ts.copyPreferenceId,
+					action: () => {
+						copyToClipboard(key);
+					},
 				},
-			},
-			{
-				icon: 'ti ti-refresh',
-				text: i18n.ts.resetToDefaultValue,
-				danger: true,
-				action: () => {
-					this.commit(key, getInitialPrefValue(key));
+				{
+					icon: 'ti ti-refresh',
+					text: i18n.ts.resetToDefaultValue,
+					danger: true,
+					action: () => {
+						this.commit(key, getInitialPrefValue(key));
+					},
 				},
+				{
+					type: 'divider',
+				},
+				{
+					type: 'switch',
+					icon: 'ti ti-user-cog',
+					text: i18n.ts.overrideByAccount,
+					ref: overrideByAccount,
+				},
+				{
+					type: 'switch',
+					icon: 'ti ti-cloud-cog',
+					text: i18n.ts.syncBetweenDevices,
+					ref: sync,
+				},
+			],
+			overrideByAccount,
+			sync,
+			dispose: () => {
+				stopOverrideByAccountWatcher();
+				stopSyncWatcher();
 			},
-			{
-				type: 'divider',
-			},
-			{
-				type: 'switch',
-				icon: 'ti ti-user-cog',
-				text: i18n.ts.overrideByAccount,
-				ref: overrideByAccount,
-			},
-			{
-				type: 'switch',
-				icon: 'ti ti-cloud-cog',
-				text: i18n.ts.syncBetweenDevices,
-				ref: sync,
-			},
-		];
+		};
 	}
 }

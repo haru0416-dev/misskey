@@ -11,6 +11,7 @@ import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { TAB_ID } from '@/tab-id.js';
+import { DeferredTaskScheduler } from '@/utility/deferred-task-scheduler.js';
 
 // クラウド同期用グループ名
 const syncGroup = 'default';
@@ -149,22 +150,30 @@ preferencesChannel.addEventListener('message', (ev: MessageEvent<PreferencesChan
 });
 //#endregion
 
-//#region 定期クラウドバックアップ
+//#region 遅延クラウドバックアップ
 let latestBackupAt = 0;
+const backupScheduler = new DeferredTaskScheduler(async () => {
+	if ($i == null) return;
+	if (!store.s.enablePreferencesAutoCloudBackup) return;
+	if (prefer.profile.modifiedAt <= latestBackupAt) return;
 
-window.setInterval(
-	() => {
-		if ($i == null) return;
-		if (!store.s.enablePreferencesAutoCloudBackup) return;
-		if (window.document.visibilityState !== 'visible') return; // 同期されていない古い値がバックアップされるのを防ぐ
-		if (prefer.profile.modifiedAt <= latestBackupAt) return;
+	const backedUpModifiedAt = prefer.profile.modifiedAt;
+	try {
+		await cloudBackup();
+		latestBackupAt = Math.max(latestBackupAt, backedUpModifiedAt);
+	} catch {
+		if (store.s.enablePreferencesAutoCloudBackup) backupScheduler.request();
+	}
+}, 1000 * 60 * 3);
 
-		cloudBackup().then(() => {
-			latestBackupAt = Date.now();
-		});
-	},
-	1000 * 60 * 3,
-);
+function requestBackup(): void {
+	if ($i == null) return;
+	if (!store.s.enablePreferencesAutoCloudBackup) return;
+	backupScheduler.request();
+}
+
+prefer.on('saved', requestBackup);
+requestBackup();
 //#endregion
 
 if (_DEV_) {

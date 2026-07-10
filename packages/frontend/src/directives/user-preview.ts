@@ -5,7 +5,7 @@
 
 import { defineAsyncComponent, ref } from 'vue';
 import type { Directive } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { popup } from '@/os.js';
 import { isTouchUsing } from '@/utility/touch.js';
 
@@ -14,7 +14,6 @@ export class UserPreview {
 	private user: string | Misskey.entities.UserDetailed;
 	private showTimer: number | null = null;
 	private hideTimer: number | null = null;
-	private checkTimer: number | null = null;
 	private promise: null | { cancel: () => void } = null;
 
 	constructor(el: HTMLElement, user: string | Misskey.entities.UserDetailed) {
@@ -62,19 +61,10 @@ export class UserPreview {
 				showing.value = false;
 			},
 		};
-
-		this.checkTimer = window.setInterval(() => {
-			if (!window.document.body.contains(this.el)) {
-				if (this.showTimer) window.clearTimeout(this.showTimer);
-				if (this.hideTimer) window.clearTimeout(this.hideTimer);
-				this.close();
-			}
-		}, 1000);
 	}
 
 	private close() {
 		if (this.promise) {
-			if (this.checkTimer) window.clearInterval(this.checkTimer);
 			this.promise.cancel();
 			this.promise = null;
 		}
@@ -104,6 +94,9 @@ export class UserPreview {
 	}
 
 	public detach() {
+		if (this.showTimer) window.clearTimeout(this.showTimer);
+		if (this.hideTimer) window.clearTimeout(this.hideTimer);
+		this.close();
 		this.el.removeEventListener('mouseover', this.onMouseover);
 		this.el.removeEventListener('mouseleave', this.onMouseleave);
 		this.el.removeEventListener('click', this.onClick);
@@ -128,9 +121,7 @@ export const userPreviewDirective = {
 		};
 	},
 
-	unmounted(el, binding) {
-		if (binding.value == null) return;
-
+	unmounted(el) {
 		const self = el._userPreviewDirective_;
 		if (self == null) return;
 		self.preview.detach();

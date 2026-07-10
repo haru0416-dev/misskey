@@ -23,7 +23,6 @@ import * as Misskey from 'misskey-js';
 import { getUnicodeEmojiOrNull } from '@shared/utility/emojilist.js';
 import MkCustomEmojiDetailedDialog from './MkCustomEmojiDetailedDialog.vue';
 import type { MenuItem } from '@/types/menu';
-import XDetails from '@/components/MkReactionsViewer.Details.vue';
 import MkReactionIcon from '@/components/MkReactionIcon.vue';
 import * as os from '@/os.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
@@ -236,12 +235,15 @@ if (!mock) {
 	useTooltip(buttonEl, async (showing) => {
 		if (buttonEl.value == null) return;
 
-		const reactions = await misskeyApiGet('notes/reactions', {
-			noteId: props.noteId,
-			type: props.reaction,
-			limit: 10,
-			_cacheKey_: props.count,
-		});
+		const [reactions, XDetails] = await Promise.all([
+			misskeyApiGet('notes/reactions', {
+				noteId: props.noteId,
+				type: props.reaction,
+				limit: 10,
+				_cacheKey_: props.count,
+			}),
+			import('@/components/MkReactionsViewer.Details.vue').then((x) => x.default),
+		]);
 
 		const users = reactions.map(x => x.user);
 

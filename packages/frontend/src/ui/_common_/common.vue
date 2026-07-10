@@ -26,7 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:leaveToClass="prefer.s.animation ? $style.transition_menuDrawer_leaveTo : ''"
 >
 	<div v-if="drawerMenuShowing" :class="$style.menuDrawer">
-		<XNavbar style="height: 100%;" :asDrawer="true" :showWidgetButton="false"/>
+		<slot name="drawerMenu"></slot>
 	</div>
 </Transition>
 
@@ -105,7 +105,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { defineAsyncComponent, ref, TransitionGroup } from 'vue';
 import * as Misskey from 'misskey-js';
 import { swInject } from './sw-inject.js';
-import XNotification from './notification.vue';
 import { isSafeMode } from '@shared/utility/config.js';
 import { popups } from '@/os.js';
 import { unisonReload } from '@/utility/unison-reload.js';
@@ -118,8 +117,8 @@ import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 import { globalEvents } from '@/events.js';
 import { store } from '@/store.js';
-import XNavbar from '@/ui/_common_/navbar.vue';
 
+const XNotification = defineAsyncComponent(() => import('./notification.vue'));
 const XStreamIndicator = defineAsyncComponent(() => import('./stream-indicator.vue'));
 const XWidgets = defineAsyncComponent(() => import('./widgets.vue'));
 

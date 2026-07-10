@@ -4,39 +4,49 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<span>{{ number(Math.floor(tweened.number)) }}</span>
+<span>{{ number(Math.floor(tweened)) }}</span>
 </template>
 
 <script lang="ts" setup>
-import { reactive, watch } from 'vue';
+import { ref, watch } from 'vue';
 import number from '@/filters/number.js';
+import { prefer } from '@/preferences.js';
 
 const props = defineProps<{
 	value: number;
 }>();
 
-const tweened = reactive({
-	number: 0,
-});
+const tweened = ref(0);
 
-watch(() => props.value, (to, from) => {
-	// requestAnimationFrameを利用して、500msでfromからtoまでを1次関数的に変化させる
+watch([() => props.value, prefer.r.animation], ([to, shouldAnimate], _oldValue, onCleanup) => {
+	const from = tweened.value;
+	if (!shouldAnimate || from === to) {
+		tweened.value = to;
+		return;
+	}
+
+	// requestAnimationFrameを利用して、500msで現在の表示値から最新値までを1次関数的に変化させる
 	let start: number | null = null;
+	let frameId: number | null = null;
 
 	function step(timestamp: number) {
 		if (start === null) {
 			start = timestamp;
 		}
 		const elapsed = timestamp - start;
-		tweened.number = (from ?? 0) + (to - (from ?? 0)) * elapsed / 500;
+		tweened.value = from + (to - from) * elapsed / 500;
 		if (elapsed < 500) {
-			window.requestAnimationFrame(step);
+			frameId = window.requestAnimationFrame(step);
 		} else {
-			tweened.number = to;
+			frameId = null;
+			tweened.value = to;
 		}
 	}
 
-	window.requestAnimationFrame(step);
+	frameId = window.requestAnimationFrame(step);
+	onCleanup(() => {
+		if (frameId != null) window.cancelAnimationFrame(frameId);
+	});
 }, {
 	immediate: true,
 });

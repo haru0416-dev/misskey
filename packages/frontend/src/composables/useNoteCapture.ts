@@ -14,6 +14,7 @@ import { store } from '@/store.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
 import { globalEvents } from '@/events.js';
+import { PollingScheduler } from '@shared/utility/polling-scheduler.js';
 
 export const noteEvents = new EventEmitter<{
 	[ev: `reacted:${string}`]: (ctx: {
@@ -55,6 +56,7 @@ function pollingEnqueue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
 			lastAddedAt: Date.now(),
 		});
 	}
+	pollingScheduler.start();
 }
 
 function pollingDequeue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
@@ -63,6 +65,7 @@ function pollingDequeue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
 
 	if (data.referenceCount === 1) {
 		pollingQueue.delete(note.id);
+		if (pollingQueue.size === 0) pollingScheduler.stop();
 	} else {
 		pollingQueue.set(note.id, {
 			...data,
@@ -82,27 +85,28 @@ const POLLING_INTERVAL =
 				? MIN_POLLING_INTERVAL
 				: MIN_POLLING_INTERVAL;
 
-window.setInterval(() => {
+const pollingScheduler = new PollingScheduler(async () => {
 	const ids = [...pollingQueue.entries()]
-		.filter(([k, v]) => Date.now() - v.lastAddedAt < 1000 * 60 * 5) // 追加されてから一定時間経過したものは省く
-		.map(([k, v]) => k)
+		.filter(([, data]) => Date.now() - data.lastAddedAt < 1000 * 60 * 5) // 追加されてから一定時間経過したものは省く
+		.map(([id]) => id)
 		.sort((a, b) => (a > b ? -1 : 1)) // 新しいものを優先するためにIDで降順ソート
 		.slice(0, CAPTURE_MAX);
 
-	if (ids.length === 0) return;
-	if (window.document.hidden) return;
+	if (ids.length === 0) {
+		pollingScheduler.stop();
+		return;
+	}
 
 	// まとめてリクエストするのではなく、個別にHTTPリクエスト投げてCDNにキャッシュさせた方がサーバーの負荷低減には良いかもしれない？
-	misskeyApi('notes/show-partial-bulk', {
+	const items = await misskeyApi('notes/show-partial-bulk', {
 		noteIds: ids,
-	}).then((items) => {
-		for (const item of items) {
-			fetchEvent.emit(item.id, {
-				reactions: item.reactions,
-				reactionEmojis: item.reactionEmojis,
-			});
-		}
 	});
+	for (const item of items) {
+		fetchEvent.emit(item.id, {
+			reactions: item.reactions,
+			reactionEmojis: item.reactionEmojis,
+		});
+	}
 }, POLLING_INTERVAL);
 
 function pollingSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>; $note: ReactiveNoteData }) {

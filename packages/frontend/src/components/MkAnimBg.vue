@@ -8,11 +8,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, useTemplateRef } from 'vue';
+import { onMounted, onUnmounted, useTemplateRef, watch } from 'vue';
 import isChromatic from 'chromatic/isChromatic';
 import vertexShaderSource from './MkAnimBg.vertex.glsl';
 import fragmentShaderSource from './MkAnimBg.fragment.glsl';
 import { initShaderProgram } from '@/utility/webgl.js';
+import { prefer } from '@/preferences.js';
 
 const canvasEl = useTemplateRef('canvasEl');
 
@@ -25,11 +26,17 @@ const props = withDefaults(defineProps<{
 });
 
 let handle: ReturnType<typeof window['requestAnimationFrame']> | null = null;
+let resizeObserver: ResizeObserver | null = null;
+let intersectionObserver: IntersectionObserver | null = null;
+let stopAnimationWatch: (() => void) | null = null;
+let removeVisibilityListener: (() => void) | null = null;
 
 onMounted(() => {
 	const canvas = canvasEl.value!;
 	let width = canvas.offsetWidth;
 	let height = canvas.offsetHeight;
+	let isVisible = true;
+	let lastTimeStamp = 0;
 	canvas.width = width;
 	canvas.height = height;
 
@@ -71,41 +78,82 @@ onMounted(() => {
 	const vertices = [1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0];
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 
-	if (isChromatic()) {
-		gl.uniform1f(u_time, 0);
+	function draw(timeStamp: number) {
+		lastTimeStamp = timeStamp;
+		gl.uniform1f(u_time, timeStamp);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-	} else {
-		function render(timeStamp: number) {
-			let sizeChanged = false;
-			if (Math.abs(height - canvas.offsetHeight) > 2) {
-				height = canvas.offsetHeight;
-				canvas.height = height;
-				sizeChanged = true;
-			}
-			if (Math.abs(width - canvas.offsetWidth) > 2) {
-				width = canvas.offsetWidth;
-				canvas.width = width;
-				sizeChanged = true;
-			}
-			if (sizeChanged && gl) {
-				gl.uniform2fv(u_resolution, [width, height]);
-				gl.viewport(0, 0, width, height);
-			}
+	}
 
-			gl.uniform1f(u_time, timeStamp);
-			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+	function shouldAnimate() {
+		return prefer.r.animation.value && isVisible && window.document.visibilityState === 'visible';
+	}
 
-			handle = window.requestAnimationFrame(render);
-		}
+	function stop() {
+		if (handle == null) return;
+		window.cancelAnimationFrame(handle);
+		handle = null;
+	}
 
+	function render(timeStamp: number) {
+		handle = null;
+		if (!shouldAnimate()) return;
+		draw(timeStamp);
 		handle = window.requestAnimationFrame(render);
 	}
+
+	function start() {
+		if (handle != null || !shouldAnimate()) return;
+		handle = window.requestAnimationFrame(render);
+	}
+
+	function updateSize() {
+		const nextWidth = canvas.offsetWidth;
+		const nextHeight = canvas.offsetHeight;
+		if (Math.abs(height - nextHeight) <= 2 && Math.abs(width - nextWidth) <= 2) return;
+
+		width = nextWidth;
+		height = nextHeight;
+		canvas.width = width;
+		canvas.height = height;
+		gl.uniform2fv(u_resolution, [width, height]);
+		gl.viewport(0, 0, width, height);
+		if (!shouldAnimate()) draw(lastTimeStamp);
+	}
+
+	draw(0);
+	if (isChromatic()) return;
+
+	resizeObserver = new ResizeObserver(updateSize);
+	resizeObserver.observe(canvas);
+	intersectionObserver = new IntersectionObserver(([entry]) => {
+		isVisible = entry?.isIntersecting ?? false;
+		if (isVisible) start();
+		else stop();
+	});
+	intersectionObserver.observe(canvas);
+	stopAnimationWatch = watch(prefer.r.animation, (animation) => {
+		if (animation) start();
+		else stop();
+	}, { immediate: true });
+	const onVisibilityChange = () => {
+		if (window.document.visibilityState === 'visible') start();
+		else stop();
+	};
+	window.document.addEventListener('visibilitychange', onVisibilityChange, { passive: true });
+	removeVisibilityListener = () => window.document.removeEventListener('visibilitychange', onVisibilityChange);
 });
 
 onUnmounted(() => {
-	if (handle) {
-		window.cancelAnimationFrame(handle);
-	}
+	if (handle != null) window.cancelAnimationFrame(handle);
+	handle = null;
+	resizeObserver?.disconnect();
+	resizeObserver = null;
+	intersectionObserver?.disconnect();
+	intersectionObserver = null;
+	stopAnimationWatch?.();
+	stopAnimationWatch = null;
+	removeVisibilityListener?.();
+	removeVisibilityListener = null;
 
 	// TODO: WebGLリソースの解放
 });

@@ -4,8 +4,6 @@
  */
 
 import * as Misskey from 'misskey-js';
-import { readAndCompressImage } from '@misskey-dev/browser-image-resizer';
-import isAnimated from 'is-file-animated';
 import { EventEmitter } from 'eventemitter3';
 import { computed, markRaw, onMounted, onUnmounted, ref, triggerRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
@@ -736,13 +734,18 @@ export function useUploader(
 		}
 
 		const compressionSettings = getCompressionSettings(item.compressionLevel);
-		const needsCompress =
+		const compressionTools =
 			item.compressionLevel !== 0 &&
-			compressionSettings &&
-			IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type) &&
-			!(await isAnimated(preprocessedFile));
+			compressionSettings != null &&
+			IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type)
+				? await import('@/utility/image-compression.js')
+				: null;
 
-		if (needsCompress) {
+		if (
+			compressionSettings != null &&
+			compressionTools != null &&
+			!(await compressionTools.isAnimated(preprocessedFile))
+		) {
 			const config = {
 				mimeType: (isWebpSupported() ? 'image/webp' : 'image/jpeg') as 'image/webp' | 'image/jpeg',
 				maxWidth: compressionSettings.maxWidth,
@@ -751,7 +754,7 @@ export function useUploader(
 			};
 
 			try {
-				const result = await readAndCompressImage(preprocessedFile, config);
+				const result = await compressionTools.readAndCompressImage(preprocessedFile, config);
 				if (result.size < preprocessedFile.size || preprocessedFile.type === 'image/webp') {
 					// The compression may not always reduce the file size
 					// (and WebP is not browser safe yet)
