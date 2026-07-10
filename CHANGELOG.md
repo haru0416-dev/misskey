@@ -1,10 +1,12 @@
 ## Unreleased
 
 ### General
+- Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除
 - Enhance: ゲーム機能を削除
 - Enhance: フロントエンド/ビルドツール周辺の未使用依存パッケージ19個を削除 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
 
 ### Client
+- Enhance: 旧 `/authorize-follow` と Mastodon 互換の `/authorize_interaction` リダイレクト、未使用の LocalStorage 絵文字キャッシュキー、旧カスタムテーマの `kind` フィールド互換、非推奨の `i18n.t()` API を削除。リモートログイン時は `/lookup?uri=` を使用
 - Enhance: タイムライン等の画像をビューポート近傍まで読み込まないように変更 (IntersectionObserver による自前遅延読み込みを導入。あわせて、同一URLの画像がページ内の別要素で既にブラウザキャッシュ済みの場合に `load` イベントが発火せずBlurhashプレースホルダーのまま表示が固まる問題を修正)
 - Enhance: 管理画面・アクティビティページ等19箇所で個別に読み込まれていた chart.js 本体とプラグイン群を専用の共有チャンクに分離 (該当ページのコード変更でキャッシュが無効化されるのを防止)
 - Enhance: Service Worker のバンドルサイズを46%削減 (30.2KB→16.3KB minified)。SWでは使用しないWebSocketストリーミング系コードが `misskey-js` の全体importで混入していたのを、subpath import + type-only import に分離して排除
@@ -14,6 +16,7 @@
 - Fix: 埋め込みウィジェット (frontend-embed) のサーバー提供コンテキスト判定 (`assertServerContext`) で、値が存在するキーだけを見て null 値を見落とすことがあった問題を修正 (通常クライアント側の実装と揃え、値が null でないことも確認するように)
 
 ### Server
+- Enhance: 旧音声 MIME エイリアス (`audio/x-flac` / `audio/vnd.wave`)、OStatus の WebFinger subscribe リンク、`channels/timeline` の未使用 `allowPartial` パラメータを削除
 - Enhance: `notes/reactions`/`users/reactions` と `i/favorites`、通知、ノート下書き/Pages/Gallery/Play/Clips/Chat/ブロック/ミュート/ロール/ユーザー詳細/ユーザーリスト/管理ユーザー一覧の pack 処理をバッチ化し、一覧取得時のDBアクセスを削減
 - Enhance: ドライブファイルの詳細 pack と管理ドライブのファイル一覧でフォルダ詳細の pack 処理をバッチ化し、フォルダ数・ファイル数集計のDBアクセスを削減
 - Enhance: 絵文字の一括更新通知で更新後の絵文字取得を一括化し、管理操作時のDBアクセスを削減
