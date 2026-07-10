@@ -8,16 +8,6 @@ import type { ILocale, ParameterizedString } from 'i18n';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TODO = any;
 
-type FlattenKeys<T extends ILocale, TPrediction> = keyof {
-	[K in keyof T as T[K] extends ILocale
-		? FlattenKeys<T[K], TPrediction> extends infer C extends string
-			? `${K & string}.${C}`
-			: never
-		: T[K] extends TPrediction
-			? K
-			: never]: T[K];
-};
-
 type Tsx<T extends ILocale> = {
 	// `string extends T[K] ? never : K` part removes non-parameterized string keys from Tsx type.
 	readonly [K in keyof T as string extends T[K] ? never : K]: T[K] extends ParameterizedString<infer P>

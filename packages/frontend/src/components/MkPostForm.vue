@@ -117,7 +117,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { watch, nextTick, onMounted, defineAsyncComponent, provide, shallowRef, ref, computed, useTemplateRef, onUnmounted, onBeforeUnmount } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
-import insertTextAtCursor from 'insert-text-at-cursor';
 import { toASCII } from 'punycode.js';
 import { host, url } from '@shared/utility/config.js';
 import MkUploaderItems from './MkUploaderItems.vue';
@@ -1167,7 +1166,12 @@ function cancel() {
 function insertMention() {
 	os.selectUser({ localOnly: localOnly.value, includeSelf: true }).then(user => {
 		if (textareaEl.value == null) return;
-		insertTextAtCursor(textareaEl.value, '@' + Misskey.acct.toString(user) + ' ');
+
+		const mention = '@' + Misskey.acct.toString(user) + ' ';
+		const start = textareaEl.value.selectionStart;
+		const end = textareaEl.value.selectionEnd;
+		textareaEl.value.setRangeText(mention, start, end, 'end');
+		textareaEl.value.dispatchEvent(new Event('input', { bubbles: true }));
 	});
 }
 
