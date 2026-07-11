@@ -211,8 +211,8 @@ export const ContextMenu = createRender(
 						type: 'button',
 						text: 'Delete',
 						action: () => {
-							const idxes = context.rangedRows.map((r) => r.index);
-							const newData = ContextMenu.args.data.filter((d, i) => !idxes.includes(i));
+							const idxes = new Set(context.rangedRows.map((r) => r.index));
+							const newData = ContextMenu.args.data.filter((d, i) => !idxes.has(i));
 
 							ContextMenu.args.data.splice(0);
 							ContextMenu.args.data.push(...newData);

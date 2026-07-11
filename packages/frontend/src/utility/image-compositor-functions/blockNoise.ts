@@ -9,6 +9,28 @@ import type { ImageEffectorUiDefinition } from '../image-effector/ImageEffector.
 import { defineImageCompositorFunction } from '@/lib/ImageCompositor.js';
 import { i18n } from '@/i18n.js';
 
+type UniformLocations = {
+	origins: (WebGLUniformLocation | null | undefined)[];
+	strengths: (WebGLUniformLocation | null | undefined)[];
+	sizes: (WebGLUniformLocation | null | undefined)[];
+};
+
+const locationsByProgram = new WeakMap<WebGLProgram, UniformLocations>();
+
+function getLocation(
+	locations: (WebGLUniformLocation | null | undefined)[],
+	index: number,
+	gl: WebGL2RenderingContext,
+	program: WebGLProgram,
+	name: string,
+): WebGLUniformLocation | null {
+	const cached = locations[index];
+	if (cached !== undefined) return cached;
+	const location = gl.getUniformLocation(program, name);
+	locations[index] = location;
+	return location;
+}
+
 export const fn = defineImageCompositorFunction<{
 	amount: number;
 	strength: number;
@@ -25,15 +47,20 @@ export const fn = defineImageCompositorFunction<{
 		const margin = 0;
 
 		const rnd = seedrandom(params.seed.toString());
+		let locations = locationsByProgram.get(program);
+		if (locations == null) {
+			locations = { origins: [], strengths: [], sizes: [] };
+			locationsByProgram.set(program, locations);
+		}
 
 		for (let i = 0; i < params.amount; i++) {
-			const o = gl.getUniformLocation(program, `u_shiftOrigins[${i.toString()}]`);
+			const o = getLocation(locations.origins, i, gl, program, `u_shiftOrigins[${i.toString()}]`);
 			gl.uniform2f(o, rnd() * (1 + margin * 2) - margin, rnd() * (1 + margin * 2) - margin);
 
-			const s = gl.getUniformLocation(program, `u_shiftStrengths[${i.toString()}]`);
+			const s = getLocation(locations.strengths, i, gl, program, `u_shiftStrengths[${i.toString()}]`);
 			gl.uniform1f(s, (1 - rnd() * 2) * params.strength);
 
-			const sizes = gl.getUniformLocation(program, `u_shiftSizes[${i.toString()}]`);
+			const sizes = getLocation(locations.sizes, i, gl, program, `u_shiftSizes[${i.toString()}]`);
 			gl.uniform2f(sizes, params.width, params.height);
 		}
 	},

@@ -84,6 +84,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 	};
 
 	const useAnim = prefer.advancedMfm && prefer.animatedMfm;
+	let vnodeKey = 0;
+	const nextKey = () => vnodeKey++;
 
 	/**
 	 * Gen Vue Elements from MFM AST
@@ -362,7 +364,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 											style: 'margin-right: 0.25em;',
 										}),
 										h(MkTime, {
-											key: Math.random(),
+											key: nextKey(),
 											time: unixtime * 1000,
 											mode: 'detail',
 										}),
@@ -424,7 +426,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'url': {
 						return [
 							h(MkUrl, {
-								key: Math.random(),
+								key: nextKey(),
 								url: token.props.url,
 								rel: 'nofollow noopener',
 								navigationBehavior: props.linkNavigationBehavior,
@@ -437,7 +439,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							h(
 								MkLink,
 								{
-									key: Math.random(),
+									key: nextKey(),
 									url: token.props.url,
 									rel: 'nofollow noopener',
 									navigationBehavior: props.linkNavigationBehavior,
@@ -450,7 +452,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'mention': {
 						return [
 							h(MkMention, {
-								key: Math.random(),
+								key: nextKey(),
 								host:
 									(token.props.host == null && props.author && props.author.host != null
 										? props.author.host
@@ -466,7 +468,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							h(
 								MkA,
 								{
-									key: Math.random(),
+									key: nextKey(),
 									to: isNote
 										? `/tags/${encodeURIComponent(token.props.hashtag)}`
 										: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
@@ -481,7 +483,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'blockCode': {
 						return [
 							h(MkCode, {
-								key: Math.random(),
+								key: nextKey(),
 								code: token.props.code,
 								lang: token.props.lang ?? undefined,
 							}),
@@ -491,7 +493,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'inlineCode': {
 						return [
 							h(MkCodeInline, {
-								key: Math.random(),
+								key: nextKey(),
 								code: token.props.code,
 							}),
 						];
@@ -525,7 +527,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 						if (props.author?.host == null) {
 							return [
 								h(MkCustomEmoji, {
-									key: Math.random(),
+									key: nextKey(),
 									name: token.props.name,
 									normal: props.plain,
 									host: null,
@@ -542,7 +544,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							} else {
 								return [
 									h(MkCustomEmoji, {
-										key: Math.random(),
+										key: nextKey(),
 										name: token.props.name,
 										url: props.emojiUrls && props.emojiUrls[token.props.name],
 										normal: props.plain,
@@ -559,7 +561,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'unicodeEmoji': {
 						return [
 							h(MkEmoji, {
-								key: Math.random(),
+								key: nextKey(),
 								emoji: token.props.emoji,
 								menu: props.enableEmojiMenu,
 								menuReaction: props.enableEmojiMenuReaction,
@@ -578,7 +580,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'search': {
 						return [
 							h(MkGoogle, {
-								key: Math.random(),
+								key: nextKey(),
 								q: token.props.query,
 							}),
 						];
@@ -596,7 +598,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					}
 				}
 			})
-			.flat(Infinity) as (VNode | string)[];
+			.flat() as (VNode | string)[];
 
 	return h(
 		'span',

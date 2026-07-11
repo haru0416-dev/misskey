@@ -82,20 +82,21 @@ export class ImageFrameRenderer {
 		const ISOSpeedRatings = this.exif == null ? '123' : this.exif.ISOSpeedRatings?.description;
 		const GPSLatitude = this.exif == null ? '123.000000000000123' : this.exif.GPSLatitude?.description;
 		const GPSLongitude = this.exif == null ? '456.000000000000123' : this.exif.GPSLongitude?.description;
+		let metaDate = DateTimeOriginal ?? '????:??:?? ??:??:??';
+		if (metaDate.includes('T') || metaDate.includes('Z')) {
+			const parsed = new Date(metaDate);
+			const yyyy = parsed.getFullYear().toString().padStart(4, '0');
+			const mm = (parsed.getMonth() + 1).toString().padStart(2, '0');
+			const dd = parsed.getDate().toString().padStart(2, '0');
+			const hh = parsed.getHours().toString().padStart(2, '0');
+			const min = parsed.getMinutes().toString().padStart(2, '0');
+			const ss = parsed.getSeconds().toString().padStart(2, '0');
+			metaDate = `${yyyy}:${mm}:${dd} ${hh}:${min}:${ss}`;
+		}
+		const [datePart = '????:??:??', timePart = '??:??:??'] = metaDate.split(' ');
+		const [year = '????', zeroMonth = '??', zeroDay = '??'] = datePart.split(':');
+		const [zeroHour = '??', zeroMinute = '??', zeroSecond = '??'] = timePart.split(':');
 		return text.replaceAll(/\{(\w+)\}/g, (_: string, key: string) => {
-			let meta_date = DateTimeOriginal ?? '????:??:?? ??:??:??';
-			if (meta_date.includes('T') || meta_date.includes('Z')) {
-				// ISO 8601
-				const parsed = new Date(meta_date);
-				const yyyy = parsed.getFullYear().toString().padStart(4, '0');
-				const mm = (parsed.getMonth() + 1).toString().padStart(2, '0');
-				const dd = parsed.getDate().toString().padStart(2, '0');
-				const hh = parsed.getHours().toString().padStart(2, '0');
-				const min = parsed.getMinutes().toString().padStart(2, '0');
-				const ss = parsed.getSeconds().toString().padStart(2, '0');
-				meta_date = `${yyyy}:${mm}:${dd} ${hh}:${min}:${ss}`;
-			}
-			const date = meta_date.split(' ')[0].replaceAll(':', '/');
 			switch (key) {
 				case 'caption':
 					return this.caption ?? '?';
@@ -104,27 +105,27 @@ export class ImageFrameRenderer {
 				case 'filename_without_ext':
 					return this.filename?.replace(/\.[^/.]+$/, '') ?? '?';
 				case 'year':
-					return date.split('/')[0];
+					return year;
 				case 'month':
-					return date.split('/')[1].replace(/^0/, '');
+					return zeroMonth.replace(/^0/, '');
 				case 'day':
-					return date.split('/')[2].replace(/^0/, '');
+					return zeroDay.replace(/^0/, '');
 				case 'hour':
-					return meta_date.split(' ')[1].split(':')[0].replace(/^0/, '');
+					return zeroHour.replace(/^0/, '');
 				case 'minute':
-					return meta_date.split(' ')[1].split(':')[1].replace(/^0/, '');
+					return zeroMinute.replace(/^0/, '');
 				case 'second':
-					return meta_date.split(' ')[1].split(':')[2].replace(/^0/, '');
+					return zeroSecond.replace(/^0/, '');
 				case '0month':
-					return date.split('/')[1];
+					return zeroMonth;
 				case '0day':
-					return date.split('/')[2];
+					return zeroDay;
 				case '0hour':
-					return meta_date.split(' ')[1].split(':')[0];
+					return zeroHour;
 				case '0minute':
-					return meta_date.split(' ')[1].split(':')[1];
+					return zeroMinute;
 				case '0second':
-					return meta_date.split(' ')[1].split(':')[2];
+					return zeroSecond;
 				case 'camera_model':
 					return Model ?? '?';
 				case 'camera_lens_model':

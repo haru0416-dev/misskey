@@ -82,8 +82,9 @@ class ValidatorPreset {
 		return {
 			name: 'regex',
 			validate: ({ value }): ValidatorResult => {
+				pattern.lastIndex = 0;
 				return {
-					valid: typeof value !== 'string' || pattern.test(value.toString() ?? ''),
+					valid: typeof value !== 'string' || pattern.test(value),
 					message: i18n.tsx._gridComponent._error.patternNotMatch({ pattern: pattern.source }),
 				};
 			},
@@ -95,9 +96,9 @@ class ValidatorPreset {
 			name: 'unique',
 			validate: ({ column, row, value, allCells }): ValidatorResult => {
 				const bindTo = column.setting.bindTo;
-				const isUnique = allCells
-					.filter((it) => it.column.setting.bindTo === bindTo && it.row.index !== row.index)
-					.every((cell) => cell.value !== value);
+				const isUnique = !allCells.some((cell) =>
+					cell.column.setting.bindTo === bindTo && cell.row.index !== row.index && cell.value === value,
+				);
 				return {
 					valid: isUnique,
 					message: i18n.ts._gridComponent._error.notUnique,

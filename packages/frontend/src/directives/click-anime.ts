@@ -16,7 +16,7 @@ export const clickAnimeDirective = {
 
 		if (target == null) return;
 
-	target.classList.add('_anime_bounce_standBy');
+		target.classList.add('_anime_bounce_standBy');
 
 		const onMousedown = () => {
 			target.classList.remove('_anime_bounce');

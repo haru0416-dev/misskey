@@ -421,10 +421,9 @@ export function getAccountWithSignupDialog(): Promise<{ id: string; token: strin
 			{},
 			{
 				done: async (res: Misskey.entities.SignupResponse) => {
-					const user = JSON.parse(JSON.stringify(res));
-					delete user.token;
-					await addAccount(host, user, res.token);
-					resolve({ id: res.id, token: res.token });
+					const { token, ...user } = res;
+					await addAccount(host, user, token);
+					resolve({ id: res.id, token });
 				},
 				cancelled: () => {
 					resolve(null);

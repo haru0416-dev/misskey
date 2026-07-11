@@ -44,7 +44,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 	private renderWidth: number;
 	private renderHeight: number;
 	private baseTexture: WebGLTexture;
+	private vertexBuffer: WebGLBuffer;
 	private shaderCache: Map<string, WebGLProgram> = new Map();
+	private uniformLocationCache = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
 	private perLayerResultTextures: Map<string, WebGLTexture> = new Map();
 	private perLayerResultFrameBuffers: Map<string, WebGLFramebuffer> = new Map();
 	private nopProgram: WebGLProgram;
@@ -79,6 +81,8 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 		const VERTICES = new Float32Array([-1, -1, -1, 1, 1, 1, -1, -1, 1, 1, 1, -1]);
 		const vertexBuffer = gl.createBuffer();
+		if (vertexBuffer == null) throw new Error('Failed to create vertex buffer');
+		this.vertexBuffer = vertexBuffer;
 		gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, VERTICES, gl.STATIC_DRAW);
 
@@ -149,6 +153,18 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		return uniforms;
 	}
 
+	private getUniformLocation(program: WebGLProgram, name: string): WebGLUniformLocation | null {
+		let locations = this.uniformLocationCache.get(program);
+		if (locations == null) {
+			locations = new Map();
+			this.uniformLocationCache.set(program, locations);
+		}
+		if (locations.has(name)) return locations.get(name) ?? null;
+		const location = this.gl.getUniformLocation(program, name);
+		locations.set(name, location);
+		return location;
+	}
+
 	private renderLayer(layer: ImageCompositorLayer, preTexture: WebGLTexture, invert = false) {
 		const gl = this.gl;
 
@@ -178,22 +194,22 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 		gl.useProgram(shaderProgram);
 
-		const in_resolution = gl.getUniformLocation(shaderProgram, 'in_resolution');
+		const in_resolution = this.getUniformLocation(shaderProgram, 'in_resolution');
 		gl.uniform2fv(in_resolution, [this.renderWidth, this.renderHeight]);
 
-		const u_invert = gl.getUniformLocation(shaderProgram, 'u_invert');
+		const u_invert = this.getUniformLocation(shaderProgram, 'u_invert');
 		gl.uniform1i(u_invert, invert ? 1 : 0);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, preTexture);
-		const in_texture = gl.getUniformLocation(shaderProgram, 'in_texture');
+		const in_texture = this.getUniformLocation(shaderProgram, 'in_texture');
 		gl.uniform1i(in_texture, 0);
 
 		fn.main({
 			gl: gl,
 			program: shaderProgram,
 			params: layer.params,
-			u: Object.fromEntries(fn.uniforms.map((u) => [u, gl.getUniformLocation(shaderProgram, 'u_' + u)!])),
+			u: Object.fromEntries(fn.uniforms.map((u) => [u, this.getUniformLocation(shaderProgram, 'u_' + u)!])),
 			width: this.renderWidth,
 			height: this.renderHeight,
 			textures: this.registeredTextures,
@@ -204,6 +220,17 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 	public render(layers: ImageCompositorLayer<FNS>[]) {
 		const gl = this.gl;
+		const intermediateLayerIds = new Set(layers.slice(0, -1).map((layer) => layer.id));
+		for (const [id, texture] of this.perLayerResultTextures) {
+			if (intermediateLayerIds.has(id)) continue;
+			gl.deleteTexture(texture);
+			this.perLayerResultTextures.delete(id);
+		}
+		for (const [id, framebuffer] of this.perLayerResultFrameBuffers) {
+			if (intermediateLayerIds.has(id)) continue;
+			gl.deleteFramebuffer(framebuffer);
+			this.perLayerResultFrameBuffers.delete(id);
+		}
 
 		// 入力をそのまま出力
 		if (layers.length === 0) {
@@ -211,7 +238,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			gl.bindTexture(gl.TEXTURE_2D, this.baseTexture);
 
 			gl.useProgram(this.nopProgram);
-			gl.uniform1i(gl.getUniformLocation(this.nopProgram, 'u_texture')!, 0);
+			gl.uniform1i(this.getUniformLocation(this.nopProgram, 'u_texture'), 0);
 
 			gl.drawArrays(gl.TRIANGLES, 0, 6);
 			return;
@@ -219,8 +246,14 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 		let preTexture = this.baseTexture;
 
-		for (const layer of layers) {
-			const isLast = layer === layers.at(-1);
+		for (let i = 0; i < layers.length; i++) {
+			const layer = layers[i];
+			const isLast = i === layers.length - 1;
+			if (isLast) {
+				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+				this.renderLayer(layer as ImageCompositorLayer, preTexture, true);
+				continue;
+			}
 
 			const cachedResultTexture = this.perLayerResultTextures.get(layer.id);
 			const resultTexture = cachedResultTexture ?? createTexture(gl);
@@ -231,19 +264,16 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.renderWidth, this.renderHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 			gl.bindTexture(gl.TEXTURE_2D, null);
 
-			if (isLast) {
-				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-			} else {
-				const cachedResultFrameBuffer = this.perLayerResultFrameBuffers.get(layer.id);
-				const resultFrameBuffer = cachedResultFrameBuffer ?? gl.createFramebuffer();
-				if (cachedResultFrameBuffer == null) {
-					this.perLayerResultFrameBuffers.set(layer.id, resultFrameBuffer);
-				}
-				gl.bindFramebuffer(gl.FRAMEBUFFER, resultFrameBuffer);
-				gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, resultTexture, 0);
+			const cachedResultFrameBuffer = this.perLayerResultFrameBuffers.get(layer.id);
+			const resultFrameBuffer = cachedResultFrameBuffer ?? gl.createFramebuffer();
+			if (resultFrameBuffer == null) throw new Error('Failed to create framebuffer');
+			if (cachedResultFrameBuffer == null) {
+				this.perLayerResultFrameBuffers.set(layer.id, resultFrameBuffer);
 			}
+			gl.bindFramebuffer(gl.FRAMEBUFFER, resultFrameBuffer);
+			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, resultTexture, 0);
 
-			this.renderLayer(layer as ImageCompositorLayer, preTexture, isLast);
+			this.renderLayer(layer as ImageCompositorLayer, preTexture);
 
 			preTexture = resultTexture;
 		}
@@ -305,6 +335,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 	 * disposeCanvas = true だとloseContextを呼ぶため、コンストラクタで渡されたcanvasも再利用不可になるので注意
 	 */
 	public destroy(disposeCanvas = true) {
+		this.gl.deleteBuffer(this.vertexBuffer);
 		this.gl.deleteProgram(this.nopProgram);
 
 		for (const shader of this.shaderCache.values()) {

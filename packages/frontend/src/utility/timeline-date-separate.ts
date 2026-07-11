@@ -57,34 +57,33 @@ export function makeDateSeparatedTimelineComputedRef<T extends { id: string; cre
 ) {
 	return computed<DateSeparetedTimelineItem<T>[]>(() => {
 		const tl: DateSeparetedTimelineItem<T>[] = [];
-		for (let i = 0; i < items.value.length; i++) {
-			const item = items.value[i];
-
+		let previousItem: T | null = null;
+		let previousDate: Date | null = null;
+		for (const item of items.value) {
 			const date = new Date(item.createdAt);
-			const nextDate = items.value[i + 1] ? new Date(items.value[i + 1].createdAt) : null;
-
+			if (
+				previousItem != null &&
+				previousDate != null &&
+				(previousDate.getFullYear() !== date.getFullYear() ||
+					previousDate.getMonth() !== date.getMonth() ||
+					previousDate.getDate() !== date.getDate())
+			) {
+				tl.push({
+					id: `date-${previousItem.id}`,
+					type: 'date',
+					prev: previousDate,
+					prevText: getDateText(previousDate),
+					next: date,
+					nextText: getDateText(date),
+				});
+			}
 			tl.push({
 				id: item.id,
 				type: 'item',
 				data: item,
 			});
-
-			if (
-				i !== items.value.length - 1 &&
-				nextDate != null &&
-				(date.getFullYear() !== nextDate.getFullYear() ||
-					date.getMonth() !== nextDate.getMonth() ||
-					date.getDate() !== nextDate.getDate())
-			) {
-				tl.push({
-					id: `date-${item.id}`,
-					type: 'date',
-					prev: date,
-					prevText: getDateText(date),
-					next: nextDate,
-					nextText: getDateText(nextDate),
-				});
-			}
+			previousItem = item;
+			previousDate = date;
 		}
 		return tl;
 	});
@@ -104,7 +103,6 @@ export function makeDateGroupedTimelineComputedRef<T extends { id: string; creat
 		for (let i = 0; i < items.value.length; i++) {
 			const item = items.value[i];
 			const date = new Date(item.createdAt);
-			const _nextDate = items.value[i + 1] ? new Date(items.value[i + 1].createdAt) : null;
 
 			if (
 				tl.length === 0 ||

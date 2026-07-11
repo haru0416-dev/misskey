@@ -174,7 +174,13 @@ export class WatermarkRenderer {
 				if (!this.compositor.hasTexture(textureKey)) {
 					if (_DEV_) console.log(`Baking qr texture of <${textureKey}>...`);
 					const image = await createTextureFromQr({ data: layer.data });
-					if (image != null) this.compositor.registerTexture(textureKey, image);
+					if (image != null) {
+						try {
+							this.compositor.registerTexture(textureKey, image);
+						} finally {
+							image.close();
+						}
+					}
 				}
 
 				compositorLayers.push({

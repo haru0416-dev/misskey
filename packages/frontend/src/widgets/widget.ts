@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { defineAsyncComponent, reactive, watch } from 'vue';
+import { defineAsyncComponent, onBeforeUnmount, reactive, watch } from 'vue';
 import { throttle } from 'throttle-debounce';
 import type { Reactive } from 'vue';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
@@ -11,6 +11,8 @@ import { getDefaultFormValues } from '@/utility/form.js';
 import * as os from '@/os.js';
 import { deepClone } from '@/utility/clone.js';
 import type { WidgetName } from './index.js';
+
+const MkWidgetSettingsDialog = defineAsyncComponent(() => import('@/components/MkWidgetSettingsDialog.vue'));
 
 export type Widget<P extends Record<string, unknown>> = {
 	id: string;
@@ -68,6 +70,7 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 	const save = throttle(3000, () => {
 		emit('updateProps', widgetProps as GetFormResultType<F>);
 	});
+	onBeforeUnmount(() => save.cancel());
 
 	const configure = async () => {
 		const form = deepClone(propsDef);
@@ -85,7 +88,7 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 			  }
 		>((resolve) => {
 			const { dispose } = os.popup(
-				defineAsyncComponent(() => import('@/components/MkWidgetSettingsDialog.vue')),
+				MkWidgetSettingsDialog,
 				{
 					widgetName: name,
 					form: form,

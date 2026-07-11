@@ -8,13 +8,15 @@ import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import { prefer } from '@/preferences.js';
 import { popup } from '@/os.js';
 
+const clickHandlers = new WeakMap<HTMLElement, () => void>();
+
 export const rippleDirective = {
 	mounted(el, binding) {
 		// 明示的に false であればバインドしない
 		if (binding.value === false) return;
 		if (!prefer.animation) return;
 
-		el.addEventListener('click', () => {
+		const onClick = () => {
 			const rect = el.getBoundingClientRect();
 
 			const x = rect.left + el.offsetWidth / 2;
@@ -27,6 +29,15 @@ export const rippleDirective = {
 					end: () => dispose(),
 				},
 			);
-		});
+		};
+		clickHandlers.set(el, onClick);
+		el.addEventListener('click', onClick);
+	},
+
+	unmounted(el) {
+		const onClick = clickHandlers.get(el);
+		if (onClick == null) return;
+		el.removeEventListener('click', onClick);
+		clickHandlers.delete(el);
 	},
 } as Directive<HTMLElement, boolean | undefined>;

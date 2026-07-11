@@ -11,7 +11,11 @@ import { deepClone } from '@/utility/clone.js';
 import { mainRouter } from '@/router.js';
 import { login } from '@/accounts.js';
 
+let injected = false;
+
 export function swInject() {
+	if (injected) return;
+	injected = true;
 	navigator.serviceWorker.addEventListener('message', async (ev) => {
 		if (_DEV_) {
 			console.log('sw msg', ev.data);

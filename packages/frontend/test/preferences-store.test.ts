@@ -14,6 +14,7 @@ import type {
 	ValueOf,
 } from '@/preferences/store.js';
 import { createPreferencesStore, isPossiblyNonNormalizedPreferencesProfile } from '@/preferences/store.js';
+import { PREF_DEF } from '@/preferences/def.js';
 
 function createProfile(
 	preferences: PossiblyNonNormalizedPreferencesProfile['preferences'] = {},
@@ -66,6 +67,17 @@ describe('preferences profile validation', () => {
 		{ ...createProfile(), preferences: { animation: [[{}, true, { sync: 'yes' }]] } },
 	])('rejects an invalid profile: %j', profile => {
 		expect(isPossiblyNonNormalizedPreferencesProfile(profile)).toBe(false);
+	});
+});
+
+describe('preference merge strategies', () => {
+	test('merges ID-based collections while preserving order and rejecting conflicts', () => {
+		const merge = PREF_DEF.emojiPalettes.mergeStrategy!;
+		const first = { id: 'a', name: 'First', emojis: ['a'] };
+		const second = { id: 'b', name: 'Second', emojis: ['b'] };
+
+		expect(merge([first], [first, second])).toEqual([first, second]);
+		expect(() => merge([first], [{ ...first, name: 'Changed' }])).toThrow();
 	});
 });
 

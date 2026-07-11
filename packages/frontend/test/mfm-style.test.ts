@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import { FN, TEXT } from 'mfm-js';
+import { FN, TEXT, parse } from 'mfm-js';
 import type { CSSProperties, VNode } from 'vue';
 import MkMfm from '@/components/global/MkMfm.js';
 
@@ -18,6 +18,16 @@ function renderFunctionStyle(name: string, args: Record<string, string | true>):
 }
 
 describe('MFM function styles', () => {
+	test('uses stable child keys across equivalent renders', () => {
+		const parsedNodes = parse('https://example.com');
+		const first = MkMfm({ text: 'https://example.com', parsedNodes }, { emit: vi.fn() }) as VNode;
+		const second = MkMfm({ text: 'https://example.com', parsedNodes }, { emit: vi.fn() }) as VNode;
+		const firstChild = (first.children as VNode[])[0];
+		const secondChild = (second.children as VNode[])[0];
+
+		expect(firstChild.key).toBe(secondChild.key);
+	});
+
 	test('binds validated values as individual style properties', () => {
 		expect(renderFunctionStyle('rotate', { deg: '45.5' })).toStrictEqual({
 			display: 'inline-block',

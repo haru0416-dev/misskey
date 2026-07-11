@@ -19,6 +19,7 @@ import type { HighlighterCore, LanguageRegistration, ThemeRegistration, ThemeReg
 import { prefer } from '@/preferences.js';
 
 let _highlighter: HighlighterCore | null = null;
+let _highlighterPromise: Promise<HighlighterCore> | null = null;
 
 export async function getTheme(mode: 'light' | 'dark', getName: true): Promise<string>;
 export async function getTheme(
@@ -67,11 +68,14 @@ export async function getTheme(
 	return darkPlus;
 }
 
-export async function getHighlighter(): Promise<HighlighterCore> {
-	if (!_highlighter) {
-		return await initHighlighter();
-	}
-	return _highlighter;
+export function getHighlighter(): Promise<HighlighterCore> {
+	if (_highlighter) return Promise.resolve(_highlighter);
+
+	_highlighterPromise ??= initHighlighter().catch((error: unknown) => {
+		_highlighterPromise = null;
+		throw error;
+	});
+	return _highlighterPromise;
 }
 
 async function initHighlighter() {
