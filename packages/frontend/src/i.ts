@@ -4,17 +4,18 @@
  */
 
 import { reactive } from 'vue';
-import * as Misskey from 'misskey-js';
 import { miLocalStorage } from '@/local-storage.js';
+import { isAccountWithToken } from '@/utility/account-data.js';
+import type { AccountWithToken } from '@/utility/account-data.js';
 
 // TODO: 他のタブと永続化されたstateを同期
 
-export type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
+export type { AccountWithToken } from '@/utility/account-data.js';
 
-const accountData = miLocalStorage.getItem('account');
+const accountData = miLocalStorage.getItemAsJson('account', isAccountWithToken);
 
 // TODO: 外部からはreadonlyに
-export const $i = accountData ? reactive(JSON.parse(accountData) as AccountWithToken) : null;
+export const $i = accountData ? reactive<AccountWithToken>(accountData) : null;
 
 export const iAmModerator = $i != null && ($i.isAdmin === true || $i.isModerator === true);
 export const iAmAdmin = $i != null && $i.isAdmin;

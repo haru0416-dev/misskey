@@ -226,7 +226,7 @@ type HandlerDef = {
 		handler: (note: Misskey.entities.Note) => Misskey.entities.Note | null;
 	};
 	note_post_interruptor: {
-		handler: (note: FIXME) => unknown;
+		handler: (note: Misskey.entities.NotesCreateRequest) => unknown;
 	};
 	page_view_interruptor: {
 		handler: (page: Misskey.entities.Page) => Misskey.entities.Page;

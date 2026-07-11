@@ -5,8 +5,74 @@
 
 import type { ILocale, ParameterizedString } from 'i18n';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TODO = any;
+type InterpolationArgs = Readonly<Record<string, string | number>>;
+type Interpolator = (arg: InterpolationArgs) => string;
+interface RuntimeTsx {
+	[key: string]: RuntimeTsx | Interpolator;
+}
+
+function isLocaleObject(value: unknown): value is ILocale {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getLocaleValue(target: ILocale, key: string | symbol): unknown {
+	return (target as unknown as Record<PropertyKey, unknown>)[key];
+}
+
+function compileInterpolator(value: string, onMissing?: (expression: string) => void): Interpolator | null {
+	const quasis: string[] = [];
+	const expressions: string[] = [];
+	let cursor = 0;
+	let searchCursor = 0;
+
+	while (true) {
+		const start = value.indexOf('{', searchCursor);
+		if (start === -1) {
+			quasis.push(value.slice(cursor));
+			break;
+		}
+
+		const end = value.indexOf('}', start + 1);
+		if (end === -1) {
+			quasis.push(value.slice(cursor));
+			break;
+		}
+		const nestedStart = value.indexOf('{', start + 1);
+		if (nestedStart !== -1 && nestedStart < end) {
+			searchCursor = nestedStart;
+			continue;
+		}
+
+		const expression = value.slice(start + 1, end);
+		if (expression === '') {
+			searchCursor = end + 1;
+			continue;
+		}
+
+		quasis.push(value.slice(cursor, start));
+		expressions.push(expression);
+		cursor = end + 1;
+		searchCursor = cursor;
+	}
+
+	if (expressions.length === 0) return null;
+
+	return (arg) => {
+		let str = quasis[0] ?? '';
+		for (let i = 0; i < expressions.length; i++) {
+			const expression = expressions[i]!;
+			const replacement = arg[expression];
+			if (replacement === undefined) {
+				onMissing?.(expression);
+				str += `{${expression}}`;
+			} else {
+				str += replacement;
+			}
+			str += quasis[i + 1] ?? '';
+		}
+		return str;
+	};
+}
 
 type Tsx<T extends ILocale> = {
 	// `string extends T[K] ? never : K` part removes non-parameterized string keys from Tsx type.
@@ -29,12 +95,12 @@ export class I18n<T extends ILocale> {
 
 	public get ts(): T {
 		if (this.devMode) {
-			class Handler<TTarget extends ILocale> implements ProxyHandler<TTarget> {
-				get(target: TTarget, p: string | symbol): unknown {
-					const value = target[p as keyof TTarget];
+			class Handler implements ProxyHandler<ILocale> {
+				get(target: ILocale, p: string | symbol): unknown {
+					const value = getLocaleValue(target, p);
 
-					if (typeof value === 'object') {
-						return new Proxy(value, new Handler<TTarget[keyof TTarget] & ILocale>());
+					if (isLocaleObject(value)) {
+						return new Proxy(value, new Handler());
 					}
 
 					// パラメータ化された文字列 ({name} 等を含む) を .ts 経由で取得するのは
@@ -47,11 +113,11 @@ export class I18n<T extends ILocale> {
 
 					console.error(`Unexpected locale key: ${String(p)}`);
 
-					return new Proxy({} as any, new Handler<TTarget[keyof TTarget] & ILocale>());
+					return new Proxy({} as ILocale, new Handler());
 				}
 			}
 
-			return new Proxy(this.locale, new Handler());
+			return new Proxy(this.locale, new Handler()) as T;
 		}
 
 		return this.locale;
@@ -63,60 +129,31 @@ export class I18n<T extends ILocale> {
 				return this.tsxCache;
 			}
 
-			class Handler<TTarget extends ILocale> implements ProxyHandler<TTarget> {
-				get(target: TTarget, p: string | symbol): unknown {
-					const value = target[p as keyof TTarget];
+			class Handler implements ProxyHandler<ILocale> {
+				get(target: ILocale, p: string | symbol): unknown {
+					const value = getLocaleValue(target, p);
 
-					if (typeof value === 'object') {
-						return new Proxy(value, new Handler<TTarget[keyof TTarget] & ILocale>());
+					if (isLocaleObject(value)) {
+						return new Proxy(value, new Handler());
 					}
 
 					if (typeof value === 'string') {
-						const quasis: string[] = [];
-						const expressions: string[] = [];
-						let cursor = 0;
-
-						while (~cursor) {
-							const start = value.indexOf('{', cursor);
-
-							if (!~start) {
-								quasis.push(value.slice(cursor));
-								break;
-							}
-
-							quasis.push(value.slice(cursor, start));
-
-							const end = value.indexOf('}', start);
-
-							expressions.push(value.slice(start + 1, end));
-
-							cursor = end + 1;
-						}
-
-						if (!expressions.length) {
+						const interpolator = compileInterpolator(value, (expression) => {
+							console.error(`Missing locale parameters: ${expression} at ${String(p)}`);
+						});
+						if (interpolator == null) {
 							console.error(`Unexpected locale key: ${String(p)}`);
-
 							return () => value;
 						}
-
-						return (arg: TODO) => {
-							let str = quasis[0];
-
-							for (let i = 0; i < expressions.length; i++) {
-								if (!Object.hasOwn(arg, expressions[i])) {
-									console.error(`Missing locale parameters: ${expressions[i]} at ${String(p)}`);
-								}
-
-								str += arg[expressions[i]] + quasis[i + 1];
-							}
-
-							return str;
-						};
+						return interpolator;
 					}
 
 					console.error(`Unexpected locale key: ${String(p)}`);
 
-					return new Proxy((() => p) as any, new Handler<TTarget[keyof TTarget] & ILocale>());
+					const fallback = () => String(p);
+					return new Proxy(fallback, {
+						get: (_target, nested) => new Proxy({} as ILocale, new Handler())[nested as keyof ILocale],
+					});
 				}
 			}
 
@@ -127,58 +164,26 @@ export class I18n<T extends ILocale> {
 			return this.tsxCache;
 		}
 
-		function build(target: ILocale): Tsx<T> {
-			const result = {} as Tsx<T>;
+		function build(target: ILocale): RuntimeTsx {
+			const result: RuntimeTsx = {};
 
 			for (const k in target) {
 				if (!Object.hasOwn(target, k)) {
 					continue;
 				}
 
-				const value = target[k as keyof typeof target];
+				const value = getLocaleValue(target, k);
 
-				if (typeof value === 'object') {
-					(result as TODO)[k] = build(value as ILocale);
+				if (isLocaleObject(value)) {
+					result[k] = build(value);
 				} else if (typeof value === 'string') {
-					const quasis: string[] = [];
-					const expressions: string[] = [];
-					let cursor = 0;
-
-					while (~cursor) {
-						const start = value.indexOf('{', cursor);
-
-						if (!~start) {
-							quasis.push(value.slice(cursor));
-							break;
-						}
-
-						quasis.push(value.slice(cursor, start));
-
-						const end = value.indexOf('}', start);
-
-						expressions.push(value.slice(start + 1, end));
-
-						cursor = end + 1;
-					}
-
-					if (!expressions.length) {
-						continue;
-					}
-
-					(result as TODO)[k] = (arg: TODO) => {
-						let str = quasis[0];
-
-						for (let i = 0; i < expressions.length; i++) {
-							str += arg[expressions[i]] + quasis[i + 1];
-						}
-
-						return str;
-					};
+					const interpolator = compileInterpolator(value);
+					if (interpolator != null) result[k] = interpolator;
 				}
 			}
 			return result;
 		}
 
-		return (this.tsxCache = build(this.locale));
+		return (this.tsxCache = build(this.locale) as Tsx<T>);
 	}
 }

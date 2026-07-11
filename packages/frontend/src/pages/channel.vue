@@ -139,7 +139,10 @@ watch(() => props.channelId, async () => {
 	}
 
 	if ((favorited.value || _channel.isFollowing) && _channel.lastNotedAt) {
-		const lastReadedAt: number = miLocalStorage.getItemAsJson(`channelLastReadedAt:${_channel.id}`) ?? 0;
+		const lastReadedAt = miLocalStorage.getItemAsJson(
+			`channelLastReadedAt:${_channel.id}`,
+			(value): value is number => typeof value === 'number' && Number.isFinite(value),
+		) ?? 0;
 		const lastNotedAt = Date.parse(_channel.lastNotedAt);
 
 		if (lastNotedAt > lastReadedAt) {

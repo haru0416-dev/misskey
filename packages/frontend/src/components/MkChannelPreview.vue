@@ -61,7 +61,10 @@ const props = defineProps<{
 }>();
 
 const getLastReadedAt = (): number | null => {
-	return miLocalStorage.getItemAsJson(`channelLastReadedAt:${props.channel.id}`) ?? null;
+	return miLocalStorage.getItemAsJson(
+		`channelLastReadedAt:${props.channel.id}`,
+		(value): value is number => typeof value === 'number' && Number.isFinite(value),
+	) ?? null;
 };
 
 const lastReadedAt = ref(getLastReadedAt());

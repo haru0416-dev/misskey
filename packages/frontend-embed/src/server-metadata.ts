@@ -4,11 +4,10 @@
  */
 
 import * as Misskey from 'misskey-js';
+import { readServerContext } from '@shared/utility/server-context.js';
 import { misskeyApi } from '@/misskey-api.js';
 
-const providedMetaEl = window.document.getElementById('misskey_meta');
-
-const _serverMetadata: Misskey.entities.MetaDetailed | null = (providedMetaEl && providedMetaEl.textContent) ? JSON.parse(providedMetaEl.textContent) : null;
+const _serverMetadata = readServerContext<Misskey.entities.MetaDetailed>('misskey_meta');
 
 // NOTE: devモードのときしか _serverMetadata が null になることは無い
 export const serverMetadata: Misskey.entities.MetaDetailed = _serverMetadata ?? await misskeyApi('meta', {

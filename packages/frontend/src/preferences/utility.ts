@@ -4,7 +4,7 @@
  */
 
 import { ref, watch } from 'vue';
-import type { PreferencesProfile } from './store.js';
+import { isPossiblyNonNormalizedPreferencesProfile } from './store.js';
 import type { MenuItem } from '@/types/menu.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
@@ -139,7 +139,17 @@ function importProfile() {
 
 		const file = input.files[0];
 		const txt = await file.text();
-		const profile = JSON.parse(txt) as PreferencesProfile;
+		let profile: unknown;
+		try {
+			profile = JSON.parse(txt);
+		} catch {
+			await os.alert({ type: 'error', text: i18n.ts.invalidValue });
+			return;
+		}
+		if (!isPossiblyNonNormalizedPreferencesProfile(profile)) {
+			await os.alert({ type: 'error', text: i18n.ts.invalidValue });
+			return;
+		}
 
 		miLocalStorage.setItem('preferences', JSON.stringify(profile));
 		miLocalStorage.setItem('hidePreferencesRestoreSuggestion', 'true');
@@ -216,6 +226,10 @@ export async function restoreFromCloudBackup() {
 	});
 
 	if (_DEV_) console.log(profile);
+	if (!isPossiblyNonNormalizedPreferencesProfile(profile)) {
+		await os.alert({ type: 'error', text: i18n.ts.invalidValue });
+		return;
+	}
 
 	miLocalStorage.setItem('preferences', JSON.stringify(profile));
 	miLocalStorage.setItem('hidePreferencesRestoreSuggestion', 'true');

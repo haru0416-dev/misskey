@@ -140,7 +140,7 @@ import { ensureSignin, notesCount, incNotesCount } from '@/i.js';
 import { getAccounts, getAccountMenu } from '@/accounts.js';
 import { deepClone } from '@/utility/clone.js';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
-import { miLocalStorage } from '@/local-storage.js';
+import { isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
 import { claimAchievement } from '@/utility/claim-achievement.js';
 import { emojiPicker } from '@/utility/emoji-picker.js';
 import { mfmFunctionPicker } from '@/utility/mfm-function-picker.js';
@@ -214,7 +214,7 @@ const scheduledAt = ref<number | null>(null);
 const draghover = ref(false);
 const quoteId = ref<string | null>(null);
 const hasNotSpecifiedMentions = ref(false);
-const recentHashtags = ref(JSON.parse(miLocalStorage.getItem('hashtags') ?? '[]'));
+const recentHashtags = ref(miLocalStorage.getItemAsJson('hashtags', isStringArray) ?? []);
 const imeText = ref('');
 const showingOptions = ref(false);
 const textAreaReadOnly = ref(false);
@@ -860,31 +860,33 @@ function onDrop(ev: DragEvent): void {
 	//#endregion
 }
 
-type StoredDrafts = {
-	[key: string]: {
-		updatedAt: string;
-		data: {
-			text: string;
-			useCw: boolean;
-			cw: string | null;
-			visibility: 'public' | 'home' | 'followers' | 'specified';
-			localOnly: boolean;
-			files: Misskey.entities.DriveFile[];
-			poll: PollEditorModelValue | null;
-			visibleUserIds?: string[];
-			quoteId: string | null;
-			reactionAcceptance: 'likeOnly' | 'likeOnlyForRemote' | 'nonSensitiveOnly' | 'nonSensitiveOnlyForLocalLikeOnlyForRemote' | null;
-			scheduledAt: number | null;
-		};
+type StoredDraft = {
+	updatedAt: string;
+	data: {
+		text: string;
+		useCw: boolean;
+		cw: string | null;
+		visibility: 'public' | 'home' | 'followers' | 'specified';
+		localOnly: boolean;
+		files: Misskey.entities.DriveFile[];
+		poll: PollEditorModelValue | null;
+		visibleUserIds?: string[];
+		quoteId: string | null;
+		reactionAcceptance: 'likeOnly' | 'likeOnlyForRemote' | 'nonSensitiveOnly' | 'nonSensitiveOnlyForLocalLikeOnlyForRemote' | null;
+		scheduledAt: number | null;
 	};
 };
+
+function getStoredDrafts(): Record<string, unknown> {
+	return miLocalStorage.getItemAsJson('drafts', isJsonObject) ?? {};
+}
 
 function saveDraft() {
 	if (props.instant || props.mock) return;
 
-	const draftsData = JSON.parse(miLocalStorage.getItem('drafts') ?? '{}') as StoredDrafts;
+	const draftsData = getStoredDrafts();
 
-	draftsData[draftKey.value] = {
+	const draft: StoredDraft = {
 		updatedAt: new Date().toISOString(),
 		data: {
 			text: text.value,
@@ -900,16 +902,17 @@ function saveDraft() {
 			scheduledAt: scheduledAt.value,
 		},
 	};
+	draftsData[draftKey.value] = draft;
 
-	miLocalStorage.setItem('drafts', JSON.stringify(draftsData));
+	miLocalStorage.setItemAsJson('drafts', draftsData);
 }
 
 function deleteDraft() {
-	const draftsData = JSON.parse(miLocalStorage.getItem('drafts') ?? '{}') as StoredDrafts;
+	const draftsData = getStoredDrafts();
 
 	delete draftsData[draftKey.value];
 
-	miLocalStorage.setItem('drafts', JSON.stringify(draftsData));
+	miLocalStorage.setItemAsJson('drafts', draftsData);
 }
 
 async function saveServerDraft(options: {
@@ -1090,8 +1093,8 @@ async function post(ev?: PointerEvent) {
 			emit('posted');
 			if (postData.text && postData.text !== '') {
 				const hashtags_ = mfm.parse(postData.text).map(x => x.type === 'hashtag' && x.props.hashtag).filter(x => x) as string[];
-				const history = JSON.parse(miLocalStorage.getItem('hashtags') ?? '[]') as string[];
-				miLocalStorage.setItem('hashtags', JSON.stringify(unique(hashtags_.concat(history))));
+				const history = miLocalStorage.getItemAsJson('hashtags', isStringArray) ?? [];
+				miLocalStorage.setItemAsJson('hashtags', unique(hashtags_.concat(history)));
 			}
 			posting.value = false;
 			postAccount.value = null;
@@ -1426,25 +1429,26 @@ onMounted(() => {
 	nextTick(() => {
 		// 書きかけの投稿を復元
 		if (!props.instant && !props.mention && !props.specified && !props.mock) {
-			const draft = JSON.parse(miLocalStorage.getItem('drafts') ?? '{}')[draftKey.value] as StoredDrafts[string] | undefined;
-			if (draft != null) {
-				text.value = draft.data.text;
-				useCw.value = draft.data.useCw;
-				cw.value = draft.data.cw;
-				visibility.value = draft.data.visibility;
-				localOnly.value = draft.data.localOnly;
-				files.value = (draft.data.files || []).filter(draftFile => draftFile);
-				if (draft.data.poll) {
-					poll.value = draft.data.poll;
+			const draft = getStoredDrafts()[draftKey.value];
+			const data = isJsonObject(draft) && isJsonObject(draft.data) ? draft.data : null;
+			if (data != null) {
+				if (typeof data.text === 'string') text.value = data.text;
+				if (typeof data.useCw === 'boolean') useCw.value = data.useCw;
+				if (typeof data.cw === 'string' || data.cw === null) cw.value = data.cw;
+				if (data.visibility === 'public' || data.visibility === 'home' || data.visibility === 'followers' || data.visibility === 'specified') visibility.value = data.visibility;
+				if (typeof data.localOnly === 'boolean') localOnly.value = data.localOnly;
+				if (Array.isArray(data.files)) files.value = data.files.filter(isJsonObject) as Misskey.entities.DriveFile[];
+				if (isJsonObject(data.poll)) {
+					poll.value = data.poll as PollEditorModelValue;
 				}
-				if (draft.data.visibleUserIds) {
-					misskeyApi('users/show', { userIds: draft.data.visibleUserIds }).then(users => {
+				if (isStringArray(data.visibleUserIds)) {
+					misskeyApi('users/show', { userIds: data.visibleUserIds }).then(users => {
 						users.forEach(u => pushVisibleUser(u));
 					});
 				}
-				quoteId.value = draft.data.quoteId;
-				reactionAcceptance.value = draft.data.reactionAcceptance;
-				scheduledAt.value = draft.data.scheduledAt ?? null;
+				if (typeof data.quoteId === 'string' || data.quoteId === null) quoteId.value = data.quoteId;
+				if (data.reactionAcceptance === 'likeOnly' || data.reactionAcceptance === 'likeOnlyForRemote' || data.reactionAcceptance === 'nonSensitiveOnly' || data.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote' || data.reactionAcceptance === null) reactionAcceptance.value = data.reactionAcceptance;
+				if ((typeof data.scheduledAt === 'number' && Number.isFinite(data.scheduledAt)) || data.scheduledAt === null) scheduledAt.value = data.scheduledAt;
 			}
 		}
 

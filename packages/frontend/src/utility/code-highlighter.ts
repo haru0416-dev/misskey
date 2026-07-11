@@ -42,11 +42,11 @@ export async function getTheme(
 	if (theme.codeHighlighter) {
 		let _res: ThemeRegistration = {};
 		if (theme.codeHighlighter.base === '_none_') {
-			_res = deepClone(theme.codeHighlighter.overrides);
+			_res = deepClone(theme.codeHighlighter.overrides) as ThemeRegistration;
 		} else {
 			const base = (await bundledThemesInfo.find((t) => t.id === theme.codeHighlighter!.base)?.import()) ?? darkPlus;
 			_res = deepMerge<ThemeRegistration>(
-				theme.codeHighlighter.overrides ?? {},
+				(theme.codeHighlighter.overrides ?? {}) as ThemeRegistration,
 				'default' in base ? base.default : base,
 			);
 		}

@@ -5,20 +5,27 @@
 
 import { shallowRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
+import { isEmojiSimpleArray } from '@shared/utility/custom-emojis.js';
 import { misskeyApi, misskeyApiGet } from '@/misskey-api.js';
 
-function get(key: string) {
+function get(key: string): unknown {
 	const value = localStorage.getItem(key);
 	if (value === null) return null;
-	return JSON.parse(value);
+	try {
+		return JSON.parse(value);
+	} catch {
+		localStorage.removeItem(key);
+		return null;
+	}
 }
 
-function set(key: string, value: any) {
+function set(key: string, value: unknown): void {
 	localStorage.setItem(key, JSON.stringify(value));
 }
 
-const storageCache = await get('emojis');
-export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(Array.isArray(storageCache) ? storageCache : []);
+const storageCache = get('emojis');
+if (storageCache !== null && !isEmojiSimpleArray(storageCache)) localStorage.removeItem('emojis');
+export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(isEmojiSimpleArray(storageCache) ? storageCache : []);
 
 export const customEmojisMap = new Map<string, Misskey.entities.EmojiSimple>();
 watch(
@@ -39,27 +46,12 @@ export async function fetchCustomEmojis(force = false) {
 	if (force) {
 		res = await misskeyApi('emojis', {});
 	} else {
-		const lastFetchedAt = await get('lastEmojisFetchedAt');
-		if (lastFetchedAt && now - lastFetchedAt < 1000 * 60 * 60) return;
+		const lastFetchedAt = get('lastEmojisFetchedAt');
+		if (typeof lastFetchedAt === 'number' && Number.isFinite(lastFetchedAt) && now - lastFetchedAt < 1000 * 60 * 60) return;
 		res = await misskeyApiGet('emojis', {});
 	}
 
 	customEmojis.value = res.emojis;
 	set('emojis', res.emojis);
 	set('lastEmojisFetchedAt', now);
-}
-
-let cachedTags: string[] | undefined;
-export function getCustomEmojiTags(): string[] {
-	if (cachedTags) return cachedTags;
-
-	const tags = new Set<string>();
-	for (const emoji of customEmojis.value) {
-		for (const tag of emoji.aliases) {
-			tags.add(tag);
-		}
-	}
-	const res = Array.from(tags);
-	cachedTags = res;
-	return res;
 }
