@@ -203,7 +203,6 @@
         "@types/canvas-confetti": "1.9.0",
         "@types/estree": "1.0.9",
         "@types/matter-js": "0.20.2",
-        "@types/micromatch": "4.0.10",
         "@types/node": "26.0.0",
         "@types/punycode.js": "npm:@types/punycode@2.1.4",
         "@types/sanitize-html": "2.16.1",
@@ -213,11 +212,9 @@
         "@types/tinycolor2": "1.4.6",
         "@vitest/coverage-v8": "4.1.9",
         "@vue/compiler-core": "3.5.38",
-        "astring": "1.9.0",
         "happy-dom": "20.10.6",
         "lightningcss": "1.32.0",
         "magic-string": "0.30.21",
-        "micromatch": "4.0.8",
         "minimatch": "10.2.5",
         "msw": "2.14.6",
         "msw-storybook-addon": "2.0.7",
@@ -259,7 +256,6 @@
       "devDependencies": {
         "@misskey-dev/emoji-assets": "17.0.6",
         "@tabler/icons-webfont": "3.44.0",
-        "@testing-library/vue": "8.1.0",
         "@types/node": "26.0.0",
         "@types/punycode.js": "npm:@types/punycode@2.1.4",
         "@types/tinycolor2": "1.4.6",
@@ -1293,8 +1289,6 @@
 
     "@types/aria-query": ["@types/aria-query@5.0.4", "", {}, "sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw=="],
 
-    "@types/braces": ["@types/braces@3.0.5", "", {}, "sha512-SQFof9H+LXeWNz8wDe7oN5zu7ket0qwMu5vZubW4GCJ8Kkeh6nBWUz87+KTz/G3Kqsrp0j/W253XJb3KMEeg3w=="],
-
     "@types/canvas-confetti": ["@types/canvas-confetti@1.9.0", "", {}, "sha512-aBGj/dULrimR1XDZLtG9JwxX1b4HPRF6CX9Yfwh3NvstZEm1ZL7RBnel4keCPSqs1ANRu1u2Aoz9R+VmtjYuTg=="],
 
     "@types/chai": ["@types/chai@5.2.3", "", { "dependencies": { "@types/deep-eql": "4.0.2", "assertion-error": "2.0.1" } }, "sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA=="],
@@ -1322,8 +1316,6 @@
     "@types/matter-js": ["@types/matter-js@0.20.2", "", {}, "sha512-3PPKy3QxvZ89h9+wdBV2488I1JLVs7DEpIkPvgO8JC1mUdiVSO37ZIvVctOTD7hIq8OAL2gJ3ugGSuUip6DhCw=="],
 
     "@types/mdast": ["@types/mdast@4.0.4", "", { "dependencies": { "@types/unist": "3.0.3" } }, "sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA=="],
-
-    "@types/micromatch": ["@types/micromatch@4.0.10", "", { "dependencies": { "@types/braces": "3.0.5" } }, "sha512-5jOhFDElqr4DKTrTEbnW8DZ4Hz5LRUEmyrGpCMrD/NphYv3nUnaF08xmSLx1rGGnyEs/kFnhiw6dCgcDqMr5PQ=="],
 
     "@types/mime-types": ["@types/mime-types@3.0.1", "", {}, "sha512-xRMsfuQbnRq1Ef+C+RKaENOxXX87Ygl38W1vDfPHRku02TgQr+Qd8iivLtAMcR0KF5/29xlnFihkTlbqFrGOVQ=="],
 
