@@ -147,7 +147,10 @@ export const navbarItemDef = reactive<{
 				get: () => prefer.dataSaver.avatar,
 				set: (value: boolean) => prefer.commit('dataSaver', { ...prefer.dataSaver, avatar: value }),
 			});
-			const sensitiveMedia = prefer.model('nsfw');
+			const sensitiveMedia = computed({
+				get: () => prefer.nsfw,
+				set: (value) => prefer.commit('nsfw', value),
+			});
 			const reduceUiAnimation = computed({
 				get: () => !prefer.animation,
 				set: (value: boolean) => prefer.commit('animation', !value),

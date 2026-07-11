@@ -10,6 +10,8 @@ import type { Ref } from 'vue';
 import type { CompleteInfo } from '@/components/MkAutocomplete.vue';
 import { popup } from '@/os.js';
 
+const MkAutocomplete = defineAsyncComponent(() => import('@/components/MkAutocomplete.vue'));
+
 export type SuggestionType = 'user' | 'hashtag' | 'emoji' | 'mfmTag' | 'mfmParam';
 
 type CompleteProps<T extends keyof CompleteInfo> = {
@@ -35,6 +37,7 @@ export class Autocomplete {
 	private currentType: keyof CompleteInfo | undefined;
 	private textRef: Ref<string | number | null>;
 	private opening: boolean;
+	private attached: boolean;
 	private onlyType: SuggestionType[];
 
 	private get text(): string {
@@ -67,6 +70,7 @@ export class Autocomplete {
 		this.textarea = textarea;
 		this.textRef = textRef;
 		this.opening = false;
+		this.attached = false;
 		this.onlyType = onlyType ?? ['user', 'hashtag', 'emoji', 'mfmTag', 'mfmParam'];
 
 		this.attach();
@@ -76,6 +80,8 @@ export class Autocomplete {
 	 * このインスタンスにあるテキストエリアの入力のキャプチャを開始します。
 	 */
 	public attach() {
+		if (this.attached) return;
+		this.attached = true;
 		this.textarea.addEventListener('input', this.onInput);
 	}
 
@@ -83,6 +89,8 @@ export class Autocomplete {
 	 * このインスタンスにあるテキストエリアの入力のキャプチャを解除します。
 	 */
 	public detach() {
+		if (!this.attached) return;
+		this.attached = false;
 		this.textarea.removeEventListener('input', this.onInput);
 		this.close();
 	}
@@ -92,10 +100,11 @@ export class Autocomplete {
 	 */
 	private onInput() {
 		const caretPos = Number(this.textarea.selectionStart);
-		const text = this.text.substring(0, caretPos).split('\n').pop()!;
+		const beforeCaret = this.text.substring(0, caretPos);
+		const text = beforeCaret.substring(beforeCaret.lastIndexOf('\n') + 1);
 
 		// メンションに含められる文字のみで構成された、最も末尾にある文字列を抽出
-		const mentionCandidate = text.split(/[^a-zA-Z0-9_@.\-]+/).pop()!;
+		const mentionCandidate = text.match(/[a-zA-Z0-9_@.\-]+$/)?.[0] ?? '';
 
 		const mentionIndex = mentionCandidate.lastIndexOf('@');
 		const hashtagIndex = text.lastIndexOf('#');
@@ -232,7 +241,7 @@ export class Autocomplete {
 			const _q = ref(q);
 
 			const { dispose } = popup(
-				defineAsyncComponent(() => import('@/components/MkAutocomplete.vue')),
+				MkAutocomplete,
 				{
 					textarea: this.textarea,
 					close: this.close,

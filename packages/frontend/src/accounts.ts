@@ -19,6 +19,10 @@ import type { AccountWithToken } from '@/i.js';
 import { signout } from '@/signout.js';
 import { updateUserQueries } from '@/query/streaming.js';
 
+const MkWaitingDialog = defineAsyncComponent(() => import('@/components/MkWaitingDialog.vue'));
+const MkSigninDialog = defineAsyncComponent(() => import('@/components/MkSigninDialog.vue'));
+const MkSignupDialog = defineAsyncComponent(() => import('@/components/MkSignupDialog.vue'));
+
 export async function getAccounts(): Promise<
 	{
 		host: string;
@@ -49,11 +53,12 @@ async function addAccount(host: string, user: Misskey.entities.MeDetailed, token
 }
 
 export async function removeAccount(host: string, id: AccountWithToken['id']) {
-	const tokens = JSON.parse(JSON.stringify(store.accountTokens));
-	delete tokens[host + '/' + id];
+	const accountKey = host + '/' + id;
+	const tokens = { ...store.accountTokens };
+	delete tokens[accountKey];
 	store.set('accountTokens', tokens);
-	const accountInfos = JSON.parse(JSON.stringify(store.accountInfos));
-	delete accountInfos[host + '/' + id];
+	const accountInfos = { ...store.accountInfos };
+	delete accountInfos[accountKey];
 	store.set('accountInfos', accountInfos);
 
 	prefer.commit(
@@ -178,7 +183,7 @@ export async function refreshCurrentAccount() {
 export async function login(token: AccountWithToken['token'], redirect?: string) {
 	const showing = ref(true);
 	const { dispose } = popup(
-		defineAsyncComponent(() => import('@/components/MkWaitingDialog.vue')),
+		MkWaitingDialog,
 		{
 			success: false,
 			showing: showing,
@@ -220,7 +225,7 @@ export async function switchAccount(host: string, id: string) {
 		login(token);
 	} else {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkSigninDialog.vue')),
+			MkSigninDialog,
 			{},
 			{
 				done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
@@ -289,7 +294,7 @@ export async function getAccountMenu(opts: {
 				active: opts.active != null ? opts.active === id : false,
 				action: async () => {
 					const { dispose } = popup(
-						defineAsyncComponent(() => import('@/components/MkSigninDialog.vue')),
+						MkSigninDialog,
 						{
 							initialUsername: username,
 						},
@@ -390,7 +395,7 @@ export async function getAccountMenu(opts: {
 export function getAccountWithSigninDialog(): Promise<{ id: string; token: string } | null> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkSigninDialog.vue')),
+			MkSigninDialog,
 			{},
 			{
 				done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
@@ -412,7 +417,7 @@ export function getAccountWithSigninDialog(): Promise<{ id: string; token: strin
 export function getAccountWithSignupDialog(): Promise<{ id: string; token: string } | null> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkSignupDialog.vue')),
+			MkSignupDialog,
 			{},
 			{
 				done: async (res: Misskey.entities.SignupResponse) => {

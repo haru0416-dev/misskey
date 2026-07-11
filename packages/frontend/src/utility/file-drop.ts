@@ -108,11 +108,15 @@ export async function readDataTransferItems(itemList: DataTransferItemList): Pro
  */
 export function flattenDroppedFiles(items: DroppedItem[]): DroppedFile[] {
 	const result = Array.of<DroppedFile>();
-	for (const item of items) {
+	const remaining = items.toReversed();
+	while (remaining.length > 0) {
+		const item = remaining.pop()!;
 		if (item.isFile) {
 			result.push(item);
 		} else {
-			result.push(...flattenDroppedFiles(item.children));
+			for (let i = item.children.length - 1; i >= 0; i--) {
+				remaining.push(item.children[i]!);
+			}
 		}
 	}
 	return result;

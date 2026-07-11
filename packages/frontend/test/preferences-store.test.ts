@@ -111,6 +111,21 @@ describe('Pinia preferences store', () => {
 		expect(fixture.saves.at(-1)?.profile.preferences.animation[0][1]).toBe(true);
 	});
 
+	test('exposes preferences as computed two-way models', async () => {
+		const fixture = createStorageProvider({
+			profile: createProfile({ animation: [[{}, false, {}]] }),
+		});
+		const store = createPreferencesStore(fixture.provider, null, createPinia());
+		await store.$preferencesCloudReady;
+		const animation = store.model('animation');
+		const reduceAnimation = store.model('animation', value => !value, value => !value);
+
+		expect(animation.value).toBe(false);
+		reduceAnimation.value = false;
+		expect(store.animation).toBe(true);
+		expect(animation.value).toBe(true);
+	});
+
 	test('does not overwrite a local commit with a late cloud response', async () => {
 		let resolveCloud!: (value: Partial<Record<keyof PREF, ValueOf<keyof PREF>>>) => void;
 		const cloudResult = new Promise<Partial<Record<keyof PREF, ValueOf<keyof PREF>>>>((resolve) => {

@@ -18,7 +18,7 @@ if (isTouchSupported && !isTouchUsing) {
 			// タッチで使っていると判定されてしまうため、実際に一度でもタッチされたらtrueにする
 			isTouchUsing = true;
 		},
-		{ passive: true },
+		{ passive: true, once: true },
 	);
 }
 

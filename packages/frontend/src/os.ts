@@ -37,6 +37,13 @@ import { showMovedDialog } from '@/utility/show-moved-dialog.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { focusParent } from '@/utility/focus.js';
 
+const MkPasswordDialog = defineAsyncComponent(() => import('@/components/MkPasswordDialog.vue'));
+const MkFormDialog = defineAsyncComponent(() => import('@/components/MkFormDialog.vue'));
+const MkUserSelectDialog = defineAsyncComponent(() => import('@/components/MkUserSelectDialog.vue'));
+const MkRoleSelectDialog = defineAsyncComponent(() => import('@/components/MkRoleSelectDialog.vue'));
+const MkEmojiPickerDialog = defineAsyncComponent(() => import('@/components/MkEmojiPickerDialog.vue'));
+const MkCropperDialog = defineAsyncComponent(() => import('@/components/MkCropperDialog.vue'));
+
 export const openingWindowsCount = ref(0);
 
 export type ApiWithDialogCustomErrors = Record<string, { title?: string; text: string }>;
@@ -206,7 +213,10 @@ export function popup<T extends Component>(
 	markRaw(component);
 
 	const id = ++popupIdCount;
+	let disposed = false;
 	const dispose = () => {
+		if (disposed) return;
+		disposed = true;
 		nextTick(() => {
 			popups.value = popups.value.filter((p) => p.id !== id);
 		});
@@ -521,7 +531,7 @@ export function authenticateDialog(): Promise<
 > {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkPasswordDialog.vue')),
+			MkPasswordDialog,
 			{},
 			{
 				done: (result) => {
@@ -622,7 +632,7 @@ export function form<F extends Form>(
 ): Promise<{ canceled: true; result?: undefined } | { canceled?: false; result: GetFormResultType<F> }> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkFormDialog.vue')),
+			MkFormDialog,
 			{ title, form: f },
 			{
 				done: (result) => {
@@ -639,7 +649,7 @@ export async function selectUser(
 ): Promise<Misskey.entities.UserDetailed> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkUserSelectDialog.vue')),
+			MkUserSelectDialog,
 			{
 				includeSelf: opts.includeSelf,
 				localOnly: opts.localOnly,
@@ -659,7 +669,7 @@ export async function selectRole(
 ): Promise<{ canceled: true; result: undefined } | { canceled: false; result: Misskey.entities.Role[] }> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkRoleSelectDialog.vue')),
+			MkRoleSelectDialog,
 			params,
 			{
 				done: (roles) => {
@@ -680,7 +690,7 @@ export async function pickEmoji(
 ): Promise<string> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkEmojiPickerDialog.vue')),
+			MkEmojiPickerDialog,
 			{
 				anchorElement,
 				...opts,
@@ -703,7 +713,7 @@ export async function cropImageFile<F extends File | Blob>(
 ): Promise<F> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkCropperDialog.vue')),
+			MkCropperDialog,
 			{
 				imageFile: imageFile,
 				aspectRatio: options.aspectRatio,

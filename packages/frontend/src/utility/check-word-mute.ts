@@ -4,6 +4,37 @@
  */
 import * as Misskey from 'misskey-js';
 
+type CompiledMute =
+	| { source: string[]; keywords: string[] }
+	| { source: string; regexp: RegExp };
+
+const compiledMutesCache = new WeakMap<Array<string | string[]>, CompiledMute[]>();
+
+function compileMutes(mutedWords: Array<string | string[]>): CompiledMute[] {
+	const cached = compiledMutesCache.get(mutedWords);
+	if (cached != null) return cached;
+
+	const compiled: CompiledMute[] = [];
+	for (const filter of mutedWords) {
+		if (Array.isArray(filter)) {
+			const keywords = filter.filter((keyword) => keyword !== '');
+			if (keywords.length > 0) compiled.push({ source: filter, keywords });
+			continue;
+		}
+
+		const regexp = filter.match(/^\/(.+)\/(.*)$/);
+		if (regexp == null) continue;
+		try {
+			compiled.push({ source: filter, regexp: new RegExp(regexp[1], regexp[2]) });
+		} catch (_) {
+			// This should never happen due to input sanitisation.
+		}
+	}
+
+	compiledMutesCache.set(mutedWords, compiled);
+	return compiled;
+}
+
 export function checkWordMute(
 	note: Misskey.entities.Note,
 	me: Misskey.entities.UserLite | null | undefined,
@@ -17,28 +48,15 @@ export function checkWordMute(
 
 		if (text === '') return false;
 
-		const matched = mutedWords.filter((filter) => {
-			if (Array.isArray(filter)) {
-				// Clean up
-				const filteredFilter = filter.filter((keyword) => keyword !== '');
-				if (filteredFilter.length === 0) return false;
-
-				return filteredFilter.every((keyword) => text.includes(keyword));
+		const matched: Array<string | string[]> = [];
+		for (const filter of compileMutes(mutedWords)) {
+			if ('keywords' in filter) {
+				if (filter.keywords.every((keyword) => text.includes(keyword))) matched.push(filter.source);
 			} else {
-				// represents RegExp
-				const regexp = filter.match(/^\/(.+)\/(.*)$/);
-
-				// This should never happen due to input sanitisation.
-				if (!regexp) return false;
-
-				try {
-					return new RegExp(regexp[1], regexp[2]).test(text);
-				} catch (_) {
-					// This should never happen due to input sanitisation.
-					return false;
-				}
+				filter.regexp.lastIndex = 0;
+				if (filter.regexp.test(text)) matched.push(filter.source);
 			}
-		});
+		}
 
 		if (matched.length > 0) return matched;
 	}

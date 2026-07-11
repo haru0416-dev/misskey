@@ -51,13 +51,15 @@ export function addCustomEmoji(emoji: Misskey.entities.EmojiSimple) {
 }
 
 export function updateCustomEmojis(emojis: Misskey.entities.EmojiSimple[]) {
-	customEmojis.value = customEmojis.value.map((item) => emojis.find((search) => search.name === item.name) ?? item);
+	const updatesByName = new Map(emojis.map((emoji) => [emoji.name, emoji]));
+	customEmojis.value = customEmojis.value.map((item) => updatesByName.get(item.name) ?? item);
 	updateEmojiQueries({ type: 'update', emojis });
 	set('emojis', customEmojis.value);
 }
 
 export function removeCustomEmojis(emojis: Misskey.entities.EmojiSimple[]) {
-	customEmojis.value = customEmojis.value.filter((item) => !emojis.some((search) => search.name === item.name));
+	const removedNames = new Set(emojis.map((emoji) => emoji.name));
+	customEmojis.value = customEmojis.value.filter((item) => !removedNames.has(item.name));
 	updateEmojiQueries({ type: 'delete', emojis });
 	set('emojis', customEmojis.value);
 }

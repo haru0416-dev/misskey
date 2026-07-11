@@ -5,11 +5,11 @@
 
 import type { SoundStore } from '@/preferences/def.js';
 import { prefer } from '@/preferences.js';
-import { PREF_DEF } from '@/preferences/def.js';
 import { getInitialPrefValue } from '@/preferences/store.js';
 
 let ctx: AudioContext;
 const cache = new Map<string, AudioBuffer>();
+const pendingLoads = new Map<string, Promise<AudioBuffer | undefined>>();
 let canPlay = true;
 
 export const soundsTypes = [
@@ -95,28 +95,35 @@ export async function loadAudio(url: string, options?: { useCache?: boolean }) {
 			ctx.close();
 		});
 	}
-	if (options?.useCache ?? true) {
+	const useCache = options?.useCache ?? true;
+	if (useCache) {
 		if (cache.has(url)) {
 			return cache.get(url) as AudioBuffer;
 		}
+		const pending = pendingLoads.get(url);
+		if (pending != null) return pending;
 	}
 
-	let response: Response;
+	const load = (async (): Promise<AudioBuffer | undefined> => {
+		try {
+			let response: Response;
+			try {
+				response = await window.fetch(url);
+			} catch (_) {
+				return undefined;
+			}
 
-	try {
-		response = await window.fetch(url);
-	} catch (_) {
-		return;
-	}
+			const arrayBuffer = await response.arrayBuffer();
+			const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+			if (useCache) cache.set(url, audioBuffer);
+			return audioBuffer;
+		} finally {
+			if (useCache) pendingLoads.delete(url);
+		}
+	})();
 
-	const arrayBuffer = await response.arrayBuffer();
-	const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-
-	if (options?.useCache ?? true) {
-		cache.set(url, audioBuffer);
-	}
-
-	return audioBuffer;
+	if (useCache) pendingLoads.set(url, load);
+	return load;
 }
 
 /**
@@ -227,15 +234,27 @@ export function createSourceNode(
  */
 export async function getSoundDuration(file: string): Promise<number> {
 	const audioEl = window.document.createElement('audio');
+	audioEl.preload = 'metadata';
 	audioEl.src = file;
-	return new Promise((resolve) => {
-		const si = window.setInterval(() => {
-			if (audioEl.readyState > 0) {
-				resolve(audioEl.duration * 1000);
-				window.clearInterval(si);
-				audioEl.remove();
-			}
-		}, 100);
+	return new Promise((resolve, reject) => {
+		const cleanup = () => {
+			audioEl.removeEventListener('loadedmetadata', onLoadedMetadata);
+			audioEl.removeEventListener('error', onError);
+			audioEl.remove();
+		};
+		const onLoadedMetadata = () => {
+			const duration = audioEl.duration * 1000;
+			cleanup();
+			resolve(duration);
+		};
+		const onError = () => {
+			cleanup();
+			reject(new Error(`Failed to load audio metadata: ${file}`));
+		};
+
+		audioEl.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+		audioEl.addEventListener('error', onError, { once: true });
+		audioEl.load();
 	});
 }
 

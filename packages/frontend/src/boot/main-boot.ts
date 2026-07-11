@@ -6,7 +6,6 @@
 import { defineAsyncComponent, markRaw } from 'vue';
 import { ui } from '@shared/utility/config.js';
 import * as Misskey from 'misskey-js';
-import { compareVersions } from 'compare-versions';
 import { common } from './common.js';
 import type { App, Component } from 'vue';
 import type { Keymap } from '@/utility/hotkey.js';
@@ -28,8 +27,14 @@ import { prefer } from '@/preferences.js';
 import { updateCurrentAccountPartial } from '@/accounts.js';
 import { unisonReload } from '@/utility/unison-reload.js';
 
+const MkUpdated = defineAsyncComponent(() => import('@/components/MkUpdated.vue'));
+const MkUserSetupDialog = defineAsyncComponent(() => import('@/components/MkUserSetupDialog.vue'));
+const MkAnnouncementDialog = defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue'));
+const MkDonation = defineAsyncComponent(() => import('@/components/MkDonation.vue'));
+const MkSourceCodeAvailablePopup = defineAsyncComponent(() => import('@/components/MkSourceCodeAvailablePopup.vue'));
+
 export async function mainBoot(app: App<Element>, setRootComponent: (component: Component) => void) {
-	const { isClientUpdated, lastVersion } = await common(app, async () => {
+	const { isClientUpdated } = await common(app, async () => {
 		let uiStyle = ui;
 		const searchParams = new URLSearchParams(window.location.search);
 
@@ -65,7 +70,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 
 	if (isClientUpdated && $i) {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkUpdated.vue')),
+			MkUpdated,
 			{},
 			{
 				closed: () => dispose(),
@@ -104,7 +109,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		store.$persistLoaded.then(async () => {
 			if (store.accountSetupWizard !== -1) {
 				const { dispose } = popup(
-					defineAsyncComponent(() => import('@/components/MkUserSetupDialog.vue')),
+					MkUserSetupDialog,
 					{},
 					{
 						closed: () => dispose(),
@@ -115,7 +120,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 
 		for (const announcement of ($i.unreadAnnouncements ?? []).filter((x) => x.display === 'dialog')) {
 			const { dispose } = popup(
-				defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue')),
+				MkAnnouncementDialog,
 				{
 					announcement,
 				},
@@ -129,7 +134,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 			const announcement = ev.announcement;
 			if (announcement.display === 'dialog') {
 				const { dispose } = popup(
-					defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue')),
+					MkAnnouncementDialog,
 					{
 						announcement,
 					},
@@ -162,7 +167,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 				new Date(latestDonationInfoShownAt).getTime() < Date.now() - 1000 * 60 * 60 * 24 * 30
 			) {
 				const { dispose } = popup(
-					defineAsyncComponent(() => import('@/components/MkDonation.vue')),
+					MkDonation,
 					{},
 					{
 						closed: () => dispose(),
@@ -179,7 +184,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 			instance.repositoryUrl !== 'https://github.com/misskey-dev/misskey'
 		) {
 			const { dispose } = popup(
-				defineAsyncComponent(() => import('@/components/MkSourceCodeAvailablePopup.vue')),
+				MkSourceCodeAvailablePopup,
 				{},
 				{
 					closed: () => dispose(),

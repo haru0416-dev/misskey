@@ -5,7 +5,7 @@
 
 import * as Misskey from 'misskey-js';
 import { EventEmitter } from 'eventemitter3';
-import { computed, markRaw, onMounted, onUnmounted, ref, triggerRef } from 'vue';
+import { computed, markRaw, onUnmounted, ref, triggerRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import type { WatermarkLayers, WatermarkPreset } from '@/utility/watermark/WatermarkRenderer.js';
 import type { ImageFrameParams, ImageFramePreset } from '@/utility/image-frame-renderer/ImageFrameRenderer.js';
@@ -118,7 +118,8 @@ export function useUploader(
 	function initializeFile(file: File) {
 		const id = genId();
 		const filename = file.name ?? 'untitled';
-		const extension = filename.split('.').length > 1 ? '.' + filename.split('.').pop() : '';
+		const extensionStart = filename.lastIndexOf('.');
+		const extension = extensionStart === -1 ? '' : filename.slice(extensionStart);
 		const watermarkPreset =
 			uploaderFeatures.value.watermark && $i.policies.watermarkAvailable
 				? (prefer.watermarkPresets.find((p) => p.id === prefer.defaultWatermarkPresetId) ?? null)
@@ -158,8 +159,10 @@ export function useUploader(
 	}
 
 	function removeItem(item: UploaderItem) {
+		const index = items.value.indexOf(item);
+		if (index === -1) return;
 		if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
-		items.value.splice(items.value.indexOf(item), 1);
+		items.value.splice(index, 1);
 	}
 
 	function getMenu(item: UploaderItem): MenuItem[] {
@@ -613,9 +616,9 @@ export function useUploader(
 			uploading: false,
 		}));
 
-		for (const item of items.value.filter((item) => item.uploaded == null)) {
-			// アップロード処理途中で値が変わる場合（途中で全キャンセルされたりなど）もあるので、Array filterではなくここでチェック
-			if (item.aborted) {
+		for (const item of items.value) {
+			// アップロード処理途中で値が変わる場合（途中で全キャンセルされたりなど）もあるので、事前にfilterしない
+			if (item.uploaded != null || item.aborted) {
 				continue;
 			}
 

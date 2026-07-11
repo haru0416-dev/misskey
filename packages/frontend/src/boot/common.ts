@@ -225,24 +225,37 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		{ immediate: true },
 	);
 
-	// Keep screen on
-	const onVisibilityChange = () =>
-		window.document.addEventListener('visibilitychange', () => {
-			if (window.document.visibilityState === 'visible') {
-				navigator.wakeLock.request('screen');
-			}
-		});
+	// Keep screen on. 再取得のたびにvisibilitychangeリスナーを増やさない。
 	if (prefer.keepScreenOn && 'wakeLock' in navigator) {
-		navigator.wakeLock
-			.request('screen')
-			.then(onVisibilityChange)
-			.catch(() => {
-				// On WebKit-based browsers, user activation is required to send wake lock request
-				// https://webkit.org/blog/13862/the-user-activation-api/
-				window.document.addEventListener('click', () => navigator.wakeLock.request('screen').then(onVisibilityChange), {
-					once: true,
-				});
-			});
+		let wakeLock: WakeLockSentinel | null = null;
+		let requestingWakeLock = false;
+		let waitingForActivation = false;
+
+		const requestWakeLock = async (): Promise<void> => {
+			if (wakeLock != null || requestingWakeLock || window.document.visibilityState !== 'visible') return;
+			requestingWakeLock = true;
+			try {
+				wakeLock = await navigator.wakeLock.request('screen');
+				wakeLock.addEventListener('release', () => {
+					wakeLock = null;
+				}, { once: true });
+			} catch {
+				if (waitingForActivation) return;
+				waitingForActivation = true;
+				// WebKit系ではユーザー操作後でないと要求できない場合がある。
+				window.document.addEventListener('click', () => {
+					waitingForActivation = false;
+					void requestWakeLock();
+				}, { once: true });
+			} finally {
+				requestingWakeLock = false;
+			}
+		};
+
+		window.document.addEventListener('visibilitychange', () => {
+			if (window.document.visibilityState === 'visible') void requestWakeLock();
+		});
+		void requestWakeLock();
 	}
 
 	if (prefer.makeEveryTextElementsSelectable) {

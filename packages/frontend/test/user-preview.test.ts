@@ -84,6 +84,7 @@ describe('UserPreview', () => {
 		await fireEvent.mouseOver(source);
 		await vi.advanceTimersByTimeAsync(500);
 		expect(popupMock.mock.calls[1]?.[1].q).toBe('user-2');
+		expect(popupMock.mock.calls[1]?.[0]).toBe(popupMock.mock.calls[0]?.[0]);
 
 		await result.rerender({ user: null });
 		await fireEvent.mouseOver(source);

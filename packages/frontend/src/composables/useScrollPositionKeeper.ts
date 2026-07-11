@@ -4,7 +4,7 @@
  */
 
 import { throttle } from 'throttle-debounce';
-import { nextTick, onActivated, onDeactivated, watch } from 'vue';
+import { nextTick, onActivated, onDeactivated, onUnmounted, watch } from 'vue';
 import type { Ref } from 'vue';
 
 // note render skippingがオンだとズレるため、遷移直前にスクロール範囲に表示されているdata-scroll-anchor要素を特定して、復元時に当該要素までスクロールするようにする
@@ -17,10 +17,11 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 	let anchorContainerLocalY = 0;
 	let savedScrollTop = 0;
 	let ready = true;
+	let restoreTimer: number | null = null;
 
 	watch(
 		scrollContainerRef,
-		(el) => {
+		(el, _oldEl, onCleanup) => {
 			if (!el) return;
 
 			const captureAnchor = () => {
@@ -54,10 +55,17 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 			// ほんとはscrollイベントじゃなくてonBeforeDeactivatedでやりたい
 			// https://github.com/vuejs/vue/issues/9454
 			// https://github.com/vuejs/rfcs/pull/284
-			el.addEventListener('scroll', throttle(1000, captureAnchor), { passive: true });
+			const throttledCaptureAnchor = throttle(1000, captureAnchor);
+			el.addEventListener('scroll', throttledCaptureAnchor, { passive: true });
 			// スクロール後すぐにクリックするとthrottleによりanchorIdが古いまま残るため、
 			// pointerdownで遷移直前のアンカーを同期的に取得する
 			el.addEventListener('pointerdown', captureAnchor, { passive: true });
+
+			onCleanup(() => {
+				throttledCaptureAnchor.cancel();
+				el.removeEventListener('scroll', throttledCaptureAnchor);
+				el.removeEventListener('pointerdown', captureAnchor);
+			});
 		},
 		{
 			immediate: true,
@@ -78,6 +86,10 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 	};
 
 	onDeactivated(() => {
+		if (restoreTimer != null) {
+			window.clearTimeout(restoreTimer);
+			restoreTimer = null;
+		}
 		const el = scrollContainerRef.value;
 		if (el) savedScrollTop = el.scrollTop;
 		ready = false;
@@ -87,7 +99,8 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 		restore();
 		nextTick(() => {
 			restore();
-			window.setTimeout(() => {
+			restoreTimer = window.setTimeout(() => {
+				restoreTimer = null;
 				restore();
 
 				// anchor方式が失敗した場合（anchorIdがnullまたは要素が見つからない場合）の
@@ -100,5 +113,9 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				ready = true;
 			}, 100);
 		});
+	});
+
+	onUnmounted(() => {
+		if (restoreTimer != null) window.clearTimeout(restoreTimer);
 	});
 }

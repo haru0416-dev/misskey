@@ -43,13 +43,10 @@ const pollingQueue = new Map<
 >();
 
 function pollingEnqueue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
-	if (pollingQueue.has(note.id)) {
-		const data = pollingQueue.get(note.id)!;
-		pollingQueue.set(note.id, {
-			...data,
-			referenceCount: data.referenceCount + 1,
-			lastAddedAt: Date.now(),
-		});
+	const data = pollingQueue.get(note.id);
+	if (data != null) {
+		data.referenceCount++;
+		data.lastAddedAt = Date.now();
 	} else {
 		pollingQueue.set(note.id, {
 			referenceCount: 1,
@@ -67,10 +64,7 @@ function pollingDequeue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
 		pollingQueue.delete(note.id);
 		if (pollingQueue.size === 0) pollingScheduler.stop();
 	} else {
-		pollingQueue.set(note.id, {
-			...data,
-			referenceCount: data.referenceCount - 1,
-		});
+		data.referenceCount--;
 	}
 }
 
@@ -114,7 +108,9 @@ function pollingSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cre
 
 	function onFetched(data: Pick<Misskey.entities.Note, 'reactions' | 'reactionEmojis'>): void {
 		$note.reactions = data.reactions;
-		$note.reactionCount = Object.values(data.reactions).reduce((a, b) => a + b, 0);
+		let reactionCount = 0;
+		for (const reaction in data.reactions) reactionCount += data.reactions[reaction] ?? 0;
+		$note.reactionCount = reactionCount;
 		$note.reactionEmojis = data.reactionEmojis;
 	}
 
@@ -212,20 +208,14 @@ export function useNoteCapture(props: {
 } {
 	const { note, parentNote, mock } = props;
 
+	const normalizedReactions: Misskey.entities.Note['reactions'] = {};
+	for (const name in note.reactions) {
+		const normalizedName = name.replace(/^:(\w+):$/, ':$1@.:');
+		normalizedReactions[normalizedName] = (normalizedReactions[normalizedName] ?? 0) + (note.reactions[name] ?? 0);
+	}
+
 	const $note = reactive<ReactiveNoteData>({
-		reactions: Object.entries(note.reactions).reduce(
-			(acc, [name, count]) => {
-				// Normalize reactions
-				const normalizedName = name.replace(/^:(\w+):$/, ':$1@.:');
-				if (acc[normalizedName] == null) {
-					acc[normalizedName] = count;
-				} else {
-					acc[normalizedName] += count;
-				}
-				return acc;
-			},
-			{} as Misskey.entities.Note['reactions'],
-		),
+		reactions: normalizedReactions,
 		reactionCount: note.reactionCount,
 		reactionEmojis: note.reactionEmojis,
 		myReaction: note.myReaction,
@@ -246,8 +236,8 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.match('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
-		if (reactionUserMap.has(ctx.userId) && reactionUserMap.get(ctx.userId) === normalizedName) return;
+		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
+		if (reactionUserMap.get(ctx.userId) === normalizedName) return;
 		reactionUserMap.set(ctx.userId, normalizedName);
 
 		if (ctx.emoji && !(ctx.emoji.name in $note.reactionEmojis)) {
@@ -270,10 +260,10 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.match('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
+		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
 
 		// 確実に一度リアクションされて取り消されている場合のみ処理をとめる（APIで初回読み込み→Streamでアップデート等の場合、reactionUserMapに情報がないため）
-		if (reactionUserMap.has(ctx.userId) && reactionUserMap.get(ctx.userId) === noReaction) return;
+		if (reactionUserMap.get(ctx.userId) === noReaction) return;
 		reactionUserMap.set(ctx.userId, noReaction);
 
 		const currentCount = $note.reactions[normalizedName] || 0;
