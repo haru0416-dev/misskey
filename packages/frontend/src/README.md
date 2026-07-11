@@ -34,6 +34,7 @@ components / composables / query / store
 - `utility/` から `features/` や `pages/` をimportしない。
 - feature固有のVue component、型、renderer、補助処理は同じfeature内に置く。
 - `components/` に置くのは、機能名を知らなくても利用できるUI部品だけにする。
+- `components/global/` はglobal component登録のadapter層なので、描画を委譲するfeatureをimportしてよい。featureのstateや業務処理は持たせない。
 - `pages/` は再利用ロジックの保管場所にせず、featureや共通層を組み立てる。
 - feature間の直接importは最小限にし、循環依存を作らない。
 - 動的importが必要なcomponentは、bundle分割を維持するためfeature内の実ファイルを直接指定してよい。

@@ -77,12 +77,12 @@ import MkAsUi from '@/components/MkAsUi.vue';
 import { registerAsUiLib } from '@/aiscript/ui.js';
 import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
 import MkFolder from '@/components/MkFolder.vue';
-import MkCode from '@/components/MkCode.vue';
+import MkCode from '@/features/code/components/MkCode.vue';
 import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
 import { isSupportShare } from '@/utility/navigator.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
-import { pleaseLogin } from '@/utility/please-login.js';
+import { pleaseLogin } from '@/features/auth/please-login.js';
 
 const props = defineProps<{
 	id: string;

@@ -5,7 +5,7 @@
 
 import { shallowRef, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import MkEmojiPickerDialog from '@/components/MkEmojiPickerDialog.vue';
+import MkEmojiPickerDialog from '@/features/emoji-picker/components/MkEmojiPickerDialog.vue';
 import { popup } from '@/os.js';
 import { prefer } from '@/preferences.js';
 

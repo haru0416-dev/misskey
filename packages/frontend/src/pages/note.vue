@@ -58,7 +58,7 @@ import { i18n } from '@/i18n.js';
 import { dateString } from '@/filters/date.js';
 import MkClipPreview from '@/components/MkClipPreview.vue';
 import { prefer } from '@/preferences.js';
-import { pleaseLogin } from '@/utility/please-login.js';
+import { pleaseLogin } from '@/features/auth/please-login.js';
 import { getAppearNote } from '@/utility/get-appear-note.js';
 import { serverContext, assertServerContext } from '@/server-context.js';
 import { $i } from '@/i.js';

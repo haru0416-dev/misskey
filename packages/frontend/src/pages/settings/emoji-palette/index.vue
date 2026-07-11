@@ -135,7 +135,7 @@ import MkFolder from '@/components/MkFolder.vue';
 import { prefer } from '@/preferences.js';
 import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
-import { emojiPicker } from '@/utility/emoji-picker.js';
+import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 
 const emojiPaletteForReaction = prefer.model('emojiPaletteForReaction');
 const emojiPaletteForReactionDef = computed<MkSelectItem[]>(() => [

@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, toRef, watch } from 'vue';
 import { bundledLanguagesInfo } from 'shiki/langs';
 import type { BundledLanguage } from 'shiki/langs';
-import { getHighlighter, getTheme } from '@/utility/code-highlighter.js';
+import { getHighlighter, getTheme } from '@/features/code/code-highlighter.js';
 import { store } from '@/store.js';
 
 const props = withDefaults(defineProps<{

@@ -142,7 +142,7 @@ import { deepClone } from '@/utility/clone.js';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import { isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
 import { claimAchievement } from '@/utility/claim-achievement.js';
-import { emojiPicker } from '@/utility/emoji-picker.js';
+import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { mfmFunctionPicker } from '@/utility/mfm-function-picker.js';
 import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';

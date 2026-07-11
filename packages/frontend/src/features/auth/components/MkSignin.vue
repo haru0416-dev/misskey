@@ -69,17 +69,17 @@ import { nextTick, onBeforeUnmount, ref, shallowRef, useTemplateRef } from 'vue'
 import * as Misskey from 'misskey-js';
 import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialRequestOptionsJSON, AuthenticationResponseJSON } from '@simplewebauthn/browser';
-import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
-import type { PwResponse } from '@/components/MkSignin.Password.vue';
+import type { OpenOnRemoteOptions } from '@/features/auth/please-login.js';
+import type { PwResponse } from '@/features/auth/components/MkSignin.Password.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { showSuspendedDialog } from '@/utility/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 
-import XInput from '@/components/MkSignin.Input.vue';
-import XPassword from '@/components/MkSignin.Password.vue';
-import XTotp from '@/components/MkSignin.Totp.vue';
-import XPasskey from '@/components/MkSignin.Passkey.vue';
+import XInput from '@/features/auth/components/MkSignin.Input.vue';
+import XPassword from '@/features/auth/components/MkSignin.Password.vue';
+import XTotp from '@/features/auth/components/MkSignin.Totp.vue';
+import XPasskey from '@/features/auth/components/MkSignin.Passkey.vue';
 import { login } from '@/accounts.js';
 
 const emit = defineEmits<{

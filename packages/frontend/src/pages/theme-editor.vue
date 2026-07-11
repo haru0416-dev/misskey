@@ -83,7 +83,7 @@ import { parseThemeCode } from '@shared/utility/theme.js';
 import type { Theme } from '@shared/utility/theme.js';
 import { genId } from '@/utility/id.js';
 import MkButton from '@/components/MkButton.vue';
-import MkCodeEditor from '@/components/MkCodeEditor.vue';
+import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkFolder from '@/components/MkFolder.vue';
 import { ensureSignin } from '@/i.js';

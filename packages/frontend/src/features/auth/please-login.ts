@@ -64,7 +64,7 @@ export async function pleaseLogin(
 	}
 
 	const { dispose } = await popupAsyncWithDialog(
-		import('@/components/MkSigninDialog.vue').then((x) => x.default),
+		import('@/features/auth/components/MkSigninDialog.vue').then((x) => x.default),
 		{
 			autoSet: true,
 			message: opts.message ?? (_openOnRemote ? i18n.ts.signinOrContinueOnRemote : i18n.ts.signinRequired),

@@ -172,9 +172,9 @@ import { i18n } from '@/i18n.js';
 import MkButton from '@/components/MkButton.vue';
 import MkTabs from '@/components/MkTabs.vue';
 import MkFolder from '@/components/MkFolder.vue';
-import MkCode from '@/components/MkCode.vue';
+import MkCode from '@/features/code/components/MkCode.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';
-import MkCodeEditor from '@/components/MkCodeEditor.vue';
+import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
 import MkTl from '@/components/MkTl.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 

@@ -130,7 +130,7 @@ import type {
 	UnicodeEmojiDef,
 	CustomEmojiFolderTree,
 } from '@shared/utility/emojilist.js';
-import XSection from '@/components/MkEmojiPicker.Section.vue';
+import XSection from '@/features/emoji-picker/components/MkEmojiPicker.Section.vue';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import * as os from '@/os.js';
 import { isTouchUsing } from '@/utility/touch.js';

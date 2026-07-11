@@ -44,7 +44,7 @@ async function save() {
 
 onMounted(async () => {
 	if (props.token == null) {
-		const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkForgotPassword.vue').then(x => x.default), {}, {
+		const { dispose } = await os.popupAsyncWithDialog(import('@/features/auth/components/MkForgotPassword.vue').then(x => x.default), {}, {
 			closed: () => dispose(),
 		});
 		mainRouter.push('/');

@@ -19,7 +19,7 @@ import type { OptionValue } from '@/types/option-value.js';
 import type { MkDialogReturnType } from '@/components/MkDialog.vue';
 import type { OverloadToUnion } from '@/types/overload-to-union.js';
 import type MkRoleSelectDialog_TypeReferenceOnly from '@/components/MkRoleSelectDialog.vue';
-import type MkEmojiPickerDialog_TypeReferenceOnly from '@/components/MkEmojiPickerDialog.vue';
+import type MkEmojiPickerDialog_TypeReferenceOnly from '@/features/emoji-picker/components/MkEmojiPickerDialog.vue';
 import type MkPopupMenu_TypeReferenceOnly from '@/components/MkPopupMenu.vue';
 import type MkContextMenu_TypeReferenceOnly from '@/components/MkContextMenu.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -32,7 +32,7 @@ import MkWaitingDialog from '@/components/MkWaitingDialog.vue';
 import MkToast from '@/components/MkToast.vue';
 import MkDialog from '@/components/MkDialog.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
-import { pleaseLogin } from '@/utility/please-login.js';
+import { pleaseLogin } from '@/features/auth/please-login.js';
 import { showMovedDialog } from '@/utility/show-moved-dialog.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { focusParent } from '@/utility/focus.js';
@@ -41,7 +41,7 @@ const MkPasswordDialog = defineAsyncComponent(() => import('@/components/MkPassw
 const MkFormDialog = defineAsyncComponent(() => import('@/components/MkFormDialog.vue'));
 const MkUserSelectDialog = defineAsyncComponent(() => import('@/components/MkUserSelectDialog.vue'));
 const MkRoleSelectDialog = defineAsyncComponent(() => import('@/components/MkRoleSelectDialog.vue'));
-const MkEmojiPickerDialog = defineAsyncComponent(() => import('@/components/MkEmojiPickerDialog.vue'));
+const MkEmojiPickerDialog = defineAsyncComponent(() => import('@/features/emoji-picker/components/MkEmojiPickerDialog.vue'));
 const MkCropperDialog = defineAsyncComponent(() => import('@/components/MkCropperDialog.vue'));
 
 export const openingWindowsCount = ref(0);

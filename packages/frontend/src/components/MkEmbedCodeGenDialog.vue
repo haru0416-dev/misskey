@@ -95,7 +95,7 @@ import MkInput from '@/components/MkInput.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import MkButton from '@/components/MkButton.vue';
-import MkCode from '@/components/MkCode.vue';
+import MkCode from '@/features/code/components/MkCode.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import { i18n } from '@/i18n.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';

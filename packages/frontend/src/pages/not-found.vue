@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed } from 'vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { pleaseLogin } from '@/utility/please-login.js';
+import { pleaseLogin } from '@/features/auth/please-login.js';
 
 const props = defineProps<{
 	showLoginPopup?: boolean;

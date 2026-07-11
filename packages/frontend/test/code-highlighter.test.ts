@@ -32,7 +32,7 @@ describe('getHighlighter', () => {
 	test('shares initialization between concurrent callers', async () => {
 		const highlighter = {};
 		createHighlighterCore.mockResolvedValue(highlighter);
-		const { getHighlighter } = await import('@/utility/code-highlighter.js');
+		const { getHighlighter } = await import('@/features/code/code-highlighter.js');
 
 		const [first, second] = await Promise.all([getHighlighter(), getHighlighter()]);
 

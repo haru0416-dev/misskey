@@ -47,7 +47,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkTextarea from '@/components/MkTextarea.vue';
-import MkCodeEditor from '@/components/MkCodeEditor.vue';
+import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';

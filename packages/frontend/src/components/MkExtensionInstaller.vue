@@ -128,7 +128,7 @@ export type Extension = {
 import { computed } from 'vue';
 import MkButton from '@/components/MkButton.vue';
 import FormSplit from '@/components/form/split.vue';
-import MkCode from '@/components/MkCode.vue';
+import MkCode from '@/features/code/components/MkCode.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import MkFolder from '@/components/MkFolder.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';

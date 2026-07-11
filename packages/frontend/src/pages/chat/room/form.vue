@@ -44,7 +44,7 @@ import { isJsonObject, miLocalStorage } from '@/local-storage.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
 import { Autocomplete } from '@/utility/autocomplete.js';
-import { emojiPicker } from '@/utility/emoji-picker.js';
+import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
 
 const props = defineProps<{

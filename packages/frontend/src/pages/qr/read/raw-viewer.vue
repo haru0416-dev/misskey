@@ -40,7 +40,7 @@ import * as mfm from 'mfm-js';
 import MkFolder from '@/components/MkFolder.vue';
 import MkTabs from '@/components/MkTabs.vue';
 import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm';
-import MkCode from '@/components/MkCode.vue';
+import MkCode from '@/features/code/components/MkCode.vue';
 import MkUrlPreview from '@/components/MkUrlPreview.vue';
 import { i18n } from '@/i18n.js';
 

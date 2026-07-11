@@ -43,7 +43,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
 import { claimAchievement } from '@/utility/claim-achievement.js';
-import { pleaseLogin } from '@/utility/please-login.js';
+import { pleaseLogin } from '@/features/auth/please-login.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
 

@@ -30,9 +30,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { host } from '@shared/utility/config.js';
-import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
+import type { OpenOnRemoteOptions } from '@/features/auth/please-login.js';
 import { sum } from '@/utility/array.js';
-import { pleaseLogin } from '@/utility/please-login.js';
+import { pleaseLogin } from '@/features/auth/please-login.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';

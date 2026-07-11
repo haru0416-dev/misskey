@@ -12,9 +12,9 @@ import lightTheme from '@shared/themes/_light.json5';
 import darkTheme from '@shared/themes/_dark.json5';
 import defaultLightTheme from '@shared/themes/l-light.json5';
 import defaultDarkTheme from '@shared/themes/d-green-lime.json5';
-import { unique } from './array.js';
-import { deepClone } from './clone.js';
-import { deepMerge } from './merge.js';
+import { unique } from '@/utility/array.js';
+import { deepClone } from '@/utility/clone.js';
+import { deepMerge } from '@/utility/merge.js';
 import type { HighlighterCore, LanguageRegistration, ThemeRegistration, ThemeRegistrationRaw } from 'shiki/core';
 import { prefer } from '@/preferences.js';
 

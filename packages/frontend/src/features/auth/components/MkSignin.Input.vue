@@ -58,7 +58,7 @@ import { toUnicode } from 'punycode.js';
 
 import { query, extractDomain } from '@shared/utility/url.js';
 import { host as configHost } from '@shared/utility/config.js';
-import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
+import type { OpenOnRemoteOptions } from '@/features/auth/please-login.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 
