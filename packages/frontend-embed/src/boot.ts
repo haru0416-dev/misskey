@@ -18,7 +18,8 @@ import defaultLightTheme from '@shared/themes/l-light.json5';
 import defaultDarkTheme from '@shared/themes/d-dark.json5';
 import { MediaProxy } from '@shared/utility/media-proxy.js';
 import { storeBootloaderErrors } from '@shared/utility/store-boot-errors';
-import { applyTheme, assertIsTheme } from '@/theme.js';
+import { parseThemeOrNull } from '@shared/utility/theme.js';
+import { applyTheme } from '@/theme.js';
 import { fetchCustomEmojis } from '@/custom-emojis.js';
 import { DI } from '@/di.js';
 import { serverMetadata } from '@/server-metadata.js';
@@ -27,8 +28,6 @@ import { parseEmbedParams } from '@shared/utility/embed-page.js';
 import { postMessageToParentWindow, setIframeId } from '@/post-message.js';
 import { serverContext } from '@/server-context.js';
 import { i18n } from '@/i18n.js';
-
-import type { Theme } from '@shared/utility/theme.js';
 
 console.log('Misskey Embed');
 
@@ -39,20 +38,6 @@ if (_DEV_) console.log(embedParams);
 //#endregion
 
 //#region テーマ
-function parseThemeOrNull(theme: string | null): Theme | null {
-	if (theme == null) return null;
-	try {
-		const parsed = JSON.parse(theme);
-		if (assertIsTheme(parsed)) {
-			return parsed;
-		} else {
-			return null;
-		}
-	} catch (err) {
-		return null;
-	}
-}
-
 const lightTheme = parseThemeOrNull(serverMetadata.defaultLightTheme) ?? defaultLightTheme;
 const darkTheme = parseThemeOrNull(serverMetadata.defaultDarkTheme) ?? defaultDarkTheme;
 

@@ -79,6 +79,7 @@ import JSON5 from 'json5';
 import lightTheme from '@shared/themes/_light.json5';
 import darkTheme from '@shared/themes/_dark.json5';
 import { host } from '@shared/utility/config.js';
+import { parseThemeCode } from '@shared/utility/theme.js';
 import type { Theme } from '@shared/utility/theme.js';
 import { genId } from '@/utility/id.js';
 import MkButton from '@/components/MkButton.vue';
@@ -176,19 +177,14 @@ function apply() {
 }
 
 function applyThemeCode() {
-	let parsed;
-
 	try {
-		parsed = JSON5.parse(themeCode.value);
-	} catch (err) {
+		theme.value = parseThemeCode(themeCode.value);
+	} catch {
 		os.alert({
 			type: 'error',
 			text: i18n.ts._theme.invalid,
 		});
-		return;
 	}
-
-	theme.value = parsed;
 }
 
 async function saveAs() {
