@@ -6,7 +6,6 @@
 import type { JsonValue } from '@/misc/json-value.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
-/** AdminChannel 相当。 */
 export const honoStreamChannelAdmin: HonoStreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: true,

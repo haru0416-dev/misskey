@@ -212,7 +212,6 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 	return { authUser, activity };
 }
 
-/** InboxProcessorService.process 相当。 */
 export async function handleHonoQueueInbox(deps: HonoQueueInboxDependencies, job: Bull.Job<InboxJobData>): Promise<string> {
 	const host = toPuny(new URL(job.data.signature.keyId).hostname);
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
@@ -231,7 +230,6 @@ export async function handleHonoQueueInbox(deps: HonoQueueInboxDependencies, job
 	void deps.chartWriters.apRequestChart.inbox();
 	void deps.chartWriters.federationChart.inbox(authUser.user.host!);
 
-	// Update instance stats
 	process.nextTick(async () => {
 		const i = deps.meta.enableStatsForFederatedInstances
 			? await fetchOrRegisterFederatedInstance(deps, authUser.user.host!)

@@ -8,7 +8,6 @@ import type { Packed } from '@/misc/json-schema.js';
 import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
 import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
-/** HomeTimelineChannel 相当。 */
 export const honoStreamChannelHomeTimeline: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: true,

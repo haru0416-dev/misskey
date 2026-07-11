@@ -10,13 +10,11 @@ import type { Packed } from '@/misc/json-schema.js';
 import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
 import { isNoteMutedOrBlockedForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
-/** RoleService.isExplorable 相当。 */
 async function isRoleExplorableForHonoStream(deps: { db: HonoApiNoteDependencies['db'] }, roleId: string): Promise<boolean> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, roleId);
 	return role?.isExplorable ?? false;
 }
 
-/** RoleTimelineChannel 相当。 */
 export const honoStreamChannelRoleTimeline: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,

@@ -54,7 +54,6 @@ function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 	return blockedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
-/** FanoutTimelineService.getMulti 相当。 */
 async function getMultiFromRedis(redisForTimelines: Redis.Redis, names: string[], untilId?: string | null, sinceId?: string | null): Promise<string[][]> {
 	const pipeline = redisForTimelines.pipeline();
 	for (const name of names) {

@@ -62,7 +62,6 @@ export type HonoApiApNoteDependencies = HonoApiApPersonDependencies & HonoApiApR
 	publishNoteStream?: HonoApiNoteStreamPublisher;
 };
 
-/** ApNoteService.validateNote 相当。 */
 function validateNoteForHonoApi(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
 	const expectHost = extractDbHost(uri);
 	const apType = (x as { type?: string }).type;
@@ -94,7 +93,6 @@ function validateNoteForHonoApi(x: IObject, uri: string, actor?: MiRemoteUser): 
 	return null;
 }
 
-/** ApAudienceService.parseAudience 相当。 */
 export async function parseAudienceForHonoApi(
 	deps: HonoApiApNoteDependencies,
 	actor: MiRemoteUser,
@@ -132,13 +130,11 @@ export async function parseAudienceForHonoApi(
 	return { visibility: 'specified', visibleUsers: mentionedUsers };
 }
 
-/** ApMentionService.extractApMentionObjects 相当。 */
 function extractApMentionObjectsForHonoApi(tags: IObject | IObject[] | null | undefined): IApMention[] {
 	if (tags == null) return [];
 	return toArray(tags).filter(isMention);
 }
 
-/** ApMentionService.extractApMentions 相当。 */
 async function extractApMentionsForHonoApi(deps: HonoApiApNoteDependencies, tags: IObject | IObject[] | null | undefined, history: Set<string>): Promise<MiUser[]> {
 	const hrefs = unique(extractApMentionObjectsForHonoApi(tags).map(x => x.href));
 	const limit = promiseLimit<MiUser | null>(2);
@@ -147,7 +143,6 @@ async function extractApMentionsForHonoApi(deps: HonoApiApNoteDependencies, tags
 	)).filter((x): x is MiUser => x != null);
 }
 
-/** ApQuestionService.extractPollFromQuestion 相当。 */
 async function extractPollFromQuestionForHonoApi(deps: HonoApiApNoteDependencies, source: string | IObject, history: Set<string>): Promise<IPoll> {
 	const question = await resolveApObjectForHonoApi(deps, source, FetchAllowSoftFailMask.Strict, history);
 	if (!isQuestion(question)) throw new Error('invalid type');
@@ -400,7 +395,6 @@ export async function createNoteFromApForHonoApi(
 	}
 }
 
-/** ApNoteService.resolveNote 相当。 */
 export async function resolveNoteForHonoApi(
 	deps: HonoApiApNoteDependencies,
 	value: string | IObject,

@@ -13,7 +13,5 @@ export class MiPromoNote {
 
 	public expiresAt: Date;
 
-	//#region Denormalized fields
 	public userId: MiUser['id'];
-	//#endregion
 }

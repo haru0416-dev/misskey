@@ -187,7 +187,6 @@ export async function updateFederatedInstanceCache(
 	);
 }
 
-/** FederatedInstanceService.fetchOrRegister() 相当。 */
 export async function fetchOrRegisterFederatedInstance(
 	deps: FederatedInstanceCacheDependencies,
 	host: string,

@@ -15,7 +15,6 @@ import {
 
 export type HonoQueuePostScheduledNoteDependencies = HonoApiNotesCreateDependencies & HonoApiNotificationDependencies;
 
-/** PostScheduledNoteProcessorService.process 相当。 */
 export async function handleHonoQueuePostScheduledNote(
 	deps: HonoQueuePostScheduledNoteDependencies,
 	job: Bull.Job<PostScheduledNoteJobData>,

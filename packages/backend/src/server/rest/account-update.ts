@@ -541,7 +541,6 @@ export async function handleHonoApiIUpdate(
 		updates.alsoKnownAs = newAlsoKnownAs.size > 0 ? Array.from(newAlsoKnownAs).join(',') : null;
 	}
 
-	//#region emojis/tags
 
 	let emojis: string[] = [];
 	let tags: string[] = [];
@@ -587,7 +586,6 @@ export async function handleHonoApiIUpdate(
 
 	// ハッシュタグ更新 (ランキング更新 (Redis) 込み)
 	void updateUsertagsForHonoApi(deps, user, tags).catch(() => {});
-	//#endregion
 
 	if (Object.keys(updates).length > 0) {
 		await updateUserInDatabase(deps.db, user.id, updates);
@@ -604,7 +602,6 @@ export async function handleHonoApiIUpdate(
 
 	const updatedProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
-	// Publish meUpdated event
 	deps.publishMainStream?.(user.id, 'meUpdated', iObj);
 
 	// 鍵垢を解除したとき、溜まっていたフォローリクエストがあるならすべて承認

@@ -23,32 +23,24 @@ EventEmitter.defaultMaxListeners = 128;
 
 const logger = new Logger('core', 'cyan');
 const clusterLogger = logger.createSubLogger('cluster', 'orange');
-//#region Events
 
-// Listen new workers
 cluster.on('fork', worker => {
 	clusterLogger.debug(`Process forked: [${worker.id}]`);
 });
 
-// Listen online workers
 cluster.on('online', worker => {
 	clusterLogger.debug(`Process is now online: [${worker.id}]`);
 });
 
-// Listen for dying workers
 cluster.on('exit', worker => {
-	// Replace the dead worker,
-	// we're not sentimental
 	clusterLogger.error(chalk.red(`[${worker.id}] died :(`));
 	cluster.fork();
 });
 
-// Display detail of unhandled promise rejection
 if (!envOption.quiet) {
 	process.on('unhandledRejection', console.dir);
 }
 
-// Display detail of uncaught exception
 process.on('uncaughtException', err => {
 	try {
 		logger.error(err);
@@ -56,12 +48,10 @@ process.on('uncaughtException', err => {
 	} catch { }
 });
 
-// Dying away...
 process.on('exit', code => {
 	logger.info(`The process is going to exit with code ${code}`);
 });
 
-//#endregion
 
 if (!envOption.disableClustering) {
 	if (cluster.isPrimary) {
