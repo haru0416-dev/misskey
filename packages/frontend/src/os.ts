@@ -13,7 +13,7 @@ import type { Form, GetFormResultType } from '@/utility/form.js';
 import type { ComponentProps } from '@/utility/component-props.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { PostFormProps } from '@/types/post-form.js';
-import type { UploaderFeatures } from '@/composables/useUploader.js';
+import type { UploaderFeatures } from '@/features/drive/useUploader.js';
 import type { MkSelectItem } from '@/components/MkSelect.vue';
 import type { OptionValue } from '@/types/option-value.js';
 import type { MkDialogReturnType } from '@/components/MkDialog.vue';
@@ -936,7 +936,7 @@ export async function launchUploader(
 		if (files.length === 0) return rej();
 		let dispose: () => void;
 		popupAsyncWithDialog(
-			import('@/components/MkUploaderDialog.vue').then((x) => x.default),
+			import('@/features/drive/components/MkUploaderDialog.vue').then((x) => x.default),
 			{
 				files: markRaw(files),
 				folderId: options?.folderId,

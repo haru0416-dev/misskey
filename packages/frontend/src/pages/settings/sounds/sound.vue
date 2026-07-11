@@ -41,7 +41,7 @@ import * as os from '@/os.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { playMisskeySfxFile, soundsTypes, getSoundDuration } from '@/utility/sound.js';
-import { selectFile } from '@/utility/drive.js';
+import { selectFile } from '@/features/drive/drive.js';
 
 const props = defineProps<{
 	def: SoundStore;

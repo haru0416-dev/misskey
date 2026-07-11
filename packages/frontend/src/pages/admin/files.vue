@@ -34,7 +34,7 @@ import { computed, markRaw, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkInput from '@/components/MkInput.vue';
 import MkSelect from '@/components/MkSelect.vue';
-import MkFileListForAdmin from '@/components/MkFileListForAdmin.vue';
+import MkFileListForAdmin from '@/features/drive/components/MkFileListForAdmin.vue';
 import * as os from '@/os.js';
 import { lookupFile } from '@/utility/admin-lookup.js';
 import { i18n } from '@/i18n.js';

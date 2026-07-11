@@ -69,7 +69,7 @@ import MkSwitch from '@/components/MkSwitch.vue';
 import MkInput from '@/components/MkInput.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { selectFile } from '@/utility/drive.js';
+import { selectFile } from '@/features/drive/drive.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { $i } from '@/i.js';

@@ -86,7 +86,7 @@ import * as Misskey from 'misskey-js';
 import MkButton from '@/components/MkButton.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import MkObjectView from '@/components/MkObjectView.vue';
-import MkDriveFileThumbnail from '@/components/MkDriveFileThumbnail.vue';
+import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';
 import FormSection from '@/components/form/section.vue';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';

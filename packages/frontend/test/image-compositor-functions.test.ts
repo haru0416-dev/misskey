@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import { fn as blockNoise } from '@/utility/image-compositor-functions/blockNoise.js';
-import { fn as tearing } from '@/utility/image-compositor-functions/tearing.js';
+import { fn as blockNoise } from '@/features/image-editor/effects/blockNoise.js';
+import { fn as tearing } from '@/features/image-editor/effects/tearing.js';
 
 describe('image compositor functions', () => {
 	test('cache dynamic array uniform locations per program', () => {

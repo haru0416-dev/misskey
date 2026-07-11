@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { flattenDroppedFiles } from '@/utility/file-drop.js';
-import type { DroppedDirectory, DroppedFile } from '@/utility/file-drop.js';
+import { flattenDroppedFiles } from '@/features/drive/file-drop.js';
+import type { DroppedDirectory, DroppedFile } from '@/features/drive/file-drop.js';
 
 function droppedFile(path: string): DroppedFile {
 	return { isFile: true, path, file: {} as File };

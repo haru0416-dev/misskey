@@ -109,7 +109,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
 import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
-import { selectFile } from '@/utility/drive.js';
+import { selectFile } from '@/features/drive/drive.js';
 import { suggestReload } from '@/utility/reload-suggest.js';
 
 const navWindow = prefer.model('deck.navWindow');

@@ -29,7 +29,7 @@ export function useForm<T extends Record<string, any>>(initialState: T, save: (n
 			}
 			return obj;
 		})(),
-	);
+	) as Record<keyof T, boolean>;
 	const modifiedCount = computed(() => {
 		let count = 0;
 		for (const key in modifiedStates) {

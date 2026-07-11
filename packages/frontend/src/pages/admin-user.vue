@@ -221,7 +221,7 @@ import MkButton from '@/components/MkButton.vue';
 import MkFolder from '@/components/MkFolder.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';
 import MkSelect from '@/components/MkSelect.vue';
-import MkFileListForAdmin from '@/components/MkFileListForAdmin.vue';
+import MkFileListForAdmin from '@/features/drive/components/MkFileListForAdmin.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

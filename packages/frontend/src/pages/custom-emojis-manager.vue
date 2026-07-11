@@ -79,7 +79,7 @@ import MkPagination from '@/components/MkPagination.vue';
 import MkRemoteEmojiEditDialog from '@/components/MkRemoteEmojiEditDialog.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import FormSplit from '@/components/form/split.vue';
-import { selectFile } from '@/utility/drive.js';
+import { selectFile } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { getProxiedImageUrl } from '@/utility/media-proxy.js';

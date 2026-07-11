@@ -44,7 +44,7 @@ import { inject } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { MenuItem } from '@/types/menu';
 import { copyToClipboard } from '@/utility/copy-to-clipboard';
-import MkDriveFileThumbnail from '@/components/MkDriveFileThumbnail.vue';
+import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import MkDraggable from '@/components/MkDraggable.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -132,7 +132,7 @@ async function rename(file: Misskey.entities.DriveFile) {
 async function describe(file: Misskey.entities.DriveFile) {
 	if (mock) return;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/drive/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
 		default: file.comment !== null ? file.comment : '',
 		file: file,
 	}, {

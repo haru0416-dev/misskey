@@ -80,7 +80,7 @@ import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useRouter } from '@/router.js';
-import { selectDriveFolder } from '@/utility/drive.js';
+import { selectDriveFolder } from '@/features/drive/drive.js';
 import { globalEvents } from '@/events.js';
 
 const router = useRouter();
@@ -184,7 +184,7 @@ async function describe() {
 
 	const f = file.value;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/drive/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
 		default: file.value.comment ?? '',
 		file: file.value,
 	}, {

@@ -54,14 +54,14 @@ import type { StyleValue } from 'vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkPagination from '@/components/MkPagination.vue';
-import MkDriveFileThumbnail from '@/components/MkDriveFileThumbnail.vue';
+import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import { i18n } from '@/i18n.js';
 import bytes from '@/filters/bytes.js';
 import { definePage } from '@/page.js';
 import MkSelect from '@/components/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { useGlobalEvent } from '@/events.js';
-import { getDriveFileMenu } from '@/utility/get-drive-file-menu.js';
+import { getDriveFileMenu } from '@/features/drive/get-drive-file-menu.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const sortMode = ref<Misskey.entities.DriveFilesRequest['sort']>('+size');

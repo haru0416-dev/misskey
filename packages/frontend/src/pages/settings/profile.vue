@@ -173,7 +173,7 @@ import MkFolder from '@/components/MkFolder.vue';
 import FormSlot from '@/components/form/slot.vue';
 import FormLink from '@/components/form/link.vue';
 import MkDraggable from '@/components/MkDraggable.vue';
-import { chooseDriveFile } from '@/utility/drive.js';
+import { chooseDriveFile } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';

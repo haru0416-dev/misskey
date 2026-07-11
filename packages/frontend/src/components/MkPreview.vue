@@ -37,7 +37,7 @@ import MkInput from '@/components/MkInput.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';
-import { chooseDriveFile } from '@/utility/drive.js';
+import { chooseDriveFile } from '@/features/drive/drive.js';
 
 const text = ref('');
 const flag = ref(true);

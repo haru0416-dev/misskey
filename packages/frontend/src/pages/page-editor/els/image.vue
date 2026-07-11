@@ -24,10 +24,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XContainer from '../container.vue';
-import MkDriveFileThumbnail from '@/components/MkDriveFileThumbnail.vue';
+import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { chooseDriveFile } from '@/utility/drive.js';
+import { chooseDriveFile } from '@/features/drive/drive.js';
 
 const props = defineProps<{
 	dragStartCallback?: (ev: DragEvent) => void;

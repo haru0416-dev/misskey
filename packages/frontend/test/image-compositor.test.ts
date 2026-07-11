@@ -15,7 +15,7 @@ vi.mock('@/utility/webgl.js', () => ({
 	initShaderProgram: initShaderProgramMock,
 }));
 
-import { ImageCompositor } from '@/lib/ImageCompositor.js';
+import { ImageCompositor } from '@/features/image-editor/core/ImageCompositor.js';
 
 function createGl(): WebGL2RenderingContext {
 	return {

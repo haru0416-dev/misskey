@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkDrive from '@/components/MkDrive.vue';
+import MkDrive from '@/features/drive/components/MkDrive.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { useScrollPositionKeeper } from '@/composables/useScrollPositionKeeper.js';

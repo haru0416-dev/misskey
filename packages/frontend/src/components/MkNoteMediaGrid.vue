@@ -48,7 +48,7 @@ import { prefer } from '@/preferences.js';
 import { shouldHideFileByDefault, canRevealFile } from '@/utility/sensitive-file.js';
 import bytes from '@/filters/bytes.js';
 
-import MkDriveFileThumbnail from '@/components/MkDriveFileThumbnail.vue';
+import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 
 defineProps<{
 	note: Misskey.entities.Note;
