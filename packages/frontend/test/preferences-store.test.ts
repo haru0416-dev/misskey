@@ -70,6 +70,17 @@ describe('preferences profile validation', () => {
 });
 
 describe('Pinia preferences store', () => {
+	test('uses backward-compatible defaults for the new display and draft preferences', async () => {
+		const fixture = createStorageProvider();
+		const store = createPreferencesStore(fixture.provider, null, createPinia());
+		await store.$preferencesCloudReady;
+
+		expect(store.draftRestoreMode).toBe('always');
+		expect(store.instanceTickerDisplay).toBe('normal');
+		expect(store.searchEngine).toBe('google');
+		expect(store.menu).toContain('quickSettings');
+	});
+
 	test('selects the account-scoped value during initialization', async () => {
 		const fixture = createStorageProvider({
 			profile: createProfile({

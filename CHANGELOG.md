@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### General
+- Enhance: ノート翻訳サービスとしてセルフホスト可能なLibreTranslateに対応
 - Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除
 - Enhance: ゲーム機能を削除
 - Enhance: フロントエンド/ビルドツール周辺の未使用依存パッケージ19個を削除 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
@@ -23,12 +24,21 @@
 - Fix: misskey-jsのストリーミング接続を複数回disposeすると共有接続が解放されなくなる問題を修正
 
 ### Client
+
+- Enhance: プロフィール設定から自分のアイコン画像・バナー画像を削除できるように
+- Enhance: 右横書き・双方向テキストを含むノート本文の表示を改善
+- Enhance: MFMの検索フォームで使用する検索エンジンを選べるように
+- Enhance: ノート詳細画面で親ノートを折りたためるように
+- Enhance: 管理画面から新規登録のレート制限を調整できるように
+- Enhance: タイムラインとデッキで画像・動画をグリッド表示するメディアタイムラインを追加
+- Enhance: 通知を個別に非表示にできるように
+- Enhance: ノート検索で添付ファイル、センシティブファイル、返信、引用、CW、公開範囲による絞り込みに対応
 - Enhance: Paginator のカーソル計算・重複排除・リアクティビティを最適化し、重複取得と古いリクエストの競合を抑制
 - Enhance: TanStack Query を導入し、主要な参照APIと共有キャッシュの重複取得・無効化・Streaming同期を統合
 - Enhance: クライアントの状態・設定管理を Pinia ベースへ移行し、永続化書き込みのバッチ化とアカウント単位のタブ間同期を改善
 - Enhance: 旧 `/authorize-follow` と Mastodon 互換の `/authorize_interaction` リダイレクト、未使用の LocalStorage 絵文字キャッシュキー、旧カスタムテーマの `kind` フィールド互換、非推奨の `i18n.t()` API を削除。リモートログイン時は `/lookup?uri=` を使用
 - Enhance: タイムライン等の画像をビューポート近傍まで読み込まないように変更 (IntersectionObserver による自前遅延読み込みを導入。あわせて、同一URLの画像がページ内の別要素で既にブラウザキャッシュ済みの場合に `load` イベントが発火せずBlurhashプレースホルダーのまま表示が固まる問題を修正)
-- Enhance: 管理画面・アクティビティページ等19箇所で個別に読み込まれていた chart.js 本体とプラグイン群を専用の共有チャンクに分離 (該当ページのコード変更でキャッシュが無効化されるのを防止)
+- Enhance: 管理画面・アクティビティページのグラフをEChartsベースへ刷新し、要約値・系列切替・詳細表・空データ表示・キーボード操作に対応
 - Enhance: Service Worker のバンドルサイズを46%削減 (30.2KB→16.3KB minified)。SWでは使用しないWebSocketストリーミング系コードが `misskey-js` の全体importで混入していたのを、subpath import + type-only import に分離して排除
 - Enhance: ストリーミングのメッセージ受信処理を高速化 (misskey-js のチャンネル振り分けを受信毎の線形探索+配列生成から Map による O(1) 参照に変更。接続チャンネル数が多いほど効果大)
 - Enhance: ストリーミングの自動再接続処理を内製化し、2020年から未メンテの `reconnecting-websocket` 依存を削除 (指数バックオフ・接続タイムアウト・未接続時の送信バッファリングなど従来挙動を維持、再接続の回帰テストを追加)
@@ -82,8 +92,19 @@
 - Fix: 破損したアカウント情報・設定プロファイルによりクライアントが起動できなくなる問題を修正し、設定のインポート・クラウド復元時の検証を追加
 - Fix: 不正なドラッグデータでドロップ操作が失敗する問題と、対象データ形式が先頭にない場合にドロップできない問題を修正
 - Fix: ファイルアップロード時に不正なレスポンスを受信すると処理が完了しない問題を修正
+- Enhance: 付箋ウィジェットを個別に保存してタイトルを設定できるようにし、RSSウィジェットのタイトル変更に対応
+- Enhance: 投稿フォームの下書き復元方針と、インスタンスティッカーの表示形式を選択できるように
+- Enhance: データセーバーやセンシティブメディア表示、UIアニメーションを切り替えるクイック設定を追加
+- Fix: 開発環境で更新前の翻訳キャッシュにより画面表示が壊れる問題を修正
 
 ### Server
+
+- Fix: NestJS廃止後にChart集計などの定期systemジョブが登録されなくなっていた問題を修正
+
+- Enhance: アンテナのユーザー指定で `*@example.com` によるサーバー全体の指定に対応
+- Enhance: 新規登録にIP単位の最短間隔・時間あたり件数制限を追加
+- Enhance: 通知を本人のタイムラインから個別に削除する `notifications/delete` APIを追加
+- Enhance: `notes/search` APIに添付ファイル、センシティブファイル、返信、引用、CW、公開範囲のフィルターを追加
 - Enhance: 旧音声 MIME エイリアス (`audio/x-flac` / `audio/vnd.wave`)、OStatus の WebFinger subscribe リンク、`channels/timeline` の未使用 `allowPartial` パラメータを削除
 - Enhance: `notes/reactions`/`users/reactions` と `i/favorites`、通知、ノート下書き/Pages/Gallery/Play/Clips/Chat/ブロック/ミュート/ロール/ユーザー詳細/ユーザーリスト/管理ユーザー一覧の pack 処理をバッチ化し、一覧取得時のDBアクセスを削減
 - Enhance: ドライブファイルの詳細 pack と管理ドライブのファイル一覧でフォルダ詳細の pack 処理をバッチ化し、フォルダ数・ファイル数集計のDBアクセスを削減
@@ -180,6 +201,7 @@
 - Enhance: REST API のリクエストパラメータ検証を `ajv` (JSON Schema) から `Zod` に全面移行し、本番依存から `ajv` を除去。あわせて `users/show`/`notes/create` の OpenAPI 仕様生成 (misskey-js 型生成) を Zod スキーマ由来に統一し、これまで独立して二重管理されていたパラメータ定義の重複を解消
 - Enhance: ID生成方式を `uuidv7` 固定に簡素化し、設定ファイルの `id` 項目 (aid/aidx/meid/meidg/objectid/ulid の選択) を削除。本フォークは常に `uuidv7` のみを使用していたための整理
 - Enhance: 連合インスタンスのメタデータ更新時に旧形式のRedisロックキーを毎回削除していた移行処理を除去
+- Fix: ActivityPub Actorにアカウント作成日時が含まれない問題を修正
 
 ## 2026.6.1
 

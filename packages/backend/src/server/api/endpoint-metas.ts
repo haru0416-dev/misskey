@@ -395,6 +395,7 @@ export const endpointMetas = {
 	'notes/unrenote': notesMetas['notes/unrenote'],
 	'notes/user-list-timeline': notesMetas['notes/user-list-timeline'],
 	'notifications/create': miscMetas['notifications/create'],
+	'notifications/delete': miscMetas['notifications/delete'],
 	'notifications/flush': miscMetas['notifications/flush'],
 	'notifications/mark-all-as-read': miscMetas['notifications/mark-all-as-read'],
 	'notifications/test-notification': miscMetas['notifications/test-notification'],

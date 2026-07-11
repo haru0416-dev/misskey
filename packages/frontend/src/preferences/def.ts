@@ -18,6 +18,7 @@ import type { ImageFramePreset } from '@/utility/image-frame-renderer/ImageFrame
 import { genId } from '@/utility/id.js';
 import { DEFAULT_DEVICE_KIND } from '@/utility/device-kind.js';
 import { deepEqual } from '@/utility/deep-equal.js';
+import type { SearchEngine } from '@/utility/search-engine.js';
 
 /** サウンド設定 */
 export type SoundStore =
@@ -166,6 +167,9 @@ export const PREF_DEF = definePreferences({
 	overridedDeviceKind: {
 		default: null as DeviceKind | null,
 	},
+	searchEngine: {
+		default: 'google' as SearchEngine,
+	},
 	themes: {
 		default: [] as Theme[],
 		mergeStrategy: (a, b) => {
@@ -227,6 +231,7 @@ export const PREF_DEF = definePreferences({
 			'channels',
 			'search',
 			'-',
+			'quickSettings',
 			'ui',
 		],
 	},
@@ -290,6 +295,9 @@ export const PREF_DEF = definePreferences({
 	showFixedPostFormInChannel: {
 		default: false,
 	},
+	draftRestoreMode: {
+		default: 'always' as 'always' | 'ask' | 'never',
+	},
 	enableInfiniteScroll: {
 		default: true,
 	},
@@ -298,6 +306,9 @@ export const PREF_DEF = definePreferences({
 	},
 	instanceTicker: {
 		default: 'remote' as 'none' | 'remote' | 'always',
+	},
+	instanceTickerDisplay: {
+		default: 'normal' as 'normal' | 'compact' | 'icon',
 	},
 	emojiPickerScale: {
 		default: 2,

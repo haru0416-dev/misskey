@@ -15,6 +15,13 @@
       "when": 1783572128506,
       "tag": "0001_chart_tables_and_manual_ddl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783755813873,
+      "tag": "0002_melted_genesis",
+      "breakpoints": true
     }
   ]
 }

@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<template #header>{{ i18n.ts.options }}</template>
 
 			<div class="_gaps_m">
-				<div style="display: flex; gap: 8px;">
+				<div :class="$style.dateGrid">
 					<MkInput v-model="rangeStartAt" type="datetime-local">
 						<template #label>{{ i18n.ts._search.postFrom }}</template>
 					</MkInput>
@@ -27,6 +27,31 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<template #label>{{ i18n.ts._search.postTo }}</template>
 					</MkInput>
 				</div>
+
+				<MkFoldableSection>
+					<template #header>{{ i18n.ts._search.contentFilters }}</template>
+
+					<div :class="$style.filterGrid">
+						<MkSelect v-model="filesFilter" :items="booleanFilterDef">
+							<template #label>{{ i18n.ts.file }}</template>
+						</MkSelect>
+						<MkSelect v-model="sensitiveFilesFilter" :items="booleanFilterDef" :disabled="filesFilter === 'exclude'">
+							<template #label>{{ i18n.ts.sensitive }}</template>
+						</MkSelect>
+						<MkSelect v-model="repliesFilter" :items="booleanFilterDef">
+							<template #label>{{ i18n.ts.replies }}</template>
+						</MkSelect>
+						<MkSelect v-model="quotesFilter" :items="booleanFilterDef">
+							<template #label>{{ i18n.ts.quote }}</template>
+						</MkSelect>
+						<MkSelect v-model="cwFilter" :items="booleanFilterDef">
+							<template #label>{{ i18n.ts._search.cw }}</template>
+						</MkSelect>
+						<MkSelect v-model="visibilityFilter" :items="visibilityFilterDef">
+							<template #label>{{ i18n.ts.visibility }}</template>
+						</MkSelect>
+					</div>
+				</MkFoldableSection>
 
 				<MkRadios
 					v-model="searchScope"
@@ -133,9 +158,12 @@ import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkNotesTimeline from '@/components/MkNotesTimeline.vue';
 import MkRadios from '@/components/MkRadios.vue';
+import MkSelect from '@/components/MkSelect.vue';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';
 import { Paginator } from '@/utility/paginator.js';
 import type { MkRadiosOption } from '@/components/MkRadios.vue';
+import type { MkSelectItem } from '@/components/MkSelect.vue';
+import { useMkSelect } from '@/composables/useMkSelect.js';
 
 const props = withDefaults(defineProps<{
 	query?: string;
@@ -158,6 +186,30 @@ const searchQuery = ref(toRef(props, 'query').value);
 const hostInput = ref(toRef(props, 'host').value);
 const rangeStartAt = ref<string | null>(null);
 const rangeEndAt = ref<string | null>(null);
+
+type BooleanFilter = 'all' | 'include' | 'exclude';
+
+const booleanFilterDef = computed<MkSelectItem<BooleanFilter>[]>(() => [
+	{ label: i18n.ts.all, value: 'all' },
+	{ label: i18n.ts._search.include, value: 'include' },
+	{ label: i18n.ts._search.exclude, value: 'exclude' },
+]);
+const { model: filesFilter } = useMkSelect({ items: booleanFilterDef, initialValue: 'all' });
+const { model: sensitiveFilesFilter } = useMkSelect({ items: booleanFilterDef, initialValue: 'all' });
+const { model: repliesFilter } = useMkSelect({ items: booleanFilterDef, initialValue: 'all' });
+const { model: quotesFilter } = useMkSelect({ items: booleanFilterDef, initialValue: 'all' });
+const { model: cwFilter } = useMkSelect({ items: booleanFilterDef, initialValue: 'all' });
+
+type VisibilityFilter = (typeof Misskey.noteVisibilities)[number] | null;
+
+const visibilityFilterDef = computed<MkSelectItem<VisibilityFilter>[]>(() => [
+	{ label: i18n.ts.all, value: null },
+	{ label: i18n.ts._visibility.public, value: 'public' },
+	{ label: i18n.ts._visibility.home, value: 'home' },
+	{ label: i18n.ts._visibility.followers, value: 'followers' },
+	{ label: i18n.ts._visibility.specified, value: 'specified' },
+]);
+const { model: visibilityFilter } = useMkSelect({ items: visibilityFilterDef, initialValue: null });
 
 const user = shallowRef<Misskey.entities.UserDetailed | null>(null);
 
@@ -218,6 +270,12 @@ type SearchParams = {
 	readonly userId?: string;
 	readonly rangeStartAt?: number | null;
 	readonly rangeEndAt?: number | null;
+	readonly withFiles?: boolean | null;
+	readonly withSensitiveFiles?: boolean | null;
+	readonly withReplies?: boolean | null;
+	readonly withQuotes?: boolean | null;
+	readonly withCw?: boolean | null;
+	readonly visibility?: (typeof Misskey.noteVisibilities)[number] | null;
 };
 
 const fixHostIfLocal = (target: string | null | undefined) => {
@@ -232,6 +290,17 @@ const searchRange = () => {
 	};
 };
 
+const toBooleanFilter = (value: BooleanFilter): boolean | null => value === 'all' ? null : value === 'include';
+
+const contentFilters = () => ({
+	withFiles: toBooleanFilter(filesFilter.value),
+	withSensitiveFiles: filesFilter.value === 'exclude' ? null : toBooleanFilter(sensitiveFilesFilter.value),
+	withReplies: toBooleanFilter(repliesFilter.value),
+	withQuotes: toBooleanFilter(quotesFilter.value),
+	withCw: toBooleanFilter(cwFilter.value),
+	visibility: visibilityFilter.value,
+});
+
 const searchParams = computed<SearchParams | null>(() => {
 	const trimmedQuery = searchQuery.value.trim();
 	if (!trimmedQuery) return null;
@@ -243,6 +312,7 @@ const searchParams = computed<SearchParams | null>(() => {
 			host: fixHostIfLocal(user.value.host),
 			userId: user.value.id,
 			...searchRange(),
+			...contentFilters(),
 		};
 	}
 
@@ -258,6 +328,7 @@ const searchParams = computed<SearchParams | null>(() => {
 			query: trimmedQuery,
 			host: fixHostIfLocal(trimmedHost),
 			...searchRange(),
+			...contentFilters(),
 		};
 	}
 
@@ -266,12 +337,14 @@ const searchParams = computed<SearchParams | null>(() => {
 			query: trimmedQuery,
 			host: '.',
 			...searchRange(),
+			...contentFilters(),
 		};
 	}
 
 	return {
 		query: trimmedQuery,
 		...searchRange(),
+		...contentFilters(),
 	};
 });
 
@@ -367,6 +440,20 @@ async function search() {
 	background: var(--MI_THEME-panel);
 	border-radius: var(--MI-radius);
 	padding: var(--MI-margin);
+}
+
+.dateGrid,
+.filterGrid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--MI-margin);
+}
+
+@container (max-width: 500px) {
+	.dateGrid,
+	.filterGrid {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 
 .userSelectLabel {

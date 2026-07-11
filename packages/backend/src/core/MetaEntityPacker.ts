@@ -96,7 +96,9 @@ export async function packMetaLite(
 		enableEmail: meta.enableEmail,
 		enableServiceWorker: meta.enableServiceWorker,
 
-		translatorAvailable: meta.deeplAuthKey != null,
+		translatorAvailable: meta.translatorProvider === 'deepl'
+			? meta.deeplAuthKey != null
+			: meta.libreTranslateApiUrl != null,
 
 		serverRules: meta.serverRules,
 

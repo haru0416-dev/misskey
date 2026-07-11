@@ -1514,6 +1514,19 @@ export const endpointMetas = {
 						type: 'boolean',
 						optional: false, nullable: false,
 					},
+					translatorProvider: {
+						type: 'string',
+						enum: ['deepl', 'libreTranslate'],
+						optional: false, nullable: false,
+					},
+					libreTranslateApiUrl: {
+						type: 'string',
+						optional: false, nullable: true,
+					},
+					libreTranslateApiKey: {
+						type: 'string',
+						optional: false, nullable: true,
+					},
 					defaultDarkTheme: {
 						type: 'string',
 						optional: false, nullable: true,
@@ -1531,6 +1544,14 @@ export const endpointMetas = {
 					},
 					disableRegistration: {
 						type: 'boolean',
+						optional: false, nullable: false,
+					},
+					signupRateLimitMinIntervalSeconds: {
+						type: 'integer',
+						optional: false, nullable: false,
+					},
+					signupRateLimitMaxPerHour: {
+						type: 'integer',
 						optional: false, nullable: false,
 					},
 					impressumUrl: {

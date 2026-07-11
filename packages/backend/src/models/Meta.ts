@@ -31,6 +31,10 @@ export class MiMeta {
 
 	public disableRegistration: boolean;
 
+	public signupRateLimitMinIntervalSeconds: number;
+
+	public signupRateLimitMaxPerHour: number;
+
 	public langs: string[];
 
 	public pinnedUsers: string[];
@@ -146,6 +150,12 @@ export class MiMeta {
 	public deeplAuthKey: string | null;
 
 	public deeplIsPro: boolean;
+
+	public translatorProvider: 'deepl' | 'libreTranslate';
+
+	public libreTranslateApiUrl: string | null;
+
+	public libreTranslateApiKey: string | null;
 
 	public termsOfServiceUrl: string | null;
 

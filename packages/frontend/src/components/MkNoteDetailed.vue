@@ -11,13 +11,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:class="$style.root"
 	tabindex="0"
 >
-	<div v-if="appearNote.reply && appearNote.reply.replyId">
-		<div v-if="!conversationLoaded" style="padding: 16px">
-			<MkButton style="margin: 0 auto;" primary rounded @click="loadConversation">{{ i18n.ts.loadConversation }}</MkButton>
+	<details v-if="appearNote.replyId" open :class="$style.parentNotes" @toggle="onParentNotesToggle">
+		<summary :class="$style.parentNotesSummary">
+			<i class="ti ti-corner-left-up" aria-hidden="true"></i>
+			{{ parentNotesExpanded ? i18n.ts.hideParentNotes : i18n.ts.showParentNotes }}
+		</summary>
+		<div v-if="appearNote.reply && appearNote.reply.replyId">
+			<div v-if="!conversationLoaded" style="padding: 16px">
+				<MkButton style="margin: 0 auto;" primary rounded @click="loadConversation">{{ i18n.ts.loadConversation }}</MkButton>
+			</div>
+			<MkNoteSub v-for="note in conversation" :key="note.id" :class="$style.replyToMore" :note="note"/>
 		</div>
-		<MkNoteSub v-for="note in conversation" :key="note.id" :class="$style.replyToMore" :note="note"/>
-	</div>
-	<MkNoteSub v-if="appearNote.replyId" :note="appearNote?.reply ?? null" :class="$style.replyTo"/>
+		<MkNoteSub :note="appearNote?.reply ?? null" :class="$style.replyTo"/>
+	</details>
 	<div v-if="isRenote" :class="$style.renote">
 		<MkAvatar :class="$style.renoteAvatar" :user="note.user" link preview/>
 		<i class="ti ti-repeat" style="margin-right: 4px;"></i>
@@ -73,41 +79,43 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<img v-for="(role, i) in appearNote.user.badgeRoles" :key="i" v-tooltip="role.name" :class="$style.noteHeaderBadgeRole" :src="role.iconUrl!"/>
 						</div>
 					</div>
-					<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :instance="appearNote.user.instance"/>
+					<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :instance="appearNote.user.instance" :displayMode="prefer.instanceTickerDisplay"/>
 				</div>
 			</header>
 			<div :class="$style.noteContent">
 				<p v-if="appearNote.cw != null" :class="$style.cw">
-					<Mfm
-						v-if="appearNote.cw != ''"
-						:text="appearNote.cw"
+					<span v-if="appearNote.cw != ''" dir="auto" :class="$style.bidiText">
+						<Mfm
+							:text="appearNote.cw"
 						:author="appearNote.user"
 						:nyaize="'respect'"
 						:enableEmojiMenu="true"
 						:enableEmojiMenuReaction="true"
-					/>
+						/>
+					</span>
 					<MkCwButton v-model="showContent" :text="appearNote.text" :renote="appearNote.renote" :files="appearNote.files" :poll="appearNote.poll"/>
 				</p>
 				<div v-show="appearNote.cw == null || showContent">
 					<span v-if="appearNote.isHidden" style="opacity: 0.5">({{ i18n.ts.private }})</span>
 					<MkA v-if="appearNote.replyId" :class="$style.noteReplyTarget" :to="`/notes/${appearNote.replyId}`"><i class="ti ti-arrow-back-up"></i></MkA>
-					<Mfm
-						v-if="appearNote.text"
-						:parsedNodes="parsed"
-						:text="appearNote.text"
-						:author="appearNote.user"
-						:nyaize="'respect'"
-						:emojiUrls="appearNote.emojis"
-						:enableEmojiMenu="true"
-						:enableEmojiMenuReaction="true"
-						class="_selectable"
-					/>
+					<span v-if="appearNote.text" dir="auto" :class="$style.bidiText">
+						<Mfm
+							:parsedNodes="parsed"
+							:text="appearNote.text"
+							:author="appearNote.user"
+							:nyaize="'respect'"
+							:emojiUrls="appearNote.emojis"
+							:enableEmojiMenu="true"
+							:enableEmojiMenuReaction="true"
+							class="_selectable"
+						/>
+					</span>
 					<a v-if="appearNote.renote != null" :class="$style.rn">RN:</a>
 					<div v-if="translating || translation" :class="$style.translation">
 						<MkLoading v-if="translating" mini/>
 						<div v-else-if="translation">
 							<b>{{ i18n.tsx.translatedFrom({ x: translation.sourceLang }) }}: </b>
-							<Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" :emojiUrls="appearNote.emojis" class="_selectable"/>
+							<span dir="auto" :class="$style.bidiText"><Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" :emojiUrls="appearNote.emojis" class="_selectable"/></span>
 						</div>
 					</div>
 					<div v-if="appearNote.files && appearNote.files.length > 0">
@@ -643,6 +651,11 @@ function loadReplies() {
 }
 
 const conversationLoaded = ref(false);
+const parentNotesExpanded = ref(true);
+
+function onParentNotesToggle(event: Event) {
+	parentNotesExpanded.value = (event.currentTarget as HTMLDetailsElement).open;
+}
 
 function loadConversation() {
 	conversationLoaded.value = true;
@@ -656,6 +669,10 @@ function loadConversation() {
 </script>
 
 <style lang="scss" module>
+.bidiText {
+	unicode-bidi: plaintext;
+}
+
 .root {
 	position: relative;
 	transition: box-shadow 0.1s ease;
@@ -692,6 +709,26 @@ function loadConversation() {
 
 .replyToMore {
 	opacity: 0.7;
+}
+
+.parentNotes {
+	border-bottom: solid 1px var(--MI_THEME-divider);
+}
+
+.parentNotesSummary {
+	width: fit-content;
+	margin: 8px 16px 0;
+	padding: 4px 8px;
+	border-radius: 999px;
+	color: var(--MI_THEME-fgTransparentWeak);
+	font-size: 0.85em;
+	cursor: pointer;
+
+	&:hover,
+	&:focus-visible {
+		color: var(--MI_THEME-accent);
+		background: var(--MI_THEME-accentedBg);
+	}
 }
 
 .renote {
