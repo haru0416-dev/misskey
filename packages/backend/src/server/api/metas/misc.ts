@@ -19,7 +19,7 @@ import { fetchRssParamDef } from '@/server/rest/fetch-rss.js';
 import { emptyParamDef, inviteDeleteParamDef, inviteListParamDef } from '@/server/rest/invite.js';
 import { metaParamDef, testParamDef } from '@/server/rest/meta.js';
 import { miauthGenTokenParamDef } from '@/server/rest/miauth.js';
-import { notificationsCreateParamDef } from '@/server/rest/notification.js';
+import { notificationsCreateParamDef, notificationsDeleteParamDef } from '@/server/rest/notification.js';
 import { pagePushParamDef } from '@/server/rest/page-push.js';
 import { requestResetPasswordParamDef, resetPasswordParamDef } from '@/server/rest/password-reset.js';
 import { promoReadParamDef } from '@/server/rest/promo.js';
@@ -1127,6 +1127,16 @@ export const endpointMetas = {
 			},
 		} as const,
 		paramDef: notificationsCreateParamDef,
+	},
+	'notifications/delete': {
+		meta: {
+			tags: ['notifications', 'account'],
+
+			requireCredential: true,
+
+			kind: 'write:notifications',
+		} as const,
+		paramDef: notificationsDeleteParamDef,
 	},
 	'notifications/flush': {
 		meta: {

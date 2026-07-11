@@ -313,7 +313,27 @@ function changeAvatar(ev: PointerEvent) {
 				done(files[0]);
 			});
 		},
-	}], ev.currentTarget ?? ev.target);
+	}, ...($i.avatarId != null ? [{
+		type: 'divider' as const,
+	}, {
+		text: i18n.ts._profile.removeAvatar,
+		icon: 'ti ti-trash',
+		danger: true,
+		action: removeAvatar,
+	}] : [])], ev.currentTarget ?? ev.target);
+}
+
+async function removeAvatar() {
+	const { canceled } = await os.confirm({
+		type: 'warning',
+		text: i18n.ts._profile.removeAvatarConfirm,
+		okText: i18n.ts.remove,
+	});
+	if (canceled) return;
+
+	const i = await os.apiWithDialog('i/update', { avatarId: null });
+	$i.avatarId = i.avatarId;
+	$i.avatarUrl = i.avatarUrl;
 }
 
 function changeBanner(ev: PointerEvent) {
@@ -361,7 +381,27 @@ function changeBanner(ev: PointerEvent) {
 				done(files[0]);
 			});
 		},
-	}], ev.currentTarget ?? ev.target);
+	}, ...($i.bannerId != null ? [{
+		type: 'divider' as const,
+	}, {
+		text: i18n.ts._profile.removeBanner,
+		icon: 'ti ti-trash',
+		danger: true,
+		action: removeBanner,
+	}] : [])], ev.currentTarget ?? ev.target);
+}
+
+async function removeBanner() {
+	const { canceled } = await os.confirm({
+		type: 'warning',
+		text: i18n.ts._profile.removeBannerConfirm,
+		okText: i18n.ts.remove,
+	});
+	if (canceled) return;
+
+	const i = await os.apiWithDialog('i/update', { bannerId: null });
+	$i.bannerId = i.bannerId;
+	$i.bannerUrl = i.bannerUrl;
 }
 
 const headerActions = computed(() => []);

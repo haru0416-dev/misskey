@@ -1008,6 +1008,80 @@ export type HonoApiNotesTranslateDependencies = HonoApiNoteDependencies & HonoAp
 	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
 
+const deeplTranslationResponse = z.object({
+	translations: z.array(z.object({
+		detected_source_language: z.string(),
+		text: z.string(),
+	})).min(1),
+});
+
+const libreTranslateResponse = z.object({
+	translatedText: z.string(),
+	detectedLanguage: z.object({
+		language: z.string(),
+	}).optional(),
+});
+
+export async function translateTextForHonoApi(
+	deps: Pick<HonoApiNotesTranslateDependencies, 'meta' | 'httpRequestService'>,
+	text: string,
+	targetLang: string,
+): Promise<{ sourceLang: string; text: string }> {
+	if (deps.meta.translatorProvider === 'libreTranslate') {
+		if (deps.meta.libreTranslateApiUrl == null) throw notesTranslateUnavailableError();
+
+		const endpoint = new URL(deps.meta.libreTranslateApiUrl);
+		endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}/translate`;
+		const body: Record<string, string> = {
+			q: text,
+			source: 'auto',
+			target: targetLang.toLowerCase(),
+			format: 'text',
+		};
+		if (deps.meta.libreTranslateApiKey != null) body.api_key = deps.meta.libreTranslateApiKey;
+
+		const res = await deps.httpRequestService.send(endpoint.href, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Accept: 'application/json, */*',
+			},
+			body: JSON.stringify(body),
+			timeout: 30_000,
+			size: 1024 * 1024,
+			isLocalAddressAllowed: true,
+		});
+		const json = libreTranslateResponse.parse(await res.json());
+
+		return {
+			sourceLang: json.detectedLanguage?.language ?? 'auto',
+			text: json.translatedText,
+		};
+	}
+
+	if (deps.meta.deeplAuthKey == null) throw notesTranslateUnavailableError();
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('text', text);
+	searchParams.append('target_lang', targetLang);
+	const endpoint = deps.meta.deeplIsPro ? 'https://api.deepl.com/v2/translate' : 'https://api-free.deepl.com/v2/translate';
+	const res = await deps.httpRequestService.send(endpoint, {
+		method: 'POST',
+		headers: {
+			'Authorization': `DeepL-Auth-Key ${deps.meta.deeplAuthKey}`,
+			'Content-Type': 'application/x-www-form-urlencoded',
+			Accept: 'application/json, */*',
+		},
+		body: searchParams.toString(),
+	});
+	const json = deeplTranslationResponse.parse(await res.json());
+
+	return {
+		sourceLang: json.translations[0].detected_source_language,
+		text: json.translations[0].text,
+	};
+}
+
 export async function handleHonoApiNotesTranslate(
 	deps: HonoApiNotesTranslateDependencies,
 	me: MiUser,
@@ -1031,40 +1105,10 @@ export async function handleHonoApiNotesTranslate(
 		return undefined;
 	}
 
-	if (deps.meta.deeplAuthKey == null) {
-		throw notesTranslateUnavailableError();
-	}
-
 	let targetLang = params.targetLang;
 	if (targetLang.includes('-')) targetLang = targetLang.split('-')[0]!;
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('text', note.text);
-	searchParams.append('target_lang', targetLang);
-
-	const endpoint = deps.meta.deeplIsPro ? 'https://api.deepl.com/v2/translate' : 'https://api-free.deepl.com/v2/translate';
-
-	const res = await deps.httpRequestService.send(endpoint, {
-		method: 'POST',
-		headers: {
-			'Authorization': `DeepL-Auth-Key ${deps.meta.deeplAuthKey}`,
-			'Content-Type': 'application/x-www-form-urlencoded',
-			Accept: 'application/json, */*',
-		},
-		body: searchParams.toString(),
-	});
-
-	const json = (await res.json()) as {
-		translations: {
-			detected_source_language: string;
-			text: string;
-		}[];
-	};
-
-	return {
-		sourceLang: json.translations[0]!.detected_source_language,
-		text: json.translations[0]!.text,
-	};
+	return await translateTextForHonoApi(deps, note.text, targetLang);
 }
 
 export const usersNotesParamDef = z.object({

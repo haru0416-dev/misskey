@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkPostForm v-if="prefer.showFixedPostForm" :class="$style.postForm" class="_panel" fixed style="margin-bottom: var(--MI-margin);"/>
 		<MkStreamingNotesTimeline
 			ref="tlComponent"
-			:key="src + withRenotes + withReplies + onlyFiles + withSensitive"
+			:key="src + withRenotes + withReplies + onlyFiles + withSensitive + mediaView"
 			:class="$style.tl"
 			:src="(src.split(':')[0] as (BasicTimelineType | 'list'))"
 			:list="src.split(':')[1]"
@@ -20,6 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:withReplies="withReplies"
 			:withSensitive="withSensitive"
 			:onlyFiles="onlyFiles"
+			:viewMode="mediaView ? 'media' : 'notes'"
 			:sound="true"
 		/>
 	</div>
@@ -86,7 +87,18 @@ const onlyFiles = computed<boolean>({
 			return store.tl.filter.onlyFiles;
 		}
 	},
-	set: (x) => saveTlFilter('onlyFiles', x),
+	set: (x) => {
+		saveTlFilter('onlyFiles', x);
+		if (!x && mediaView.value) saveTlFilter('mediaView', false);
+	},
+});
+
+const mediaView = computed<boolean>({
+	get: () => store.tl.filter.mediaView,
+	set: (x) => {
+		saveTlFilter('mediaView', x);
+		if (x && !onlyFiles.value) onlyFiles.value = true;
+	},
 });
 
 watch([withReplies, onlyFiles], ([withRepliesTo, onlyFilesTo]) => {
@@ -242,6 +254,11 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 				text: i18n.ts.fileAttachedOnly,
 				ref: onlyFiles,
 				disabled: isBasicTimeline(src.value) && hasWithReplies(src.value) ? withReplies : false,
+			}, {
+				type: 'switch',
+				icon: 'ti ti-layout-grid',
+				text: i18n.ts.mediaTimeline,
+				ref: mediaView,
 			}, {
 				type: 'divider',
 			}, {

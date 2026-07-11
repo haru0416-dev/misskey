@@ -50,39 +50,41 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkAvatar :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="appearNote.user" :link="!mock" :preview="!mock"/>
 		<div :class="$style.main">
 			<MkNoteHeader :note="appearNote" :mini="true"/>
-			<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :instance="appearNote.user.instance"/>
+			<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :instance="appearNote.user.instance" :displayMode="prefer.instanceTickerDisplay"/>
 			<div style="container-type: inline-size;">
 				<p v-if="appearNote.cw != null" :class="$style.cw">
-					<Mfm
-						v-if="appearNote.cw != ''"
-						:text="appearNote.cw"
-						:author="appearNote.user"
-						:nyaize="'respect'"
-						:enableEmojiMenu="true"
-						:enableEmojiMenuReaction="true"
-					/>
+					<span v-if="appearNote.cw != ''" dir="auto" :class="$style.bidiText">
+						<Mfm
+							:text="appearNote.cw"
+							:author="appearNote.user"
+							:nyaize="'respect'"
+							:enableEmojiMenu="true"
+							:enableEmojiMenuReaction="true"
+						/>
+					</span>
 					<MkCwButton v-model="showContent" :text="appearNote.text" :renote="appearNote.renote" :files="appearNote.files" :poll="appearNote.poll" style="margin: 4px 0;"/>
 				</p>
 				<div v-show="appearNote.cw == null || showContent" :class="[{ [$style.contentCollapsed]: collapsed }]">
 					<div :class="$style.text">
 						<span v-if="appearNote.isHidden" style="opacity: 0.5">({{ i18n.ts.private }})</span>
 						<MkA v-if="appearNote.replyId" :class="$style.replyIcon" :to="`/notes/${appearNote.replyId}`"><i class="ti ti-arrow-back-up"></i></MkA>
-						<Mfm
-							v-if="appearNote.text"
-							:parsedNodes="parsed"
-							:text="appearNote.text"
-							:author="appearNote.user"
-							:nyaize="'respect'"
-							:emojiUrls="appearNote.emojis"
-							:enableEmojiMenu="true"
-							:enableEmojiMenuReaction="true"
-							class="_selectable"
-						/>
+						<span v-if="appearNote.text" dir="auto" :class="$style.bidiText">
+							<Mfm
+								:parsedNodes="parsed"
+								:text="appearNote.text"
+								:author="appearNote.user"
+								:nyaize="'respect'"
+								:emojiUrls="appearNote.emojis"
+								:enableEmojiMenu="true"
+								:enableEmojiMenuReaction="true"
+								class="_selectable"
+							/>
+						</span>
 						<div v-if="translating || translation" :class="$style.translation">
 							<MkLoading v-if="translating" mini/>
 							<div v-else-if="translation">
 								<b>{{ i18n.tsx.translatedFrom({ x: translation.sourceLang }) }}: </b>
-								<Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" :emojiUrls="appearNote.emojis" class="_selectable"/>
+								<span dir="auto" :class="$style.bidiText"><Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" :emojiUrls="appearNote.emojis" class="_selectable"/></span>
 							</div>
 						</div>
 					</div>
@@ -768,6 +770,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 </script>
 
 <style lang="scss" module>
+.bidiText {
+	unicode-bidi: plaintext;
+}
+
 .root {
 	position: relative;
 	font-size: 1.05em;

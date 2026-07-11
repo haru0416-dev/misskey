@@ -37,6 +37,7 @@ function createBaseState() {
 				withRenotes: true,
 				withSensitive: true,
 				onlyFiles: false,
+				mediaView: false,
 			},
 		},
 		darkMode: false,

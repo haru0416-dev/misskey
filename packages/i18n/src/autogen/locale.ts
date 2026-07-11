@@ -1977,6 +1977,10 @@ export interface Locale extends ILocale {
      */
     "title": string;
     /**
+     * クイック設定
+     */
+    "quickSettings": string;
+    /**
      * テキスト
      */
     "text": string;
@@ -2989,6 +2993,14 @@ export interface Locale extends ILocale {
      */
     "instanceTicker": string;
     /**
+     * サーバー情報の表示形式
+     */
+    "instanceTickerDisplay": string;
+    /**
+     * 投稿フォームの下書き復元
+     */
+    "draftRestoreMode": string;
+    /**
      * {x}を待っています
      */
     "waitingFor": ParameterizedString<"x">;
@@ -3840,6 +3852,66 @@ export interface Locale extends ILocale {
      * 検索
      */
     "searchByGoogle": string;
+    /**
+     * {provider}で検索
+     */
+    "searchUsingProvider": ParameterizedString<"provider">;
+    /**
+     * 検索エンジン
+     */
+    "searchEngine": string;
+    /**
+     * MFMの検索フォームから開く検索エンジンを選択します。
+     */
+    "searchEngineDescription": string;
+    "_searchEngine": {
+        /**
+         * Google
+         */
+        "google": string;
+        /**
+         * DuckDuckGo
+         */
+        "duckduckgo": string;
+        /**
+         * Bing
+         */
+        "bing": string;
+        /**
+         * Brave Search
+         */
+        "brave": string;
+    };
+    "_translationService": {
+        /**
+         * ノート翻訳
+         */
+        "translation": string;
+        /**
+         * 翻訳サービス
+         */
+        "provider": string;
+        /**
+         * APIキー
+         */
+        "apiKey": string;
+        /**
+         * APIキー（任意）
+         */
+        "apiKeyOptional": string;
+        /**
+         * APIのベースURL
+         */
+        "apiUrl": string;
+        /**
+         * 例: http://localhost:5000（末尾の /translate は不要です）
+         */
+        "apiUrlDescription": string;
+        /**
+         * Proアカウント
+         */
+        "deeplProAccount": string;
+    };
     /**
      * サーバーデフォルトのライトテーマ
      */
@@ -4877,6 +4949,14 @@ export interface Locale extends ILocale {
      */
     "loadConversation": string;
     /**
+     * 親ノートを表示
+     */
+    "showParentNotes": string;
+    /**
+     * 親ノートを隠す
+     */
+    "hideParentNotes": string;
+    /**
      * ピン留めされたリスト
      */
     "pinnedList": string;
@@ -4936,6 +5016,10 @@ export interface Locale extends ILocale {
      * ファイル付きのみ
      */
     "fileAttachedOnly": string;
+    /**
+     * メディアタイムライン
+     */
+    "mediaTimeline": string;
     /**
      * TLに他の人への返信を含める
      */
@@ -6762,6 +6846,26 @@ export interface Locale extends ILocale {
         "description": string;
     };
     "_serverSettings": {
+        /**
+         * 新規登録のレート制限
+         */
+        "signupRateLimit": string;
+        /**
+         * 同じIPアドレスからの新規登録を制限します。共有回線の利用者を考慮して調整してください。
+         */
+        "signupRateLimitDescription": string;
+        /**
+         * 登録の最短間隔
+         */
+        "signupRateLimitMinInterval": string;
+        /**
+         * 1時間あたりの登録上限
+         */
+        "signupRateLimitMaxPerHour": string;
+        /**
+         * 0にすると、この制限を無効にします。
+         */
+        "signupRateLimitZeroDisables": string;
         /**
          * アイコン画像のURL
          */
@@ -8635,6 +8739,34 @@ export interface Locale extends ILocale {
          */
         "always": string;
     };
+    "_instanceTickerDisplay": {
+        /**
+         * 通常
+         */
+        "normal": string;
+        /**
+         * コンパクト
+         */
+        "compact": string;
+        /**
+         * アイコンのみ
+         */
+        "icon": string;
+    };
+    "_draftRestoreMode": {
+        /**
+         * 常に復元する
+         */
+        "always": string;
+        /**
+         * 復元前に確認する
+         */
+        "ask": string;
+        /**
+         * 復元しない
+         */
+        "never": string;
+    };
     "_serverDisconnectedBehavior": {
         /**
          * 自動でリロード
@@ -10281,6 +10413,22 @@ export interface Locale extends ILocale {
          */
         "changeBanner": string;
         /**
+         * アイコン画像を削除
+         */
+        "removeAvatar": string;
+        /**
+         * 現在のアイコン画像を削除して、既定の画像に戻しますか？
+         */
+        "removeAvatarConfirm": string;
+        /**
+         * バナー画像を削除
+         */
+        "removeBanner": string;
+        /**
+         * 現在のバナー画像を削除しますか？
+         */
+        "removeBannerConfirm": string;
+        /**
          * 内容にURLを設定すると、リンク先のWebサイトに自分のプロフィールへのリンクが含まれている場合に所有者確認済みアイコンを表示させることができます。
          */
         "verifiedLinkDescription": string;
@@ -10728,6 +10876,10 @@ export interface Locale extends ILocale {
         "rejected": string;
     };
     "_notification": {
+        /**
+         * この通知を非表示
+         */
+        "hideThisNotification": string;
         /**
          * ファイルがアップロードされました
          */
@@ -12311,6 +12463,22 @@ export interface Locale extends ILocale {
          * 投稿日時to
          */
         "postTo": string;
+        /**
+         * 内容で絞り込む
+         */
+        "contentFilters": string;
+        /**
+         * 含む
+         */
+        "include": string;
+        /**
+         * 含まない
+         */
+        "exclude": string;
+        /**
+         * 内容を隠す（CW）
+         */
+        "cw": string;
     };
     "_serverSetupWizard": {
         /**
@@ -12969,6 +13137,10 @@ export interface Locale extends ILocale {
          * 復元
          */
         "restore": string;
+        /**
+         * 保存されている書きかけの内容を復元しますか？
+         */
+        "restoreLocalDraftConfirm": string;
         /**
          * 下書き一覧
          */

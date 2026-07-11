@@ -4,26 +4,29 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="$style.root">
-	<input v-model="query" :class="$style.input" type="search" :placeholder="q">
-	<button :class="$style.button" @click="search"><i class="ti ti-search"></i> {{ i18n.ts.searchByGoogle }}</button>
-</div>
+<search>
+	<form :class="$style.root" @submit.prevent="search">
+		<input v-model="query" :class="$style.input" type="search" :placeholder="q">
+		<button type="submit" :class="$style.button"><i class="ti ti-search"></i> {{ i18n.tsx.searchUsingProvider({ provider: searchEngineLabel }) }}</button>
+	</form>
+</search>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { i18n } from '@/i18n.js';
+import { prefer } from '@/preferences.js';
+import { createSearchUrl } from '@/utility/search-engine.js';
 
 const props = defineProps<{
 	q: string;
 }>();
 
 const query = ref(props.q);
+const searchEngineLabel = computed(() => i18n.ts._searchEngine[prefer.searchEngine]);
 
 const search = () => {
-	const sp = new URLSearchParams();
-	sp.append('q', query.value);
-	window.open(`https://www.google.com/search?${sp.toString()}`, '_blank', 'noopener');
+	window.open(createSearchUrl(prefer.searchEngine, query.value), '_blank', 'noopener');
 };
 </script>
 

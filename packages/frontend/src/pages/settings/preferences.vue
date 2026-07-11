@@ -30,6 +30,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</MkSelect>
 						</SearchMarker>
 
+						<SearchMarker :keywords="['search', 'engine', 'provider', 'google', 'duckduckgo', 'bing', 'brave']">
+							<MkPreferenceContainer k="searchEngine">
+								<MkRadios
+									v-model="searchEngine"
+									:options="searchEngines.map(value => ({ label: i18n.ts._searchEngine[value], value }))"
+								>
+									<template #label><SearchLabel>{{ i18n.ts.searchEngine }}</SearchLabel></template>
+									<template #caption><SearchText>{{ i18n.ts.searchEngineDescription }}</SearchText></template>
+								</MkRadios>
+							</MkPreferenceContainer>
+						</SearchMarker>
+
 						<SearchMarker :keywords="['device', 'type', 'kind', 'smartphone', 'tablet', 'desktop']">
 							<MkRadios
 								v-model="overridedDeviceKind"
@@ -163,6 +175,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 									<MkSwitch v-model="showFixedPostFormInChannel">
 										<template #label><SearchLabel>{{ i18n.ts.showFixedPostFormInChannel }}</SearchLabel></template>
 									</MkSwitch>
+								</MkPreferenceContainer>
+							</SearchMarker>
+
+							<SearchMarker :keywords="['post', 'form', 'draft', 'restore']">
+								<MkPreferenceContainer k="draftRestoreMode">
+									<MkSelect
+										v-model="draftRestoreMode"
+										:items="[
+											{ label: i18n.ts._draftRestoreMode.always, value: 'always' },
+											{ label: i18n.ts._draftRestoreMode.ask, value: 'ask' },
+											{ label: i18n.ts._draftRestoreMode.never, value: 'never' },
+										]"
+									>
+										<template #label><SearchLabel>{{ i18n.ts.draftRestoreMode }}</SearchLabel></template>
+									</MkSelect>
 								</MkPreferenceContainer>
 							</SearchMarker>
 
@@ -305,6 +332,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 											]"
 										>
 											<template #label><SearchLabel>{{ i18n.ts.instanceTicker }}</SearchLabel></template>
+										</MkSelect>
+									</MkPreferenceContainer>
+								</SearchMarker>
+
+								<SearchMarker :keywords="['ticker', 'information', 'label', 'instance', 'server', 'host', 'density', 'compact', 'icon']">
+									<MkPreferenceContainer k="instanceTickerDisplay">
+										<MkSelect
+											v-model="instanceTickerDisplay"
+											:items="[
+												{ label: i18n.ts._instanceTickerDisplay.normal, value: 'normal' },
+												{ label: i18n.ts._instanceTickerDisplay.compact, value: 'compact' },
+												{ label: i18n.ts._instanceTickerDisplay.icon, value: 'icon' },
+											]"
+										>
+											<template #label><SearchLabel>{{ i18n.ts.instanceTickerDisplay }}</SearchLabel></template>
 										</MkSelect>
 									</MkPreferenceContainer>
 								</SearchMarker>
@@ -891,6 +933,7 @@ import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
 import { genId } from '@/utility/id.js';
 import { suggestReload } from '@/utility/reload-suggest.js';
+import { searchEngines } from '@/utility/search-engine.js';
 
 const $i = ensureSignin();
 
@@ -899,6 +942,7 @@ const dataSaver = ref(prefer.dataSaver);
 const realtimeMode = toRef(store, 'realtimeMode');
 
 const overridedDeviceKind = prefer.model('overridedDeviceKind');
+const searchEngine = prefer.model('searchEngine');
 const pollingInterval = prefer.model('pollingInterval');
 const showTitlebar = prefer.model('showTitlebar');
 const keepCw = prefer.model('keepCw');
@@ -915,6 +959,7 @@ const loadRawImages = prefer.model('loadRawImages');
 const imageNewTab = prefer.model('imageNewTab');
 const showFixedPostForm = prefer.model('showFixedPostForm');
 const showFixedPostFormInChannel = prefer.model('showFixedPostFormInChannel');
+const draftRestoreMode = prefer.model('draftRestoreMode');
 const numberOfPageCache = prefer.model('numberOfPageCache');
 const enableInfiniteScroll = prefer.model('enableInfiniteScroll');
 const useReactionPickerForContextMenu = prefer.model('useReactionPickerForContextMenu');
@@ -929,6 +974,7 @@ const rememberNoteVisibility = prefer.model('rememberNoteVisibility');
 const notificationPosition = prefer.model('notificationPosition');
 const notificationStackAxis = prefer.model('notificationStackAxis');
 const instanceTicker = prefer.model('instanceTicker');
+const instanceTickerDisplay = prefer.model('instanceTickerDisplay');
 const highlightSensitiveMedia = prefer.model('highlightSensitiveMedia');
 const mediaListWithOneImageAppearance = prefer.model('mediaListWithOneImageAppearance');
 const showMediaListByGridInWideArea = prefer.model('showMediaListByGridInWideArea');

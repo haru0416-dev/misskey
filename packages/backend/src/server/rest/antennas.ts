@@ -55,6 +55,24 @@ function getFullApAccount(config: Pick<Config, 'host'>, username: string, host: 
 	return host ? `${username}@${domainToASCII(host.toLowerCase())}` : `${username}@${domainToASCII(config.host.toLowerCase())}`;
 }
 
+export function antennaUsersIncludes(
+	config: Pick<Config, 'host'>,
+	users: string[],
+	user: { username: string; host: string | null },
+): boolean {
+	const account = getFullApAccount(config, user.username, user.host).toLowerCase();
+	const accountHost = domainToASCII((user.host ?? config.host).toLowerCase());
+
+	return users.some((value) => {
+		const { username, host } = Acct.parse(value);
+		if (username === '*' && host != null) {
+			return domainToASCII(host.toLowerCase()) === accountHost;
+		}
+
+		return getFullApAccount(config, username, host).toLowerCase() === account;
+	});
+}
+
 /** AntennaService.checkHitAntenna 相当。 */
 export async function checkHitAntennaForHonoApi(
 	deps: Pick<HonoApiAntennaFanoutDependencies, 'config' | 'db'>,
@@ -90,17 +108,9 @@ export async function checkHitAntennaForHonoApi(
 			: await userListMembershipExistsInDatabase(deps.db, note.userId, antenna.userListId);
 		if (!exists) return false;
 	} else if (antenna.src === 'users') {
-		const accts = antenna.users.map(x => {
-			const { username, host } = Acct.parse(x);
-			return getFullApAccount(deps.config, username, host).toLowerCase();
-		});
-		if (!accts.includes(getFullApAccount(deps.config, noteUser.username, noteUser.host).toLowerCase())) return false;
+		if (!antennaUsersIncludes(deps.config, antenna.users, noteUser)) return false;
 	} else if (antenna.src === 'users_blacklist') {
-		const accts = antenna.users.map(x => {
-			const { username, host } = Acct.parse(x);
-			return getFullApAccount(deps.config, username, host).toLowerCase();
-		});
-		if (accts.includes(getFullApAccount(deps.config, noteUser.username, noteUser.host).toLowerCase())) return false;
+		if (antennaUsersIncludes(deps.config, antenna.users, noteUser)) return false;
 	}
 
 	const keywords = antenna.keywords
