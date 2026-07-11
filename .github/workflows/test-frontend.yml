@@ -14,7 +14,7 @@ on:
       - packages/misskey-js/**
       # for e2e
       - packages/backend/**
-      - playwright/**
+      - tests/e2e/**
       - playwright.config.ts
       - package.json
       - bun.lock
@@ -30,7 +30,7 @@ on:
       - packages/misskey-js/**
       # for e2e
       - packages/backend/**
-      - playwright/**
+      - tests/e2e/**
       - playwright.config.ts
       - package.json
       - bun.lock

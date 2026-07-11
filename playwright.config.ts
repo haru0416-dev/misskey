@@ -9,7 +9,7 @@ const baseURL = process.env.MISSKEY_TEST_BASE_URL ?? 'http://localhost:61812';
 const startCommand = process.env.MISSKEY_TEST_START_COMMAND ?? 'bun run start:test';
 
 export default defineConfig({
-	testDir: './playwright/e2e',
+	testDir: './tests/e2e/specs',
 	fullyParallel: false,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,

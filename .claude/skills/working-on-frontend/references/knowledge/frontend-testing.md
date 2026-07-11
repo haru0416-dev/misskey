@@ -38,7 +38,7 @@ bun run pw:open
 ```
 
 - 設定: ルート [playwright.config.ts](../../../../../playwright.config.ts)
-- テスト本体は [playwright/e2e/](../../../../../playwright/e2e/) 配下
+- テスト本体は [tests/e2e/specs/](../../../../../tests/e2e/specs/) 配下
 - start コマンドを変えたい場合は `MISSKEY_TEST_START_COMMAND`、接続先を変えたい場合は `MISSKEY_TEST_BASE_URL` を使う
 
 新規 frontend 機能の E2E は Playwright に書くのが基本。ただし対象は主要 UI フロー (login / post / drive etc) に限定し、細かい単位テストは Vitest または Storybook で代替する慣習。
