@@ -741,7 +741,7 @@ export function useUploader(
 			item.compressionLevel !== 0 &&
 			compressionSettings != null &&
 			IMAGE_EDITING_SUPPORTED_TYPES.includes(preprocessedFile.type)
-				? await import('@/utility/image-compression.js')
+				? await import('./image-compression.js')
 				: null;
 
 		if (

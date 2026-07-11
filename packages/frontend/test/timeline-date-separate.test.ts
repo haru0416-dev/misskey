@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { ref } from 'vue';
-import { makeDateSeparatedTimelineComputedRef } from '@/utility/timeline-date-separate.js';
+import { makeDateSeparatedTimelineComputedRef } from '@/features/notes/timeline-date-separate.js';
 
 describe('makeDateSeparatedTimelineComputedRef', () => {
 	test('preserves item order and inserts separators between calendar days', () => {

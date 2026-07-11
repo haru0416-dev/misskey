@@ -28,7 +28,7 @@ import { ref, reactive } from 'vue';
 import { i18n } from '@/i18n.js';
 import { globalEvents } from '@/events.js';
 import { $i } from '@/i.js';
-import MkNote from '@/components/MkNote.vue';
+import MkNote from '@/features/notes/components/MkNote.vue';
 import { genId } from '@/utility/id.js';
 
 const props = defineProps<{

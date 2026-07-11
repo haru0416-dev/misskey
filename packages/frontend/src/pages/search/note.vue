@@ -156,7 +156,7 @@ import { useRouter } from '@/router.js';
 import MkButton from '@/components/MkButton.vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkInput from '@/components/MkInput.vue';
-import MkNotesTimeline from '@/components/MkNotesTimeline.vue';
+import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
 import MkRadios from '@/components/MkRadios.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';

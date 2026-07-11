@@ -72,7 +72,7 @@ import MkSwitch from '@/components/MkSwitch.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkFolder from '@/components/MkFolder.vue';
-import MkPostForm from '@/components/MkPostForm.vue';
+import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 
 const props = withDefaults(defineProps<{

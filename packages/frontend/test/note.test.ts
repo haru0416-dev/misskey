@@ -9,7 +9,7 @@ import './init';
 import * as Misskey from 'misskey-js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
-import MkMediaImage from '@/components/MkMediaImage.vue';
+import MkMediaImage from '@/features/media-viewer/components/MkMediaImage.vue';
 
 describe('MkMediaImage', () => {
 	const renderMediaImage = (image: Partial<Misskey.entities.DriveFile>): RenderResult => {

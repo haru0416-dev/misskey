@@ -27,7 +27,7 @@ import { $i } from '@/i.js';
 import { executeMisskeyMutation } from '@/query/mutation.js';
 import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
-import MkPostFormDialog from '@/components/MkPostFormDialog.vue';
+import MkPostFormDialog from '@/features/post-composer/components/MkPostFormDialog.vue';
 import MkWaitingDialog from '@/components/MkWaitingDialog.vue';
 import MkToast from '@/components/MkToast.vue';
 import MkDialog from '@/components/MkDialog.vue';

@@ -9,9 +9,9 @@ import './init';
 import * as Misskey from 'misskey-js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
-import MkMediaVideo from '@/components/MkMediaVideo.vue';
+import MkMediaVideo from '@/features/media-viewer/components/MkMediaVideo.vue';
 
-vi.mock('@/utility/media-has-audio.js', () => ({
+vi.mock('@/features/media-viewer/media-has-audio.js', () => ({
 	default: () => Promise.resolve(true),
 }));
 

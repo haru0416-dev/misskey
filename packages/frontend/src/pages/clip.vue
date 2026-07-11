@@ -35,7 +35,7 @@ import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
-import MkNotesTimeline from '@/components/MkNotesTimeline.vue';
+import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';

@@ -38,8 +38,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 import * as Misskey from 'misskey-js';
 import { reactive } from 'vue';
 import { i18n } from '@/i18n.js';
-import MkNote from '@/components/MkNote.vue';
-import MkPostForm from '@/components/MkPostForm.vue';
+import MkNote from '@/features/notes/components/MkNote.vue';
+import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import MkFormSection from '@/components/form/section.vue';
 import MkInfo from '@/components/MkInfo.vue';
 

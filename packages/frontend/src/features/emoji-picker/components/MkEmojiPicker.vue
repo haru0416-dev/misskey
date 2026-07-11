@@ -139,7 +139,7 @@ import { i18n } from '@/i18n.js';
 import { store } from '@/store.js';
 import { customEmojiCategories, customEmojis, customEmojisMap } from '@/custom-emojis.js';
 import { $i } from '@/i.js';
-import { checkReactionPermissions } from '@/utility/check-reaction-permissions.js';
+import { checkReactionPermissions } from '@/features/notes/check-reaction-permissions.js';
 import { prefer } from '@/preferences.js';
 import { useRouter } from '@/router.js';
 

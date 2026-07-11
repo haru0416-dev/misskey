@@ -101,7 +101,7 @@ import { ensureSignin } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkPushNotificationAllowButton from '@/components/MkPushNotificationAllowButton.vue';
+import MkPushNotificationAllowButton from '@/features/notifications/components/MkPushNotificationAllowButton.vue';
 import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
 import { Paginator } from '@/utility/paginator.js';
 import MkPagination from '@/components/MkPagination.vue';

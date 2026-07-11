@@ -36,7 +36,7 @@ import * as Misskey from 'misskey-js';
 import { useInterval } from '@shared/utility/use-interval.js';
 import MkMarqueeText from '@/components/MkMarqueeText.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { getNoteSummary } from '@/utility/get-note-summary.js';
+import { getNoteSummary } from '@/features/notes/get-note-summary.js';
 import { notePage } from '@/filters/note.js';
 
 const props = defineProps<{

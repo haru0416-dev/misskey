@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import hasAudio from '@/utility/media-has-audio.js';
+import hasAudio from '@/features/media-viewer/media-has-audio.js';
 
 describe('hasAudio', () => {
 	test('settles and releases the clone when playback is rejected', async () => {

@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, markRaw, ref } from 'vue';
 import type { PageHeaderItem } from '@/types/page-header.js';
-import MkNotesTimeline from '@/components/MkNotesTimeline.vue';
+import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
 import MkButton from '@/components/MkButton.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';

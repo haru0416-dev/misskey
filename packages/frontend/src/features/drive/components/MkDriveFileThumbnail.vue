@@ -45,7 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkImgWithBlurhash from '@/components/MkImgWithBlurhash.vue';
+import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
 import { prefer } from '@/preferences.js';
 
 const props = defineProps<{

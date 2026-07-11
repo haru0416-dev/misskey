@@ -180,7 +180,7 @@ import { claimAchievement } from '@/utility/claim-achievement.js';
 import { prefer } from '@/preferences.js';
 import { chooseFileFromPcAndUpload, selectDriveFolder } from '@/features/drive/drive.js';
 import { store } from '@/store.js';
-import { makeDateGroupedTimelineComputedRef } from '@/utility/timeline-date-separate.js';
+import { makeDateGroupedTimelineComputedRef } from '@/features/notes/timeline-date-separate.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
 import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js';
 import { getDriveFileMenu } from '@/features/drive/get-drive-file-menu.js';

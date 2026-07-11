@@ -60,7 +60,7 @@ import type { MenuItem } from '@/types/menu.js';
 import XSigninDialog from '@/features/auth/components/MkSigninDialog.vue';
 import XSignupDialog from '@/features/auth/components/MkSignupDialog.vue';
 import MkButton from '@/components/MkButton.vue';
-import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
+import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

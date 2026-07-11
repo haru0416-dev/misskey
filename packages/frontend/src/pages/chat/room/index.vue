@@ -110,7 +110,7 @@ import MkButton from '@/components/MkButton.vue';
 import { useRouter } from '@/router.js';
 import { useMutationObserver } from '@/composables/useMutationObserver.js';
 import MkInfo from '@/components/MkInfo.vue';
-import { makeDateSeparatedTimelineComputedRef } from '@/utility/timeline-date-separate.js';
+import { makeDateSeparatedTimelineComputedRef } from '@/features/notes/timeline-date-separate.js';
 
 const $i = ensureSignin();
 const router = useRouter();
