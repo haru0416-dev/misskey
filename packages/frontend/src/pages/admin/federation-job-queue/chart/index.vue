@@ -56,7 +56,7 @@ import number from '@/filters/number.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import MkFolder from '@/components/MkFolder.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import { genId } from '@/utility/id.js';
 
 const connection = markRaw(useStream().useChannel('queueStats'));

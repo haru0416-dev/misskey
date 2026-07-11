@@ -19,9 +19,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, computed, markRaw } from 'vue';
 import MessageItem from '../chat/message-item.vue';
 import { i18n } from '@/i18n.js';
-import MkInfo from '@/components/MkInfo.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 import { Paginator } from '@/utility/paginator.js';
-import MkPagination from '@/components/MkPagination.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 
 const props = defineProps<{
 	fileId: string;

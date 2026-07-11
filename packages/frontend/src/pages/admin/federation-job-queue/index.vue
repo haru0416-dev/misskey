@@ -24,7 +24,7 @@ import type { Ref } from 'vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 
 export type ApQueueDomain = 'deliver' | 'inbox';
 

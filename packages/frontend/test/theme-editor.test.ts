@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { fromThemeString, toThemeString } from '@/utility/theme-editor.js';
+import { fromThemeString, toThemeString } from '@/features/themes/theme-editor.js';
 
 describe('theme editor value conversion', () => {
 	test.each(['alpha', 'darken', 'hue', 'lighten', 'saturate'] as const)('round-trips the %s function', (name) => {

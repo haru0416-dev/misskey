@@ -31,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, toRefs } from 'vue';
 import { i18n } from '@/i18n.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import { copyGridDataToClipboard } from '@/components/grid/grid-utils.js';
 
 import type { RequestLogItem } from '@/pages/admin/custom-emojis-manager2/impl.js';

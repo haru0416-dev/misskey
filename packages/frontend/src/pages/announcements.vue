@@ -46,9 +46,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkPagination from '@/components/MkPagination.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';

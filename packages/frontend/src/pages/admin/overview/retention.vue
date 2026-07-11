@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import MkRetentionHeatmap from '@/components/MkRetentionHeatmap.vue';
+import MkRetentionHeatmap from '@/features/charts/components/MkRetentionHeatmap.vue';
 </script>
 
 <style lang="scss" module>

@@ -14,6 +14,7 @@ import type {
 	ValueOf,
 } from '@/preferences/store.js';
 import { createPreferencesStore, isPossiblyNonNormalizedPreferencesProfile } from '@/preferences/store.js';
+import { PREF_DEF } from '@/preferences/def.js';
 
 function createProfile(
 	preferences: PossiblyNonNormalizedPreferencesProfile['preferences'] = {},
@@ -69,6 +70,17 @@ describe('preferences profile validation', () => {
 	});
 });
 
+describe('preference merge strategies', () => {
+	test('merges ID-based collections while preserving order and rejecting conflicts', () => {
+		const merge = PREF_DEF.emojiPalettes.mergeStrategy!;
+		const first = { id: 'a', name: 'First', emojis: ['a'] };
+		const second = { id: 'b', name: 'Second', emojis: ['b'] };
+
+		expect(merge([first], [first, second])).toEqual([first, second]);
+		expect(() => merge([first], [{ ...first, name: 'Changed' }])).toThrow();
+	});
+});
+
 describe('Pinia preferences store', () => {
 	test('uses backward-compatible defaults for the new display and draft preferences', async () => {
 		const fixture = createStorageProvider();
@@ -109,6 +121,21 @@ describe('Pinia preferences store', () => {
 		expect(store.animation).toBe(true);
 		expect(store.profile.preferences.animation[0][1]).toBe(true);
 		expect(fixture.saves.at(-1)?.profile.preferences.animation[0][1]).toBe(true);
+	});
+
+	test('exposes preferences as computed two-way models', async () => {
+		const fixture = createStorageProvider({
+			profile: createProfile({ animation: [[{}, false, {}]] }),
+		});
+		const store = createPreferencesStore(fixture.provider, null, createPinia());
+		await store.$preferencesCloudReady;
+		const animation = store.model('animation');
+		const reduceAnimation = store.model('animation', value => !value, value => !value);
+
+		expect(animation.value).toBe(false);
+		reduceAnimation.value = false;
+		expect(store.animation).toBe(true);
+		expect(animation.value).toBe(true);
 	});
 
 	test('does not overwrite a local commit with a late cloud response', async () => {

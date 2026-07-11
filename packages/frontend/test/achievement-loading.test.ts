@@ -9,12 +9,12 @@ const { claimAchievementMock } = vi.hoisted(() => ({
 	claimAchievementMock: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('@/utility/achievements.js', () => ({
+vi.mock('@/features/achievements/achievements.js', () => ({
 	claimedAchievements: ['justPlainLucky', 'client30min', 'client60min'],
 	claimAchievement: claimAchievementMock,
 }));
 
-vi.mock('@/utility/is-birthday.js', () => ({
+vi.mock('@/features/users/is-birthday.js', () => ({
 	isBirthday: () => false,
 }));
 
@@ -33,7 +33,7 @@ describe('achievement loading', () => {
 	});
 
 	test('loads the achievement implementation when a claim is requested', async () => {
-		const { claimAchievement } = await import('@/utility/claim-achievement.js');
+		const { claimAchievement } = await import('@/features/achievements/claim-achievement.js');
 
 		await claimAchievement('notes1');
 
@@ -42,7 +42,7 @@ describe('achievement loading', () => {
 	});
 
 	test('runs startup achievement checks from the deferred initializer', async () => {
-		const { initializeAchievements } = await import('@/utility/initialize-achievements.js');
+		const { initializeAchievements } = await import('@/features/achievements/initialize-achievements.js');
 
 		initializeAchievements();
 

@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { i18n } from '@/i18n.js';
 import { store } from '@/store.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { TIPS, hideAllTips, closeTip } from '@/tips.js';
 

@@ -59,17 +59,17 @@ import { isLink } from '@shared/utility/is-link.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { NormalizedChatMessage } from './room/index.vue';
 import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm.js';
-import MkUrlPreview from '@/components/MkUrlPreview.vue';
+import MkUrlPreview from '@/features/link-preview/components/MkUrlPreview.vue';
 import { ensureSignin } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import MkFukidashi from '@/components/MkFukidashi.vue';
+import MkFukidashi from '@/components/overlay/MkFukidashi.vue';
 import * as os from '@/os.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
-import MkMediaList from '@/components/MkMediaList.vue';
-import { reactionPicker } from '@/utility/reaction-picker.js';
-import * as sound from '@/utility/sound.js';
-import MkReactionIcon from '@/components/MkReactionIcon.vue';
+import MkMediaList from '@/features/media-viewer/components/MkMediaList.vue';
+import { reactionPicker } from '@/features/emoji-picker/reaction-picker.js';
+import * as sound from '@/features/sound/sound.js';
+import MkReactionIcon from '@/features/notes/components/MkReactionIcon.vue';
 import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
@@ -183,7 +183,7 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 			icon: 'ti ti-exclamation-circle',
 			action: async () => {
 				const localUrl = `${url}/chat/messages/${props.message.id}`;
-				const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkAbuseReportWindow.vue').then(x => x.default), {
+				const { dispose } = await os.popupAsyncWithDialog(import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then(x => x.default), {
 					user: props.message.fromUser!,
 					initialComment: `${localUrl}\n-----\n`,
 				}, {

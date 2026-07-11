@@ -145,20 +145,20 @@ import * as Misskey from 'misskey-js';
 import type { GridSortOrderKey, RequestLogItem } from '@/pages/admin/custom-emojis-manager2/impl.js';
 import type { GridCellValueChangeEvent, GridEvent } from '@/components/grid/grid-event.js';
 import type { GridSetting } from '@/components/grid/grid.js';
-import type { SortOrder } from '@/components/MkSortOrderEditor.define.js';
-import MkRemoteEmojiEditDialog from '@/components/MkRemoteEmojiEditDialog.vue';
+import type { SortOrder } from '@/components/form/MkSortOrderEditor.define.js';
+import MkRemoteEmojiEditDialog from '@/features/custom-emojis/components/MkRemoteEmojiEditDialog.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
 import MkGrid from '@/components/grid/MkGrid.vue';
 import { emptyStrToUndefined, gridSortOrderKeys } from '@/pages/admin/custom-emojis-manager2/impl.js';
-import MkFolder from '@/components/MkFolder.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import XRegisterLogs from '@/pages/admin/custom-emojis-manager2/logs.vue';
 import * as os from '@/os.js';
 import { deviceKind } from '@/utility/device-kind.js';
-import MkPagingButtons from '@/components/MkPagingButtons.vue';
-import MkSortOrderEditor from '@/components/MkSortOrderEditor.vue';
+import MkPagingButtons from '@/components/layout/MkPagingButtons.vue';
+import MkSortOrderEditor from '@/components/form/MkSortOrderEditor.vue';
 import { useLoading } from '@/composables/useLoading.js';
 
 type GridItem = {

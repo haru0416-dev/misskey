@@ -54,19 +54,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, markRaw, ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { userPage } from '@/filters/user.js';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkInput from '@/components/MkInput.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkInput from '@/components/form/MkInput.vue';
 import { userListsCache } from '@/cache.js';
 import { ensureSignin } from '@/i.js';
-import MkPagination from '@/components/MkPagination.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
 

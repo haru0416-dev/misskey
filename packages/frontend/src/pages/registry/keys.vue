@@ -40,8 +40,8 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import FormLink from '@/components/form/link.vue';
 import FormSection from '@/components/form/section.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import FormSplit from '@/components/form/split.vue';
 
 const props = defineProps<{

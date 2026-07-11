@@ -31,10 +31,10 @@ import { computed, useTemplateRef } from 'vue';
 import { scrollInContainer } from '@shared/utility/scroll.js';
 import type { PageHeaderProps } from './MkPageHeader.vue';
 import { useScrollPositionKeeper } from '@/composables/useScrollPositionKeeper.js';
-import MkSwiper from '@/components/MkSwiper.vue';
+import MkSwiper from '@/components/layout/MkSwiper.vue';
 import { useRouter } from '@/router.js';
 import { prefer } from '@/preferences.js';
-import MkTabs from '@/components/MkTabs.vue';
+import MkTabs from '@/components/layout/MkTabs.vue';
 
 const props = withDefaults(defineProps<PageHeaderProps & {
 	reversed?: boolean;

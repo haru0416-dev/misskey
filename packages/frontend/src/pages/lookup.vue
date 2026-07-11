@@ -25,7 +25,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { mainRouter } from '@/router.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 
 const state = ref<'fetching' | 'done'>('fetching');
 

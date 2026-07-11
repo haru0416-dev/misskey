@@ -5,9 +5,9 @@
 
 import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/vue';
-import MkInput from '@/components/MkInput.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
 import * as os from '@/os.js';
 
 vi.mock('@/os.js', () => ({

@@ -5,7 +5,7 @@
 
 import { computed, reactive, watch } from 'vue';
 import type { Reactive } from 'vue';
-import { deepEqual } from '@/utility/deep-equal';
+import { deepEqual } from '@/utility/deep-equal.js';
 import { deepClone } from '@/utility/clone.js';
 import type { Cloneable } from '@/utility/clone.js';
 
@@ -29,19 +29,25 @@ export function useForm<T extends Record<string, any>>(initialState: T, save: (n
 			}
 			return obj;
 		})(),
-	);
-	const modified = computed(() => Object.values(modifiedStates).some((v) => v));
-	const modifiedCount = computed(() => Object.values(modifiedStates).filter((v) => v).length);
+	) as Record<keyof T, boolean>;
+	const modifiedCount = computed(() => {
+		let count = 0;
+		for (const key in modifiedStates) {
+			if (modifiedStates[key]) count++;
+		}
+		return count;
+	});
+	const modified = computed(() => modifiedCount.value > 0);
 
-	watch(
-		[currentState, previousState],
-		() => {
-			for (const key in modifiedStates) {
-				(modifiedStates as any)[key] = !deepEqual(currentState[key], previousState[key]);
-			}
-		},
-		{ deep: true },
-	);
+	for (const key in initialState) {
+		watch(
+			[() => currentState[key], () => previousState[key]],
+			() => {
+				modifiedStates[key] = !deepEqual(currentState[key], previousState[key]);
+			},
+			{ deep: true },
+		);
+	}
 
 	async function _save() {
 		await save(unwrapReactive(currentState));

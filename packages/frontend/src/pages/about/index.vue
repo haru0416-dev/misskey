@@ -24,13 +24,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
-import { claimAchievement } from '@/utility/claim-achievement.js';
+import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { definePage } from '@/page.js';
 
 const XOverview = defineAsyncComponent(() => import('@/pages/about/overview.vue'));
 const XEmojis = defineAsyncComponent(() => import('@/pages/about/emojis.vue'));
 const XFederation = defineAsyncComponent(() => import('@/pages/about/federation.vue'));
-const MkInstanceStats = defineAsyncComponent(() => import('@/components/MkInstanceStats.vue'));
+const MkInstanceStats = defineAsyncComponent(() => import('@/features/instances/components/MkInstanceStats.vue'));
 
 const props = withDefaults(defineProps<{
 	initialTab?: string;

@@ -19,7 +19,7 @@ import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import * as os from '@/os.js';
 import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
 import { $i } from '@/i.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 
 const name = 'button';

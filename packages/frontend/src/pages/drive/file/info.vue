@@ -72,15 +72,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent, onMounted } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkInfo from '@/components/MkInfo.vue';
-import MkMediaList from '@/components/MkMediaList.vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
+import MkMediaList from '@/features/media-viewer/components/MkMediaList.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import bytes from '@/filters/bytes.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useRouter } from '@/router.js';
-import { selectDriveFolder } from '@/utility/drive.js';
+import { selectDriveFolder } from '@/features/drive/drive.js';
 import { globalEvents } from '@/events.js';
 
 const router = useRouter();
@@ -184,7 +184,7 @@ async function describe() {
 
 	const f = file.value;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/drive/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
 		default: file.value.comment ?? '',
 		file: file.value,
 	}, {

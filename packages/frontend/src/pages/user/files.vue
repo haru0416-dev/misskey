@@ -18,8 +18,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkNoteMediaGrid from '@/components/MkNoteMediaGrid.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkNoteMediaGrid from '@/features/notes/components/MkNoteMediaGrid.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const props = defineProps<{

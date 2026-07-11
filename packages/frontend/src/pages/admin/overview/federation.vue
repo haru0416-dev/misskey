@@ -52,7 +52,7 @@ import type { InstanceForPie } from './pie.vue';
 import * as os from '@/os.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import number from '@/filters/number.js';
-import MkNumberDiff from '@/components/MkNumberDiff.vue';
+import MkNumberDiff from '@/components/display/MkNumberDiff.vue';
 import { i18n } from '@/i18n.js';
 
 const topSubInstancesForPie = ref<InstanceForPie[] | null>(null);

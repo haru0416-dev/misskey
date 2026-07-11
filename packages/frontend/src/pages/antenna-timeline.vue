@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, watch, ref, useTemplateRef, provide } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
+import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';

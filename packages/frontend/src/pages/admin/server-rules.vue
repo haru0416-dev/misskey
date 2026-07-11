@@ -43,10 +43,10 @@ import { ref } from 'vue';
 import * as os from '@/os.js';
 import { fetchInstance, instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkDraggable from '@/components/MkDraggable.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkDraggable from '@/components/layout/MkDraggable.vue';
 
 const serverRules = ref<{ text: string; id: string; }[]>(instance.serverRules.map(text => ({ text, id: Math.random().toString() })));
 

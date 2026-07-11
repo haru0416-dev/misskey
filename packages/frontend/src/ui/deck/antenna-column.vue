@@ -22,7 +22,7 @@ import type { Column } from '@/deck.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { SoundStore } from '@/preferences/def.js';
 import { updateColumn } from '@/deck.js';
-import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
+import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
@@ -78,7 +78,7 @@ async function setAntenna() {
 	if (canceled || antennaIdOrOperation == null) return;
 
 	if (antennaIdOrOperation === '_CREATE_') {
-		const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkAntennaEditorDialog.vue').then(x => x.default), {}, {
+		const { dispose } = await os.popupAsyncWithDialog(import('@/features/antennas/components/MkAntennaEditorDialog.vue').then(x => x.default), {}, {
 			created: (newAntenna: MisskeyEntities.Antenna) => {
 				antennasCache.delete();
 				updateColumn(props.column.id, {

@@ -21,7 +21,7 @@ import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@shared/utility/use-interval.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkInstanceCardMini from '@/components/MkInstanceCardMini.vue';
+import MkInstanceCardMini from '@/features/instances/components/MkInstanceCardMini.vue';
 import { prefer } from '@/preferences.js';
 
 const instances = ref<Misskey.entities.FederationInstance[]>([]);

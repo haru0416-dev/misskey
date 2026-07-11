@@ -5,12 +5,13 @@
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 
 const focusTrapElements = new Set<HTMLElement>();
-const ignoreElements = ['script', 'style'];
+const ignoreElements = new Set(['script', 'style']);
 
 function containsFocusTrappedElements(el: HTMLElement): boolean {
-	return Array.from(focusTrapElements).some((focusTrapElement) => {
-		return el.contains(focusTrapElement);
-	});
+	for (const focusTrapElement of focusTrapElements) {
+		if (el.contains(focusTrapElement)) return true;
+	}
+	return false;
 }
 
 function getZIndex(el: HTMLElement): number {
@@ -64,7 +65,7 @@ function releaseFocusTrap(el: HTMLElement): void {
 				highestZIndexElement != null &&
 				siblingEl !== highestZIndexElement.el &&
 				!siblingEl.contains(highestZIndexElement.el) &&
-				!ignoreElements.includes(siblingEl.tagName.toLowerCase())
+				!ignoreElements.has(siblingEl.tagName.toLowerCase())
 			) {
 				siblingEl.inert = true;
 			} else {
@@ -117,7 +118,7 @@ export function focusTrap(
 				siblingEl !== el &&
 				(hasInteractionWithOtherFocusTrappedEls === false ||
 					(!focusTrapElements.has(siblingEl) && !containsFocusTrappedElements(siblingEl))) &&
-				!ignoreElements.includes(siblingEl.tagName.toLowerCase())
+				!ignoreElements.has(siblingEl.tagName.toLowerCase())
 			) {
 				siblingEl.inert = true;
 			}

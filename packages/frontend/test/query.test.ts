@@ -90,8 +90,10 @@ describe('TanStack Query integration', () => {
 		expect(request).toHaveBeenCalledOnce();
 		expect(queryClient.getQueryData(queryKey)).toEqual([{ id: 'clip-a' }]);
 
+		const find = vi.spyOn(queryClient.getQueryCache(), 'find');
 		cache.set([{ id: 'clip-b' }]);
 		expect(cache.value.value).toEqual([{ id: 'clip-b' }]);
+		expect(find).not.toHaveBeenCalled();
 	});
 
 	test('invalidates related list queries after mutations', () => {
