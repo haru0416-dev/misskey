@@ -17,6 +17,24 @@
 | `widgets/` | widgetランタイムと各widget |
 | `workers/` | Web Worker entrypoints |
 
+## Shared component categories
+
+`components/` の直下にはglobal登録entrypointだけを置き、共通UIは責務別のsubdirectoryへ置く。
+
+| Directory | Responsibility |
+| --- | --- |
+| `components/form/` | input、button、select、switch、form補助、並べ替えeditor |
+| `components/overlay/` | dialog、modal、menu、tooltip、toast、window |
+| `components/layout/` | container、pagination、tab、folder、drag、scroll layout |
+| `components/display/` | 値・状態・時計・previewなど読み取り中心の表示部品 |
+| `components/effects/` | ripple、sparkleなど一時的な視覚effect |
+| `components/global/` | Vueへglobal登録するrendererとapp adapter |
+| `components/grid/` | data grid基盤 |
+
+componentを追加するとき、特定のユーザー機能を知っている場合は `components/` ではなく `features/<feature>/components/` を選ぶ。共通UI category間の依存は絶対pathで明示し、同じcategory内の密結合な補助componentだけ相対importを許可する。
+
+`MkInput` と `MkTextarea` は入力補助として `features/autocomplete/` を利用する。この統合点以外の共通form primitiveはfeatureへ依存させない。
+
 ## Dependency direction
 
 基本の依存方向は次の通り。

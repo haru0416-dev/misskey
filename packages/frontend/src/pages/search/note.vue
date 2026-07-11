@@ -151,18 +151,18 @@ import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { apLookup } from '@/utility/lookup.js';
+import { apLookup } from '@/features/search/lookup.js';
 import { useRouter } from '@/router.js';
-import MkButton from '@/components/MkButton.vue';
-import MkFoldableSection from '@/components/MkFoldableSection.vue';
-import MkInput from '@/components/MkInput.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
+import MkInput from '@/components/form/MkInput.vue';
 import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
-import MkRadios from '@/components/MkRadios.vue';
-import MkSelect from '@/components/MkSelect.vue';
+import MkRadios from '@/components/form/MkRadios.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
 import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 import { Paginator } from '@/utility/paginator.js';
-import type { MkRadiosOption } from '@/components/MkRadios.vue';
-import type { MkSelectItem } from '@/components/MkSelect.vue';
+import type { MkRadiosOption } from '@/components/form/MkRadios.vue';
+import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 
 const props = withDefaults(defineProps<{

@@ -7,6 +7,10 @@
 - `components/MkAuthConfirm.vue`: MiAuth、OAuthの認可確認
 - `components/MkForgotPassword.vue`: パスワード再設定要求
 - `components/MkVisitorDashboard.vue`: 未認証ユーザー向けの入口
+- `components/MkCaptcha.vue`: bot protection challenge
+- `components/MkPasswordDialog.vue`, `components/MkTokenGenerateWindow.vue`: 再認証とAPI token生成
 - `please-login.ts`: 認証必須操作のguardとサインイン誘導
 
 アカウント状態とセッション切り替えは引き続きアプリケーション基盤の `accounts.ts`、`i.ts`、`signout.ts` が所有する。このfeatureはそれらを利用するUI層であり、セッション状態を独自に保持しない。
+
+`account-data.ts` と `login-id.ts` はaccount永続データの変換とlogin identifier管理を担当する。

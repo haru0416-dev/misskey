@@ -150,16 +150,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, useTemplateRef, watch } from 'vue';
 import { host } from '@shared/utility/config.js';
-import MkModalWindow from '@/components/MkModalWindow.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import XNote from '@/features/onboarding/components/MkTutorialDialog.Note.vue';
 import XTimeline from '@/features/onboarding/components/MkTutorialDialog.Timeline.vue';
 import XPostNote from '@/features/onboarding/components/MkTutorialDialog.PostNote.vue';
 import XSensitive from '@/features/onboarding/components/MkTutorialDialog.Sensitive.vue';
-import MkAnimBg from '@/components/MkAnimBg.vue';
+import MkAnimBg from '@/components/display/MkAnimBg.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import { claimAchievement } from '@/utility/claim-achievement.js';
+import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import * as os from '@/os.js';
 
 const props = defineProps<{

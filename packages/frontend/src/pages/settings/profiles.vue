@@ -16,8 +16,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import MkButton from '@/components/MkButton.vue';
-import MkFolder from '@/components/MkFolder.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { deleteCloudBackup, listCloudBackups } from '@/preferences/utility.js';

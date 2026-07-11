@@ -42,11 +42,11 @@ import { entities } from 'misskey-js';
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
 import XRecipient from './item.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkInput from '@/components/MkInput.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
-import MkDivider from '@/components/MkDivider.vue';
+import MkDivider from '@/components/layout/MkDivider.vue';
 import { i18n } from '@/i18n.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 

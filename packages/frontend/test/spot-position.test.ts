@@ -24,7 +24,7 @@ vi.mock('@/utility/popup-position.js', () => ({
 	calcPopupPosition: calcPopupPositionMock,
 }));
 
-import MkSpot from '@/components/MkSpot.vue';
+import MkSpot from '@/components/overlay/MkSpot.vue';
 
 describe('MkSpot', () => {
 	afterEach(() => {

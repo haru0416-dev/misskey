@@ -32,9 +32,9 @@ import XItem from './item.vue';
 import FormSection from '@/components/form/section.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { showSystemWebhookEditorDialog } from '@/components/MkSystemWebhookEditor.impl.js';
+import { showSystemWebhookEditorDialog } from '@/features/webhooks/components/MkSystemWebhookEditor.impl.js';
 import * as os from '@/os.js';
 
 const webhooks = ref<entities.SystemWebhook[]>([]);

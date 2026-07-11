@@ -130,12 +130,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, useTemplateRef, watch, nextTick, defineAsyncComponent } from 'vue';
 import { host } from '@shared/utility/config.js';
-import MkModalWindow from '@/components/MkModalWindow.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import XProfile from '@/features/onboarding/components/MkUserSetupDialog.Profile.vue';
 import XFollow from '@/features/onboarding/components/MkUserSetupDialog.Follow.vue';
 import XPrivacy from '@/features/onboarding/components/MkUserSetupDialog.Privacy.vue';
-import MkAnimBg from '@/components/MkAnimBg.vue';
+import MkAnimBg from '@/components/display/MkAnimBg.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import MkPushNotificationAllowButton from '@/features/notifications/components/MkPushNotificationAllowButton.vue';

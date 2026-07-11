@@ -64,9 +64,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, ref, computed, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import { host as currentHost, hostname } from '@shared/utility/config.js';
-import MkInput from '@/components/MkInput.vue';
+import MkInput from '@/components/form/MkInput.vue';
 import FormSplit from '@/components/form/split.vue';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';

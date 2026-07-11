@@ -30,7 +30,7 @@ import { useTooltip } from '@/composables/useTooltip.js';
 import { $i } from '@/i.js';
 import MkReactionEffect from '@/features/notes/components/MkReactionEffect.vue';
 import { i18n } from '@/i18n.js';
-import * as sound from '@/utility/sound.js';
+import * as sound from '@/features/sound/sound.js';
 import { checkReactionPermissions } from '@/features/notes/check-reaction-permissions.js';
 import { customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
 import { prefer } from '@/preferences.js';

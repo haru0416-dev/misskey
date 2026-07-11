@@ -28,7 +28,7 @@ import { useWidgetPropsManager } from './widget.js';
 import { i18n } from '@/i18n.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import MkContainer from '@/components/MkContainer.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
 
 const name = 'rss';
 

@@ -19,7 +19,7 @@ import type { AccountWithToken } from '@/i.js';
 import { signout } from '@/signout.js';
 import { updateUserQueries } from '@/query/streaming.js';
 
-const MkWaitingDialog = defineAsyncComponent(() => import('@/components/MkWaitingDialog.vue'));
+const MkWaitingDialog = defineAsyncComponent(() => import('@/components/overlay/MkWaitingDialog.vue'));
 const MkSigninDialog = defineAsyncComponent(() => import('@/features/auth/components/MkSigninDialog.vue'));
 const MkSignupDialog = defineAsyncComponent(() => import('@/features/auth/components/MkSignupDialog.vue'));
 

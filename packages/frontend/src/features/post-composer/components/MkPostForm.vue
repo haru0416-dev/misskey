@@ -128,22 +128,22 @@ import XTextCounter from '@/features/post-composer/components/MkPostForm.TextCou
 import MkNoteSimple from '@/features/notes/components/MkNoteSimple.vue';
 import { erase, unique } from '@/utility/array.js';
 import { formatTimeString } from '@/utility/format-time-string.js';
-import { Autocomplete } from '@/utility/autocomplete.js';
+import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { chooseDriveFile } from '@/features/drive/drive.js';
 import { store } from '@/store.js';
-import MkInfo from '@/components/MkInfo.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import { ensureSignin, notesCount, incNotesCount } from '@/i.js';
 import { getAccounts, getAccountMenu } from '@/accounts.js';
 import { deepClone } from '@/utility/clone.js';
-import MkRippleEffect from '@/components/MkRippleEffect.vue';
+import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import { isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
-import { claimAchievement } from '@/utility/claim-achievement.js';
+import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
-import { mfmFunctionPicker } from '@/utility/mfm-function-picker.js';
+import { mfmFunctionPicker } from '@/features/post-composer/mfm-function-picker.js';
 import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { DI } from '@/di.js';
@@ -529,7 +529,7 @@ function setVisibility() {
 		return;
 	}
 
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkVisibilityPicker.vue')), {
+	const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/post-composer/components/MkVisibilityPicker.vue')), {
 		currentVisibility: visibility.value,
 		isSilenced: $i.isSilenced,
 		anchorElement: visibilityButton.value,

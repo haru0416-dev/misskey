@@ -62,9 +62,9 @@ import type { OpenOnRemoteOptions } from '@/features/auth/please-login.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 
 const props = withDefaults(defineProps<{
 	message?: string,

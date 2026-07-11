@@ -26,7 +26,7 @@ import { startAuthentication } from '@simplewebauthn/browser';
 
 import { i18n } from '@/i18n.js';
 
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 
 import type { PublicKeyCredentialRequestOptionsJSON, AuthenticationResponseJSON } from '@simplewebauthn/browser';
 

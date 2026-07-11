@@ -27,7 +27,7 @@ export function startTour(steps: TourStep[]) {
 		});
 
 		const { dispose } = os.popup(
-			defineAsyncComponent(() => import('@/components/MkSpot.vue')),
+			defineAsyncComponent(() => import('@/components/overlay/MkSpot.vue')),
 			{
 				title: titleRef,
 				description: descriptionRef,

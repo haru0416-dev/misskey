@@ -22,7 +22,7 @@ import { store } from '@/store.js';
 import { fetchInstance, instance } from '@/instance.js';
 import { updateDeviceKind } from '@/utility/device-kind.js';
 import { reloadChannel } from '@/utility/unison-reload.js';
-import { getUrlWithoutLoginId } from '@/utility/login-id.js';
+import { getUrlWithoutLoginId } from '@/features/auth/login-id.js';
 import { getAccountFromId } from '@/features/users/get-account-from-id.js';
 import { analytics, initAnalytics } from '@/analytics.js';
 import { miLocalStorage } from '@/local-storage.js';

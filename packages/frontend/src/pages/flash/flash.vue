@@ -68,15 +68,15 @@ import { url } from '@shared/utility/config.js';
 import type { Ref } from 'vue';
 import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
 import type { MenuItem } from '@/types/menu.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkAsUi from '@/components/MkAsUi.vue';
+import MkAsUi from '@/aiscript/components/MkAsUi.vue';
 import { registerAsUiLib } from '@/aiscript/ui.js';
 import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
-import MkFolder from '@/components/MkFolder.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import MkCode from '@/features/code/components/MkCode.vue';
 import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
@@ -249,7 +249,7 @@ async function reportAbuse() {
 
 	const pageUrl = `${url}/play/${flash.value.id}`;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkAbuseReportWindow.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then(x => x.default), {
 		user: flash.value.user,
 		initialComment: `Play: ${pageUrl}\n-----\n`,
 	}, {

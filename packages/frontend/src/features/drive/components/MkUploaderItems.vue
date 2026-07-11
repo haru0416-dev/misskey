@@ -54,7 +54,7 @@ import { isLink } from '@shared/utility/is-link.js';
 import { getUploadName } from '@/features/drive/useUploader.js';
 import type { UploaderItem } from '@/features/drive/useUploader.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import bytes from '@/filters/bytes.js';
 
 const props = defineProps<{

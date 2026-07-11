@@ -13,7 +13,7 @@ import * as Misskey from 'misskey-js';
 import type { PollEditorModelValue } from '@/features/post-composer/components/MkPollEditor.vue';
 import { concat } from '@/utility/array.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 
 const props = defineProps<{
 	modelValue: boolean;

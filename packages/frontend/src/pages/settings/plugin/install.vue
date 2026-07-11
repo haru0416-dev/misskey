@@ -20,8 +20,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { nextTick, ref, computed } from 'vue';
 import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
-import MkButton from '@/components/MkButton.vue';
-import FormInfo from '@/components/MkInfo.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import FormInfo from '@/components/display/MkInfo.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';

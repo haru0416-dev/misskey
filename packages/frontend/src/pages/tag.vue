@@ -22,13 +22,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, markRaw, ref } from 'vue';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 import { store } from '@/store.js';
 import * as os from '@/os.js';
-import { genEmbedCode } from '@/utility/get-embed-code.js';
+import { genEmbedCode } from '@/features/code/get-embed-code.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const props = defineProps<{

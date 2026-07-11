@@ -13,7 +13,7 @@ vi.mock('@/preferences/store.js', () => ({
 	getInitialPrefValue: vi.fn(),
 }));
 
-import { getSoundDuration, loadAudio } from '@/utility/sound.js';
+import { getSoundDuration, loadAudio } from '@/features/sound/sound.js';
 
 describe('sound utilities', () => {
 	const decodeAudioData = vi.fn();

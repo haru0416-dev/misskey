@@ -49,7 +49,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-import type { SortOrder } from '@/components/MkSortOrderEditor.define.js';
+import type { SortOrder } from '@/components/form/MkSortOrderEditor.define.js';
 import type { GridSortOrderKey } from '../../impl.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 
@@ -84,10 +84,10 @@ import {
 } from '@/pages/admin/custom-emojis-manager2/impl.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { validators } from '@/components/grid/cell-validators.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkPagingButtons from '@/components/MkPagingButtons.vue';
+import MkPagingButtons from '@/components/layout/MkPagingButtons.vue';
 import { selectFile } from '@/features/drive/drive.js';
 import { copyGridDataToClipboard, removeDataFromGrid } from '@/components/grid/grid-utils.js';
 import { useLoading } from '@/composables/useLoading.js';

@@ -67,10 +67,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref } from 'vue';
 import { instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 import * as os from '@/os.js';
 
 const availableServerRules = instance.serverRules.length > 0;

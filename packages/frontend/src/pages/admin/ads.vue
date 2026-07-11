@@ -90,14 +90,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
-import MkRadios from '@/components/MkRadios.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkSelect from '@/components/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
+import MkRadios from '@/components/form/MkRadios.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
 import FormSplit from '@/components/form/split.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';

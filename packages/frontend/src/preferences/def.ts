@@ -9,7 +9,7 @@ import { DEFAULT_EMOJIS } from '@shared/utility/const.js';
 import { prefersReducedMotion } from '@shared/utility/config.js';
 import { definePreferences } from './store.js';
 import type { Theme } from '@shared/utility/theme.js';
-import type { SoundType } from '@/utility/sound.js';
+import type { SoundType } from '@/features/sound/sound.js';
 import type { Plugin } from '@/plugin.js';
 import type { DeviceKind } from '@/utility/device-kind.js';
 import type { DeckProfile } from '@/deck.js';
@@ -18,7 +18,7 @@ import type { ImageFramePreset } from '@/features/image-editor/frame/ImageFrameR
 import { genId } from '@/utility/id.js';
 import { DEFAULT_DEVICE_KIND } from '@/utility/device-kind.js';
 import { deepEqual } from '@/utility/deep-equal.js';
-import type { SearchEngine } from '@/utility/search-engine.js';
+import type { SearchEngine } from '@/features/search/search-engine.js';
 
 /** サウンド設定 */
 export type SoundStore =

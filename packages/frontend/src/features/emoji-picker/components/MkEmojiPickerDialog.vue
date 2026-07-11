@@ -38,7 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
 import { useTemplateRef } from 'vue';
-import MkModal from '@/components/MkModal.vue';
+import MkModal from '@/components/overlay/MkModal.vue';
 import MkEmojiPicker from '@/features/emoji-picker/components/MkEmojiPicker.vue';
 import { prefer } from '@/preferences.js';
 

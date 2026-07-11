@@ -9,7 +9,7 @@ import { popup, alert } from '@/os.js';
 import { genId } from '@/utility/id.js';
 
 const MOUSEENTER_IGNORE_DURATION = 1000;
-const MkTooltip = defineAsyncComponent(() => import('@/components/MkTooltip.vue'));
+const MkTooltip = defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue'));
 
 type TooltipDirectiveState = {
 	text: string | null | undefined;

@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import * as Misskey from 'misskey-js';
 import type { IPaginator, ExtractorFunction } from '@/utility/paginator.js';
 import MkChannelPreview from '@/features/channels/components/MkChannelPreview.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 
 const props = withDefaults(defineProps<{
 	paginator: P;

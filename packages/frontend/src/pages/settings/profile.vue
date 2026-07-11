@@ -164,25 +164,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, reactive, ref, toRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkSelect from '@/components/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
 import FormSplit from '@/components/form/split.vue';
-import MkFolder from '@/components/MkFolder.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import FormSlot from '@/components/form/slot.vue';
 import FormLink from '@/components/form/link.vue';
-import MkDraggable from '@/components/MkDraggable.vue';
+import MkDraggable from '@/components/layout/MkDraggable.vue';
 import { chooseDriveFile } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
 import { langmap } from '@/utility/langmap.js';
 import { definePage } from '@/page.js';
-import { claimAchievement } from '@/utility/claim-achievement.js';
+import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { store } from '@/store.js';
-import MkInfo from '@/components/MkInfo.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
 import { genId } from '@/utility/id.js';
 
 const $i = ensureSignin();

@@ -41,7 +41,7 @@ import { i18n } from '@/i18n.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import MkFormSection from '@/components/form/section.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 
 const exampleCWNote = reactive<Misskey.entities.Note>({
 	id: '0000000000',

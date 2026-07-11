@@ -5,7 +5,7 @@
 
 import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
-import { claimAchievement } from '@/utility/claim-achievement.js';
+import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import type { Ref, ShallowRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import { $i } from '@/i.js';
@@ -18,10 +18,10 @@ import { store } from '@/store.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { getUserMenu } from '@/features/users/get-user-menu.js';
 import { clipsCache, favoritedChannelsCache } from '@/cache.js';
-import MkRippleEffect from '@/components/MkRippleEffect.vue';
+import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import { isSupportShare } from '@/utility/navigator.js';
 import { getAppearNote } from '@/features/notes/get-appear-note.js';
-import { genEmbedCode } from '@/utility/get-embed-code.js';
+import { genEmbedCode } from '@/features/code/get-embed-code.js';
 import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { globalEvents } from '@/events.js';
@@ -147,7 +147,7 @@ export function getAbuseNoteMenu(note: Misskey.entities.Note, text: string): Men
 			if (note.url ?? note.uri != null) noteInfo = `Note: ${note.url ?? note.uri}\n`;
 			noteInfo += `Local Note: ${localUrl}\n`;
 			const { dispose } = await os.popupAsyncWithDialog(
-				import('@/components/MkAbuseReportWindow.vue').then((x) => x.default),
+				import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
 				{
 					user: note.user,
 					initialComment: `${noteInfo}-----\n`,

@@ -36,9 +36,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { markRaw } from 'vue';
 import { i18n } from '@/i18n.js';
-import MkFolder from '@/components/MkFolder.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import XUser from '@/features/onboarding/components/MkUserSetupDialog.User.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const pinnedUsersPaginator = markRaw(new Paginator('pinned-users', {

@@ -50,11 +50,11 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkButton from '@/components/MkButton.vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
 import FormSplit from '@/components/form/split.vue';
-import FormInfo from '@/components/MkInfo.vue';
+import FormInfo from '@/components/display/MkInfo.vue';
 
 const props = defineProps<{
 	path: string;

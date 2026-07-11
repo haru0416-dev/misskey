@@ -6,6 +6,7 @@
 - `components/MkCode.Core.vue`: highlighterを使うcode renderer本体
 - `components/MkCodeInline.vue`: MFMなどで使うinline code表示
 - `components/MkCodeEditor.vue`: code入力用editor
+- `components/MkEmbedCodeGenDialog.vue`, `get-embed-code.ts`: 埋め込みcodeの生成
 - `code-highlighter.ts`: Shiki instance、language、themeの遅延読み込み
 - `aiscript.tmLanguage.json`: AiScript用TextMate grammar
 

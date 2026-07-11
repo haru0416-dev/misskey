@@ -9,5 +9,7 @@
 - `components/MkPollEditor.vue`: 投票入力
 - `components/MkNotePreview.vue`: 送信前preview
 - `components/MkNoteDraftsDialog.vue`: 下書きの選択と削除
+- `components/MkVisibilityPicker.vue`: 公開範囲と宛先の選択
+- `mfm-function-picker.ts`: MFM構文入力の補助menu
 
 送信後のnote表示とinteractionは `notes/`、file選択とupload queueは `drive/`、絵文字選択は `emoji-picker/` が所有する。

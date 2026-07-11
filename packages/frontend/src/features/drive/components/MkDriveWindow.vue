@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkDrive from '@/features/drive/components/MkDrive.vue';
-import MkWindow from '@/components/MkWindow.vue';
+import MkWindow from '@/components/overlay/MkWindow.vue';
 import { i18n } from '@/i18n.js';
 
 defineProps<{

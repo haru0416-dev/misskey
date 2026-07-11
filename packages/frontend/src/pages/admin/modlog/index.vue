@@ -46,16 +46,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, markRaw, onMounted } from 'vue';
 import * as Misskey from 'misskey-js';
 import XModLog from './mod-log.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkTl from '@/components/MkTl.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkTl from '@/components/layout/MkTl.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
-import MkPullToRefresh from '@/components/MkPullToRefresh.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkPaginationControl from '@/components/MkPaginationControl.vue';
+import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkPaginationControl from '@/components/layout/MkPaginationControl.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const {

@@ -73,10 +73,10 @@ import {
 } from '@/pages/admin/custom-emojis-manager2/impl.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
 import { i18n } from '@/i18n.js';
-import MkSelect from '@/components/MkSelect.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { validators } from '@/components/grid/cell-validators.js';
 import { chooseDriveFile, chooseFileFromPcAndUpload } from '@/features/drive/drive.js';

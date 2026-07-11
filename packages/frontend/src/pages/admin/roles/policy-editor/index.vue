@@ -419,11 +419,11 @@ import { computed, ref, watch } from 'vue';
 import { i18n } from '@/i18n.js';
 import XFolder from './folder.vue';
 
-import MkInput from '@/components/MkInput.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
-import MkRange from '@/components/MkRange.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkSelect from '@/components/MkSelect.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
+import MkRange from '@/components/form/MkRange.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
 
 const props = defineProps<{
 	isBaseRole: boolean;

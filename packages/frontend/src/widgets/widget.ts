@@ -12,7 +12,7 @@ import * as os from '@/os.js';
 import { deepClone } from '@/utility/clone.js';
 import type { WidgetName } from './index.js';
 
-const MkWidgetSettingsDialog = defineAsyncComponent(() => import('@/components/MkWidgetSettingsDialog.vue'));
+const MkWidgetSettingsDialog = defineAsyncComponent(() => import('@/widgets/components/MkWidgetSettingsDialog.vue'));
 
 export type Widget<P extends Record<string, unknown>> = {
 	id: string;

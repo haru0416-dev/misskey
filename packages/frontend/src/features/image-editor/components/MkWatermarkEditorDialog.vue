@@ -67,11 +67,11 @@ import { ref, useTemplateRef, watch, onMounted, onUnmounted, reactive, nextTick 
 import type { WatermarkLayers, WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import { WatermarkRenderer } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import { i18n } from '@/i18n.js';
-import MkModalWindow from '@/components/MkModalWindow.vue';
-import MkPreviewWithControls from '@/components/MkPreviewWithControls.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkFolder from '@/components/MkFolder.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
+import MkPreviewWithControls from '@/features/ui-preview/components/MkPreviewWithControls.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import XLayer from '@/features/image-editor/components/MkWatermarkEditorDialog.Layer.vue';
 import * as os from '@/os.js';
 import { deepClone } from '@/utility/clone.js';

@@ -3,6 +3,7 @@
 画像加工、フレーム、透かし処理をまとめたfeature。
 
 - `components/`: editor dialogsと編集フォーム
+- `components/MkCropperDialog.vue`: avatar・bannerなどのcrop UI
 - `core/`: WebGL compositorとshader/program管理
 - `effects/`: compositor用画像effectとGLSL
 - `effect/`: effect一覧とUI定義

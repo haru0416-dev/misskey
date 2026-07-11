@@ -69,7 +69,7 @@ import number from '@/filters/number.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
-import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/utility/is-ff-visible-for-me.js';
+import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/features/users/is-ff-visible-for-me.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 
 const props = defineProps<{

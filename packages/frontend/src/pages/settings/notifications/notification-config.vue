@@ -40,8 +40,8 @@ export type NotificationConfig = {
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
 import { ref, computed } from 'vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { i18n } from '@/i18n.js';
 

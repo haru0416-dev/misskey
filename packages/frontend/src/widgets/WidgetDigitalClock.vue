@@ -20,7 +20,7 @@ import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps 
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import { timezones } from '@/utility/timezones.js';
 import { i18n } from '@/i18n.js';
-import MkDigitalClock from '@/components/MkDigitalClock.vue';
+import MkDigitalClock from '@/components/display/MkDigitalClock.vue';
 
 const name = 'digitalClock';
 

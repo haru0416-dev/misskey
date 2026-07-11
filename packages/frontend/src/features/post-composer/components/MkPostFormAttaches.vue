@@ -45,7 +45,7 @@ import * as Misskey from 'misskey-js';
 import type { MenuItem } from '@/types/menu';
 import { copyToClipboard } from '@/utility/copy-to-clipboard';
 import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
-import MkDraggable from '@/components/MkDraggable.vue';
+import MkDraggable from '@/components/layout/MkDraggable.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';

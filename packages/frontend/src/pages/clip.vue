@@ -41,11 +41,11 @@ import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { clipsCache } from '@/cache.js';
 import { isSupportShare } from '@/utility/navigator.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
-import { genEmbedCode } from '@/utility/get-embed-code.js';
+import { genEmbedCode } from '@/features/code/get-embed-code.js';
 import { assertServerContext, serverContext } from '@/server-context.js';
 import { Paginator } from '@/utility/paginator.js';
 

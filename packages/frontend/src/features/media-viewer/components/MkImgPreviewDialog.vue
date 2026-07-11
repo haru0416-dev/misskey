@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 <script lang="ts" setup>
 import { ref } from 'vue';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import type * as Misskey from 'misskey-js';
 
 defineProps<{

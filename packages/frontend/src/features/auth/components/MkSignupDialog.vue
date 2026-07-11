@@ -37,7 +37,7 @@ import { useTemplateRef, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XSignup from '@/features/auth/components/MkSignupDialog.Form.vue';
 import XServerRules from '@/features/auth/components/MkSignupDialog.Rules.vue';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import { i18n } from '@/i18n.js';
 
 const props = withDefaults(defineProps<{

@@ -177,7 +177,7 @@ import * as Misskey from 'misskey-js';
 import XEmojiMute from './emoji-mute.vue';
 import XInstanceMute from './instance-mute.vue';
 import XWordMute from './word-mute.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import { userPage } from '@/filters/user.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
@@ -185,13 +185,13 @@ import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 import * as os from '@/os.js';
 import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
-import MkInfo from '@/components/MkInfo.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import { prefer } from '@/preferences.js';
-import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
+import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 import { Paginator } from '@/utility/paginator.js';
-import { suggestReload } from '@/utility/reload-suggest.js';
+import { suggestReload } from '@/ui/_common_/reload-suggest.js';
 
 const $i = ensureSignin();
 

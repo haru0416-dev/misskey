@@ -36,8 +36,8 @@ import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-d
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import MkContainer from '@/components/MkContainer.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import XUser from './WidgetBirthdayFollowings.user.vue';
 import { i18n } from '@/i18n.js';
 import { Paginator } from '@/utility/paginator.js';

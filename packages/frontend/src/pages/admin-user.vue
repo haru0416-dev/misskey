@@ -212,17 +212,17 @@ import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
 import type { ChartSrc } from '@/features/charts/components/MkChart.vue';
 import MkChart from '@/features/charts/components/MkChart.vue';
-import MkObjectView from '@/components/MkObjectView.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkObjectView from '@/components/display/MkObjectView.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import FormLink from '@/components/form/link.vue';
 import FormSection from '@/components/form/section.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
-import MkSelect from '@/components/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
 import MkFileListForAdmin from '@/features/drive/components/MkFileListForAdmin.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { acct } from '@/filters/user.js';
@@ -230,8 +230,8 @@ import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { ensureSignin, iAmAdmin, iAmModerator } from '@/i.js';
-import MkRolePreview from '@/components/MkRolePreview.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const $i = ensureSignin();
@@ -511,7 +511,7 @@ function toggleRoleItem(role: typeof info.value.roles[number]) {
 }
 
 async function createAnnouncement() {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkUserAnnouncementEditDialog.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then(x => x.default), {
 		user: user.value,
 	}, {
 		closed: () => dispose(),
@@ -519,7 +519,7 @@ async function createAnnouncement() {
 }
 
 async function editAnnouncement(announcement: Misskey.entities.AdminAnnouncementsListResponse[number]) {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkUserAnnouncementEditDialog.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then(x => x.default), {
 		user: user.value,
 		announcement,
 	}, {

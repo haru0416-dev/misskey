@@ -11,14 +11,14 @@ import type { CSSProperties, VNode, SetupContext } from 'vue';
 import type { MkABehavior } from '@/components/global/MkA.vue';
 import MkUrl from '@/components/global/MkUrl.vue';
 import MkTime from '@/components/global/MkTime.vue';
-import MkLink from '@/components/MkLink.vue';
+import MkLink from '@/features/link-preview/components/MkLink.vue';
 import MkMention from '@/features/users/components/MkMention.vue';
 import MkEmoji from '@/components/global/MkEmoji.vue';
 import MkCustomEmoji from '@/components/global/MkCustomEmoji.vue';
 import MkCode from '@/features/code/components/MkCode.vue';
 import MkCodeInline from '@/features/code/components/MkCodeInline.vue';
-import MkGoogle from '@/components/MkGoogle.vue';
-import MkSparkle from '@/components/MkSparkle.vue';
+import MkGoogle from '@/features/search/components/MkGoogle.vue';
+import MkSparkle from '@/components/effects/MkSparkle.vue';
 import MkA from '@/components/global/MkA.vue';
 import { prefer } from '@/preferences.js';
 

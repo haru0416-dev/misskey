@@ -48,12 +48,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, markRaw, ref, watchEffect } from 'vue';
 import * as Misskey from 'misskey-js';
 import { defaultMemoryStorage } from '@/memory-storage';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import * as os from '@/os.js';
-import { lookupUser } from '@/utility/admin-lookup.js';
+import { lookupUser } from '@/features/admin-tools/admin-lookup.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';

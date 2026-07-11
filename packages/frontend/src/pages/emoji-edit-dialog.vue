@@ -81,18 +81,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, watch, ref, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkWindow from '@/components/MkWindow.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkInfo from '@/components/MkInfo.vue';
-import MkFolder from '@/components/MkFolder.vue';
+import MkWindow from '@/components/overlay/MkWindow.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { customEmojiCategories } from '@/features/custom-emojis/custom-emojis.js';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import { selectFile } from '@/features/drive/drive.js';
-import MkRolePreview from '@/components/MkRolePreview.vue';
+import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
 
 const props = defineProps<{
 	emoji?: Misskey.entities.EmojiDetailed,

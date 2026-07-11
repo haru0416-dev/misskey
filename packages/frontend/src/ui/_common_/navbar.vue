@@ -187,7 +187,7 @@ async function openAccountMenu(ev: PointerEvent) {
 async function more(ev: PointerEvent) {
 	const target = getHTMLElementOrNull(ev.currentTarget ?? ev.target);
 	if (!target) return;
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkLaunchPad.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/components/overlay/MkLaunchPad.vue').then(x => x.default), {
 		anchorElement: target,
 	}, {
 		closed: () => dispose(),

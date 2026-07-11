@@ -47,7 +47,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
 import type { Paginator } from '@/utility/paginator.js';
-import MkPagination from '@/components/MkPagination.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import bytes from '@/filters/bytes.js';
 import { i18n } from '@/i18n.js';

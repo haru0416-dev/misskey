@@ -14,35 +14,35 @@ import type { ComponentProps } from '@/utility/component-props.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { PostFormProps } from '@/types/post-form.js';
 import type { UploaderFeatures } from '@/features/drive/useUploader.js';
-import type { MkSelectItem } from '@/components/MkSelect.vue';
+import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 import type { OptionValue } from '@/types/option-value.js';
-import type { MkDialogReturnType } from '@/components/MkDialog.vue';
+import type { MkDialogReturnType } from '@/components/overlay/MkDialog.vue';
 import type { OverloadToUnion } from '@/types/overload-to-union.js';
-import type MkRoleSelectDialog_TypeReferenceOnly from '@/components/MkRoleSelectDialog.vue';
+import type MkRoleSelectDialog_TypeReferenceOnly from '@/features/roles/components/MkRoleSelectDialog.vue';
 import type MkEmojiPickerDialog_TypeReferenceOnly from '@/features/emoji-picker/components/MkEmojiPickerDialog.vue';
-import type MkPopupMenu_TypeReferenceOnly from '@/components/MkPopupMenu.vue';
-import type MkContextMenu_TypeReferenceOnly from '@/components/MkContextMenu.vue';
+import type MkPopupMenu_TypeReferenceOnly from '@/components/overlay/MkPopupMenu.vue';
+import type MkContextMenu_TypeReferenceOnly from '@/components/overlay/MkContextMenu.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
 import { executeMisskeyMutation } from '@/query/mutation.js';
 import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
 import MkPostFormDialog from '@/features/post-composer/components/MkPostFormDialog.vue';
-import MkWaitingDialog from '@/components/MkWaitingDialog.vue';
-import MkToast from '@/components/MkToast.vue';
-import MkDialog from '@/components/MkDialog.vue';
+import MkWaitingDialog from '@/components/overlay/MkWaitingDialog.vue';
+import MkToast from '@/components/overlay/MkToast.vue';
+import MkDialog from '@/components/overlay/MkDialog.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { pleaseLogin } from '@/features/auth/please-login.js';
 import { showMovedDialog } from '@/features/users/show-moved-dialog.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { focusParent } from '@/utility/focus.js';
 
-const MkPasswordDialog = defineAsyncComponent(() => import('@/components/MkPasswordDialog.vue'));
-const MkFormDialog = defineAsyncComponent(() => import('@/components/MkFormDialog.vue'));
+const MkPasswordDialog = defineAsyncComponent(() => import('@/features/auth/components/MkPasswordDialog.vue'));
+const MkFormDialog = defineAsyncComponent(() => import('@/features/dynamic-form/components/MkFormDialog.vue'));
 const MkUserSelectDialog = defineAsyncComponent(() => import('@/features/users/components/MkUserSelectDialog.vue'));
-const MkRoleSelectDialog = defineAsyncComponent(() => import('@/components/MkRoleSelectDialog.vue'));
+const MkRoleSelectDialog = defineAsyncComponent(() => import('@/features/roles/components/MkRoleSelectDialog.vue'));
 const MkEmojiPickerDialog = defineAsyncComponent(() => import('@/features/emoji-picker/components/MkEmojiPickerDialog.vue'));
-const MkCropperDialog = defineAsyncComponent(() => import('@/components/MkCropperDialog.vue'));
+const MkCropperDialog = defineAsyncComponent(() => import('@/features/image-editor/components/MkCropperDialog.vue'));
 
 export const openingWindowsCount = ref(0);
 
@@ -274,7 +274,7 @@ async function resolveComponentWithDialog<T extends Component>(componentFetching
 export async function pageWindow(path: string): Promise<void> {
 	try {
 		const { dispose } = await popupAsyncWithDialog(
-			import('@/components/MkPageWindow.vue').then((x) => x.default),
+			import('@/features/page-content/components/MkPageWindow.vue').then((x) => x.default),
 			{
 				initialPath: path,
 			},
@@ -732,7 +732,7 @@ let popupMenuComponentPromise: Promise<typeof MkPopupMenu_TypeReferenceOnly> | n
 let contextMenuComponentPromise: Promise<typeof MkContextMenu_TypeReferenceOnly> | null = null;
 
 function fetchPopupMenuComponent(): Promise<typeof MkPopupMenu_TypeReferenceOnly> {
-	popupMenuComponentPromise ??= import('@/components/MkPopupMenu.vue')
+	popupMenuComponentPromise ??= import('@/components/overlay/MkPopupMenu.vue')
 		.then((x) => x.default)
 		.catch((error: unknown) => {
 			popupMenuComponentPromise = null;
@@ -742,7 +742,7 @@ function fetchPopupMenuComponent(): Promise<typeof MkPopupMenu_TypeReferenceOnly
 }
 
 function fetchContextMenuComponent(): Promise<typeof MkContextMenu_TypeReferenceOnly> {
-	contextMenuComponentPromise ??= import('@/components/MkContextMenu.vue')
+	contextMenuComponentPromise ??= import('@/components/overlay/MkContextMenu.vue')
 		.then((x) => x.default)
 		.catch((error: unknown) => {
 			contextMenuComponentPromise = null;

@@ -4,7 +4,7 @@
  */
 
 import type { Directive } from 'vue';
-import MkRippleEffect from '@/components/MkRippleEffect.vue';
+import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import { prefer } from '@/preferences.js';
 import { popup } from '@/os.js';
 

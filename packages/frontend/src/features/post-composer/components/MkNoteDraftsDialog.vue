@@ -162,17 +162,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, shallowRef, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkButton from '@/components/MkButton.vue';
-import MkPagination from '@/components/MkPagination.vue';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import { getNoteSummary } from '@/features/notes/get-note-summary.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api';
 import { Paginator } from '@/utility/paginator.js';
-import MkTabs from '@/components/MkTabs.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkTabs from '@/components/layout/MkTabs.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 
 const props = defineProps<{
 	scheduled?: boolean;

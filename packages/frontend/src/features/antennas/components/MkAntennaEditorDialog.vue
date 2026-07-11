@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import XAntennaEditor from '@/features/antennas/components/MkAntennaEditor.vue';
 import { i18n } from '@/i18n.js';
 

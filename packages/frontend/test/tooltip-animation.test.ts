@@ -24,7 +24,7 @@ vi.mock('@/utility/popup-position.js', () => ({
 	calcPopupPosition: calcPopupPositionMock,
 }));
 
-import MkTooltip from '@/components/MkTooltip.vue';
+import MkTooltip from '@/components/overlay/MkTooltip.vue';
 
 describe('MkTooltip', () => {
 	afterEach(() => {

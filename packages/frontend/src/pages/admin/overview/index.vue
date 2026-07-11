@@ -83,7 +83,7 @@ import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkFoldableSection from '@/components/MkFoldableSection.vue';
+import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import { genId } from '@/utility/id.js';
 
 const rootEl = useTemplateRef('rootEl');

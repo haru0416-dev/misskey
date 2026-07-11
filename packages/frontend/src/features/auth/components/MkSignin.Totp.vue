@@ -32,8 +32,8 @@ import { ref } from 'vue';
 
 import { i18n } from '@/i18n.js';
 
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
 
 const emit = defineEmits<{
 	(ev: 'totpSubmitted', token: string): void;

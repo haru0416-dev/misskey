@@ -63,7 +63,7 @@ import XNotification from '@/features/notifications/components/MkNotification.vu
 import MkNote from '@/features/notes/components/MkNote.vue';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import MkPullToRefresh from '@/components/MkPullToRefresh.vue';
+import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';

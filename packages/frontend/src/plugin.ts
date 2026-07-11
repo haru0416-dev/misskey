@@ -109,7 +109,7 @@ export async function authorizePlugin(plugin: Plugin) {
 	const token = await new Promise<string>((res, rej) => {
 		let dispose: () => void;
 		os.popupAsyncWithDialog(
-			import('@/components/MkTokenGenerateWindow.vue').then((x) => x.default),
+			import('@/features/auth/components/MkTokenGenerateWindow.vue').then((x) => x.default),
 			{
 				title: i18n.ts.tokenRequested,
 				information: i18n.ts.pluginTokenRequestedDescription,

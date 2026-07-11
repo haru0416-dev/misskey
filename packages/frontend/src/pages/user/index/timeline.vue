@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, computed, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
-import MkTab from '@/components/MkTab.vue';
+import MkTab from '@/components/layout/MkTab.vue';
 import { i18n } from '@/i18n.js';
 import { Paginator } from '@/utility/paginator.js';
 

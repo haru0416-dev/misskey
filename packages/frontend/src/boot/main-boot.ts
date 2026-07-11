@@ -12,13 +12,13 @@ import type { Keymap } from '@/utility/hotkey.js';
 import { i18n } from '@/i18n.js';
 import { alert, confirm, popup, post } from '@/os.js';
 import { useStream } from '@/stream.js';
-import * as sound from '@/utility/sound.js';
+import * as sound from '@/features/sound/sound.js';
 import { $i } from '@/i.js';
 import { instance } from '@/instance.js';
 import { store } from '@/store.js';
 import { reactionPicker } from '@/features/emoji-picker/reaction-picker.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { initializeSw } from '@/utility/initialize-sw.js';
+import { initializeSw } from '@/boot/initialize-sw.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { mainRouter } from '@/router.js';
 import { makeHotkey } from '@/utility/hotkey.js';
@@ -27,11 +27,11 @@ import { prefer } from '@/preferences.js';
 import { updateCurrentAccountPartial } from '@/accounts.js';
 import { unisonReload } from '@/utility/unison-reload.js';
 
-const MkUpdated = defineAsyncComponent(() => import('@/components/MkUpdated.vue'));
+const MkUpdated = defineAsyncComponent(() => import('@/components/display/MkUpdated.vue'));
 const MkUserSetupDialog = defineAsyncComponent(() => import('@/features/onboarding/components/MkUserSetupDialog.vue'));
-const MkAnnouncementDialog = defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue'));
-const MkDonation = defineAsyncComponent(() => import('@/components/MkDonation.vue'));
-const MkSourceCodeAvailablePopup = defineAsyncComponent(() => import('@/components/MkSourceCodeAvailablePopup.vue'));
+const MkAnnouncementDialog = defineAsyncComponent(() => import('@/features/announcements/components/MkAnnouncementDialog.vue'));
+const MkDonation = defineAsyncComponent(() => import('@/features/support/components/MkDonation.vue'));
+const MkSourceCodeAvailablePopup = defineAsyncComponent(() => import('@/features/support/components/MkSourceCodeAvailablePopup.vue'));
 
 export async function mainBoot(app: App<Element>, setRootComponent: (component: Component) => void) {
 	const { isClientUpdated } = await common(app, async () => {
@@ -153,7 +153,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		}
 
 		const createdAt = new Date($i.createdAt);
-		void import('@/utility/initialize-achievements.js').then(({ initializeAchievements }) => initializeAchievements());
+		void import('@/features/achievements/initialize-achievements.js').then(({ initializeAchievements }) => initializeAchievements());
 
 		const latestDonationInfoShownAt = miLocalStorage.getItem('latestDonationInfoShownAt');
 		const neverShowDonationInfo = miLocalStorage.getItem('neverShowDonationInfo');

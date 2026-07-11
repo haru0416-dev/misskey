@@ -27,7 +27,7 @@ import * as Misskey from 'misskey-js';
 import { useTemplateRef } from 'vue';
 import type { OpenOnRemoteOptions } from '@/features/auth/please-login.js';
 import MkSignin from '@/features/auth/components/MkSignin.vue';
-import MkModal from '@/components/MkModal.vue';
+import MkModal from '@/components/overlay/MkModal.vue';
 import { i18n } from '@/i18n.js';
 
 withDefaults(defineProps<{

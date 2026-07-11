@@ -10,3 +10,18 @@
 - `README.md`: 境界が自明でない場合の責務と公開入口
 
 feature外から利用する型や処理は、安定した少数の入口へ寄せる。内部ファイルへのimportが必要な場合でも、別featureの内部実装へ依存しない。
+
+## Feature index
+
+| Area | Features |
+| --- | --- |
+| Account | `auth`, `onboarding`, `users`, `roles`, `invitations` |
+| Content | `notes`, `post-composer`, `media-viewer`, `link-preview`, `page-content`, `code`, `autocomplete` |
+| Discovery | `search`, `channels`, `antennas`, `clips`, `gallery`, `flash` |
+| Communication | `chat`, `notifications`, `announcements`, `sound` |
+| Emoji and images | `custom-emojis`, `emoji-picker`, `image-editor`, `drive` |
+| Administration | `abuse-reports`, `instances`, `charts`, `webhooks`, `server-setup`, `admin-tools` |
+| Extensions and project | `extensions`, `themes`, `achievements`, `support` |
+| Application UI | `dynamic-form`, `ui-preview`, `cache-management` |
+
+各featureの境界と所有物は、そのdirectoryの `README.md` を参照する。

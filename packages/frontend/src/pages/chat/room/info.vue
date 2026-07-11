@@ -28,13 +28,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { ensureSignin } from '@/i.js';
-import MkInput from '@/components/MkInput.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import { useRouter } from '@/router.js';
 
 const router = useRouter();

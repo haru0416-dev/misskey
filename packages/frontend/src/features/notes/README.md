@@ -12,5 +12,6 @@
 - `get-appear-note.ts`, `get-note-summary.ts`: renote解決と通知用summary
 - `check-reaction-permissions.ts`: reaction可否判定
 - `timeline-date-separate.ts`: timelineの日付境界判定
+- `check-word-mute.ts`: word mute条件のcompileとnote判定
 
 投稿フォームは別の作成フローとして今後分離する。このfeatureは表示中noteとそのinteractionを所有し、Driveや絵文字pickerの内部stateは所有しない。

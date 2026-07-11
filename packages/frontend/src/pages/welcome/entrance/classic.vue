@@ -32,8 +32,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XTimeline from '../timeline/index.vue';
-import MkMarqueeText from '@/components/MkMarqueeText.vue';
-import MkFeaturedPhotos from '@/components/MkFeaturedPhotos.vue';
+import MkMarqueeText from '@/components/display/MkMarqueeText.vue';
+import MkFeaturedPhotos from '@/features/gallery/components/MkFeaturedPhotos.vue';
 import misskeysvg from '/client-assets/misskey.svg';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import MkVisitorDashboard from '@/features/auth/components/MkVisitorDashboard.vue';

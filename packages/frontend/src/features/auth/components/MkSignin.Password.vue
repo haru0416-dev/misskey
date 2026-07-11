@@ -58,9 +58,9 @@ import { instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkCaptcha from '@/components/MkCaptcha.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkCaptcha from '@/features/auth/components/MkCaptcha.vue';
 
 const props = defineProps<{
 	user: Misskey.entities.UserDetailed;

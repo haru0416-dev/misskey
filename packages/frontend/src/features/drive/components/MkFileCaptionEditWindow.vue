@@ -27,8 +27,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { useTemplateRef, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkModalWindow from '@/components/MkModalWindow.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import { i18n } from '@/i18n.js';
 

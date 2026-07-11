@@ -83,9 +83,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkInput from '@/components/MkInput.vue';
-import FormInfo from '@/components/MkInfo.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import FormInfo from '@/components/display/MkInfo.vue';
 import FormSplit from '@/components/form/split.vue';
 import FormSection from '@/components/form/section.vue';
 import * as os from '@/os.js';
@@ -93,7 +93,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { fetchInstance, instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 
 const meta = await misskeyApi('admin/meta');
 

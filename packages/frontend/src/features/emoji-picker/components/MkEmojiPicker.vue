@@ -131,7 +131,7 @@ import type {
 	CustomEmojiFolderTree,
 } from '@shared/utility/emojilist.js';
 import XSection from '@/features/emoji-picker/components/MkEmojiPicker.Section.vue';
-import MkRippleEffect from '@/components/MkRippleEffect.vue';
+import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import * as os from '@/os.js';
 import { isTouchUsing } from '@/utility/touch.js';
 import { deviceKind } from '@/utility/device-kind.js';

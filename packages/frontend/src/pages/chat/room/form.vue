@@ -43,7 +43,7 @@ import { i18n } from '@/i18n.js';
 import { isJsonObject, miLocalStorage } from '@/local-storage.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
-import { Autocomplete } from '@/utility/autocomplete.js';
+import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
 

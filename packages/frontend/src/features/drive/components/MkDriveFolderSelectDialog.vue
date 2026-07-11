@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkDrive from '@/features/drive/components/MkDrive.vue';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import { i18n } from '@/i18n.js';
 
 withDefaults(defineProps<{

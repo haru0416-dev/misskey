@@ -139,12 +139,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, watch } from 'vue';
 import XMigration from './migration.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import FormLink from '@/components/form/link.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import FormInfo from '@/components/MkInfo.vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import FormInfo from '@/components/display/MkInfo.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import FormSlot from '@/components/form/slot.vue';
 import * as os from '@/os.js';
 import { enableStoragePersistence, getStoragePersistenceStatusRef, storagePersistenceSupported } from '@/utility/storage.js';
@@ -153,10 +153,10 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import FormSection from '@/components/form/section.vue';
 import { prefer } from '@/preferences.js';
-import MkRolePreview from '@/components/MkRolePreview.vue';
+import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
 import { signout } from '@/signout.js';
 import { hideAllTips as _hideAllTips, resetAllTips as _resetAllTips } from '@/tips.js';
-import { suggestReload } from '@/utility/reload-suggest.js';
+import { suggestReload } from '@/ui/_common_/reload-suggest.js';
 import { cloudBackup } from '@/preferences/utility.js';
 
 const $i = ensureSignin();

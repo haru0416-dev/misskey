@@ -40,7 +40,7 @@ import { i18n } from '@/i18n.js';
 import MkVisitorDashboard from '@/features/auth/components/MkVisitorDashboard.vue';
 import { mainRouter } from '@/router.js';
 import { DI } from '@/di.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 
 const isRoot = computed(() => mainRouter.currentRoute.value.name === 'index');
 

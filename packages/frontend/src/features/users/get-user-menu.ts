@@ -17,7 +17,7 @@ import { $i, iAmModerator } from '@/i.js';
 import { notesSearchAvailable, canSearchNonLocalNotes } from '@/utility/check-permissions.js';
 import { antennasCache, rolesCache, userListsCache } from '@/cache.js';
 import { mainRouter } from '@/router.js';
-import { genEmbedCode } from '@/utility/get-embed-code.js';
+import { genEmbedCode } from '@/features/code/get-embed-code.js';
 import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 
@@ -113,7 +113,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 
 	async function reportAbuse() {
 		const { dispose } = await os.popupAsyncWithDialog(
-			import('@/components/MkAbuseReportWindow.vue').then((x) => x.default),
+			import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
 			{
 				user: user,
 			},

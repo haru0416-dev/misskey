@@ -31,7 +31,7 @@ import * as Misskey from 'misskey-js';
 import XPv from './pv.vue';
 import XNotes from './notes.vue';
 import XFollowing from './following.vue';
-import MkFoldableSection from '@/components/MkFoldableSection.vue';
+import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import MkHeatmap from '@/features/charts/components/MkHeatmap.vue';
 
 const props = defineProps<{

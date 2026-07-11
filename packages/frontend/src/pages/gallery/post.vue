@@ -66,12 +66,12 @@ import { computed, watch, ref, defineAsyncComponent, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkContainer from '@/components/MkContainer.vue';
-import MkPagination from '@/components/MkPagination.vue';
-import MkGalleryPostPreview from '@/components/MkGalleryPostPreview.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
+import MkGalleryPostPreview from '@/features/gallery/components/MkGalleryPostPreview.vue';
 import MkFollowButton from '@/features/users/components/MkFollowButton.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
@@ -167,7 +167,7 @@ async function reportAbuse() {
 
 	const pageUrl = `${url}/gallery/${post.value.id}`;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkAbuseReportWindow.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then(x => x.default), {
 		user: post.value.user,
 		initialComment: `Post: ${pageUrl}\n-----\n`,
 	}, {

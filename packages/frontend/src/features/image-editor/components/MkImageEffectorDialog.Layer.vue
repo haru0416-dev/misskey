@@ -20,8 +20,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import type { ImageEffectorLayer } from '@/features/image-editor/effect/ImageEffector.js';
-import MkFolder from '@/components/MkFolder.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import MkImageEffectorFxForm from '@/features/image-editor/components/MkImageEffectorFxForm.vue';
 import { FXS } from '@/features/image-editor/effect/fxs.js';
 

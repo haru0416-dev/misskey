@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
-import MkTooltip from '@/components/MkTooltip.vue';
+import MkTooltip from '@/components/overlay/MkTooltip.vue';
 
 defineProps<{
 	showing: boolean;

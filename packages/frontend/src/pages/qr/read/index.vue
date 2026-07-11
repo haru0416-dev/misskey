@@ -76,8 +76,8 @@ import { i18n } from '@/i18n.js';
 import MkUserInfo from '@/features/users/components/MkUserInfo.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
-import MkTab from '@/components/MkTab.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkTab from '@/components/layout/MkTab.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import MkQrReadRawViewer from '@/pages/qr/read/raw-viewer.vue';
 
 const LIST_RERENDER_INTERVAL = 1500;
