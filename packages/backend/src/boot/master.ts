@@ -22,14 +22,12 @@ const themeColor = chalk.hex('#86b300');
 
 function greet(props: { version: string }) {
 	if (!envOption.quiet) {
-		//#region Misskey logo
 		const v = `v${props.version}`;
 		console.log(themeColor('  _____ _         _           '));
 		console.log(themeColor(' |     |_|___ ___| |_ ___ _ _ '));
 		console.log(themeColor(' | | | | |_ -|_ -| \'_| -_| | |'));
 		console.log(themeColor(' |_|_|_|_|___|___|_,_|___|_  |'));
 		console.log(' ' + chalk.gray(v) + themeColor('                        |___|\n'.substring(v.length)));
-		//#endregion
 
 		console.log(' Misskey is an open-source decentralized microblogging platform.');
 		console.log(chalk.rgb(255, 136, 0)(' If you like Misskey, please consider donating to support dev. https://misskey-hub.net/docs/donate/'));
@@ -48,7 +46,6 @@ function greet(props: { version: string }) {
 export async function masterMain() {
 	let config!: Config;
 
-	// initialize app
 	try {
 		config = loadConfigBoot();
 		greet({ version: config.version });
@@ -74,7 +71,6 @@ export async function masterMain() {
 				...(config.sentryForBackend.enableNodeProfiling ? [nodeProfilingIntegration()] : []),
 			],
 
-			// Performance Monitoring
 			tracesSampleRate: 1.0, //  Capture 100% of the transactions
 
 			// Set sampling rate for profiling - this is relative to tracesSampleRate

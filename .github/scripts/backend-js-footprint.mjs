@@ -7,7 +7,7 @@ import { fork, spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { cpus, tmpdir } from 'node:os';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
-import { setTimeout } from 'node:timers/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import * as fs from 'node:fs/promises';
@@ -45,34 +45,6 @@ function bytesToKiB(value) {
 	return Math.round(value / 1024);
 }
 
-async function resetState() {
-	const backendRequire = createRequire(join(backendDir, 'package.json'));
-	const pg = backendRequire('pg');
-	const Redis = backendRequire('ioredis');
-
-	const postgres = new pg.Client({
-		host: '127.0.0.1',
-		port: 54312,
-		database: 'postgres',
-		user: 'postgres',
-	});
-
-	await postgres.connect();
-	try {
-		await postgres.query('DROP DATABASE IF EXISTS "test-misskey" WITH (FORCE)');
-		await postgres.query('CREATE DATABASE "test-misskey"');
-	} finally {
-		await postgres.end();
-	}
-
-	const redis = new Redis({ host: '127.0.0.1', port: 56312 });
-	try {
-		await redis.flushall();
-	} finally {
-		redis.disconnect();
-	}
-}
-
 function createRequest() {
 	return new Promise((resolvePromise, reject) => {
 		const req = http.request(
@@ -93,34 +65,48 @@ function createRequest() {
 }
 
 async function waitForServerReady(serverProcess) {
-	let serverReady = false;
-	serverProcess.on('message', (message) => {
-		if (message === 'ok') serverReady = true;
-	});
-
-	const startupStartTime = Date.now();
-	// eslint-disable-next-line no-unmodified-loop-condition -- serverReady is set by the 'message' event handler registered above
-	while (!serverReady) {
-		if (Date.now() - startupStartTime > STARTUP_TIMEOUT) {
+	await new Promise((resolvePromise, reject) => {
+		const timeout = globalThis.setTimeout(() => {
 			serverProcess.kill('SIGTERM');
-			throw new Error('Server startup timeout');
+			finish(new Error('Server startup timeout'));
+		}, STARTUP_TIMEOUT);
+
+		function onMessage(message) {
+			if (message === 'ok') finish();
 		}
-		await setTimeout(100);
-	}
+
+		function onExit(code, signal) {
+			finish(new Error(`Server exited before startup completed (${signal ?? `code ${code}`})`));
+		}
+		function onError(error) {
+			finish(error);
+		}
+
+		function finish(error) {
+			clearTimeout(timeout);
+			serverProcess.off('message', onMessage);
+			serverProcess.off('exit', onExit);
+			serverProcess.off('error', onError);
+			if (error == null) resolvePromise();
+			else reject(error);
+		}
+
+		serverProcess.on('message', onMessage);
+		serverProcess.once('exit', onExit);
+		serverProcess.once('error', onError);
+	});
 }
 
 async function stopServer(serverProcess) {
+	if (serverProcess.exitCode != null || serverProcess.signalCode != null) return;
 	serverProcess.kill('SIGTERM');
 
-	let exited = false;
 	await new Promise((resolvePromise) => {
-		serverProcess.on('exit', () => {
-			exited = true;
-			resolvePromise(undefined);
-		});
-
-		setTimeout(10000).then(() => {
-			if (!exited) serverProcess.kill('SIGKILL');
+		const timeout = globalThis.setTimeout(() => {
+			serverProcess.kill('SIGKILL');
+		}, 10000);
+		serverProcess.once('exit', () => {
+			clearTimeout(timeout);
 			resolvePromise(undefined);
 		});
 	});
@@ -400,7 +386,7 @@ async function measureFootprint() {
 	await fs.writeFile(traceFile, '');
 
 	process.stderr.write('Resetting database and Redis\n');
-	await resetState();
+	await util.resetTestServices(repoDir);
 
 	process.stderr.write('Running migrations\n');
 	await util.run('bun', ['run', '--bun', '--filter', 'backend', 'migrate'], {
@@ -442,12 +428,10 @@ async function measureFootprint() {
 
 	try {
 		await waitForServerReady(serverProcess);
-		await setTimeout(SETTLE_TIME);
-
-		//const startup = summarizeRecords(await readTraceRecords(), 'startup');
+		await delay(SETTLE_TIME);
 
 		await Promise.all(Array.from({ length: REQUEST_COUNT }).map(() => createRequest()));
-		await setTimeout(1000);
+		await delay(1000);
 
 		const afterRequest = summarizeRecords(await readTraceRecords(), 'afterRequest');
 
@@ -461,7 +445,6 @@ async function measureFootprint() {
 				cpus: cpus().length,
 			},
 			phases: {
-				//startup,
 				afterRequest,
 			},
 		};

@@ -14,14 +14,12 @@ export const followRequest = pgTable('follow_request', {
 	requestId: varchar({ length: 128 }),
 	withReplies: boolean().default(false).notNull(),
 
-	//#region Denormalized fields
 	followerHost: varchar({ length: 128 }),
 	followerInbox: varchar({ length: 512 }),
 	followerSharedInbox: varchar({ length: 512 }),
 	followeeHost: varchar({ length: 128 }),
 	followeeInbox: varchar({ length: 512 }),
 	followeeSharedInbox: varchar({ length: 512 }),
-	//#endregion
 }, table => [
 	index('IDX_FOLLOW_REQUEST_FOLLOWEE_ID').on(table.followeeId),
 	index('IDX_FOLLOW_REQUEST_FOLLOWER_ID').on(table.followerId),

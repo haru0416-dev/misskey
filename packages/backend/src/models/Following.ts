@@ -23,7 +23,6 @@ export class MiFollowing {
 
 	public notify: 'normal' | null;
 
-	//#region Denormalized fields
 	public followerHost: string | null;
 
 	public followerInbox: string | null;
@@ -35,5 +34,4 @@ export class MiFollowing {
 	public followeeInbox: string | null;
 
 	public followeeSharedInbox: string | null;
-	//#endregion
 }

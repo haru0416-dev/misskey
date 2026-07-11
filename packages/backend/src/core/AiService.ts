@@ -24,7 +24,6 @@ type DetectImagesResponse =
 	| { success: true; result: { results: BatchItemResult[] } }
 	| { success: false; error: { code: string; message: string } };
 
-// #region type guards
 function isPrediction(v: unknown): v is Prediction {
 	if (typeof v !== 'object' || v === null) return false;
 	const obj = v as Record<string, unknown>;
@@ -59,7 +58,6 @@ function isDetectImagesResponse(v: unknown): v is DetectImagesResponse {
 	}
 	return false;
 }
-// #endregion
 
 // サイドカーの判定エンドポイント。baseUrl にパスプレフィックスがあっても連結できるよう先頭スラッシュは付けない。
 const DETECT_IMAGES_PATH = 'v1/detect-images';

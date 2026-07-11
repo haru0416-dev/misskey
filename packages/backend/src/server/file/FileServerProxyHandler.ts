@@ -55,7 +55,6 @@ export class FileServerProxyHandler {
 
 		this.validateUserAgent(request);
 
-		// Create temp file
 		const file = await this.getStreamAndTypeFromUrl(url);
 		if (file.kind === 'not-found') {
 			reply.code(404);

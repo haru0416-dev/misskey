@@ -168,7 +168,6 @@ export async function performActivityForHonoApi(deps: HonoApiInboxDependencies, 
 	return result;
 }
 
-/** ApInboxService.performOneActivity 相当。 */
 export async function performOneActivityForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IObject, history: Set<string>): Promise<string | void> {
 	if (actor.isSuspended) return;
 
@@ -190,7 +189,6 @@ export async function performOneActivityForHonoApi(deps: HonoApiInboxDependencie
 	return `unrecognized activity type: ${activity.type}`;
 }
 
-/** ApInboxService.follow 相当。 */
 async function followFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IFollow): Promise<string> {
 	const followee = await getUserFromApIdForHonoApi(deps, activity.object);
 	if (followee == null) return 'skip: followee not found';
@@ -201,7 +199,6 @@ async function followFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	return 'ok';
 }
 
-/** ApInboxService.like 相当。 */
 async function likeFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: ILike): Promise<string> {
 	const targetUri = getApId(activity.object);
 
@@ -221,7 +218,6 @@ async function likeFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRem
 	}
 }
 
-/** ApInboxService.accept 相当。 */
 async function acceptFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAccept, history: Set<string>): Promise<string> {
 	const object = await resolveApObjectForHonoApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
@@ -230,14 +226,12 @@ async function acceptFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	return `skip: Unknown Accept type: ${getApType(object)}`;
 }
 
-/** ApInboxService.acceptFollow 相当。 */
 async function acceptFollowFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IFollow): Promise<string> {
 	// ※ activityはこっちから投げたフォローリクエストなので、activity.actorは存在するローカルユーザーである必要がある
 	const follower = await getUserFromApIdForHonoApi(deps, activity.actor);
 	if (follower == null) return 'skip: follower not found';
 	if (follower.host != null) return 'skip: follower is not a local user';
 
-	// relay
 	const match = activity.id?.match(/follow-relay\/(\w+)/);
 	if (match) return await relayAcceptedForHonoApi(deps, match[1]!);
 
@@ -245,7 +239,6 @@ async function acceptFollowFromApForHonoApi(deps: HonoApiInboxDependencies, acto
 	return 'ok';
 }
 
-/** ApInboxService.add 相当。 */
 async function addFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAdd, history: Set<string>): Promise<string | void> {
 	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
 	if (activity.target == null) return 'target is null';
@@ -260,7 +253,6 @@ async function addFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemo
 	return `unknown target: ${activity.target}`;
 }
 
-/** ApInboxService.announce 相当。 */
 async function announceFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAnnounce, history: Set<string>): Promise<string | void> {
 	if (!activity.object) return 'skip: activity has no object property';
 	const targetUri = getApId(activity.object);
@@ -273,7 +265,6 @@ async function announceFromApForHonoApi(deps: HonoApiInboxDependencies, actor: M
 	return `skip: unknown object type ${getApType(target)}`;
 }
 
-/** ApInboxService.announceNote 相当。 */
 async function announceNoteFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAnnounce, target: IPost, history: Set<string>): Promise<string | void> {
 	if (actor.isSuspended) return;
 
@@ -353,7 +344,6 @@ async function announceNoteFromApForHonoApi(deps: HonoApiInboxDependencies, acto
 	}
 }
 
-/** ApInboxService.block 相当。 */
 async function blockFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IBlock): Promise<string> {
 	// ※ activity.objectにブロック対象があり、それは存在するローカルユーザーのはず
 	const blockee = await getUserFromApIdForHonoApi(deps, activity.object);
@@ -364,7 +354,6 @@ async function blockFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRe
 	return 'ok';
 }
 
-/** ApInboxService.create 相当。 */
 async function createFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: ICreate, history: Set<string>): Promise<string | void> {
 	if (!activity.object) return 'skip: activity has no object property';
 	const targetUri = getApId(activity.object);
@@ -425,7 +414,6 @@ async function createNoteWithLockFromApForHonoApi(deps: HonoApiInboxDependencies
 	}
 }
 
-/** ApInboxService.delete 相当。 */
 async function deleteFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IDelete): Promise<string> {
 	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
 
@@ -452,7 +440,6 @@ async function deleteFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	return `Unknown type ${formerType}`;
 }
 
-/** ApInboxService.deleteActor 相当。 */
 async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, uri: string): Promise<string> {
 	if (actor.uri !== uri) return `skip: delete actor ${actor.uri} !== ${uri}`;
 
@@ -466,7 +453,6 @@ async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor
 	return `ok: queued ${job.name} ${job.id}`;
 }
 
-/** ApInboxService.deleteNote 相当。 */
 async function deleteNoteFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, uri: string): Promise<string> {
 	const unlock = await acquireApObjectLock(deps.redis, uri);
 	try {
@@ -481,7 +467,6 @@ async function deleteNoteFromApForHonoApi(deps: HonoApiInboxDependencies, actor:
 	}
 }
 
-/** ApInboxService.flag 相当。 */
 async function flagFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IFlag): Promise<string> {
 	// objectは `(User|Note) | (User|Note)[]` だけど、全パターンDBスキーマと対応させられないので
 	// 対象ユーザーは一番最初のユーザー として あとはコメントとして格納する
@@ -515,7 +500,6 @@ async function moveFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRem
 	return 'ok';
 }
 
-/** ApInboxService.reject 相当。 */
 async function rejectFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IReject, history: Set<string>): Promise<string> {
 	const object = await resolveApObjectForHonoApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
@@ -524,14 +508,12 @@ async function rejectFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	return `skip: Unknown Reject type: ${getApType(object)}`;
 }
 
-/** ApInboxService.rejectFollow 相当。 */
 async function rejectFollowFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IFollow): Promise<string> {
 	// ※ activityはこっちから投げたフォローリクエストなので、activity.actorは存在するローカルユーザーである必要がある
 	const follower = await getUserFromApIdForHonoApi(deps, activity.actor);
 	if (follower == null) return 'skip: follower not found';
 	if (follower.host != null) return 'skip: follower is not a local user';
 
-	// relay
 	const match = activity.id?.match(/follow-relay\/(\w+)/);
 	if (match) return await relayRejectedForHonoApi(deps, match[1]!);
 
@@ -539,7 +521,6 @@ async function rejectFollowFromApForHonoApi(deps: HonoApiInboxDependencies, acto
 	return 'ok';
 }
 
-/** ApInboxService.remove 相当。 */
 async function removeFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IRemove, history: Set<string>): Promise<string | void> {
 	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
 	if (activity.target == null) return 'target is null';
@@ -554,7 +535,6 @@ async function removeFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	return `unknown target: ${activity.target}`;
 }
 
-/** ApInboxService.update 相当。 */
 async function updateFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IUpdate, history: Set<string>): Promise<string> {
 	if (actor.uri !== getApId(activity.actor)) return 'skip: invalid actor';
 
@@ -573,7 +553,6 @@ async function updateFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	}
 }
 
-/** ApInboxService.undo 相当。 */
 async function undoFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IUndo, history: Set<string>): Promise<string> {
 	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
 
@@ -589,7 +568,6 @@ async function undoFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRem
 	return `skip: unknown object type ${getApType(object)}`;
 }
 
-/** ApInboxService.undoAccept 相当。 */
 async function undoAcceptFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAccept): Promise<string> {
 	const follower = await getUserFromApIdForHonoApi(deps, activity.object);
 	if (follower == null) return 'skip: follower not found';
@@ -603,7 +581,6 @@ async function undoAcceptFromApForHonoApi(deps: HonoApiInboxDependencies, actor:
 	return 'skip: フォローされていない';
 }
 
-/** ApInboxService.undoAnnounce 相当。 */
 async function undoAnnounceFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAnnounce): Promise<string> {
 	const uri = getApId(activity);
 
@@ -614,7 +591,6 @@ async function undoAnnounceFromApForHonoApi(deps: HonoApiInboxDependencies, acto
 	return 'ok: deleted';
 }
 
-/** ApInboxService.undoBlock 相当。 */
 async function undoBlockFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IBlock): Promise<string> {
 	const blockee = await getUserFromApIdForHonoApi(deps, activity.object);
 	if (blockee == null) return 'skip: blockee not found';
@@ -624,7 +600,6 @@ async function undoBlockFromApForHonoApi(deps: HonoApiInboxDependencies, actor: 
 	return 'ok';
 }
 
-/** ApInboxService.undoFollow 相当。 */
 async function undoFollowFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IFollow): Promise<string> {
 	const followee = await getUserFromApIdForHonoApi(deps, activity.object);
 	if (followee == null) return 'skip: followee not found';
@@ -646,7 +621,6 @@ async function undoFollowFromApForHonoApi(deps: HonoApiInboxDependencies, actor:
 	return 'skip: リクエストもフォローもされていない';
 }
 
-/** ApInboxService.undoLike 相当。 */
 async function undoLikeFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: ILike): Promise<string> {
 	const targetUri = getApId(activity.object);
 

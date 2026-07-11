@@ -66,7 +66,6 @@ async function deliverPinnedChangeForHonoApi(
 	void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, content).catch(() => {});
 }
 
-/** NotePiningService.addPinned 相当。 */
 export async function addPinnedForHonoApi(
 	deps: HonoApiAccountPinDependencies,
 	user: { id: MiUser['id']; host: MiUser['host'] },
@@ -93,7 +92,6 @@ export async function addPinnedForHonoApi(
 	}
 }
 
-/** NotePiningService.removePinned 相当。 */
 export async function removePinnedForHonoApi(
 	deps: HonoApiAccountPinDependencies,
 	user: { id: MiUser['id']; host: MiUser['host'] },

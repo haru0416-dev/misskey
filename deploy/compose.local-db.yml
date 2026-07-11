@@ -7,7 +7,7 @@ services:
     ports:
       - '6379:6379'
     volumes:
-      - ./redis:/data
+      - ../redis:/data
     healthcheck:
       test: 'redis-cli ping'
       interval: 5s
@@ -19,9 +19,9 @@ services:
     ports:
       - '5432:5432'
     env_file:
-      - .config/docker.env
+      - ../.config/docker.env
     volumes:
-      - ./db:/var/lib/postgresql
+      - ../db:/var/lib/postgresql
     healthcheck:
       test: 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB'
       interval: 5s
@@ -34,7 +34,6 @@ services:
 #      - MEILI_NO_ANALYTICS=true
 #      - MEILI_ENV=production
 #    env_file:
-#      - .config/meilisearch.env
+#      - ../.config/meilisearch.env
 #    volumes:
-#      - ./meili_data:/meili_data
-
+#      - ../meili_data:/meili_data

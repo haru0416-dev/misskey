@@ -103,7 +103,6 @@ function normalizeEmojiStringForHonoApi(x: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// packing
 // ---------------------------------------------------------------------------
 
 type ChatRoomInvitationPackable = ChatRoomInvitationRow & {
@@ -1026,7 +1025,6 @@ export async function getMyChatMembershipsForHonoApi(deps: HonoApiChatDependenci
 }
 
 // ---------------------------------------------------------------------------
-// error helpers
 // ---------------------------------------------------------------------------
 
 function noSuchRoomError(id: string): HonoApiError {
@@ -1048,7 +1046,6 @@ async function getUserForHonoApiChat(deps: HonoApiChatDependencies, userId: stri
 }
 
 // ---------------------------------------------------------------------------
-// handlers
 // ---------------------------------------------------------------------------
 
 export const chatHistoryParamDef = z.object({

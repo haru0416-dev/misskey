@@ -71,21 +71,17 @@ export class RedisKVCache<T> {
 	}
 
 	/**
-	 * キャッシュがあればそれを返し、無ければfetcherを呼び出して結果をキャッシュ&返します
-	 * This awaits the call to Redis to ensure that the write succeeded, which is important for a few reasons:
+	 * Redisへの書き込み完了を待ち、worker間同期と連続更新の順序を保証する。
 	 *   * Other code uses this to synchronize changes between worker processes. A failed write can internally de-sync the cluster.
 	 *   * Without an `await`, consecutive calls could race. An unlucky race could result in the older write overwriting the newer value.
-	 *   * Not awaiting here makes the entire cache non-consistent. The prevents many possible uses.
 	 */
 	@bindThis
 	public async fetch(key: string): Promise<T> {
 		const cachedValue = await this.get(key);
 		if (cachedValue !== undefined) {
-			// Cache HIT
 			return cachedValue;
 		}
 
-		// Cache MISS
 		const value = await this.fetcher(key);
 		await this.set(key, value);
 		return value;
@@ -146,51 +142,37 @@ export class MemoryKVCache<T> {
 		this.cache.delete(key);
 	}
 
-	/**
-	 * キャッシュがあればそれを返し、無ければfetcherを呼び出して結果をキャッシュ&返します
-	 * optional: キャッシュが存在してもvalidatorでfalseを返すとキャッシュ無効扱いにします
-	 */
 	@bindThis
 	public async fetch(key: string, fetcher: () => Promise<T>, validator?: (cachedValue: T) => boolean): Promise<T> {
 		const cachedValue = this.get(key);
 		if (cachedValue !== undefined) {
 			if (validator) {
 				if (validator(cachedValue)) {
-					// Cache HIT
 					return cachedValue;
 				}
 			} else {
-				// Cache HIT
 				return cachedValue;
 			}
 		}
 
-		// Cache MISS
 		const value = await fetcher();
 		this.set(key, value);
 		return value;
 	}
 
-	/**
-	 * キャッシュがあればそれを返し、無ければfetcherを呼び出して結果をキャッシュ&返します
-	 * optional: キャッシュが存在してもvalidatorでfalseを返すとキャッシュ無効扱いにします
-	 */
 	@bindThis
 	public async fetchMaybe(key: string, fetcher: () => Promise<T | undefined>, validator?: (cachedValue: T) => boolean): Promise<T | undefined> {
 		const cachedValue = this.get(key);
 		if (cachedValue !== undefined) {
 			if (validator) {
 				if (validator(cachedValue)) {
-					// Cache HIT
 					return cachedValue;
 				}
 			} else {
-				// Cache HIT
 				return cachedValue;
 			}
 		}
 
-		// Cache MISS
 		const value = await fetcher();
 		if (value !== undefined) {
 			this.set(key, value);
@@ -259,16 +241,13 @@ export class MemorySingleCache<T> {
 		if (cachedValue !== undefined) {
 			if (validator) {
 				if (validator(cachedValue)) {
-					// Cache HIT
 					return cachedValue;
 				}
 			} else {
-				// Cache HIT
 				return cachedValue;
 			}
 		}
 
-		// Cache MISS
 		const value = await fetcher();
 		this.set(value);
 		return value;
@@ -284,16 +263,13 @@ export class MemorySingleCache<T> {
 		if (cachedValue !== undefined) {
 			if (validator) {
 				if (validator(cachedValue)) {
-					// Cache HIT
 					return cachedValue;
 				}
 			} else {
-				// Cache HIT
 				return cachedValue;
 			}
 		}
 
-		// Cache MISS
 		const value = await fetcher();
 		if (value !== undefined) {
 			this.set(value);

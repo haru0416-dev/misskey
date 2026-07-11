@@ -14,19 +14,13 @@ import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
 import type { UserWebhookPayload } from '@/core/user-webhook-types.js';
 import type httpSignature from '@peertube/http-signature';
 
-/** ImportAntennasProcessorService.ts で定義されていたエクスポート/インポート用の型。 */
 export type Antenna = (MiAntenna & { userListAccts: string[] | null })[];
 
 export type DeliverJobData = {
-	/** Actor */
 	user: ThinUser;
-	/** Activity */
 	content: string;
-	/** Digest header */
 	digest: string;
-	/** inbox URL to deliver */
 	to: string;
-	/** whether it is sharedInbox */
 	isSharedInbox: boolean;
 };
 

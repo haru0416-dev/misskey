@@ -165,7 +165,6 @@ async function listRemoteRootNoteIdsWindow(
 	return result.rows.map(row => row.id);
 }
 
-/** CleanRemoteNotesProcessorService.process 相当。 */
 export async function handleHonoQueueCleanRemoteNotes(
 	deps: HonoQueueCleanRemoteNotesDependencies,
 	job: Bull.Job<Record<string, unknown>>,
@@ -229,7 +228,6 @@ export async function handleHonoQueueCleanRemoteNotes(
 		if (!enabled) {
 			break;
 		}
-		//#region check time
 		const batchBeginAt = Date.now();
 
 		const elapsed = batchBeginAt - startAt;
@@ -248,7 +246,6 @@ export async function handleHonoQueueCleanRemoteNotes(
 			lowThroughputWarned = true;
 		}
 		job.updateProgress(progress);
-		//#endregion
 
 		const queryBegin = performance.now();
 		let noteIds = null;

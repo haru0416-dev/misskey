@@ -26,7 +26,6 @@ export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependenc
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
 
-/** SearchService.unindexNote 相当。 */
 async function unindexNoteForHonoApi(deps: HonoQueueDeleteAccountDependencies, note: Pick<MiNote, 'id' | 'visibility'>): Promise<void> {
 	if (!deps.meilisearch) return;
 	if (!['home', 'public'].includes(note.visibility)) return;
@@ -35,7 +34,6 @@ async function unindexNoteForHonoApi(deps: HonoQueueDeleteAccountDependencies, n
 	await index.deleteDocument(note.id);
 }
 
-/** DeleteAccountProcessorService.process 相当。 */
 export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountDependencies, job: Bull.Job<DbUserDeleteJobData>): Promise<string | void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;

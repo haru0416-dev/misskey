@@ -21,7 +21,6 @@ export class MiPoll {
 
 	public votes: number[];
 
-	//#region Denormalized fields
 	public noteVisibility: typeof noteVisibilities[number];
 
 	public userId: MiUser['id'];
@@ -29,7 +28,6 @@ export class MiPoll {
 	public userHost: string | null;
 
 	public channelId: MiChannel['id'] | null;
-	//#endregion
 
 	constructor(data: Partial<MiPoll>) {
 		if (data == null) return;

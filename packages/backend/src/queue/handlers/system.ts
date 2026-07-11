@@ -59,14 +59,12 @@ export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencie
 	await deps.chartWriters.apRequestChart.tick(false);
 }
 
-/** ResyncChartsProcessorService.process 相当。 */
 export async function handleHonoQueueResyncCharts(deps: HonoQueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.driveChart.resync();
 	await deps.chartWriters.notesChart.resync();
 	await deps.chartWriters.usersChart.resync();
 }
 
-/** CleanChartsProcessorService.process 相当。 */
 export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.federationChart.clean();
 	await deps.chartWriters.notesChart.clean();
@@ -82,7 +80,6 @@ export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependenci
 	await deps.chartWriters.apRequestChart.clean();
 }
 
-/** CleanProcessorService.process 相当。 */
 export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): Promise<void> {
 	await deleteUserIpsOlderThanFromDatabase(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 90)));
 
@@ -93,7 +90,6 @@ export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): P
 	await deleteExpiredRoleAssignmentsFromDatabase(deps.db, new Date());
 }
 
-/** AggregateRetentionProcessorService.process 相当。 */
 export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDependencies): Promise<void> {
 	const now = new Date();
 	const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;

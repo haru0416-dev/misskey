@@ -20,7 +20,6 @@ export class MiFollowRequest {
 
 	public withReplies: boolean;
 
-	//#region Denormalized fields
 	public followerHost: string | null;
 
 	public followerInbox: string | null;
@@ -32,5 +31,4 @@ export class MiFollowRequest {
 	public followeeInbox: string | null;
 
 	public followeeSharedInbox: string | null;
-	//#endregion
 }
