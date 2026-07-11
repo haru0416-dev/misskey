@@ -35,7 +35,7 @@ export async function get(key: string) {
 	return miLocalStorage.getItemAsJson(`${PREFIX}${key}`);
 }
 
-export async function set(key: string, val: any) {
+export async function set(key: string, val: unknown) {
 	if (idbAvailable) return iset(key, val);
 	return miLocalStorage.setItemAsJson(`${PREFIX}${key}`, val);
 }

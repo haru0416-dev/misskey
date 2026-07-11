@@ -41,11 +41,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import lightTheme from '@shared/themes/_light.json5';
-import darkTheme from '@shared/themes/_dark.json5';
 import type { Theme } from '@shared/utility/theme.js';
 import { compile } from '@shared/utility/theme.js';
-import { deepClone } from '@/utility/clone.js';
 
 const props = defineProps<{
 	theme: Theme;
@@ -86,14 +83,7 @@ const themeVariables = ref<{
 watch(() => props.theme, (theme) => {
 	if (theme == null) return;
 
-	const _theme = deepClone(theme);
-
-	if (_theme.base != null) {
-		const base = [lightTheme, darkTheme].find(x => x.id === _theme.base);
-		if (base) _theme.props = Object.assign({}, base.props, _theme.props);
-	}
-
-	const compiled = compile(_theme);
+	const compiled = compile(theme);
 
 	themeVariables.value = {
 		bg: compiled.bg ?? 'var(--MI_THEME-bg)',

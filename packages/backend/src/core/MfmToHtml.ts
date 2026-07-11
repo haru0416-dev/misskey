@@ -147,7 +147,7 @@ export function mfmToHtml(
 			let html = '';
 			const lines = node.props.text.split(/\r\n|\r|\n/).map(x => escapeHtml(x));
 
-			for (const x of intersperse<FIXME | 'br'>('br', lines)) {
+			for (const x of intersperse<string>('br', lines)) {
 				html += x === 'br' ? '<br />' : x;
 			}
 

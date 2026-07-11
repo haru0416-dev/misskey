@@ -116,6 +116,7 @@ import { useRouter } from '@/router.js';
 import { prefer } from '@/preferences.js';
 import { getAccountMenu } from '@/accounts.js';
 import { $i } from '@/i.js';
+import { runViewTransition } from '@/utility/view-transition.js';
 
 const router = useRouter();
 
@@ -152,8 +153,8 @@ watch(() => store.menuDisplay, () => {
 });
 
 function toggleIconOnly() {
-	if (window.document.startViewTransition && prefer.animation) {
-		window.document.startViewTransition(() => {
+	if (prefer.animation) {
+		runViewTransition(() => {
 			store.set('menuDisplay', iconOnly.value ? 'sideFull' : 'sideIcon');
 		});
 	} else {

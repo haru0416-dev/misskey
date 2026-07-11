@@ -60,6 +60,7 @@ import { useMkSelect } from '@/composables/useMkSelect.js';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';
 import { dateString } from '@/filters/date.js';
 import { Paginator } from '@/utility/paginator.js';
+import { isJsonObject } from '@/local-storage.js';
 
 type SearchQuery = {
 	sort?: '-createdAt' | '+createdAt' | '-updatedAt' | '+updatedAt';
@@ -69,7 +70,17 @@ type SearchQuery = {
 	hostname?: string;
 };
 
-const storedQuery = JSON.parse(defaultMemoryStorage.getItem('admin-users-query') ?? '{}') as SearchQuery;
+function isSearchQuery(value: unknown): value is SearchQuery {
+	if (!isJsonObject(value)) return false;
+	if (value.sort !== undefined && value.sort !== '-createdAt' && value.sort !== '+createdAt' && value.sort !== '-updatedAt' && value.sort !== '+updatedAt') return false;
+	if (value.state !== undefined && value.state !== 'all' && value.state !== 'available' && value.state !== 'admin' && value.state !== 'moderator' && value.state !== 'suspended') return false;
+	if (value.origin !== undefined && value.origin !== 'combined' && value.origin !== 'local' && value.origin !== 'remote') return false;
+	if (value.username !== undefined && typeof value.username !== 'string') return false;
+	if (value.hostname !== undefined && typeof value.hostname !== 'string') return false;
+	return true;
+}
+
+const storedQuery = defaultMemoryStorage.getItem('admin-users-query', isSearchQuery) ?? {};
 
 const {
 	model: sort,
@@ -178,13 +189,13 @@ const headerActions = computed(() => [{
 const headerTabs = computed(() => []);
 
 watchEffect(() => {
-	defaultMemoryStorage.setItem('admin-users-query', JSON.stringify({
+	defaultMemoryStorage.setItem('admin-users-query', {
 		sort: sort.value,
 		state: state.value,
 		origin: origin.value,
 		username: searchUsername.value,
 		hostname: searchHost.value,
-	}));
+	});
 });
 
 definePage(() => ({

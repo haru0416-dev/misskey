@@ -3,18 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// TODO: (可能な部分を)sharedに抽出して frontend と共通化
-
-import lightTheme from '@shared/themes/_light.json5';
-import darkTheme from '@shared/themes/_dark.json5';
 import { compile } from '@shared/utility/theme.js';
 import type { Theme } from '@shared/utility/theme.js';
 
 let timeout: number | null = null;
-
-export function assertIsTheme(theme: Record<string, unknown>): theme is Theme {
-	return typeof theme === 'object' && theme !== null && 'id' in theme && 'name' in theme && 'author' in theme && 'props' in theme;
-}
 
 export function applyTheme(theme: Theme) {
 	if (timeout) window.clearTimeout(timeout);
@@ -29,15 +21,7 @@ export function applyTheme(theme: Theme) {
 
 	window.document.documentElement.dataset.colorScheme = colorScheme;
 
-	// Deep copy
-	const _theme = JSON.parse(JSON.stringify(theme));
-
-	if (_theme.base) {
-		const base = [lightTheme, darkTheme].find(x => x.id === _theme.base);
-		if (base) _theme.props = Object.assign({}, base.props, _theme.props);
-	}
-
-	const props = compile(_theme);
+	const props = compile(theme);
 
 	for (const tag of window.document.head.children) {
 		if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {

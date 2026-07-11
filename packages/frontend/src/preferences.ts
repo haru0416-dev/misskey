@@ -6,7 +6,7 @@
 import type { PREF, Scope, StorageProvider, ValueOf } from '@/preferences/store.js';
 import { cloudBackup } from '@/preferences/utility.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { createPreferencesStore, isSameScope, preferencesEvents } from '@/preferences/store.js';
+import { createPreferencesStore, isPossiblyNonNormalizedPreferencesProfile, isSameScope, preferencesEvents } from '@/preferences/store.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -23,12 +23,7 @@ function isNoSuchKeyError(err: unknown): boolean {
 
 const io: StorageProvider = {
 	load: () => {
-		const savedProfileRaw = miLocalStorage.getItem('preferences');
-		if (savedProfileRaw == null) {
-			return null;
-		} else {
-			return JSON.parse(savedProfileRaw);
-		}
+		return miLocalStorage.getItemAsJson('preferences', isPossiblyNonNormalizedPreferencesProfile) ?? null;
 	},
 
 	save: (ctx) => {

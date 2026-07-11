@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, assert, beforeEach, describe, test, vi } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Theme } from '@shared/utility/theme.js';
 import lightTheme from '@shared/themes/_light.json5';
 import darkTheme from '@shared/themes/_dark.json5';
@@ -102,6 +102,7 @@ describe('ThemeManager', () => {
 
 	afterEach(() => {
 		window.localStorage.clear();
+		vi.restoreAllMocks();
 	});
 
 	test('通常テーマ適用後のプレビューは現在テーマのみを切り替え、キャッシュは保持する', async () => {
@@ -199,5 +200,60 @@ describe('ThemeManager', () => {
 			'themeChanging',
 			'themeChanged',
 		]);
+	});
+
+	test('View Transitionの非同期失敗時もテーマを適用して一時クラスを解放する', async () => {
+		let rejectFinished: (reason?: unknown) => void = () => {};
+		const finished = new Promise<void>((_resolve, reject) => {
+			rejectFinished = reject;
+		});
+		const startViewTransition = vi.fn((update: () => void | Promise<void>) => {
+			void update();
+			return {
+				finished,
+				ready: Promise.resolve(),
+				updateCallbackDone: Promise.resolve(),
+				skipTransition: vi.fn(),
+			};
+		});
+		Object.defineProperty(document, 'startViewTransition', {
+			configurable: true,
+			value: startViewTransition,
+		});
+		const error = new Error('transition failed');
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { themeManager } = await loadThemeModule();
+		const themeChanged = vi.fn();
+		themeManager.on('themeChanged', themeChanged);
+
+		themeManager.updateTheme(primaryTheme);
+		expect(document.documentElement.classList.contains('_themeChanging_')).toBe(true);
+		rejectFinished(error);
+		await vi.waitFor(() => expect(document.documentElement.classList.contains('_themeChanging_')).toBe(false));
+
+		expect(document.documentElement.dataset.colorScheme).toBe('light');
+		expect(themeChanged).toHaveBeenCalledTimes(1);
+		expect(consoleError).toHaveBeenCalledWith(error);
+	});
+
+	test('View Transitionの同期例外時もテーマを適用して一時クラスを解放する', async () => {
+		const error = new Error('start failed');
+		Object.defineProperty(document, 'startViewTransition', {
+			configurable: true,
+			value: vi.fn(() => {
+				throw error;
+			}),
+		});
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { themeManager } = await loadThemeModule();
+		const themeChanged = vi.fn();
+		themeManager.on('themeChanged', themeChanged);
+
+		themeManager.updateTheme(primaryTheme);
+
+		expect(document.documentElement.classList.contains('_themeChanging_')).toBe(false);
+		expect(document.documentElement.dataset.colorScheme).toBe('light');
+		expect(themeChanged).toHaveBeenCalledTimes(1);
+		expect(consoleError).toHaveBeenCalledWith(error);
 	});
 });

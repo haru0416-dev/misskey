@@ -6,7 +6,11 @@
 import tinycolor from 'tinycolor2';
 import JSON5 from 'json5';
 import lightTheme from '@shared/themes/_light.json5';
+import darkTheme from '@shared/themes/_dark.json5';
 import type { BundledTheme } from 'shiki/themes';
+
+type ThemeCodeHighlighterValue = string | number | boolean | null | ThemeCodeHighlighterValue[] | { [key: string]: ThemeCodeHighlighterValue };
+type ThemeCodeHighlighterOverrides = { [key: string]: ThemeCodeHighlighterValue };
 
 export type Theme = {
 	id: string;
@@ -18,13 +22,11 @@ export type Theme = {
 	codeHighlighter?:
 		| {
 				base: BundledTheme;
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				overrides?: Record<string, any>;
+				overrides?: ThemeCodeHighlighterOverrides;
 		  }
 		| {
 				base: '_none_';
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				overrides: Record<string, any>;
+				overrides: ThemeCodeHighlighterOverrides;
 		  };
 };
 
@@ -94,9 +96,12 @@ function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): t
 		const funcTxt = parts.shift();
 		const argTxt = parts.shift();
 
-		if (funcTxt && argTxt) {
+		if (funcTxt && argTxt?.trim()) {
 			const func = funcTxt.substring(1);
-			const arg = parseFloat(argTxt);
+			const arg = Number(argTxt);
+			if (!Number.isFinite(arg) || parts.length === 0) {
+				throw new Error(`Theme contains invalid function: ${val}`);
+			}
 			const color = getColor(theme, parts.join('<'), stack, depth + 1);
 
 			switch (func) {
@@ -110,21 +115,33 @@ function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): t
 					return color.spin(arg);
 				case 'saturate':
 					return color.saturate(arg);
+				default:
+					throw new Error(`Theme contains unknown function: ${func}`);
 			}
 		}
+
+		throw new Error(`Theme contains invalid function: ${val}`);
 	}
 
 	// other case
-	return tinycolor(val);
+	const color = tinycolor(val);
+	if (!color.isValid()) {
+		throw new Error(`Theme contains invalid color: ${val}`);
+	}
+	return color;
 }
 
 export function compile(theme: Theme): CompiledTheme {
+	const base = theme.base === 'dark' ? darkTheme : theme.base === 'light' ? lightTheme : null;
+	const resolvedTheme: Theme = base == null
+		? theme
+		: { ...theme, props: { ...base.props, ...theme.props } };
 	const props = {} as CompiledTheme;
 
-	for (const [k, v] of Object.entries(theme.props)) {
+	for (const [k, v] of Object.entries(resolvedTheme.props)) {
 		if (k.startsWith('$')) continue; // ignore const
 
-		props[k] = v.startsWith('"') ? v.replace(/^"\s*/, '') : genValue(getColor(theme, v));
+		props[k] = v.startsWith('"') ? v.replace(/^"\s*/, '') : genValue(getColor(resolvedTheme, v));
 	}
 
 	return Object.fromEntries(Object.entries(props).filter(([key]) => themeProps.includes(key))) as CompiledTheme;
@@ -134,12 +151,36 @@ function genValue(c: tinycolor.Instance): string {
 	return c.toRgbString();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validateTheme(theme: Record<string, any>): boolean {
-	if (theme.id == null || typeof theme.id !== 'string') return false;
-	if (theme.name == null || typeof theme.name !== 'string') return false;
-	if (theme.base == null || !['light', 'dark'].includes(theme.base)) return false;
-	if (theme.props == null || typeof theme.props !== 'object') return false;
+function isRecord(value: unknown): value is Record<string, unknown> {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	const prototype = Object.getPrototypeOf(value);
+	return prototype === Object.prototype || prototype === null;
+}
+
+function isJsonValue(value: unknown, ancestors = new Set<object>()): value is ThemeCodeHighlighterValue {
+	if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
+	if (typeof value !== 'object') return false;
+	if (ancestors.has(value)) return false;
+
+	const nextAncestors = new Set(ancestors).add(value);
+	if (Array.isArray(value)) return value.every(item => isJsonValue(item, nextAncestors));
+	if (!isRecord(value)) return false;
+	return Object.values(value).every(item => isJsonValue(item, nextAncestors));
+}
+
+export function validateTheme(theme: unknown): theme is Theme {
+	if (!isRecord(theme)) return false;
+	if (typeof theme.id !== 'string') return false;
+	if (typeof theme.name !== 'string') return false;
+	if (typeof theme.author !== 'string') return false;
+	if (theme.desc !== undefined && typeof theme.desc !== 'string') return false;
+	if (theme.base !== 'light' && theme.base !== 'dark') return false;
+	if (!isRecord(theme.props) || !Object.values(theme.props).every(value => typeof value === 'string')) return false;
+	if (theme.codeHighlighter !== undefined) {
+		if (!isRecord(theme.codeHighlighter) || typeof theme.codeHighlighter.base !== 'string') return false;
+		if (theme.codeHighlighter.overrides !== undefined && (!isRecord(theme.codeHighlighter.overrides) || !isJsonValue(theme.codeHighlighter.overrides))) return false;
+		if (theme.codeHighlighter.base === '_none_' && theme.codeHighlighter.overrides === undefined) return false;
+	}
 	return true;
 }
 
@@ -154,6 +195,21 @@ export function parseThemeCode(code: string): Theme {
 	if (!validateTheme(theme)) {
 		throw new Error('This theme is invaild');
 	}
+	try {
+		compile(theme);
+	} catch (_) {
+		throw new Error('This theme is invaild', { cause: _ });
+	}
 
 	return theme;
+}
+
+export function parseThemeOrNull(code: string | null | undefined): Theme | null {
+	if (code == null) return null;
+
+	try {
+		return parseThemeCode(code);
+	} catch {
+		return null;
+	}
 }

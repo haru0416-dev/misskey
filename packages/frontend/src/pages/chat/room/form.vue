@@ -40,7 +40,7 @@ import { formatTimeString } from '@/utility/format-time-string.js';
 import { selectFile } from '@/utility/drive.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
-import { miLocalStorage } from '@/local-storage.js';
+import { isJsonObject, miLocalStorage } from '@/local-storage.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
 import { Autocomplete } from '@/utility/autocomplete.js';
@@ -65,6 +65,10 @@ const canSend = computed(() => (text.value != null && text.value !== '') || file
 
 function getDraftKey() {
 	return props.user ? 'user:' + props.user.id : 'room:' + props.room?.id;
+}
+
+function getDrafts(): Record<string, unknown> {
+	return miLocalStorage.getItemAsJson('chatMessageDrafts', isJsonObject) ?? {};
 }
 
 watch([text, file], saveDraft);
@@ -225,7 +229,7 @@ function clear() {
 }
 
 function saveDraft() {
-	const drafts = JSON.parse(miLocalStorage.getItem('chatMessageDrafts') || '{}');
+	const drafts = getDrafts();
 
 	drafts[getDraftKey()] = {
 		updatedAt: new Date(),
@@ -235,15 +239,15 @@ function saveDraft() {
 		},
 	};
 
-	miLocalStorage.setItem('chatMessageDrafts', JSON.stringify(drafts));
+	miLocalStorage.setItemAsJson('chatMessageDrafts', drafts);
 }
 
 function deleteDraft() {
-	const drafts = JSON.parse(miLocalStorage.getItem('chatMessageDrafts') || '{}');
+	const drafts = getDrafts();
 
 	delete drafts[getDraftKey()];
 
-	miLocalStorage.setItem('chatMessageDrafts', JSON.stringify(drafts));
+	miLocalStorage.setItemAsJson('chatMessageDrafts', drafts);
 }
 
 async function insertEmoji(ev: MouseEvent) {
@@ -281,10 +285,11 @@ onMounted(() => {
 	}
 
 	// 書きかけの投稿を復元
-	const draft = JSON.parse(miLocalStorage.getItem('chatMessageDrafts') || '{}')[getDraftKey()];
-	if (draft) {
-		text.value = draft.data.text;
-		file.value = draft.data.file;
+	const draft = getDrafts()[getDraftKey()];
+	const data = isJsonObject(draft) && isJsonObject(draft.data) ? draft.data : null;
+	if (data != null) {
+		if (typeof data.text === 'string') text.value = data.text;
+		if (data.file === null || isJsonObject(data.file)) file.value = data.file as Misskey.entities.DriveFile | null;
 	}
 });
 

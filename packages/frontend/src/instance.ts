@@ -10,28 +10,32 @@ import { miLocalStorage } from '@/local-storage.js';
 import { $i } from '@/i.js';
 import { queryClient } from '@/query/client.js';
 import { queryKeys } from '@/query/keys.js';
+import { resolveInitialInstanceMeta } from '@/utility/instance-cache.js';
 
 // TODO: 他のタブと永続化されたstateを同期
 
 //#region loader
 const providedMetaEl = window.document.getElementById('misskey_meta');
-
-let cachedMeta = miLocalStorage.getItem('instance') ? JSON.parse(miLocalStorage.getItem('instance')!) : null;
-let cachedAt = miLocalStorage.getItem('instanceCachedAt') ? parseInt(miLocalStorage.getItem('instanceCachedAt')!) : 0;
-const providedMeta = providedMetaEl && providedMetaEl.textContent ? JSON.parse(providedMetaEl.textContent) : null;
-const providedAt =
-	providedMetaEl && providedMetaEl.dataset.generatedAt ? parseInt(providedMetaEl.dataset.generatedAt) : 0;
-if (providedAt > cachedAt) {
-	miLocalStorage.setItem('instance', JSON.stringify(providedMeta));
-	miLocalStorage.setItem('instanceCachedAt', providedAt.toString());
-	cachedMeta = providedMeta;
-	cachedAt = providedAt;
+const initialMeta = resolveInitialInstanceMeta({
+	cachedMeta: miLocalStorage.getItem('instance'),
+	cachedAt: miLocalStorage.getItem('instanceCachedAt'),
+	providedMeta: providedMetaEl?.textContent ?? null,
+	providedAt: providedMetaEl?.dataset.generatedAt ?? null,
+});
+if (initialMeta.cacheAction === 'store') {
+	miLocalStorage.setItem('instance', JSON.stringify(initialMeta.meta));
+	miLocalStorage.setItem('instanceCachedAt', initialMeta.cachedAt.toString());
+} else if (initialMeta.cacheAction === 'clear') {
+	miLocalStorage.removeItem('instance');
+	miLocalStorage.removeItem('instanceCachedAt');
 }
+const cachedMeta = initialMeta.meta as Misskey.entities.MetaDetailed | null;
+const cachedAt = initialMeta.cachedAt;
 //#endregion
 
 // TODO: instanceをリアクティブにするかは再考の余地あり
 
-export const instance: Misskey.entities.MetaDetailed = reactive(cachedMeta ?? {});
+export const instance = reactive(cachedMeta ?? {}) as Misskey.entities.MetaDetailed;
 
 const metaParams = { detail: true } as const;
 const metaQueryKey = queryKeys.endpoint($i?.id ?? null, 'meta', metaParams);
@@ -46,9 +50,7 @@ export async function fetchInstance(force = false): Promise<Misskey.entities.Met
 
 	const meta = await misskeyApi('meta', metaParams);
 
-	for (const [k, v] of Object.entries(meta)) {
-		(instance[k as keyof typeof meta] as any) = v;
-	}
+	Object.assign(instance, meta);
 
 	miLocalStorage.setItem('instance', JSON.stringify(instance));
 	miLocalStorage.setItem('instanceCachedAt', Date.now().toString());

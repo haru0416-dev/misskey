@@ -3,14 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type MemoryStorage = {
-	has: (key: string) => boolean;
-	getItem: <T>(key: string) => T | null;
-	setItem: (key: string, value: unknown) => void;
-	removeItem: (key: string) => void;
-	clear: () => void;
-	size: number;
-};
+type ValueValidator<T> = (value: unknown) => value is T;
+
+export interface MemoryStorage {
+	has(key: string): boolean;
+	getItem(key: string): unknown | null;
+	getItem<T>(key: string, validate: ValueValidator<T>): T | null;
+	setItem(key: string, value: unknown): void;
+	removeItem(key: string): void;
+	clear(): void;
+	readonly size: number;
+}
 
 class MemoryStorageImpl implements MemoryStorage {
 	private readonly storage: Map<string, unknown>;
@@ -23,8 +26,16 @@ class MemoryStorageImpl implements MemoryStorage {
 		return this.storage.has(key);
 	}
 
-	getItem<T>(key: string): T | null {
-		return this.storage.has(key) ? (this.storage.get(key) as T) : null;
+	getItem(key: string): unknown | null;
+	getItem<T>(key: string, validate: ValueValidator<T>): T | null;
+	getItem<T>(key: string, validate?: ValueValidator<T>): T | unknown | null {
+		if (!this.storage.has(key)) return null;
+		const value = this.storage.get(key);
+		if (validate != null && !validate(value)) {
+			this.storage.delete(key);
+			return null;
+		}
+		return value;
 	}
 
 	setItem(key: string, value: unknown): void {

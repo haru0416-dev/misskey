@@ -85,6 +85,44 @@ export type PossiblyNonNormalizedPreferencesProfile = Omit<PreferencesProfile, '
 	preferences: Record<string, [scope: Scope, value: unknown, meta: ValueMeta][]>;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isNullableString(value: unknown): value is string | null | undefined {
+	return value === undefined || value === null || typeof value === 'string';
+}
+
+function isScope(value: unknown): value is Scope {
+	return isRecord(value)
+		&& isNullableString(value.server)
+		&& isNullableString(value.account)
+		&& isNullableString(value.device);
+}
+
+function isValueMeta(value: unknown): value is ValueMeta {
+	return isRecord(value) && (value.sync === undefined || typeof value.sync === 'boolean');
+}
+
+function isPreferenceRecord(value: unknown): value is [scope: Scope, value: unknown, meta: ValueMeta] {
+	return Array.isArray(value)
+		&& value.length === 3
+		&& isScope(value[0])
+		&& isValueMeta(value[2]);
+}
+
+export function isPossiblyNonNormalizedPreferencesProfile(value: unknown): value is PossiblyNonNormalizedPreferencesProfile {
+	if (!isRecord(value) || !isRecord(value.preferences)) return false;
+
+	return typeof value.id === 'string'
+		&& typeof value.version === 'string'
+		&& value.type === 'main'
+		&& typeof value.modifiedAt === 'number'
+		&& Number.isFinite(value.modifiedAt)
+		&& typeof value.name === 'string'
+		&& Object.values(value.preferences).every(records => Array.isArray(records) && records.every(isPreferenceRecord));
+}
+
 export type StorageProvider = {
 	load: () => PossiblyNonNormalizedPreferencesProfile | null;
 	save: (ctx: { profile: PreferencesProfile }) => void;

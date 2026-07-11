@@ -40,6 +40,53 @@ export type Keys =
 	| `channelLastReadedAt:${string}`
 	| `idbfallback::${string}`;
 
+type JsonValidator<T> = (value: unknown) => value is T;
+type ReadableStorage = Pick<Storage, 'getItem' | 'removeItem'>;
+
+export function isJsonObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isStringArray(value: unknown): value is string[] {
+	return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+export function getStorageItemAsJson(storage: ReadableStorage, key: string): unknown | undefined;
+export function getStorageItemAsJson<T>(storage: ReadableStorage, key: string, validate: JsonValidator<T>): T | undefined;
+export function getStorageItemAsJson<T>(storage: ReadableStorage, key: string, validate?: JsonValidator<T>): T | unknown | undefined {
+	const item = storage.getItem(key);
+	if (item === null) return undefined;
+
+	try {
+		const parsed: unknown = JSON.parse(item);
+		if (validate != null && !validate(parsed)) {
+			storage.removeItem(key);
+			return undefined;
+		}
+		return parsed;
+	} catch {
+		storage.removeItem(key);
+		return undefined;
+	}
+}
+
+function getItemAsJson(key: Keys): unknown | undefined;
+function getItemAsJson<T>(key: Keys, validate: JsonValidator<T>): T | undefined;
+function getItemAsJson<T>(key: Keys, validate?: JsonValidator<T>): T | unknown | undefined {
+	return validate == null
+		? getStorageItemAsJson(window.localStorage, key)
+		: getStorageItemAsJson(window.localStorage, key, validate);
+}
+
+function setItemAsJson(key: Keys, value: unknown): void {
+	const serialized = JSON.stringify(value);
+	if (serialized === undefined) {
+		miLocalStorage.removeItem(key);
+		return;
+	}
+	miLocalStorage.setItem(key, serialized);
+}
+
 // セッション毎に廃棄されるLocalStorage代替（セーフモードなどで使用できそう）
 //const safeSessionStorage = new Map<Keys, string>();
 
@@ -53,14 +100,6 @@ export const miLocalStorage = {
 	removeItem: (key: Keys): void => {
 		window.localStorage.removeItem(key);
 	},
-	getItemAsJson: (key: Keys): any | undefined => {
-		const item = miLocalStorage.getItem(key);
-		if (item === null) {
-			return undefined;
-		}
-		return JSON.parse(item);
-	},
-	setItemAsJson: (key: Keys, value: any): void => {
-		miLocalStorage.setItem(key, JSON.stringify(value));
-	},
+	getItemAsJson,
+	setItemAsJson,
 };

@@ -57,7 +57,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
-import { miLocalStorage } from '@/local-storage.js';
+import { getStorageItemAsJson, isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
 import { customEmojis } from '@/custom-emojis.js';
 import { searchEmoji, searchEmojiExact } from '@/utility/search-emoji.js';
 import { prefer } from '@/preferences.js';
@@ -195,6 +195,10 @@ const mfmParams = ref<string[]>([]);
 const select = ref(-1);
 const zIndex = os.claimZIndex('high');
 
+function isUserArray(value: unknown): value is Misskey.entities.User[] {
+	return Array.isArray(value) && value.every(user => isJsonObject(user) && typeof user.id === 'string' && typeof user.username === 'string');
+}
+
 function completeMfmParam(param: string) {
 	if (props.type !== 'mfmParam') throw new Error('Invalid type');
 	complete('mfmParam', props.q.params.toSpliced(-1, 1, param).join(','));
@@ -242,10 +246,10 @@ function exec() {
 		}
 
 		const cacheKey = `autocomplete:user:${props.q}`;
-		const cache = sessionStorage.getItem(cacheKey);
+		const cache = getStorageItemAsJson(sessionStorage, cacheKey, isUserArray);
 
-		if (cache) {
-			users.value = JSON.parse(cache);
+		if (cache != null) {
+			users.value = cache;
 			fetching.value = false;
 		} else {
 			const [username, host] = props.q.toString().split('@');
@@ -263,14 +267,13 @@ function exec() {
 		}
 	} else if (props.type === 'hashtag') {
 		if (!props.q || props.q === '') {
-			hashtags.value = JSON.parse(miLocalStorage.getItem('hashtags') ?? '[]');
+			hashtags.value = miLocalStorage.getItemAsJson('hashtags', isStringArray) ?? [];
 			fetching.value = false;
 		} else {
 			const cacheKey = `autocomplete:hashtag:${props.q}`;
-			const cache = sessionStorage.getItem(cacheKey);
-			if (cache) {
-				const hashtags = JSON.parse(cache);
-				hashtags.value = hashtags;
+			const cache = getStorageItemAsJson(sessionStorage, cacheKey, isStringArray);
+			if (cache != null) {
+				hashtags.value = cache;
 				fetching.value = false;
 			} else {
 				misskeyApi('hashtags/search', {

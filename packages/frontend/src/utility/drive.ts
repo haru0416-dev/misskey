@@ -6,6 +6,7 @@
 import { defineAsyncComponent } from 'vue';
 import * as Misskey from 'misskey-js';
 import { apiUrl } from '@shared/utility/config.js';
+import { parseJsonObject } from '@shared/utility/server-context.js';
 import type { UploaderFeatures } from '@/composables/useUploader.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -27,6 +28,25 @@ export class UploadAbortedError extends Error {
 	constructor() {
 		super('Upload aborted');
 	}
+}
+
+function parseUploadResponse(value: unknown): Record<string, unknown> | null {
+	return typeof value === 'string' ? parseJsonObject(value) : null;
+}
+
+function getUploadError(value: Record<string, unknown> | null): Record<string, unknown> | null {
+	if (value == null || typeof value.error !== 'object' || value.error === null || Array.isArray(value.error)) return null;
+	return value.error as Record<string, unknown>;
+}
+
+function isDriveFileResponse(value: Record<string, unknown> | null): value is Record<string, unknown> & Misskey.entities.DriveFile {
+	return value != null
+		&& typeof value.id === 'string'
+		&& typeof value.name === 'string'
+		&& typeof value.type === 'string'
+		&& typeof value.size === 'number'
+		&& Number.isFinite(value.size)
+		&& typeof value.url === 'string';
 }
 
 export function uploadFile(
@@ -76,20 +96,20 @@ export function uploadFile(
 						text: i18n.ts.cannotUploadBecauseExceedsFileSizeLimit,
 					});
 				} else if (ev.target?.response) {
-					const res = JSON.parse(ev.target.response);
-					if (res.error?.id === 'bec5bd69-fba3-43c9-b4fb-2894b66ad5d2') {
+					const error = getUploadError(parseUploadResponse(ev.target.response));
+					if (error?.id === 'bec5bd69-fba3-43c9-b4fb-2894b66ad5d2') {
 						os.alert({
 							type: 'error',
 							title: i18n.ts.failedToUpload,
 							text: i18n.ts.cannotUploadBecauseInappropriate,
 						});
-					} else if (res.error?.id === 'd08dbc37-a6a9-463a-8c47-96c32ab5f064') {
+					} else if (error?.id === 'd08dbc37-a6a9-463a-8c47-96c32ab5f064') {
 						os.alert({
 							type: 'error',
 							title: i18n.ts.failedToUpload,
 							text: i18n.ts.cannotUploadBecauseNoFreeSpace,
 						});
-					} else if (res.error?.id === '4becd248-7f2c-48c4-a9f0-75edc4f9a1ea') {
+					} else if (error?.id === '4becd248-7f2c-48c4-a9f0-75edc4f9a1ea') {
 						os.alert({
 							type: 'error',
 							title: i18n.ts.failedToUpload,
@@ -99,7 +119,7 @@ export function uploadFile(
 						os.alert({
 							type: 'error',
 							title: i18n.ts.failedToUpload,
-							text: `${res.error?.message}\n${res.error?.code}\n${res.error?.id}`,
+							text: error == null ? i18n.ts.invalidValue : `${String(error.message ?? '')}\n${String(error.code ?? '')}\n${String(error.id ?? '')}`,
 						});
 					}
 				} else {
@@ -114,7 +134,16 @@ export function uploadFile(
 				return;
 			}
 
-			const driveFile = JSON.parse(ev.target.response);
+			const driveFile = parseUploadResponse(ev.target.response);
+			if (!isDriveFileResponse(driveFile)) {
+				os.alert({
+					type: 'error',
+					title: i18n.ts.failedToUpload,
+					text: i18n.ts.invalidValue,
+				});
+				reject(new Error('Invalid drive file response'));
+				return;
+			}
 			globalEvents.emit('driveFileCreated', driveFile);
 			resolve(driveFile);
 		}) as (ev: ProgressEvent<EventTarget>) => void;

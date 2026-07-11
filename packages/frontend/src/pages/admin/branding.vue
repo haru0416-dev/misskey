@@ -154,7 +154,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
-import JSON5 from 'json5';
 import * as Misskey from 'misskey-js';
 import { host } from '@shared/utility/config.js';
 import MkInput from '@/components/MkInput.vue';
@@ -168,6 +167,7 @@ import MkButton from '@/components/MkButton.vue';
 import MkColorInput from '@/components/MkColorInput.vue';
 import MkRadios from '@/components/MkRadios.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
+import { normalizeBrandingJsonSettings } from '@/utility/admin-branding.js';
 
 const meta = await misskeyApi('admin/meta');
 
@@ -191,10 +191,29 @@ const infoImageUrl = ref(meta.infoImageUrl);
 const notFoundImageUrl = ref(meta.notFoundImageUrl);
 const repositoryUrl = ref(meta.repositoryUrl);
 const feedbackUrl = ref(meta.feedbackUrl);
-const manifestJsonOverride = ref(meta.manifestJsonOverride === '' ? '{}' : JSON.stringify(JSON.parse(meta.manifestJsonOverride), null, '\t'));
+const manifestJsonOverride = ref(meta.manifestJsonOverride.trim() === '' ? '{}' : meta.manifestJsonOverride);
 
-function save() {
-	os.apiWithDialog('admin/update-meta', {
+async function save() {
+	const normalized = normalizeBrandingJsonSettings({
+		defaultLightTheme: defaultLightTheme.value,
+		defaultDarkTheme: defaultDarkTheme.value,
+		manifestJsonOverride: manifestJsonOverride.value,
+	});
+	if (!normalized.success) {
+		const title = {
+			defaultLightTheme: i18n.ts.instanceDefaultLightTheme,
+			defaultDarkTheme: i18n.ts.instanceDefaultDarkTheme,
+			manifestJsonOverride: i18n.ts._serverSettings.manifestJsonOverride,
+		}[normalized.field];
+		await os.alert({
+			type: 'error',
+			title,
+			text: normalized.field === 'manifestJsonOverride' ? i18n.ts.invalidValue : i18n.ts._theme.invalid,
+		});
+		return;
+	}
+
+	await os.apiWithDialog('admin/update-meta', {
 		clientOptions: {
 			entrancePageStyle: entrancePageStyle.value,
 			showTimelineForVisitor: showTimelineForVisitor.value,
@@ -206,17 +225,16 @@ function save() {
 		bannerUrl: bannerUrl.value,
 		backgroundImageUrl: backgroundImageUrl.value,
 		themeColor: themeColor.value === '' ? null : themeColor.value,
-		defaultLightTheme: defaultLightTheme.value === '' ? null : defaultLightTheme.value,
-		defaultDarkTheme: defaultDarkTheme.value === '' ? null : defaultDarkTheme.value,
+		defaultLightTheme: normalized.value.defaultLightTheme,
+		defaultDarkTheme: normalized.value.defaultDarkTheme,
 		infoImageUrl: infoImageUrl.value === '' ? null : infoImageUrl.value,
 		notFoundImageUrl: notFoundImageUrl.value === '' ? null : notFoundImageUrl.value,
 		serverErrorImageUrl: serverErrorImageUrl.value === '' ? null : serverErrorImageUrl.value,
 		repositoryUrl: repositoryUrl.value === '' ? null : repositoryUrl.value,
 		feedbackUrl: feedbackUrl.value === '' ? null : feedbackUrl.value,
-		manifestJsonOverride: manifestJsonOverride.value === '' ? '{}' : JSON.stringify(JSON5.parse(manifestJsonOverride.value)),
-	}).then(() => {
-		fetchInstance(true);
+		manifestJsonOverride: normalized.value.manifestJsonOverride,
 	});
+	await fetchInstance(true);
 }
 
 const headerTabs = computed(() => []);
