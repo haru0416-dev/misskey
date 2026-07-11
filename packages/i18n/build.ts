@@ -4,12 +4,12 @@
  */
 
 import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { watch as chokidarWatch } from 'chokidar';
 import * as esbuild from 'esbuild';
 import { build } from 'esbuild';
-import { execa } from 'execa';
 import { generateLocaleInterface } from './scripts/generateLocaleInterface.js';
 import { languages } from './src/const.js';
 import type { BuildOptions, BuildResult, Plugin, PluginBuild } from 'esbuild';
@@ -22,7 +22,8 @@ const _rootPackage = JSON.parse(fs.readFileSync(resolve(_rootPackageDir, 'packag
 const _frontendLocalesDir = resolve(_dirname, '../../built/_frontend_dist_/locales');
 const _localesDir = resolve(_rootPackageDir, 'locales');
 
-const entryPoints = fs.globSync('./src/**/**.{ts,tsx}');
+const entryPoints = fs.globSync('./src/**/*.{ts,tsx}');
+const localeFiles = new Set(languages.map((lang) => `${lang}.yml`));
 
 const options: BuildOptions = {
 	entryPoints,
@@ -69,10 +70,10 @@ function copyLocales(): void {
  * フロントエンド用の locale JSON を書き出す
  * Service Worker が HTTP 経由で取得するために必要
  */
-async function writeFrontendLocalesJson(): Promise<void> {
+async function writeFrontendLocalesJson(useCachedLocales = false): Promise<void> {
 	// 動的 import でビルド済みモジュールから読み込み（循環参照回避）
-	const { writeFrontendLocalesJson: write } = await import('./built/index.js');
-	await write(_frontendLocalesDir, _rootPackage.version);
+	const { locales, writeFrontendLocalesJson: write } = await import('./built/index.js');
+	await write(_frontendLocalesDir, _rootPackage.version, useCachedLocales ? locales : undefined);
 	console.log(`[${_package.name}] frontend locales JSON written to ${_frontendLocalesDir}`);
 }
 
@@ -91,7 +92,7 @@ async function buildSrc(): Promise<void> {
 		});
 
 	copyLocales();
-	await writeFrontendLocalesJson();
+	await writeFrontendLocalesJson(true);
 
 	if (process.env.NODE_ENV === 'production') {
 		console.log(`[${_package.name}] skip building d.ts because NODE_ENV is production.`);
@@ -102,10 +103,9 @@ async function buildSrc(): Promise<void> {
 	console.log(`[${_package.name}] finish building.`);
 }
 
-function buildDts(): Promise<unknown> {
-	return execa(
-		'bun',
-		[
+function buildDts(): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const child = spawn('bun', [
 			'run',
 			'--bun',
 			'tsgo',
@@ -119,12 +119,13 @@ function buildDts(): Promise<unknown> {
 			'true',
 			'--emitDeclarationOnly',
 			'true',
-		],
-		{
-			stdout: process.stdout,
-			stderr: process.stderr,
-		},
-	);
+		], { stdio: 'inherit' });
+		child.once('error', reject);
+		child.once('exit', (code, signal) => {
+			if (code === 0) resolve();
+			else reject(new Error(`tsgo exited with ${signal ? `signal ${signal}` : `code ${code}`}`));
+		});
+	});
 }
 
 async function watchSrc(): Promise<void> {
@@ -132,11 +133,12 @@ async function watchSrc(): Promise<void> {
 		ignoreInitial: true,
 	});
 	localesWatcher.on('all', async (event, path) => {
-		if (!path.endsWith('.yml')) return;
+		const file = basename(path);
+		if (!localeFiles.has(file)) return;
 		console.log(`[${_package.name}] locales changed: ${event} ${path}`);
 		copyLocales();
 		await writeFrontendLocalesJson();
-		await generateLocaleInterface(_localesDir);
+		if (file === 'ja-JP.yml') await generateLocaleInterface(_localesDir);
 	});
 
 	const plugins: Plugin[] = [

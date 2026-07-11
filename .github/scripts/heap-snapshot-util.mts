@@ -60,6 +60,7 @@ export function renderHeapSnapshotTable(base: HeapSnapshotReport, head: HeapSnap
 		const baseSpread = getHeapSnapshotSampleSpread(base, category);
 		const headSpread = getHeapSnapshotSampleSpread(head, category);
 		const summary = util.pairedDeltaSummary(base.samples, head.samples, (sample) => sample.data.categories[category]);
+		if (summary == null) throw new Error(`No paired samples for category ${category}`);
 		const percent = (summary.median * 100) / baseValue;
 
 		if (category === 'total') {
@@ -127,7 +128,7 @@ export function renderHeapSnapshotSankey(report: HeapSnapshotReport, title: stri
 			const breakdownEntries = getHeapSnapshotBreakdownEntries(category);
 			const breakdownTotal = breakdownEntries.reduce((sum, [, childValue]) => sum + childValue, 0);
 			const percent = (value * 100) / total;
-			const childEntries = [];
+			const childEntries: [string, number][] = [];
 			let otherPercent = 0;
 
 			if (breakdownTotal > 0 && percent > heapSnapshotSankeyParentMinPercent) {

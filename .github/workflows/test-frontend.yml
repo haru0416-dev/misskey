@@ -14,8 +14,7 @@ on:
       - packages/misskey-js/**
       # for e2e
       - packages/backend/**
-      - playwright/**
-      - playwright.config.ts
+      - tests/e2e/**
       - package.json
       - bun.lock
       - .github/workflows/test-frontend.yml
@@ -30,8 +29,7 @@ on:
       - packages/misskey-js/**
       # for e2e
       - packages/backend/**
-      - playwright/**
-      - playwright.config.ts
+      - tests/e2e/**
       - package.json
       - bun.lock
       - .github/workflows/test-frontend.yml

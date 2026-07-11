@@ -104,9 +104,6 @@ export function collectModifications(
 				localizedOnly: false,
 			});
 			return modifications;
-		case 'unexpected-specifiers':
-			fileLogger.error(`Importing ${inliner.i18nFileName} found but with unexpected specifiers. Skipping inlining.`);
-			return modifications;
 		case 'specifier':
 			fileLogger.debug(`Found import i18n as ${importSpecifierResult.localI18nIdentifier}`);
 			break;
@@ -223,11 +220,25 @@ export function collectModifications(
 
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (!preserveI18nImport) {
-		fileLogger.debug('removing i18n import statement');
+		fileLogger.debug('removing i18n import specifier');
+		const i18nImportSpecifier = importSpecifierResult.importSpecifier;
+		const otherSpecifiers = i18nImport.specifiers.filter((specifier) => specifier !== i18nImportSpecifier);
+		const begin =
+			otherSpecifiers.length === 0
+				? i18nImport.start
+				: i18nImportSpecifier === i18nImport.specifiers[0]
+					? i18nImportSpecifier.start
+					: i18nImport.specifiers[i18nImport.specifiers.indexOf(i18nImportSpecifier) - 1].end;
+		const end =
+			otherSpecifiers.length === 0
+				? i18nImport.end
+				: i18nImportSpecifier === i18nImport.specifiers[0]
+					? i18nImport.specifiers[1].start
+					: i18nImportSpecifier.end;
 		codeModifications.push({
 			type: 'delete',
-			begin: i18nImport.start,
-			end: i18nImport.end,
+			begin,
+			end,
 			localizedOnly: true,
 		});
 	}
@@ -438,8 +449,12 @@ function isAwaitFetchLocaleThenJson(awaitNode: ESTree.Node): boolean {
 type SpecifierResult =
 	| { type: 'no-import' }
 	| { type: 'no-specifiers'; importNode: ESTree.ImportDeclaration }
-	| { type: 'unexpected-specifiers'; importNode: ESTree.ImportDeclaration }
-	| { type: 'specifier'; localI18nIdentifier: string; importNode: ESTree.ImportDeclaration };
+	| {
+			type: 'specifier';
+			localI18nIdentifier: string;
+			importNode: ESTree.ImportDeclaration;
+			importSpecifier: ESTree.ImportSpecifier;
+	  };
 
 function findImportSpecifier(programNode: ESTree.Program, i18nFileName: string, i18nSymbol: string): SpecifierResult {
 	const imports = programNode.body.filter((x) => x.type === 'ImportDeclaration');
@@ -450,24 +465,16 @@ function findImportSpecifier(programNode: ESTree.Program, i18nFileName: string, 
 		return { type: 'no-specifiers', importNode };
 	}
 
-	if (importNode.specifiers.length !== 1) {
-		return { type: 'unexpected-specifiers', importNode };
-	}
-	const i18nImportSpecifier = importNode.specifiers[0];
-	if (i18nImportSpecifier.type !== 'ImportSpecifier') {
-		return { type: 'unexpected-specifiers', importNode };
-	}
+	const i18nImportSpecifier = importNode.specifiers.find(
+		(specifier): specifier is ESTree.ImportSpecifier =>
+			specifier.type === 'ImportSpecifier' &&
+			specifier.imported.type === 'Identifier' &&
+			specifier.imported.name === i18nSymbol,
+	);
+	if (i18nImportSpecifier == null) return { type: 'no-import' };
 
-	if (i18nImportSpecifier.imported.type !== 'Identifier') {
-		return { type: 'unexpected-specifiers', importNode };
-	}
-
-	const importingIdentifier = i18nImportSpecifier.imported.name;
-	if (importingIdentifier !== i18nSymbol) {
-		return { type: 'unexpected-specifiers', importNode };
-	}
 	const localI18nIdentifier = i18nImportSpecifier.local.name;
-	return { type: 'specifier', localI18nIdentifier, importNode };
+	return { type: 'specifier', localI18nIdentifier, importNode, importSpecifier: i18nImportSpecifier };
 }
 
 // checker helpers

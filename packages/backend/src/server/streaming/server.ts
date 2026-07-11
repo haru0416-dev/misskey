@@ -29,7 +29,6 @@ function writeRawHttpError(socket: Socket, error: HonoApiError): void {
 	socket.destroy();
 }
 
-/** StreamingApiServerService の Authorization/`?i=` トークン解決+パーミッションチェック相当。 */
 async function authenticateStreamingRequest(
 	deps: HonoStreamServerDependencies,
 	request: IncomingMessage,

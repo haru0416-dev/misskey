@@ -42,9 +42,7 @@ export class MiAbuseUserReport {
 	 */
 	public resolvedAs: AbuseReportResolveType | null;
 
-	//#region Denormalized fields
 	public targetUserHost: string | null;
 
 	public reporterHost: string | null;
-	//#endregion
 }

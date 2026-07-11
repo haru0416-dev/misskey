@@ -23,7 +23,6 @@ import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { Serialized } from '@/types.js';
 
-//#region Stream type-body definitions
 export interface BroadcastTypes {
 	emojiAdded: {
 		emoji: Packed<'EmojiDetailed'>;
@@ -167,7 +166,6 @@ export interface ChatEventTypes {
 	};
 }
 
-//#endregion
 
 // 辞書(interface or type)から{ type, body }ユニオンを定義
 // https://stackoverflow.com/questions/49311989/can-i-infer-the-type-of-a-value-using-extends-keyof-type
@@ -282,5 +280,4 @@ export type GlobalEvents = {
 	};
 };
 
-// provide stream channels union
 export type StreamChannels = GlobalEvents[keyof GlobalEvents]['name'];

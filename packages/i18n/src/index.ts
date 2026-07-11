@@ -19,6 +19,8 @@ type PrimaryLang = keyof typeof primaries;
 
 type Locales = Record<Language, ILocale>;
 
+const backspaceRegExp = new RegExp(String.fromCodePoint(0x08), 'g');
+
 /**
  * オブジェクトを再帰的にマージする
  */
@@ -38,8 +40,8 @@ function merge<T extends ILocale>(...args: (T | ILocale | undefined)[]): T {
 /**
  * 何故か文字列にバックスペース文字が混入することがあり、YAMLが壊れるので取り除く
  */
-function clean (text: string) {
-	return text.replace(new RegExp(String.fromCodePoint(0x08), 'g'), '');
+function clean(text: string) {
+	return text.replace(backspaceRegExp, '');
 }
 
 /**
@@ -107,22 +109,25 @@ const locales = build() as {
  * @param destDir 出力先ディレクトリ（例: built/_frontend_dist_/locales）
  * @param version バージョン文字列（ファイル名とJSON内に埋め込まれる）
  */
-async function writeFrontendLocalesJson(destDir: string, version: string): Promise<void> {
+async function writeFrontendLocalesJson(
+	destDir: string,
+	version: string,
+	builtLocales: Readonly<Record<string, Locale>> = build(),
+): Promise<void> {
 	const { mkdir, writeFile } = await import('node:fs/promises');
 	const { resolve } = await import('node:path');
 
 	await mkdir(destDir, { recursive: true });
 
-	const builtLocales = build();
 	const v = { '_version_': version };
 
-	for (const [lang, locale] of Object.entries(builtLocales)) {
-		await writeFile(
+	await Promise.all(Object.entries(builtLocales).map(([lang, locale]) =>
+		writeFile(
 			resolve(destDir, `${lang}.${version}.json`),
 			JSON.stringify({ ...locale, ...v }),
 			'utf-8',
-		);
-	}
+		),
+	));
 }
 
 export { locales, languages, build, writeFrontendLocalesJson };

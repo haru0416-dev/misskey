@@ -25,7 +25,6 @@ export type HonoQueueObjectStorageDependencies = {
 	publishDriveStream?: (userId: MiUser['id'], type: 'fileDeleted', value: MiDriveFile['id']) => void;
 };
 
-/** DriveService.deleteObjectStorageFile 相当。 */
 export async function deleteObjectStorageFileForHonoApi(deps: HonoQueueObjectStorageDependencies, key: string): Promise<void> {
 	try {
 		const param = {
@@ -44,7 +43,6 @@ export async function deleteObjectStorageFileForHonoApi(deps: HonoQueueObjectSto
 	}
 }
 
-/** DriveService.deleteFileSync 相当。 */
 export async function deleteFileSyncForHonoApi(deps: HonoQueueObjectStorageDependencies, file: MiDriveFile, isExpired = false, deleter?: MiUser): Promise<void> {
 	if (file.storedInternal) {
 		deps.internalStorageService.del(file.accessKey!);
@@ -84,7 +82,6 @@ export async function deleteFileSyncForHonoApi(deps: HonoQueueObjectStorageDepen
 	}, file, isExpired, deleter);
 }
 
-/** CleanRemoteFilesProcessorService.process 相当。 */
 export async function handleHonoQueueCleanRemoteFiles(deps: HonoQueueObjectStorageDependencies, job: Bull.Job<Record<string, unknown>>): Promise<void> {
 	let deletedCount = 0;
 	let cursor: MiDriveFile['id'] | null = null;
@@ -112,7 +109,6 @@ export async function handleHonoQueueCleanRemoteFiles(deps: HonoQueueObjectStora
 	}
 }
 
-/** DeleteFileProcessorService.process 相当。 */
 export async function handleHonoQueueDeleteFile(deps: HonoQueueObjectStorageDependencies, job: Bull.Job<ObjectStorageFileJobData>): Promise<string> {
 	await deleteObjectStorageFileForHonoApi(deps, job.data.key);
 	return 'Success';

@@ -51,9 +51,6 @@ export function createFileInfoService(
 ) {
 	const logger = loggerService.getLogger('file-info');
 
-	/**
-	 * Get file information
-	 */
 	async function getFileInfo(path: string, opts: {
 		fileName?: string | null;
 		skipSensitiveDetection: boolean;
@@ -88,7 +85,6 @@ export function createFileInfoService(
 			}
 		}
 
-		// image dimensions
 		let width: number | undefined;
 		let height: number | undefined;
 		let orientation: number | undefined;
@@ -110,7 +106,6 @@ export function createFileInfoService(
 				return undefined;
 			});
 
-			// うまく判定できない画像は octet-stream にする
 			if (!imageSize) {
 				warnings.push('cannot detect image dimensions');
 				type = TYPE_OCTET_STREAM;
@@ -119,7 +114,6 @@ export function createFileInfoService(
 				height = imageSize.height;
 				orientation = imageSize.orientation;
 
-				// 制限を超えている画像は octet-stream にする
 				if (imageSize.width > 16383 || imageSize.height > 16383) {
 					warnings.push('image dimensions exceeds limits');
 					type = TYPE_OCTET_STREAM;
@@ -215,7 +209,6 @@ export function createFileInfoService(
 					'-vsync', '0', // 可変フレームレートにすることで穴埋めをさせない
 					join(outDir, '%d.png'),
 				];
-				// 判定対象フレームを選定して正規化済みバッファとして集め、外部サービスへまとめて送る。
 				const frameBuffers: Buffer[] = [];
 				let frameIndex = 0;
 				let targetIndex = 0;
@@ -388,9 +381,6 @@ export function createFileInfoService(
 		return TYPE_OCTET_STREAM;
 	}
 
-	/**
-	 * Check the file is SVG or not
-	 */
 	async function checkSvg(path: string): Promise<boolean> {
 		try {
 			const size = await getFileSize(path);
@@ -402,16 +392,10 @@ export function createFileInfoService(
 		}
 	}
 
-	/**
-	 * Get file size
-	 */
 	async function getFileSize(path: string): Promise<number> {
 		return (await fs.promises.stat(path)).size;
 	}
 
-	/**
-	 * Calculate MD5 hash
-	 */
 	async function calcHash(path: string): Promise<string> {
 		const hash = crypto.createHash('md5').setEncoding('hex');
 		await stream.pipeline(fs.createReadStream(path), hash);

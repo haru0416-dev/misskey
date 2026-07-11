@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * Identicon generator
- * https://en.wikipedia.org/wiki/Identicon
- */
-
 import { createCanvas } from '@napi-rs/canvas';
 
 // deterministic PRNG (xmur3 hash + mulberry32), replaces the unmaintained random-seed package
@@ -56,9 +51,6 @@ const actualSize = size - (margin * 2);
 const cellSize = actualSize / n;
 const sideN = Math.floor(n / 2);
 
-/**
- * Generate buffer of an identicon by seed
- */
 export async function genIdenticon(seed: string): Promise<Buffer> {
 	const rand = createSeededRandom(seed);
 	const canvas = createCanvas(size, size);
@@ -76,13 +68,11 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 
 	ctx.fillStyle = '#ffffff';
 
-	// side bitmap (filled by false)
 	const side: boolean[][] = new Array(sideN);
 	for (let i = 0; i < side.length; i++) {
 		side[i] = new Array(n).fill(false);
 	}
 
-	// 1*n (filled by false)
 	const center: boolean[] = new Array(n).fill(false);
 
 	// eslint:disable-next-line:prefer-for-of
@@ -96,7 +86,6 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 		center[i] = rand(3) === 0;
 	}
 
-	// Draw
 	for (let x = 0; x < n; x++) {
 		for (let y = 0; y < n; y++) {
 			const isXCenter = x === ((n - 1) / 2);

@@ -20,7 +20,5 @@ export class MiUserListMembership {
 	// タイムラインにその人のリプライまで含めるかどうか
 	public withReplies: boolean;
 
-	//#region Denormalized fields
 	public userListUserId: MiUser['id'];
-	//#endregion
 }

@@ -9,7 +9,6 @@ import type { Packed } from '@/misc/json-schema.js';
 import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
 import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
-/** HashtagChannel 相当。 */
 export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,

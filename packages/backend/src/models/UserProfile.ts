@@ -122,9 +122,7 @@ export class MiUserProfile {
 		unlockedAt: number;
 	}[];
 
-	//#region Denormalized fields
 	public userHost: string | null;
-	//#endregion
 
 	constructor(data: Partial<MiUserProfile>) {
 		if (data == null) return;

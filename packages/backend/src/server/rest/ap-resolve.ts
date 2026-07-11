@@ -270,7 +270,6 @@ export type HonoApiSignedPostDependencies = {
 	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
 
-/** ApRequestService.signedPost 相当。 */
 export async function signedPostForHonoApi(
 	deps: HonoApiSignedPostDependencies,
 	user: { id: MiUser['id'] },
@@ -353,7 +352,6 @@ export async function resolveApObjectForHonoApi(
 	return object;
 }
 
-/** ApResolverService.Resolver#resolveCollection 相当。 */
 export async function resolveCollectionForHonoApi(
 	deps: HonoApiApResolveDependencies,
 	value: string | IObject,

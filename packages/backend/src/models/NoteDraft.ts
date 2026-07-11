@@ -55,7 +55,6 @@ export class MiNoteDraft {
 	// (deleting channel is not implemented so it's not happening now but may happen in the future)
 	public channel: MiChannel | null;
 
-	//#region 以下、Pollについて追加
 
 	public hasPoll: boolean;
 
@@ -67,7 +66,6 @@ export class MiNoteDraft {
 
 	public pollExpiredAfter: number | null;
 
-	//#endregion
 
 	// 予約日時
 	// これがあるだけでは実際に予約されているかどうかはわからない

@@ -652,7 +652,6 @@ export async function fetchPersonForHonoApi(deps: HonoApiApPersonDependencies, u
 	return await fetchUserByUriFromDatabase(deps.db, uri) as MiLocalUser | MiRemoteUser | null;
 }
 
-/** ApPersonService.resolvePerson 相当。 */
 export async function resolvePersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string, history: Set<string> = new Set()): Promise<MiLocalUser | MiRemoteUser> {
 	const exist = await fetchPersonForHonoApi(deps, uri);
 	if (exist) return exist;
@@ -758,7 +757,6 @@ type WebfingerResult = {
 const webfingerUrlRegex = /^https?:\/\//;
 const webfingerAcctRegex = /^([^@]+)@(.*)/;
 
-/** WebfingerService.webfinger 相当。 */
 async function webfingerForHonoApi(deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> }, query: string): Promise<WebfingerResult> {
 	let url: string;
 	if (webfingerUrlRegex.test(query)) {

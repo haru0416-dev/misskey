@@ -10,7 +10,6 @@ import type { Packed } from '@/misc/json-schema.js';
 import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
 import { isNoteVisibleForMeForHonoStream, type HonoStreamChannelContext, type HonoStreamChannelDefinition } from '../channel.js';
 
-/** ChannelChannel (misskeyのチャンネル機能) の isNoteMutedOrBlocked オーバーライド相当。 */
 function isNoteMutedOrBlockedForChannelChannel(ctx: HonoStreamChannelContext, channelId: string, note: Packed<'Note'>): boolean {
 	if (isInstanceMuted(note, new Set<string>(ctx.userProfile?.mutedInstances ?? []))) return true;
 	if (isUserRelated(note, ctx.userIdsWhoMeMuting)) return true;
@@ -27,7 +26,6 @@ function isNoteMutedOrBlockedForChannelChannel(ctx: HonoStreamChannelContext, ch
 	return false;
 }
 
-/** ChannelChannel 相当。 */
 export const honoStreamChannelChannel: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,

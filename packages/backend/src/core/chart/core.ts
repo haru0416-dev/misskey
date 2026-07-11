@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * チャートエンジン
- *
- * Tests located in test/chart
- */
-
 import { createHash } from 'node:crypto';
 import { sql, type SQL } from 'drizzle-orm';
 import { dateUTC, isTimeSame, isTimeBefore, subtractTime, addTime } from '@/misc/prelude/time.js';
@@ -27,7 +21,6 @@ type Schema = Record<string, {
 
 	range?: 'big' | 'small' | 'medium';
 
-	// previousな値を引き継ぐかどうか
 	accumulate?: boolean;
 }>;
 
@@ -59,14 +52,8 @@ type TempColumnsForUnique<S extends Schema> = {
 type RawRecord<S extends Schema> = {
 	id: number;
 
-	/**
-	 * 集計のグループ
-	 */
 	group?: string | null;
 
-	/**
-	 * 集計日時のUnixタイムスタンプ(秒)
-	 */
 	date: number;
 } & TempColumnsForUnique<S> & Columns<S>;
 
@@ -174,9 +161,6 @@ export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatt
 	return jsonSchema as ToJsonSchema<Unflatten<ChartResult<S>>>;
 }
 
-/**
- * 様々なチャートの管理を司るクラス
- */
 // eslint-disable-next-line import/no-default-export
 export default abstract class Chart<T extends Schema> {
 	private logger: Logger;
@@ -559,7 +543,6 @@ export default abstract class Chart<T extends Schema> {
 				}
 			}
 
-			// bake cardinality
 			for (const [k, v] of Object.entries(finalDiffs)) {
 				if (this.schema[k].uniqueIncrement) {
 					const name = COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof Columns<T>;
@@ -571,7 +554,6 @@ export default abstract class Chart<T extends Schema> {
 				}
 			}
 
-			// compute intersection
 			// TODO: intersectionに指定されたカラムがintersectionだった場合の対応
 			for (const [k, v] of Object.entries(this.schema)) {
 				const intersection = v.intersection;

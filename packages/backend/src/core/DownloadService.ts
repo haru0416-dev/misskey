@@ -105,13 +105,11 @@ export function createDownloadService(
 	}
 
 	async function downloadTextFile(url: string): Promise<string> {
-		// Create temp file
 		const [path, cleanup] = await createTemp();
 
 		logger.info(`text file: Temp file is ${path}`);
 
 		try {
-			// write content at URL to temp file
 			await downloadUrl(url, path);
 
 			const text = await fs.promises.readFile(path, 'utf8');

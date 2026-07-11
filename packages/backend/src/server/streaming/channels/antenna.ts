@@ -9,7 +9,6 @@ import type { JsonValue } from '@/misc/json-value.js';
 import { filterNoteForStreamingHidingForHonoApi, packNoteForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
 import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
-/** AntennaChannel 相当。 */
 export const honoStreamChannelAntenna: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: true,

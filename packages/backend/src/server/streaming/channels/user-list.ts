@@ -16,7 +16,6 @@ type MembershipCacheEntry = {
 	withReplies: boolean | undefined;
 };
 
-/** UserListChannel 相当。 */
 export const honoStreamChannelUserList: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,

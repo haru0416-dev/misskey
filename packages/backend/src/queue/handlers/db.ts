@@ -128,7 +128,6 @@ function validateExportedAntenna(data: unknown): data is ExportedAntenna {
 	return exportedAntennaZodSchema.safeParse(data).success;
 }
 
-/** DeleteDriveFilesProcessorService.process 相当。 */
 export async function handleHonoQueueDeleteDriveFiles(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) {
@@ -162,7 +161,6 @@ export async function handleHonoQueueDeleteDriveFiles(deps: HonoQueueDbDependenc
 	}
 }
 
-/** ExportMutingProcessorService.process 相当。 */
 export async function handleHonoQueueExportMuting(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -215,7 +213,6 @@ export async function handleHonoQueueExportMuting(deps: HonoQueueDbDependencies,
 	}
 }
 
-/** ExportBlockingProcessorService.process 相当。 */
 export async function handleHonoQueueExportBlocking(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -268,7 +265,6 @@ export async function handleHonoQueueExportBlocking(deps: HonoQueueDbDependencie
 	}
 }
 
-/** ExportUserListsProcessorService.process 相当。 */
 export async function handleHonoQueueExportUserLists(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -303,7 +299,6 @@ export async function handleHonoQueueExportUserLists(deps: HonoQueueDbDependenci
 	}
 }
 
-/** ExportAntennasProcessorService.process 相当。 */
 export async function handleHonoQueueExportAntennas(deps: HonoQueueDbDependencies, job: Bull.Job<DBExportAntennasData>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -351,7 +346,6 @@ export async function handleHonoQueueExportAntennas(deps: HonoQueueDbDependencie
 	}
 }
 
-/** ExportFollowingProcessorService.process 相当。 */
 export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependencies, job: Bull.Job<DbExportFollowingData>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -465,7 +459,6 @@ async function resolveImportTargetUserForHonoApi(
 	return target;
 }
 
-/** ImportMutingProcessorService.process 相当。 */
 export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -484,7 +477,6 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 				throw new Error(`cannot resolve user: ${acct}`);
 			}
 
-			// skip myself
 			if (target.id === job.data.user.id) continue;
 
 			await createMutingInDatabase(deps.db, {
@@ -500,7 +492,6 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 	}
 }
 
-/** ImportUserListsProcessorService.process 相当。 */
 export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -574,7 +565,6 @@ export async function handleHonoQueueImportBlocking(deps: HonoQueueDbDependencie
 	await deps.dbQueue.addBulk(jobs);
 }
 
-/** ImportBlockingProcessorService.processDb 相当。 */
 export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportToDbJobData>): Promise<void> {
 	const line = job.data.target;
 	const user = job.data.user;
@@ -587,7 +577,6 @@ export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDepende
 			throw new Error(`Unable to resolve user: ${acct}`);
 		}
 
-		// skip myself
 		if (target.id === job.data.user.id) return;
 
 		await deps.relationshipQueue.addBulk([
@@ -617,7 +606,6 @@ export async function handleHonoQueueImportFollowing(deps: HonoQueueDbDependenci
 	await deps.dbQueue.addBulk(jobs);
 }
 
-/** ImportFollowingProcessorService.processDb 相当。 */
 export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportToDbJobData>): Promise<void> {
 	const line = job.data.target;
 	const user = job.data.user;
@@ -642,7 +630,6 @@ export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDepend
 			throw new Error(`Unable to resolve user: ${acct}`);
 		}
 
-		// skip myself
 		if (target.id === job.data.user.id) return;
 
 		await deps.relationshipQueue.addBulk([
@@ -692,7 +679,6 @@ function serializeFavoriteForHonoApi(
 	};
 }
 
-/** ExportFavoritesProcessorService.process 相当。 */
 export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -971,7 +957,6 @@ async function processClipsForHonoApi(
 	}
 }
 
-/** ExportClipsProcessorService.process 相当。 */
 export async function handleHonoQueueExportClips(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;

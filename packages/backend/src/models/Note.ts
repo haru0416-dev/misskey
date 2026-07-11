@@ -85,7 +85,6 @@ export class MiNote {
 
 	public channel: MiChannel | null;
 
-	//#region Denormalized fields
 	public userHost: string | null;
 
 	public replyUserId: MiUser['id'] | null;
@@ -97,7 +96,6 @@ export class MiNote {
 	public renoteUserHost: string | null;
 
 	public renoteChannelId: MiChannel['id'] | null;
-	//#endregion
 
 	constructor(data: Partial<MiNote>) {
 		if (data == null) return;

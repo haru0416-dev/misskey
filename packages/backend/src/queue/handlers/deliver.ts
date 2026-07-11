@@ -41,7 +41,6 @@ export type HonoQueueDeliverDependencies = {
 // Set<string> で保持し、ジョブ毎の .map().includes() (配列再構築+線形探索) を避けてO(1)判定にする。
 const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60); // 1h
 
-/** DeliverProcessorService.process 相当。 */
 export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies, job: Bull.Job<DeliverJobData>): Promise<string> {
 	const { host } = new URL(job.data.to);
 
@@ -63,7 +62,6 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 		? fetchOrRegisterFederatedInstance(deps, host)
 		: fetchFederatedInstance(deps, host));
 
-	// suspend server by software
 	if (i != null && isDeliverSuspendedSoftware(deps.meta, i)) {
 		return 'skip (software suspended)';
 	}
@@ -74,7 +72,6 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 		void deps.chartWriters.apRequestChart.deliverSucc();
 		void deps.chartWriters.federationChart.deliverd(host, true);
 
-		// Update instance stats
 		process.nextTick(async () => {
 			if (i == null) return;
 
@@ -106,7 +103,6 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 		void deps.chartWriters.apRequestChart.deliverFail();
 		void deps.chartWriters.federationChart.deliverd(host, false);
 
-		// Update instance stats
 		fetchOrRegisterFederatedInstance(deps, host).then(async i2 => {
 			if (!i2.isNotResponding) {
 				await updateFederatedInstanceAndCache(deps, i2.id, {

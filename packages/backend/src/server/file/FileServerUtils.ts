@@ -16,9 +16,6 @@ export type RangeStream = {
 	chunksize: number;
 };
 
-/**
- * Range リクエストに対応したストリームを作成する
- */
 export function createRangeStream(rangeHeader: string, size: number, path: string): RangeStream {
 	const parts = rangeHeader.replace(/bytes=/, '').split('-');
 	const start = parseInt(parts[0], 10);
@@ -49,17 +46,10 @@ export function attachStreamCleanup(data: IImageStreamable['data'], cleanup: () 
 	}
 }
 
-/**
- * MIME タイプがブラウザセーフかどうかに応じて Content-Type を返す
- */
 export function getSafeContentType(mime: string): string {
 	return FILE_TYPE_BROWSERSAFE.includes(mime) ? mime : 'application/octet-stream';
 }
 
-/**
- * Range リクエストを処理してストリームを返す
- * Range ヘッダーがない場合は通常のストリームを返す
- */
 export function handleRangeRequest(
 	reply: FileServerReply,
 	rangeHeader: string | undefined,
@@ -84,9 +74,6 @@ export type FileResponseOptions = {
 	cacheControl?: string;
 };
 
-/**
- * ファイルレスポンス用の共通ヘッダーを設定する
- */
 export function setFileResponseHeaders(
 	reply: FileServerReply,
 	options: FileResponseOptions,
@@ -99,9 +86,6 @@ export function setFileResponseHeaders(
 	}
 }
 
-/**
- * cleanup が必要なファイルかどうかを判定する型ガード
- */
 export function needsCleanup<T extends { kind?: string; cleanup?: () => void }>(file: T): file is T & { cleanup: () => void } {
 	return 'cleanup' in file && typeof file.cleanup === 'function';
 }

@@ -16,7 +16,7 @@
 'packages/frontend:test':
   - any:
       - changed-files:
-          - any-glob-to-any-file: ['playwright/**/*']
+          - any-glob-to-any-file: ['tests/e2e/**/*']
 
 'packages/sw':
   - any:

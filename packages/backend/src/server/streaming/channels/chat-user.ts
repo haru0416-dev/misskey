@@ -7,7 +7,6 @@ import type { JsonValue } from '@/misc/json-value.js';
 import { readUserChatMessageForHonoApi, type HonoApiChatDependencies } from '../../rest/chat.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
-/** ChatUserChannel 相当。 */
 export const honoStreamChannelChatUser: HonoStreamChannelDefinition<HonoApiChatDependencies> = {
 	shouldShare: false,
 	requireCredential: true,

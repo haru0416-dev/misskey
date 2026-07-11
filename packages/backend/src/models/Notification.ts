@@ -117,9 +117,6 @@ export type MiNotification = {
 	id: string;
 	createdAt: string;
 
-	/**
-	 * アプリ通知のbody
-	 */
 	customBody: string;
 
 	/**
@@ -134,9 +131,6 @@ export type MiNotification = {
 	 */
 	customIcon: string | null;
 
-	/**
-	 * アプリ通知のアプリ(のトークン)
-	 */
 	appAccessTokenId: MiAccessToken['id'] | null;
 } | {
 	type: 'test';

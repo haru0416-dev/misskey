@@ -48,8 +48,7 @@ jobs:
           }
 
           directories=(
-            "playwright/e2e"
-            "playwright/support"
+            "tests/e2e"
             "packages/backend/migration"
             "packages/backend/src"
             "packages/backend/test"

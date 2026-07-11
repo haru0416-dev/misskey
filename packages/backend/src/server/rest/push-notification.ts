@@ -29,7 +29,6 @@ export type HonoApiPushNotificationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-/** push メッセージサーバーの文字数制限に収まるよう、ノート本文を要約に置き換えて縮める。原典 PushNotificationService.truncateBody 相当。 */
 function truncateNotificationBody<T extends keyof PushNotificationsTypes>(type: T, body: PushNotificationsTypes[T]): PushNotificationsTypes[T] {
 	if (typeof body !== 'object' || body == null) return body;
 

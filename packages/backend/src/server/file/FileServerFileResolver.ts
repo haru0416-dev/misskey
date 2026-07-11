@@ -73,7 +73,6 @@ export class FileServerFileResolver {
 	}
 
 	public async resolveFileByAccessKey(key: string): Promise<FileResolveResult> {
-		// Fetch drive file
 		const file = await fetchDriveFileByAccessKeyFromDatabase(this.db, key);
 
 		if (file == null) return { kind: 'not-found' };

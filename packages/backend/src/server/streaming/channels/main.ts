@@ -14,7 +14,6 @@ type MainStreamNotificationBody = {
 	note?: { id: string; isHidden?: boolean } & Record<string, unknown>;
 } & Record<string, unknown>;
 
-/** MainChannel 相当。 */
 export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: true,
 	requireCredential: true,

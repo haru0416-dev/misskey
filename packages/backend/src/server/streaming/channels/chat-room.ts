@@ -8,7 +8,6 @@ import type { JsonValue } from '@/misc/json-value.js';
 import { hasPermissionToViewRoomTimelineForHonoApi, readRoomChatMessageForHonoApi, type HonoApiChatDependencies } from '../../rest/chat.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
-/** ChatRoomChannel 相当。 */
 export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatDependencies> = {
 	shouldShare: false,
 	requireCredential: true,

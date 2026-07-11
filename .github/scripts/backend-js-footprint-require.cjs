@@ -5,15 +5,16 @@
 
 'use strict';
 
-const { appendFileSync, statSync } = require('node:fs');
+const { openSync, statSync, writeSync } = require('node:fs');
 const Module = require('node:module');
 const { extname } = require('node:path');
 
 const traceFile = process.env.MK_BACKEND_JS_FOOTPRINT_TRACE;
+const traceFd = traceFile == null ? null : openSync(traceFile, 'a');
 const jsExtensions = new Set(['.js', '.mjs', '.cjs']);
 
 function recordLoadedFile(kind, filePath, request) {
-	if (traceFile == null || typeof filePath !== 'string') return;
+	if (traceFd == null || typeof filePath !== 'string') return;
 
 	const extension = extname(filePath);
 	if (!jsExtensions.has(extension) && extension !== '.node') return;
@@ -25,8 +26,8 @@ function recordLoadedFile(kind, filePath, request) {
 		return;
 	}
 
-	appendFileSync(
-		traceFile,
+	writeSync(
+		traceFd,
 		`${JSON.stringify({
 			kind,
 			format: extension === '.node' ? 'native' : 'commonjs',
