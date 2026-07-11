@@ -23,7 +23,7 @@ import XJoiningRooms from './joining-rooms.vue';
 import XOwnedRooms from './owned-rooms.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkPolkadots from '@/components/MkPolkadots.vue';
+import MkPolkadots from '@/components/display/MkPolkadots.vue';
 
 const tab = ref('home');
 

@@ -18,59 +18,49 @@ export type EmojiDef =
 	  };
 type EmojiScore = { emoji: EmojiDef; score: number };
 
+function canonicalName(emoji: EmojiDef): string {
+	return emoji.aliasOf ?? emoji.name;
+}
+
+function appendUnique(target: Map<string, EmojiDef>, candidates: EmojiDef[], max: number): void {
+	for (const emoji of candidates) {
+		const key = canonicalName(emoji);
+		if (!target.has(key)) {
+			target.set(key, emoji);
+			if (target.size === max) return;
+		}
+	}
+}
+
 export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30): EmojiDef[] {
-	if (!query) {
+	if (!query || max <= 0) {
 		return [];
 	}
 
-	const matched = new Map<string, EmojiScore>();
-	// 完全一致（エイリアスなし）
-	emojiDb.some((x) => {
-		if (x.name === query && !x.aliasOf) {
-			matched.set(x.name, { emoji: x, score: query.length + 3 });
+	const exact: EmojiDef[] = [];
+	const exactAliases: EmojiDef[] = [];
+	const prefixes: EmojiDef[] = [];
+	const prefixAliases: EmojiDef[] = [];
+	const partials: EmojiDef[] = [];
+
+	// 入力のたびに大きな絵文字DBを何度も走査しないよう、優先度別の候補を1回で分類する。
+	for (const emoji of emojiDb) {
+		const name = emoji.name;
+		if (name === query) {
+			(emoji.aliasOf ? exactAliases : exact).push(emoji);
+		} else if (name.startsWith(query)) {
+			(emoji.aliasOf ? prefixAliases : prefixes).push(emoji);
+		} else if (name.includes(query)) {
+			partials.push(emoji);
 		}
-		return matched.size === max;
-	});
-
-	// 完全一致（エイリアス込み）
-	if (matched.size < max) {
-		emojiDb.some((x) => {
-			if (x.name === query && !matched.has(x.aliasOf ?? x.name)) {
-				matched.set(x.aliasOf ?? x.name, { emoji: x, score: query.length + 2 });
-			}
-			return matched.size === max;
-		});
 	}
 
-	// 前方一致（エイリアスなし）
-	if (matched.size < max) {
-		emojiDb.some((x) => {
-			if (x.name.startsWith(query) && !x.aliasOf && !matched.has(x.name)) {
-				matched.set(x.name, { emoji: x, score: query.length + 1 });
-			}
-			return matched.size === max;
-		});
-	}
-
-	// 前方一致（エイリアス込み）
-	if (matched.size < max) {
-		emojiDb.some((x) => {
-			if (x.name.startsWith(query) && !matched.has(x.aliasOf ?? x.name)) {
-				matched.set(x.aliasOf ?? x.name, { emoji: x, score: query.length });
-			}
-			return matched.size === max;
-		});
-	}
-
-	// 部分一致（エイリアス込み）
-	if (matched.size < max) {
-		emojiDb.some((x) => {
-			if (x.name.includes(query) && !matched.has(x.aliasOf ?? x.name)) {
-				matched.set(x.aliasOf ?? x.name, { emoji: x, score: query.length - 1 });
-			}
-			return matched.size === max;
-		});
-	}
+	const matched = new Map<string, EmojiDef>();
+	appendUnique(matched, exact, max);
+	if (matched.size < max) appendUnique(matched, exactAliases, max);
+	if (matched.size < max) appendUnique(matched, prefixes, max);
+	if (matched.size < max) appendUnique(matched, prefixAliases, max);
+	if (matched.size < max) appendUnique(matched, partials, max);
 
 	// 簡易あいまい検索（3文字以上）
 	if (matched.size < max && query.length > 3) {
@@ -89,8 +79,8 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 			}
 
 			// 半分以上の文字が含まれていればヒットとする
-			if (hit > Math.ceil(queryChars.length / 2) && hit - 2 > (matched.get(x.aliasOf ?? x.name)?.score ?? 0)) {
-				hitEmojis.set(x.aliasOf ?? x.name, { emoji: x, score: hit - 2 });
+			if (hit > Math.ceil(queryChars.length / 2) && !matched.has(canonicalName(x))) {
+				hitEmojis.set(canonicalName(x), { emoji: x, score: hit - 2 });
 			}
 		}
 
@@ -98,41 +88,29 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 		[...hitEmojis.values()]
 			.sort((x, y) => y.score - x.score)
 			.slice(0, 6)
-			.forEach((it) => matched.set(it.emoji.name, it));
+			.forEach((it) => {
+				if (matched.size < max) matched.set(canonicalName(it.emoji), it.emoji);
+			});
 	}
 
-	return [...matched.values()]
-		.sort((x, y) => y.score - x.score)
-		.slice(0, max)
-		.map((it) => it.emoji);
+	return [...matched.values()];
 }
 
 export function searchEmojiExact(query: string | null, emojiDb: EmojiDef[], max = 30): EmojiDef[] {
-	if (!query) {
+	if (!query || max <= 0) {
 		return [];
 	}
 
-	const matched = new Map<string, EmojiScore>();
-	// 完全一致（エイリアスなし）
-	emojiDb.some((x) => {
-		if (x.name === query && !x.aliasOf) {
-			matched.set(x.name, { emoji: x, score: query.length + 3 });
+	const exact: EmojiDef[] = [];
+	const aliases: EmojiDef[] = [];
+	for (const emoji of emojiDb) {
+		if (emoji.name === query) {
+			(emoji.aliasOf ? aliases : exact).push(emoji);
 		}
-		return matched.size === max;
-	});
-
-	// 完全一致（エイリアス込み）
-	if (matched.size < max) {
-		emojiDb.some((x) => {
-			if (x.name === query && !matched.has(x.aliasOf ?? x.name)) {
-				matched.set(x.aliasOf ?? x.name, { emoji: x, score: query.length + 2 });
-			}
-			return matched.size === max;
-		});
 	}
 
-	return [...matched.values()]
-		.sort((x, y) => y.score - x.score)
-		.slice(0, max)
-		.map((it) => it.emoji);
+	const matched = new Map<string, EmojiDef>();
+	appendUnique(matched, exact, max);
+	if (matched.size < max) appendUnique(matched, aliases, max);
+	return [...matched.values()];
 }

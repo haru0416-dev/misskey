@@ -5,12 +5,12 @@
 
 import { reactive } from 'vue';
 import { miLocalStorage } from '@/local-storage.js';
-import { isAccountWithToken } from '@/utility/account-data.js';
-import type { AccountWithToken } from '@/utility/account-data.js';
+import { isAccountWithToken } from '@/features/auth/account-data.js';
+import type { AccountWithToken } from '@/features/auth/account-data.js';
 
 // TODO: 他のタブと永続化されたstateを同期
 
-export type { AccountWithToken } from '@/utility/account-data.js';
+export type { AccountWithToken } from '@/features/auth/account-data.js';
 
 const accountData = miLocalStorage.getItemAsJson('account', isAccountWithToken);
 

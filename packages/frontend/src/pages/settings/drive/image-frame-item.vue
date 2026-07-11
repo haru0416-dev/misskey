@@ -22,13 +22,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { defineAsyncComponent, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
-import type { ImageFramePreset } from '@/utility/image-frame-renderer/ImageFrameRenderer.js';
-import { ImageFrameRenderer } from '@/utility/image-frame-renderer/ImageFrameRenderer.js';
-import MkButton from '@/components/MkButton.vue';
+import type { ImageFramePreset } from '@/features/image-editor/frame/ImageFrameRenderer.js';
+import { ImageFrameRenderer } from '@/features/image-editor/frame/ImageFrameRenderer.js';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { deepClone } from '@/utility/clone.js';
-import MkFolder from '@/components/MkFolder.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 
 const props = defineProps<{
 	preset: ImageFramePreset;
@@ -40,7 +40,7 @@ const emit = defineEmits<{
 }>();
 
 async function edit() {
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkImageFrameEditorDialog.vue')), {
+	const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/image-editor/components/MkImageFrameEditorDialog.vue')), {
 		presetEditMode: true,
 		preset: deepClone(props.preset),
 		params: deepClone(props.preset.params),

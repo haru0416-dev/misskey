@@ -4,7 +4,6 @@
  */
 
 import * as mfm from 'mfm-js';
-import { unique } from '@/utility/array.js';
 
 // unique without hash
 // [ http://a/#1, http://a/#2, http://b/#3 ] => [ http://a/#1, http://b/#3 ]
@@ -14,11 +13,16 @@ export function extractUrlFromMfm(nodes: mfm.MfmNode[], respectSilentFlag = true
 	const urlNodes = mfm.extract(nodes, (node) => {
 		return node.type === 'url' || (node.type === 'link' && (!respectSilentFlag || !node.props.silent));
 	}) as mfm.MfmUrl[];
-	const urls: string[] = unique(urlNodes.map((x) => x.props.url));
-
-	return urls.reduce((array, url) => {
+	const seenUrls = new Set<string>();
+	const seenUrlsWithoutHash = new Set<string>();
+	const urls: string[] = [];
+	for (const { props: { url } } of urlNodes) {
+		if (seenUrls.has(url)) continue;
+		seenUrls.add(url);
 		const urlWithoutHash = removeHash(url);
-		if (!array.map((x) => removeHash(x)).includes(urlWithoutHash)) array.push(url);
-		return array;
-	}, [] as string[]);
+		if (seenUrlsWithoutHash.has(urlWithoutHash)) continue;
+		seenUrlsWithoutHash.add(urlWithoutHash);
+		urls.push(url);
+	}
+	return urls;
 }

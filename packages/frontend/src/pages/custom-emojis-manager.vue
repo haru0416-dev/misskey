@@ -73,13 +73,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
 import { computed, markRaw, ref } from 'vue';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkPagination from '@/components/MkPagination.vue';
-import MkRemoteEmojiEditDialog from '@/components/MkRemoteEmojiEditDialog.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
+import MkRemoteEmojiEditDialog from '@/features/custom-emojis/components/MkRemoteEmojiEditDialog.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import FormSplit from '@/components/form/split.vue';
-import { selectFile } from '@/utility/drive.js';
+import { selectFile } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { getProxiedImageUrl } from '@/utility/media-proxy.js';

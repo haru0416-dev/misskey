@@ -37,10 +37,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
 import { computed, markRaw, ref } from 'vue';
-import MkInput from '@/components/MkInput.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkPagination from '@/components/MkPagination.vue';
-import MkInstanceCardMini from '@/components/MkInstanceCardMini.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
+import MkInstanceCardMini from '@/features/instances/components/MkInstanceCardMini.vue';
 import FormSplit from '@/components/form/split.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';

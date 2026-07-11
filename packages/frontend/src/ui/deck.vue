@@ -119,12 +119,12 @@ import XMentionsColumn from '@/ui/deck/mentions-column.vue';
 import XDirectColumn from '@/ui/deck/direct-column.vue';
 import XRoleTimelineColumn from '@/ui/deck/role-timeline-column.vue';
 import XChatColumn from '@/ui/deck/chat-column.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 import { mainRouter } from '@/router.js';
 import { columns, layout, columnTypes, switchProfileMenu, addColumn as addColumnToStore, deleteProfile as deleteProfile_ } from '@/deck.js';
 import { shouldSuggestRestoreBackup } from '@/preferences/utility.js';
-import { shouldSuggestReload } from '@/utility/reload-suggest.js';
-import { startTour } from '@/utility/tour.js';
+import { shouldSuggestReload } from '@/ui/_common_/reload-suggest.js';
+import { startTour } from '@/features/onboarding/tour.js';
 import { closeTip } from '@/tips.js';
 
 const XStatusBars = defineAsyncComponent(() => import('@/ui/_common_/statusbars.vue'));

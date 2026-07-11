@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, test } from 'vitest';
 import { getStorageItemAsJson, isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
-import { isAccountWithToken } from '@/utility/account-data.js';
+import { isAccountWithToken } from '@/features/auth/account-data.js';
 
 beforeEach(() => {
 	window.localStorage.clear();

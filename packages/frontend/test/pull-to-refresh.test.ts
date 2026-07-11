@@ -8,7 +8,7 @@ import { cleanup, render } from '@testing-library/vue';
 import { nextTick } from 'vue';
 import './init';
 
-import MkPullToRefresh from '@/components/MkPullToRefresh.vue';
+import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';
 
 describe('MkPullToRefresh', () => {
 	afterEach(() => {

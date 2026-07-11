@@ -156,18 +156,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import { host } from '@shared/utility/config.js';
-import MkInput from '@/components/MkInput.vue';
-import MkTextarea from '@/components/MkTextarea.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkTextarea from '@/components/form/MkTextarea.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { instance, fetchInstance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkButton from '@/components/MkButton.vue';
-import MkColorInput from '@/components/MkColorInput.vue';
-import MkRadios from '@/components/MkRadios.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import { normalizeBrandingJsonSettings } from '@/utility/admin-branding.js';
+import MkButton from '@/components/form/MkButton.vue';
+import MkColorInput from '@/components/form/MkColorInput.vue';
+import MkRadios from '@/components/form/MkRadios.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import { normalizeBrandingJsonSettings } from '@/features/admin-tools/admin-branding.js';
 
 const meta = await misskeyApi('admin/meta');
 

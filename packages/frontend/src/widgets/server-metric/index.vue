@@ -29,7 +29,7 @@ import XNet from './net.vue';
 import XCpu from './cpu.vue';
 import XMemory from './mem.vue';
 import XDisk from './disk.vue';
-import MkContainer from '@/components/MkContainer.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';

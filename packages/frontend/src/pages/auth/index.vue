@@ -44,7 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import XForm from './form.vue';
-import MkSignin from '@/components/MkSignin.vue';
+import MkSignin from '@/features/auth/components/MkSignin.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
 import { definePage } from '@/page.js';

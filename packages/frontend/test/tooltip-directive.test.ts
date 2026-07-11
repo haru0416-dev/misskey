@@ -57,6 +57,7 @@ describe('tooltipDirective', () => {
 		await result.rerender({ text: 'Second' });
 		await fireEvent.mouseEnter(target);
 		expect(popupMock.mock.calls[1]?.[1].text).toBe('Second');
+		expect(popupMock.mock.calls[1]?.[0]).toBe(popupMock.mock.calls[0]?.[0]);
 
 		result.unmount();
 		await fireEvent.mouseEnter(target);

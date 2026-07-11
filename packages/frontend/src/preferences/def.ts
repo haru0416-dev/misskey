@@ -9,16 +9,16 @@ import { DEFAULT_EMOJIS } from '@shared/utility/const.js';
 import { prefersReducedMotion } from '@shared/utility/config.js';
 import { definePreferences } from './store.js';
 import type { Theme } from '@shared/utility/theme.js';
-import type { SoundType } from '@/utility/sound.js';
+import type { SoundType } from '@/features/sound/sound.js';
 import type { Plugin } from '@/plugin.js';
 import type { DeviceKind } from '@/utility/device-kind.js';
 import type { DeckProfile } from '@/deck.js';
-import type { WatermarkPreset } from '@/utility/watermark/WatermarkRenderer.js';
-import type { ImageFramePreset } from '@/utility/image-frame-renderer/ImageFrameRenderer.js';
+import type { WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
+import type { ImageFramePreset } from '@/features/image-editor/frame/ImageFrameRenderer.js';
 import { genId } from '@/utility/id.js';
 import { DEFAULT_DEVICE_KIND } from '@/utility/device-kind.js';
 import { deepEqual } from '@/utility/deep-equal.js';
-import type { SearchEngine } from '@/utility/search-engine.js';
+import type { SearchEngine } from '@/features/search/search-engine.js';
 
 /** サウンド設定 */
 export type SoundStore =
@@ -59,6 +59,24 @@ export type DataSaverStore = {
 };
 
 type OmitStrict<T, K extends keyof T> = T extends unknown ? Pick<T, Exclude<keyof T, K>> : never;
+
+function mergeItemsById<T extends { id: string }>(a: T[], b: T[]): T[] {
+	const mergedItems: T[] = [];
+	const itemsById = new Map<string, T>();
+	for (const item of [...a, ...b]) {
+		const existing = itemsById.get(item.id);
+		if (existing == null) {
+			itemsById.set(item.id, item);
+			mergedItems.push(item);
+		} else if (!deepEqual(
+			item as unknown as Parameters<typeof deepEqual>[0],
+			existing as unknown as Parameters<typeof deepEqual>[1],
+		)) {
+			throw new Error();
+		}
+	}
+	return mergedItems;
+}
 
 // NOTE: デフォルト値は他の設定の状態に依存してはならない(依存していた場合、ユーザーがその設定項目単体で「初期値にリセット」した場合不具合の原因になる)
 
@@ -136,24 +154,7 @@ export const PREF_DEF = definePreferences({
 				name: string;
 				emojis: string[];
 			}[],
-		mergeStrategy: (a, b) => {
-			const mergedItems = [] as typeof a;
-			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find((y) => y.id === x.id);
-				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) {
-						// 完全な重複は無視
-						continue;
-					} else {
-						// IDは同じなのに内容が違う場合はマージ不可とする
-						throw new Error();
-					}
-				} else {
-					mergedItems.push(x);
-				}
-			}
-			return mergedItems;
-		},
+		mergeStrategy: mergeItemsById,
 	},
 	emojiPaletteForReaction: {
 		serverDependent: true,
@@ -172,24 +173,7 @@ export const PREF_DEF = definePreferences({
 	},
 	themes: {
 		default: [] as Theme[],
-		mergeStrategy: (a, b) => {
-			const mergedItems = [] as typeof a;
-			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find((y) => y.id === x.id);
-				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) {
-						// 完全な重複は無視
-						continue;
-					} else {
-						// IDは同じなのに内容が違う場合はマージ不可とする
-						throw new Error();
-					}
-				} else {
-					mergedItems.push(x);
-				}
-			}
-			return mergedItems;
-		},
+		mergeStrategy: mergeItemsById,
 	},
 	lightTheme: {
 		default: null as Theme | null,
@@ -447,10 +431,9 @@ export const PREF_DEF = definePreferences({
 		// Plugin['config'] (FormWithDefault) の形として直接扱うため、あえて緩い型のままにしている。
 		default: [] as (OmitStrict<Plugin, 'config'> & { config: Record<string, any> })[],
 		mergeStrategy: (a, b) => {
-			const sameIdExists = a.some((x) => b.some((y) => x.installId === y.installId));
-			if (sameIdExists) throw new Error();
-			const sameNameExists = a.some((x) => b.some((y) => x.name === y.name));
-			if (sameNameExists) throw new Error();
+			const installIds = new Set(a.map((plugin) => plugin.installId));
+			const names = new Set(a.map((plugin) => plugin.name));
+			if (b.some((plugin) => installIds.has(plugin.installId) || names.has(plugin.name))) throw new Error();
 			return a.concat(b);
 		},
 	},
@@ -463,24 +446,7 @@ export const PREF_DEF = definePreferences({
 	watermarkPresets: {
 		accountDependent: true,
 		default: [] as WatermarkPreset[],
-		mergeStrategy: (a, b) => {
-			const mergedItems = [] as typeof a;
-			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find((y) => y.id === x.id);
-				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) {
-						// 完全な重複は無視
-						continue;
-					} else {
-						// IDは同じなのに内容が違う場合はマージ不可とする
-						throw new Error();
-					}
-				} else {
-					mergedItems.push(x);
-				}
-			}
-			return mergedItems;
-		},
+		mergeStrategy: mergeItemsById,
 	},
 	defaultWatermarkPresetId: {
 		accountDependent: true,
@@ -489,24 +455,7 @@ export const PREF_DEF = definePreferences({
 	imageFramePresets: {
 		accountDependent: true,
 		default: [] as ImageFramePreset[],
-		mergeStrategy: (a, b) => {
-			const mergedItems = [] as typeof a;
-			for (const x of a.concat(b)) {
-				const sameIdItem = mergedItems.find((y) => y.id === x.id);
-				if (sameIdItem != null) {
-					if (deepEqual(x, sameIdItem)) {
-						// 完全な重複は無視
-						continue;
-					} else {
-						// IDは同じなのに内容が違う場合はマージ不可とする
-						throw new Error();
-					}
-				} else {
-					mergedItems.push(x);
-				}
-			}
-			return mergedItems;
-		},
+		mergeStrategy: mergeItemsById,
 	},
 	defaultImageCompressionLevel: {
 		default: 2 as 0 | 1 | 2 | 3,

@@ -11,7 +11,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { customEmojis } from '@/custom-emojis.js';
+import { customEmojis } from '@/features/custom-emojis/custom-emojis.js';
 
 const DIALOG_TYPES = ['error', 'info', 'success', 'warning', 'waiting', 'question'] as const;
 

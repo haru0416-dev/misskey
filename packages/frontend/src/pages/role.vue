@@ -26,10 +26,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, watch, ref, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkUserList from '@/components/MkUserList.vue';
+import MkUserList from '@/features/users/components/MkUserList.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
+import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const props = withDefaults(defineProps<{

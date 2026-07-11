@@ -57,13 +57,13 @@ import { ref } from 'vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import { definePage } from '@/page.js';
-import MkKeyValue from '@/components/MkKeyValue.vue';
-import MkLink from '@/components/MkLink.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
+import MkLink from '@/features/link-preview/components/MkLink.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import * as os from '@/os.js';
-import MkFolder from '@/components/MkFolder.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 
 const {
 	model: resultType,

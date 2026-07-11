@@ -44,8 +44,8 @@ import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkContainer from '@/components/MkContainer.vue';
-import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
+import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
 import { i18n } from '@/i18n.js';
 import { availableBasicTimelines, isAvailableBasicTimeline, isBasicTimeline, basicTimelineIconClass, basicTimelineTypes } from '@/timelines.js';
 

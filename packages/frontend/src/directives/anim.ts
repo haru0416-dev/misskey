@@ -5,6 +5,8 @@
 
 import type { Directive } from 'vue';
 
+const timers = new WeakMap<HTMLElement, number>();
+
 export const animDirective = {
 	beforeMount(src) {
 		src.style.opacity = '0';
@@ -14,9 +16,18 @@ export const animDirective = {
 	},
 
 	mounted(src) {
-		window.setTimeout(() => {
+		const timer = window.setTimeout(() => {
+			timers.delete(src);
 			src.style.opacity = '1';
 			src.style.transform = 'none';
 		}, 1);
+		timers.set(src, timer);
+	},
+
+	unmounted(src) {
+		const timer = timers.get(src);
+		if (timer == null) return;
+		window.clearTimeout(timer);
+		timers.delete(src);
 	},
 } as Directive<HTMLElement>;

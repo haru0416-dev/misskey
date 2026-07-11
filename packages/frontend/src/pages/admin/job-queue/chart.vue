@@ -9,9 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import MkDataChart, { type DataChartPoint } from '@/components/MkDataChart.vue';
+import MkDataChart, { type DataChartPoint } from '@/features/charts/components/MkDataChart.vue';
 import { i18n } from '@/i18n.js';
-import { chartText } from '@/utility/chart-i18n.js';
+import { chartText } from '@/features/charts/chart-i18n.js';
 
 const props = defineProps<{ dataSet: { completed: number[]; failed: number[] }; aspectRatio?: number }>();
 function points(values: number[]): DataChartPoint[] {

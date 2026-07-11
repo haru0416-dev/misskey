@@ -109,7 +109,7 @@ export async function authorizePlugin(plugin: Plugin) {
 	const token = await new Promise<string>((res, rej) => {
 		let dispose: () => void;
 		os.popupAsyncWithDialog(
-			import('@/components/MkTokenGenerateWindow.vue').then((x) => x.default),
+			import('@/features/auth/components/MkTokenGenerateWindow.vue').then((x) => x.default),
 			{
 				title: i18n.ts.tokenRequested,
 				information: i18n.ts.pluginTokenRequestedDescription,
@@ -240,6 +240,7 @@ type PluginHandler<K extends keyof HandlerDef> = {
 };
 
 let pluginHandlers: PluginHandler<keyof HandlerDef>[] = [];
+const pluginHandlersCache = new Map<keyof HandlerDef, HandlerDef[keyof HandlerDef][]>();
 
 function addPluginHandler<K extends keyof HandlerDef>(
 	installId: Plugin['installId'],
@@ -252,6 +253,7 @@ function addPluginHandler<K extends keyof HandlerDef>(
 		message: `Handler registered: ${type}`,
 	});
 	pluginHandlers.push({ pluginInstallId: installId, type, ctx });
+	pluginHandlersCache.delete(type);
 }
 
 export function launchPlugins() {
@@ -341,6 +343,7 @@ export function abortPlugin(plugin: Plugin): void {
 	pluginContexts.delete(plugin.installId);
 	pluginLogs.value.delete(plugin.installId);
 	pluginHandlers = pluginHandlers.filter((x) => x.pluginInstallId !== plugin.installId);
+	pluginHandlersCache.clear();
 }
 
 export function reloadPlugin(plugin: Plugin): void {
@@ -501,5 +504,9 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 }
 
 export function getPluginHandlers<K extends keyof HandlerDef>(type: K): HandlerDef[K][] {
-	return pluginHandlers.filter((x): x is PluginHandler<K> => x.type === type).map((x) => x.ctx);
+	const cached = pluginHandlersCache.get(type);
+	if (cached != null) return cached as HandlerDef[K][];
+	const handlers = pluginHandlers.filter((x): x is PluginHandler<K> => x.type === type).map((x) => x.ctx);
+	pluginHandlersCache.set(type, handlers);
+	return handlers;
 }

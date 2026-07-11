@@ -56,13 +56,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref, toRef } from 'vue';
-import MkRadios from '@/components/MkRadios.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkRadios from '@/components/form/MkRadios.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import FormSlot from '@/components/form/slot.vue';
-import MkContainer from '@/components/MkContainer.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
-import MkDraggable from '@/components/MkDraggable.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkPreferenceContainer from '@/components/form/MkPreferenceContainer.vue';
+import MkDraggable from '@/components/layout/MkDraggable.vue';
 import * as os from '@/os.js';
 import { navbarItemDef } from '@/navbar.js';
 import { store } from '@/store.js';

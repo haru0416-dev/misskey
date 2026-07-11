@@ -6,12 +6,16 @@
 import { post } from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
-import { getAccountFromId } from '@/utility/get-account-from-id.js';
+import { getAccountFromId } from '@/features/users/get-account-from-id.js';
 import { deepClone } from '@/utility/clone.js';
 import { mainRouter } from '@/router.js';
 import { login } from '@/accounts.js';
 
+let injected = false;
+
 export function swInject() {
+	if (injected) return;
+	injected = true;
 	navigator.serviceWorker.addEventListener('message', async (ev) => {
 		if (_DEV_) {
 			console.log('sw msg', ev.data);

@@ -9,6 +9,7 @@ import type { Awaitable } from '@/types/misc.js';
 
 interface HTMLElementWithObserver extends HTMLElement {
 	_observer_?: IntersectionObserver;
+	_cancelThrottle_?: () => void;
 }
 
 export const appearDirective = {
@@ -27,9 +28,11 @@ export const appearDirective = {
 		observer.observe(src);
 
 		src._observer_ = observer;
+		src._cancelThrottle_ = check.cancel;
 	},
 
 	unmounted(src) {
 		if (src._observer_) src._observer_.disconnect();
+		src._cancelThrottle_?.();
 	},
 } as Directive<HTMLElementWithObserver, (() => Awaitable<void>) | null | undefined>;

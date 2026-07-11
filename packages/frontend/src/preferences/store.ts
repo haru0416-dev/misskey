@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { customRef, ref, watch, onScopeDispose } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import { defineStore } from 'pinia';
 import { host, version } from '@shared/utility/config.js';
@@ -17,6 +17,7 @@ import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { deepEqual } from '@/utility/deep-equal.js';
 import { deepClone } from '@/utility/clone.js';
+import type { Cloneable } from '@/utility/clone.js';
 
 // NOTE: 明示的な設定値のひとつとして null もあり得るため、設定が存在しないかどうかを判定する目的で null で比較したり ?? を使ってはいけない
 
@@ -343,12 +344,12 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 		state: () => createPreferencesStoreState(io, currentAccount),
 		actions: {
 			_rewriteRawState<K extends keyof PREF>(key: K, value: ValueOf<K>) {
-				const v = JSON.parse(JSON.stringify(value)); // deep copy 兼 vueのプロキシ解除
+				const v = deepClone(value as Cloneable) as ValueOf<K>; // deep copy 兼 vueのプロキシ解除
 				(this.$state[key] as unknown) = v;
 			},
 
 			commit<K extends keyof PREF>(key: K, value: ValueOf<K>) {
-				const v = JSON.parse(JSON.stringify(value)); // deep copy 兼 vueのプロキシ解除
+				const v = deepClone(value as Cloneable) as ValueOf<K>; // deep copy 兼 vueのプロキシ解除
 
 				if (deepEqual(this.$state[key], v)) {
 					if (_DEV_) console.log('(skip) prefer:commit', key, v);
@@ -418,28 +419,12 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 				getter?: (v: ValueOf<K>) => V,
 				setter?: (v: V) => ValueOf<K>,
 			): Ref<V> {
-				return customRef<V>((track, trigger) => {
-					const watchStop = watch(
-						() => this.$state[key],
-						() => {
-							trigger();
-						},
-					);
-
-					onScopeDispose(() => {
-						watchStop();
-					}, true);
-
-					return {
-						get: () => {
-							track();
-							return (getter != null ? getter(this.$state[key]) : this.$state[key]) as V;
-						},
-						set: (value) => {
-							const val = setter != null ? setter(value) : value;
-							this.commit(key, val as ValueOf<K>);
-						},
-					};
+				return computed<V>({
+					get: () => (getter != null ? getter(this.$state[key]) : this.$state[key]) as V,
+					set: (value) => {
+						const val = setter != null ? setter(value) : value;
+						this.commit(key, val as ValueOf<K>);
+					},
 				});
 			},
 

@@ -15,6 +15,17 @@ let stream: Misskey.IStream | null = null;
 let timeoutHeartBeat: number | null = null;
 let lastHeartbeatCall = 0;
 
+function clearHeartbeatTimer(): void {
+	if (timeoutHeartBeat == null) return;
+	window.clearTimeout(timeoutHeartBeat);
+	timeoutHeartBeat = null;
+}
+
+function scheduleHeartbeat(delay = HEART_BEAT_INTERVAL): void {
+	clearHeartbeatTimer();
+	timeoutHeartBeat = window.setTimeout(heartbeat, delay);
+}
+
 export function useStream(): Misskey.IStream {
 	if (stream) return stream;
 
@@ -29,28 +40,33 @@ export function useStream(): Misskey.IStream {
 		),
 	);
 
-	if (timeoutHeartBeat) window.clearTimeout(timeoutHeartBeat);
-	timeoutHeartBeat = window.setTimeout(heartbeat, HEART_BEAT_INTERVAL);
+	scheduleHeartbeat();
 
 	// send heartbeat right now when last send time is over HEART_BEAT_INTERVAL
 	window.document.addEventListener('visibilitychange', () => {
-		if (
-			!stream ||
-			window.document.visibilityState !== 'visible' ||
-			Date.now() - lastHeartbeatCall < HEART_BEAT_INTERVAL
-		)
+		if (!stream) return;
+		if (window.document.visibilityState !== 'visible') {
+			clearHeartbeatTimer();
 			return;
-		heartbeat();
+		}
+
+		const elapsed = Date.now() - lastHeartbeatCall;
+		if (elapsed >= HEART_BEAT_INTERVAL) {
+			heartbeat();
+		} else {
+			scheduleHeartbeat(HEART_BEAT_INTERVAL - elapsed);
+		}
 	});
 
 	return stream;
 }
 
 function heartbeat(): void {
-	if (stream != null && window.document.visibilityState === 'visible') {
-		stream.heartbeat();
+	if (stream == null || window.document.visibilityState !== 'visible') {
+		clearHeartbeatTimer();
+		return;
 	}
+	stream.heartbeat();
 	lastHeartbeatCall = Date.now();
-	if (timeoutHeartBeat) window.clearTimeout(timeoutHeartBeat);
-	timeoutHeartBeat = window.setTimeout(heartbeat, HEART_BEAT_INTERVAL);
+	scheduleHeartbeat();
 }

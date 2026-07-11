@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { onUnmounted, watch } from 'vue';
+import { watch } from 'vue';
 import type { Ref } from 'vue';
 
 export function useMutationObserver(
@@ -15,15 +15,12 @@ export function useMutationObserver(
 
 	watch(
 		targetNodeRef,
-		(targetNode) => {
+		(targetNode, _oldTargetNode, onCleanup) => {
 			if (targetNode) {
 				observer.observe(targetNode, options);
+				onCleanup(() => observer.disconnect());
 			}
 		},
 		{ immediate: true },
 	);
-
-	onUnmounted(() => {
-		observer.disconnect();
-	});
 }

@@ -20,8 +20,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { defineAsyncComponent, onMounted, ref, computed } from 'vue';
-import MkInput from '@/components/MkInput.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
@@ -44,7 +44,7 @@ async function save() {
 
 onMounted(async () => {
 	if (props.token == null) {
-		const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkForgotPassword.vue').then(x => x.default), {}, {
+		const { dispose } = await os.popupAsyncWithDialog(import('@/features/auth/components/MkForgotPassword.vue').then(x => x.default), {}, {
 			closed: () => dispose(),
 		});
 		mainRouter.push('/');

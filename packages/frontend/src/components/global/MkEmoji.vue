@@ -19,8 +19,8 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
-import { mute as muteEmoji, unmute as unmuteEmoji, checkMuted as checkMutedEmoji } from '@/utility/emoji-mute.js';
-import { addToEmojiPalette } from '@/utility/emoji-palette.js';
+import { mute as muteEmoji, unmute as unmuteEmoji, checkMuted as checkMutedEmoji } from '@/features/custom-emojis/emoji-mute.js';
+import { addToEmojiPalette } from '@/features/emoji-picker/emoji-palette.js';
 
 const props = defineProps<{
 	emoji: string;

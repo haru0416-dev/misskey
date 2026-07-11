@@ -7,7 +7,7 @@ import { afterEach, assert, describe, test, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
 import { nextTick, ref } from 'vue';
 import { preferReactive, preferState } from './init';
-import MkAnimBg from '@/components/MkAnimBg.vue';
+import MkAnimBg from '@/components/display/MkAnimBg.vue';
 
 vi.mock('chromatic/isChromatic', () => ({ default: () => false }));
 vi.mock('@/utility/webgl.js', () => ({ initShaderProgram: () => ({}) }));

@@ -272,7 +272,7 @@ export function popRightColumn(id: Column['id']) {
 export function addColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
-	const column = deepClone(columns.value[columnIndex]);
+	const column = newColumns[columnIndex];
 	if (column == null) return;
 	if (column.widgets == null) column.widgets = [];
 	column.widgets.unshift(widget);
@@ -284,7 +284,7 @@ export function addColumnWidget(id: Column['id'], widget: ColumnWidget) {
 export function removeColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
-	const column = deepClone(columns.value[columnIndex]);
+	const column = newColumns[columnIndex];
 	if (column == null) return;
 	if (column.widgets == null) column.widgets = [];
 	column.widgets = column.widgets.filter((w) => w.id !== widget.id);
@@ -296,7 +296,7 @@ export function removeColumnWidget(id: Column['id'], widget: ColumnWidget) {
 export function setColumnWidgets(id: Column['id'], widgets: ColumnWidget[]) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
-	const column = deepClone(columns.value[columnIndex]);
+	const column = newColumns[columnIndex];
 	if (column == null) return;
 	column.widgets = widgets;
 	newColumns[columnIndex] = column;
@@ -307,7 +307,7 @@ export function setColumnWidgets(id: Column['id'], widgets: ColumnWidget[]) {
 export function updateColumnWidget(id: Column['id'], widgetId: string, widgetData: any) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
-	const column = deepClone(columns.value[columnIndex]);
+	const column = newColumns[columnIndex];
 	if (column == null) return;
 	if (column.widgets == null) column.widgets = [];
 	column.widgets = column.widgets.map((w) =>
@@ -326,7 +326,7 @@ export function updateColumnWidget(id: Column['id'], widgetId: string, widgetDat
 export function updateColumn(id: Column['id'], column: Partial<Column>) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
-	const currentColumn = deepClone(columns.value[columnIndex]);
+	const currentColumn = newColumns[columnIndex];
 	if (currentColumn == null) return;
 	for (const [k, v] of Object.entries(column)) {
 		(currentColumn[k as keyof typeof column] as any) = v;

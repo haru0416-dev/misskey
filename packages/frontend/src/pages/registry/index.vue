@@ -30,7 +30,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import FormLink from '@/components/form/link.vue';
 import FormSection from '@/components/form/section.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 
 const scopesWithDomain = ref<Misskey.entities.IRegistryScopesWithDomainResponse | null>(null);
 

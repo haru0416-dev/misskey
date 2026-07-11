@@ -45,12 +45,12 @@ import { ref } from 'vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import { definePage } from '@/page.js';
-import { getUserEnvironment } from '@/utility/get-user-environment.js';
-import type { UserEnvironment } from '@/utility/get-user-environment.js';
-import MkKeyValue from '@/components/MkKeyValue.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkLink from '@/components/MkLink.vue';
-import MkCode from '@/components/MkCode.vue';
+import { getUserEnvironment } from '@/features/users/get-user-environment.js';
+import type { UserEnvironment } from '@/features/users/get-user-environment.js';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkLink from '@/features/link-preview/components/MkLink.vue';
+import MkCode from '@/features/code/components/MkCode.vue';
 
 const userEnv = ref<UserEnvironment | null>(null);
 

@@ -11,7 +11,11 @@ type Predicate<T> = (x: T) => boolean;
  */
 
 export function countIf<T>(f: Predicate<T>, xs: T[]): number {
-	return xs.filter(f).length;
+	let count = 0;
+	for (const x of xs) {
+		if (f(x)) count++;
+	}
+	return count;
 }
 
 /**
@@ -33,7 +37,14 @@ export function concat<T>(xss: T[][]): T[] {
  * @param sep The element to be interspersed
  */
 export function intersperse<T>(sep: T, xs: T[]): T[] {
-	return concat(xs.map((x) => [sep, x])).slice(1);
+	if (xs.length === 0) return [];
+	const result = new Array<T>(xs.length * 2 - 1);
+	result[0] = xs[0]!;
+	for (let i = 1; i < xs.length; i++) {
+		result[i * 2 - 1] = sep;
+		result[i * 2] = xs[i]!;
+	}
+	return result;
 }
 
 /**
@@ -48,7 +59,8 @@ export function erase<T>(a: T, xs: T[]): T[] {
  * The order of result values are determined by the first array.
  */
 export function difference<T>(xs: T[], ys: T[]): T[] {
-	return xs.filter((x) => !ys.includes(x));
+	const excluded = new Set(ys);
+	return xs.filter((x) => !excluded.has(x));
 }
 
 /**
@@ -74,7 +86,11 @@ export function sum(xs: number[]): number {
 }
 
 export function maximum(xs: number[]): number {
-	return Math.max(...xs);
+	let result = -Infinity;
+	for (const x of xs) {
+		if (x > result) result = x;
+	}
+	return result;
 }
 
 /**

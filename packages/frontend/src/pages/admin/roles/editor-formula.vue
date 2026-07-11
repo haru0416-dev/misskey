@@ -60,12 +60,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import type { GetMkSelectValueTypesFromDef, MkSelectItem } from '@/components/MkSelect.vue';
+import type { GetMkSelectValueTypesFromDef, MkSelectItem } from '@/components/form/MkSelect.vue';
 import { genId } from '@/utility/id.js';
-import MkInput from '@/components/MkInput.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkDraggable from '@/components/MkDraggable.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkDraggable from '@/components/layout/MkDraggable.vue';
 import { i18n } from '@/i18n.js';
 import { deepClone } from '@/utility/clone.js';
 import { rolesCache } from '@/cache.js';

@@ -11,11 +11,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import MkDataChart, { type DataChartSeries } from '@/components/MkDataChart.vue';
+import MkDataChart, { type DataChartSeries } from '@/features/charts/components/MkDataChart.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { toChartSeries } from '@/utility/chart-helpers.js';
-import { chartText } from '@/utility/chart-i18n.js';
+import { toChartSeries } from '@/features/charts/chart-helpers.js';
+import { chartText } from '@/features/charts/chart-i18n.js';
 
 const fetching = ref(true);
 const series = ref<DataChartSeries[]>([]);

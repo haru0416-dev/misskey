@@ -20,7 +20,7 @@ vi.mock('@/utility/idle-render.js', () => ({
 	},
 }));
 
-import MkDigitalClock from '@/components/MkDigitalClock.vue';
+import MkDigitalClock from '@/components/display/MkDigitalClock.vue';
 
 describe('clock component scheduling', () => {
 	afterEach(() => {

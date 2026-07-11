@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import MkAnimBg from '@/components/MkAnimBg.vue';
+import MkAnimBg from '@/components/display/MkAnimBg.vue';
 </script>
 
 <style lang="scss" module>
