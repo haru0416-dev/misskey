@@ -201,6 +201,7 @@
 - Enhance: REST API のリクエストパラメータ検証を `ajv` (JSON Schema) から `Zod` に全面移行し、本番依存から `ajv` を除去。あわせて `users/show`/`notes/create` の OpenAPI 仕様生成 (misskey-js 型生成) を Zod スキーマ由来に統一し、これまで独立して二重管理されていたパラメータ定義の重複を解消
 - Enhance: ID生成方式を `uuidv7` 固定に簡素化し、設定ファイルの `id` 項目 (aid/aidx/meid/meidg/objectid/ulid の選択) を削除。本フォークは常に `uuidv7` のみを使用していたための整理
 - Enhance: 連合インスタンスのメタデータ更新時に旧形式のRedisロックキーを毎回削除していた移行処理を除去
+- Fix: ActivityPub Actorにアカウント作成日時が含まれない問題を修正
 
 ## 2026.6.1
 
