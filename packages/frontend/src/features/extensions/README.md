@@ -1,3 +1,0 @@
-# Extensions
-
-plugin・themeなど外部extensionのmetadata確認とinstall同意UIを所有するfeature。実際のinstall処理とroutingはinstall pageが組み立てる。

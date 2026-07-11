@@ -1,3 +1,0 @@
-# Announcements
-
-お知らせ内容のdialog表示、既読操作、ユーザー向けお知らせ編集dialogを所有するfeature。お知らせ一覧と管理画面はroute page側で組み立てる。
