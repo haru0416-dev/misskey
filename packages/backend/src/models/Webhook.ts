@@ -25,13 +25,7 @@ export class MiWebhook {
 
 	public active: boolean;
 
-	/**
-	 * 直近のリクエスト送信日時
-	 */
 	public latestSentAt: Date | null;
 
-	/**
-	 * 直近のリクエスト送信時のHTTPステータスコード
-	 */
 	public latestStatus: number | null;
 }

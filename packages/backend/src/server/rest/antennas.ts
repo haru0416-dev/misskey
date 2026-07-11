@@ -73,7 +73,6 @@ export function antennaUsersIncludes(
 	});
 }
 
-/** AntennaService.checkHitAntenna 相当。 */
 export async function checkHitAntennaForHonoApi(
 	deps: Pick<HonoApiAntennaFanoutDependencies, 'config' | 'db'>,
 	antenna: MiAntenna,
@@ -182,12 +181,10 @@ export async function onMoveAccountForHonoApi(
 
 	const antennaIds = antennasToMigrate.map(x => x.id);
 
-	// Update the antennas by appending dst users acct to the users list
 	const dstUserAcct = '@' + Acct.toString({ username: dst.username, host: dst.host });
 
 	await appendUserToAntennasInDatabase(deps.db, antennaIds, dstUserAcct);
 
-	// announce update to event
 	for (const newAntenna of await listAntennasByIdsFromDatabase(deps.db, antennaIds)) {
 		deps.publishInternalEvent?.('antennaUpdated', newAntenna);
 	}

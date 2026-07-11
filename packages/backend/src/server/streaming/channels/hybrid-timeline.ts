@@ -9,7 +9,6 @@ import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, t
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../../rest/role-policy.js';
 import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
-/** HybridTimelineChannel 相当。 */
 export const honoStreamChannelHybridTimeline: HonoStreamChannelDefinition<HonoApiNoteDependencies & HonoApiRolePolicyDependencies> = {
 	shouldShare: false,
 	requireCredential: true,

@@ -153,7 +153,6 @@ describe('アンテナ', () => {
 		}
 	});
 
-	//#region 作成(antennas/create)
 
 	test('が作成できること、キーが過不足なく入っていること。', async () => {
 		const response = await successfulApiCall({
@@ -263,8 +262,6 @@ describe('アンテナ', () => {
 			id: '53ee222e-1ddd-4f9a-92e5-9fb82ddb463a',
 		});
 	});
-	//#endregion
-	//#region 更新(antennas/update)
 
 	test.each(antennaParamPattern)('を変更できること($#)', async ({ parameters }) => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -314,8 +311,6 @@ describe('アンテナ', () => {
 		});
 	});
 
-	//#endregion
-	//#region 表示(antennas/show)
 
 	test('をID指定で表示できること。', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -340,8 +335,6 @@ describe('アンテナ', () => {
 		});
 	});
 
-	//#endregion
-	//#region 一覧(antennas/list)
 
 	test('をリスト形式で取得できること。', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -355,8 +348,6 @@ describe('アンテナ', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
-	//#region 削除(antennas/delete)
 
 	test('を削除できること。', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -385,10 +376,8 @@ describe('アンテナ', () => {
 		assert.deepStrictEqual(list.map(a => a.id).includes(antenna.id), true);
 	});
 
-	//#endregion
 
 	describe('のノート', () => {
-		//#region アンテナのノート取得(antennas/notes)
 
 		// アンテナへの振り分けは note 作成時に await されない副作用のため、期待件数に達するまで
 		// 有界ポーリングで待つ (期待0件の場合は短い猶予後に読む)。
@@ -875,6 +864,5 @@ describe('アンテナ', () => {
 			assert.strictEqual(shown.isActive, true);
 		});
 
-		//#endregion
 	});
 });

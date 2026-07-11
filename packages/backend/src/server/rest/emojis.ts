@@ -368,7 +368,6 @@ export async function publishHonoApiEmojiAdded(
 	});
 }
 
-/** CustomEmojiService.add 相当。 */
 export async function addCustomEmojiForHonoApi(
 	deps: HonoApiEmojiDependencies,
 	data: {

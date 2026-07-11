@@ -40,13 +40,11 @@ export type HonoQueueRelationshipDependencies =
 	& HonoApiFollowingDependencies
 	& HonoApiApPersonDependencies;
 
-/** UtilityService.isSilencedHost 相当。 */
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
 	return silencedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
-/** UserFollowingService.deliverAccept 相当。 */
 async function deliverAcceptFollowActivity(
 	deps: HonoQueueRelationshipDependencies,
 	follower: MiUser,
@@ -196,7 +194,6 @@ export async function handleHonoQueueRelationshipUnfollow(
 	return 'ok';
 }
 
-/** UserBlockingService.block 相当。 */
 export async function handleHonoQueueRelationshipBlock(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
@@ -211,7 +208,6 @@ export async function handleHonoQueueRelationshipBlock(
 	return 'ok';
 }
 
-/** UserBlockingService.unblock 相当。 */
 export async function handleHonoQueueRelationshipUnblock(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,

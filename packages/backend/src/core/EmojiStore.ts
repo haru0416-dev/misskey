@@ -120,7 +120,6 @@ export async function fetchEmojiByNameAndHostOrFailFromDatabase(
 	return row;
 }
 
-//#region name@host 単位のプロセスローカル短命キャッシュ (AvatarDecorationStore と同じ同期無効化パターン)
 const EMOJI_CACHE_TTL_MS = 1000 * 60;
 const EMOJI_CACHE_MAX_ENTRIES = 5000;
 const emojiByNameAndHostCache = new Map<string, { row: MiEmoji | null; cachedAt: number }>();
@@ -209,7 +208,6 @@ export async function fetchEmojisByNamesAndHostsFromDatabaseCached(
 
 	return queries.map(query => resultByKey.get(emojiCacheKey(query.name, query.host)) ?? null);
 }
-//#endregion
 
 export async function listEmojisByIdsFromDatabase(
 	db: MiDrizzleDatabase,
@@ -515,11 +513,9 @@ export async function fetchEmojisFromDatabase(
 		const q = params.query;
 
 		if (q.updatedAtFrom) {
-			// noIndexScan
 			conditions.push(sql`CAST(${emoji.updatedAt} AS DATE) >= ${q.updatedAtFrom}`);
 		}
 		if (q.updatedAtTo) {
-			// noIndexScan
 			conditions.push(sql`CAST(${emoji.updatedAt} AS DATE) <= ${q.updatedAtTo}`);
 		}
 		if (q.name) {
@@ -533,7 +529,6 @@ export async function fetchEmojisFromDatabase(
 			}
 			case q.hostType === 'remote': {
 				if (q.host) {
-					// noIndexScan
 					conditions.push(likeAnyWords(emoji.host, q.host));
 				} else {
 					conditions.push(isNotNull(emoji.host));
@@ -543,19 +538,15 @@ export async function fetchEmojisFromDatabase(
 		}
 
 		if (q.uri) {
-			// noIndexScan
 			conditions.push(likeAnyWords(emoji.uri, q.uri));
 		}
 		if (q.publicUrl) {
-			// noIndexScan
 			conditions.push(likeAnyWords(emoji.publicUrl, q.publicUrl));
 		}
 		if (q.type) {
-			// noIndexScan
 			conditions.push(likeAnyWords(emoji.type, q.type));
 		}
 		if (q.aliases) {
-			// noIndexScan
 			const patterns = multipleWordsToPatterns(q.aliases);
 			conditions.push(sql`EXISTS (SELECT 1 FROM unnest(${emoji.aliases}) AS alias WHERE alias ~~ ANY(ARRAY[${sql.join(patterns.map(p => sql`${p}`), sql`, `)}]))`);
 		}
@@ -563,15 +554,12 @@ export async function fetchEmojisFromDatabase(
 			conditions.push(likeAnyWords(emoji.category, q.category));
 		}
 		if (q.license) {
-			// noIndexScan
 			conditions.push(likeAnyWords(emoji.license, q.license));
 		}
 		if (q.isSensitive != null) {
-			// noIndexScan
 			conditions.push(eq(emoji.isSensitive, q.isSensitive));
 		}
 		if (q.localOnly != null) {
-			// noIndexScan
 			conditions.push(eq(emoji.localOnly, q.localOnly));
 		}
 		if (q.roleIds && q.roleIds.length > 0) {

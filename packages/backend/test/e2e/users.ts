@@ -336,7 +336,6 @@ describe('ユーザー', () => {
 		aliceNote = await successfulApiCall({ endpoint: 'notes/show', parameters: { noteId: aliceNote.id }, user: alice });
 	});
 
-	//#region サインアップ(signup)
 
 	test('が作れる。（作りたての状態で自分のユーザー情報が取れる）', async () => {
 		// SignupApiService.ts
@@ -442,8 +441,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response.securityKeysList, []);
 	});
 
-	//#endregion
-	//#region 自分の情報(i)
 
 	test('を読み取ることができること（自分）、キーが過不足なく入っていること。', async () => {
 		const response = await successfulApiCall({
@@ -456,8 +453,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
-	//#region 自分の情報の更新(i/update)
 
 	test.each([
 		{ parameters: () => ({ name: null }) },
@@ -578,8 +573,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response2, expected2, inspect(parameters));
 	});
 
-	//#endregion
-	//#region 自分の情報の更新(i/pin, i/unpin)
 
 	test('を書き換えることができる(ピン止めノート)', async () => {
 		const parameters = { noteId: aliceNote.id };
@@ -592,8 +585,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response2, expected2);
 	});
 
-	//#endregion
-	//#region メモの更新(users/update-memo)
 
 	test.each([
 		{ label: '最大長', memo: 'x'.repeat(2048) },
@@ -607,8 +598,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
-	//#region ユーザー(users)
 
 	test.each([
 		{ label: 'ID昇順', parameters: { limit: 5 }, selector: (u: misskey.entities.UserLite): string => u.id },
@@ -664,8 +653,6 @@ describe('ユーザー', () => {
 		}, 'offset', 'asc');
 	});
 
-	//#endregion
-	//#region ユーザー情報(users/show)
 
 	test.each([
 		{ label: 'ID指定で自分自身を', parameters: () => ({ userId: alice.id }), user: () => alice, type: meDetailed },
@@ -785,8 +772,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
-	//#region 検索(users/search)
 
 	test('を検索することができる', async () => {
 		const parameters = { query: 'carol', limit: 10 };
@@ -850,8 +835,6 @@ describe('ユーザー', () => {
 		}, 'offset', 'asc');
 	});
 
-	//#endregion
-	//#region ID指定検索(users/search-by-username-and-host)
 
 	test.each([
 		{ label: '自分', parameters: { username: 'alice' }, user: () => [alice] },
@@ -892,8 +875,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
-	//#region ID指定検索(users/get-frequently-replied-users)
 
 	test('がよくリプライをするユーザーのリストを取得できる', async () => {
 		const parameters = { userId: alice.id, limit: 5 };
@@ -923,8 +904,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response.map(s => s.user).filter((u) => u.id === user().id), expected);
 	});
 
-	//#endregion
-	//#region ハッシュタグ(hashtags/users)
 
 	test.each([
 		{ label: 'フォロワー昇順', sort: { sort: '+follower' }, selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.followersCount) },
@@ -975,8 +954,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
-	//#region オススメユーザー(users/recommendation)
 
 	// 原典 (NestJS/TypeORM) では QueryFailedError: missing FROM-clause entry for table "note" で
 	// 壊れていたが、Hono移行後のdrizzle実装では動作するためテストを有効化した。
@@ -989,8 +966,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
-	//#region ピン止めユーザー(pinned-users)
 
 	test('のピン止めユーザーを取得することができる', async () => {
 		await successfulApiCall({ endpoint: 'admin/update-meta', parameters: { pinnedUsers: [bob.username, `@${carol.username}`] }, user: root });
@@ -1000,7 +975,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	//#endregion
 
 	test('を管理人として確認することができる(admin/show-user)', async () => {
 		const user = await signup();

@@ -21,16 +21,16 @@ function createMemberType(item: string | LocaleRecord): ts.TypeNode {
 	if (typeof item !== 'string') {
 		return ts.factory.createTypeLiteralNode(createMembers(item));
 	}
-	const parameters = Array.from(
+	const parameters = new Set(Array.from(
 		item.matchAll(parameterRegExp),
 		([, parameter]) => parameter,
-	);
-	return parameters.length
+	));
+	return parameters.size > 0
 		? ts.factory.createTypeReferenceNode(
 			ts.factory.createIdentifier('ParameterizedString'),
 			[
 				ts.factory.createUnionTypeNode(
-					parameters.map((parameter) =>
+					Array.from(parameters, (parameter) =>
 						ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(parameter)),
 					),
 				),
@@ -140,10 +140,12 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 
 	const autogenDir = `${__dirname}/../src/autogen`;
 	fs.mkdirSync(autogenDir, { recursive: true });
+	const outputPath = `${autogenDir}/locale.ts`;
+	if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf-8') === printed) return;
 
 	// 一瞬ファイルが存在しなくなって途切れる→不安定になるらしいので、リネームで対処
 	fs.writeFileSync(`${autogenDir}/_locale.ts`, printed, 'utf-8');
-	fs.renameSync(`${autogenDir}/_locale.ts`, `${autogenDir}/locale.ts`);
+	fs.renameSync(`${autogenDir}/_locale.ts`, outputPath);
 }
 
 // スクリプトとして直接実行された場合

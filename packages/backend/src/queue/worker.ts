@@ -122,7 +122,6 @@ function renderError(e?: Error): unknown {
  * NestJS側のWorkerと二重に接続すると同一ジョブが二重処理される。
  */
 export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
-	//#region user-webhook deliver
 	const userWebhookDeliverQueueWorker = new Bull.Worker(QUEUE.USER_WEBHOOK_DELIVER, (job) => {
 		return handleHonoQueueUserWebhookDeliver(deps, job);
 	}, {
@@ -147,9 +146,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
-	//#region system-webhook deliver
 	const systemWebhookDeliverQueueWorker = new Bull.Worker(QUEUE.SYSTEM_WEBHOOK_DELIVER, (job) => {
 		return handleHonoQueueSystemWebhookDeliver(deps, job);
 	}, {
@@ -174,9 +171,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
-	//#region relationship
 	const relationshipQueueWorker = new Bull.Worker(QUEUE.RELATIONSHIP, (job) => {
 		switch (job.name) {
 			case 'follow': return handleHonoQueueRelationshipFollow(deps, job);
@@ -204,18 +199,14 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
-	//#region post scheduled note
 	const postScheduledNoteQueueWorker = new Bull.Worker(QUEUE.POST_SCHEDULED_NOTE, (job) => {
 		return handleHonoQueuePostScheduledNote(deps, job);
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.POST_SCHEDULED_NOTE),
 		autorun: false,
 	});
-	//#endregion
 
-	//#region system
 	const systemJobHandlers = {
 		clean: () => handleHonoQueueClean(deps),
 		aggregateRetention: () => handleHonoQueueAggregateRetention(deps),
@@ -245,9 +236,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
-	//#region deliver
 	const deliverQueueWorker = new Bull.Worker(QUEUE.DELIVER, (job) => {
 		return handleHonoQueueDeliver(deps, job);
 	}, {
@@ -272,9 +261,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
-	//#region inbox
 	const inboxQueueWorker = new Bull.Worker(QUEUE.INBOX, (job) => {
 		return handleHonoQueueInbox(deps, job);
 	}, {
@@ -299,18 +286,14 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
-	//#region ended poll notification
 	const endedPollNotificationQueueWorker = new Bull.Worker(QUEUE.ENDED_POLL_NOTIFICATION, (job) => {
 		return handleHonoQueueEndedPollNotification(deps, job);
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.ENDED_POLL_NOTIFICATION),
 		autorun: false,
 	});
-	//#endregion
 
-	//#region object storage
 	const objectStorageQueueWorker = new Bull.Worker(QUEUE.OBJECT_STORAGE, (job) => {
 		switch (job.name) {
 			case 'deleteFile': return handleHonoQueueDeleteFile(deps, job);
@@ -332,9 +315,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
-	//#region db
 	// dbキューの全18ジョブ型を移植済み。
 	const dbQueueWorker = new Bull.Worker(QUEUE.DB, (job) => {
 		switch (job.name) {
@@ -373,7 +354,6 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('error', (err: Error) => logger.error(`error ${err.name}: ${err.message}`, { e: renderError(err) }))
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
-	//#endregion
 
 	return {
 		userWebhookDeliverQueueWorker,

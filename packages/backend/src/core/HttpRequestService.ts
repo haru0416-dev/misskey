@@ -190,9 +190,7 @@ class HttpsRequestServiceAgent extends https.Agent {
 }
 
 export function createHttpRequestService(config: Config) {
-	/**
-	 * send() の事前 SSRF チェックで使う DNS リゾルバ (結果は 1h キャッシュ)。
-	 */
+	// SSRF検査と接続先解決で同じDNS結果を使い、名前解決後の差し替えを防ぐ。
 	const dnsCache = new CacheableLookup({
 		maxTtl: 3600,	// 1hours
 		errorTtl: 30,	// 30secs
@@ -206,31 +204,16 @@ export function createHttpRequestService(config: Config) {
 		localAddress: config.outgoingAddress,
 	};
 
-	/**
-	 * Get http non-proxy agent (without local address filtering)
-	 */
 	const httpNative: http.Agent = new http.Agent(agentOption);
 
-	/**
-	 * Get https non-proxy agent (without local address filtering)
-	 */
 	const httpsNative: https.Agent = new https.Agent(agentOption);
 
-	/**
-	 * Get http non-proxy agent
-	 */
 	const httpNonProxyAgent: http.Agent = new HttpRequestServiceAgent(config, agentOption);
 
-	/**
-	 * Get https non-proxy agent
-	 */
 	const httpsNonProxyAgent: https.Agent = new HttpsRequestServiceAgent(config, agentOption);
 
 	const maxSockets = Math.max(256, config.deliverJobConcurrency ?? 128);
 
-	/**
-	 * Get http proxy or non-proxy agent
-	 */
 	const httpAgent: http.Agent = config.proxy
 		? new HttpProxyAgent({
 			keepAlive: true,
@@ -243,9 +226,6 @@ export function createHttpRequestService(config: Config) {
 		})
 		: httpNonProxyAgent;
 
-	/**
-	 * Get https proxy or non-proxy agent
-	 */
 	const httpsAgent: https.Agent = config.proxy
 		? new HttpsProxyAgent({
 			keepAlive: true,
@@ -258,12 +238,6 @@ export function createHttpRequestService(config: Config) {
 		})
 		: httpsNonProxyAgent;
 
-	/**
-	 * Get agent by URL
-	 * @param url URL
-	 * @param bypassProxy Always bypass proxy
-	 * @param isLocalAddressAllowed
-	 */
 	function getAgentByUrl(url: URL, bypassProxy = false, isLocalAddressAllowed = false): http.Agent | https.Agent {
 		if (bypassProxy || (config.proxyBypassHosts ?? []).includes(url.hostname)) {
 			if (isLocalAddressAllowed) {
@@ -278,11 +252,6 @@ export function createHttpRequestService(config: Config) {
 		}
 	}
 
-	/**
-	 * Get agent for http by URL
-	 * @param url URL
-	 * @param isLocalAddressAllowed
-	 */
 	function getAgentForHttp(url: URL, isLocalAddressAllowed = false): http.Agent {
 		if ((config.proxyBypassHosts ?? []).includes(url.hostname)) {
 			return isLocalAddressAllowed
@@ -293,11 +262,6 @@ export function createHttpRequestService(config: Config) {
 		}
 	}
 
-	/**
-	 * Get agent for https by URL
-	 * @param url URL
-	 * @param isLocalAddressAllowed
-	 */
 	function getAgentForHttps(url: URL, isLocalAddressAllowed = false): https.Agent {
 		if ((config.proxyBypassHosts ?? []).includes(url.hostname)) {
 			return isLocalAddressAllowed

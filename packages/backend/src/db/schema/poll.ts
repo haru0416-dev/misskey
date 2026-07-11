@@ -20,12 +20,10 @@ export const poll = pgTable('poll', {
 	multiple: boolean().notNull(),
 	choices: varchar({ length: 256 }).array().default(emptyVarcharArray).notNull(),
 	votes: integer().array().notNull(),
-	// #region Denormalized fields
 	noteVisibility: pollNoteVisibilityEnum().notNull().$type<typeof noteVisibilities[number]>(),
 	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
 	userHost: varchar({ length: 128 }),
 	channelId: varchar({ length: 32 }).$type<MiChannel['id'] | null>(),
-	// #endregion
 }, table => [
 	index('IDX_POLL_USER_ID').on(table.userId),
 	index('IDX_POLL_USER_HOST').on(table.userHost),

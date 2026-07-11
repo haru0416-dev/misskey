@@ -35,7 +35,6 @@ function writeToFile(stream: fs.WriteStream, content: string): Promise<void> {
 	});
 }
 
-/** ExportCustomEmojisProcessorService.process 相当。 */
 export async function handleHonoQueueExportCustomEmojis(deps: HonoQueueEmojisDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
@@ -117,7 +116,6 @@ type ExportedEmojiMetaRecord = {
 	};
 };
 
-/** ImportCustomEmojisProcessorService.process 相当。 */
 export async function handleHonoQueueImportCustomEmojis(deps: HonoQueueEmojisDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
 	if (file == null) return;

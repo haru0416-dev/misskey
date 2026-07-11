@@ -3,9 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * Array.includes()よりSet.has()の方が高速
- */
 const targetExtsToSkip = new Set([
 	'.gz',
 	'.tar',
@@ -29,15 +26,12 @@ export function correctFilename(filename: string, ext: string | null) {
 
 	const match = extRegExp.exec(filename);
 	if (!match || !match[0]) {
-		// filenameが拡張子を持っていない場合は拡張子をつける
 		return `${filename}${dotExt}`;
 	}
 
 	const filenameExt = match[0].toLowerCase();
 	if (
-		// 未知のファイル形式かつ拡張子がある場合は何もしない
 		ext === null ||
-		// 拡張子が一致している場合は何もしない
 		filenameExt === dotExt ||
 
 		// jpeg, tiffを同一視
@@ -53,6 +47,5 @@ export function correctFilename(filename: string, ext: string | null) {
 		return filename;
 	}
 
-	// 拡張子があるが一致していないなどの場合は拡張子を付け足す
 	return `${filename}${dotExt}`;
 }

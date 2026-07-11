@@ -46,26 +46,17 @@ export interface IObject {
 	height?: number;
 }
 
-/**
- * Get array of ActivityStreams Objects id
- */
 export function getApIds(value: ApObject | undefined): string[] {
 	if (value == null) return [];
 	const array = Array.isArray(value) ? value : [value];
 	return array.map(x => getApId(x));
 }
 
-/**
- * Get first ActivityStreams Object id
- */
 export function getOneApId(value: ApObject): string {
 	const firstOne = Array.isArray(value) ? value[0] : value;
 	return getApId(firstOne);
 }
 
-/**
- * Get ActivityStreams Object id
- */
 export function getApId(value: string | IObject | undefined): string {
 	if (typeof value === 'string') return value;
 	if (value != null && typeof value.id === 'string') return value.id;
@@ -73,8 +64,6 @@ export function getApId(value: string | IObject | undefined): string {
 }
 
 /**
- * Get ActivityStreams Object type
- *
  * タイプ判定ができなかった場合に、あえてエラーではなくnullを返すようにしている。
  * 詳細: https://github.com/misskey-dev/misskey/issues/14239
  */

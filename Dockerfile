@@ -97,6 +97,6 @@ COPY --chown=misskey:misskey . ./
 
 ENV LD_PRELOAD=/usr/local/lib/libjemalloc.so
 ENV NODE_ENV=production
-HEALTHCHECK --interval=5s --retries=20 CMD ["/bin/bash", "/misskey/healthcheck.sh"]
+HEALTHCHECK --interval=5s --retries=20 CMD ["/bin/bash", "/misskey/deploy/healthcheck.sh"]
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["bun", "run", "migrateandstart"]

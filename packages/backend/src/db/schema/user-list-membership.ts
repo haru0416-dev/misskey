@@ -15,9 +15,7 @@ export const userListMembership = pgTable('user_list_membership', {
 	userListId: varchar({ length: 32 }).notNull().$type<MiUserList['id']>().references(() => userList.id, { onDelete: 'cascade' }),
 	withReplies: boolean().default(false).notNull(),
 
-	//#region Denormalized fields
 	userListUserId: varchar({ length: 32 }).notNull().$type<MiUser['id']>(),
-	//#endregion
 }, table => [
 	index('IDX_USER_LIST_MEMBERSHIP_USER_ID').on(table.userId),
 	index('IDX_USER_LIST_MEMBERSHIP_USER_LIST_ID').on(table.userListId),

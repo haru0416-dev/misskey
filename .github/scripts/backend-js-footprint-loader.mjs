@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { appendFileSync, statSync } from 'node:fs';
+import { openSync, statSync, writeSync } from 'node:fs';
 import { extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const traceFile = process.env.MK_BACKEND_JS_FOOTPRINT_TRACE;
+const traceFd = traceFile == null ? null : openSync(traceFile, 'a');
 const jsExtensions = new Set(['.js', '.mjs', '.cjs']);
 
 function recordLoadedFile(kind, url, format) {
-	if (traceFile == null || !url.startsWith('file:')) return;
+	if (traceFd == null || !url.startsWith('file:')) return;
 
 	let filePath;
 	try {
@@ -30,8 +31,8 @@ function recordLoadedFile(kind, url, format) {
 		return;
 	}
 
-	appendFileSync(
-		traceFile,
+	writeSync(
+		traceFd,
 		`${JSON.stringify({
 			kind,
 			format,

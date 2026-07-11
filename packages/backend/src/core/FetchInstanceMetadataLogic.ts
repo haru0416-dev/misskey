@@ -311,7 +311,6 @@ export async function fetchInstanceMetadataWithSideEffects(
 			const existing = await deps.fetchOrRegisterInstance(host);
 			const now = Date.now();
 			if (existing && existing.infoUpdatedAt && (now - existing.infoUpdatedAt.getTime() < 1000 * 60 * 60 * 24)) {
-				// unlock at the finally caluse
 				return;
 			}
 		}

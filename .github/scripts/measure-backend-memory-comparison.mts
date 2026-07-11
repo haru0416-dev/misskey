@@ -3,30 +3,44 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createRequire } from 'node:module';
 import { copyFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import * as util from './utility.mts';
 import * as heapSnapshotUtil from './heap-snapshot-util.mts';
-import type { MemoryReportRaw } from '../../packages/backend/scripts/measure-memory.mts';
 
 const phases = ['afterGc'] as const;
 
-export type MemoryReport = {
+type MemorySample = {
 	timestamp: string;
-	sampleCount: any;
-	aggregation: string;
+	phases: Record<
+		(typeof phases)[number],
+		{
+			memoryUsage: Record<string, number>;
+			heapSnapshot?: heapSnapshotUtil.HeapSnapshotData | null;
+		}
+	>;
+};
+
+type MemoryReportRaw = {
 	measurement: {
-		startupTimeoutMs: any;
-		memorySettleTimeMs: any;
-		ipcTimeoutMs: any;
-		requestCount: any;
+		startupTimeoutMs: number;
+		memorySettleTimeMs: number;
+		ipcTimeoutMs: number;
+		requestCount: number;
 		heapSnapshot: {
-			enabled: any;
-			timeoutMs: any;
-			breakdownTopN: any;
+			enabled: boolean;
+			timeoutMs: number;
+			breakdownTopN: number;
 		};
 	};
+	samples: MemorySample[];
+};
+
+export type MemoryReport = {
+	timestamp: string;
+	sampleCount: number;
+	aggregation: string;
+	measurement: MemoryReportRaw['measurement'];
 	summary: Record<
 		(typeof phases)[number],
 		{
@@ -44,34 +58,6 @@ const [baseDirArg, headDirArg, baseOutputArg, headOutputArg] = process.argv.slic
 const HEAP_SNAPSHOT_BREAKDOWN_TOP_N = util.readIntegerEnv('MK_MEMORY_HEAP_SNAPSHOT_BREAKDOWN_TOP_N', 6, 1);
 const HEAD_HEAP_SNAPSHOT_WORK_DIR = resolve('head-heap-snapshots');
 const HEAD_HEAP_SNAPSHOT_OUTPUT_PATH = resolve('head-heap-snapshot.heapsnapshot');
-
-async function resetState(repoDir: string) {
-	const require = createRequire(join(repoDir, 'packages/backend/package.json'));
-	const pg = require('pg');
-	const Redis = require('ioredis');
-
-	const postgres = new pg.Client({
-		host: '127.0.0.1',
-		port: 54312,
-		database: 'postgres',
-		user: 'postgres',
-	});
-
-	await postgres.connect();
-	try {
-		await postgres.query('DROP DATABASE IF EXISTS "test-misskey" WITH (FORCE)');
-		await postgres.query('CREATE DATABASE "test-misskey"');
-	} finally {
-		await postgres.end();
-	}
-
-	const redis = new Redis({ host: '127.0.0.1', port: 56312 });
-	try {
-		await redis.flushall();
-	} finally {
-		redis.disconnect();
-	}
-}
 
 function summarizeHeapSnapshotBreakdowns(samples: MemoryReport['samples'], phase: (typeof phases)[number]) {
 	const breakdowns = {} as Record<keyof typeof heapSnapshotUtil.heapSnapshotCategory, Record<string, number>>;
@@ -126,9 +112,11 @@ function summarizeSamples(samples: MemoryReport['samples']) {
 			memoryUsage: {},
 		};
 
-		const metricKeys = new Set<string>();
+		const metricKeys = new Set<keyof MemoryReport['samples'][number]['phases'][typeof phase]['memoryUsage']>();
 		for (const sample of samples) {
-			for (const key of Object.keys(sample.phases[phase].memoryUsage)) {
+			for (const key of Object.keys(
+				sample.phases[phase].memoryUsage,
+			) as (keyof (typeof sample.phases)[typeof phase]['memoryUsage'])[]) {
 				metricKeys.add(key);
 			}
 		}
@@ -181,7 +169,7 @@ async function measureRepo(
 	options: { heapSnapshotSavePath?: string } = {},
 ) {
 	process.stderr.write(`[${label}] Resetting database and Redis\n`);
-	await resetState(repoDir);
+	await util.resetTestServices(repoDir);
 
 	process.stderr.write(`[${label}] Running migrations\n`);
 	await util.run('bun', ['run', '--bun', '--filter', 'backend', 'migrate'], {
@@ -273,6 +261,8 @@ async function main() {
 	for (let round = 1; round <= warmupRounds; round++) {
 		process.stderr.write(`Starting warmup round ${round}/${warmupRounds}\n`);
 		for (const label of ['base', 'head'] as const) {
+			// Measurements must not overlap because they share the database, Redis, and host memory.
+			// eslint-disable-next-line no-await-in-loop
 			await measureRepo(label, reports[label].dir, -round);
 		}
 	}
@@ -284,6 +274,8 @@ async function main() {
 		for (const label of order) {
 			const shouldSaveHeadHeapSnapshot = label === 'head';
 			const options = shouldSaveHeadHeapSnapshot ? { heapSnapshotSavePath: headHeapSnapshotPath(round) } : {};
+			// Preserve the alternating order while keeping each measurement isolated.
+			// eslint-disable-next-line no-await-in-loop
 			const sample = await measureRepo(label, reports[label].dir, round, options);
 			reports[label].samples.push({
 				...sample,
@@ -298,23 +290,25 @@ async function main() {
 	};
 	await saveRepresentativeHeadHeapSnapshot(reports.head.samples, summaries.head);
 
-	for (const label of ['base', 'head'] as const) {
-		const report = {
-			timestamp: new Date().toISOString(),
-			sampleCount: reports[label].samples.length,
-			aggregation: 'median',
-			comparison: {
-				strategy: 'interleaved-pairs',
-				rounds,
-				warmupRounds,
-				startedAt,
-			},
-			summary: summaries[label],
-			samples: reports[label].samples,
-		};
+	await Promise.all(
+		(['base', 'head'] as const).map((label) => {
+			const report = {
+				timestamp: new Date().toISOString(),
+				sampleCount: reports[label].samples.length,
+				aggregation: 'median',
+				comparison: {
+					strategy: 'interleaved-pairs',
+					rounds,
+					warmupRounds,
+					startedAt,
+				},
+				summary: summaries[label],
+				samples: reports[label].samples,
+			};
 
-		await writeFile(label === 'base' ? baseOutput : headOutput, `${JSON.stringify(report, null, 2)}\n`);
-	}
+			return writeFile(label === 'base' ? baseOutput : headOutput, `${JSON.stringify(report, null, 2)}\n`);
+		}),
+	);
 }
 
 main().catch((err) => {

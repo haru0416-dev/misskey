@@ -6,7 +6,6 @@
 import type { JsonValue } from '@/misc/json-value.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
-/** DriveChannel 相当。 */
 export const honoStreamChannelDrive: HonoStreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: true,

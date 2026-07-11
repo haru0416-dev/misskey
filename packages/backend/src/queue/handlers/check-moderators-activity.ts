@@ -95,7 +95,6 @@ async function fetchModeratorsForCheck(deps: HonoQueueCheckModeratorsActivityDep
 	return getModeratorsForHonoApi(deps, { includeAdmins: true, includeRoot: true, excludeExpire: true });
 }
 
-/** CheckModeratorsActivityProcessorService.evaluateModeratorsInactiveDays 相当。 */
 async function evaluateModeratorsInactiveDays(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<ModeratorInactivityEvaluationResult> {
 	const today = new Date();
 	const inactivePeriod = new Date(today);
@@ -125,7 +124,6 @@ async function changeToInvitationOnly(deps: HonoQueueCheckModeratorsActivityDepe
 	deps.publishInternalEvent?.('metaUpdated', { before, after });
 }
 
-/** SystemWebhookService.enqueueSystemWebhook 相当。 */
 async function enqueueCheckModeratorsActivitySystemWebhook<T extends SystemWebhookEventType>(
 	deps: HonoQueueCheckModeratorsActivityDependencies,
 	type: T,
@@ -135,7 +133,6 @@ async function enqueueCheckModeratorsActivitySystemWebhook<T extends SystemWebho
 	await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, type, content)));
 }
 
-/** CheckModeratorsActivityProcessorService.notifyInactiveModeratorsWarning 相当。 */
 async function notifyInactiveModeratorsWarning(deps: HonoQueueCheckModeratorsActivityDependencies, remainingTime: ModeratorInactivityRemainingTime): Promise<void> {
 	const moderators = await fetchModeratorsForCheck(deps);
 	const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(deps.db, moderators.map(moderator => moderator.id))
@@ -152,7 +149,6 @@ async function notifyInactiveModeratorsWarning(deps: HonoQueueCheckModeratorsAct
 	await enqueueCheckModeratorsActivitySystemWebhook(deps, 'inactiveModeratorsWarning', { remainingTime });
 }
 
-/** CheckModeratorsActivityProcessorService.notifyChangeToInvitationOnly 相当。 */
 async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<void> {
 	const moderators = await fetchModeratorsForCheck(deps);
 	const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(deps.db, moderators.map(moderator => moderator.id))
@@ -187,7 +183,6 @@ async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivi
 	await enqueueCheckModeratorsActivitySystemWebhook(deps, 'inactiveModeratorsInvitationOnlyChanged', {});
 }
 
-/** CheckModeratorsActivityProcessorService.process 相当。 */
 export async function handleHonoQueueCheckModeratorsActivity(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<void> {
 	if (deps.meta.disableRegistration) return;
 

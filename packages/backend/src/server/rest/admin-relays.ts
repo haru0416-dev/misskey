@@ -56,13 +56,11 @@ function assertHttpsUrl(url: string): void {
 	}
 }
 
-/** RelayService.relayAccepted 相当。 */
 export async function relayAcceptedForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
 	const result = await updateRelayStatusInDatabase(deps.db, id, 'accepted');
 	return JSON.stringify(result);
 }
 
-/** RelayService.relayRejected 相当。 */
 export async function relayRejectedForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
 	const result = await updateRelayStatusInDatabase(deps.db, id, 'rejected');
 	return JSON.stringify(result);

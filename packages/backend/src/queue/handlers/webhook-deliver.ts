@@ -62,7 +62,6 @@ async function deliverWebhookForHonoQueue(
 	}
 }
 
-/** UserWebhookDeliverProcessorService.process 相当。 */
 export async function handleHonoQueueUserWebhookDeliver(
 	deps: HonoQueueWebhookDeliverDependencies,
 	job: Bull.Job<UserWebhookDeliverJobData>,
@@ -75,7 +74,6 @@ export async function handleHonoQueueUserWebhookDeliver(
 	});
 }
 
-/** SystemWebhookDeliverProcessorService.process 相当。 */
 export async function handleHonoQueueSystemWebhookDeliver(
 	deps: HonoQueueWebhookDeliverDependencies,
 	job: Bull.Job<SystemWebhookDeliverJobData>,

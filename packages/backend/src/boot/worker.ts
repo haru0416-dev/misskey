@@ -25,10 +25,8 @@ export async function workerMain() {
 				...(config.sentryForBackend.enableNodeProfiling ? [nodeProfilingIntegration()] : []),
 			],
 
-			// Performance Monitoring
 			tracesSampleRate: 1.0, //  Capture 100% of the transactions
 
-			// Set sampling rate for profiling - this is relative to tracesSampleRate
 			profilesSampleRate: 1.0,
 
 			maxBreadcrumbs: 0,
@@ -46,7 +44,6 @@ export async function workerMain() {
 	}
 
 	if (cluster.isWorker) {
-		// Send a 'ready' message to parent process
 		process.send!('ready');
 	}
 }

@@ -58,7 +58,6 @@ export function createMfmService(config: Config) {
 				return;
 			}
 
-			// Skip comment or document type node
 			if (!(node instanceof htmlParser.HTMLElement)) {
 				return;
 			}
@@ -74,22 +73,17 @@ export function createMfmService(config: Config) {
 					const rel = node.attributes.rel;
 					const href = node.attributes.href;
 
-					// ハッシュタグ
 					if (normalizedHashtagNames && href != null && normalizedHashtagNames.has(normalizeForSearch(txt))) {
 						text += txt;
-						// メンション
 					} else if (txt.startsWith('@') && !(rel != null && rel.startsWith('me '))) {
 						const part = txt.split('@');
 
 						if (part.length === 2 && href) {
-							//#region ホスト名部分が省略されているので復元する
 							const acct = `${txt}@${(new URL(href)).hostname}`;
 							text += acct;
-							//#endregion
 						} else if (part.length === 3) {
 							text += txt;
 						}
-						// その他
 					} else {
 						const generateLink = () => {
 							if (!href && !txt) {

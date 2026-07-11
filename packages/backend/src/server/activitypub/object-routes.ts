@@ -81,7 +81,6 @@ function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
 	return { '@context': CONTEXT, ...obj };
 }
 
-/** ActivityPubServerService.packActivity 相当。 */
 async function packActivity(deps: ApObjectRoutesDependencies, note: MiNote): Promise<Record<string, unknown> | null> {
 	const pureRenote = isRenote(note) && !isQuote(note);
 	const renote = pureRenote ? await fetchNoteByIdFromDatabase(deps.db, note.renoteId!) : null;
@@ -92,7 +91,6 @@ async function packActivity(deps: ApObjectRoutesDependencies, note: MiNote): Pro
 	}, note);
 }
 
-/** ActivityPubServerService.userInfo 相当。 */
 async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user: MiUser | null): Promise<Response> {
 	if (user == null) return apError(404);
 

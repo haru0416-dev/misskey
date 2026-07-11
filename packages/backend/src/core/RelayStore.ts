@@ -14,7 +14,6 @@ type UpdateResultLike = {
 	affected: number;
 };
 
-//#region status 別リレー一覧のプロセスローカル短命キャッシュ (AvatarDecorationStore と同じ同期無効化パターン)
 const RELAY_CACHE_TTL_MS = 1000 * 60;
 const relaysByStatusCache = new Map<string, { rows: RelayRow[]; cachedAt: number }>();
 
@@ -38,7 +37,6 @@ export async function listRelaysByStatusFromDatabaseCached(db: MiDrizzleDatabase
 	relaysByStatusCache.set(status, { rows, cachedAt: Date.now() });
 	return rows;
 }
-//#endregion
 
 export async function createRelayInDatabase(db: MiDrizzleDatabase, data: RelayInsert): Promise<RelayRow> {
 	const [row] = await db

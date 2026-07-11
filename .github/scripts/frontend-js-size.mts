@@ -11,32 +11,9 @@ const marker = '<!-- misskey-frontend-js-size -->';
 
 const locale = process.env.FRONTEND_JS_SIZE_LOCALE ?? 'ja-JP';
 
-//function sharePercent(value, total) {
-//	if (total === 0) return '0%';
-//	return Math.round((value / total) * 100) + '%';
-//}
-
 function escapeCell(value: string) {
 	return String(value).replaceAll('|', '\\|').replaceAll('\n', '<br>');
 }
-
-//function tableCell(value) {
-//	return String(value).replaceAll('|', '\\|').replaceAll('\r', ' ').replaceAll('\n', ' ');
-//}
-
-//function code(value) {
-//	const sanitized = String(value).replaceAll('\r', ' ').replaceAll('\n', ' ');
-//	const backtickRuns = sanitized.match(/`+/g) ?? [];
-//	const fenceLength = Math.max(1, ...backtickRuns.map((run) => run.length + 1));
-//	const fence = '`'.repeat(fenceLength);
-//	const padding = sanitized.startsWith('`') || sanitized.endsWith('`') ? ' ' : '';
-//
-//	return `${fence}${padding}${sanitized}${padding}${fence}`;
-//}
-
-//function tableCode(value) {
-//	return tableCell(code(value));
-//}
 
 type Manifest = Record<string, { file?: string; src?: string; name?: string; isEntry?: boolean; imports?: string[] }>;
 
@@ -111,19 +88,22 @@ async function collectReport(repoDir: string) {
 	const byKey = new Map<string, FileEntry>();
 	const byFile = new Set<string>();
 
-	for (const [key, chunk] of Object.entries(manifest)) {
-		if (!chunk.file?.endsWith('.js')) continue;
-		const builtFile = await resolveBuiltFile(outDir, chunk.file);
-		const size = await util.fileSize(builtFile.absolutePath);
-		const stableKey = stableChunkKey(key, chunk);
-		const displayName = chunk.src ?? chunk.name ?? key;
-		byKey.set(stableKey, {
-			key: stableKey,
-			displayName,
-			file: builtFile.relativePath,
-			size,
-		});
-		byFile.add(builtFile.relativePath);
+	const manifestEntries = await Promise.all(
+		Object.entries(manifest).map(async ([key, chunk]) => {
+			if (!chunk.file?.endsWith('.js')) return null;
+			const builtFile = await resolveBuiltFile(outDir, chunk.file);
+			return {
+				key: stableChunkKey(key, chunk),
+				displayName: chunk.src ?? chunk.name ?? key,
+				file: builtFile.relativePath,
+				size: await util.fileSize(builtFile.absolutePath),
+			};
+		}),
+	);
+	for (const entry of manifestEntries) {
+		if (entry == null) continue;
+		byKey.set(entry.key, entry);
+		byFile.add(entry.file);
 	}
 
 	const localeDir = path.join(outDir, locale);
@@ -178,46 +158,29 @@ type VisualizerReport = {
 function collectVisualizerReport(data: VisualizerReport) {
 	const nodeParts = data.nodeParts ?? {};
 	const nodeMetas = Object.values(data.nodeMetas ?? {});
-	const moduleRows = [];
-	const bundleMap = new Map();
+	const moduleRows: { renderedLength: number; gzipLength: number; brotliLength: number }[] = [];
+	const bundleIds = new Set<string>();
 
 	for (const meta of nodeMetas) {
 		const row = {
-			id: meta.id,
-			bundles: 0,
 			renderedLength: 0,
 			gzipLength: 0,
 			brotliLength: 0,
-			importedByCount: meta.importedBy?.length ?? 0,
-			importedCount: meta.imported?.length ?? 0,
 		};
+		let hasBundle = false;
 
 		for (const [bundleId, partUid] of Object.entries(meta.moduleParts ?? {})) {
 			const part = nodeParts[partUid];
 			if (part == null) continue;
 
-			row.bundles += 1;
+			hasBundle = true;
 			row.renderedLength += part.renderedLength;
 			row.gzipLength += part.gzipLength;
 			row.brotliLength += part.brotliLength;
-
-			const bundle = bundleMap.get(bundleId) ?? {
-				id: bundleId,
-				modules: 0,
-				renderedLength: 0,
-				gzipLength: 0,
-				brotliLength: 0,
-			};
-			bundle.modules += 1;
-			bundle.renderedLength += part.renderedLength;
-			bundle.gzipLength += part.gzipLength;
-			bundle.brotliLength += part.brotliLength;
-			bundleMap.set(bundleId, bundle);
+			bundleIds.add(bundleId);
 		}
 
-		if (row.bundles > 0) {
-			moduleRows.push(row);
-		}
+		if (hasBundle) moduleRows.push(row);
 	}
 
 	let staticImports = 0;
@@ -232,16 +195,13 @@ function collectVisualizerReport(data: VisualizerReport) {
 		}
 	}
 
-	const bundleRows = [...bundleMap.values()].sort((a, b) => b.renderedLength - a.renderedLength);
-	const hotModules = [...moduleRows].sort((a, b) => b.renderedLength - a.renderedLength);
 	const totalRendered = moduleRows.reduce((sum, row) => sum + row.renderedLength, 0);
 	const totalGzip = moduleRows.reduce((sum, row) => sum + row.gzipLength, 0);
 	const totalBrotli = moduleRows.reduce((sum, row) => sum + row.brotliLength, 0);
 
 	return {
-		options: data.options ?? {},
 		summary: {
-			bundles: bundleRows.length,
+			bundles: bundleIds.size,
 			modules: moduleRows.length,
 			entries: nodeMetas.filter((meta) => meta.isEntry).length,
 			externals: nodeMetas.filter((meta) => meta.isExternal).length,
@@ -253,7 +213,6 @@ function collectVisualizerReport(data: VisualizerReport) {
 			gzipLength: totalGzip,
 			brotliLength: totalBrotli,
 		},
-		hotModules,
 	};
 }
 
@@ -410,7 +369,6 @@ function renderFrontendChunkReport(
 	const addedChunkKeys = Object.keys(after.chunks).filter((key) => before.chunks[key] == null);
 	const removedChunkKeys = Object.keys(before.chunks).filter((key) => after.chunks[key] == null);
 	const allChunkKeys = [...commonChunkKeys, ...addedChunkKeys, ...removedChunkKeys];
-	//const comparisonRows = getChunkComparisonRows(commonChunkKeys, before, after);
 	const allComparisonRows = getChunkComparisonRows(allChunkKeys, before, after);
 
 	const changedRows = allComparisonRows.filter((row) => row.changeType !== 'unchanged');
@@ -419,7 +377,7 @@ function renderFrontendChunkReport(
 		beforeSize: allComparisonRows.reduce((sum, row) => sum + row.beforeSize, 0),
 		afterSize: allComparisonRows.reduce((sum, row) => sum + row.afterSize, 0),
 	};
-	const diffRows = changedRows.sort(compareChunkComparisonRows).slice(0, 30); // TODO: 実際に30を超えて切り捨てられたrowがあった場合はその旨をmarkdown内に表示するようにする
+	const diffRows = changedRows.sort(compareChunkComparisonRows).slice(0, 30);
 
 	const startupKeys = new Set([...before.startupKeys, ...after.startupKeys]);
 	const startupComparisonRows = getChunkComparisonRows([...startupKeys], before, after);
@@ -429,10 +387,6 @@ function renderFrontendChunkReport(
 		beforeSize: startupComparisonRows.reduce((sum, row) => sum + row.beforeSize, 0),
 		afterSize: startupComparisonRows.reduce((sum, row) => sum + row.afterSize, 0),
 	};
-
-	//const largeRows = comparisonRows
-	//	.sort((a, b) => b.sortSize - a.sortSize || a.name.localeCompare(b.name))
-	//	.slice(0, 30);
 
 	return [
 		'<details open>',
@@ -451,13 +405,6 @@ function renderFrontendChunkReport(
 		'',
 		'</details>',
 		'',
-		//'<details>',
-		//`<summary>Largest</summary>`,
-		//'',
-		//markdownTable(largeRows),
-		//'',
-		//'</details>',
-		//'',
 	].join('\n');
 }
 
@@ -465,42 +412,7 @@ function renderFrontendBundleReport(
 	before: ReturnType<typeof collectVisualizerReport>,
 	after: ReturnType<typeof collectVisualizerReport>,
 ) {
-	const lines = [
-		...renderVisualizerSummaryTable(before, after),
-		'',
-		//'<details>',
-		//'<summary>Top 10</summary>',
-		//'',
-	];
-
-	/*
-	for (const row of after.hotModules.slice(0, 10)) {
-		lines.push(`- ${code(row.id)}: ${sharePercent(row.renderedLength, after.metrics.renderedLength)} (${formatBytes(row.renderedLength)})`);
-	}
-
-	lines.push(
-		'',
-		'</details>',
-	);
-
-	lines.push(
-		'',
-		'<details>',
-		'<summary>Hot Modules (Self Size)</summary>',
-		'',
-		'| Module | Bundles | Rendered | Share | Gzip | Brotli | Imports | Imported By |',
-		'|---|---:|---:|---:|---:|---:|---:|---:|',
-	);
-
-	for (const row of after.hotModules.slice(0, 15)) {
-		lines.push(`| ${tableCode(row.id)} | ${row.bundles} | ${formatBytes(row.renderedLength)} | ${sharePercent(row.renderedLength, after.metrics.renderedLength)} | ${formatBytes(row.gzipLength)} | ${formatBytes(row.brotliLength)} | ${row.importedCount} | ${row.importedByCount} |`);
-	}
-
-	lines.push(
-		'',
-		'</details>',
-	);
-	*/
+	const lines = [...renderVisualizerSummaryTable(before, after), ''];
 
 	return lines.join('\n');
 }

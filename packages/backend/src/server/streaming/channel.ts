@@ -36,7 +36,6 @@ export type HonoStreamChannelContext = {
 	send: (type: string, body: JsonValue) => void;
 };
 
-/** Channel#isNoteVisibleForMe 相当。 */
 export function isNoteVisibleForMeForHonoStream(ctx: HonoStreamChannelContext, note: Packed<'Note'>): boolean {
 	const meId = ctx.user?.id ?? null;
 
@@ -57,7 +56,6 @@ export function isNoteVisibleForMeForHonoStream(ctx: HonoStreamChannelContext, n
 	return true;
 }
 
-/** Channel#isNoteMutedOrBlocked 相当。 */
 export function isNoteMutedOrBlockedForHonoStream(ctx: HonoStreamChannelContext, note: Packed<'Note'>): boolean {
 	if (isInstanceMuted(note, new Set<string>(ctx.userProfile?.mutedInstances ?? []))) return true;
 	if (isUserRelated(note, ctx.userIdsWhoMeMuting)) return true;
