@@ -9,7 +9,7 @@ import './init';
 import * as Misskey from 'misskey-js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
-import MkMediaAudio from '@/components/MkMediaAudio.vue';
+import MkMediaAudio from '@/features/media-viewer/components/MkMediaAudio.vue';
 
 const audioFile = {
 	id: 'xxxxxxxx',

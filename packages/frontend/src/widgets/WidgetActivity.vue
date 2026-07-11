@@ -27,7 +27,7 @@ import XCalendar from './WidgetActivity.calendar.vue';
 import XChart from './WidgetActivity.chart.vue';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
-import MkContainer from '@/components/MkContainer.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
 import { ensureSignin } from '@/i.js';
 import { i18n } from '@/i18n.js';
 

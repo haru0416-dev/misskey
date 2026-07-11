@@ -12,7 +12,7 @@ import { } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import MkPostForm from '@/components/MkPostForm.vue';
+import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 
 const name = 'postForm';
 

@@ -65,17 +65,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, onMounted, ref, useTemplateRef, toRefs } from 'vue';
 import { entities } from 'misskey-js';
-import type { MkSystemWebhookResult } from '@/components/MkSystemWebhookEditor.impl.js';
-import MkButton from '@/components/MkButton.vue';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import type { MkSystemWebhookResult } from '@/features/webhooks/components/MkSystemWebhookEditor.impl.js';
+import MkButton from '@/components/form/MkButton.vue';
+import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import { i18n } from '@/i18n.js';
-import MkInput from '@/components/MkInput.vue';
+import MkInput from '@/components/form/MkInput.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
-import MkSelect from '@/components/MkSelect.vue';
-import { showSystemWebhookEditorDialog } from '@/components/MkSystemWebhookEditor.impl.js';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkDivider from '@/components/MkDivider.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import { showSystemWebhookEditorDialog } from '@/features/webhooks/components/MkSystemWebhookEditor.impl.js';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkDivider from '@/components/layout/MkDivider.vue';
 import * as os from '@/os.js';
 
 const emit = defineEmits<{

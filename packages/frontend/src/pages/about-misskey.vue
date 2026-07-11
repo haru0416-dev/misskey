@@ -141,14 +141,14 @@ import { host, version } from '@shared/utility/config.js';
 import { DEFAULT_EMOJIS } from '@shared/utility/const.js';
 import FormLink from '@/components/form/link.vue';
 import FormSection from '@/components/form/section.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 import { physics } from '@/utility/physics.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import * as os from '@/os.js';
 import { definePage } from '@/page.js';
-import { claimAchievement, claimedAchievements } from '@/utility/achievements.js';
+import { claimAchievement, claimedAchievements } from '@/features/achievements/achievements.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
 

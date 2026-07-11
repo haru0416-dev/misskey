@@ -33,8 +33,8 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { userPage } from '@/filters/user.js';
 import { i18n } from '@/i18n.js';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { definePage } from '@/page.js';
 
 const props = defineProps<{

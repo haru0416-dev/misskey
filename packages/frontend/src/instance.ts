@@ -10,7 +10,7 @@ import { miLocalStorage } from '@/local-storage.js';
 import { $i } from '@/i.js';
 import { queryClient } from '@/query/client.js';
 import { queryKeys } from '@/query/keys.js';
-import { resolveInitialInstanceMeta } from '@/utility/instance-cache.js';
+import { resolveInitialInstanceMeta } from '@/features/instances/instance-cache.js';
 
 // TODO: 他のタブと永続化されたstateを同期
 

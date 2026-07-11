@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onUnmounted, ref } from 'vue';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';

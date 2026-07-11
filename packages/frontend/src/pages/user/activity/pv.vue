@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
-import MkChart from '@/components/MkChart.vue';
+import MkChart from '@/features/charts/components/MkChart.vue';
 
 defineProps<{ user: Misskey.entities.User }>();
 </script>

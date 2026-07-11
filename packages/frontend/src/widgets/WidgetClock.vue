@@ -33,9 +33,9 @@ import { computed } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import MkContainer from '@/components/MkContainer.vue';
-import MkAnalogClock from '@/components/MkAnalogClock.vue';
-import MkDigitalClock from '@/components/MkDigitalClock.vue';
+import MkContainer from '@/components/layout/MkContainer.vue';
+import MkAnalogClock from '@/components/display/MkAnalogClock.vue';
+import MkDigitalClock from '@/components/display/MkDigitalClock.vue';
 import { timezones } from '@/utility/timezones.js';
 import { i18n } from '@/i18n.js';
 

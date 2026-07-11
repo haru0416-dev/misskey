@@ -26,13 +26,21 @@ export function initShaderProgram(gl: WebGL2RenderingContext, vsSource: string, 
 	const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
 
 	const shaderProgram = gl.createProgram();
+	if (shaderProgram == null) {
+		gl.deleteShader(vertexShader);
+		gl.deleteShader(fragmentShader);
+		throw new Error('failed to create shader program');
+	}
 
 	gl.attachShader(shaderProgram, vertexShader);
 	gl.attachShader(shaderProgram, fragmentShader);
 	gl.linkProgram(shaderProgram);
+	gl.deleteShader(vertexShader);
+	gl.deleteShader(fragmentShader);
 
 	if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
 		console.error(`failed to init shader: ${gl.getProgramInfoLog(shaderProgram)}`);
+		gl.deleteProgram(shaderProgram);
 		throw new Error('failed to init shader');
 	}
 

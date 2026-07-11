@@ -32,7 +32,7 @@ import { maybeMakeRelative } from '@shared/utility/url.js';
 import type { MkABehavior } from '@/components/global/MkA.vue';
 import * as os from '@/os.js';
 import { useTooltip } from '@/composables/useTooltip.js';
-import { isEnabledUrlPreview } from '@/utility/url-preview.js';
+import { isEnabledUrlPreview } from '@/features/link-preview/url-preview.js';
 
 function safeURIDecode(str: string): string {
 	try {
@@ -59,7 +59,7 @@ const el = ref();
 
 if (props.showUrlPreview && isEnabledUrlPreview.value) {
 	useTooltip(el, (showing) => {
-		const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkUrlPreviewPopup.vue')), {
+		const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/link-preview/components/MkUrlPreviewPopup.vue')), {
 			showing,
 			url: props.url,
 			anchorElement: el.value instanceof HTMLElement ? el.value : el.value?.$el,

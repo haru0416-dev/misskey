@@ -34,9 +34,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@shared/utility/use-interval.js';
-import MkMarqueeText from '@/components/MkMarqueeText.vue';
+import MkMarqueeText from '@/components/display/MkMarqueeText.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { getNoteSummary } from '@/utility/get-note-summary.js';
+import { getNoteSummary } from '@/features/notes/get-note-summary.js';
 import { notePage } from '@/filters/note.js';
 
 const props = defineProps<{

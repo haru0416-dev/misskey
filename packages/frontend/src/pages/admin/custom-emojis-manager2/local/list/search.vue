@@ -126,12 +126,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import MkWindow from '@/components/MkWindow.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkSelect from '@/components/MkSelect.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkSortOrderEditor from '@/components/MkSortOrderEditor.vue';
+import MkWindow from '@/components/overlay/MkWindow.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkSortOrderEditor from '@/components/form/MkSortOrderEditor.vue';
 
 import {
 	gridSortOrderKeys,
@@ -141,7 +141,7 @@ import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 
 import type { EmojiSearchQuery } from './index.vue';
-import type { SortOrder } from '@/components/MkSortOrderEditor.define.js';
+import type { SortOrder } from '@/components/form/MkSortOrderEditor.define.js';
 import type { GridSortOrderKey } from '../../impl.js';
 
 const props = defineProps<{

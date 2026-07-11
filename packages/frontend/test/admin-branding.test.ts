@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { normalizeBrandingJsonSettings } from '@/utility/admin-branding.js';
+import { normalizeBrandingJsonSettings } from '@/features/admin-tools/admin-branding.js';
 
 const theme = (base: 'light' | 'dark') => `{
 	id: '${base}-theme',

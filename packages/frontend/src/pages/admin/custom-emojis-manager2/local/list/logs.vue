@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import MkWindow from '@/components/MkWindow.vue';
+import MkWindow from '@/components/overlay/MkWindow.vue';
 import XRegisterLogs from '@/pages/admin/custom-emojis-manager2/logs.vue';
 
 import { i18n } from '@/i18n.js';

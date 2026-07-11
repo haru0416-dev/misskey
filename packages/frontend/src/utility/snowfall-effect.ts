@@ -236,6 +236,11 @@ export class SnowfallEffect {
 
 		gl.shaderSource(shader, source);
 		gl.compileShader(shader);
+		if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+			const info = gl.getShaderInfoLog(shader);
+			gl.deleteShader(shader);
+			throw new Error(`Failed to compile shader: ${info}`);
+		}
 
 		return shader;
 	}
@@ -245,11 +250,22 @@ export class SnowfallEffect {
 		const vertex = this.initShader(gl.VERTEX_SHADER, this.VERTEX_SOURCE);
 		const fragment = this.initShader(gl.FRAGMENT_SHADER, this.FRAGMENT_SOURCE);
 		const program = gl.createProgram();
-		if (program == null) throw new Error('Failed to create program');
+		if (program == null) {
+			gl.deleteShader(vertex);
+			gl.deleteShader(fragment);
+			throw new Error('Failed to create program');
+		}
 
 		gl.attachShader(program, vertex);
 		gl.attachShader(program, fragment);
 		gl.linkProgram(program);
+		gl.deleteShader(vertex);
+		gl.deleteShader(fragment);
+		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+			const info = gl.getProgramInfoLog(program);
+			gl.deleteProgram(program);
+			throw new Error(`Failed to link program: ${info}`);
+		}
 		gl.useProgram(program);
 
 		return program;
@@ -422,6 +438,11 @@ export class SnowfallEffect {
 	public dispose(): void {
 		this.animationScheduler.dispose();
 		window.removeEventListener('resize', this.handleResize);
+		for (const buffer of Object.values(this.buffers)) {
+			this.gl.deleteBuffer(buffer.ref);
+		}
+		this.gl.deleteTexture(this.texture);
+		this.gl.deleteProgram(this.program);
 		this.canvas.remove();
 	}
 

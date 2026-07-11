@@ -26,8 +26,8 @@ const editMode = ref(false);
 </script>
 
 <script lang="ts" setup>
-import type { DefaultStoredWidget, Widget } from '@/components/MkWidgets.vue';
-import XWidgets from '@/components/MkWidgets.vue';
+import type { DefaultStoredWidget, Widget } from '@/widgets/components/MkWidgets.vue';
+import XWidgets from '@/widgets/components/MkWidgets.vue';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 

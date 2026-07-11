@@ -8,6 +8,8 @@ import type { toHiragana as toHiraganaType } from 'wanakana';
 
 let toHiragana: typeof toHiraganaType = (str?: string) => str ?? '';
 let isWanakanaLoaded = false;
+let wanakanaPromise: Promise<void> | null = null;
+let graphemeSegmenter: Intl.Segmenter | null = null;
 
 /**
  * ローマ字変換のセットアップ（日本語以外の環境で読み込まないのでlazy-loading）
@@ -16,9 +18,16 @@ let isWanakanaLoaded = false;
  */
 export async function initIntlString(forceWanakana = false) {
 	if ((!versatileLang.includes('ja') && !forceWanakana) || isWanakanaLoaded) return;
-	const { toHiragana: _toHiragana } = await import('wanakana');
-	toHiragana = _toHiragana;
-	isWanakanaLoaded = true;
+	wanakanaPromise ??= import('wanakana')
+		.then(({ toHiragana: _toHiragana }) => {
+			toHiragana = _toHiragana;
+			isWanakanaLoaded = true;
+		})
+		.catch((error: unknown) => {
+			wanakanaPromise = null;
+			throw error;
+		});
+	await wanakanaPromise;
 }
 
 /**
@@ -30,8 +39,8 @@ export async function initIntlString(forceWanakana = false) {
  * - 文字列のトリム
  */
 export function normalizeString(str: string) {
-	const segmenter = new Intl.Segmenter(versatileLang, { granularity: 'grapheme' });
-	return [...segmenter.segment(str)]
+	graphemeSegmenter ??= new Intl.Segmenter(versatileLang, { granularity: 'grapheme' });
+	return [...graphemeSegmenter.segment(str)]
 		.map(({ segment }) => segment.normalize('NFKC'))
 		.join('')
 		.toLowerCase()
@@ -82,14 +91,23 @@ export function normalizeHyphens(str: string) {
  * （ローマ字じゃないものもローマ字として認識され変換されるので、文字列比較の際は `normalizeString` を併用する必要あり）
  */
 export function normalizeStringWithHiragana(str: string) {
-	return normalizeHyphens(toHiragana(normalizeString(str), { convertLongVowelMark: false }));
+	return normalizeStringWithHiraganaFromNormalized(normalizeString(str));
+}
+
+function normalizeStringWithHiraganaFromNormalized(str: string): string {
+	return normalizeHyphens(toHiragana(str, { convertLongVowelMark: false }));
 }
 
 /** aとbが同じかどうか */
 export function compareStringEquals(a: string, b: string) {
 	if (a === b) return true; // まったく同じ場合はtrue。なお、ノーマライズ前後で文字数が変化することがあるため、文字数が違うからといってfalseにはできない
-	if (normalizeString(a) === normalizeString(b)) return true;
-	if (normalizeStringWithHiragana(a) === normalizeStringWithHiragana(b)) return true;
+	const normalizedA = normalizeString(a);
+	const normalizedB = normalizeString(b);
+	if (normalizedA === normalizedB) return true;
+	if (
+		normalizeStringWithHiraganaFromNormalized(normalizedA) ===
+		normalizeStringWithHiraganaFromNormalized(normalizedB)
+	) return true;
 	return false;
 }
 
@@ -97,7 +115,13 @@ export function compareStringEquals(a: string, b: string) {
 export function compareStringIncludes(base: string, query: string) {
 	if (base === query) return true; // まったく同じ場合は含まれていると考えてよいのでtrue
 	if (base.includes(query)) return true;
-	if (normalizeString(base).includes(normalizeString(query))) return true;
-	if (normalizeStringWithHiragana(base).includes(normalizeStringWithHiragana(query))) return true;
+	const normalizedBase = normalizeString(base);
+	const normalizedQuery = normalizeString(query);
+	if (normalizedBase.includes(normalizedQuery)) return true;
+	if (
+		normalizeStringWithHiraganaFromNormalized(normalizedBase).includes(
+			normalizeStringWithHiraganaFromNormalized(normalizedQuery),
+		)
+	) return true;
 	return false;
 }

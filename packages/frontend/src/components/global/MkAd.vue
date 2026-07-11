@@ -43,7 +43,7 @@ import { ref, computed } from 'vue';
 import { url as local, host } from '@shared/utility/config.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import MkButton from '@/components/MkButton.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { store } from '@/store.js';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';

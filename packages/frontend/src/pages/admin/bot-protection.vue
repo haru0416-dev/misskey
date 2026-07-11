@@ -163,19 +163,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { ApiWithDialogCustomErrors } from '@/os.js';
-import MkRadios from '@/components/MkRadios.vue';
-import MkInput from '@/components/MkInput.vue';
+import MkRadios from '@/components/form/MkRadios.vue';
+import MkInput from '@/components/form/MkInput.vue';
 import FormSlot from '@/components/form/slot.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { fetchInstance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
 import { useForm } from '@/composables/useForm.js';
-import MkFormFooter from '@/components/MkFormFooter.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkFormFooter from '@/components/form/MkFormFooter.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 
-const MkCaptcha = defineAsyncComponent(() => import('@/components/MkCaptcha.vue'));
+const MkCaptcha = defineAsyncComponent(() => import('@/features/auth/components/MkCaptcha.vue'));
 
 const errorHandler: ApiWithDialogCustomErrors = {
 	// 検証リクエストそのものに失敗

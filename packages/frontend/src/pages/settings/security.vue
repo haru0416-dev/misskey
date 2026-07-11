@@ -61,13 +61,13 @@ import { computed, markRaw } from 'vue';
 import X2fa from './2fa/index.vue';
 import FormSection from '@/components/form/section.vue';
 import FormSlot from '@/components/form/slot.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
+import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const paginator = markRaw(new Paginator('i/signin-history', {

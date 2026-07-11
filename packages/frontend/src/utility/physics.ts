@@ -118,15 +118,13 @@ export function physics(container: HTMLElement) {
 		objEl.style.margin = '0';
 	}
 
-	window.requestAnimationFrame(update);
-
 	let stop = false;
+	let animationFrameId = window.requestAnimationFrame(update);
 
 	function update() {
-		for (const objEl of objEls) {
-			const obj = objs.find((obj) => obj.id.toString() === objEl.id.toString());
-			if (obj == null) continue;
-
+		for (let i = 0; i < objEls.length; i++) {
+			const objEl = objEls[i];
+			const obj = objs[i];
 			const x = obj.position.x - objEl.offsetWidth / 2;
 			const y = obj.position.y - objEl.offsetHeight / 2;
 			const angle = obj.angle;
@@ -134,7 +132,7 @@ export function physics(container: HTMLElement) {
 		}
 
 		if (!stop) {
-			window.requestAnimationFrame(update);
+			animationFrameId = window.requestAnimationFrame(update);
 		}
 	}
 
@@ -147,8 +145,13 @@ export function physics(container: HTMLElement) {
 
 	return {
 		stop: () => {
+			if (stop) return;
 			stop = true;
+			window.cancelAnimationFrame(animationFrameId);
+			Matter.Render.stop(render);
 			Matter.Runner.stop(runner);
+			Matter.Mouse.clearSourceEvents(mouse);
+			Matter.Engine.clear(engine);
 			window.clearInterval(intervalId);
 		},
 	};

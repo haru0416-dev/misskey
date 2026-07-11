@@ -16,7 +16,7 @@ import { defineAsyncComponent, useTemplateRef } from 'vue';
 import XColumn from './column.vue';
 import type { Column } from '@/deck.js';
 import { updateColumn } from '@/deck.js';
-import MkStreamingNotificationsTimeline from '@/components/MkStreamingNotificationsTimeline.vue';
+import MkStreamingNotificationsTimeline from '@/features/notifications/components/MkStreamingNotificationsTimeline.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 
@@ -28,7 +28,7 @@ const props = defineProps<{
 const notificationsComponent = useTemplateRef('notificationsComponent');
 
 async function func() {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkNotificationSelectWindow.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/notifications/components/MkNotificationSelectWindow.vue').then(x => x.default), {
 		excludeTypes: props.column.excludeTypes,
 	}, {
 		done: async (res) => {

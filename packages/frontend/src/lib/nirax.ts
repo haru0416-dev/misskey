@@ -333,10 +333,7 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 					}
 
 					if (route.query != null && queryString != null) {
-						const queryObject = [...new URLSearchParams(queryString).entries()].reduce(
-							(obj, entry) => ({ ...obj, [entry[0]]: entry[1] }),
-							{},
-						) as Record<string, string>;
+						const queryObject = Object.fromEntries(new URLSearchParams(queryString));
 
 						for (const q in route.query) {
 							const as = route.query[q];

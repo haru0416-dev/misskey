@@ -13,29 +13,36 @@ import type { Form, GetFormResultType } from '@/utility/form.js';
 import type { ComponentProps } from '@/utility/component-props.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { PostFormProps } from '@/types/post-form.js';
-import type { UploaderFeatures } from '@/composables/useUploader.js';
-import type { MkSelectItem } from '@/components/MkSelect.vue';
+import type { UploaderFeatures } from '@/features/drive/useUploader.js';
+import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 import type { OptionValue } from '@/types/option-value.js';
-import type { MkDialogReturnType } from '@/components/MkDialog.vue';
+import type { MkDialogReturnType } from '@/components/overlay/MkDialog.vue';
 import type { OverloadToUnion } from '@/types/overload-to-union.js';
-import type MkRoleSelectDialog_TypeReferenceOnly from '@/components/MkRoleSelectDialog.vue';
-import type MkEmojiPickerDialog_TypeReferenceOnly from '@/components/MkEmojiPickerDialog.vue';
-import type MkPopupMenu_TypeReferenceOnly from '@/components/MkPopupMenu.vue';
-import type MkContextMenu_TypeReferenceOnly from '@/components/MkContextMenu.vue';
+import type MkRoleSelectDialog_TypeReferenceOnly from '@/features/roles/components/MkRoleSelectDialog.vue';
+import type MkEmojiPickerDialog_TypeReferenceOnly from '@/features/emoji-picker/components/MkEmojiPickerDialog.vue';
+import type MkPopupMenu_TypeReferenceOnly from '@/components/overlay/MkPopupMenu.vue';
+import type MkContextMenu_TypeReferenceOnly from '@/components/overlay/MkContextMenu.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
 import { executeMisskeyMutation } from '@/query/mutation.js';
 import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
-import MkPostFormDialog from '@/components/MkPostFormDialog.vue';
-import MkWaitingDialog from '@/components/MkWaitingDialog.vue';
-import MkToast from '@/components/MkToast.vue';
-import MkDialog from '@/components/MkDialog.vue';
+import MkPostFormDialog from '@/features/post-composer/components/MkPostFormDialog.vue';
+import MkWaitingDialog from '@/components/overlay/MkWaitingDialog.vue';
+import MkToast from '@/components/overlay/MkToast.vue';
+import MkDialog from '@/components/overlay/MkDialog.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
-import { pleaseLogin } from '@/utility/please-login.js';
-import { showMovedDialog } from '@/utility/show-moved-dialog.js';
+import { pleaseLogin } from '@/features/auth/please-login.js';
+import { showMovedDialog } from '@/features/users/show-moved-dialog.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { focusParent } from '@/utility/focus.js';
+
+const MkPasswordDialog = defineAsyncComponent(() => import('@/features/auth/components/MkPasswordDialog.vue'));
+const MkFormDialog = defineAsyncComponent(() => import('@/features/dynamic-form/components/MkFormDialog.vue'));
+const MkUserSelectDialog = defineAsyncComponent(() => import('@/features/users/components/MkUserSelectDialog.vue'));
+const MkRoleSelectDialog = defineAsyncComponent(() => import('@/features/roles/components/MkRoleSelectDialog.vue'));
+const MkEmojiPickerDialog = defineAsyncComponent(() => import('@/features/emoji-picker/components/MkEmojiPickerDialog.vue'));
+const MkCropperDialog = defineAsyncComponent(() => import('@/features/image-editor/components/MkCropperDialog.vue'));
 
 export const openingWindowsCount = ref(0);
 
@@ -206,7 +213,10 @@ export function popup<T extends Component>(
 	markRaw(component);
 
 	const id = ++popupIdCount;
+	let disposed = false;
 	const dispose = () => {
+		if (disposed) return;
+		disposed = true;
 		nextTick(() => {
 			popups.value = popups.value.filter((p) => p.id !== id);
 		});
@@ -264,7 +274,7 @@ async function resolveComponentWithDialog<T extends Component>(componentFetching
 export async function pageWindow(path: string): Promise<void> {
 	try {
 		const { dispose } = await popupAsyncWithDialog(
-			import('@/components/MkPageWindow.vue').then((x) => x.default),
+			import('@/features/page-content/components/MkPageWindow.vue').then((x) => x.default),
 			{
 				initialPath: path,
 			},
@@ -521,7 +531,7 @@ export function authenticateDialog(): Promise<
 > {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkPasswordDialog.vue')),
+			MkPasswordDialog,
 			{},
 			{
 				done: (result) => {
@@ -622,7 +632,7 @@ export function form<F extends Form>(
 ): Promise<{ canceled: true; result?: undefined } | { canceled?: false; result: GetFormResultType<F> }> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkFormDialog.vue')),
+			MkFormDialog,
 			{ title, form: f },
 			{
 				done: (result) => {
@@ -639,7 +649,7 @@ export async function selectUser(
 ): Promise<Misskey.entities.UserDetailed> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkUserSelectDialog.vue')),
+			MkUserSelectDialog,
 			{
 				includeSelf: opts.includeSelf,
 				localOnly: opts.localOnly,
@@ -659,7 +669,7 @@ export async function selectRole(
 ): Promise<{ canceled: true; result: undefined } | { canceled: false; result: Misskey.entities.Role[] }> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkRoleSelectDialog.vue')),
+			MkRoleSelectDialog,
 			params,
 			{
 				done: (roles) => {
@@ -680,7 +690,7 @@ export async function pickEmoji(
 ): Promise<string> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkEmojiPickerDialog.vue')),
+			MkEmojiPickerDialog,
 			{
 				anchorElement,
 				...opts,
@@ -703,7 +713,7 @@ export async function cropImageFile<F extends File | Blob>(
 ): Promise<F> {
 	return new Promise((resolve) => {
 		const { dispose } = popup(
-			defineAsyncComponent(() => import('@/components/MkCropperDialog.vue')),
+			MkCropperDialog,
 			{
 				imageFile: imageFile,
 				aspectRatio: options.aspectRatio,
@@ -722,7 +732,7 @@ let popupMenuComponentPromise: Promise<typeof MkPopupMenu_TypeReferenceOnly> | n
 let contextMenuComponentPromise: Promise<typeof MkContextMenu_TypeReferenceOnly> | null = null;
 
 function fetchPopupMenuComponent(): Promise<typeof MkPopupMenu_TypeReferenceOnly> {
-	popupMenuComponentPromise ??= import('@/components/MkPopupMenu.vue')
+	popupMenuComponentPromise ??= import('@/components/overlay/MkPopupMenu.vue')
 		.then((x) => x.default)
 		.catch((error: unknown) => {
 			popupMenuComponentPromise = null;
@@ -732,7 +742,7 @@ function fetchPopupMenuComponent(): Promise<typeof MkPopupMenu_TypeReferenceOnly
 }
 
 function fetchContextMenuComponent(): Promise<typeof MkContextMenu_TypeReferenceOnly> {
-	contextMenuComponentPromise ??= import('@/components/MkContextMenu.vue')
+	contextMenuComponentPromise ??= import('@/components/overlay/MkContextMenu.vue')
 		.then((x) => x.default)
 		.catch((error: unknown) => {
 			contextMenuComponentPromise = null;
@@ -926,7 +936,7 @@ export async function launchUploader(
 		if (files.length === 0) return rej();
 		let dispose: () => void;
 		popupAsyncWithDialog(
-			import('@/components/MkUploaderDialog.vue').then((x) => x.default),
+			import('@/features/drive/components/MkUploaderDialog.vue').then((x) => x.default),
 			{
 				files: markRaw(files),
 				folderId: options?.folderId,

@@ -7,7 +7,7 @@ import { afterEach, assert, describe, test, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
 import { nextTick, ref } from 'vue';
 import { preferReactive, preferState } from './init';
-import MkNumber from '@/components/MkNumber.vue';
+import MkNumber from '@/components/display/MkNumber.vue';
 
 preferState.animation = true;
 preferReactive.animation = ref(true);

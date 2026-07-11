@@ -166,16 +166,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import JSON5 from 'json5';
-import type { TlEvent } from '@/components/MkTl.vue';
+import type { TlEvent } from '@/components/layout/MkTl.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
-import MkButton from '@/components/MkButton.vue';
-import MkTabs from '@/components/MkTabs.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkCode from '@/components/MkCode.vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
-import MkCodeEditor from '@/components/MkCodeEditor.vue';
-import MkTl from '@/components/MkTl.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkTabs from '@/components/layout/MkTabs.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkCode from '@/features/code/components/MkCode.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
+import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
+import MkTl from '@/components/layout/MkTl.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 
 function msSMH(v: number | null) {

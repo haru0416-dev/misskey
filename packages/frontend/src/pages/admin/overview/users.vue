@@ -21,7 +21,7 @@ import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@shared/utility/use-interval.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 import { prefer } from '@/preferences.js';
 
 const newUsers = ref<Misskey.entities.UserDetailed[] | null>(null);

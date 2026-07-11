@@ -183,12 +183,12 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { fetchInstance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkLink from '@/components/MkLink.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkInput from '@/components/form/MkInput.vue';
+import MkLink from '@/features/link-preview/components/MkLink.vue';
 import { useForm } from '@/composables/useForm.js';
-import MkFormFooter from '@/components/MkFormFooter.vue';
+import MkFormFooter from '@/components/form/MkFormFooter.vue';
 
 const meta = await misskeyApi('admin/meta');
 

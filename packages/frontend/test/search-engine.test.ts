@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { createSearchUrl } from '@/utility/search-engine.js';
+import { createSearchUrl } from '@/features/search/search-engine.js';
 
 describe('createSearchUrl', () => {
 	test.each([

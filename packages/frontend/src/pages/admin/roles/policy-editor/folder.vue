@@ -32,9 +32,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkRange from '@/components/MkRange.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkRange from '@/components/form/MkRange.vue';
 import { i18n } from '@/i18n.js';
 import type { PolicyMeta } from './index.vue';
 

@@ -62,16 +62,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref, defineAsyncComponent, markRaw } from 'vue';
-import MkPagination from '@/components/MkPagination.vue';
+import MkPagination from '@/components/layout/MkPagination.vue';
 import FormSection from '@/components/form/section.vue';
 import FormLink from '@/components/form/link.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
+import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import MkButton from '@/components/MkButton.vue';
-import MkFolder from '@/components/MkFolder.vue';
+import MkButton from '@/components/form/MkButton.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const isDesktop = ref(window.innerWidth >= 1100);
@@ -82,7 +82,7 @@ const paginator = markRaw(new Paginator('i/webhooks/list', {
 }));
 
 async function generateToken() {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkTokenGenerateWindow.vue').then(x => x.default), {}, {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/auth/components/MkTokenGenerateWindow.vue').then(x => x.default), {}, {
 		done: async result => {
 			const { name, permissions } = result;
 			const { token } = await misskeyApi('miauth/gen-token', {

@@ -20,8 +20,8 @@ import { ensureSignin } from '@/i.js';
 import { i18n } from '../../i18n.js';
 import XColumn from './column.vue';
 import type { Column } from '@/deck.js';
-import MkInfo from '@/components/MkInfo.vue';
-import MkChatHistories from '@/components/MkChatHistories.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
+import MkChatHistories from '@/features/chat/components/MkChatHistories.vue';
 
 defineProps<{
 	column: Column;

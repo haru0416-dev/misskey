@@ -43,7 +43,7 @@ vi.mock('@/os.js', () => ({
 	contextMenu: mocks.contextMenu,
 }));
 
-import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
+import MkPreferenceContainer from '@/components/form/MkPreferenceContainer.vue';
 
 describe('MkPreferenceContainer', () => {
 	afterEach(() => {

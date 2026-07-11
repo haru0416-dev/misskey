@@ -101,16 +101,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkRadios from '@/components/MkRadios.vue';
-import MkRange from '@/components/MkRange.vue';
-import MkButton from '@/components/MkButton.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkRadios from '@/components/form/MkRadios.vue';
+import MkRange from '@/components/form/MkRange.vue';
+import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
-import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
-import { selectFile } from '@/utility/drive.js';
-import { suggestReload } from '@/utility/reload-suggest.js';
+import MkPreferenceContainer from '@/components/form/MkPreferenceContainer.vue';
+import { selectFile } from '@/features/drive/drive.js';
+import { suggestReload } from '@/ui/_common_/reload-suggest.js';
 
 const navWindow = prefer.model('deck.navWindow');
 const useSimpleUiForNonRootPages = prefer.model('deck.useSimpleUiForNonRootPages');

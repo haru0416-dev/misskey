@@ -4,6 +4,7 @@
  */
 
 import { shallowRef } from 'vue';
+import { hashKey } from '@tanstack/vue-query';
 import type { QueryKey } from '@tanstack/vue-query';
 import { queryClient } from '@/query/client.js';
 
@@ -16,9 +17,9 @@ export class QueryBackedCache<T> {
 		private readonly staleTime: number,
 	) {
 		this.value.value = queryClient.getQueryData<T>(this.queryKey);
+		const queryHash = hashKey(this.queryKey);
 		queryClient.getQueryCache().subscribe((event) => {
-			const query = queryClient.getQueryCache().find({ queryKey: this.queryKey, exact: true });
-			if (query !== event.query) return;
+			if (event.query.queryHash !== queryHash) return;
 			this.value.value = event.query.state.data as T | undefined;
 		});
 	}

@@ -37,12 +37,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script setup lang="ts">
 import { computed, onActivated, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import type { PageMetadata } from '@/page.js';
-import type { SuperMenuDef } from '@/components/MkSuperMenu.vue';
+import type { SuperMenuDef } from '@/features/search/components/MkSuperMenu.vue';
 import { i18n } from '@/i18n.js';
-import MkInfo from '@/components/MkInfo.vue';
-import MkSuperMenu from '@/components/MkSuperMenu.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
+import MkSuperMenu from '@/features/search/components/MkSuperMenu.vue';
 import { $i } from '@/i.js';
-import { clearCache } from '@/utility/clear-cache.js';
+import { clearCache } from '@/features/cache-management/clear-cache.js';
 import { instance } from '@/instance.js';
 import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import * as os from '@/os.js';
@@ -50,7 +50,7 @@ import { useRouter } from '@/router.js';
 import { enableAutoBackup, getPreferencesProfileMenu } from '@/preferences/utility.js';
 import { store } from '@/store.js';
 import { signout } from '@/signout.js';
-import { genSearchIndexes } from '@/utility/inapp-search.js';
+import { genSearchIndexes } from '@/features/search/inapp-search.js';
 import { enableStoragePersistence, getStoragePersistenceStatusRef, storagePersistenceSupported, skipStoragePersistence } from '@/utility/storage.js';
 
 const searchIndex = await import('search-index:settings').then(({ searchIndexes }) => genSearchIndexes(searchIndexes));

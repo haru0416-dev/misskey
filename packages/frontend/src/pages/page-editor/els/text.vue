@@ -19,7 +19,7 @@ import { watch, ref, useTemplateRef, onMounted, onUnmounted } from 'vue';
 import * as Misskey from 'misskey-js';
 import XContainer from '../container.vue';
 import { i18n } from '@/i18n.js';
-import { Autocomplete } from '@/utility/autocomplete.js';
+import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 
 const props = defineProps<{
 	dragStartCallback?: (ev: DragEvent) => void;

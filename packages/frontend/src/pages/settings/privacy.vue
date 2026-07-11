@@ -213,9 +213,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue';
-import type { MkSelectItem } from '@/components/MkSelect.vue';
-import MkSwitch from '@/components/MkSwitch.vue';
-import MkSelect from '@/components/MkSelect.vue';
+import type { MkSelectItem } from '@/components/form/MkSelect.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
 import FormSection from '@/components/form/section.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
@@ -225,11 +225,11 @@ import { definePage } from '@/page.js';
 import FormSlot from '@/components/form/slot.vue';
 import { formatDateTimeString } from '@/utility/format-time-string.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
-import MkInput from '@/components/MkInput.vue';
+import MkInput from '@/components/form/MkInput.vue';
 import * as os from '@/os.js';
-import MkDisableSection from '@/components/MkDisableSection.vue';
-import MkInfo from '@/components/MkInfo.vue';
-import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
+import MkDisableSection from '@/components/form/MkDisableSection.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
+import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 
 const $i = ensureSignin();
 

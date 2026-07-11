@@ -5,12 +5,12 @@
 
 import { computed, reactive } from 'vue';
 import { ui } from '@shared/utility/config.js';
-import { clearCache } from './utility/clear-cache.js';
+import { clearCache } from '@/features/cache-management/clear-cache.js';
 import type { ComputedRef } from 'vue';
 import { $i } from '@/i.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { openInstanceMenu, openToolsMenu } from '@/ui/_common_/common.js';
-import { lookup } from '@/utility/lookup.js';
+import { lookup } from '@/features/search/lookup.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { unisonReload } from '@/utility/unison-reload.js';
@@ -147,7 +147,10 @@ export const navbarItemDef = reactive<{
 				get: () => prefer.dataSaver.avatar,
 				set: (value: boolean) => prefer.commit('dataSaver', { ...prefer.dataSaver, avatar: value }),
 			});
-			const sensitiveMedia = prefer.model('nsfw');
+			const sensitiveMedia = computed({
+				get: () => prefer.nsfw,
+				set: (value) => prefer.commit('nsfw', value),
+			});
 			const reduceUiAnimation = computed({
 				get: () => !prefer.animation,
 				set: (value: boolean) => prefer.commit('animation', !value),

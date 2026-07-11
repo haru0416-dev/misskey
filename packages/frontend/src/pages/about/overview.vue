@@ -134,10 +134,10 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import FormLink from '@/components/form/link.vue';
 import FormSection from '@/components/form/section.vue';
 import FormSplit from '@/components/form/split.vue';
-import MkFolder from '@/components/MkFolder.vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
-import MkLink from '@/components/MkLink.vue';
-import MkInfo from '@/components/MkInfo.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
+import MkLink from '@/features/link-preview/components/MkLink.vue';
+import MkInfo from '@/components/display/MkInfo.vue';
 
 const initStats = () => misskeyApi('stats', {});
 </script>

@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, defineAsyncComponent } from 'vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkSwiper from '@/components/MkSwiper.vue';
+import MkSwiper from '@/components/layout/MkSwiper.vue';
 
 const props = defineProps<{
 	fileId: string;

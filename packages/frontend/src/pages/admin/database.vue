@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import MkKeyValue from '@/components/MkKeyValue.vue';
+import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import bytes from '@/filters/bytes.js';
 import number from '@/filters/number.js';

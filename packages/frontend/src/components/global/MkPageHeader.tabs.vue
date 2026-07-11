@@ -44,7 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-import type { Tab } from '@/components/MkTabs.vue';
+import type { Tab } from '@/components/layout/MkTabs.vue';
 
 export type { Tab };
 </script>

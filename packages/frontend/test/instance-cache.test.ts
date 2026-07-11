@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { resolveInitialInstanceMeta } from '@/utility/instance-cache.js';
+import { resolveInitialInstanceMeta } from '@/features/instances/instance-cache.js';
 
 describe('instance metadata cache', () => {
 	test('uses and stores newer provided metadata', () => {

@@ -6,7 +6,7 @@
 import { defineAsyncComponent } from 'vue';
 import { common } from './common.js';
 import type { App, Component } from 'vue';
-import { emojiPicker } from '@/utility/emoji-picker.js';
+import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import UiMinimum from '@/ui/minimum.vue';
 
 export async function subBoot(app: App<Element>, setRootComponent: (component: Component) => void) {
