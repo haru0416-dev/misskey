@@ -42,11 +42,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div class="pies">
 				<div class="sub">
 					<div class="title">Sub</div>
-					<canvas ref="subDoughnutEl"></canvas>
+					<MkPieChart :data="subs"/>
 				</div>
 				<div class="pub">
 					<div class="title">Pub</div>
-					<canvas ref="pubDoughnutEl"></canvas>
+					<MkPieChart :data="pubs"/>
 				</div>
 			</div>
 		</div>
@@ -55,13 +55,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, computed, useTemplateRef } from 'vue';
-import { Chart } from 'chart.js';
+import { onMounted, computed, ref } from 'vue';
 import type { MkSelectItem, ItemOption } from '@/components/MkSelect.vue';
 import type { ChartSrc } from '@/components/MkChart.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkChart from '@/components/MkChart.vue';
-import { useChartTooltip } from '@/composables/useChartTooltip.js';
 import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
@@ -71,11 +69,8 @@ import MkHeatmap from '@/components/MkHeatmap.vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkRetentionHeatmap from '@/components/MkRetentionHeatmap.vue';
 import MkRetentionLineChart from '@/components/MkRetentionLineChart.vue';
-import { initChart } from '@/utility/init-chart.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
-import { themeManager } from '@/theme.js';
-
-initChart();
+import MkPieChart, { type InstanceForPie } from '@/pages/admin/overview/pie.vue';
 
 const shouldShowFederation = computed(() => instance.federation !== 'none' || $i?.isModerator);
 
@@ -163,75 +158,12 @@ const {
 	]),
 	initialValue: 'active-users',
 });
-const subDoughnutEl = useTemplateRef('subDoughnutEl');
-const pubDoughnutEl = useTemplateRef('pubDoughnutEl');
-
-const { handler: externalTooltipHandler1 } = useChartTooltip({
-	position: 'middle',
-});
-const { handler: externalTooltipHandler2 } = useChartTooltip({
-	position: 'middle',
-});
-
-type ChartData = {
-	name: string,
-	color: string,
-	value: number,
-	onClick?: () => void,
-}[];
-
-function createDoughnut(chartEl: HTMLCanvasElement, tooltip: ReturnType<typeof useChartTooltip>['handler'], data: ChartData) {
-	const chartInstance = new Chart(chartEl, {
-		type: 'doughnut',
-		data: {
-			labels: data.map(x => x.name),
-			datasets: [{
-				backgroundColor: data.map(x => x.color),
-				borderColor: themeManager.currentCompiledTheme!.panel,
-				borderWidth: 2,
-				hoverOffset: 0,
-				data: data.map(x => x.value),
-			}],
-		},
-		options: {
-			maintainAspectRatio: false,
-			layout: {
-				padding: {
-					left: 16,
-					right: 16,
-					top: 16,
-					bottom: 16,
-				},
-			},
-			onClick: (ev) => {
-				if (ev.native == null) return;
-				const hit = chartInstance.getElementsAtEventForMode(ev.native, 'nearest', { intersect: true }, false)[0];
-				if (hit != null) {
-					data[hit.index].onClick?.();
-				}
-			},
-			plugins: {
-				legend: {
-					display: false,
-				},
-				tooltip: {
-					enabled: false,
-					mode: 'index',
-					animation: {
-						duration: 0,
-					},
-					external: tooltip,
-				},
-			},
-		},
-	});
-
-	return chartInstance;
-}
+const subs = ref<InstanceForPie[]>([]);
+const pubs = ref<InstanceForPie[]>([]);
 
 onMounted(() => {
 	misskeyApiGet('federation/stats', { limit: 30 }).then(fedStats => {
-		const subs: ChartData = fedStats.topSubInstances.map(x => ({
+		subs.value = fedStats.topSubInstances.map(x => ({
 			name: x.host,
 			color: x.themeColor ?? '#888888',
 			value: x.followersCount,
@@ -240,15 +172,13 @@ onMounted(() => {
 			},
 		}));
 
-		subs.push({
+		subs.value.push({
 			name: '(other)',
 			color: '#80808080',
 			value: fedStats.otherFollowersCount,
 		});
 
-		if (subDoughnutEl.value != null) createDoughnut(subDoughnutEl.value, externalTooltipHandler1, subs);
-
-		const pubs: ChartData = fedStats.topPubInstances.map(x => ({
+		pubs.value = fedStats.topPubInstances.map(x => ({
 			name: x.host,
 			color: x.themeColor ?? '#888888',
 			value: x.followingCount,
@@ -257,13 +187,11 @@ onMounted(() => {
 			},
 		}));
 
-		pubs.push({
+		pubs.value.push({
 			name: '(other)',
 			color: '#80808080',
 			value: fedStats.otherFollowingCount,
 		});
-
-		if (pubDoughnutEl.value != null) createDoughnut(pubDoughnutEl.value, externalTooltipHandler2, pubs);
 	});
 });
 </script>

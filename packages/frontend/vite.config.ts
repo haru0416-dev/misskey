@@ -236,10 +236,10 @@ export function getConfig(): UserConfig {
 								test: /node_modules[\\/]photoswipe/,
 							},
 							{
-								// chart.js本体とプラグイン群は管理画面/アクティビティpage等19箇所から利用されるため、
+								// ECharts は管理画面/アクティビティpage等から利用されるため、
 								// 個別ページのコード変更でvendorチャンクのハッシュが変わりキャッシュが無効化されるのを防ぐ
 								name: 'chart',
-								test: /node_modules[\\/](chart\.js|chartjs-[^\\/]+)[\\/]/,
+								test: /node_modules[\\/](echarts|zrender)[\\/]/,
 							},
 							{
 								// split i18n related module to distinct module

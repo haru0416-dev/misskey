@@ -24,6 +24,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</MkSwitch>
 				</SearchMarker>
 
+				<SearchMarker :keywords="['signup', 'registration', 'rate', 'limit']">
+					<MkFolder>
+						<template #icon><SearchIcon><i class="ti ti-shield-lock"></i></SearchIcon></template>
+						<template #label><SearchLabel>{{ i18n.ts._serverSettings.signupRateLimit }}</SearchLabel></template>
+
+						<div class="_gaps">
+							<div>{{ i18n.ts._serverSettings.signupRateLimitDescription }}</div>
+							<MkInput v-model="signupRateLimitMinIntervalSeconds" type="number" inputmode="numeric" :min="0" :max="86400" :step="1">
+								<template #label>{{ i18n.ts._serverSettings.signupRateLimitMinInterval }}</template>
+								<template #suffix>{{ i18n.ts._time.second }}</template>
+								<template #caption>{{ i18n.ts._serverSettings.signupRateLimitZeroDisables }}</template>
+							</MkInput>
+							<MkInput v-model="signupRateLimitMaxPerHour" type="number" inputmode="numeric" :min="0" :max="100000" :step="1">
+								<template #label>{{ i18n.ts._serverSettings.signupRateLimitMaxPerHour }}</template>
+								<template #caption>{{ i18n.ts._serverSettings.signupRateLimitZeroDisables }}</template>
+							</MkInput>
+							<MkButton primary @click="save_signupRateLimit">{{ i18n.ts.save }}</MkButton>
+						</div>
+					</MkFolder>
+				</SearchMarker>
+
 				<SearchMarker :keywords="['ugc', 'content', 'visibility', 'visitor', 'guest']">
 					<MkSelect v-model="ugcVisibilityForVisitor" :items="ugcVisibilityForVisitorDef" @update:modelValue="onChange_ugcVisibilityForVisitor">
 						<template #label><SearchLabel>{{ i18n.ts._serverSettings.userGeneratedContentsVisibilityForVisitor }}</SearchLabel></template>
@@ -175,6 +196,8 @@ const meta = await misskeyApi('admin/meta');
 
 const enableRegistration = ref(!meta.disableRegistration);
 const emailRequiredForSignup = ref(meta.emailRequiredForSignup);
+const signupRateLimitMinIntervalSeconds = ref(meta.signupRateLimitMinIntervalSeconds);
+const signupRateLimitMaxPerHour = ref(meta.signupRateLimitMaxPerHour);
 const {
 	model: ugcVisibilityForVisitor,
 	def: ugcVisibilityForVisitorDef,
@@ -218,6 +241,13 @@ function onChange_emailRequiredForSignup(value: boolean) {
 		emailRequiredForSignup: value,
 	}).then(() => {
 		fetchInstance(true);
+	});
+}
+
+function save_signupRateLimit() {
+	os.apiWithDialog('admin/update-meta', {
+		signupRateLimitMinIntervalSeconds: signupRateLimitMinIntervalSeconds.value,
+		signupRateLimitMaxPerHour: signupRateLimitMaxPerHour.value,
 	});
 }
 

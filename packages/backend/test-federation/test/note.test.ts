@@ -1,7 +1,8 @@
 import { describe, test, beforeAll, afterAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
+import { Announce, Note, Question } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
-import { addCustomEmoji, createAccount, createModerator, deepStrictEqualWithExcludedFields, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, uploadFile } from './utils.js';
+import { addCustomEmoji, createAccount, createModerator, deepStrictEqualWithExcludedFields, fetchActivityPubObject, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, uploadFile } from './utils.js';
 
 describe('Note', () => {
 	let alice: LoginUser, bob: LoginUser;
@@ -46,6 +47,18 @@ describe('Note', () => {
 				'uri',
 			]);
 			strictEqual(aliceInB.id, resolvedNote.userId);
+
+			const uri = `https://a.test/notes/${note.id}`;
+			const activityPubNote = await fetchActivityPubObject(uri);
+			assert(activityPubNote instanceof Question);
+			strictEqual(activityPubNote.id?.href, uri);
+			strictEqual(activityPubNote.attributionId?.href, `https://a.test/users/${alice.id}`);
+			strictEqual(activityPubNote.published?.epochMilliseconds, Date.parse(note.createdAt));
+			const options = [];
+			for await (const option of activityPubNote.getExclusiveOptions()) {
+				options.push(option.name);
+			}
+			assert.deepStrictEqual(options, ['neko', 'inu']);
 		});
 
 		test('Consistency of reply', async () => {
@@ -56,6 +69,7 @@ describe('Note', () => {
 				text: 'b',
 				replyId: _replyedNote.id,
 			})).createdNote;
+			await sleep();
 			// NOTE: the repliedCount is incremented, so fetch again
 			const replyedNote = await alice.client.request('notes/show', { noteId: _replyedNote.id });
 			strictEqual(replyedNote.repliesCount, 1);
@@ -85,6 +99,10 @@ describe('Note', () => {
 			]);
 			strictEqual(aliceInB.id, resolvedNote.userId);
 
+			const activityPubReply = await fetchActivityPubObject(`https://a.test/notes/${note.id}`);
+			assert(activityPubReply instanceof Note);
+			strictEqual(activityPubReply.replyTargetId?.href, `https://a.test/notes/${_replyedNote.id}`);
+
 			await sleep();
 
 			const resolvedReplyedNote = await bob.client.request('notes/show', { noteId: resolvedNote.replyId });
@@ -97,7 +115,6 @@ describe('Note', () => {
 				text: 'a',
 			})).createdNote;
 			const note = (await alice.client.request('notes/create', {
-				text: 'b',
 				renoteId: renotedNote.id,
 			})).createdNote;
 
@@ -121,6 +138,12 @@ describe('Note', () => {
 				'uri',
 			]);
 			strictEqual(aliceInB.id, resolvedNote.userId);
+
+			const activityPubRenote = await fetchActivityPubObject(`https://a.test/notes/${note.id}/activity`);
+			assert(activityPubRenote instanceof Announce);
+			strictEqual(activityPubRenote.id?.href, `https://a.test/notes/${note.id}/activity`);
+			strictEqual(activityPubRenote.actorId?.href, `https://a.test/users/${alice.id}`);
+			strictEqual(activityPubRenote.objectId?.href, `https://a.test/notes/${renotedNote.id}`);
 		});
 	});
 

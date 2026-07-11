@@ -19,8 +19,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div :class="$style.newBg2"></div>
 			<button data-cy-streaming-new-notes class="_button" :class="$style.newButton" @click="releaseQueue()"><i class="ti ti-circle-arrow-up"></i> {{ i18n.ts.newNote }}</button>
 		</div>
+		<div v-if="props.viewMode === 'media'" ref="notesEl" :class="$style.mediaGrid">
+			<article v-for="note in mediaNotes" :key="note.id" :data-scroll-anchor="note.id" :class="$style.mediaCard">
+				<MkMediaList :mediaList="mediaFiles(note).slice(0, 4)" :square="true" :eagerLightbox="false"/>
+				<div v-if="mediaFiles(note).length > 4" :class="$style.mediaCount">+{{ mediaFiles(note).length - 4 }}</div>
+				<MkA :to="notePage(note)" :class="$style.mediaMeta">
+					<MkAvatar :user="note.user" :class="$style.mediaAvatar"/>
+					<span :class="$style.mediaAuthor"><MkUserName :user="note.user"/></span>
+					<MkTime :time="note.createdAt" :class="$style.mediaTime"/>
+				</MkA>
+			</article>
+			<MkResult v-if="mediaNotes.length === 0" type="empty" :text="i18n.ts.noNotes" :class="$style.mediaEmpty"/>
+		</div>
 		<div
-			v-if="canVirtualize"
+			v-else-if="canVirtualize"
 			ref="notesEl"
 			data-cy-streaming-notes
 			:class="$style.notes"
@@ -104,12 +116,14 @@ import { instance } from '@/instance.js';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import MkNote from '@/components/MkNote.vue';
+import MkMediaList from '@/components/MkMediaList.vue';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { DI } from '@/di.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/utility/timeline-date-separate.js';
 import { Paginator } from '@/utility/paginator.js';
+import { notePage } from '@/filters/note.js';
 
 const props = withDefaults(defineProps<{
 	src: BasicTimelineType | 'mentions' | 'directs' | 'list' | 'antenna' | 'channel' | 'role';
@@ -123,11 +137,13 @@ const props = withDefaults(defineProps<{
 	withReplies?: boolean;
 	withSensitive?: boolean;
 	onlyFiles?: boolean;
+	viewMode?: 'notes' | 'media';
 }>(), {
 	withRenotes: true,
 	withReplies: false,
 	withSensitive: true,
 	onlyFiles: false,
+	viewMode: 'notes',
 	sound: false,
 	customSound: null,
 });
@@ -236,7 +252,12 @@ function isTop() {
 const scrollElement = shallowRef<HTMLElement | null>(null);
 const scrollMargin = ref(0);
 const rootScrollMargin = ref(0);
-const canVirtualize = computed(() => scrollElement.value != null);
+const canVirtualize = computed(() => props.viewMode === 'notes' && scrollElement.value != null);
+const mediaFiles = (note: Misskey.entities.Note) => (note.files ?? []).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
+const mediaNotes = computed(() => paginator.items.value.filter(note => {
+	const files = mediaFiles(note);
+	return files.length > 0 && (props.withSensitive || files.every(file => !file.isSensitive));
+}));
 
 const virtualizer = useVirtualizer(computed(() => ({
 	count: paginator.items.value.length,
@@ -603,6 +624,89 @@ defineExpose({
 	container-type: inline-size;
 	position: relative;
 	background: var(--MI_THEME-panel);
+}
+
+.mediaGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: var(--MI-margin);
+	padding: var(--MI-margin);
+	container-type: inline-size;
+	background: var(--MI_THEME-bg);
+}
+
+.mediaCard {
+	position: relative;
+	min-width: 0;
+	overflow: hidden;
+	border-radius: var(--MI-radius);
+	background: var(--MI_THEME-panel);
+}
+
+.mediaCount {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	padding: 3px 7px;
+	border-radius: 999px;
+	background: rgb(0 0 0 / 70%);
+	color: #fff;
+	font-weight: 700;
+	pointer-events: none;
+}
+
+.mediaMeta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 44px;
+	padding: 8px 10px;
+	color: var(--MI_THEME-fg);
+}
+
+.mediaAvatar {
+	flex: 0 0 28px;
+	width: 28px;
+	height: 28px;
+}
+
+.mediaAuthor {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mediaTime {
+	flex: none;
+	margin-left: auto;
+	font-size: 0.85em;
+	opacity: 0.7;
+}
+
+.mediaEmpty {
+	grid-column: 1 / -1;
+}
+
+@container (max-width: 520px) {
+	.mediaGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 2px;
+		padding: 0;
+	}
+
+	.mediaCard {
+		border-radius: 0;
+	}
+
+	.mediaMeta {
+		min-height: 40px;
+		padding: 6px 8px;
+	}
+
+	.mediaAvatar {
+		display: none;
+	}
 }
 
 .virtualRow {

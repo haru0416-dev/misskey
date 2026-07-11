@@ -6,6 +6,7 @@
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { note, type NoteInsert, type NoteRow } from '@/db/schema/note.js';
+import { driveFile } from '@/db/schema/drive-file.js';
 import { poll, type PollInsert } from '@/db/schema/poll.js';
 import { user as userTable } from '@/db/schema/user.js';
 import { channel as channelTable, type ChannelRow } from '@/db/schema/channel.js';
@@ -1077,6 +1078,12 @@ export async function searchNotesByTextFromDatabase(
 		host?: string | null;
 		rangeStartId?: MiNote['id'] | null;
 		rangeEndId?: MiNote['id'] | null;
+		withFiles?: boolean | null;
+		withSensitiveFiles?: boolean | null;
+		withReplies?: boolean | null;
+		withQuotes?: boolean | null;
+		withCw?: boolean | null;
+		visibility?: MiNote['visibility'] | null;
 	},
 ): Promise<MiNote[]> {
 	const conditions: SQL[] = [
@@ -1111,6 +1118,51 @@ export async function searchNotesByTextFromDatabase(
 
 	if (options.rangeEndId) {
 		conditions.push(sql`"note"."id" < ${options.rangeEndId}`);
+	}
+
+	if (options.withFiles != null) {
+		conditions.push(options.withFiles
+			? sql`cardinality("note"."fileIds") > 0`
+			: sql`cardinality("note"."fileIds") = 0`);
+	}
+
+	if (options.withSensitiveFiles != null) {
+		const hasSensitiveFiles = sql`EXISTS (
+			SELECT 1
+			FROM ${driveFile}
+			WHERE ${driveFile.id} = ANY("note"."fileIds")
+			AND ${driveFile.isSensitive} = TRUE
+		)`;
+		conditions.push(options.withSensitiveFiles ? hasSensitiveFiles : sql`NOT (${hasSensitiveFiles})`);
+	}
+
+	if (options.withReplies != null) {
+		conditions.push(options.withReplies
+			? sql`"note"."replyId" IS NOT NULL`
+			: sql`"note"."replyId" IS NULL`);
+	}
+
+	const isQuote = sql`(
+		"note"."renoteId" IS NOT NULL
+		AND (
+			"note"."text" IS NOT NULL
+			OR "note"."cw" IS NOT NULL
+			OR cardinality("note"."fileIds") > 0
+			OR "note"."hasPoll" = TRUE
+		)
+	)`;
+	if (options.withQuotes != null) {
+		conditions.push(options.withQuotes ? isQuote : sql`NOT (${isQuote})`);
+	}
+
+	if (options.withCw != null) {
+		conditions.push(options.withCw
+			? sql`"note"."cw" IS NOT NULL`
+			: sql`"note"."cw" IS NULL`);
+	}
+
+	if (options.visibility != null) {
+		conditions.push(sql`"note"."visibility" = ${options.visibility}`);
 	}
 
 	const result = await db.execute<NoteRow>(sql`

@@ -552,6 +552,7 @@ import type {
     NotesUserListTimelineRequest,
     NotesUserListTimelineResponse,
     NotificationsCreateRequest,
+    NotificationsDeleteRequest,
     PagePushRequest,
     PagesCreateRequest,
     PagesCreateResponse,
@@ -1049,6 +1050,7 @@ export type Endpoints = {
     'notes/unrenote': { req: NotesUnrenoteRequest; res: EmptyResponse };
     'notes/user-list-timeline': { req: NotesUserListTimelineRequest; res: NotesUserListTimelineResponse };
     'notifications/create': { req: NotificationsCreateRequest; res: EmptyResponse };
+    'notifications/delete': { req: NotificationsDeleteRequest; res: EmptyResponse };
     'notifications/flush': { req: EmptyRequest; res: EmptyResponse };
     'notifications/mark-all-as-read': { req: EmptyRequest; res: EmptyResponse };
     'notifications/test-notification': { req: EmptyRequest; res: EmptyResponse };

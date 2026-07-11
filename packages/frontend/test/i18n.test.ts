@@ -5,9 +5,15 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { I18n } from '@shared/utility/i18n.js';
-import type { ParameterizedString } from 'i18n';
+import type { ILocale, ParameterizedString } from 'i18n';
 
 describe('i18n', () => {
+	it('missing development locale keys degrade to strings', () => {
+		const i18n = new I18n({} as ILocale, true);
+
+		expect((i18n.ts as unknown as Record<string, unknown>).missing).toBe('missing');
+	});
+
 	it('tsx (nested)', () => {
 		const i18n = new I18n({
 			foo: 'foo',

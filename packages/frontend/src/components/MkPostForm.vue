@@ -1413,6 +1413,40 @@ function showTour() {
 	});
 }
 
+async function restoreLocalDraft(): Promise<void> {
+	if (props.instant || props.mention || props.specified || props.mock || props.initialNote || prefer.draftRestoreMode === 'never') return;
+
+	const draft = getStoredDrafts()[draftKey.value];
+	const data = isJsonObject(draft) && isJsonObject(draft.data) ? draft.data : null;
+	if (data == null) return;
+
+	if (prefer.draftRestoreMode === 'ask') {
+		const { canceled } = await os.confirm({
+			type: 'question',
+			title: i18n.ts._drafts.restoreFromDraft,
+			text: i18n.ts._drafts.restoreLocalDraftConfirm,
+			okText: i18n.ts._drafts.restore,
+		});
+		if (canceled) return;
+	}
+
+	if (typeof data.text === 'string') text.value = data.text;
+	if (typeof data.useCw === 'boolean') useCw.value = data.useCw;
+	if (typeof data.cw === 'string' || data.cw === null) cw.value = data.cw;
+	if (data.visibility === 'public' || data.visibility === 'home' || data.visibility === 'followers' || data.visibility === 'specified') visibility.value = data.visibility;
+	if (typeof data.localOnly === 'boolean') localOnly.value = data.localOnly;
+	if (Array.isArray(data.files)) files.value = data.files.filter(isJsonObject) as Misskey.entities.DriveFile[];
+	if (isJsonObject(data.poll)) poll.value = data.poll as PollEditorModelValue;
+	if (isStringArray(data.visibleUserIds)) {
+		misskeyApi('users/show', { userIds: data.visibleUserIds }).then(users => {
+			users.forEach(u => pushVisibleUser(u));
+		});
+	}
+	if (typeof data.quoteId === 'string' || data.quoteId === null) quoteId.value = data.quoteId;
+	if (data.reactionAcceptance === 'likeOnly' || data.reactionAcceptance === 'likeOnlyForRemote' || data.reactionAcceptance === 'nonSensitiveOnly' || data.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote' || data.reactionAcceptance === null) reactionAcceptance.value = data.reactionAcceptance;
+	if ((typeof data.scheduledAt === 'number' && Number.isFinite(data.scheduledAt)) || data.scheduledAt === null) scheduledAt.value = data.scheduledAt;
+}
+
 onMounted(() => {
 	if (props.autofocus) {
 		focus();
@@ -1426,31 +1460,8 @@ onMounted(() => {
 	if (cwInputEl.value) cwAutocomplete = new Autocomplete(cwInputEl.value, cw);
 	if (hashtagsInputEl.value) hashtagAutocomplete = new Autocomplete(hashtagsInputEl.value, hashtags);
 
-	nextTick(() => {
-		// 書きかけの投稿を復元
-		if (!props.instant && !props.mention && !props.specified && !props.mock) {
-			const draft = getStoredDrafts()[draftKey.value];
-			const data = isJsonObject(draft) && isJsonObject(draft.data) ? draft.data : null;
-			if (data != null) {
-				if (typeof data.text === 'string') text.value = data.text;
-				if (typeof data.useCw === 'boolean') useCw.value = data.useCw;
-				if (typeof data.cw === 'string' || data.cw === null) cw.value = data.cw;
-				if (data.visibility === 'public' || data.visibility === 'home' || data.visibility === 'followers' || data.visibility === 'specified') visibility.value = data.visibility;
-				if (typeof data.localOnly === 'boolean') localOnly.value = data.localOnly;
-				if (Array.isArray(data.files)) files.value = data.files.filter(isJsonObject) as Misskey.entities.DriveFile[];
-				if (isJsonObject(data.poll)) {
-					poll.value = data.poll as PollEditorModelValue;
-				}
-				if (isStringArray(data.visibleUserIds)) {
-					misskeyApi('users/show', { userIds: data.visibleUserIds }).then(users => {
-						users.forEach(u => pushVisibleUser(u));
-					});
-				}
-				if (typeof data.quoteId === 'string' || data.quoteId === null) quoteId.value = data.quoteId;
-				if (data.reactionAcceptance === 'likeOnly' || data.reactionAcceptance === 'likeOnlyForRemote' || data.reactionAcceptance === 'nonSensitiveOnly' || data.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote' || data.reactionAcceptance === null) reactionAcceptance.value = data.reactionAcceptance;
-				if ((typeof data.scheduledAt === 'number' && Number.isFinite(data.scheduledAt)) || data.scheduledAt === null) scheduledAt.value = data.scheduledAt;
-			}
-		}
+	nextTick(async () => {
+		await restoreLocalDraft();
 
 		// 削除して編集
 		if (props.initialNote) {

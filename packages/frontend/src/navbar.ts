@@ -14,6 +14,7 @@ import { lookup } from '@/utility/lookup.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { unisonReload } from '@/utility/unison-reload.js';
+import { prefer } from '@/preferences.js';
 
 export const navbarItemDef = reactive<{
 	[key: string]: {
@@ -133,6 +134,68 @@ export const navbarItemDef = reactive<{
 		to: '/chat',
 		show: computed(() => $i != null && $i.policies.chatAvailability !== 'unavailable'),
 		indicated: computed(() => $i != null && $i.hasUnreadChatMessages),
+	},
+	quickSettings: {
+		title: i18n.ts.quickSettings,
+		icon: 'ti ti-adjustments-horizontal',
+		action: (ev) => {
+			const mediaDataSaver = computed({
+				get: () => prefer.dataSaver.media,
+				set: (value: boolean) => prefer.commit('dataSaver', { ...prefer.dataSaver, media: value }),
+			});
+			const avatarDataSaver = computed({
+				get: () => prefer.dataSaver.avatar,
+				set: (value: boolean) => prefer.commit('dataSaver', { ...prefer.dataSaver, avatar: value }),
+			});
+			const sensitiveMedia = prefer.model('nsfw');
+			const reduceUiAnimation = computed({
+				get: () => !prefer.animation,
+				set: (value: boolean) => prefer.commit('animation', !value),
+			});
+
+			os.popupMenu([
+				{
+					type: 'label',
+					text: i18n.ts.quickSettings,
+				},
+				{
+					type: 'switch',
+					text: i18n.ts._dataSaver._media.title,
+					icon: 'ti ti-photo-off',
+					ref: mediaDataSaver,
+				},
+				{
+					type: 'switch',
+					text: i18n.ts._dataSaver._avatar.title,
+					icon: 'ti ti-user-square-rounded',
+					ref: avatarDataSaver,
+				},
+				{
+					type: 'radio',
+					text: i18n.ts.sensitive,
+					icon: 'ti ti-eye-off',
+					ref: sensitiveMedia,
+					options: [
+						{ label: i18n.ts._displayOfSensitiveMedia.respect, value: 'respect' },
+						{ label: i18n.ts._displayOfSensitiveMedia.force, value: 'force' },
+						{ label: i18n.ts._displayOfSensitiveMedia.ignore, value: 'ignore' },
+					],
+				},
+				{
+					type: 'switch',
+					text: i18n.ts.reduceUiAnimation,
+					icon: 'ti ti-player-pause',
+					ref: reduceUiAnimation,
+				},
+				{ type: 'divider' },
+				{
+					type: 'link',
+					text: i18n.ts.settings,
+					icon: 'ti ti-settings',
+					to: '/settings/preferences',
+				},
+			], ev.currentTarget ?? ev.target);
+		},
 	},
 	achievements: {
 		title: i18n.ts.achievements,

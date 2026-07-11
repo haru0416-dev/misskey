@@ -49,6 +49,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	// onMessage は受信メッセージ毎に呼ばれるホットパスなので、id からの逆引きを O(1) にする
 	// (shared connection は pool の id を共有するため、値はリストで持つ)
 	private connectionsById = new Map<string, Connection[]>();
+	private connectedChannelIds = new Set<string>();
 	private idCounter = 0;
 
 	constructor(origin: string, user: { token: string; } | null, options?: {
@@ -107,6 +108,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 			this.connectionsById.set(connection.id, list);
 		}
 		list.push(connection);
+		if (this.connectedChannelIds.has(connection.id)) connection.markConnected();
 	}
 
 	private unindexConnection(connection: Connection): void {
@@ -146,6 +148,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 
 	public removeSharedConnectionPool(pool: Pool): void {
 		this.sharedConnectionPools = this.sharedConnectionPools.filter(p => p !== pool);
+		this.connectedChannelIds.delete(pool.id);
 	}
 
 	private connectToChannel<C extends keyof Channels>(channel: C, params: Channels[C]['params']): NonSharedConnection<Channels[C]> {
@@ -158,6 +161,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	public disconnectToChannel(connection: NonSharedConnection): void {
 		this.nonSharedConnections = this.nonSharedConnections.filter(c => c !== connection);
 		this.unindexConnection(connection);
+		this.connectedChannelIds.delete(connection.id);
 	}
 
 	/**
@@ -182,6 +186,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	private onClose(): void {
 		if (this.state === 'connected') {
 			this.state = 'reconnecting';
+			this.connectedChannelIds.clear();
 			this.emit('_disconnected_');
 		}
 	}
@@ -200,6 +205,13 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 					c.emit(body.type, body.body);
 					c.inCount++;
 				}
+			}
+		} else if (type === 'connected') {
+			const connections = this.connectionsById.get(body.id);
+			this.connectedChannelIds.add(body.id);
+
+			if (connections) {
+				for (const c of connections) c.markConnected();
 			}
 		} else {
 			this.emit(type, body);
@@ -302,6 +314,7 @@ class Pool {
 		this.stream.send('connect', {
 			channel: this.channel,
 			id: this.id,
+			pong: true,
 		});
 	}
 
@@ -318,6 +331,7 @@ export interface IChannelConnection<Channel extends AnyOf<Channels> = AnyOf<Chan
 	inCount: number;
 	outCount: number;
 	channel: string;
+	ready: Promise<void>;
 
 	send<T extends keyof Channel['receives']>(type: T, body: Channel['receives'][T]): void;
 	dispose(): void;
@@ -332,9 +346,14 @@ export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channel
 	public name?: string; // for debug
 	public inCount = 0; // for debug
 	public outCount = 0; // for debug
+	public readonly ready: Promise<void>;
+	private resolveReady!: () => void;
 
 	constructor(stream: Stream, channel: string, name?: string) {
 		super();
+		this.ready = new Promise(resolve => {
+			this.resolveReady = resolve;
+		});
 
 		this.send = this.send.bind(this);
 
@@ -343,6 +362,10 @@ export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channel
 		if (name !== undefined) {
 			this.name = name;
 		}
+	}
+
+	public markConnected(): void {
+		this.resolveReady();
 	}
 
 	public send<T extends keyof Channel['receives']>(type: T, body: Channel['receives'][T]): void {
@@ -409,6 +432,7 @@ class NonSharedConnection<Channel extends AnyOf<Channels> = AnyOf<Channels>> ext
 			channel: this.channel,
 			id: this.id,
 			params: this.params,
+			pong: true,
 		});
 	}
 

@@ -96,7 +96,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { prefer } from '@/preferences.js';
 import { getBgColor } from '@/utility/get-bg-color.js';
 import { pageFolderTeleportCount, popup } from '@/os.js';
@@ -164,11 +164,21 @@ async function toggle(ev: PointerEvent) {
 	});
 }
 
-onMounted(() => {
-	const themeValue = themeManager.currentCompiledTheme!;
+function updateBgSame() {
+	const themeValue = themeManager.currentCompiledTheme;
+	if (themeValue == null) return;
 	const parentBg = getBgColor(rootEl.value?.parentElement) ?? 'transparent';
 	const myBg = themeValue.panel;
 	bgSame.value = parentBg === myBg;
+}
+
+onMounted(() => {
+	updateBgSame();
+	themeManager.on('themeChanged', updateBgSame);
+});
+
+onBeforeUnmount(() => {
+	themeManager.off('themeChanged', updateBgSame);
 });
 
 watch(opened, (isOpened) => {

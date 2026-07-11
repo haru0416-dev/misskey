@@ -6,8 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <MkContainer :showHeader="widgetProps.showHeader" data-cy-mkw-rss class="mkw-rss">
 	<template #icon><i class="ti ti-rss"></i></template>
-	<template #header>RSS</template>
-	<template #func="{ buttonStyleClass }"><button class="_button" :class="buttonStyleClass" @click="configure"><i class="ti ti-settings"></i></button></template>
+	<template #header>{{ widgetProps.title || 'RSS' }}</template>
+	<template #func="{ buttonStyleClass }"><button v-tooltip="i18n.ts.settings" class="_button" :class="buttonStyleClass" :aria-label="i18n.ts.settings" @click="configure"><i class="ti ti-settings"></i></button></template>
 
 	<div class="ekmkgxbj">
 		<MkLoading v-if="fetching"/>
@@ -33,6 +33,11 @@ import MkContainer from '@/components/MkContainer.vue';
 const name = 'rss';
 
 const widgetPropsDef = {
+	title: {
+		type: 'string',
+		label: i18n.ts.title,
+		default: 'RSS',
+	},
 	url: {
 		type: 'string',
 		label: i18n.ts._widgetOptions._rss.url,
