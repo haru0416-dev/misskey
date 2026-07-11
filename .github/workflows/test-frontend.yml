@@ -15,7 +15,6 @@ on:
       # for e2e
       - packages/backend/**
       - tests/e2e/**
-      - playwright.config.ts
       - package.json
       - bun.lock
       - .github/workflows/test-frontend.yml
@@ -31,7 +30,6 @@ on:
       # for e2e
       - packages/backend/**
       - tests/e2e/**
-      - playwright.config.ts
       - package.json
       - bun.lock
       - .github/workflows/test-frontend.yml

@@ -1,6 +1,6 @@
 services:
   web:
-    build: .
+    build: ..
     restart: always
     links:
       - db
@@ -18,10 +18,10 @@ services:
       - internal_network
       - external_network
     # env_file:
-    #   - .config/docker.env
+    #   - ../.config/docker.env
     volumes:
-      - ./files:/misskey/files
-      - ./.config:/misskey/.config:ro
+      - ../files:/misskey/files
+      - ../.config:/misskey/.config:ro
 
   redis:
     restart: always
@@ -29,7 +29,7 @@ services:
     networks:
       - internal_network
     volumes:
-      - ./redis:/data
+      - ../redis:/data
     healthcheck:
       test: 'redis-cli ping'
       interval: 5s
@@ -41,9 +41,9 @@ services:
     networks:
       - internal_network
     env_file:
-      - .config/docker.env
+      - ../.config/docker.env
     volumes:
-      - ./db:/var/lib/postgresql
+      - ../db:/var/lib/postgresql
     healthcheck:
       test: 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB'
       interval: 5s
@@ -60,7 +60,7 @@ services:
 #    ports:
 #      - 7493:7493
 #    env_file:
-#      - .config/docker.env
+#      - ../.config/docker.env
 #    environment:
 #      PORT: 7493
 #      MCAPTCHA_redis_URL: "redis://mcaptcha_redis/"
@@ -86,11 +86,11 @@ services:
 #      - MEILI_NO_ANALYTICS=true
 #      - MEILI_ENV=production
 #    env_file:
-#      - .config/meilisearch.env
+#      - ../.config/meilisearch.env
 #    networks:
 #      - internal_network
 #    volumes:
-#      - ./meili_data:/meili_data
+#      - ../meili_data:/meili_data
 
 networks:
   internal_network:

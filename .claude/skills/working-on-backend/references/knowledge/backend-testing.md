@@ -208,14 +208,14 @@ backend の **テスト** と **開発** では用途別に別の compose ファ
 | 用途 | compose ファイル | host ポート (db / redis) |
 | --- | --- | --- |
 | テスト (`test` / `test:e2e` / `test:fed`) | [packages/backend/test/compose.yml](../../../../../packages/backend/test/compose.yml) | `54312` / `56312` ([.github/misskey/test.yml](../../../../../.github/misskey/test.yml) のポート設定と一致) |
-| 開発 (`bun run dev` 等) | `compose.local-db.yml` (リポジトリルート) | `5432` / `6379` |
+| 開発 (`bun run dev` 等) | `deploy/compose.local-db.yml` | `5432` / `6379` |
 
 ```bash
 # テスト用 DB / Redis (テスト時はこちら)
 docker compose -f packages/backend/test/compose.yml up -d
 
 # 開発用 DB / Redis (Misskey 本体は起動せず postgres / redis / meilisearch だけ立てる)
-docker compose -f compose.local-db.yml up -d
+docker compose -f deploy/compose.local-db.yml up -d
 ```
 
-`compose.local-db.yml` は開発向け (標準ポート `5432` / `6379`) で、テスト用 DB (`test-misskey` / ポート `54312` / `56312`) とは別物。CI (`.github/workflows/test-backend.yml`) は docker compose ではなく GitHub Actions の `services:` で同じテスト用ポートの postgres / redis コンテナを立ててから走る。
+`deploy/compose.local-db.yml` は開発向け (標準ポート `5432` / `6379`) で、テスト用 DB (`test-misskey` / ポート `54312` / `56312`) とは別物。CI (`.github/workflows/test-backend.yml`) は docker compose ではなく GitHub Actions の `services:` で同じテスト用ポートの postgres / redis コンテナを立ててから走る。

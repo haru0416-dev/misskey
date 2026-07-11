@@ -20,7 +20,7 @@ bun run --bun --filter frontend test-and-coverage   # カバレッジ付き
 Playwright は **起動済みのテストサーバー** に対して走るため、unit より前提が多い。[.github/workflows/test-frontend.yml](../../../../../.github/workflows/test-frontend.yml) の `e2e` ジョブと同じ手順をローカルで踏む:
 
 ```bash
-# 1. テスト用 DB / Redis を起動 (テスト用ポート。開発用の compose.local-db.yml ではない)
+# 1. テスト用 DB / Redis を起動 (テスト用ポート。開発用の deploy/compose.local-db.yml ではない)
 docker compose -f packages/backend/test/compose.yml up -d
 
 # 2. テスト設定を配置 (未作成なら。例示なので、cpコマンドは環境にあったコマンドに適宜読み替えること)
@@ -37,7 +37,7 @@ bun run pw:run
 bun run pw:open
 ```
 
-- 設定: ルート [playwright.config.ts](../../../../../playwright.config.ts)
+- 設定: [tests/e2e/playwright.config.ts](../../../../../tests/e2e/playwright.config.ts)
 - テスト本体は [tests/e2e/specs/](../../../../../tests/e2e/specs/) 配下
 - start コマンドを変えたい場合は `MISSKEY_TEST_START_COMMAND`、接続先を変えたい場合は `MISSKEY_TEST_BASE_URL` を使う
 
@@ -61,4 +61,4 @@ frontend のテスト種別で DB / Redis の要否が違う:
 - **Vitest (unit)** — DB 不要。ロジック / コンポーネント単体のテストで backend に繋がない (CI の `vitest` ジョブにも `services:` は無い)
 - **Playwright (E2E)** — テストサーバー (`bun run start:test`) 経由で backend に繋ぐため DB / Redis が必要。**テスト用ポートの [packages/backend/test/compose.yml](../../../../../packages/backend/test/compose.yml)** を使う (上記 Playwright E2E の手順を参照)
 
-開発用の `compose.local-db.yml` (db `5432` / redis `6379`) は **テストには使わない**。テスト用の `packages/backend/test/compose.yml` (`54312` / `56312`) とはポートが異なり、混同すると接続できない。
+開発用の `deploy/compose.local-db.yml` (db `5432` / redis `6379`) は **テストには使わない**。テスト用の `packages/backend/test/compose.yml` (`54312` / `56312`) とはポートが異なり、混同すると接続できない。
