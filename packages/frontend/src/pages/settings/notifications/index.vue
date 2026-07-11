@@ -106,7 +106,7 @@ import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
 import { Paginator } from '@/utility/paginator.js';
 import MkPagination from '@/components/MkPagination.vue';
 import { userPage } from '@/filters/user.js';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 
 const $i = ensureSignin();
 

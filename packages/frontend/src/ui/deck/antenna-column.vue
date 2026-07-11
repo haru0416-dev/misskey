@@ -78,7 +78,7 @@ async function setAntenna() {
 	if (canceled || antennaIdOrOperation == null) return;
 
 	if (antennaIdOrOperation === '_CREATE_') {
-		const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkAntennaEditorDialog.vue').then(x => x.default), {}, {
+		const { dispose } = await os.popupAsyncWithDialog(import('@/features/antennas/components/MkAntennaEditorDialog.vue').then(x => x.default), {}, {
 			created: (newAntenna: MisskeyEntities.Antenna) => {
 				antennasCache.delete();
 				updateColumn(props.column.id, {

@@ -9,8 +9,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
-import MkDataChart from '@/components/MkDataChart.vue';
-import { chartText } from '@/utility/chart-i18n.js';
+import MkDataChart from '@/features/charts/components/MkDataChart.vue';
+import { chartText } from '@/features/charts/chart-i18n.js';
 
 const props = defineProps<{ type: string }>();
 const values = ref<number[]>([]);

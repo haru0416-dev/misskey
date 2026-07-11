@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkContainer from '@/components/MkContainer.vue';
-import MkChart from '@/components/MkChart.vue';
+import MkChart from '@/features/charts/components/MkChart.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 

@@ -163,15 +163,15 @@ import { defineAsyncComponent, computed, onMounted, onUnmounted, onActivated, on
 import * as Misskey from 'misskey-js';
 import { getScrollContainer } from '@shared/utility/scroll.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
-import MkFollowButton from '@/components/MkFollowButton.vue';
-import MkAccountMoved from '@/components/MkAccountMoved.vue';
+import MkFollowButton from '@/features/users/components/MkFollowButton.vue';
+import MkAccountMoved from '@/features/users/components/MkAccountMoved.vue';
 import MkFukidashi from '@/components/MkFukidashi.vue';
-import MkRemoteCaution from '@/components/MkRemoteCaution.vue';
+import MkRemoteCaution from '@/features/users/components/MkRemoteCaution.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkOmit from '@/components/MkOmit.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import MkButton from '@/components/MkButton.vue';
-import { getUserMenu } from '@/utility/get-user-menu.js';
+import { getUserMenu } from '@/features/users/get-user-menu.js';
 import number from '@/filters/number.js';
 import { userPage } from '@/filters/user.js';
 import * as os from '@/os.js';
@@ -186,7 +186,7 @@ import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import MkSparkle from '@/components/MkSparkle.vue';
 import { prefer } from '@/preferences.js';
 import MkPullToRefresh from '@/components/MkPullToRefresh.vue';
-import { isBirthday } from '@/utility/is-birthday.js';
+import { isBirthday } from '@/features/users/is-birthday.js';
 
 function calcAge(birthdate: string): number {
 	const date = new Date(birthdate);

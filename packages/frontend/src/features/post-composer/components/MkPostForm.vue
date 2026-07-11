@@ -150,7 +150,7 @@ import { DI } from '@/di.js';
 import { globalEvents } from '@/events.js';
 import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
 import { useUploader } from '@/features/drive/useUploader.js';
-import { startTour } from '@/utility/tour.js';
+import { startTour } from '@/features/onboarding/tour.js';
 import { closeTip } from '@/tips.js';
 
 const MkUploaderItems = defineAsyncComponent(() => import('@/features/drive/components/MkUploaderItems.vue'));

@@ -159,7 +159,7 @@ import MkInput from '@/components/MkInput.vue';
 import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
 import MkRadios from '@/components/MkRadios.vue';
 import MkSelect from '@/components/MkSelect.vue';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 import { Paginator } from '@/utility/paginator.js';
 import type { MkRadiosOption } from '@/components/MkRadios.vue';
 import type { MkSelectItem } from '@/components/MkSelect.vue';

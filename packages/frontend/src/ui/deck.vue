@@ -124,7 +124,7 @@ import { mainRouter } from '@/router.js';
 import { columns, layout, columnTypes, switchProfileMenu, addColumn as addColumnToStore, deleteProfile as deleteProfile_ } from '@/deck.js';
 import { shouldSuggestRestoreBackup } from '@/preferences/utility.js';
 import { shouldSuggestReload } from '@/utility/reload-suggest.js';
-import { startTour } from '@/utility/tour.js';
+import { startTour } from '@/features/onboarding/tour.js';
 import { closeTip } from '@/tips.js';
 
 const XStatusBars = defineAsyncComponent(() => import('@/ui/_common_/statusbars.vue'));

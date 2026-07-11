@@ -12,7 +12,7 @@ import type { MkABehavior } from '@/components/global/MkA.vue';
 import MkUrl from '@/components/global/MkUrl.vue';
 import MkTime from '@/components/global/MkTime.vue';
 import MkLink from '@/components/MkLink.vue';
-import MkMention from '@/components/MkMention.vue';
+import MkMention from '@/features/users/components/MkMention.vue';
 import MkEmoji from '@/components/global/MkEmoji.vue';
 import MkCustomEmoji from '@/components/global/MkCustomEmoji.vue';
 import MkCode from '@/features/code/components/MkCode.vue';

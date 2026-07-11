@@ -9,7 +9,7 @@ import type * as Misskey from 'misskey-js';
 import { popup } from '@/os.js';
 import { isTouchUsing } from '@/utility/touch.js';
 
-const MkUserPopup = defineAsyncComponent(() => import('@/components/MkUserPopup.vue'));
+const MkUserPopup = defineAsyncComponent(() => import('@/features/users/components/MkUserPopup.vue'));
 
 export class UserPreview {
 	private el: HTMLElement;

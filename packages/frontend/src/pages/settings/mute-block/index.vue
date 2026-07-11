@@ -181,7 +181,7 @@ import MkPagination from '@/components/MkPagination.vue';
 import { userPage } from '@/filters/user.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 import * as os from '@/os.js';
 import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';

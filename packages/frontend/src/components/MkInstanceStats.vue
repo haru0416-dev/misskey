@@ -57,18 +57,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, computed, ref } from 'vue';
 import type { MkSelectItem, ItemOption } from '@/components/MkSelect.vue';
-import type { ChartSrc } from '@/components/MkChart.vue';
+import type { ChartSrc } from '@/features/charts/components/MkChart.vue';
 import MkSelect from '@/components/MkSelect.vue';
-import MkChart from '@/components/MkChart.vue';
+import MkChart from '@/features/charts/components/MkChart.vue';
 import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import { instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
-import MkHeatmap from '@/components/MkHeatmap.vue';
+import MkHeatmap from '@/features/charts/components/MkHeatmap.vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
-import MkRetentionHeatmap from '@/components/MkRetentionHeatmap.vue';
-import MkRetentionLineChart from '@/components/MkRetentionLineChart.vue';
+import MkRetentionHeatmap from '@/features/charts/components/MkRetentionHeatmap.vue';
+import MkRetentionLineChart from '@/features/charts/components/MkRetentionLineChart.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import MkPieChart, { type InstanceForPie } from '@/pages/admin/overview/pie.vue';
 

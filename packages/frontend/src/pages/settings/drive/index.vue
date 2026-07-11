@@ -215,7 +215,7 @@ import FormSplit from '@/components/form/split.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import bytes from '@/filters/bytes.js';
-import MkChart from '@/components/MkChart.vue';
+import MkChart from '@/features/charts/components/MkChart.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { ensureSignin } from '@/i.js';

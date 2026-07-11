@@ -89,7 +89,7 @@ import MkObjectView from '@/components/MkObjectView.vue';
 import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';
 import FormSection from '@/components/form/section.vue';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import bytes from '@/filters/bytes.js';
 import * as os from '@/os.js';

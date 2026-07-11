@@ -107,7 +107,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkMediaImage from '@/features/media-viewer/components/MkMediaImage.vue';
 import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
-import MkFollowButton from '@/components/MkFollowButton.vue';
+import MkFollowButton from '@/features/users/components/MkFollowButton.vue';
 import MkContainer from '@/components/MkContainer.vue';
 import MkPagination from '@/components/MkPagination.vue';
 import MkPagePreview from '@/components/MkPagePreview.vue';

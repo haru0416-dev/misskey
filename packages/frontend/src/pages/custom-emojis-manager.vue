@@ -76,7 +76,7 @@ import { computed, markRaw, ref } from 'vue';
 import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkPagination from '@/components/MkPagination.vue';
-import MkRemoteEmojiEditDialog from '@/components/MkRemoteEmojiEditDialog.vue';
+import MkRemoteEmojiEditDialog from '@/features/custom-emojis/components/MkRemoteEmojiEditDialog.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import FormSplit from '@/components/form/split.vue';
 import { selectFile } from '@/features/drive/drive.js';

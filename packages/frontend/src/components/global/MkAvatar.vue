@@ -50,7 +50,7 @@ import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurh
 import MkA from './MkA.vue';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import { acct, userPage } from '@/filters/user.js';
-import MkUserOnlineIndicator from '@/components/MkUserOnlineIndicator.vue';
+import MkUserOnlineIndicator from '@/features/users/components/MkUserOnlineIndicator.vue';
 import { prefer } from '@/preferences.js';
 
 const animation = ref(prefer.animation);

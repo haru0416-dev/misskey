@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, inject, onMounted, useTemplateRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { getUnicodeEmojiOrNull } from '@shared/utility/emojilist.js';
-import MkCustomEmojiDetailedDialog from '@/components/MkCustomEmojiDetailedDialog.vue';
+import MkCustomEmojiDetailedDialog from '@/features/custom-emojis/components/MkCustomEmojiDetailedDialog.vue';
 import type { MenuItem } from '@/types/menu';
 import MkReactionIcon from '@/features/notes/components/MkReactionIcon.vue';
 import * as os from '@/os.js';
@@ -32,11 +32,11 @@ import MkReactionEffect from '@/features/notes/components/MkReactionEffect.vue';
 import { i18n } from '@/i18n.js';
 import * as sound from '@/utility/sound.js';
 import { checkReactionPermissions } from '@/features/notes/check-reaction-permissions.js';
-import { customEmojisMap } from '@/custom-emojis.js';
+import { customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
 import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
 import { noteEvents } from '@/features/notes/useNoteCapture.js';
-import { mute as muteEmoji, unmute as unmuteEmoji, checkMuted as isEmojiMuted } from '@/utility/emoji-mute.js';
+import { mute as muteEmoji, unmute as unmuteEmoji, checkMuted as isEmojiMuted } from '@/features/custom-emojis/emoji-mute.js';
 import { addToEmojiPalette } from '@/features/emoji-picker/emoji-palette.js';
 
 const props = defineProps<{

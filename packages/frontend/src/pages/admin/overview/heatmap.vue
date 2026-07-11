@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import MkHeatmap from '@/components/MkHeatmap.vue';
+import MkHeatmap from '@/features/charts/components/MkHeatmap.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 

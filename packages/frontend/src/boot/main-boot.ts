@@ -22,13 +22,13 @@ import { initializeSw } from '@/utility/initialize-sw.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { mainRouter } from '@/router.js';
 import { makeHotkey } from '@/utility/hotkey.js';
-import { addCustomEmoji, removeCustomEmojis, updateCustomEmojis } from '@/custom-emojis.js';
+import { addCustomEmoji, removeCustomEmojis, updateCustomEmojis } from '@/features/custom-emojis/custom-emojis.js';
 import { prefer } from '@/preferences.js';
 import { updateCurrentAccountPartial } from '@/accounts.js';
 import { unisonReload } from '@/utility/unison-reload.js';
 
 const MkUpdated = defineAsyncComponent(() => import('@/components/MkUpdated.vue'));
-const MkUserSetupDialog = defineAsyncComponent(() => import('@/components/MkUserSetupDialog.vue'));
+const MkUserSetupDialog = defineAsyncComponent(() => import('@/features/onboarding/components/MkUserSetupDialog.vue'));
 const MkAnnouncementDialog = defineAsyncComponent(() => import('@/components/MkAnnouncementDialog.vue'));
 const MkDonation = defineAsyncComponent(() => import('@/components/MkDonation.vue'));
 const MkSourceCodeAvailablePopup = defineAsyncComponent(() => import('@/components/MkSourceCodeAvailablePopup.vue'));

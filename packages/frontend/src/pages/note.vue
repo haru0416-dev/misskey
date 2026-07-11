@@ -50,7 +50,7 @@ import * as Misskey from 'misskey-js';
 import { host } from '@shared/utility/config.js';
 import MkNoteDetailed from '@/features/notes/components/MkNoteDetailed.vue';
 import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
-import MkRemoteCaution from '@/components/MkRemoteCaution.vue';
+import MkRemoteCaution from '@/features/users/components/MkRemoteCaution.vue';
 import MkButton from '@/components/MkButton.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';

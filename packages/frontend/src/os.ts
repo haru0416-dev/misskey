@@ -33,13 +33,13 @@ import MkToast from '@/components/MkToast.vue';
 import MkDialog from '@/components/MkDialog.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { pleaseLogin } from '@/features/auth/please-login.js';
-import { showMovedDialog } from '@/utility/show-moved-dialog.js';
+import { showMovedDialog } from '@/features/users/show-moved-dialog.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { focusParent } from '@/utility/focus.js';
 
 const MkPasswordDialog = defineAsyncComponent(() => import('@/components/MkPasswordDialog.vue'));
 const MkFormDialog = defineAsyncComponent(() => import('@/components/MkFormDialog.vue'));
-const MkUserSelectDialog = defineAsyncComponent(() => import('@/components/MkUserSelectDialog.vue'));
+const MkUserSelectDialog = defineAsyncComponent(() => import('@/features/users/components/MkUserSelectDialog.vue'));
 const MkRoleSelectDialog = defineAsyncComponent(() => import('@/components/MkRoleSelectDialog.vue'));
 const MkEmojiPickerDialog = defineAsyncComponent(() => import('@/features/emoji-picker/components/MkEmojiPickerDialog.vue'));
 const MkCropperDialog = defineAsyncComponent(() => import('@/components/MkCropperDialog.vue'));

@@ -72,7 +72,7 @@ import type { PublicKeyCredentialRequestOptionsJSON, AuthenticationResponseJSON 
 import type { OpenOnRemoteOptions } from '@/features/auth/please-login.js';
 import type { PwResponse } from '@/features/auth/components/MkSignin.Password.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { showSuspendedDialog } from '@/utility/show-suspended-dialog.js';
+import { showSuspendedDialog } from '@/features/users/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 

@@ -237,7 +237,7 @@ import { useTooltip } from '@/composables/useTooltip.js';
 import { claimAchievement } from '@/utility/claim-achievement.js';
 import { getNoteSummary } from '@/features/notes/get-note-summary.js';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
-import { showMovedDialog } from '@/utility/show-moved-dialog.js';
+import { showMovedDialog } from '@/features/users/show-moved-dialog.js';
 import { isEnabledUrlPreview } from '@/utility/url-preview.js';
 import { focusPrev, focusNext } from '@/utility/focus.js';
 import { getAppearNote } from '@/features/notes/get-appear-note.js';
@@ -450,7 +450,7 @@ if (!props.mock) {
 				noteId: appearNote.id,
 				limit: 11,
 			}),
-			import('@/components/MkUsersTooltip.vue').then((x) => x.default),
+			import('@/features/users/components/MkUsersTooltip.vue').then((x) => x.default),
 		]);
 
 		const users = renotes.map(x => x.user);

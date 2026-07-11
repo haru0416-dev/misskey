@@ -8,7 +8,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 vi.mock('@/os.js', () => ({ post: vi.fn() }));
 vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: vi.fn() }));
 vi.mock('@/i.js', () => ({ $i: null }));
-vi.mock('@/utility/get-account-from-id.js', () => ({ getAccountFromId: vi.fn() }));
+vi.mock('@/features/users/get-account-from-id.js', () => ({ getAccountFromId: vi.fn() }));
 vi.mock('@/accounts.js', () => ({ login: vi.fn() }));
 vi.mock('@/router.js', () => ({
 	mainRouter: {

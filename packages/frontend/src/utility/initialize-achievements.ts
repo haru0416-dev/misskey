@@ -4,7 +4,7 @@
  */
 
 import { claimAchievement, claimedAchievements } from '@/utility/achievements.js';
-import { isBirthday } from '@/utility/is-birthday.js';
+import { isBirthday } from '@/features/users/is-birthday.js';
 import { $i } from '@/i.js';
 
 export function initializeAchievements(): void {

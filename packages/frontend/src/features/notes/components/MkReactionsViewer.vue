@@ -36,7 +36,7 @@ import { isSupportedEmoji } from '@shared/utility/emojilist.js';
 import XReaction from '@/features/notes/components/MkReactionsViewer.Reaction.vue';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
-import { customEmojisMap } from '@/custom-emojis.js';
+import { customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
 import { DI } from '@/di.js';
 
 const props = withDefaults(defineProps<{

@@ -14,7 +14,7 @@ vi.mock('@/utility/achievements.js', () => ({
 	claimAchievement: claimAchievementMock,
 }));
 
-vi.mock('@/utility/is-birthday.js', () => ({
+vi.mock('@/features/users/is-birthday.js', () => ({
 	isBirthday: () => false,
 }));
 

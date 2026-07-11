@@ -146,7 +146,7 @@ import type { GridSortOrderKey, RequestLogItem } from '@/pages/admin/custom-emoj
 import type { GridCellValueChangeEvent, GridEvent } from '@/components/grid/grid-event.js';
 import type { GridSetting } from '@/components/grid/grid.js';
 import type { SortOrder } from '@/components/MkSortOrderEditor.define.js';
-import MkRemoteEmojiEditDialog from '@/components/MkRemoteEmojiEditDialog.vue';
+import MkRemoteEmojiEditDialog from '@/features/custom-emojis/components/MkRemoteEmojiEditDialog.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/MkButton.vue';

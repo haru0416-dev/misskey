@@ -78,7 +78,7 @@ import { useInterval } from '@shared/utility/use-interval.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
-import XChannelFollowButton from '@/components/MkChannelFollowButton.vue';
+import XChannelFollowButton from '@/features/channels/components/MkChannelFollowButton.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i, iAmModerator } from '@/i.js';

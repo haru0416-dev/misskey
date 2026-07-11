@@ -51,7 +51,7 @@ import {
 	unmute as unmuteEmoji,
 	extractCustomEmojiName as customEmojiName,
 	extractCustomEmojiHost as customEmojiHost,
-} from '@/utility/emoji-mute.js';
+} from '@/features/custom-emojis/emoji-mute.js';
 
 const emojis = prefer.model('mutingEmojis');
 

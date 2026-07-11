@@ -123,8 +123,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed, watch, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
-import type { ChartSrc } from '@/components/MkChart.vue';
-import MkChart from '@/components/MkChart.vue';
+import type { ChartSrc } from '@/features/charts/components/MkChart.vue';
+import MkChart from '@/features/charts/components/MkChart.vue';
 import MkObjectView from '@/components/MkObjectView.vue';
 import FormLink from '@/components/form/link.vue';
 import MkLink from '@/components/MkLink.vue';
@@ -139,7 +139,7 @@ import number from '@/filters/number.js';
 import { iAmModerator, iAmAdmin } from '@/i.js';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import MkUserCardMini from '@/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 import MkPagination from '@/components/MkPagination.vue';
 import { getProxiedImageUrlNullable } from '@/utility/media-proxy.js';
 import { dateString } from '@/filters/date.js';

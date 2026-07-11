@@ -89,7 +89,7 @@ import MkFolder from '@/components/MkFolder.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { customEmojiCategories } from '@/custom-emojis.js';
+import { customEmojiCategories } from '@/features/custom-emojis/custom-emojis.js';
 import MkSwitch from '@/components/MkSwitch.vue';
 import { selectFile } from '@/features/drive/drive.js';
 import MkRolePreview from '@/components/MkRolePreview.vue';

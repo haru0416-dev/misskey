@@ -73,7 +73,7 @@ import { getScrollContainer } from '@shared/utility/scroll.js';
 import type { ApShowResponse } from 'misskey-js/entities.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
-import MkUserInfo from '@/components/MkUserInfo.vue';
+import MkUserInfo from '@/features/users/components/MkUserInfo.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
 import MkTab from '@/components/MkTab.vue';
