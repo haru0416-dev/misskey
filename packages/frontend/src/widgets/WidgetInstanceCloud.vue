@@ -8,8 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div class="">
 		<MkTagCloud v-if="activeInstances" ref="cloud">
 			<li v-for="instance in activeInstances" :key="instance.id">
-				<a @click.prevent="onInstanceClick(instance)">
-					<img style="width: 32px;" :src="getInstanceIcon(instance)">
+				<a :href="`/instance-info/${instance.host}`" :title="instance.name ?? instance.host" @click.prevent="onInstanceClick(instance)">
+					<img style="width: 32px;" :src="getInstanceIcon(instance)" :alt="instance.name ?? instance.host" loading="lazy">
 				</a>
 			</li>
 		</MkTagCloud>

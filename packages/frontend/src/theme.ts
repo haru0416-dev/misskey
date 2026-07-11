@@ -7,8 +7,6 @@
 
 import { ref, nextTick } from 'vue';
 import { EventEmitter } from 'eventemitter3';
-import lightTheme from '@shared/themes/_light.json5';
-import darkTheme from '@shared/themes/_dark.json5';
 import { version } from '@shared/utility/config.js';
 import { getBuiltinThemes, parseThemeCode, themeProps, compile } from '@shared/utility/theme.js';
 import type { Theme, CompiledTheme } from '@shared/utility/theme.js';
@@ -102,16 +100,8 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		this.applyTheme();
 	}
 
-	/** 通常のテーマのコンパイルに加え、ベースとなるテーマの値を解決し代入します。 */
 	private compile(theme: Theme) {
-		const _theme = deepClone(theme);
-
-		if (_theme.base != null) {
-			const base = [lightTheme, darkTheme].find((x) => x.id === _theme.base);
-			if (base) _theme.props = Object.assign({}, base.props, _theme.props);
-		}
-
-		return compile(_theme);
+		return compile(theme);
 	}
 
 	/** currentThemeを適用します。 */
@@ -122,26 +112,25 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		// 通常hiddenな時に呼ばれることはないが、iOSのPWAだとアプリ切り替え時に(何故か)hiddenな状態で(何故か)一瞬デバイスのダークモード判定が変わりapplyThemeが呼ばれる場合がある
 		if (window.document.startViewTransition != null && window.document.visibilityState === 'visible') {
 			window.document.documentElement.classList.add('_themeChanging_');
+			const finish = () => {
+				window.document.documentElement.classList.remove('_themeChanging_');
+				this.emit('themeChanged');
+			};
+			const fallback = (err: unknown) => {
+				console.error(err);
+				this.updateAttributes();
+				finish();
+			};
 			try {
-				window.document
-					.startViewTransition(async () => {
-						this.updateAttributes();
-						await nextTick();
-					})
-					.finished.then(() => {
-						window.document.documentElement.classList.remove('_themeChanging_');
-						this.emit('themeChanged');
-					});
+				const transition = window.document.startViewTransition(async () => {
+					this.updateAttributes();
+					await nextTick();
+				});
+				void transition.finished.then(finish, fallback);
 			} catch (err) {
 				// 様々な理由により startViewTransition は失敗することがある
 				// ref. https://github.com/misskey-dev/misskey/issues/16562
-
-				// FIXME: viewTransitonエラーはtry~catch貫通してそうな気配がする
-				console.error(err);
-
-				window.document.documentElement.classList.remove('_themeChanging_');
-				this.updateAttributes();
-				this.emit('themeChanged');
+				fallback(err);
 			}
 		} else {
 			this.updateAttributes();

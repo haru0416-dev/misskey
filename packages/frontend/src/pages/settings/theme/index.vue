@@ -211,6 +211,7 @@ import JSON5 from 'json5';
 import defaultLightTheme from '@shared/themes/l-light.json5';
 import defaultDarkTheme from '@shared/themes/d-green-lime.json5';
 import { isSafeMode } from '@shared/utility/config.js';
+import { getBuiltinThemes, parseThemeOrNull } from '@shared/utility/theme.js';
 import type { Theme } from '@shared/utility/theme.js';
 import * as os from '@/os.js';
 import MkSwitch from '@/components/MkSwitch.vue';
@@ -220,7 +221,6 @@ import MkFolder from '@/components/MkFolder.vue';
 import MkThemePreview from '@/components/MkThemePreview.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import { handleThemeInstallError, installTheme, removeTheme } from '@/theme.js';
-import { getBuiltinThemes } from '@shared/utility/theme.js';
 import { isDeviceDarkmode } from '@/utility/is-device-darkmode.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
@@ -237,10 +237,10 @@ getBuiltinThemes().then(themes => {
 	builtinThemes.value = themes;
 });
 
-const instanceDarkTheme = computed<Theme | null>(() => instance.defaultDarkTheme ? JSON5.parse(instance.defaultDarkTheme) : null);
+const instanceDarkTheme = computed<Theme | null>(() => parseThemeOrNull(instance.defaultDarkTheme));
 const installedDarkThemes = computed(() => installedThemes.value.filter(t => t.base === 'dark'));
 const builtinDarkThemes = computed(() => builtinThemes.value.filter(t => t.base === 'dark'));
-const instanceLightTheme = computed<Theme | null>(() => instance.defaultLightTheme ? JSON5.parse(instance.defaultLightTheme) : null);
+const instanceLightTheme = computed<Theme | null>(() => parseThemeOrNull(instance.defaultLightTheme));
 const installedLightThemes = computed(() => installedThemes.value.filter(t => t.base === 'light'));
 const builtinLightThemes = computed(() => builtinThemes.value.filter(t => t.base === 'light'));
 const themes = computed(() => uniqueBy([instanceDarkTheme.value, instanceLightTheme.value, ...builtinThemes.value, ...installedThemes.value].filter(x => x != null), theme => theme.id));

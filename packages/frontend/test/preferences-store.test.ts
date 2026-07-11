@@ -13,7 +13,7 @@ import type {
 	StorageProvider,
 	ValueOf,
 } from '@/preferences/store.js';
-import { createPreferencesStore } from '@/preferences/store.js';
+import { createPreferencesStore, isPossiblyNonNormalizedPreferencesProfile } from '@/preferences/store.js';
 
 function createProfile(
 	preferences: PossiblyNonNormalizedPreferencesProfile['preferences'] = {},
@@ -47,6 +47,27 @@ function createStorageProvider(options?: {
 	};
 	return { provider, saves, cloudSets };
 }
+
+describe('preferences profile validation', () => {
+	test('accepts a profile containing scoped preference records', () => {
+		expect(isPossiblyNonNormalizedPreferencesProfile(createProfile({
+			animation: [[{ server: 'example.test' }, true, { sync: true }]],
+		}))).toBe(true);
+	});
+
+	test.each([
+		null,
+		{},
+		{ ...createProfile(), modifiedAt: Number.NaN },
+		{ ...createProfile(), preferences: [] },
+		{ ...createProfile(), preferences: { animation: true } },
+		{ ...createProfile(), preferences: { animation: [[null, true, {}]] } },
+		{ ...createProfile(), preferences: { animation: [[{}, true]] } },
+		{ ...createProfile(), preferences: { animation: [[{}, true, { sync: 'yes' }]] } },
+	])('rejects an invalid profile: %j', profile => {
+		expect(isPossiblyNonNormalizedPreferencesProfile(profile)).toBe(false);
+	});
+});
 
 describe('Pinia preferences store', () => {
 	test('selects the account-scoped value during initialization', async () => {
