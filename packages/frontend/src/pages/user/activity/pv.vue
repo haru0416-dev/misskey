@@ -4,173 +4,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div>
-	<MkLoading v-if="fetching"/>
-	<div v-show="!fetching" :class="$style.root" class="_panel">
-		<canvas ref="chartEl"></canvas>
-		<MkChartLegend ref="legendEl" style="margin-top: 8px;"/>
-	</div>
+<div :class="$style.root" class="_panel">
+	<MkChart src="per-user-pv" :args="{ user }" span="day" :limit="30" :bar="true" :detailed="true"/>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, useTemplateRef, ref } from 'vue';
-import { Chart } from 'chart.js';
 import * as Misskey from 'misskey-js';
-import type { ChartDataset } from 'chart.js';
-import { misskeyApi } from '@/utility/misskey-api.js';
-import { store } from '@/store.js';
-import { useChartTooltip } from '@/composables/useChartTooltip.js';
-import { chartVLine } from '@/utility/chart-vline.js';
-import { initChart } from '@/utility/init-chart.js';
-import { chartLegend } from '@/utility/chart-legend.js';
-import { toChartSeries } from '@/utility/chart-helpers.js';
-import MkChartLegend from '@/components/MkChartLegend.vue';
+import MkChart from '@/components/MkChart.vue';
 
-initChart();
-
-const props = defineProps<{
-	user: Misskey.entities.User;
-}>();
-
-const chartEl = useTemplateRef('chartEl');
-const legendEl = useTemplateRef('legendEl');
-const now = new Date();
-let chartInstance: Chart | null = null;
-const chartLimit = 30;
-const fetching = ref(true);
-
-const { handler: externalTooltipHandler } = useChartTooltip();
-
-async function renderChart() {
-	if (chartEl.value == null) return;
-
-	if (chartInstance) {
-		chartInstance.destroy();
-	}
-
-	const format = (arr: number[]) => toChartSeries(now, arr);
-
-	const raw = await misskeyApi('charts/user/pv', { userId: props.user.id, limit: chartLimit, span: 'day' });
-
-	const vLineColor = store.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
-
-	const colorUser = '#3498db';
-	const colorVisitor = '#2ecc71';
-	const colorUser2 = '#3498db88';
-	const colorVisitor2 = '#2ecc7188';
-
-	function makeDataset(label: string, data: ChartDataset['data'], extra: Partial<ChartDataset> = {}): ChartDataset {
-		return Object.assign({
-			label: label,
-			data: data,
-			parsing: false,
-			pointRadius: 0,
-			borderWidth: 0,
-			borderJoinStyle: 'round',
-			borderRadius: 4,
-			barPercentage: 0.7,
-			categoryPercentage: 0.7,
-			fill: true,
-		/* @see <https://github.com/misskey-dev/misskey/pull/10365#discussion_r1155511107>
-		} satisfies ChartData, extra);
-		 */
-		}, extra);
-	}
-
-	chartInstance = new Chart(chartEl.value, {
-		type: 'bar',
-		data: {
-			datasets: [
-				makeDataset('UPV (user)', format(raw.upv.user).slice().reverse(), { backgroundColor: colorUser, stack: 'u' }),
-				makeDataset('UPV (visitor)', format(raw.upv.visitor).slice().reverse(), { backgroundColor: colorVisitor, stack: 'u' }),
-				makeDataset('NPV (user)', format(raw.pv.user).slice().reverse(), { backgroundColor: colorUser2, stack: 'n' }),
-				makeDataset('NPV (visitor)', format(raw.pv.visitor).slice().reverse(), { backgroundColor: colorVisitor2, stack: 'n' }),
-			],
-		},
-		options: {
-			aspectRatio: 3,
-			layout: {
-				padding: {
-					left: 0,
-					right: 8,
-					top: 0,
-					bottom: 0,
-				},
-			},
-			scales: {
-				x: {
-					type: 'time',
-					offset: true,
-					stacked: true,
-					time: {
-						unit: 'day',
-						displayFormats: {
-							day: 'M/d',
-							month: 'y/M',
-						},
-					},
-					grid: {
-						display: false,
-					},
-					ticks: {
-						display: true,
-						maxRotation: 0,
-						autoSkipPadding: 8,
-					},
-				},
-				y: {
-					position: 'left',
-					stacked: true,
-					suggestedMax: 10,
-					grid: {
-						display: true,
-					},
-					ticks: {
-						display: true,
-						//mirror: true,
-					},
-				},
-			},
-			interaction: {
-				intersect: false,
-				mode: 'index',
-			},
-			plugins: {
-				title: {
-					display: true,
-					text: 'Unique/Natural PV',
-					padding: {
-						top: 0,
-						bottom: 12,
-					},
-				},
-				legend: {
-					display: false,
-				},
-				tooltip: {
-					enabled: false,
-					mode: 'index',
-					animation: {
-						duration: 0,
-					},
-					external: externalTooltipHandler,
-				},
-			},
-		},
-		plugins: [chartVLine(vLineColor), chartLegend(legendEl.value)],
-	});
-
-	fetching.value = false;
-}
-
-onMounted(async () => {
-	renderChart();
-});
+defineProps<{ user: Misskey.entities.User }>();
 </script>
 
 <style lang="scss" module>
-.root {
-	padding: 20px;
-}
+.root { padding: 20px; }
 </style>

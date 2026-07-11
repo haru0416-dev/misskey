@@ -25,7 +25,7 @@ import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/
 import { createChannelInDatabase, updateChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/DriveFileStore.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
 import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
@@ -69,6 +69,7 @@ import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { toXListId } from '@/server/rest/notification.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
 import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, PostScheduledNoteJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
@@ -304,6 +305,10 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.uri, origin);
 			assert.strictEqual(typeof res.body.version, 'string');
 			assert.strictEqual(res.body.emailRequiredForSignup, meta.emailRequiredForSignup);
+			assert.strictEqual(res.body.signupRateLimitMinIntervalSeconds, meta.signupRateLimitMinIntervalSeconds);
+			assert.strictEqual(res.body.signupRateLimitMaxPerHour, meta.signupRateLimitMaxPerHour);
+			assert.strictEqual(res.body.translatorProvider, meta.translatorProvider);
+			assert.strictEqual(res.body.libreTranslateApiUrl, meta.libreTranslateApiUrl);
 			assert.strictEqual(res.body.federation, meta.federation);
 			assert.strictEqual(typeof res.body.proxyAccountId, 'string');
 			assert.strictEqual((res.body.policies as { canPublicNote?: boolean }).canPublicNote, true);
@@ -342,6 +347,11 @@ describe('Endpoints', () => {
 				const updated = await api('admin/update-meta', {
 					name: updatedName,
 					disableRegistration: null,
+					signupRateLimitMinIntervalSeconds: 15,
+					signupRateLimitMaxPerHour: 20,
+					translatorProvider: 'libreTranslate',
+					libreTranslateApiUrl: 'https://translate.example/base',
+					libreTranslateApiKey: 'test-key',
 					pinnedUsers: ['@alice', ''],
 					hiddenTags: [`hono-meta-${now}`, ''],
 					blockedHosts: ['Blocked.Example', ''],
@@ -367,6 +377,11 @@ describe('Endpoints', () => {
 				const after = await fetchMetaFromDatabase(db);
 				assert.strictEqual(after.name, updatedName);
 				assert.strictEqual(after.disableRegistration, before.disableRegistration);
+				assert.strictEqual(after.signupRateLimitMinIntervalSeconds, 15);
+				assert.strictEqual(after.signupRateLimitMaxPerHour, 20);
+				assert.strictEqual(after.translatorProvider, 'libreTranslate');
+				assert.strictEqual(after.libreTranslateApiUrl, 'https://translate.example/base');
+				assert.strictEqual(after.libreTranslateApiKey, 'test-key');
 				assert.deepStrictEqual(after.pinnedUsers, ['@alice']);
 				assert.deepStrictEqual(after.hiddenTags, [`hono-meta-${now}`]);
 				assert.deepStrictEqual(after.blockedHosts, ['blocked.example']);
@@ -397,6 +412,11 @@ describe('Endpoints', () => {
 			} finally {
 				await api('admin/update-meta', {
 					name: before.name,
+					signupRateLimitMinIntervalSeconds: before.signupRateLimitMinIntervalSeconds,
+					signupRateLimitMaxPerHour: before.signupRateLimitMaxPerHour,
+					translatorProvider: before.translatorProvider,
+					libreTranslateApiUrl: before.libreTranslateApiUrl,
+					libreTranslateApiKey: before.libreTranslateApiKey,
 					pinnedUsers: before.pinnedUsers,
 					hiddenTags: before.hiddenTags,
 					blockedHosts: before.blockedHosts,
@@ -6544,7 +6564,7 @@ describe('Endpoints', () => {
 				const entries = await redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 10);
 				return entries.map(([, values]) => {
 					const dataIndex = values.findIndex(value => value === 'data');
-					return JSON.parse(values[dataIndex + 1]!) as { type?: string; customBody?: string; customHeader?: string | null; customIcon?: string | null };
+					return JSON.parse(values[dataIndex + 1]!) as { id: string; type?: string; customBody?: string; customHeader?: string | null; customIcon?: string | null };
 				});
 			} finally {
 				await closeRedisConnection(redis);
@@ -6624,6 +6644,59 @@ describe('Endpoints', () => {
 			try {
 				const latestReadNotificationId = await redis.get(`latestReadNotification:${user.id}`);
 				assert.ok(latestReadNotificationId);
+			} finally {
+				await closeRedisConnection(redis);
+			}
+		});
+
+		test('notifications/delete は本人の通知だけを個別に削除する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hnd${suffix}` });
+			const other = await signup({ username: `hndo${suffix}` });
+
+			await api('notifications/test-notification', {}, user);
+			await new Promise(resolve => setTimeout(resolve, 100));
+			const notification = (await readNotificationTimeline(config, user.id)).find(item => item.type === 'test');
+			assert.ok(notification);
+
+			const wrongScopeToken = await createAppToken(user, ['read:account']);
+			const scopeDenied = await api('notifications/delete', { notificationId: notification.id }, { token: wrongScopeToken });
+			assert.strictEqual(scopeDenied.status, 403);
+
+			const otherDelete = await api('notifications/delete', { notificationId: notification.id }, other);
+			assert.strictEqual(otherDelete.status, 204);
+			assert.ok((await readNotificationTimeline(config, user.id)).some(item => item.id === notification.id));
+
+			const deleted = await api('notifications/delete', { notificationId: notification.id }, user);
+			assert.strictEqual(deleted.status, 204);
+			assert.strictEqual((await readNotificationTimeline(config, user.id)).some(item => item.id === notification.id), false);
+		});
+
+		test('notifications/delete はグルーピングされた通知をまとめて削除する', async () => {
+			const config = loadConfig();
+			const suffix = Date.now().toString(36).slice(-8);
+			const user = await signup({ username: `hndg${suffix}` });
+			const redis = createRedisClient(config);
+			const streamKey = `notificationTimeline:${user.id}`;
+			const unrelatedBefore = { id: genId(), createdAt: new Date().toISOString(), type: 'test' };
+			const reaction1 = { id: genId(), createdAt: new Date().toISOString(), type: 'reaction', noteId: genId(), notifierId: user.id, reaction: '❤' };
+			const reaction2 = { ...reaction1, id: genId() };
+			const unrelatedAfter = { id: genId(), createdAt: new Date().toISOString(), type: 'login' };
+
+			try {
+				for (const notification of [unrelatedBefore, reaction1, reaction2, unrelatedAfter]) {
+					await redis.xadd(streamKey, toXListId(notification.id), 'data', JSON.stringify(notification));
+				}
+
+				const deleted = await api('notifications/delete', { notificationId: reaction1.id, grouped: true }, user);
+				assert.strictEqual(deleted.status, 204);
+
+				const remaining = await readNotificationTimeline(config, user.id);
+				assert.strictEqual(remaining.some(item => item.id === reaction1.id), false);
+				assert.strictEqual(remaining.some(item => item.id === reaction2.id), false);
+				assert.strictEqual(remaining.some(item => item.id === unrelatedBefore.id), true);
+				assert.strictEqual(remaining.some(item => item.id === unrelatedAfter.id), true);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -9145,6 +9218,47 @@ describe('Endpoints', () => {
 			const searched = await api('notes/search', { query: uniqueText }, author);
 			assert.strictEqual(searched.status, 200);
 			assert.ok(searched.body.some((n: any) => n.id === searchNoteId));
+		});
+
+		test('notes/search は内容の詳細条件で絞り込める', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnsf${suffix}` });
+			const query = `hono-search-filter-${suffix}`;
+			const searchRole = await role(alice, {}, { canSearchNotes: { priority: 1, useDefault: false, value: true } });
+			await api('admin/roles/assign', { userId: author.id, roleId: searchRole.id }, alice);
+
+			const original = await post(author, { text: `${query} original` });
+			const reply = await post(author, { text: `${query} reply`, replyId: original.id });
+			const quote = await post(author, { text: `${query} quote`, renoteId: original.id });
+			const cw = await post(author, { text: `${query} cw`, cw: '内容注意' });
+			const followers = await post(author, { text: `${query} followers`, visibility: 'followers' });
+
+			const regularUpload = await uploadFile(author);
+			assert.ok(regularUpload.body != null);
+			const regularFile = await post(author, { text: `${query} file`, fileIds: [regularUpload.body.id] });
+
+			const sensitiveUpload = await uploadFile(author);
+			assert.ok(sensitiveUpload.body != null);
+			await updateDriveFileInDatabase(db, sensitiveUpload.body.id, { isSensitive: true });
+			const sensitiveFile = await post(author, { text: `${query} sensitive`, fileIds: [sensitiveUpload.body.id] });
+
+			const searchIds = async (params: Record<string, unknown>) => {
+				const result = await api('notes/search', { query, limit: 100, ...params }, author);
+				assert.strictEqual(result.status, 200);
+				return new Set(result.body.map(note => note.id));
+			};
+
+			assert.deepStrictEqual(await searchIds({ withReplies: true }), new Set([reply.id]));
+			assert.deepStrictEqual(await searchIds({ withQuotes: true }), new Set([quote.id]));
+			assert.deepStrictEqual(await searchIds({ withCw: true }), new Set([cw.id]));
+			assert.deepStrictEqual(await searchIds({ withFiles: true }), new Set([regularFile.id, sensitiveFile.id]));
+			assert.deepStrictEqual(await searchIds({ withSensitiveFiles: true }), new Set([sensitiveFile.id]));
+			assert.deepStrictEqual(await searchIds({ visibility: 'followers' }), new Set([followers.id]));
+
+			const withoutFiles = await searchIds({ withFiles: false });
+			assert.strictEqual(withoutFiles.has(regularFile.id), false);
+			assert.strictEqual(withoutFiles.has(sensitiveFile.id), false);
+			assert.strictEqual(withoutFiles.has(original.id), true);
 		});
 	});
 

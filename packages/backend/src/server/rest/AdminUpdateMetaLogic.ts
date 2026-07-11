@@ -8,6 +8,8 @@ import type { MiMeta } from '@/models/Meta.js';
 
 export const adminUpdateMetaParamDef = z.object({
 	disableRegistration: z.boolean().nullable().optional(),
+	signupRateLimitMinIntervalSeconds: z.number().int().min(0).max(86400).optional(),
+	signupRateLimitMaxPerHour: z.number().int().min(0).max(100000).optional(),
 	pinnedUsers: z.array(z.string()).nullable().optional(),
 	hiddenTags: z.array(z.string()).nullable().optional(),
 	blockedHosts: z.array(z.string()).nullable().optional(),
@@ -66,6 +68,9 @@ export const adminUpdateMetaParamDef = z.object({
 	langs: z.array(z.string()).optional(),
 	deeplAuthKey: z.string().nullable().optional(),
 	deeplIsPro: z.boolean().optional(),
+	translatorProvider: z.enum(['deepl', 'libreTranslate']).optional(),
+	libreTranslateApiUrl: z.union([z.string().url(), z.literal('')]).nullable().optional(),
+	libreTranslateApiKey: z.string().nullable().optional(),
 	enableEmail: z.boolean().optional(),
 	email: z.string().nullable().optional(),
 	smtpSecure: z.boolean().optional(),
@@ -152,6 +157,8 @@ export const adminUpdateMetaJsonSchema = {
 	type: 'object',
 	properties: {
 		disableRegistration: { type: 'boolean', nullable: true },
+		signupRateLimitMinIntervalSeconds: { type: 'integer', minimum: 0, maximum: 86400 },
+		signupRateLimitMaxPerHour: { type: 'integer', minimum: 0, maximum: 100000 },
 		pinnedUsers: {
 			type: 'array', nullable: true, items: {
 				type: 'string',
@@ -241,6 +248,9 @@ export const adminUpdateMetaJsonSchema = {
 		},
 		deeplAuthKey: { type: 'string', nullable: true },
 		deeplIsPro: { type: 'boolean' },
+		translatorProvider: { type: 'string', enum: ['deepl', 'libreTranslate'] },
+		libreTranslateApiUrl: { type: 'string', nullable: true },
+		libreTranslateApiKey: { type: 'string', nullable: true },
 		enableEmail: { type: 'boolean' },
 		email: { type: 'string', nullable: true },
 		smtpSecure: { type: 'boolean' },
@@ -374,6 +384,8 @@ const directAdminUpdateMetaFields = [
 	'cacheRemoteFiles',
 	'cacheRemoteSensitiveFiles',
 	'emailRequiredForSignup',
+	'signupRateLimitMinIntervalSeconds',
+	'signupRateLimitMaxPerHour',
 	'enableHcaptcha',
 	'hcaptchaSiteKey',
 	'hcaptchaSecretKey',
@@ -423,6 +435,7 @@ const directAdminUpdateMetaFields = [
 	'objectStorageSetPublicRead',
 	'objectStorageS3ForcePathStyle',
 	'deeplIsPro',
+	'translatorProvider',
 	'enableIpLogging',
 	'enableActiveEmailValidation',
 	'enableVerifymailApi',
@@ -577,6 +590,14 @@ export function buildAdminUpdateMetaPatch(
 
 	if (params.deeplAuthKey !== undefined) {
 		set.deeplAuthKey = emptyStringToNull(params.deeplAuthKey);
+	}
+
+	if (params.libreTranslateApiUrl !== undefined) {
+		set.libreTranslateApiUrl = emptyStringToNull(params.libreTranslateApiUrl);
+	}
+
+	if (params.libreTranslateApiKey !== undefined) {
+		set.libreTranslateApiKey = emptyStringToNull(params.libreTranslateApiKey);
 	}
 
 	if (params.verifymailAuthKey !== undefined) {

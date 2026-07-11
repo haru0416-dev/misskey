@@ -54,7 +54,6 @@ import { misskeyApiGet } from '@/utility/misskey-api.js';
 import number from '@/filters/number.js';
 import MkNumberDiff from '@/components/MkNumberDiff.vue';
 import { i18n } from '@/i18n.js';
-import { useChartTooltip } from '@/composables/useChartTooltip.js';
 
 const topSubInstancesForPie = ref<InstanceForPie[] | null>(null);
 const topPubInstancesForPie = ref<InstanceForPie[] | null>(null);
@@ -63,8 +62,6 @@ const federationPubActiveDiff = ref<number | null>(null);
 const federationSubActive = ref<number | null>(null);
 const federationSubActiveDiff = ref<number | null>(null);
 const fetching = ref(true);
-
-const { handler: externalTooltipHandler } = useChartTooltip();
 
 onMounted(async () => {
 	const chart = await misskeyApiGet('charts/federation', { limit: 2, span: 'day' });
@@ -194,4 +191,3 @@ onMounted(async () => {
 	}
 }
 </style>
-

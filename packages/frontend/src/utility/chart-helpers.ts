@@ -15,7 +15,7 @@ export function getDateDaysAgo(now: Date, ago: number): Date {
 }
 
 /**
- * day単位で並んだ数値配列を、chart.js用の { x: timestamp, y: value } 系列に変換する
+ * day単位で並んだ数値配列を、時系列グラフ用の { x: timestamp, y: value } 系列に変換する
  * (配列のインデックスがそのまま「now から何日前か」に対応する)
  */
 export function toChartSeries(now: Date, values: number[]): { x: number; y: number }[] {

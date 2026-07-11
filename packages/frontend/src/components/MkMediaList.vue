@@ -17,6 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					[$style.n11_1]: prefer.mediaListWithOneImageAppearance === '1_1',
 					[$style.n12_3]: prefer.mediaListWithOneImageAppearance === '2_3',
 				}] : count === 2 ? $style.n2 : count === 3 ? $style.n3 : count === 4 ? $style.n4 : $style.nMany,
+				square ? $style.square : null,
 			]"
 			@click="onGalleryClick"
 		>
@@ -42,10 +43,14 @@ import { prefer } from '@/preferences.js';
 
 const XVideo = defineAsyncComponent(() => import('@/components/MkMediaVideo.vue'));
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
 	mediaList: Misskey.entities.DriveFile[];
 	raw?: boolean;
-}>();
+	square?: boolean;
+	eagerLightbox?: boolean;
+}>(), {
+	eagerLightbox: true,
+});
 
 const gallery = useTemplateRef('gallery');
 const pswpZIndex = os.claimZIndex('middle');
@@ -255,7 +260,7 @@ onMounted(() => {
 	calcAspectRatio();
 	window.addEventListener('popstate', popstateHandler);
 
-	if (getGalleryImages().length > 0) {
+	if (props.eagerLightbox && getGalleryImages().length > 0) {
 		void ensureLightbox();
 	}
 });
@@ -363,8 +368,28 @@ defineExpose({
 	&.nMany {
 		grid-template-columns: 1fr 1fr;
 
-		> .media {
+		> .media:nth-child(n) {
 			aspect-ratio: 16/9;
+		}
+	}
+
+	&.square {
+		min-height: 0;
+		max-height: none;
+		aspect-ratio: 1 / 1;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-rows: repeat(2, minmax(0, 1fr));
+
+		> .media:nth-child(n) {
+			grid-column: auto;
+			grid-row: auto;
+			aspect-ratio: auto;
+			border-radius: 0;
+		}
+
+		> .media:only-child {
+			grid-column: 1 / -1;
+			grid-row: 1 / -1;
 		}
 	}
 }
@@ -375,7 +400,7 @@ defineExpose({
 }
 
 @container (min-width: 500px) {
-	.medias.gridInWideArea {
+	.medias.gridInWideArea:not(.square) {
 		display: grid;
 		aspect-ratio: auto;
 		grid-template-columns: repeat(4, 1fr);

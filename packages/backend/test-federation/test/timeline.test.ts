@@ -52,6 +52,7 @@ describe('Timeline', () => {
 			},
 			'note', msg => msg.text === text,
 			channelParams,
+			expect ? 1500 : 750,
 		);
 		strictEqual(streamingFired, expect);
 

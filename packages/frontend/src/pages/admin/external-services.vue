@@ -25,25 +25,44 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</MkFolder>
 				</SearchMarker>
 
-				<SearchMarker v-slot="slotProps">
+				<SearchMarker v-slot="slotProps" :keywords="['translation', 'deepl', 'libretranslate']">
 					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
-						<template #label><SearchLabel>DeepL Translation</SearchLabel></template>
+						<template #label><SearchLabel>{{ i18n.ts._translationService.translation }}</SearchLabel></template>
 
 						<div class="_gaps_m">
-							<SearchMarker>
+							<MkRadios
+								v-model="translatorProvider"
+								:options="[
+									{ value: 'deepl', label: 'DeepL' },
+									{ value: 'libreTranslate', label: 'LibreTranslate' },
+								]"
+							>
+								<template #label><SearchLabel>{{ i18n.ts._translationService.provider }}</SearchLabel></template>
+							</MkRadios>
+
+							<template v-if="translatorProvider === 'deepl'">
 								<MkInput v-model="deeplAuthKey">
 									<template #prefix><i class="ti ti-key"></i></template>
-									<template #label><SearchLabel>Auth Key</SearchLabel></template>
+									<template #label><SearchLabel>{{ i18n.ts._translationService.apiKey }}</SearchLabel></template>
 								</MkInput>
-							</SearchMarker>
-
-							<SearchMarker>
 								<MkSwitch v-model="deeplIsPro">
-									<template #label><SearchLabel>Pro account</SearchLabel></template>
+									<template #label><SearchLabel>{{ i18n.ts._translationService.deeplProAccount }}</SearchLabel></template>
 								</MkSwitch>
-							</SearchMarker>
+							</template>
 
-							<MkButton primary @click="save_deepl">Save</MkButton>
+							<template v-else>
+								<MkInput v-model="libreTranslateApiUrl" type="url" inputmode="url" autocomplete="url" :spellcheck="false">
+									<template #prefix><i class="ti ti-link"></i></template>
+									<template #label><SearchLabel>{{ i18n.ts._translationService.apiUrl }}</SearchLabel></template>
+									<template #caption>{{ i18n.ts._translationService.apiUrlDescription }}</template>
+								</MkInput>
+								<MkInput v-model="libreTranslateApiKey">
+									<template #prefix><i class="ti ti-key"></i></template>
+									<template #label><SearchLabel>{{ i18n.ts._translationService.apiKeyOptional }}</SearchLabel></template>
+								</MkInput>
+							</template>
+
+							<MkButton primary @click="save_translation">{{ i18n.ts.save }}</MkButton>
 						</div>
 					</MkFolder>
 				</SearchMarker>
@@ -64,17 +83,24 @@ import { fetchInstance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkFolder from '@/components/MkFolder.vue';
+import MkRadios from '@/components/MkRadios.vue';
 
 const meta = await misskeyApi('admin/meta');
 
 const deeplAuthKey = ref(meta.deeplAuthKey ?? '');
 const deeplIsPro = ref(meta.deeplIsPro);
+const translatorProvider = ref(meta.translatorProvider);
+const libreTranslateApiUrl = ref(meta.libreTranslateApiUrl ?? '');
+const libreTranslateApiKey = ref(meta.libreTranslateApiKey ?? '');
 const googleAnalyticsMeasurementId = ref(meta.googleAnalyticsMeasurementId ?? '');
 
-function save_deepl() {
+function save_translation() {
 	os.apiWithDialog('admin/update-meta', {
 		deeplAuthKey: deeplAuthKey.value,
 		deeplIsPro: deeplIsPro.value,
+		translatorProvider: translatorProvider.value,
+		libreTranslateApiUrl: libreTranslateApiUrl.value,
+		libreTranslateApiKey: libreTranslateApiKey.value,
 	}).then(() => {
 		fetchInstance(true);
 	});

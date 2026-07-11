@@ -42,6 +42,7 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
+import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { packClipsManyForHonoApi, type HonoApiClipDependencies } from './clips.js';
@@ -886,6 +887,12 @@ export const notesSearchParamDef = z.object({
 	host: z.string().optional(),
 	userId: misskeyId().nullable().optional().default(null),
 	channelId: misskeyId().nullable().optional().default(null),
+	withFiles: z.boolean().nullable().optional().default(null),
+	withSensitiveFiles: z.boolean().nullable().optional().default(null),
+	withReplies: z.boolean().nullable().optional().default(null),
+	withQuotes: z.boolean().nullable().optional().default(null),
+	withCw: z.boolean().nullable().optional().default(null),
+	visibility: z.enum(['public', 'home', 'followers', 'specified']).nullable().optional().default(null),
 });
 
 type NotesSearchParams = {
@@ -901,6 +908,12 @@ type NotesSearchParams = {
 	host?: string;
 	userId?: string | null;
 	channelId?: string | null;
+	withFiles?: boolean | null;
+	withSensitiveFiles?: boolean | null;
+	withReplies?: boolean | null;
+	withQuotes?: boolean | null;
+	withCw?: boolean | null;
+	visibility?: MiNote['visibility'] | null;
 };
 
 export async function handleHonoApiNotesSearch(
@@ -935,6 +948,12 @@ export async function handleHonoApiNotesSearch(
 		host: params.host,
 		rangeStartId: params.rangeStartAt != null ? genId(params.rangeStartAt - 1) : null,
 		rangeEndId: params.rangeEndAt != null ? genId(params.rangeEndAt + 1) : null,
+		withFiles: params.withFiles,
+		withSensitiveFiles: params.withSensitiveFiles,
+		withReplies: params.withReplies,
+		withQuotes: params.withQuotes,
+		withCw: params.withCw,
+		visibility: params.visibility,
 	});
 
 	return await packNoteManyForHonoApi(deps, notes, me);

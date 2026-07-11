@@ -20,12 +20,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkStreamingNotesTimeline
 		v-else-if="column.tl"
 		ref="timeline"
-		:key="column.tl + withRenotes + withReplies + onlyFiles"
+		:key="column.tl + withRenotes + withReplies + onlyFiles + mediaView"
 		:src="column.tl"
 		:withRenotes="withRenotes"
 		:withReplies="withReplies"
 		:withSensitive="withSensitive"
 		:onlyFiles="onlyFiles"
+		:viewMode="mediaView ? 'media' : 'notes'"
 		:sound="true"
 		:customSound="soundSetting"
 	/>
@@ -57,6 +58,7 @@ const withRenotes = ref(props.column.withRenotes ?? true);
 const withReplies = ref(props.column.withReplies ?? false);
 const withSensitive = ref(props.column.withSensitive ?? true);
 const onlyFiles = ref(props.column.onlyFiles ?? false);
+const mediaView = ref(props.column.mediaView ?? false);
 
 watch(withRenotes, v => {
 	updateColumn(props.column.id, {
@@ -79,7 +81,17 @@ watch(withSensitive, v => {
 watch(onlyFiles, v => {
 	updateColumn(props.column.id, {
 		onlyFiles: v,
+		...(v ? {} : { mediaView: false }),
 	});
+	if (!v) mediaView.value = false;
+});
+
+watch(mediaView, v => {
+	updateColumn(props.column.id, {
+		mediaView: v,
+		...(v ? { onlyFiles: true } : {}),
+	});
+	if (v) onlyFiles.value = true;
 });
 
 watch(soundSetting, v => {
@@ -149,6 +161,10 @@ const menu = computed<MenuItem[]>(() => {
 		text: i18n.ts.fileAttachedOnly,
 		ref: onlyFiles,
 		disabled: hasWithReplies(props.column.tl) ? withReplies : false,
+	}, {
+		type: 'switch',
+		text: i18n.ts.mediaTimeline,
+		ref: mediaView,
 	}, {
 		type: 'switch',
 		text: i18n.ts.withSensitive,

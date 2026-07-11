@@ -2,6 +2,7 @@ import { deepStrictEqual, strictEqual } from 'assert';
 import { readFile } from 'fs/promises';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { Object as FedifyObject } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
 import { WebSocket } from 'ws';
 
@@ -35,6 +36,18 @@ export type Request = <
 ) => Promise<Misskey.api.SwitchCaseResponseType<E, P>>;
 
 type Host = 'a.test' | 'b.test';
+
+export async function fetchActivityPubObject(uri: string): Promise<FedifyObject> {
+	const response = await fetch(uri, {
+		headers: {
+			accept: 'application/activity+json',
+		},
+	});
+	strictEqual(response.status, 200);
+	strictEqual(response.headers.get('content-type')?.startsWith('application/activity+json'), true);
+
+	return await FedifyObject.fromJsonLd(await response.json());
+}
 
 export async function sleep(ms = 250): Promise<void> {
 	return new Promise(resolve => setTimeout(resolve, ms));
@@ -233,6 +246,7 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 	// @ts-expect-error TODO: why getting error here?
 	cond: (msg: Parameters<Misskey.Channels[C]['events'][T]>[0]) => boolean,
 	params?: Misskey.Channels[C]['params'],
+	timeoutMs = 1500,
 ): Promise<boolean> {
 	const stream = new Misskey.Stream(`wss://${host}`, { token: user.i }, { WebSocket });
 	try {
@@ -246,10 +260,11 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 			}) as any);
 		});
 
+		await connection.ready;
 		await trigger();
 		return await Promise.race([
 			receivePromise,
-			sleep(500).then(() => false),
+			sleep(timeoutMs).then(() => false),
 		]);
 	} finally {
 		stream.close();
@@ -265,6 +280,9 @@ export async function isNoteUpdatedEventFired(
 ): Promise<boolean> {
 	const stream = new Misskey.Stream(`wss://${host}`, { token: user.i }, { WebSocket });
 	try {
+		if (stream.state !== 'connected') {
+			await new Promise<void>(resolve => stream.once('_connected_', resolve));
+		}
 		stream.send('s', { id: noteId });
 
 		const receivePromise = new Promise<boolean>((resolve) => {
@@ -279,7 +297,7 @@ export async function isNoteUpdatedEventFired(
 
 		return await Promise.race([
 			receivePromise,
-			sleep(500).then(() => false),
+			sleep(2000).then(() => false),
 		]);
 	} finally {
 		stream.close();
@@ -293,7 +311,7 @@ export async function assertNotificationReceived(
 	cond: (notification: Misskey.entities.Notification) => boolean,
 	expect: boolean,
 ) {
-	const streamingFired = await isFired(receiverHost, receiver, 'main', trigger, 'notification', cond);
+	const streamingFired = await isFired(receiverHost, receiver, 'main', trigger, 'notification', cond, undefined, expect ? 1500 : 750);
 	strictEqual(streamingFired, expect);
 
 	const endpointFired = await receiver.client.request('i/notifications', {})

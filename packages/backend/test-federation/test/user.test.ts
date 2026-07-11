@@ -1,7 +1,8 @@
 import { describe, test, beforeAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
+import { Person } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
-import { createAccount, deepStrictEqualWithExcludedFields, fetchAdmin, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep } from './utils.js';
+import { createAccount, deepStrictEqualWithExcludedFields, fetchActivityPubObject, fetchAdmin, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep } from './utils.js';
 
 const [aAdmin, bAdmin] = await Promise.all([
 	fetchAdmin('a.test'),
@@ -47,6 +48,25 @@ describe('User', () => {
 					'lastFetchedAt',
 					'publicReactions',
 				]);
+			});
+
+			test('Fedify can parse the actor document', async () => {
+				const uri = `https://a.test/users/${alice.id}`;
+				const localUser = await aliceWatcher.client.request('users/show', { userId: alice.id });
+				const actor = await fetchActivityPubObject(uri);
+
+				assert(actor instanceof Person);
+				strictEqual(actor.id?.href, uri);
+				strictEqual(actor.preferredUsername, alice.username);
+				strictEqual(actor.inboxId?.href, `${uri}/inbox`);
+				strictEqual(actor.outboxId?.href, `${uri}/outbox`);
+				strictEqual(actor.followersId?.href, `${uri}/followers`);
+				strictEqual(actor.followingId?.href, `${uri}/following`);
+				strictEqual(actor.published?.epochMilliseconds, Date.parse(localUser.createdAt));
+
+				const publicKey = await actor.getPublicKey();
+				assert(publicKey != null);
+				strictEqual(publicKey.ownerId?.href, uri);
 			});
 		});
 

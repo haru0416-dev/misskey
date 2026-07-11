@@ -113,7 +113,12 @@ export class I18n<T extends ILocale> {
 
 					console.error(`Unexpected locale key: ${String(p)}`);
 
-					return new Proxy({} as ILocale, new Handler());
+					// A locale can temporarily be stale while the development server is
+					// rebuilding it. Returning an object here makes Vue inspect and stringify
+					// the proxy, which turns its internal keys into more locale lookups and can
+					// ultimately break rendering. Keep the diagnostic, but degrade to a safe
+					// display value until the updated locale is loaded.
+					return String(p);
 				}
 			}
 

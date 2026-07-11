@@ -23,6 +23,7 @@ import { appendVerifiedLinkToUserProfileInDatabase, fetchUserProfileByUserIdOrFa
 import { fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/UserStore.js';
 import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { parseId } from '@/misc/id/parse-id.js';
 import * as Acct from '@/misc/acct.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
@@ -265,6 +266,7 @@ export async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependenc
 		sharedInbox: `${deps.config.url}/inbox`,
 		endpoints: { sharedInbox: `${deps.config.url}/inbox` },
 		url: `${deps.config.url}/@${user.username}`,
+		published: parseId(user.id).date.toISOString(),
 		preferredUsername: user.username,
 		name: user.name,
 		summary: profile.description ? createMfmService(deps.config as Config).toHtml(mfm.parse(profile.description)) : null,

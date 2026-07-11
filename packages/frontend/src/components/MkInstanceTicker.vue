@@ -4,7 +4,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="$style.root" :style="themeColorStyle">
+<div
+	:class="[
+		$style.root,
+		{ [$style.compact]: displayMode === 'compact', [$style.iconOnly]: displayMode === 'icon' },
+	]"
+	:style="themeColorStyle"
+	:title="instanceName"
+	:role="displayMode === 'icon' ? 'img' : undefined"
+	:aria-label="displayMode === 'icon' ? instanceName : undefined"
+>
 	<img v-if="faviconUrl" :class="$style.icon" :src="faviconUrl"/>
 	<div :class="$style.name">{{ instanceName }}</div>
 </div>
@@ -17,14 +26,17 @@ import type { CSSProperties } from 'vue';
 import { instance as localInstance } from '@/instance.js';
 import { getProxiedImageUrlNullable } from '@/utility/media-proxy.js';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
 	host: string | null;
 	instance?: {
 		faviconUrl?: string | null
 		name?: string | null
 		themeColor?: string | null
-	}
-}>();
+	};
+	displayMode?: 'normal' | 'compact' | 'icon';
+}>(), {
+	displayMode: 'normal',
+});
 
 // if no instance data is given, this is for the local instance
 const instanceName = computed(() => props.host == null ? localInstanceName : props.instance?.name ?? props.host);
@@ -88,5 +100,30 @@ $height: 2ex;
 	color: var(--MI_THEME-fg);
 	-webkit-text-stroke: var(--MI_THEME-panel) .225em;
 	paint-order: stroke fill;
+}
+
+.compact {
+	max-width: 9em;
+	height: 1.6ex;
+
+	.icon {
+		height: 1.6ex;
+	}
+
+	.name {
+		font-size: 0.78em;
+		text-overflow: ellipsis;
+		overflow: hidden;
+	}
+}
+
+.iconOnly {
+	width: $height;
+	border-radius: 4px;
+	mask-image: none;
+
+	.name {
+		display: none;
+	}
 }
 </style>

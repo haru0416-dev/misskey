@@ -3305,6 +3305,15 @@ export type paths = {
          */
         post: operations['notifications___create'];
     };
+    '/notifications/delete': {
+        /**
+         * notifications/delete
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:notifications*
+         */
+        post: operations['notifications___delete'];
+    };
     '/notifications/flush': {
         /**
          * notifications/flush
@@ -9545,11 +9554,17 @@ export interface operations {
                         backgroundImageUrl: string | null;
                         deeplAuthKey: string | null;
                         deeplIsPro: boolean;
+                        /** @enum {string} */
+                        translatorProvider: 'deepl' | 'libreTranslate';
+                        libreTranslateApiUrl: string | null;
+                        libreTranslateApiKey: string | null;
                         defaultDarkTheme: string | null;
                         defaultLightTheme: string | null;
                         clientOptions: components['schemas']['MetaClientOptions'];
                         description: string | null;
                         disableRegistration: boolean;
+                        signupRateLimitMinIntervalSeconds: number;
+                        signupRateLimitMaxPerHour: number;
                         impressumUrl: string | null;
                         maintainerEmail: string | null;
                         maintainerName: string | null;
@@ -13251,6 +13266,8 @@ export interface operations {
             content: {
                 'application/json': {
                     disableRegistration?: boolean | null;
+                    signupRateLimitMinIntervalSeconds?: number;
+                    signupRateLimitMaxPerHour?: number;
                     pinnedUsers?: string[] | null;
                     hiddenTags?: string[] | null;
                     blockedHosts?: string[] | null;
@@ -13312,6 +13329,10 @@ export interface operations {
                     langs?: string[];
                     deeplAuthKey?: string | null;
                     deeplIsPro?: boolean;
+                    /** @enum {string} */
+                    translatorProvider?: 'deepl' | 'libreTranslate';
+                    libreTranslateApiUrl?: string | null;
+                    libreTranslateApiKey?: string | null;
                     enableEmail?: boolean;
                     email?: string | null;
                     smtpSecure?: boolean;
@@ -31876,6 +31897,18 @@ export interface operations {
                     userId?: string | null;
                     /** @default null */
                     channelId?: string | null;
+                    /** @default null */
+                    withFiles?: boolean | null;
+                    /** @default null */
+                    withSensitiveFiles?: boolean | null;
+                    /** @default null */
+                    withReplies?: boolean | null;
+                    /** @default null */
+                    withQuotes?: boolean | null;
+                    /** @default null */
+                    withCw?: boolean | null;
+                    /** @default null */
+                    visibility?: ('public' | 'home' | 'followers' | 'specified') | null;
                 };
             };
         };
@@ -32739,6 +32772,71 @@ export interface operations {
             };
             /** @description Too many requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    notifications___delete: {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    notificationId: string;
+                    /** @default false */
+                    grouped?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
                 headers: {
                     [name: string]: unknown;
                 };

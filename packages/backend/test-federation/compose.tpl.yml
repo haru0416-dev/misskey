@@ -59,6 +59,10 @@ services:
         target: /misskey/packages/frontend-embed/package.json
         read_only: true
       - type: bind
+        source: ../../frontend-shared/package.json
+        target: /misskey/packages/frontend-shared/package.json
+        read_only: true
+      - type: bind
         source: ../scripts/compile_config.js
         target: /misskey/packages/backend/scripts/compile_config.js
         read_only: true
@@ -69,6 +73,14 @@ services:
       - type: bind
         source: ../../aiscript/package.json
         target: /misskey/packages/aiscript/package.json
+        read_only: true
+      - type: bind
+        source: ../../mfm-js/package.json
+        target: /misskey/packages/mfm-js/package.json
+        read_only: true
+      - type: bind
+        source: ../../mfm-js/built
+        target: /misskey/packages/mfm-js/built
         read_only: true
       - type: bind
         source: ../../sw/package.json
@@ -124,7 +136,7 @@ services:
         read_only: true
     working_dir: /misskey
     command: >
-      bash -c "
+      bash -ec "
         bun install --frozen-lockfile
         bun run --bun --filter backend migrate
         bun run --bun --filter backend start

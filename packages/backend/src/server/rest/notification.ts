@@ -10,6 +10,7 @@ import type { Config } from '@/config.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { misskeyId } from '@/misc/zod-params.js';
 import { parseUuidv7Full } from '@/misc/id/uuidv7.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -130,6 +131,11 @@ export const notificationsCreateParamDef = z.object({
 	body: z.string(),
 	header: z.string().nullable().optional(),
 	icon: z.string().nullable().optional(),
+});
+
+export const notificationsDeleteParamDef = z.object({
+	notificationId: misskeyId(),
+	grouped: z.boolean().optional().default(false),
 });
 
 type NotificationsCreateParams = {
@@ -545,6 +551,56 @@ export async function handleHonoApiNotificationsCreate(
 		customHeader: params.header ?? token?.name ?? null,
 		customIcon: params.icon ?? token?.iconUrl ?? null,
 	});
+}
+
+function notificationGroupKey(notification: Record<string, unknown>): string | null {
+	if (notification.type === 'reaction' && typeof notification.noteId === 'string') {
+		return `reaction:${notification.noteId}`;
+	}
+	if (notification.type === 'renote' && typeof notification.targetNoteId === 'string') {
+		return `renote:${notification.targetNoteId}`;
+	}
+	return null;
+}
+
+export async function handleHonoApiNotificationsDelete(
+	deps: HonoApiNotificationDependencies,
+	me: MiUser,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const params = parseHonoApiParams(notificationsDeleteParamDef, body);
+	const streamKey = `notificationTimeline:${me.id}`;
+	const redisId = toXListId(params.notificationId);
+	let idsToDelete = [redisId];
+
+	if (params.grouped) {
+		const entries = await deps.redis.xrevrange(streamKey, '+', '-');
+		const targetIndex = entries.findIndex(([id]) => id === redisId);
+		if (targetIndex !== -1) {
+			const parseNotification = (fields: string[]): Record<string, unknown> | null => {
+				const dataIndex = fields.indexOf('data');
+				if (dataIndex === -1 || fields[dataIndex + 1] == null) return null;
+				try {
+					return JSON.parse(fields[dataIndex + 1]) as Record<string, unknown>;
+				} catch {
+					return null;
+				}
+			};
+			const targetKey = notificationGroupKey(parseNotification(entries[targetIndex]![1]) ?? {});
+			if (targetKey != null) {
+				let first = targetIndex;
+				let last = targetIndex;
+				while (first > 0 && notificationGroupKey(parseNotification(entries[first - 1]![1]) ?? {}) === targetKey) first--;
+				while (last + 1 < entries.length && notificationGroupKey(parseNotification(entries[last + 1]![1]) ?? {}) === targetKey) last++;
+				idsToDelete = entries.slice(first, last + 1).map(([id]) => id);
+			}
+		}
+	}
+
+	if (idsToDelete.length > 0) {
+		await deps.redis.xdel(streamKey, ...idsToDelete);
+	}
+	deps.publishMainStream?.(me.id, 'notificationFlushed');
 }
 
 export function handleHonoApiNotificationsFlush(deps: HonoApiNotificationDependencies, me: MiUser): void {

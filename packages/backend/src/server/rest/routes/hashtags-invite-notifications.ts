@@ -8,7 +8,7 @@ import { assertCredential, assertTokenPermission, authenticateHonoApiToken } fro
 import { rolePermissionDeniedError } from '../error.js';
 import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from '../hashtags.js';
 import { handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from '../invite.js';
-import { handleHonoApiNotificationsCreate, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification } from '../notification.js';
+import { handleHonoApiNotificationsCreate, handleHonoApiNotificationsDelete, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification } from '../notification.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { getHonoApiRolePolicies } from '../role-policy.js';
 import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
@@ -145,6 +145,18 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 			assertTokenPermission(auth, 'write:notifications');
 
 			handleHonoApiNotificationsFlush(deps, auth.user);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/notifications/delete', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:notifications');
+
+			await handleHonoApiNotificationsDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});

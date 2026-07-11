@@ -5,11 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root">
-	<canvas ref="chartEl"></canvas>
-	<MkChartLegend ref="legendEl" style="margin-top: 8px;"/>
-	<div v-if="fetching" :class="$style.fetching">
-		<MkLoading/>
-	</div>
+	<MkDataChart :series="displaySeries" :ariaLabel="`${i18n.ts.statistics}: ${src}`" :height="chartHeight" :loading="fetching" :stacked="stacked" :detailed="detailed" :bytes="chartData?.bytes"/>
 </div>
 </template>
 
@@ -46,21 +42,11 @@ export type ChartSrc =
 
 <script lang="ts" setup>
 
-import { onMounted, ref, useTemplateRef, watch } from 'vue';
-import { Chart } from 'chart.js';
+import { computed, onMounted, ref, shallowRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
-import { store } from '@/store.js';
-import { useChartTooltip } from '@/composables/useChartTooltip.js';
-import { chartVLine } from '@/utility/chart-vline.js';
-import { alpha } from '@/utility/color.js';
-import date from '@/filters/date.js';
-import bytes from '@/filters/bytes.js';
-import { initChart } from '@/utility/init-chart.js';
-import { chartLegend } from '@/utility/chart-legend.js';
-import MkChartLegend from '@/components/MkChartLegend.vue';
-
-initChart();
+import { i18n } from '@/i18n.js';
+import MkDataChart, { type DataChartSeries } from '@/components/MkDataChart.vue';
 
 const props = withDefaults(defineProps<{
 	src: ChartSrc;
@@ -92,8 +78,6 @@ const props = withDefaults(defineProps<{
 	nowForChromatic: undefined,
 });
 
-const legendEl = useTemplateRef('legendEl');
-
 const sum = (...arr: number[][]) => arr.reduce((r, a) => r.map((b, i) => a[i] + b));
 const negate = (arr: number[]) => arr.map((x) => -x);
 
@@ -107,31 +91,19 @@ const colors = {
 	lime: '#bde800',
 	cyan: '#00e0e0',
 };
-const colorSets = [colors.blue, colors.green, colors.yellow, colors.red, colors.purple];
-const getColor = (i: number) => {
-	return colorSets[i % colorSets.length];
-};
-
 // eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const now = props.nowForChromatic != null ? new Date(props.nowForChromatic) : new Date();
-let chartInstance: Chart | null = null;
-let chartData: {
-	series: {
-		name: string;
-		type: 'line' | 'area';
-		color?: string;
-		dashed?: boolean;
-		hidden?: boolean;
-		data: {
-			x: number;
-			y: number;
-		}[];
-	}[];
+type ChartData = {
+	series: DataChartSeries[];
 	bytes?: boolean;
-} | null = null;
-
-const chartEl = useTemplateRef('chartEl');
+};
+const chartData = shallowRef<ChartData | null>(null);
 const fetching = ref(true);
+const chartHeight = computed(() => Math.max(220, Math.round(700 / (props.aspectRatio ?? 2.5))));
+const displaySeries = computed(() => (chartData.value?.series ?? []).map(series => ({
+	...series,
+	type: props.bar ? 'bar' as const : series.type,
+})));
 
 const getDate = (ago: number) => {
 	const y = now.getFullYear();
@@ -149,157 +121,7 @@ const format = (arr: number[]) => {
 	}));
 };
 
-const { handler: externalTooltipHandler } = useChartTooltip();
-
-const render = () => {
-	if (chartData == null || chartEl.value == null) return;
-	if (chartInstance) {
-		chartInstance.destroy();
-	}
-
-	const vLineColor = store.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
-
-	const maxes = chartData.series.map((x, i) => Math.max(...x.data.map(d => d.y)));
-
-	chartInstance = new Chart(chartEl.value, {
-		type: props.bar ? 'bar' : 'line',
-		data: {
-			labels: new Array(props.limit).fill(0).map((_, i) => date(getDate(i))).slice().reverse(),
-			datasets: chartData.series.map((x, i) => ({
-				parsing: false,
-				label: x.name,
-				data: x.data.slice().reverse(),
-				tension: 0.3,
-				pointRadius: 0,
-				borderWidth: props.bar ? 0 : 2,
-				borderColor: x.color ? x.color : getColor(i),
-				borderDash: x.dashed ? [5, 5] : [],
-				borderJoinStyle: 'round',
-				borderRadius: props.bar ? 3 : undefined,
-				backgroundColor: props.bar ? (x.color ? x.color : getColor(i)) : alpha(x.color ? x.color : getColor(i), 0.1),
-				gradient: props.bar ? undefined : {
-					backgroundColor: {
-						axis: 'y',
-						colors: {
-							0: alpha(x.color ? x.color : getColor(i), 0),
-							[maxes[i]]: alpha(x.color ? x.color : getColor(i), 0.35),
-						},
-					},
-				},
-				barPercentage: 0.9,
-				categoryPercentage: 0.9,
-				fill: x.type === 'area',
-				clip: 8,
-				hidden: !!x.hidden,
-			})),
-		},
-		options: {
-			aspectRatio: props.aspectRatio || 2.5,
-			layout: {
-				padding: {
-					left: 0,
-					right: 8,
-					top: 0,
-					bottom: 0,
-				},
-			},
-			scales: {
-				x: {
-					type: 'time',
-					stacked: props.stacked,
-					offset: false,
-					time: {
-						unit: props.span === 'day' ? 'month' : 'day',
-						displayFormats: {
-							day: 'M/d',
-							month: 'y/M',
-						},
-					},
-					grid: {
-					},
-					ticks: {
-						stepSize: 1,
-						display: props.detailed,
-						maxRotation: 0,
-						autoSkipPadding: 16,
-					},
-					min: getDate(props.limit).getTime(),
-				},
-				y: {
-					position: 'left',
-					stacked: props.stacked,
-					suggestedMax: 50,
-					grid: {
-					},
-					ticks: {
-						display: props.detailed,
-						//mirror: true,
-					},
-				},
-			},
-			interaction: {
-				intersect: false,
-				mode: 'index',
-			},
-			elements: {
-				point: {
-					hoverRadius: 5,
-					hoverBorderWidth: 2,
-				},
-			},
-			plugins: {
-				legend: {
-					display: false,
-				},
-				tooltip: {
-					enabled: false,
-					mode: 'index',
-					animation: {
-						duration: 0,
-					},
-					external: externalTooltipHandler,
-					callbacks: {
-						label: (item) => `${item.dataset.label}: ${chartData?.bytes ? bytes(item.parsed.y * 1000, 1) : item.parsed.y.toString()}`,
-					},
-				},
-				zoom: props.detailed ? {
-					pan: {
-						enabled: true,
-					},
-					zoom: {
-						wheel: {
-							enabled: true,
-						},
-						pinch: {
-							enabled: true,
-						},
-						drag: {
-							enabled: false,
-						},
-						mode: 'x',
-					},
-					limits: {
-						x: {
-							min: 'original',
-							max: 'original',
-						},
-						y: {
-							min: 'original',
-							max: 'original',
-						},
-					},
-				} : undefined,
-			},
-		},
-		plugins: [chartVLine(vLineColor), ...(props.detailed && legendEl.value ? [chartLegend(legendEl.value)] : [])],
-	});
-};
-
-const exportData = () => {
-	// TODO
-};
-
-const fetchFederationChart = async (): Promise<typeof chartData> => {
+const fetchFederationChart = async (): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/federation', { limit: props.limit, span: props.span });
 	return {
 		series: [{
@@ -349,7 +171,7 @@ const fetchFederationChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchApRequestChart = async (): Promise<typeof chartData> => {
+const fetchApRequestChart = async (): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/ap-request', { limit: props.limit, span: props.span });
 	return {
 		series: [{
@@ -371,7 +193,7 @@ const fetchApRequestChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchNotesChart = async (type: 'local' | 'remote' | 'combined'): Promise<typeof chartData> => {
+const fetchNotesChart = async (type: 'local' | 'remote' | 'combined'): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/notes', { limit: props.limit, span: props.span });
 	return {
 		series: [{
@@ -418,7 +240,7 @@ const fetchNotesChart = async (type: 'local' | 'remote' | 'combined'): Promise<t
 	};
 };
 
-const fetchNotesTotalChart = async (): Promise<typeof chartData> => {
+const fetchNotesTotalChart = async (): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/notes', { limit: props.limit, span: props.span });
 	return {
 		series: [{
@@ -437,7 +259,7 @@ const fetchNotesTotalChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchUsersChart = async (total: boolean): Promise<typeof chartData> => {
+const fetchUsersChart = async (total: boolean): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/users', { limit: props.limit, span: props.span });
 	return {
 		series: [{
@@ -465,7 +287,7 @@ const fetchUsersChart = async (total: boolean): Promise<typeof chartData> => {
 	};
 };
 
-const fetchActiveUsersChart = async (): Promise<typeof chartData> => {
+const fetchActiveUsersChart = async (): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/active-users', { limit: props.limit, span: props.span });
 	return {
 		series: [{
@@ -517,7 +339,7 @@ const fetchActiveUsersChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchDriveChart = async (): Promise<typeof chartData> => {
+const fetchDriveChart = async (): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/drive', { limit: props.limit, span: props.span });
 	return {
 		bytes: true,
@@ -553,7 +375,7 @@ const fetchDriveChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchDriveFilesChart = async (): Promise<typeof chartData> => {
+const fetchDriveFilesChart = async (): Promise<ChartData> => {
 	const raw = await misskeyApiGet('charts/drive', { limit: props.limit, span: props.span });
 	return {
 		series: [{
@@ -588,7 +410,7 @@ const fetchDriveFilesChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchInstanceRequestsChart = async (): Promise<typeof chartData> => {
+const fetchInstanceRequestsChart = async (): Promise<ChartData> => {
 	const host = props.args?.host;
 	if (host == null) return { series: [] };
 
@@ -613,7 +435,7 @@ const fetchInstanceRequestsChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchInstanceUsersChart = async (total: boolean): Promise<typeof chartData> => {
+const fetchInstanceUsersChart = async (total: boolean): Promise<ChartData> => {
 	const host = props.args?.host;
 	if (host == null) return { series: [] };
 
@@ -631,7 +453,7 @@ const fetchInstanceUsersChart = async (total: boolean): Promise<typeof chartData
 	};
 };
 
-const fetchInstanceNotesChart = async (total: boolean): Promise<typeof chartData> => {
+const fetchInstanceNotesChart = async (total: boolean): Promise<ChartData> => {
 	const host = props.args?.host;
 	if (host == null) return { series: [] };
 
@@ -649,7 +471,7 @@ const fetchInstanceNotesChart = async (total: boolean): Promise<typeof chartData
 	};
 };
 
-const fetchInstanceFfChart = async (total: boolean): Promise<typeof chartData> => {
+const fetchInstanceFfChart = async (total: boolean): Promise<ChartData> => {
 	const host = props.args?.host;
 	if (host == null) return { series: [] };
 
@@ -675,7 +497,7 @@ const fetchInstanceFfChart = async (total: boolean): Promise<typeof chartData> =
 	};
 };
 
-const fetchInstanceDriveUsageChart = async (total: boolean): Promise<typeof chartData> => {
+const fetchInstanceDriveUsageChart = async (total: boolean): Promise<ChartData> => {
 	const host = props.args?.host;
 	if (host == null) return { series: [] };
 
@@ -694,7 +516,7 @@ const fetchInstanceDriveUsageChart = async (total: boolean): Promise<typeof char
 	};
 };
 
-const fetchInstanceDriveFilesChart = async (total: boolean): Promise<typeof chartData> => {
+const fetchInstanceDriveFilesChart = async (total: boolean): Promise<ChartData> => {
 	const host = props.args?.host;
 	if (host == null) return { series: [] };
 
@@ -712,7 +534,7 @@ const fetchInstanceDriveFilesChart = async (total: boolean): Promise<typeof char
 	};
 };
 
-const fetchPerUserNotesChart = async (): Promise<typeof chartData> => {
+const fetchPerUserNotesChart = async (): Promise<ChartData> => {
 	const userId = props.args?.user?.id;
 	if (userId == null) return { series: [] };
 
@@ -747,7 +569,7 @@ const fetchPerUserNotesChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchPerUserPvChart = async (): Promise<typeof chartData> => {
+const fetchPerUserPvChart = async (): Promise<ChartData> => {
 	const userId = props.args?.user?.id;
 	if (userId == null) return { series: [] };
 
@@ -777,7 +599,7 @@ const fetchPerUserPvChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchPerUserFollowingChart = async (): Promise<typeof chartData> => {
+const fetchPerUserFollowingChart = async (): Promise<ChartData> => {
 	const userId = props.args?.user?.id;
 	if (userId == null) return { series: [] };
 
@@ -795,7 +617,7 @@ const fetchPerUserFollowingChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchPerUserFollowersChart = async (): Promise<typeof chartData> => {
+const fetchPerUserFollowersChart = async (): Promise<ChartData> => {
 	const userId = props.args?.user?.id;
 	if (userId == null) return { series: [] };
 
@@ -813,7 +635,7 @@ const fetchPerUserFollowersChart = async (): Promise<typeof chartData> => {
 	};
 };
 
-const fetchPerUserDriveChart = async (): Promise<typeof chartData> => {
+const fetchPerUserDriveChart = async (): Promise<ChartData> => {
 	const userId = props.args?.user?.id;
 	if (userId == null) return { series: [] };
 
@@ -868,9 +690,9 @@ const fetchAndRender = async () => {
 		}
 	};
 	fetching.value = true;
-	chartData = await fetchData();
+	chartData.value = await fetchData();
 	fetching.value = false;
-	render();
+
 };
 
 watch(() => [props.src, props.span], fetchAndRender);
@@ -886,17 +708,4 @@ onMounted(() => {
 	position: relative;
 }
 
-.fetching {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	-webkit-backdrop-filter: var(--MI-blur, blur(12px));
-	backdrop-filter: var(--MI-blur, blur(12px));
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	cursor: wait;
-}
 </style>

@@ -840,6 +840,8 @@ export type NotesUserListTimelineResponse =
     operations['notes___user-list-timeline']['responses']['200']['content']['application/json'];
 export type NotificationsCreateRequest =
     operations['notifications___create']['requestBody']['content']['application/json'];
+export type NotificationsDeleteRequest =
+    operations['notifications___delete']['requestBody']['content']['application/json'];
 export type PagePushRequest = operations['page-push']['requestBody']['content']['application/json'];
 export type PagesCreateRequest = operations['pages___create']['requestBody']['content']['application/json'];
 export type PagesCreateResponse = operations['pages___create']['responses']['200']['content']['application/json'];

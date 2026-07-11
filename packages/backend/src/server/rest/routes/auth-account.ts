@@ -11,6 +11,7 @@ import { handleHonoApiAppCreate, handleHonoApiAppShow } from '../app.js';
 import { handleHonoApiSigninFlow } from '../signin.js';
 import { handleHonoApiSigninWithPasskey } from '../signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi } from '../signup.js';
+import { assertHonoApiRateLimit, type HonoApiEndpointRateLimit } from '../rate-limit.js';
 import { jsonResponse, emptyResponse, signinFlowResponse, signinWithPasskeyResponse, jsonBody, tokenFromRequest, getRequestIp, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
@@ -21,6 +22,10 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 
 	app.post('/signup', async (c) => {
 		return await runApiEndpoint(c, async () => {
+			const limitation = getSignupRateLimit(deps.meta);
+			if (limitation != null) {
+				await assertHonoApiRateLimit(deps, 'signup', limitation, getRequestIp(c, deps.config));
+			}
 			const body = await jsonBody(c);
 			return jsonResponse(c, await signupWithHonoApi(deps, body ?? {}));
 		});
@@ -158,4 +163,19 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			return jsonResponse(c, await handleHonoApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body));
 		});
 	});
+}
+
+export function getSignupRateLimit(meta: ApiShellDependencies['meta']): HonoApiEndpointRateLimit | null {
+	const minInterval = meta.signupRateLimitMinIntervalSeconds > 0
+		? meta.signupRateLimitMinIntervalSeconds * 1000
+		: undefined;
+	const max = meta.signupRateLimitMaxPerHour > 0 ? meta.signupRateLimitMaxPerHour : undefined;
+
+	if (minInterval == null && max == null) return null;
+
+	return {
+		minInterval,
+		duration: max == null ? undefined : 60 * 60 * 1000,
+		max,
+	};
 }

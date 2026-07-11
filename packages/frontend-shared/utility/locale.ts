@@ -7,7 +7,9 @@ import { lang, version } from '@shared/utility/config.js';
 import type { Locale } from 'i18n';
 
 // ここはビルド時に const locale = JSON.parse("...") みたいな感じで置き換えられるので top-level await は消える
-export let locale: Locale = await window.fetch(`/assets/locales/${lang}.${version}.json`).then(
+export let locale: Locale = await window.fetch(`/assets/locales/${lang}.${version}.json`, {
+	cache: _DEV_ ? 'no-store' : 'default',
+}).then(
 	(r) => r.json(),
 	() => null,
 );

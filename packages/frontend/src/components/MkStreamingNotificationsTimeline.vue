@@ -29,8 +29,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
 					<span>{{ getSeparatorInfo(paginator.items.value[i -1].createdAt, notification.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
 				</div>
-				<MkNote v-if="['reply', 'quote', 'mention'].includes(notification.type) && 'note' in notification" :class="$style.content" :note="notification.note" :withHardMute="true"/>
-				<XNotification v-else :class="$style.content" :notification="notification" :withTime="true" :full="true"/>
+				<div :class="$style.contentRow">
+					<MkNote v-if="['reply', 'quote', 'mention'].includes(notification.type) && 'note' in notification" :class="$style.content" :note="notification.note" :withHardMute="true"/>
+					<XNotification v-else :class="$style.content" :notification="notification" :withTime="true" :full="true"/>
+					<button
+						v-tooltip="i18n.ts._notification.hideThisNotification"
+						class="_button"
+						:class="$style.dismissButton"
+						:aria-label="i18n.ts._notification.hideThisNotification"
+						@click="dismissNotification(notification)"
+					>
+						<i class="ti ti-x"></i>
+					</button>
+				</div>
 			</div>
 		</component>
 		<button v-show="paginator.canFetchOlder.value" key="_more_" v-appear="prefer.enableInfiniteScroll ? paginator.fetchOlder : null" :disabled="paginator.fetchingOlder.value" class="_button" :class="$style.more" @click="paginator.fetchOlder">
@@ -57,6 +68,8 @@ import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/utility/timeline-date-separate.js';
 import { Paginator } from '@/utility/paginator.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import * as os from '@/os.js';
 
 const props = defineProps<{
 	excludeTypes?: typeof notificationTypes[number][] | null;
@@ -158,6 +171,21 @@ function reload() {
 	return paginator.reload();
 }
 
+async function dismissNotification(notification: Misskey.entities.Notification) {
+	try {
+		await misskeyApi('notifications/delete', {
+			notificationId: notification.id,
+			grouped: prefer.useGroupedNotifications,
+		});
+		paginator.items.value = paginator.items.value.filter(item => item.id !== notification.id);
+	} catch {
+		await os.alert({
+			type: 'error',
+			text: i18n.ts.somethingHappened,
+		});
+	}
+}
+
 let connection: Misskey.IChannelConnection<Misskey.Channels['main']> | null = null;
 
 onMounted(() => {
@@ -227,6 +255,35 @@ defineExpose({
 
 .item {
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
+}
+
+.contentRow {
+	display: flex;
+	align-items: flex-start;
+}
+
+.content {
+	flex: 1;
+	min-width: 0;
+}
+
+.dismissButton {
+	display: grid;
+	flex: 0 0 40px;
+	width: 40px;
+	height: 40px;
+	margin: 12px 8px 0 0;
+	place-items: center;
+	border-radius: 999px;
+	color: var(--MI_THEME-fg);
+	opacity: 0.55;
+
+	&:hover,
+	&:focus-visible {
+		color: var(--MI_THEME-fg);
+		background: var(--MI_THEME-buttonHoverBg);
+		opacity: 1;
+	}
 }
 
 .date {
