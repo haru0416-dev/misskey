@@ -1412,6 +1412,76 @@ export interface Locale extends ILocale {
      * フォルダーは空です
      */
     "emptyFolder": string;
+    "_chart": {
+        /**
+         * ピーク
+         */
+        "peak": string;
+        /**
+         * 表示する系列
+         */
+        "series": string;
+        /**
+         * この期間のデータはありません
+         */
+        "noData": string;
+        /**
+         * 閲覧
+         */
+        "read": string;
+        /**
+         * 投稿
+         */
+        "write": string;
+        /**
+         * 完了
+         */
+        "completed": string;
+        /**
+         * 失敗
+         */
+        "failed": string;
+        /**
+         * 処理数
+         */
+        "process": string;
+        /**
+         * 実行中
+         */
+        "active": string;
+        /**
+         * 遅延
+         */
+        "delayed": string;
+        /**
+         * 待機中
+         */
+        "waiting": string;
+        /**
+         * 受信
+         */
+        "incoming": string;
+        /**
+         * 送信
+         */
+        "outgoing": string;
+        /**
+         * 送信成功
+         */
+        "outgoingSucceeded": string;
+        /**
+         * 送信失敗
+         */
+        "outgoingFailed": string;
+        /**
+         * 継続率
+         */
+        "retention": string;
+        /**
+         * 開始日
+         */
+        "startDate": string;
+    };
     /**
      * ここにファイルをドロップしてアップロード
      */

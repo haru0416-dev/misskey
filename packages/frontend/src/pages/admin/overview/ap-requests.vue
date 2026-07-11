@@ -4,265 +4,43 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div>
-	<MkLoading v-if="fetching"/>
-	<div v-show="!fetching" :class="$style.root">
-		<div class="charts _panel">
-			<div class="chart">
-				<canvas ref="chartEl2"></canvas>
-			</div>
-			<div class="chart">
-				<canvas ref="chartEl"></canvas>
-			</div>
-		</div>
-	</div>
+<div :class="$style.root" class="_panel">
+	<section>
+		<h3>{{ chartText('incoming') }}</h3>
+		<MkDataChart :series="incoming" :ariaLabel="chartText('incoming')" :loading="fetching" :height="190"/>
+	</section>
+	<section>
+		<h3>{{ chartText('outgoing') }}</h3>
+		<MkDataChart :series="outgoing" :ariaLabel="chartText('outgoing')" :loading="fetching" :height="260"/>
+	</section>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, useTemplateRef, ref } from 'vue';
-import { Chart } from 'chart.js';
+import { onMounted, ref } from 'vue';
 import isChromatic from 'chromatic';
+import MkDataChart, { type DataChartSeries } from '@/components/MkDataChart.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { useChartTooltip } from '@/composables/useChartTooltip.js';
-import { chartVLine } from '@/utility/chart-vline.js';
-import { store } from '@/store.js';
-import { alpha } from '@/utility/color.js';
-import { initChart } from '@/utility/init-chart.js';
-import { getDateDaysAgo, toChartSeries } from '@/utility/chart-helpers.js';
+import { toChartSeries } from '@/utility/chart-helpers.js';
+import { chartText } from '@/utility/chart-i18n.js';
 
-initChart();
-
-const chartLimit = 50;
-const chartEl = useTemplateRef('chartEl');
-const chartEl2 = useTemplateRef('chartEl2');
 const fetching = ref(true);
-
-const { handler: externalTooltipHandler } = useChartTooltip();
-const { handler: externalTooltipHandler2 } = useChartTooltip();
+const incoming = ref<DataChartSeries[]>([]);
+const outgoing = ref<DataChartSeries[]>([]);
 
 onMounted(async () => {
-	if (chartEl.value == null) return;
-	if (chartEl2.value == null) return;
-
 	const now = isChromatic() ? new Date('2024-08-31T10:00:00Z') : new Date();
-
-	const format = (arr: number[]) => toChartSeries(now, arr);
-
-	const formatMinus = (arr: number[]) => toChartSeries(now, arr.map(v => -v));
-
-	const raw = await misskeyApi('charts/ap-request', { limit: chartLimit, span: 'day' });
-
-	const vLineColor = store.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
-	const succColor = '#87e000';
-	const failColor = '#ff4400';
-
-	const succMax = Math.max(...raw.deliverSucceeded);
-	const failMax = Math.max(...raw.deliverFailed);
-
-	const chartInstance = new Chart(chartEl.value, {
-		type: 'line',
-		data: {
-			datasets: [{
-				parsing: false,
-				label: 'Out: Succ',
-				data: format(raw.deliverSucceeded).slice().reverse(),
-				tension: 0.3,
-				pointRadius: 0,
-				borderWidth: 2,
-				borderColor: succColor,
-				borderJoinStyle: 'round',
-				borderRadius: 4,
-				backgroundColor: alpha(succColor, 0.35),
-				fill: true,
-				clip: 8,
-			}, {
-				parsing: false,
-				label: 'Out: Fail',
-				data: formatMinus(raw.deliverFailed).slice().reverse(),
-				tension: 0.3,
-				pointRadius: 0,
-				borderWidth: 2,
-				borderColor: failColor,
-				borderJoinStyle: 'round',
-				borderRadius: 4,
-				backgroundColor: alpha(failColor, 0.35),
-				fill: true,
-				clip: 8,
-			}],
-		},
-		options: {
-			aspectRatio: 2.5,
-			layout: {
-				padding: {
-					left: 0,
-					right: 8,
-					top: 0,
-					bottom: 0,
-				},
-			},
-			scales: {
-				x: {
-					type: 'time',
-					stacked: true,
-					offset: false,
-					time: {
-						unit: 'day',
-					},
-					grid: {
-						display: true,
-					},
-					ticks: {
-						display: true,
-						maxRotation: 0,
-						autoSkipPadding: 16,
-					},
-					min: getDateDaysAgo(now, chartLimit).getTime(),
-				},
-				y: {
-					position: 'left',
-					suggestedMax: 10,
-					grid: {
-						display: true,
-					},
-					ticks: {
-						display: true,
-						//mirror: true,
-						callback: (value, index, values) => (value as number) < 0 ? -value : value,
-					},
-				},
-			},
-			interaction: {
-				intersect: false,
-				mode: 'index',
-			},
-			elements: {
-				point: {
-					hoverRadius: 5,
-					hoverBorderWidth: 2,
-				},
-			},
-			plugins: {
-				legend: {
-					display: false,
-				},
-				tooltip: {
-					enabled: false,
-					mode: 'index',
-					animation: {
-						duration: 0,
-					},
-					external: externalTooltipHandler,
-					callbacks: {
-						label: context => `${context.dataset.label}: ${Math.abs(context.parsed.y)}`,
-					},
-				},
-			},
-		},
-		plugins: [chartVLine(vLineColor)],
-	});
-
-	const chartInstance2 = new Chart(chartEl2.value, {
-		type: 'bar',
-		data: {
-			datasets: [{
-				parsing: false,
-				label: 'In',
-				data: format(raw.inboxReceived).slice().reverse(),
-				tension: 0.3,
-				pointRadius: 0,
-				borderWidth: 0,
-				borderJoinStyle: 'round',
-				borderRadius: 4,
-				backgroundColor: '#0cc2d6',
-				barPercentage: 0.8,
-				categoryPercentage: 0.9,
-				fill: true,
-				clip: 8,
-			}],
-		},
-		options: {
-			aspectRatio: 5,
-			layout: {
-				padding: {
-					left: 0,
-					right: 8,
-					top: 0,
-					bottom: 0,
-				},
-			},
-			scales: {
-				x: {
-					type: 'time',
-					offset: false,
-					time: {
-						unit: 'day',
-						displayFormats: {
-							day: 'M/d',
-							month: 'y/M',
-						},
-					},
-					grid: {
-						display: false,
-					},
-					ticks: {
-						display: false,
-						maxRotation: 0,
-						autoSkipPadding: 16,
-					},
-					min: getDateDaysAgo(now, chartLimit).getTime(),
-				},
-				y: {
-					position: 'left',
-					suggestedMax: 10,
-					grid: {
-						display: true,
-					},
-				},
-			},
-			interaction: {
-				intersect: false,
-				mode: 'index',
-			},
-			elements: {
-				point: {
-					hoverRadius: 5,
-					hoverBorderWidth: 2,
-				},
-			},
-			plugins: {
-				legend: {
-					display: false,
-				},
-				tooltip: {
-					enabled: false,
-					mode: 'index',
-					animation: {
-						duration: 0,
-					},
-					external: externalTooltipHandler2,
-				},
-			},
-		},
-		plugins: [chartVLine(vLineColor)],
-	});
-
+	const raw = await misskeyApi('charts/ap-request', { limit: 50, span: 'day' });
+	incoming.value = [{ name: chartText('incoming'), type: 'bar', data: toChartSeries(now, raw.inboxReceived) }];
+	outgoing.value = [
+		{ name: chartText('outgoingSucceeded'), type: 'area', data: toChartSeries(now, raw.deliverSucceeded) },
+		{ name: chartText('outgoingFailed'), type: 'area', data: toChartSeries(now, raw.deliverFailed) },
+	];
 	fetching.value = false;
 });
 </script>
 
 <style lang="scss" module>
-.root {
-	&:global {
-		> .charts {
-			> .chart {
-				padding: 16px;
-
-				&:first-child {
-					border-bottom: solid 0.5px var(--MI_THEME-divider);
-				}
-			}
-		}
-	}
-}
+.root { display: grid; gap: 16px; padding: 16px; }
+.root h3 { margin: 0 0 12px; font-size: 1em; }
 </style>

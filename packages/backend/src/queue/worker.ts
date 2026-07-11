@@ -54,6 +54,7 @@ import {
 } from './handlers/db.js';
 import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, type HonoQueueEmojisDependencies } from './handlers/emojis.js';
 import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './handlers/delete-account.js';
+import type { SystemJobName } from './system-job-schedulers.js';
 
 export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueInboxDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & HonoQueueCheckModeratorsActivityDependencies & {
 	config: Config;
@@ -215,19 +216,21 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	//#endregion
 
 	//#region system
+	const systemJobHandlers = {
+		clean: () => handleHonoQueueClean(deps),
+		aggregateRetention: () => handleHonoQueueAggregateRetention(deps),
+		tickCharts: () => handleHonoQueueTickCharts(deps),
+		resyncCharts: () => handleHonoQueueResyncCharts(deps),
+		cleanCharts: () => handleHonoQueueCleanCharts(deps),
+		checkExpiredMutings: () => handleHonoQueueCheckExpiredMutings(deps),
+		bakeBufferedReactions: () => handleHonoQueueBakeBufferedReactions(deps),
+		cleanRemoteNotes: (job) => handleHonoQueueCleanRemoteNotes(deps, job),
+		checkModeratorsActivity: () => handleHonoQueueCheckModeratorsActivity(deps),
+	} satisfies Record<SystemJobName, (job: Bull.Job) => Promise<unknown>>;
 	const systemQueueWorker = new Bull.Worker(QUEUE.SYSTEM, (job) => {
-		switch (job.name) {
-			case 'clean': return handleHonoQueueClean(deps);
-			case 'aggregateRetention': return handleHonoQueueAggregateRetention(deps);
-			case 'tickCharts': return handleHonoQueueTickCharts(deps);
-			case 'resyncCharts': return handleHonoQueueResyncCharts(deps);
-			case 'cleanCharts': return handleHonoQueueCleanCharts(deps);
-			case 'checkExpiredMutings': return handleHonoQueueCheckExpiredMutings(deps);
-			case 'bakeBufferedReactions': return handleHonoQueueBakeBufferedReactions(deps);
-			case 'cleanRemoteNotes': return handleHonoQueueCleanRemoteNotes(deps, job);
-			case 'checkModeratorsActivity': return handleHonoQueueCheckModeratorsActivity(deps);
-			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for system`);
-		}
+		const handler = systemJobHandlers[job.name as SystemJobName];
+		if (handler == null) throw new Error(`unrecognized job type ${job.name} for system`);
+		return handler(job);
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.SYSTEM),
 		autorun: false,
