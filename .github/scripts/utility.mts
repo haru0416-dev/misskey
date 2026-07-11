@@ -7,9 +7,11 @@
 
 import { spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 
 export function median(values: number[]) {
+	if (values.length === 0) throw new Error('At least one sample is required');
 	const sorted = values.toSorted((a, b) => a - b);
 	const center = Math.floor(sorted.length / 2);
 	if (sorted.length % 2 === 1) return sorted[center];
@@ -17,7 +19,8 @@ export function median(values: number[]) {
 }
 
 export function mad(values: number[]) {
-	if (values.length < 2) throw new Error('Not enough samples to calculate MAD');
+	if (values.length === 0) throw new Error('At least one sample is required to calculate MAD');
+	if (values.length === 1) return 0;
 
 	const center = median(values);
 	return median(values.map((value) => Math.abs(value - center)));
@@ -39,7 +42,7 @@ export function pairedDeltaSummary<T extends { round: number }[]>(
 ) {
 	const baseSamplesByRound = getSamplesByRound(baseSamples);
 	const headSamplesByRound = getSamplesByRound(headSamples);
-	const values = [];
+	const values: number[] = [];
 
 	for (const [round, baseSample] of baseSamplesByRound) {
 		const headSample = headSamplesByRound.get(round);
@@ -52,6 +55,8 @@ export function pairedDeltaSummary<T extends { round: number }[]>(
 		values.push(headValue - baseValue);
 	}
 
+	if (values.length === 0) return null;
+
 	return {
 		median: median(values),
 		mad: mad(values),
@@ -59,6 +64,34 @@ export function pairedDeltaSummary<T extends { round: number }[]>(
 		max: Math.max(...values),
 		samples: values.length,
 	};
+}
+
+export async function resetTestServices(repoDir: string) {
+	const require = createRequire(path.join(repoDir, 'packages/backend/package.json'));
+	const pg = require('pg');
+	const Redis = require('ioredis');
+
+	const postgres = new pg.Client({
+		host: '127.0.0.1',
+		port: 54312,
+		database: 'postgres',
+		user: 'postgres',
+	});
+
+	await postgres.connect();
+	try {
+		await postgres.query('DROP DATABASE IF EXISTS "test-misskey" WITH (FORCE)');
+		await postgres.query('CREATE DATABASE "test-misskey"');
+	} finally {
+		await postgres.end();
+	}
+
+	const redis = new Redis({ host: '127.0.0.1', port: 56312 });
+	try {
+		await redis.flushall();
+	} finally {
+		redis.disconnect();
+	}
 }
 
 export function normalizePath(filePath: string) {
