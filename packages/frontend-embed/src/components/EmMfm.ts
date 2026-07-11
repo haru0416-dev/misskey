@@ -4,7 +4,7 @@
  */
 
 import { h, provide } from 'vue';
-import type { VNode, SetupContext } from 'vue';
+import type { CSSProperties, VNode, SetupContext } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { host } from '@shared/utility/config.js';
@@ -18,8 +18,8 @@ import EmA from '@/components/EmA.vue';
 
 function safeParseFloat(str: unknown): number | null {
 	if (typeof str !== 'string' || str === '') return null;
-	const num = parseFloat(str);
-	if (isNaN(num)) return null;
+	const num = Number(str);
+	if (!Number.isFinite(num)) return null;
 	return num;
 }
 
@@ -61,12 +61,12 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 	const validTime = (t: string | boolean | null | undefined) => {
 		if (t == null) return null;
 		if (typeof t === 'boolean') return null;
-		return t.match(/^\-?[0-9.]+s$/) ? t : null;
+		return /^-?(?:\d+(?:\.\d+)?|\.\d+)s$/.test(t) ? t : null;
 	};
 
 	const validColor = (c: unknown): string | null => {
 		if (typeof c !== 'string') return null;
-		return c.match(/^[0-9a-f]{3,6}$/i) ? c : null;
+		return /^(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(c) ? c : null;
 	};
 
 	const useAnim = true;
@@ -113,31 +113,33 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 			}
 
 			case 'fn': {
-				// TODO: CSSを文字列で組み立てていくと token.props.args.~~~ 経由でCSSインジェクションできるのでよしなにやる
-				let style: string | undefined;
+				let style: CSSProperties | undefined;
 				switch (token.props.name) {
 					case 'tada': {
 						const speed = validTime(token.props.args.speed) ?? '1s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = 'font-size: 150%;' + (useAnim ? `animation: global-tada ${speed} linear infinite both; animation-delay: ${delay};` : '');
+						style = {
+							fontSize: '150%',
+							...(useAnim ? { animation: `global-tada ${speed} linear infinite both`, animationDelay: delay } : {}),
+						};
 						break;
 					}
 					case 'jelly': {
 						const speed = validTime(token.props.args.speed) ?? '1s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = (useAnim ? `animation: mfm-rubberBand ${speed} linear infinite both; animation-delay: ${delay};` : '');
+						style = useAnim ? { animation: `mfm-rubberBand ${speed} linear infinite both`, animationDelay: delay } : {};
 						break;
 					}
 					case 'twitch': {
 						const speed = validTime(token.props.args.speed) ?? '0.5s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = useAnim ? `animation: mfm-twitch ${speed} ease infinite; animation-delay: ${delay};` : '';
+						style = useAnim ? { animation: `mfm-twitch ${speed} ease infinite`, animationDelay: delay } : {};
 						break;
 					}
 					case 'shake': {
 						const speed = validTime(token.props.args.speed) ?? '0.5s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = useAnim ? `animation: mfm-shake ${speed} ease infinite; animation-delay: ${delay};` : '';
+						style = useAnim ? { animation: `mfm-shake ${speed} ease infinite`, animationDelay: delay } : {};
 						break;
 					}
 					case 'spin': {
@@ -151,19 +153,19 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							'mfm-spin';
 						const speed = validTime(token.props.args.speed) ?? '1.5s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = useAnim ? `animation: ${anime} ${speed} linear infinite; animation-direction: ${direction}; animation-delay: ${delay};` : '';
+						style = useAnim ? { animation: `${anime} ${speed} linear infinite`, animationDirection: direction, animationDelay: delay } : {};
 						break;
 					}
 					case 'jump': {
 						const speed = validTime(token.props.args.speed) ?? '0.75s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = useAnim ? `animation: mfm-jump ${speed} linear infinite; animation-delay: ${delay};` : '';
+						style = useAnim ? { animation: `mfm-jump ${speed} linear infinite`, animationDelay: delay } : {};
 						break;
 					}
 					case 'bounce': {
 						const speed = validTime(token.props.args.speed) ?? '0.75s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = useAnim ? `animation: mfm-bounce ${speed} linear infinite; transform-origin: center bottom; animation-delay: ${delay};` : '';
+						style = useAnim ? { animation: `mfm-bounce ${speed} linear infinite`, transformOrigin: 'center bottom', animationDelay: delay } : {};
 						break;
 					}
 					case 'flip': {
@@ -171,7 +173,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							(token.props.args.h && token.props.args.v) ? 'scale(-1, -1)' :
 							token.props.args.v ? 'scaleY(-1)' :
 							'scaleX(-1)';
-						style = `transform: ${transform};`;
+						style = { transform };
 						break;
 					}
 					case 'x2': {
@@ -198,7 +200,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							token.props.args.emoji ? 'emoji' :
 							token.props.args.math ? 'math' :
 							null;
-						if (family) style = `font-family: ${family};`;
+						if (family) style = { fontFamily: family };
 						break;
 					}
 					case 'blur': {
@@ -214,7 +216,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 						}
 						const speed = validTime(token.props.args.speed) ?? '1s';
 						const delay = validTime(token.props.args.delay) ?? '0s';
-						style = `animation: mfm-rainbow ${speed} linear infinite; animation-delay: ${delay};`;
+						style = { animation: `mfm-rainbow ${speed} linear infinite`, animationDelay: delay };
 						break;
 					}
 					case 'sparkle': {
@@ -222,32 +224,32 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					}
 					case 'rotate': {
 						const degrees = safeParseFloat(token.props.args.deg) ?? 90;
-						style = `transform: rotate(${degrees}deg); transform-origin: center center;`;
+						style = { transform: `rotate(${degrees}deg)`, transformOrigin: 'center center' };
 						break;
 					}
 					case 'position': {
 						const x = safeParseFloat(token.props.args.x) ?? 0;
 						const y = safeParseFloat(token.props.args.y) ?? 0;
-						style = `transform: translateX(${x}em) translateY(${y}em);`;
+						style = { transform: `translateX(${x}em) translateY(${y}em)` };
 						break;
 					}
 					case 'scale': {
 						const x = Math.min(safeParseFloat(token.props.args.x) ?? 1, 5);
 						const y = Math.min(safeParseFloat(token.props.args.y) ?? 1, 5);
-						style = `transform: scale(${x}, ${y});`;
+						style = { transform: `scale(${x}, ${y})` };
 						scale = scale * Math.max(x, y);
 						break;
 					}
 					case 'fg': {
 						let color = validColor(token.props.args.color);
 						color = color ?? 'f00';
-						style = `color: #${color}; overflow-wrap: anywhere;`;
+						style = { color: `#${color}`, overflowWrap: 'anywhere' };
 						break;
 					}
 					case 'bg': {
 						let color = validColor(token.props.args.color);
 						color = color ?? 'f00';
-						style = `background-color: #${color}; overflow-wrap: anywhere;`;
+						style = { backgroundColor: `#${color}`, overflowWrap: 'anywhere' };
 						break;
 					}
 					case 'border': {
@@ -261,7 +263,13 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 						) b_style = 'solid';
 						const width = safeParseFloat(token.props.args.width) ?? 1;
 						const radius = safeParseFloat(token.props.args.radius) ?? 0;
-						style = `border: ${width}px ${b_style} ${color}; border-radius: ${radius}px;${token.props.args.noclip ? '' : ' overflow: clip;'}`;
+						style = {
+							borderWidth: `${width}px`,
+							borderStyle: b_style,
+							borderColor: color,
+							borderRadius: `${radius}px`,
+							...(token.props.args.noclip ? {} : { overflow: 'clip' }),
+						};
 						break;
 					}
 					case 'ruby': {
@@ -311,7 +319,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					return h('span', {}, ['$[', token.props.name, ' ', ...genEl(token.children, scale), ']']);
 				} else {
 					return h('span', {
-						style: 'display: inline-block; ' + style,
+						style: { display: 'inline-block', ...style },
 					}, genEl(token.children, scale));
 				}
 			}

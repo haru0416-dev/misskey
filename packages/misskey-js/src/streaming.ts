@@ -326,6 +326,7 @@ export interface IChannelConnection<Channel extends AnyOf<Channels> = AnyOf<Chan
 export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channels>> extends EventEmitter<Channel['events']> implements IChannelConnection<Channel> {
 	public channel: string;
 	protected stream: Stream;
+	private disposed = false;
 	public abstract id: string;
 
 	public name?: string; // for debug
@@ -354,6 +355,12 @@ export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channel
 		this.outCount++;
 	}
 
+	protected beginDispose(): boolean {
+		if (this.disposed) return false;
+		this.disposed = true;
+		return true;
+	}
+
 	public abstract dispose(): void;
 }
 
@@ -374,6 +381,7 @@ class SharedConnection<Channel extends AnyOf<Channels> = AnyOf<Channels>> extend
 	}
 
 	public dispose(): void {
+		if (!this.beginDispose()) return;
 		this.pool.dec();
 		this.removeAllListeners();
 		this.stream.removeSharedConnection(this as unknown as SharedConnection);
@@ -405,6 +413,7 @@ class NonSharedConnection<Channel extends AnyOf<Channels> = AnyOf<Channels>> ext
 	}
 
 	public dispose(): void {
+		if (!this.beginDispose()) return;
 		this.removeAllListeners();
 		this.stream.send('disconnect', { id: this.id });
 		this.stream.disconnectToChannel(this as unknown as NonSharedConnection);

@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import { describe, expect, test } from 'vitest';
 import { utils } from '../src';
 import { NUM, STR, NULL, ARR, OBJ, BOOL, TRUE, FALSE, ERROR ,FN_NATIVE } from '../src/interpreter/value';
-import { AiScriptRuntimeError, AiScriptUnexpectedEOFError } from '../src/error';
+import { AiScriptRuntimeError, AiScriptSyntaxError, AiScriptUnexpectedEOFError } from '../src/error';
 import { exe, getMeta, eq } from './testutils';
 
 /*
@@ -1138,6 +1138,12 @@ describe('meta', () => {
 			eq(res, new Map([
 				['x', -42]
 			]));
+		});
+
+		test.concurrent('negative overflow', async () => {
+			expect(() => getMeta(`
+			### x -1e309
+			`)).toThrow(AiScriptSyntaxError);
 		});
 	});
 

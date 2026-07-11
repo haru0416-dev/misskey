@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import WS from 'vitest-websocket-mock';
 import Stream from '../src/streaming.js';
 
@@ -200,7 +200,103 @@ describe('Streaming', () => {
 		stream.close();
 	});
 
-	// TODO: SharedConnection#dispose して一定時間経ったら disconnect メッセージがサーバーに送られてくるかのテスト
+	test('最後の共有接続をdisposeして3秒経つとdisconnectする', async () => {
+		const server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const main = stream.useChannel('main');
 
-	// TODO: チャンネル接続が使いまわされるかのテスト
+		try {
+			await server.connected;
+			const connect = await server.nextMessage as { type: string; body: { id: string; channel: string; }; };
+			expect(connect.type).toBe('connect');
+
+			vi.useFakeTimers();
+			main.dispose();
+			await vi.advanceTimersByTimeAsync(2999);
+			expect(server).toHaveReceivedMessages([connect]);
+
+			await vi.advanceTimersByTimeAsync(1);
+			await vi.advanceTimersByTimeAsync(10);
+			expect(server).toHaveReceivedMessages([
+				connect,
+				{ type: 'disconnect', body: { id: connect.body.id } },
+			]);
+		} finally {
+			vi.useRealTimers();
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('同じチャンネルの共有接続を使い回す', async () => {
+		const server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const receivedByFirst: unknown[] = [];
+		const receivedBySecond: unknown[] = [];
+		const first = stream.useChannel('main');
+		const second = stream.useChannel('main');
+		first.on('meUpdated', payload => receivedByFirst.push(payload));
+		second.on('meUpdated', payload => receivedBySecond.push(payload));
+
+		try {
+			await server.connected;
+			const connect = await server.nextMessage as { type: string; body: { id: string; channel: string; }; };
+			expect(connect.type).toBe('connect');
+			expect(connect.body.channel).toBe('main');
+			expect(first.id).toBe(connect.body.id);
+			expect(second.id).toBe(connect.body.id);
+			expect(server).toHaveReceivedMessages([connect]);
+
+			const payload = { id: 'foo' };
+			server.send({
+				type: 'channel',
+				body: {
+					id: connect.body.id,
+					type: 'meUpdated',
+					body: payload,
+				},
+			});
+			expect(receivedByFirst).toEqual([payload]);
+			expect(receivedBySecond).toEqual([payload]);
+		} finally {
+			first.dispose();
+			second.dispose();
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('共有接続のdisposeは冪等で、再利用後も正常に切断する', async () => {
+		const server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const first = stream.useChannel('main');
+		let reused: ReturnType<typeof stream.useChannel> | undefined;
+
+		try {
+			await server.connected;
+			const connect = await server.nextMessage as { type: string; body: { id: string; channel: string; }; };
+			vi.useFakeTimers();
+
+			first.dispose();
+			first.dispose();
+			await vi.advanceTimersByTimeAsync(2999);
+
+			reused = stream.useChannel('main');
+			expect(reused.id).toBe(connect.body.id);
+			await vi.advanceTimersByTimeAsync(20);
+			expect(server).toHaveReceivedMessages([connect]);
+
+			reused.dispose();
+			await vi.advanceTimersByTimeAsync(3010);
+			expect(server).toHaveReceivedMessages([
+				connect,
+				{ type: 'disconnect', body: { id: connect.body.id } },
+			]);
+		} finally {
+			vi.useRealTimers();
+			reused?.dispose();
+			stream.close();
+			server.close();
+		}
+	});
 });

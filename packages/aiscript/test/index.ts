@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import { describe, expect, test } from 'vitest';
 import { Parser, Interpreter, Ast } from '../src';
 import { NUM, STR, NULL, ARR, OBJ, BOOL, TRUE, FALSE, ERROR ,FN_NATIVE } from '../src/interpreter/value';
-import { AiScriptSyntaxError, AiScriptRuntimeError, AiScriptIndexOutOfRangeError } from '../src/error';
+import { AiScriptSyntaxError, AiScriptRuntimeError, AiScriptIndexOutOfRangeError, AiScriptUnexpectedEOFError } from '../src/error';
 import { exe, eq } from './testutils';
 
 
@@ -902,8 +902,38 @@ describe('Attribute', () => {
 		assert.equal(attr.value.value, true);
 	});
 
-	// TODO: attributed function in block
-	// TODO: attribute target does not exist
+	test.concurrent('attributed function in block', async () => {
+		const parser = new Parser();
+		const nodes = parser.parse(`
+		if true {
+			#[x 42]
+			@f() {}
+		}
+		`);
+		assert.equal(nodes.length, 1);
+		const ifNode = nodes[0];
+		assert.equal(ifNode.type, 'if');
+		if (ifNode.type !== 'if') assert.fail();
+		assert.equal(ifNode.then.type, 'block');
+		if (ifNode.then.type !== 'block') assert.fail();
+		assert.equal(ifNode.then.statements.length, 1);
+		const definition = ifNode.then.statements[0];
+		assert.equal(definition.type, 'def');
+		if (definition.type !== 'def') assert.fail();
+		assert.equal(definition.attr.length, 1);
+		const attr = definition.attr[0];
+		assert.equal(attr.name, 'x');
+		assert.equal(attr.value.type, 'num');
+		if (attr.value.type !== 'num') assert.fail();
+		assert.equal(attr.value.value, 42);
+	});
+
+	test.concurrent('attribute target does not exist', async () => {
+		const parser = new Parser();
+		expect(() => parser.parse(`
+		#[orphan]
+		`)).toThrow(AiScriptUnexpectedEOFError);
+	});
 
 	test.concurrent('single attribute (no value)', async () => {
 		let node: Ast.Node;
