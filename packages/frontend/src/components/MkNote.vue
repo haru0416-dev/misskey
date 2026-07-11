@@ -779,6 +779,11 @@ function emitUpdReaction(emoji: string, delta: number) {
 	font-size: 1.05em;
 	overflow: clip;
 	contain: content;
+	transition: background-color var(--MI-duration-normal) var(--MI-ease-out);
+
+	&:hover {
+		background: var(--MI-surface-panel-hover);
+	}
 
 	&:focus-visible {
 		outline: none;
@@ -950,7 +955,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 .article {
 	position: relative;
 	display: flex;
-	padding: 28px 32px;
+	padding: 26px 30px 22px;
 }
 
 .colorBar {
@@ -967,8 +972,8 @@ function emitUpdReaction(emoji: string, delta: number) {
 	flex-shrink: 0;
 	display: block !important;
 	margin: 0 14px 0 0;
-	width: 58px;
-	height: 58px;
+	width: 52px;
+	height: 52px;
 
 	&.useSticky {
 		position: sticky;
@@ -1077,20 +1082,26 @@ function emitUpdReaction(emoji: string, delta: number) {
 }
 
 .footer {
-	margin-bottom: -14px;
+	display: flex;
+	justify-content: space-between;
+	max-width: 420px;
+	margin: 10px 0 -8px;
 }
 
 .footerButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: var(--MI-control-sm);
+	min-height: var(--MI-control-sm);
 	margin: 0;
-	padding: 8px;
+	padding: 6px var(--MI-space-sm);
+	border-radius: var(--MI-radius-sm);
 	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%); // opacityなど不透明度で表現するとレンダリングパフォーマンスに影響するので通常の色の混合で代用
-
-	&:not(:last-child) {
-		margin-right: 28px;
-	}
 
 	&:hover {
 		color: var(--MI_THEME-fgHighlighted);
+		background: var(--MI_THEME-buttonHoverBg);
 	}
 }
 
@@ -1109,7 +1120,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 
 	.article {
-		padding: 24px 26px;
+		padding: 22px 24px 18px;
 	}
 
 	.avatar {
@@ -1128,7 +1139,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 
 	.article {
-		padding: 20px 22px;
+		padding: 18px 18px 14px;
 	}
 
 	.footer {

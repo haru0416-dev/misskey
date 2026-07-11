@@ -1,0 +1,56 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+:root {
+	/* Foundation: shared scales. */
+	--MI-space-2xs: 2px;
+	--MI-space-xs: 4px;
+	--MI-space-sm: 8px;
+	--MI-space-md: 12px;
+	--MI-space-lg: 16px;
+	--MI-space-xl: 20px;
+	--MI-space-2xl: 24px;
+	--MI-space-3xl: 32px;
+
+	--MI-radius-xs: 4px;
+	--MI-radius-sm: 9px;
+	--MI-radius-md: 14px;
+	--MI-radius-lg: 18px;
+	--MI-radius-full: 9999px;
+
+	--MI-duration-fast: 120ms;
+	--MI-duration-normal: 180ms;
+	--MI-duration-slow: 240ms;
+	--MI-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+	--MI-control-sm: 36px;
+	--MI-control-md: 44px;
+	--MI-control-lg: 52px;
+
+	/* Semantic: theme-aware surfaces, borders, and depth. */
+	--MI-surface-page: var(--MI_THEME-bg);
+	--MI-surface-panel: var(--MI_THEME-panel);
+	--MI-surface-panel-hover: color-mix(in oklab, var(--MI_THEME-panel) 96%, var(--MI_THEME-fg));
+	--MI-surface-subtle: color-mix(in oklab, var(--MI_THEME-bg) 94%, var(--MI_THEME-panel));
+	--MI-surface-nav: color-mix(in oklab, var(--MI_THEME-navBg) 96%, var(--MI_THEME-panel));
+	--MI-border-muted: color-mix(in oklab, var(--MI_THEME-divider) 72%, transparent);
+	--MI-shadow-sm: 0 2px 6px color-mix(in oklab, var(--MI_THEME-shadow) 65%, transparent);
+
+	--MI-layout-gutter: var(--MI-space-xl);
+	--MI-layout-gutter-compact: 10px;
+	--MI-minBottomSpacingMobile: calc(72px + max(var(--MI-space-md), env(safe-area-inset-bottom, 0px)));
+	--MI-minBottomSpacing: var(--MI-minBottomSpacingMobile);
+
+	/* Compatibility: keep existing extensions and component overrides working. */
+	--MI-radius: var(--MI-radius-md);
+	--MI-marginFull: var(--MI-layout-gutter);
+	--MI-marginHalf: var(--MI-layout-gutter-compact);
+	--MI-margin: var(--MI-marginFull);
+
+	@media (max-width: 500px) {
+		--MI-margin: var(--MI-marginHalf);
+	}
+}
+

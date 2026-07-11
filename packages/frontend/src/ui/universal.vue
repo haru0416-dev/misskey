@@ -137,17 +137,19 @@ $widgets-hide-threshold: 1090px;
 	contain: strict;
 	display: flex;
 	flex-direction: column;
-	background: var(--MI_THEME-navBg);
+	background: color-mix(in oklab, var(--MI-surface-page) 88%, var(--MI_THEME-navBg));
 }
 
 .nonTitlebarArea {
 	display: flex;
 	flex: 1;
 	min-height: 0;
+	gap: 1px;
 }
 
 .sidebar {
-	border-right: solid 0.5px var(--MI_THEME-divider);
+	position: relative;
+	z-index: 2;
 }
 
 .contents {
@@ -156,10 +158,11 @@ $widgets-hide-threshold: 1090px;
 	flex: 1;
 	height: 100%;
 	min-width: 0;
+	background: var(--MI-surface-page);
 
 	&.withSidebarAndTitlebar {
-		background: var(--MI_THEME-navBg);
-		border-radius: 12px 0 0 0;
+		background: var(--MI-surface-page);
+		border-radius: var(--MI-radius-lg) 0 0 0;
 		overflow: clip;
 	}
 }
@@ -176,13 +179,13 @@ $widgets-hide-threshold: 1090px;
 }
 
 .widgets {
-	width: 350px;
+	width: 360px;
 	height: 100%;
 	box-sizing: border-box;
 	overflow: auto;
 	padding: var(--MI-margin) var(--MI-margin) calc(var(--MI-margin) + env(safe-area-inset-bottom, 0px));
-	border-left: solid 0.5px var(--MI_THEME-divider);
-	background: var(--MI_THEME-bg);
+	border-left: solid 0.5px var(--MI-border-muted);
+	background: var(--MI-surface-subtle);
 
 	@media (max-width: $widgets-hide-threshold) {
 		display: none;

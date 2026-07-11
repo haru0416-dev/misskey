@@ -201,8 +201,8 @@ function menuEdit() {
 
 <style lang="scss" module>
 .root {
-	--nav-width: 250px;
-	--nav-icon-only-width: 80px;
+	--nav-width: 264px;
+	--nav-icon-only-width: 76px;
 	--nav-bg-transparent: color(from var(--MI_THEME-navBg) srgb r g b / 0.5);
 
 	--subButtonWidth: 20px;
@@ -220,7 +220,7 @@ function menuEdit() {
 	overflow: auto;
 	overflow-x: clip;
 	overscroll-behavior: contain;
-	background: var(--MI_THEME-navBg);
+	background: var(--MI-surface-nav);
 	contain: strict;
 
 	/* 画面が縦に長い、設置している項目数が少ないなどの環境においても確実にbottomを最下部に表示するため */
@@ -408,14 +408,14 @@ function menuEdit() {
 	}
 
 	.top {
-		--top-height: 80px;
+		--top-height: 76px;
 
 		position: sticky;
 		top: 0;
 		z-index: 1;
 		display: flex;
 		height: var(--top-height);
-		padding-left: 6px;
+		padding-inline: var(--MI-layout-gutter-compact) var(--MI-space-sm);
 	}
 
 	.instance {
@@ -427,7 +427,8 @@ function menuEdit() {
 		display: inline-block;
 		width: 38px;
 		aspect-ratio: 1;
-		border-radius: 8px;
+		border-radius: var(--MI-radius-sm);
+		box-shadow: var(--MI-shadow-sm);
 	}
 
 	.realtimeMode {
@@ -456,7 +457,7 @@ function menuEdit() {
 		position: relative;
 		display: block;
 		width: 100%;
-		height: 40px;
+		height: var(--MI-control-md);
 		color: var(--MI_THEME-fgOnAccent);
 		font-weight: bold;
 		text-align: left;
@@ -464,7 +465,7 @@ function menuEdit() {
 		&::before {
 			content: "";
 			display: block;
-			width: calc(100% - 38px);
+			width: calc(100% - 32px);
 			height: 100%;
 			margin: auto;
 			position: absolute;
@@ -473,7 +474,7 @@ function menuEdit() {
 			right: 0;
 			bottom: 0;
 			border-radius: 999px;
-			background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
+			background: var(--MI_THEME-accent);
 		}
 
 		&:focus-visible {
@@ -494,7 +495,7 @@ function menuEdit() {
 
 	.postIcon {
 		position: relative;
-		margin-left: 30px;
+		margin-left: 28px;
 		margin-right: 8px;
 		width: 32px;
 	}
@@ -507,7 +508,7 @@ function menuEdit() {
 		position: relative;
 		display: flex;
 		align-items: center;
-		padding: 20px 0 20px 30px;
+		padding: var(--MI-space-lg) var(--MI-space-xl) var(--MI-space-xl) var(--MI-space-2xl);
 		width: 100%;
 		text-align: left;
 		box-sizing: border-box;
@@ -538,15 +539,15 @@ function menuEdit() {
 	}
 
 	.divider {
-		margin: 16px 16px;
+		margin: var(--MI-layout-gutter-compact) var(--MI-space-xl);
 		border-top: solid 0.5px var(--MI_THEME-divider);
 	}
 
 	.item {
 		position: relative;
 		display: block;
-		padding-left: 30px;
-		line-height: 2.85rem;
+		padding-left: 24px;
+		line-height: 3rem;
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;
@@ -573,13 +574,13 @@ function menuEdit() {
 			}
 		}
 
-		&:hover, &.active, &:focus {
+		&:hover, &.active, &:focus-visible {
 			color: var(--MI_THEME-accent);
 
 			&::before {
 				content: "";
 				display: block;
-				width: calc(100% - 34px);
+				width: calc(100% - 24px);
 				height: 100%;
 				margin: auto;
 				position: absolute;
@@ -587,7 +588,7 @@ function menuEdit() {
 				left: 0;
 				right: 0;
 				bottom: 0;
-				border-radius: 999px;
+				border-radius: var(--MI-radius-sm);
 				background: var(--MI_THEME-accentedBg);
 			}
 		}
@@ -616,7 +617,8 @@ function menuEdit() {
 
 	.itemText {
 		position: relative;
-		font-size: 0.9em;
+		font-size: 0.95em;
+		font-weight: 500;
 	}
 
 	.subButtons {
@@ -658,7 +660,7 @@ function menuEdit() {
 		display: inline-block;
 		width: 30px;
 		aspect-ratio: 1;
-		border-radius: 8px;
+		border-radius: var(--MI-radius-sm);
 	}
 
 	.bottom {
@@ -671,7 +673,7 @@ function menuEdit() {
 		display: block;
 		position: relative;
 		width: 100%;
-		height: 52px;
+		height: var(--MI-control-lg);
 		text-align: center;
 	}
 
@@ -679,7 +681,7 @@ function menuEdit() {
 		display: block;
 		position: relative;
 		width: 100%;
-		height: 52px;
+		height: var(--MI-control-lg);
 		text-align: center;
 
 		&.on {
@@ -691,7 +693,7 @@ function menuEdit() {
 		display: block;
 		position: relative;
 		width: 100%;
-		height: 52px;
+		height: var(--MI-control-lg);
 		text-align: center;
 
 		&::before {
@@ -703,10 +705,10 @@ function menuEdit() {
 			right: 0;
 			bottom: 0;
 			margin: auto;
-			width: 52px;
+			width: var(--MI-control-lg);
 			aspect-ratio: 1/1;
 			border-radius: 100%;
-			background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
+			background: var(--MI_THEME-accent);
 		}
 
 		&:focus-visible {
@@ -769,7 +771,7 @@ function menuEdit() {
 	.item {
 		display: block;
 		position: relative;
-		padding: 16px 0;
+		padding: 14px 0;
 		width: 100%;
 		text-align: center;
 
@@ -782,7 +784,7 @@ function menuEdit() {
 			}
 		}
 
-		&:hover, &.active, &:focus {
+		&:hover, &.active, &:focus-visible {
 			text-decoration: none;
 			color: var(--MI_THEME-accent);
 
@@ -797,7 +799,7 @@ function menuEdit() {
 				left: 0;
 				right: 0;
 				bottom: 0;
-				border-radius: 999px;
+				border-radius: var(--MI-radius-sm);
 				background: var(--MI_THEME-accentedBg);
 			}
 
