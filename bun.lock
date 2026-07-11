@@ -289,7 +289,6 @@
         "@types/node": "26.0.0",
         "chokidar": "5.0.0",
         "esbuild": "0.28.1",
-        "execa": "9.6.1",
       },
     },
     "packages/icons-subsetter": {
