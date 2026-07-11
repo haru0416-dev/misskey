@@ -13,6 +13,29 @@ declare const _PERF_PREFIX_: string;
 declare const _LANGS_FULL_: string[][];
 
 // TagCanvas
+interface TagCanvasOptions {
+	textColour: string;
+	outlineColour: string;
+	outlineRadius: number;
+	initial: [number, number];
+	frontSelect: boolean;
+	imageRadius: number;
+	dragThreshold: number;
+	wheelZoom: boolean;
+	reverse: boolean;
+	depth: number;
+	maxSpeed: number;
+	minSpeed: number;
+	stretchX: number;
+	stretchY: number;
+}
+
+interface TagCanvasApi {
+	Start(canvasId: string, tagsId: string, options: TagCanvasOptions): void;
+	Delete(canvasId: string): void;
+	Update(canvasId: string): void;
+}
+
 interface Window {
-	TagCanvas: any;
+	TagCanvas?: TagCanvasApi;
 }

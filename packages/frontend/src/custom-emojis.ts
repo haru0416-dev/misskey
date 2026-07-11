@@ -5,6 +5,7 @@
 
 import { shallowRef, computed, markRaw, watch } from 'vue';
 import * as Misskey from 'misskey-js';
+import { isEmojiSimpleArray } from '@shared/utility/custom-emojis.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import { get, set } from '@/utility/idb-proxy.js';
 import { queryClient } from '@/query/client.js';
@@ -12,9 +13,9 @@ import { queryKeys } from '@/query/keys.js';
 import { updateEmojiQueries } from '@/query/streaming.js';
 
 const [storageCache, lastEmojisFetchedAt] = await Promise.all([get('emojis'), get('lastEmojisFetchedAt')]);
-export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(Array.isArray(storageCache) ? storageCache : []);
+export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(isEmojiSimpleArray(storageCache) ? storageCache : []);
 const emojisQueryKey = queryKeys.endpoint(null, 'emojis', {});
-if (Array.isArray(storageCache)) {
+if (isEmojiSimpleArray(storageCache)) {
 	queryClient.setQueryData(
 		emojisQueryKey,
 		{ emojis: storageCache },
@@ -72,19 +73,4 @@ export async function fetchCustomEmojis(force = false) {
 	customEmojis.value = res.emojis;
 	set('emojis', res.emojis);
 	set('lastEmojisFetchedAt', now);
-}
-
-let cachedTags: string[] | null = null;
-export function getCustomEmojiTags() {
-	if (cachedTags) return cachedTags;
-
-	const tags = new Set<string>();
-	for (const emoji of customEmojis.value) {
-		for (const tag of emoji.aliases) {
-			tags.add(tag);
-		}
-	}
-	const res = Array.from(tags);
-	cachedTags = res;
-	return res;
 }

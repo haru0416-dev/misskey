@@ -12,6 +12,26 @@ type DragDataMap = {
 	MkDraggable: { item: { id: string }; instanceId: string; group: string };
 };
 
+function hasStringId(value: unknown): value is { id: string } {
+	return typeof value === 'object' && value !== null && 'id' in value && typeof value.id === 'string';
+}
+
+const dragDataValidators = {
+	driveFiles: (value: unknown): value is DragDataMap['driveFiles'] => Array.isArray(value) && value.every(hasStringId),
+	driveFolders: (value: unknown): value is DragDataMap['driveFolders'] => Array.isArray(value) && value.every(hasStringId),
+	deckColumn: (value: unknown): value is DragDataMap['deckColumn'] => typeof value === 'string',
+	MkDraggable: (value: unknown): value is DragDataMap['MkDraggable'] => {
+		return typeof value === 'object'
+			&& value !== null
+			&& 'item' in value
+			&& hasStringId(value.item)
+			&& 'instanceId' in value
+			&& typeof value.instanceId === 'string'
+			&& 'group' in value
+			&& typeof value.group === 'string';
+	},
+};
+
 // NOTE: dataTransfer の format は大文字小文字区別されないっぽいので toLowerCase が必要
 
 export function setDragData<T extends keyof DragDataMap>(event: DragEvent, type: T, data: DragDataMap[T]) {
@@ -32,7 +52,13 @@ export function getDragData<T extends keyof DragDataMap>(event: DragEvent, type:
 	const data = event.dataTransfer.getData(`misskey/${type}`.toLowerCase());
 	if (data == null || data === '') return null;
 
-	return JSON.parse(data);
+	try {
+		const parsed: unknown = JSON.parse(data);
+		const validate = dragDataValidators[type] as (value: unknown) => value is DragDataMap[T];
+		return validate(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
 }
 
 export function getPlainDragData(event: DragEvent): string | null {
@@ -47,8 +73,6 @@ export function getPlainDragData(event: DragEvent): string | null {
 export function checkDragDataType(event: DragEvent, types: (keyof DragDataMap)[]): boolean {
 	if (event.dataTransfer == null) return false;
 
-	const dataType = event.dataTransfer.types[0];
-	if (dataType == null || dataType === '') return false;
-
-	return types.some((type) => `misskey/${type}`.toLowerCase() === dataType.toLowerCase());
+	const availableTypes = Array.from(event.dataTransfer.types, type => type.toLowerCase());
+	return types.some(type => availableTypes.includes(`misskey/${type}`.toLowerCase()));
 }

@@ -5,6 +5,7 @@
 
 import { beforeEach, describe, expect, test } from 'vitest';
 import { getStorageItemAsJson, isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
+import { isAccountWithToken } from '@/utility/account-data.js';
 
 beforeEach(() => {
 	window.localStorage.clear();
@@ -60,5 +61,31 @@ describe('miLocalStorage JSON values', () => {
 		miLocalStorage.setItemAsJson('debug', undefined);
 
 		expect(window.localStorage.getItem('debug')).toBeNull();
+	});
+});
+
+describe('account data validation', () => {
+	const account = {
+		id: '9abc',
+		username: 'alice',
+		token: 'secret',
+		notesCount: 10,
+		policies: {},
+	};
+
+	test('accepts the fields required during startup', () => {
+		expect(isAccountWithToken(account)).toBe(true);
+	});
+
+	test.each([
+		null,
+		{},
+		{ ...account, id: null },
+		{ ...account, username: null },
+		{ ...account, token: null },
+		{ ...account, notesCount: Number.NaN },
+		{ ...account, policies: [] },
+	])('rejects invalid account data: %j', value => {
+		expect(isAccountWithToken(value)).toBe(false);
 	});
 });
