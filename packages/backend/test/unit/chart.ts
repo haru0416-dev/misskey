@@ -6,9 +6,8 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeEach, afterEach, afterAll, test } from 'vitest';
+import { describe, beforeEach, afterEach, afterAll, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import * as lolex from '@sinonjs/fake-timers';
 import * as Redis from 'ioredis';
 import Chart from '@/core/chart/core.js';
 import TestChart from '@/core/chart/charts/test.js';
@@ -39,7 +38,6 @@ describe('Chart', () => {
 	let testGroupedChart: TestGroupedChart;
 	let testUniqueChart: TestUniqueChart;
 	let testIntersectionChart: TestIntersectionChart;
-	let clock: lolex.Clock;
 
 	beforeEach(async () => {
 		if (drizzlePool) await drizzlePool.end();
@@ -64,16 +62,14 @@ describe('Chart', () => {
 		testUniqueChart = new TestUniqueChart(drizzle, redisClient, logger);
 		testIntersectionChart = new TestIntersectionChart(drizzle, redisClient, logger);
 
-		clock = lolex.install({
-			// https://github.com/sinonjs/sinon/issues/2620
-			toFake: Object.keys(lolex.timers).filter((key) => !['nextTick', 'queueMicrotask'].includes(key)) as lolex.FakeMethod[],
+		vi.useFakeTimers({
+			toFake: ['Date'],
 			now: new Date(Date.UTC(2000, 0, 1, 0, 0, 0)),
-			shouldClearNativeTimers: true,
 		});
 	});
 
 	afterEach(() => {
-		clock.uninstall();
+		vi.useRealTimers();
 	});
 
 	afterAll(async () => {
@@ -209,7 +205,7 @@ describe('Chart', () => {
 		await testChart.increment();
 		await testChart.save();
 
-		clock.tick('01:00:00');
+		vi.advanceTimersByTime(60 * 60 * 1000);
 
 		await testChart.increment();
 		await testChart.save();
@@ -269,7 +265,7 @@ describe('Chart', () => {
 		await testChart.increment();
 		await testChart.save();
 
-		clock.tick('02:00:00');
+		vi.advanceTimersByTime(2 * 60 * 60 * 1000);
 
 		await testChart.increment();
 		await testChart.save();
@@ -299,7 +295,7 @@ describe('Chart', () => {
 		await testChart.increment();
 		await testChart.save();
 
-		clock.tick('05:00:00');
+		vi.advanceTimersByTime(5 * 60 * 60 * 1000);
 
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
@@ -327,7 +323,7 @@ describe('Chart', () => {
 		await testChart.increment();
 		await testChart.save();
 
-		clock.tick('05:00:00');
+		vi.advanceTimersByTime(5 * 60 * 60 * 1000);
 
 		await testChart.increment();
 		await testChart.save();
@@ -356,7 +352,7 @@ describe('Chart', () => {
 		await testChart.increment();
 		await testChart.save();
 
-		clock.tick('01:00:00');
+		vi.advanceTimersByTime(60 * 60 * 1000);
 
 		await testChart.increment();
 		await testChart.save();
@@ -382,12 +378,12 @@ describe('Chart', () => {
 	});
 
 	test('Can specify offset (floor time)', async () => {
-		clock.tick('00:30:00');
+		vi.advanceTimersByTime(30 * 60 * 1000);
 
 		await testChart.increment();
 		await testChart.save();
 
-		clock.tick('01:30:00');
+		vi.advanceTimersByTime(90 * 60 * 1000);
 
 		await testChart.increment();
 		await testChart.save();
@@ -553,7 +549,7 @@ describe('Chart', () => {
 			await testChart.increment();
 			await testChart.save();
 
-			clock.tick('01:00:00');
+			vi.advanceTimersByTime(60 * 60 * 1000);
 
 			testChart.total = 100;
 

@@ -57,14 +57,19 @@ let updateInstanceQueue: CollapsedQueue<string, UpdateInstanceJob> | undefined;
 function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
 	if (!updateInstanceQueue) {
 		const timeout = process.env.NODE_ENV !== 'test' ? 60 * 1000 * 5 : 0;
-		updateInstanceQueue = new CollapsedQueue<string, UpdateInstanceJob>(timeout, collapseUpdateInstanceJobs, async (id, job) => {
-			await updateFederatedInstanceAndCache(deps, id, {
-				latestRequestReceivedAt: new Date(),
-				isNotResponding: false,
-				// もしサーバーが死んでるために配信が止まっていた場合には自動的に復活させてあげる
-				suspensionState: job.shouldUnsuspend ? 'none' : undefined,
-			});
-		});
+		updateInstanceQueue = new CollapsedQueue<string, UpdateInstanceJob>(
+			timeout,
+			collapseUpdateInstanceJobs,
+			async (id, job) => {
+				await updateFederatedInstanceAndCache(deps, id, {
+					latestRequestReceivedAt: job.latestRequestReceivedAt,
+					isNotResponding: false,
+					// もしサーバーが死んでるために配信が止まっていた場合には自動的に復活させてあげる
+					suspensionState: job.shouldUnsuspend ? 'none' : undefined,
+				});
+			},
+			(error, id) => deps.logger.error(`Failed to update federated instance ${id}`, error instanceof Error ? error : new Error(String(error))),
+		);
 	}
 	return updateInstanceQueue;
 }

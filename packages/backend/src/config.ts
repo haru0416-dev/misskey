@@ -101,6 +101,11 @@ type Source = {
 	deliverJobConcurrency?: number;
 	inboxJobConcurrency?: number;
 	relationshipJobConcurrency?: number;
+	dbJobConcurrency?: number;
+	systemJobConcurrency?: number;
+	objectStorageJobConcurrency?: number;
+	userWebhookJobConcurrency?: number;
+	systemWebhookJobConcurrency?: number;
 	deliverJobPerSec?: number;
 	inboxJobPerSec?: number;
 	relationshipJobPerSec?: number;
@@ -175,6 +180,11 @@ export type Config = {
 	deliverJobConcurrency: number | undefined;
 	inboxJobConcurrency: number | undefined;
 	relationshipJobConcurrency: number | undefined;
+	dbJobConcurrency: number | undefined;
+	systemJobConcurrency: number | undefined;
+	objectStorageJobConcurrency: number | undefined;
+	userWebhookJobConcurrency: number | undefined;
+	systemWebhookJobConcurrency: number | undefined;
 	deliverJobPerSec: number | undefined;
 	inboxJobPerSec: number | undefined;
 	relationshipJobPerSec: number | undefined;
@@ -327,6 +337,11 @@ export function loadConfig(): Config {
 		deliverJobConcurrency: config.deliverJobConcurrency,
 		inboxJobConcurrency: config.inboxJobConcurrency,
 		relationshipJobConcurrency: config.relationshipJobConcurrency,
+		dbJobConcurrency: config.dbJobConcurrency,
+		systemJobConcurrency: config.systemJobConcurrency,
+		objectStorageJobConcurrency: config.objectStorageJobConcurrency,
+		userWebhookJobConcurrency: config.userWebhookJobConcurrency,
+		systemWebhookJobConcurrency: config.systemWebhookJobConcurrency,
 		deliverJobPerSec: config.deliverJobPerSec,
 		inboxJobPerSec: config.inboxJobPerSec,
 		relationshipJobPerSec: config.relationshipJobPerSec,
@@ -339,7 +354,7 @@ export function loadConfig(): Config {
 				? config.videoThumbnailGenerator.substring(0, config.videoThumbnailGenerator.length - 1)
 				: config.videoThumbnailGenerator
 			: null,
-		userAgent: `Misskey/${version} (${config.url})`,
+		userAgent: `Misskey/${version} (${url.origin})`,
 		frontendManifestExists: frontendManifestExists,
 		frontendEmbedManifestExists: frontendEmbedManifestExists,
 		rootDir,

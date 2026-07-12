@@ -5,6 +5,7 @@
 
 import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { userListMembership, type UserListMembershipInsert, type UserListMembershipRow } from '@/db/schema/user-list-membership.js';
+import { userList } from '@/db/schema/user-list.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { UpdateValuesMissingError } from '@/misc/db-errors.js';
@@ -223,6 +224,31 @@ export async function createUserListMembershipInDatabase(
 	data: UserListMembershipInsert,
 ): Promise<void> {
 	await db.insert(userListMembership).values(data);
+}
+
+export async function createUserListMembershipWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	data: UserListMembershipInsert,
+	limit: number,
+): Promise<boolean> {
+	return await db.transaction(async tx => {
+		const [lockedList] = await tx
+			.select({ id: userList.id })
+			.from(userList)
+			.where(eq(userList.id, data.userListId))
+			.limit(1)
+			.for('update');
+		if (!lockedList) return false;
+
+		const [row] = await tx
+			.select({ value: count() })
+			.from(userListMembership)
+			.where(eq(userListMembership.userListId, data.userListId));
+		if ((row?.value ?? 0) >= limit) return false;
+
+		await tx.insert(userListMembership).values(data);
+		return true;
+	});
 }
 
 export async function createUserListMembershipsInDatabase(

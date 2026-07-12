@@ -32,7 +32,6 @@ const INBOX_BODY_LIMIT_BYTES = 1024 * 64;
 function enqueueInboxJob(deps: InboxEndpointDependencies, activity: IActivity, signature: httpSignature.IParsedSignature) {
 	const data: InboxJobData = { activity, signature };
 	const label = (activity.id ?? '').replace('https://', '').replace('/activity', '');
-
 	return deps.inboxQueue.add(label, data, {
 		attempts: deps.config.inboxJobMaxAttempts ?? 8,
 		backoff: {

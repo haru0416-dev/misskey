@@ -7,7 +7,6 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import cluster from 'node:cluster';
 import chalk from 'chalk';
-import chalkTemplate from 'chalk-template';
 import Logger from '@/logger.js';
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
@@ -33,7 +32,7 @@ function greet(props: { version: string }) {
 		console.log(chalk.rgb(255, 136, 0)(' If you like Misskey, please consider donating to support dev. https://misskey-hub.net/docs/donate/'));
 
 		console.log('');
-		console.log(chalkTemplate`--- ${os.hostname()} {gray (PID: ${process.pid.toString()})} ---`);
+		console.log(`--- ${os.hostname()} ${chalk.gray(`(PID: ${process.pid})`)} ---`);
 	}
 
 	bootLogger.info('Welcome to Misskey!');
@@ -45,6 +44,7 @@ function greet(props: { version: string }) {
  */
 export async function masterMain() {
 	let config!: Config;
+	const disposers: Array<() => Promise<void>> = [];
 
 	try {
 		config = loadConfigBoot();
@@ -75,9 +75,11 @@ export async function masterMain() {
 			// そのため、メインプロセスでも直接listenするとポートの競合が発生して起動に失敗してしまう。
 			// see: https://nodejs.org/api/cluster.html#cluster
 		} else if (envOption.onlyQueue) {
-			await jobQueue();
+			const runtime = await jobQueue();
+			disposers.push(() => runtime.close());
 		} else {
-			await server();
+			const runtime = await server();
+			disposers.push(() => runtime.dispose());
 		}
 
 		await spawnWorkers(config.clusterLimit);
@@ -85,12 +87,15 @@ export async function masterMain() {
 		// clusterモジュール無効時
 
 		if (envOption.onlyServer) {
-			await server();
+			const runtime = await server();
+			disposers.push(() => runtime.dispose());
 		} else if (envOption.onlyQueue) {
-			await jobQueue();
+			const runtime = await jobQueue();
+			disposers.push(() => runtime.close());
 		} else {
-			await server();
-			await jobQueue();
+			const serverRuntime = await server();
+			const queueRuntime = await jobQueue();
+			disposers.push(() => queueRuntime.close(), () => serverRuntime.dispose());
 		}
 	}
 
@@ -99,6 +104,16 @@ export async function masterMain() {
 	} else {
 		bootLogger.succ(config.socket ? `Now listening on socket ${config.socket} on ${config.url}` : `Now listening on port ${config.port} on ${config.url}`, null, true);
 	}
+
+	return async () => {
+		if (!envOption.disableClustering) {
+			await Promise.all(Object.values(cluster.workers ?? {}).filter(worker => worker != null).map(worker => new Promise<void>(resolve => {
+				worker!.once('exit', () => resolve());
+				worker!.process.kill('SIGTERM');
+			})));
+		}
+		await Promise.allSettled(disposers.map(dispose => dispose()));
+	};
 }
 
 function showEnvironment(): void {

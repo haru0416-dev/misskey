@@ -82,10 +82,10 @@ dbReplications: false
 #    pass:
 
 #   ┌─────────────────────┐
-#───┘ Redis configuration └─────────────────────────────────────
+#───┘ Valkey configuration └────────────────────────────────────
 
 redis:
-  host: redis
+  host: valkey
   port: 6379
   #family: 0  # 0=Both, 4=IPv4, 6=IPv6
   #pass: example-pass
@@ -93,7 +93,7 @@ redis:
   #db: 1
 
 #redisForPubsub:
-#  host: redis
+#  host: valkey
 #  port: 6379
 #  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
 #  #pass: example-pass
@@ -101,7 +101,7 @@ redis:
 #  #db: 1
 
 #redisForJobQueue:
-#  host: redis
+#  host: valkey
 #  port: 6379
 #  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
 #  #pass: example-pass
@@ -109,7 +109,7 @@ redis:
 #  #db: 1
 
 #redisForTimelines:
-#  host: redis
+#  host: valkey
 #  port: 6379
 #  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
 #  #pass: example-pass
@@ -117,7 +117,7 @@ redis:
 #  #db: 1
 
 #redisForReactions:
-#  host: redis
+#  host: valkey
 #  port: 6379
 #  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
 #  #pass: example-pass
@@ -166,6 +166,11 @@ redis:
 # Job concurrency per worker
 # deliverJobConcurrency: 128
 # inboxJobConcurrency: 16
+# dbJobConcurrency: 1
+# systemJobConcurrency: 1
+# objectStorageJobConcurrency: 16
+# userWebhookJobConcurrency: 64
+# systemWebhookJobConcurrency: 16
 
 # Job rate limiter
 # deliverJobPerSec: 128

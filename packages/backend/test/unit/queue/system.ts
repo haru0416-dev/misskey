@@ -20,6 +20,7 @@ import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/MutingSto
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
 import { createChannelMutingInDatabase, listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
+import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createHonoChartWriters, type HonoChartWriters } from '@/server/chart-runtime.js';
 import Logger from '@/logger.js';
@@ -256,24 +257,25 @@ describe('hono-queue-system', () => {
 				userHost: null,
 				visibility: 'public',
 			});
+			await createNoteReactionInDatabase(db, {
+				id: genId(),
+				noteId,
+				userId,
+				reaction: '👍',
+			});
 
 			// ioredisのkeyPrefixが自動で前置されるため、ここではbareキーを使う
 			// (SCANのMATCHパターンだけは自動前置の対象外なので、本体実装側で手動prefixが必要になる)
-			await redisForReactions.hincrby(`reactionsBufferDeltas:${noteId}`, '👍', 3);
+			await redisForReactions.hincrby(`reactionsBufferDeltas:${noteId}`, '👍', 1);
 			await redisForReactions.zadd(`reactionsBufferPairs:${noteId}`, 0, `${userId}/👍`);
 
 			await handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: true } });
 
-			// applyBufferedNoteReactionsInDatabase は元実装同様 fire-and-forget (void) で
-			// 呼ばれるため、DB反映完了をポーリングで待つ。
-			let noteAfter = await fetchNoteByIdOrFailFromDatabase(db, noteId);
-			for (let i = 0; i < 20 && noteAfter.reactions['👍'] == null; i++) {
-				await new Promise(resolve => setTimeout(resolve, 100));
-				noteAfter = await fetchNoteByIdOrFailFromDatabase(db, noteId);
-			}
-
-			expect(noteAfter.reactions['👍']).toBe(3);
+			const noteAfter = await fetchNoteByIdOrFailFromDatabase(db, noteId);
+			expect(noteAfter.reactions['👍']).toBe(1);
 			expect(noteAfter.reactionAndUserPairCache).toContain(`${userId}/👍`);
+			expect(await redisForReactions.exists(`reactionsBufferDeltas:${noteId}`)).toBe(0);
+			expect(await redisForReactions.exists(`reactionsBufferPairs:${noteId}`)).toBe(0);
 		});
 	});
 });

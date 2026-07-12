@@ -270,6 +270,9 @@ export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDepend
 		meta: deps.meta,
 		deleteInternalFile: key => deps.internalStorageService.del(key),
 		enqueueDeleteObjectStorageFile: key => deps.objectStorageQueue.add('deleteFile', { key }, {
+			attempts: 5,
+			backoff: { type: 'exponential', delay: 10_000 },
+			deduplication: { id: key },
 			removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
 			removeOnFail: { age: 3600 * 24 * 7, count: 100 },
 		}),

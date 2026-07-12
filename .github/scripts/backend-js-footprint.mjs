@@ -385,7 +385,7 @@ function summarizeRecords(records, phase) {
 async function measureFootprint() {
 	await fs.writeFile(traceFile, '');
 
-	process.stderr.write('Resetting database and Redis\n');
+	process.stderr.write('Resetting database and Valkey\n');
 	await util.resetTestServices(repoDir);
 
 	process.stderr.write('Running migrations\n');

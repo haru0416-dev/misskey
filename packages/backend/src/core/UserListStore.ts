@@ -5,6 +5,7 @@
 
 import { and, count, eq } from 'drizzle-orm';
 import { userList, type UserListInsert, type UserListRow } from '@/db/schema/user-list.js';
+import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiUser } from '@/models/User.js';
@@ -174,6 +175,31 @@ export async function createUserListInDatabase(
 	}
 
 	return deserializeUserList(row);
+}
+
+export async function createUserListWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	values: UserListInsert,
+	limit: number,
+): Promise<MiUserList | null> {
+	return await db.transaction(async tx => {
+		const [lockedUser] = await tx
+			.select({ id: user.id })
+			.from(user)
+			.where(eq(user.id, values.userId))
+			.limit(1)
+			.for('update');
+		if (!lockedUser) return null;
+
+		const [row] = await tx
+			.select({ value: count() })
+			.from(userList)
+			.where(eq(userList.userId, values.userId));
+		if ((row?.value ?? 0) >= limit) return null;
+
+		const [created] = await tx.insert(userList).values(values).returning();
+		return created ? deserializeUserList(created) : null;
+	});
 }
 
 export async function updateUserListInDatabase(

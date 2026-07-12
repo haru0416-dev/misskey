@@ -4,13 +4,13 @@ services:
     restart: always
     links:
       - db
-      - redis
+      - valkey
     #     - mcaptcha
     #     - meilisearch
     depends_on:
       db:
         condition: service_healthy
-      redis:
+      valkey:
         condition: service_healthy
     ports:
       - '3000:3000'
@@ -23,15 +23,16 @@ services:
       - ../files:/misskey/files
       - ../.config:/misskey/.config:ro
 
-  redis:
+  valkey:
     restart: always
-    image: redis:7-alpine
+    image: valkey/valkey:8-alpine
     networks:
       - internal_network
     volumes:
+      # Keep the existing path so upgrades reuse Redis-compatible persisted data.
       - ../redis:/data
     healthcheck:
-      test: 'redis-cli ping'
+      test: 'valkey-cli ping'
       interval: 5s
       retries: 20
 

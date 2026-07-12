@@ -16,7 +16,7 @@ import {
 } from '@/core/RetentionAggregationStore.js';
 import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
 import { deleteChannelMutingsByIdsFromDatabase, listExpiredChannelMutingsFromDatabase, listMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { applyBufferedNoteReactionsInDatabase } from '@/core/NoteStore.js';
+import { rebuildNoteReactionsInDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
@@ -29,6 +29,7 @@ import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js'
 
 const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
 const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
+const REACTIONS_BUFFER_REBUILD_PREFIX = 'reactionsBufferRebuild';
 
 export type HonoQueueSystemDependencies = {
 	config: Pick<Config, 'deactivateAntennaThreshold' | 'redis' | 'redisForReactions'>;
@@ -118,9 +119,10 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 	}
 
 	const activeUsersIds = await listActiveLocalUserIdsAfter(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24)));
+	const activeUserIdSet = new Set(activeUsersIds);
 
 	for (const record of pastRecords) {
-		const retention = record.userIds.filter(id => activeUsersIds.includes(id)).length;
+		const retention = record.userIds.filter(id => activeUserIdSet.has(id)).length;
 
 		const data = deepClone(record.data) as Record<string, number>;
 		data[dateKey] = retention;
@@ -168,47 +170,56 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystemDependencies): Promise<void> {
 	if (!deps.meta.enableReactionsBuffering) return;
 
-	const bufferedNoteIds: string[] = [];
+	const bufferedNoteIds = new Set<string>();
+	const reactionRedisPrefix = deps.config.redisForReactions.prefix;
 	let cursor = '0';
 	do {
 		const result = await deps.redisForReactions.scan(
 			cursor,
 			'MATCH',
-			`${deps.config.redis.prefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:*`,
+			`${reactionRedisPrefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:*`,
 			'COUNT',
 			'1000');
 
 		cursor = result[0];
-		bufferedNoteIds.push(...result[1].map(x => x.replace(`${deps.config.redis.prefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:`, '')));
+		for (const key of result[1]) {
+			bufferedNoteIds.add(key.replace(`${reactionRedisPrefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:`, ''));
+		}
+	} while (cursor !== '0');
+	cursor = '0';
+	do {
+		const result = await deps.redisForReactions.scan(
+			cursor,
+			'MATCH',
+			`${reactionRedisPrefix}:${REACTIONS_BUFFER_REBUILD_PREFIX}:*`,
+			'COUNT',
+			'1000');
+
+		cursor = result[0];
+		for (const key of result[1]) {
+			bufferedNoteIds.add(key.replace(`${reactionRedisPrefix}:${REACTIONS_BUFFER_REBUILD_PREFIX}:`, ''));
+		}
 	} while (cursor !== '0');
 
-	if (bufferedNoteIds.length === 0) return;
+	if (bufferedNoteIds.size === 0) return;
+	const noteIds = [...bufferedNoteIds];
 
-	const pipeline = deps.redisForReactions.pipeline();
-	for (const noteId of bufferedNoteIds) {
-		pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
-		pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, -1);
-	}
-	const results = await pipeline.exec();
-
-	const clearPipeline = deps.redisForReactions.pipeline();
-	for (const noteId of bufferedNoteIds) {
-		clearPipeline.del(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
-		clearPipeline.del(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`);
-	}
-	await clearPipeline.exec();
-
-	const opsForEachNote = 2;
-	for (let i = 0; i < bufferedNoteIds.length; i++) {
-		const noteId = bufferedNoteIds[i];
-		const resultDeltas = results?.[i * opsForEachNote]?.[1] as Record<string, string> | undefined;
-		const resultPairs = results?.[(i * opsForEachNote) + 1]?.[1] as string[] | undefined;
-
-		const deltas: Record<string, number> = {};
-		for (const [name, count] of Object.entries(resultDeltas ?? {})) {
-			deltas[name] = parseInt(count, 10);
-		}
-
-		void applyBufferedNoteReactionsInDatabase(deps.db, noteId, deltas, resultPairs ?? []);
+	for (const noteId of noteIds) {
+		const drainId = genId();
+		const drainingDeltaKey = `reactionsBufferDrainingDeltas:${drainId}`;
+		const drainingPairKey = `reactionsBufferDrainingPairs:${drainId}`;
+		const rebuildKey = `${REACTIONS_BUFFER_REBUILD_PREFIX}:${noteId}`;
+		await deps.redisForReactions.set(rebuildKey, '1');
+		await deps.redisForReactions.eval(
+			`if redis.call('exists', KEYS[1]) == 1 then redis.call('rename', KEYS[1], KEYS[3]) end
+			if redis.call('exists', KEYS[2]) == 1 then redis.call('rename', KEYS[2], KEYS[4]) end`,
+			4,
+			`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`,
+			`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`,
+			drainingDeltaKey,
+			drainingPairKey,
+		);
+		await rebuildNoteReactionsInDatabase(deps.db, noteId);
+		await deps.redisForReactions.del(drainingDeltaKey, drainingPairKey, rebuildKey);
 	}
 }

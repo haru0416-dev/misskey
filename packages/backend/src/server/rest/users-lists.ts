@@ -8,8 +8,7 @@ import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import type { RelationshipQueue } from '@/core/queues.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import {
-	countUserListMembershipsByUserListIdInDatabase,
-	createUserListMembershipInDatabase,
+	createUserListMembershipWithinLimitInDatabase,
 	deleteUserListMembershipInDatabase,
 	fetchUserListMembershipByUserIdAndUserListIdFromDatabase,
 	listUserListMembershipsByUserListIdWithPaginationFromDatabase,
@@ -19,8 +18,7 @@ import {
 	userListMembershipExistsInDatabase,
 } from '@/core/UserListMembershipStore.js';
 import {
-	countUserListsByUserIdFromDatabase,
-	createUserListInDatabase,
+	createUserListWithinLimitInDatabase,
 	fetchPublicUserListByIdFromDatabase,
 	fetchUserListByIdAndUserIdFromDatabase,
 	userListExistsByIdAndPublicFromDatabase,
@@ -110,18 +108,14 @@ export async function addUserListMemberForHonoApi(
 	options: { withReplies?: boolean } = {},
 ): Promise<void> {
 	const policies = await getHonoApiRolePolicies(deps, me);
-	const currentCount = await countUserListMembershipsByUserListIdInDatabase(deps.db, list.id);
-	if (currentCount >= policies.userEachUserListsLimit) {
-		throw new TooManyUsersError();
-	}
-
-	await createUserListMembershipInDatabase(deps.db, {
+	const created = await createUserListMembershipWithinLimitInDatabase(deps.db, {
 		id: genId(),
 		userId: target.id,
 		userListId: list.id,
 		userListUserId: list.userId,
 		withReplies: options.withReplies ?? false,
-	});
+	}, policies.userEachUserListsLimit);
+	if (!created) throw new TooManyUsersError();
 
 	deps.publishInternalEvent?.('userListMemberAdded', { userListId: list.id, memberId: target.id });
 	deps.publishUserListStream?.(list.id, 'userAdded', await packUserLiteForHonoApi(deps, target));
@@ -187,16 +181,12 @@ export async function handleHonoApiUsersListsCreate(
 	const params = parseHonoApiParams(createParamDef, body);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
-	const currentCount = await countUserListsByUserIdFromDatabase(deps.db, me.id);
-	if (currentCount >= policies.userListLimit) {
-		throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: '0cf21a28-7715-4f39-a20d-777bfdb8d138' });
-	}
-
-	const userList = await createUserListInDatabase(deps.db, {
+	const userList = await createUserListWithinLimitInDatabase(deps.db, {
 		id: genId(),
 		userId: me.id,
 		name: params.name,
-	});
+	}, policies.userListLimit);
+	if (!userList) throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: '0cf21a28-7715-4f39-a20d-777bfdb8d138' });
 
 	return await packUserListByRowForHonoApi(deps, userList);
 }
@@ -222,16 +212,12 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	if (!listExists) throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
 
 	const policies = await getHonoApiRolePolicies(deps, me);
-	const currentCount = await countUserListsByUserIdFromDatabase(deps.db, me.id);
-	if (currentCount >= policies.userListLimit) {
-		throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f' });
-	}
-
-	const userList = await createUserListInDatabase(deps.db, {
+	const userList = await createUserListWithinLimitInDatabase(deps.db, {
 		id: genId(),
 		userId: me.id,
 		name: params.name,
-	});
+	}, policies.userListLimit);
+	if (!userList) throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f' });
 
 	const users = await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, params.listId);
 

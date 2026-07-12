@@ -8,6 +8,7 @@ import { user as userTable } from '@/db/schema/user.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import { usedUsername } from '@/db/schema/used-username.js';
+import { meta as metaTable } from '@/db/schema/meta.js';
 import { deserializeUser } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
@@ -25,10 +26,13 @@ type SignupAccountInsert = {
 	passwordHash: string | null;
 	publicKey: string;
 	privateKey: string;
+	claimRoot: boolean;
 };
 
-export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data: SignupAccountInsert): Promise<MiUser> {
-	const row = await db.transaction(async (tx) => {
+export class RootUserAlreadyAssignedError extends Error {}
+
+export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data: SignupAccountInsert): Promise<{ account: MiUser; rootClaimed: boolean }> {
+	const result = await db.transaction(async (tx) => {
 		const [existing] = await tx
 			.select({ id: userTable.id })
 			.from(userTable)
@@ -78,8 +82,19 @@ export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data:
 			createdAt: new Date(),
 		});
 
-		return account;
+		let rootClaimed = false;
+		if (data.claimRoot) {
+			const [updatedMeta] = await tx
+				.update(metaTable)
+				.set({ rootUserId: account.id })
+				.where(and(eq(metaTable.id, 'x'), isNull(metaTable.rootUserId)))
+				.returning({ id: metaTable.id });
+			if (!updatedMeta) throw new RootUserAlreadyAssignedError();
+			rootClaimed = true;
+		}
+
+		return { account, rootClaimed };
 	});
 
-	return deserializeUser(row);
+	return { account: deserializeUser(result.account), rootClaimed: result.rootClaimed };
 }

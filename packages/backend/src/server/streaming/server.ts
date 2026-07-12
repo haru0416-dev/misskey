@@ -63,7 +63,7 @@ async function authenticateStreamingRequest(
 
 /** StreamingApiServerService 相当。`server.on('upgrade', ...)` を直接フックし、Hono の fetch パイプラインは経由しない。 */
 export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDependencies, streamingPath = '/streaming'): { detach: () => Promise<void> } {
-	const wss = new WebSocket.WebSocketServer({ noServer: true });
+	const wss = new WebSocket.WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 	const globalEv = new EventEmitter();
 
 	const onRedisMessage = (_channelName: string, data: string) => {
