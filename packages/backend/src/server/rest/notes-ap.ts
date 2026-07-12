@@ -97,12 +97,14 @@ function renderDocument(deps: HonoApiNoteApDependencies, file: MiDriveFile): Rec
 }
 
 export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note: MiNote, dive: boolean): Promise<Record<string, unknown>> {
-	let inReplyTo: string | null = null;
+	let inReplyTo: string | Record<string, unknown> | null = null;
 	if (note.replyId) {
 		const inReplyToNote = note.reply ?? await fetchNoteByIdFromDatabase(deps.db, note.replyId);
 		if (inReplyToNote) {
 			if (inReplyToNote.uri) {
 				inReplyTo = inReplyToNote.uri;
+			} else if (note.visibility === 'specified' && inReplyToNote.visibility === 'specified') {
+				inReplyTo = await renderNoteForHonoApi(deps, inReplyToNote, false);
 			} else if (dive) {
 				inReplyTo = JSON.stringify(await renderNoteForHonoApi(deps, inReplyToNote, false));
 			} else {
@@ -122,6 +124,11 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 	const attributedTo = genLocalUserUri(deps.config, note.userId);
 
 	const mentionedRemoteUserUris: string[] = (JSON.parse(note.mentionedRemoteUsers) as IMentionedRemoteUsers).map(u => u.uri);
+	const visibleRemoteUserUris = note.visibility === 'specified'
+		? (await listUsersByIdsFromDatabase(deps.db, note.visibleUserIds, { includeSuspended: true }))
+			.filter((user): user is MiUser & { uri: string } => user.host != null && user.uri != null)
+			.map(user => user.uri)
+		: [];
 
 	const mentionedUsers = note.mentions.length > 0
 		? await listUsersByIdsFromDatabase(deps.db, note.mentions, { includeSuspended: true })
@@ -177,7 +184,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 			cc = mentionedRemoteUserUris;
 			break;
 		default:
-			to = mentionedRemoteUserUris;
+			to = visibleRemoteUserUris;
 			cc = [];
 			break;
 	}

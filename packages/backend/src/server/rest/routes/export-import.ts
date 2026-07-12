@@ -9,9 +9,9 @@ import { rolePermissionDeniedError } from '../error.js';
 import { handleHonoApiExportCustomEmojis, handleHonoApiIExportAntennas, handleHonoApiIExportBlocking, handleHonoApiIExportClips, handleHonoApiIExportFavorites, handleHonoApiIExportFollowing, handleHonoApiIExportMute, handleHonoApiIExportNotes, handleHonoApiIExportUserLists } from '../export-jobs.js';
 import { handleHonoApiIImportAntennas, handleHonoApiIImportBlocking, handleHonoApiIImportFollowing, handleHonoApiIImportMuting, handleHonoApiIImportUserLists } from '../import-jobs.js';
 import { handleHonoApiFetchRss } from '../fetch-rss.js';
-import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
+import { assertHonoApiRateLimit, assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { hasHonoApiRolePolicyOrIsRoot } from '../role-policy.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
+import { jsonResponse, emptyResponse, getRequestIp, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -261,6 +261,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 
 	app.get('/fetch-rss', async (c) => {
 		return await runApiEndpoint(c, async () => {
+			await assertHonoApiRateLimit(deps, 'fetch-rss', { duration: 60 * 1000, max: 30 }, getRequestIp(c, deps.config));
 			return jsonResponse(c, await handleHonoApiFetchRss(deps, c.req.query()), 200, {
 				'Cache-Control': 'public, max-age=180',
 			});
@@ -269,6 +270,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 
 	app.post('/fetch-rss', async (c) => {
 		return await runApiEndpoint(c, async () => {
+			await assertHonoApiRateLimit(deps, 'fetch-rss', { duration: 60 * 1000, max: 30 }, getRequestIp(c, deps.config));
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiFetchRss(deps, body), 200, {
 				'Cache-Control': 'public, max-age=180',

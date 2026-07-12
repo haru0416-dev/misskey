@@ -16,12 +16,25 @@ jobs:
   dockle:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:18
+        ports:
+          - 54312:5432
+        env:
+          POSTGRES_DB: test-misskey
+          POSTGRES_HOST_AUTH_METHOD: trust
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 56312:6379
+
     env:
       DOCKER_CONTENT_TRUST: 1
       DOCKLE_VERSION: 0.4.15
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Download and install dockle v${{ env.DOCKLE_VERSION }}
         run: |
@@ -34,6 +47,34 @@ jobs:
           set -eux
           docker build -t "misskey-web:ci" .
           docker image ls
+
+      - name: Smoke test production image
+        run: |
+          set -eux
+          docker run -d \
+            --name misskey-production-ci \
+            --network host \
+            --mount type=bind,src="$PWD/.github/misskey/test.yml",dst=/misskey/.config/default.yml,readonly \
+            misskey-web:ci
+          for attempt in $(seq 1 60); do
+            state=$(docker inspect --format '{{.State.Status}}' misskey-production-ci)
+            health=$(docker inspect --format '{{.State.Health.Status}}' misskey-production-ci)
+            if [ "$state" = exited ] || [ "$state" = dead ] || [ "$health" = unhealthy ]; then
+              docker logs misskey-production-ci
+              exit 1
+            fi
+            if [ "$health" = healthy ]; then
+              curl --fail --silent http://127.0.0.1:61812/healthz
+              exit 0
+            fi
+            sleep 5
+          done
+          docker logs misskey-production-ci
+          exit 1
+
+      - name: Stop production image
+        if: always()
+        run: docker rm --force misskey-production-ci || true
 
       - name: Mount tmpfs for Dockle tar
         env:

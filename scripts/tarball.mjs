@@ -3,28 +3,35 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createWriteStream, promises as fsp } from 'node:fs';
+import { createWriteStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { execFile } from 'node:child_process';
 import { finished } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
-import walk from 'ignore-walk';
+import { promisify } from 'node:util';
 import { Pack } from 'tar/pack';
 import meta from '../package.json' with { type: 'json' };
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
-const ignore = [
-	'**/.git/**/*',
-	'**/*ignore',
-	// Exclude files you don't want to include in the tarball here
-];
+const execFileAsync = promisify(execFile);
+
+export async function listTrackedFiles(repositoryRoot = cwd) {
+	const { stdout } = await execFileAsync('git', ['ls-files', '-z'], {
+		cwd: repositoryRoot,
+		encoding: 'buffer',
+		maxBuffer: 32 * 1024 * 1024,
+	});
+
+	return stdout.toString().split('\0').filter(Boolean);
+}
 
 export async function buildTarball() {
 	const mkdirPromise = mkdir(resolve(cwd, 'built', 'tarball'), { recursive: true });
 	const pack = new Pack({ cwd, gzip: true });
-	const patterns = await walk({ path: cwd, ignoreFiles: ['.gitignore'] });
+	const trackedFiles = await listTrackedFiles();
 
-	for await (const entry of fsp.glob(patterns, { cwd, ignore, dot: true })) {
+	for (const entry of trackedFiles) {
 		pack.add(entry);
 	}
 

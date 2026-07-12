@@ -11,8 +11,10 @@ import { I18n } from '@shared/utility/i18n.js';
 import { FETCH_TIMEOUT_MS } from '@/const.js';
 import type { Locale } from 'i18n';
 
+export const MISSKEY_CACHE_PREFIX = 'mk-cache-';
+
 class SwLang {
-	public cacheName = `mk-cache-${_VERSION_}`;
+	public cacheName = `${MISSKEY_CACHE_PREFIX}${_VERSION_}`;
 
 	public lang: Promise<string> = get('lang').then(async prelang => {
 		if (!prelang) return 'en-US';

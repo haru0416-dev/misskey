@@ -32,7 +32,7 @@ function requestHeaders(req: IncomingMessage): Headers {
 		}
 	}
 
-	if (req.socket.remoteAddress != null && !headers.has('x-misskey-remote-address')) {
+	if (req.socket.remoteAddress != null) {
 		headers.set('x-misskey-remote-address', req.socket.remoteAddress);
 	}
 

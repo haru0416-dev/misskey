@@ -57,11 +57,13 @@ function captureRequestServer(): Promise<{ server: Server; url: string; capture:
 describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	let runtime: RuntimeDependencies;
 	let deps: HonoQueueInboxDependencies;
+	let keyPair: Awaited<ReturnType<typeof genRsaKeyPair>>;
 	const servers: Server[] = [];
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = { ...runtime, logger: runtime.loggerService.getLogger('test-queue-inbox') };
+		keyPair = await genRsaKeyPair();
 		// 新規テストDBでは meta.federation が既定で 'none' になっており、そのままだと
 		// isFederationAllowedHost がすべてのホストを拒否してしまう。
 		runtime.meta.federation = 'all';
@@ -87,7 +89,6 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		servers.push(server);
 
 		const id = genId();
-		const keyPair = await genRsaKeyPair();
 		const keyId = `http://${host}/users/${id}#main-key`;
 		const user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {
@@ -173,6 +174,31 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		const { job } = await createSignedInboxJob(host, { object: `${deps.config.url}/users/${followee.id}` });
 
 		job.data.signature.params.signature = tamperBase64Signature(job.data.signature.params.signature);
+
+		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+	});
+
+	test('正しい署名でもactivity.actorが署名者と異なる場合は拒否する', async () => {
+		const host = `hono-queue-inbox-actor-mismatch-${genId()}.example.com`;
+		const { job } = await createSignedInboxJob(host, {
+			actor: `http://${host}/users/${genId()}`,
+		});
+
+		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+	});
+
+	test('正しい署名でもactivity.idのホストが署名者と異なる場合は拒否する', async () => {
+		const host = `hono-queue-inbox-id-mismatch-${genId()}.example.com`;
+		const { job } = await createSignedInboxJob(host, {
+			id: `http://other-${genId()}.example.com/activities/${genId()}`,
+		});
+
+		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+	});
+
+	test('正しい署名でもactivity.idが無い場合は拒否する', async () => {
+		const host = `hono-queue-inbox-missing-id-${genId()}.example.com`;
+		const { job } = await createSignedInboxJob(host, { id: undefined });
 
 		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});

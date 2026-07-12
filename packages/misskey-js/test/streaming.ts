@@ -188,7 +188,7 @@ describe('Streaming', () => {
 		server.close();
 	});
 
-	test('未接続時の send は例外を投げずに破棄される', async () => {
+	test('未接続時の send は例外を投げずにキューされる', async () => {
 		const server = new WS('wss://misskey.test/streaming');
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		await server.connected;

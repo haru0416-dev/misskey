@@ -235,7 +235,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</template>
 </div>
-<div v-else-if="muted" class="_panel" :class="$style.muted" @click="muted = false">
+<div v-else-if="muted" class="_panel" :class="$style.muted">
 	<I18n :src="i18n.ts.userSaysSomething" tag="small">
 		<template #name>
 			<MkA v-user-preview="appearNote.userId" :to="userPage(appearNote.user)">
@@ -243,6 +243,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkA>
 		</template>
 	</I18n>
+	<button type="button" class="_button" :class="$style.showMuted" @click="muted = false">{{ i18n.ts.show }}</button>
 </div>
 </template>
 
@@ -1026,6 +1027,17 @@ function loadConversation() {
 	padding: 8px;
 	text-align: center;
 	opacity: 0.7;
+}
+
+.showMuted {
+	margin-left: 8px;
+	text-decoration: underline;
+	cursor: pointer;
+
+	&:focus-visible {
+		outline: 2px solid var(--MI_THEME-focus);
+		outline-offset: 2px;
+	}
 }
 
 .deleted {
