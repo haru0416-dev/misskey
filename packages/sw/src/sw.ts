@@ -218,22 +218,7 @@ globalThis.addEventListener('notificationclick', (ev: ServiceWorkerGlobalScopeEv
 		if (client) {
 			client.focus();
 		}
-		if (data.type === 'notification') {
-			await swos.sendMarkAllAsRead(loginId);
-		}
-
 		notification.close();
-	})());
-});
-
-globalThis.addEventListener('notificationclose', (ev: ServiceWorkerGlobalScopeEventMap['notificationclose']) => {
-	const data: PushNotificationDataMap[keyof PushNotificationDataMap] = ev.notification.data;
-
-	ev.waitUntil((async (): Promise<void> => {
-		if (data.type === 'notification') {
-			await swos.sendMarkAllAsRead(data.userId);
-		}
-		return;
 	})());
 });
 

@@ -47,6 +47,7 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 <script lang="ts" setup>
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch, ref } from 'vue';
 import { render } from 'buraha';
+import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
 
 const props = withDefaults(defineProps<{
 	src?: string | null;
@@ -80,6 +81,7 @@ const imgWidth = ref(props.width);
 const imgHeight = ref(props.height);
 const bitmapTmp = ref<CanvasImageSource | undefined>();
 const hide = computed(() => !loaded.value || props.forceBlurhash);
+let disposed = false;
 
 function waitForDecode() {
 	if (props.src != null && props.src !== '') {
@@ -96,34 +98,39 @@ function waitForDecode() {
 }
 
 watch([() => props.width, () => props.height, root], () => {
-	const ratio = props.width / props.height;
-	if (ratio > 1) {
-		canvasWidth.value = Math.round(64 * ratio);
-		canvasHeight.value = 64;
-	} else {
-		canvasWidth.value = 64;
-		canvasHeight.value = Math.round(64 / ratio);
-	}
+	const dimensions = calculateBlurhashDimensions(props.width, props.height);
+	canvasWidth.value = dimensions.canvasWidth;
+	canvasHeight.value = dimensions.canvasHeight;
 
 	const clientWidth = root.value?.clientWidth ?? 300;
 	imgWidth.value = clientWidth;
-	imgHeight.value = Math.round(clientWidth / ratio);
+	imgHeight.value = Math.max(1, Math.round(clientWidth / dimensions.ratio));
 }, {
 	immediate: true,
 });
 
 function drawImage(bitmap: CanvasImageSource) {
+	if (disposed) {
+		if (typeof ImageBitmap !== 'undefined' && bitmap instanceof ImageBitmap) bitmap.close();
+		return;
+	}
+
 	// canvasがない（mountedされていない）場合はTmpに保存しておく
 	if (!canvas.value) {
+		if (typeof ImageBitmap !== 'undefined' && bitmapTmp.value instanceof ImageBitmap) bitmapTmp.value.close();
 		bitmapTmp.value = bitmap;
 		return;
 	}
 
 	// canvasがあれば描画する
 	bitmapTmp.value = undefined;
-	const ctx = canvas.value.getContext('2d');
-	if (!ctx) return;
-	ctx.drawImage(bitmap, 0, 0, canvasWidth.value, canvasHeight.value);
+	try {
+		const ctx = canvas.value.getContext('2d');
+		if (!ctx) return;
+		ctx.drawImage(bitmap, 0, 0, canvasWidth.value, canvasHeight.value);
+	} finally {
+		if (typeof ImageBitmap !== 'undefined' && bitmap instanceof ImageBitmap) bitmap.close();
+	}
 }
 
 function drawAvg() {
@@ -198,6 +205,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+	disposed = true;
+	if (typeof ImageBitmap !== 'undefined' && bitmapTmp.value instanceof ImageBitmap) bitmapTmp.value.close();
+	bitmapTmp.value = undefined;
 	canvasPromise.then(work => {
 		if (work instanceof WorkerMultiDispatch) {
 			work.removeListener(workerOnMessage);
