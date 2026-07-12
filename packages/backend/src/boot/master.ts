@@ -7,7 +7,6 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import cluster from 'node:cluster';
 import chalk from 'chalk';
-import chalkTemplate from 'chalk-template';
 import Logger from '@/logger.js';
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
@@ -33,7 +32,7 @@ function greet(props: { version: string }) {
 		console.log(chalk.rgb(255, 136, 0)(' If you like Misskey, please consider donating to support dev. https://misskey-hub.net/docs/donate/'));
 
 		console.log('');
-		console.log(chalkTemplate`--- ${os.hostname()} {gray (PID: ${process.pid.toString()})} ---`);
+		console.log(`--- ${os.hostname()} ${chalk.gray(`(PID: ${process.pid})`)} ---`);
 	}
 
 	bootLogger.info('Welcome to Misskey!');

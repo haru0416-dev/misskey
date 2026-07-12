@@ -6,7 +6,7 @@
 import * as fs from 'node:fs';
 import { Writable } from 'node:stream';
 import { domainToASCII } from 'node:url';
-import { format as dateFormat } from 'date-fns';
+import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { z } from 'zod';
 import type * as Bull from 'bullmq';
 import { createAntennaInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
@@ -204,7 +204,7 @@ export async function handleHonoQueueExportMuting(deps: HonoQueueDbDependencies,
 
 		stream.end();
 
-		const fileName = 'mute-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.csv';
+		const fileName = 'mute-' + formatDateTimeForFileName(new Date()) + '.csv';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'muting', driveFile.id);
@@ -256,7 +256,7 @@ export async function handleHonoQueueExportBlocking(deps: HonoQueueDbDependencie
 
 		stream.end();
 
-		const fileName = 'blocking-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.csv';
+		const fileName = 'blocking-' + formatDateTimeForFileName(new Date()) + '.csv';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'blocking', driveFile.id);
@@ -290,7 +290,7 @@ export async function handleHonoQueueExportUserLists(deps: HonoQueueDbDependenci
 
 		stream.end();
 
-		const fileName = 'user-lists-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.csv';
+		const fileName = 'user-lists-' + formatDateTimeForFileName(new Date()) + '.csv';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'userList', driveFile.id);
@@ -337,7 +337,7 @@ export async function handleHonoQueueExportAntennas(deps: HonoQueueDbDependencie
 		await writeToStream(stream, ']');
 		stream.end();
 
-		const fileName = 'antennas-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.json';
+		const fileName = 'antennas-' + formatDateTimeForFileName(new Date()) + '.json';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'antenna', driveFile.id);
@@ -389,7 +389,7 @@ export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependenci
 
 		stream.end();
 
-		const fileName = 'following-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.csv';
+		const fileName = 'following-' + formatDateTimeForFileName(new Date()) + '.csv';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'following', driveFile.id);
@@ -740,7 +740,7 @@ export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependenci
 		await writeToStream(stream, ']');
 		stream.end();
 
-		const fileName = 'favorites-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.json';
+		const fileName = 'favorites-' + formatDateTimeForFileName(new Date()) + '.json';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'favorite', driveFile.id);
@@ -823,7 +823,7 @@ export async function handleHonoQueueExportNotes(deps: HonoQueueDbDependencies, 
 		await writeToStream(stream, ']');
 		stream.end();
 
-		const fileName = 'notes-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.json';
+		const fileName = 'notes-' + formatDateTimeForFileName(new Date()) + '.json';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'note', driveFile.id);
@@ -976,7 +976,7 @@ export async function handleHonoQueueExportClips(deps: HonoQueueDbDependencies, 
 		await writer.write(']');
 		await writer.close();
 
-		const fileName = 'clips-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.json';
+		const fileName = 'clips-' + formatDateTimeForFileName(new Date()) + '.json';
 		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'clip', driveFile.id);

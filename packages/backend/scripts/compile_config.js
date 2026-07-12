@@ -5,13 +5,12 @@
 
 /**
  * YAMLファイルをJSONファイルに変換するスクリプト
- * ビルド前に実行し、ランタイムにjs-yamlを含まないようにする
+ * ビルド前に実行し、ランタイムにYAMLパーサーを含まないようにする
  */
 
 import fs from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as yaml from 'js-yaml';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
@@ -34,7 +33,7 @@ function yamlToJson(ymlPath) {
 	console.log(`${ymlPath} → ${OUTPUT_PATH}`);
 
 	const yamlContent = fs.readFileSync(ymlPath, 'utf-8');
-	const jsonContent = yaml.load(yamlContent);
+	const jsonContent = Bun.YAML.parse(yamlContent);
 	if (!fs.existsSync(dirname(OUTPUT_PATH))) {
 		fs.mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
 	}

@@ -3,7 +3,6 @@ import { version as summalyVersion } from '@misskey-dev/summaly';
 import type { Plugin, ExternalOption } from 'rolldown';
 import { execa } from 'execa';
 import type { ResultPromise } from 'execa';
-import esmShim from '@rollup/plugin-esm-shim';
 
 /**
  * Watchモード時にバックエンドの起動・停止制御を行うプラグイン
@@ -53,7 +52,7 @@ function backendDevServerPlugin(): Plugin {
 
 export default defineConfig((args) => {
 	const isWatchMode = args.watch != null && args.watch !== 'false';
-	const isE2E = args.e2e != null && args.e2e !== 'false';
+	const isE2E = process.env.MISSKEY_BUILD_E2E === '1';
 
 	// 通常のビルド時にexternalとするモジュール
 	const externalModules: ExternalOption = [
@@ -79,7 +78,6 @@ export default defineConfig((args) => {
 			input: './test-server/entry.ts',
 			platform: 'node',
 			tsconfig: './test-server/tsconfig.json',
-			plugins: [esmShim()],
 			transform: {
 				define,
 			},
@@ -104,7 +102,7 @@ export default defineConfig((args) => {
 			],
 			platform: 'node',
 			tsconfig: true,
-			plugins: [esmShim(), isWatchMode ? backendDevServerPlugin() : undefined],
+			plugins: [isWatchMode ? backendDevServerPlugin() : undefined],
 			transform: {
 				define,
 			},
