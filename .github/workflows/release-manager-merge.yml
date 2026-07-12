@@ -85,6 +85,30 @@ jobs:
           fi
         env:
           VERSION: ${{ steps.version.outputs.target }}
+      - name: Wait for checks on the version commit
+        run: |
+          expected_head=$(git rev-parse HEAD)
+          for attempt in $(seq 1 60); do
+            data=$(gh pr view "$PR_NUMBER" --json headRefOid,reviewDecision,isDraft,mergeStateStatus,statusCheckRollup,mergeable)
+            head=$(jq -r '.headRefOid' <<<"$data")
+            checks=$(jq '.statusCheckRollup | length' <<<"$data")
+            pending=$(jq '[.statusCheckRollup[] | select((.conclusion // .state) != "SUCCESS" and (.conclusion // .state) != "COMPLETED")] | length' <<<"$data")
+            if [ "$head" = "$expected_head" ] && [ "$checks" -gt 0 ] && [ "$pending" -eq 0 ]; then
+              jq -e '
+                (.isDraft | not) and
+                .reviewDecision == "APPROVED" and
+                .mergeable == "MERGEABLE" and
+                (.mergeStateStatus == "CLEAN" or .mergeStateStatus == "BLOCKED")
+              ' <<<"$data" >/dev/null
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for checks on $expected_head" >&2
+          exit 1
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
       - name: Get changelog
         id: changelog
         run: |
@@ -95,15 +119,6 @@ jobs:
           } >> "$GITHUB_OUTPUT"
         env:
           VERSION: ${{ steps.version.outputs.target }}
-      - name: Create tag and release
-        run: |
-          git tag "$VERSION"
-          git push origin "$VERSION"
-          gh release create "$VERSION" --title "$VERSION" --notes "$CHANGELOG"
-        env:
-          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
-          VERSION: ${{ steps.version.outputs.target }}
-          CHANGELOG: ${{ steps.changelog.outputs.value }}
       - name: Merge PR
         uses: prichey/retry@c92c7ba2f5f4d0b3b7b2b04cc5c6672f9c884a3f
         with:
@@ -114,8 +129,23 @@ jobs:
         env:
           GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
           PR_NUMBER: ${{ inputs.pr_number }}
+      - name: Create tag and release from the merge commit
+        run: |
+          merge_commit=$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')
+          git fetch origin "$merge_commit"
+          git checkout --detach "$merge_commit"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+          gh release create "$VERSION" --title "$VERSION" --notes "$CHANGELOG" --verify-tag
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          VERSION: ${{ steps.version.outputs.target }}
+          CHANGELOG: ${{ steps.changelog.outputs.value }}
       - name: Prepend changelog template
         run: |
+          git checkout "$HEAD_REF"
+          git pull --ff-only origin "$HEAD_REF"
           output=$(mktemp)
           printf '%s\n\n' "$CHANGES_TEMPLATE" > "$output"
           cat CHANGELOG.md >> "$output"
@@ -124,3 +154,4 @@ jobs:
           git push
         env:
           CHANGES_TEMPLATE: ${{ inputs.changes_template }}
+          HEAD_REF: ${{ steps.pr.outputs.head_ref }}

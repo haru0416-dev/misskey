@@ -168,6 +168,15 @@ jobs:
       - name: Build
         # migration実行に必要なのはbackendとその依存のみ
         run: bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
+      - name: Check schema and migration consistency
+        run: |
+          MISSKEY_CONFIG_YML=test.yml bun run --filter backend db:generate
+          status=$(git status --porcelain --untracked-files=all -- packages/backend/migration)
+          if [ -n "$status" ]; then
+            printf '%s\n' "$status"
+            echo 'Schema and committed migrations are out of sync.' >&2
+            exit 1
+          fi
       - name: Run migrations
         run: MISSKEY_CONFIG_YML=test.yml bun run --bun --filter backend migrate
       - name: Check no migrations are remaining

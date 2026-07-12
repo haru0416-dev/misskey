@@ -1,6 +1,15 @@
 name: Check Migration History
 
 on:
+  push:
+    branches:
+      - master
+      - develop
+    paths:
+      - packages/backend/migration/**
+      - .github/scripts/check-migration-history.mjs
+      - .github/scripts/check-migration-history.test.mjs
+      - .github/workflows/check-migration-history.yml
   pull_request:
     paths:
       - packages/backend/migration/**
@@ -21,4 +30,4 @@ jobs:
       - name: Test migration history checker
         run: node --test .github/scripts/check-migration-history.test.mjs
       - name: Reject edits to existing migrations
-        run: node .github/scripts/check-migration-history.mjs "${{ github.event.pull_request.base.sha }}"
+        run: node .github/scripts/check-migration-history.mjs "${{ github.event.pull_request.base.sha || github.event.before }}"
