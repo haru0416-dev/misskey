@@ -23,8 +23,6 @@
 	},
 	"devDependencies": {
 		"@misskey-dev/emoji-assets": "17.0.6",
-		"@rollup/plugin-json": "6.1.0",
-		"@rollup/pluginutils": "5.4.0",
 		"@tabler/icons-webfont": "3.44.0",
 		"@types/node": "26.0.1",
 		"@types/punycode.js": "npm:@types/punycode@2.1.4",

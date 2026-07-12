@@ -46,7 +46,6 @@ function backendDevServerPlugin(): Plugin {
 		async watchChange() {
 			if (backendProcess) {
 				await killBackendProcess();
-				await runBuildAssets();
 			}
 		},
 	};

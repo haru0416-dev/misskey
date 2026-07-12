@@ -7,7 +7,7 @@ import { promises as fsp } from 'fs';
 import locales from 'i18n';
 import meta from '../../package.json';
 import packageInfo from './package.json' with { type: 'json' };
-import pluginJson5 from './lib/vite-plugin-json5.js';
+import pluginJson5 from '../frontend/lib/vite-plugin-json5.js';
 import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n';
 import { Features } from 'lightningcss';
 
@@ -179,11 +179,6 @@ export function getConfig(): UserConfig {
 			emptyOutDir: false,
 			sourcemap: process.env.NODE_ENV === 'development',
 			reportCompressedSize: false,
-
-			// https://vitejs.dev/guide/dep-pre-bundling.html#monorepos-and-linked-dependencies
-			commonjsOptions: {
-				include: [/misskey-js/, /node_modules/],
-			},
 		},
 
 		worker: {
@@ -192,6 +187,6 @@ export function getConfig(): UserConfig {
 	};
 }
 
-const config = defineConfig(({ command, mode }) => getConfig());
+const config = defineConfig(getConfig());
 
 export default config;

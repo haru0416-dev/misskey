@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { StorybookConfig } from '@storybook/vue3-vite';
-import { type Plugin, mergeConfig } from 'vite';
+import { type Plugin, type PluginOption, mergeConfig } from 'vite';
 import turbosnap from 'vite-plugin-turbosnap';
 
 const require = createRequire(import.meta.url);
@@ -35,14 +35,14 @@ const config = {
 			viteConfig.plugins?.splice(replacePluginForIsChromatic, 1);
 		}
 
-		const unsupportedPlugins = new Set(['createSearchIndex', 'UnwindCssModuleClassName']);
-		const isUnsupportedPlugin = (plugin: unknown): boolean =>
-			typeof plugin === 'object' &&
-			plugin !== null &&
-			'name' in plugin &&
-			typeof plugin.name === 'string' &&
-			unsupportedPlugins.has(plugin.name);
-		viteConfig.plugins = viteConfig.plugins?.filter((plugin) => !isUnsupportedPlugin(plugin)) ?? [];
+		const unsupportedPlugins = new Set(['autoAssignMarkerId', 'remove-unref-i18n', 'UnwindCssModuleClassName']);
+		const filterUnsupportedPlugins = (plugins: PluginOption[]): PluginOption[] =>
+			plugins.flatMap((plugin) => {
+				if (Array.isArray(plugin)) return filterUnsupportedPlugins(plugin);
+				if (plugin && !(plugin instanceof Promise) && unsupportedPlugins.has(plugin.name)) return [];
+				return [plugin];
+			});
+		viteConfig.plugins = filterUnsupportedPlugins(viteConfig.plugins ?? []);
 
 		return mergeConfig(viteConfig, {
 			plugins: [
