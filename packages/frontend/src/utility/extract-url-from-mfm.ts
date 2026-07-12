@@ -16,7 +16,9 @@ export function extractUrlFromMfm(nodes: mfm.MfmNode[], respectSilentFlag = true
 	const seenUrls = new Set<string>();
 	const seenUrlsWithoutHash = new Set<string>();
 	const urls: string[] = [];
-	for (const { props: { url } } of urlNodes) {
+	for (const {
+		props: { url },
+	} of urlNodes) {
 		if (seenUrls.has(url)) continue;
 		seenUrls.add(url);
 		const urlWithoutHash = removeHash(url);

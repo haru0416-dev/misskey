@@ -4,9 +4,7 @@
  */
 import * as Misskey from 'misskey-js';
 
-type CompiledMute =
-	| { source: string[]; keywords: string[] }
-	| { source: string; regexp: RegExp };
+type CompiledMute = { source: string[]; keywords: string[] } | { source: string; regexp: RegExp };
 
 const compiledMutesCache = new WeakMap<Array<string | string[]>, CompiledMute[]>();
 

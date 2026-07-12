@@ -10,11 +10,11 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"devDependencies": {
-		"@types/node": "26.0.0",
+		"@types/node": "26.0.1",
 		"@types/wawoff2": "1.0.2"
 	},
 	"dependencies": {
-		"@tabler/icons-webfont": "3.35.0",
+		"@tabler/icons-webfont": "3.44.0",
 		"harfbuzzjs": "1.4.0",
 		"wawoff2": "2.0.1"
 	},

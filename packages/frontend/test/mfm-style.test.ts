@@ -9,10 +9,13 @@ import type { CSSProperties, VNode } from 'vue';
 import MkMfm from '@/components/global/MkMfm.js';
 
 function renderFunctionStyle(name: string, args: Record<string, string | true>): CSSProperties {
-	const root = MkMfm({
-		text: 'test',
-		parsedNodes: [FN(name, args, [TEXT('test')])],
-	}, { emit: vi.fn() }) as VNode;
+	const root = MkMfm(
+		{
+			text: 'test',
+			parsedNodes: [FN(name, args, [TEXT('test')])],
+		},
+		{ emit: vi.fn() },
+	) as VNode;
 	const children = root.children as VNode[];
 	return children[0]?.props?.style as CSSProperties;
 }
@@ -52,12 +55,14 @@ describe('MFM function styles', () => {
 			color: '#f00',
 			overflowWrap: 'anywhere',
 		});
-		expect(renderFunctionStyle('border', {
-			width: '1; color: red',
-			radius: '2; background: red',
-			color: 'fff;outline:red',
-			style: 'solid;display:block',
-		})).toStrictEqual({
+		expect(
+			renderFunctionStyle('border', {
+				width: '1; color: red',
+				radius: '2; background: red',
+				color: 'fff;outline:red',
+				style: 'solid;display:block',
+			}),
+		).toStrictEqual({
 			display: 'inline-block',
 			borderWidth: '1px',
 			borderStyle: 'solid',

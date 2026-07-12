@@ -64,7 +64,6 @@
 		"@opentelemetry/sdk-node": "0.220.0",
 		"@opentelemetry/sdk-trace-base": "2.9.0",
 		"@opentelemetry/semantic-conventions": "1.38.0",
-		"@oxc-project/runtime": "0.138.0",
 		"@peertube/http-signature": "1.7.0",
 		"@simplewebauthn/server": "13.3.2",
 		"@smithy/node-http-handler": "4.9.1",

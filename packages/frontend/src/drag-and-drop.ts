@@ -18,17 +18,20 @@ function hasStringId(value: unknown): value is { id: string } {
 
 const dragDataValidators = {
 	driveFiles: (value: unknown): value is DragDataMap['driveFiles'] => Array.isArray(value) && value.every(hasStringId),
-	driveFolders: (value: unknown): value is DragDataMap['driveFolders'] => Array.isArray(value) && value.every(hasStringId),
+	driveFolders: (value: unknown): value is DragDataMap['driveFolders'] =>
+		Array.isArray(value) && value.every(hasStringId),
 	deckColumn: (value: unknown): value is DragDataMap['deckColumn'] => typeof value === 'string',
 	MkDraggable: (value: unknown): value is DragDataMap['MkDraggable'] => {
-		return typeof value === 'object'
-			&& value !== null
-			&& 'item' in value
-			&& hasStringId(value.item)
-			&& 'instanceId' in value
-			&& typeof value.instanceId === 'string'
-			&& 'group' in value
-			&& typeof value.group === 'string';
+		return (
+			typeof value === 'object' &&
+			value !== null &&
+			'item' in value &&
+			hasStringId(value.item) &&
+			'instanceId' in value &&
+			typeof value.instanceId === 'string' &&
+			'group' in value &&
+			typeof value.group === 'string'
+		);
 	},
 };
 
@@ -73,6 +76,6 @@ export function getPlainDragData(event: DragEvent): string | null {
 export function checkDragDataType(event: DragEvent, types: (keyof DragDataMap)[]): boolean {
 	if (event.dataTransfer == null) return false;
 
-	const availableTypes = Array.from(event.dataTransfer.types, type => type.toLowerCase());
-	return types.some(type => availableTypes.includes(`misskey/${type}`.toLowerCase()));
+	const availableTypes = Array.from(event.dataTransfer.types, (type) => type.toLowerCase());
+	return types.some((type) => availableTypes.includes(`misskey/${type}`.toLowerCase()));
 }

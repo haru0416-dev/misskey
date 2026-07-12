@@ -51,9 +51,13 @@ function createStorageProvider(options?: {
 
 describe('preferences profile validation', () => {
 	test('accepts a profile containing scoped preference records', () => {
-		expect(isPossiblyNonNormalizedPreferencesProfile(createProfile({
-			animation: [[{ server: 'example.test' }, true, { sync: true }]],
-		}))).toBe(true);
+		expect(
+			isPossiblyNonNormalizedPreferencesProfile(
+				createProfile({
+					animation: [[{ server: 'example.test' }, true, { sync: true }]],
+				}),
+			),
+		).toBe(true);
 	});
 
 	test.each([
@@ -65,7 +69,7 @@ describe('preferences profile validation', () => {
 		{ ...createProfile(), preferences: { animation: [[null, true, {}]] } },
 		{ ...createProfile(), preferences: { animation: [[{}, true]] } },
 		{ ...createProfile(), preferences: { animation: [[{}, true, { sync: 'yes' }]] } },
-	])('rejects an invalid profile: %j', profile => {
+	])('rejects an invalid profile: %j', (profile) => {
 		expect(isPossiblyNonNormalizedPreferencesProfile(profile)).toBe(false);
 	});
 });
@@ -130,7 +134,11 @@ describe('Pinia preferences store', () => {
 		const store = createPreferencesStore(fixture.provider, null, createPinia());
 		await store.$preferencesCloudReady;
 		const animation = store.model('animation');
-		const reduceAnimation = store.model('animation', value => !value, value => !value);
+		const reduceAnimation = store.model(
+			'animation',
+			(value) => !value,
+			(value) => !value,
+		);
 
 		expect(animation.value).toBe(false);
 		reduceAnimation.value = false;

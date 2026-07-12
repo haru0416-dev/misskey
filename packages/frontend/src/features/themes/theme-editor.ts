@@ -33,7 +33,13 @@ export const fromThemeString = (str?: string): ThemeValue => {
 		const name = parts[0];
 		const arg = parseFloat(parts[1]);
 		const rawValue = parts[2];
-		if (parts.length !== 3 || !isFuncName(name) || !Number.isFinite(arg) || !rawValue?.startsWith('@') || rawValue.length === 1) {
+		if (
+			parts.length !== 3 ||
+			!isFuncName(name) ||
+			!Number.isFinite(arg) ||
+			!rawValue?.startsWith('@') ||
+			rawValue.length === 1
+		) {
 			return str;
 		}
 		const value = rawValue.slice(1);

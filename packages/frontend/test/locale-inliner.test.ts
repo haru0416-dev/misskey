@@ -52,8 +52,6 @@ describe('locale inliner imports', () => {
 describe('locale inliner expressions', () => {
 	test('parenthesizes localized objects used as arrow function expressions', () => {
 		const source = 'import{n as i18n}from"./i18n.js";const getEngine=()=>i18n.ts.searchEngine[selected];';
-		expect(inline(source)).toBe(
-			'const getEngine=()=>({"google":"Google","duckduckgo":"DuckDuckGo"})[selected];',
-		);
+		expect(inline(source)).toBe('const getEngine=()=>({"google":"Google","duckduckgo":"DuckDuckGo"})[selected];');
 	});
 });

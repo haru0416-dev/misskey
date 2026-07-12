@@ -132,14 +132,20 @@ export function initializeAchievements(): void {
 	}
 
 	if (!claimedAchievements.includes('client30min')) {
-		window.setTimeout(() => {
-			void claimAchievement('client30min');
-		}, 1000 * 60 * 30);
+		window.setTimeout(
+			() => {
+				void claimAchievement('client30min');
+			},
+			1000 * 60 * 30,
+		);
 	}
 
 	if (!claimedAchievements.includes('client60min')) {
-		window.setTimeout(() => {
-			void claimAchievement('client60min');
-		}, 1000 * 60 * 60);
+		window.setTimeout(
+			() => {
+				void claimAchievement('client60min');
+			},
+			1000 * 60 * 60,
+		);
 	}
 }

@@ -26,22 +26,28 @@ describe('MkAnimBg', () => {
 	test('renders only while visible and animations are enabled', async () => {
 		let intersectionCallback: IntersectionObserverCallback | undefined;
 		const intersectionDisconnect = vi.fn();
-		vi.stubGlobal('IntersectionObserver', class {
-			constructor(callback: IntersectionObserverCallback) {
-				intersectionCallback = callback;
-			}
-			observe() {}
-			disconnect() {
-				intersectionDisconnect();
-			}
-		});
+		vi.stubGlobal(
+			'IntersectionObserver',
+			class {
+				constructor(callback: IntersectionObserverCallback) {
+					intersectionCallback = callback;
+				}
+				observe() {}
+				disconnect() {
+					intersectionDisconnect();
+				}
+			},
+		);
 		const resizeDisconnect = vi.fn();
-		vi.stubGlobal('ResizeObserver', class {
-			observe() {}
-			disconnect() {
-				resizeDisconnect();
-			}
-		});
+		vi.stubGlobal(
+			'ResizeObserver',
+			class {
+				observe() {}
+				disconnect() {
+					resizeDisconnect();
+				}
+			},
+		);
 
 		let frameId = 0;
 		const frames = new Map<number, FrameRequestCallback>();

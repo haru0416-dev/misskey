@@ -25,9 +25,12 @@ describe('DeferredTaskScheduler', () => {
 			timers.delete(id as unknown as number);
 		});
 		let finishTask: (() => void) | null = null;
-		const task = vi.fn(() => new Promise<void>((resolve) => {
-			finishTask = resolve;
-		}));
+		const task = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					finishTask = resolve;
+				}),
+		);
 		const scheduler = new DeferredTaskScheduler(task, 180_000);
 
 		scheduler.request();

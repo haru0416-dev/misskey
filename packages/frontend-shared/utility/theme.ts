@@ -9,7 +9,13 @@ import lightTheme from '@shared/themes/_light.json5';
 import darkTheme from '@shared/themes/_dark.json5';
 import type { BundledTheme } from 'shiki/themes';
 
-type ThemeCodeHighlighterValue = string | number | boolean | null | ThemeCodeHighlighterValue[] | { [key: string]: ThemeCodeHighlighterValue };
+type ThemeCodeHighlighterValue =
+	| string
+	| number
+	| boolean
+	| null
+	| ThemeCodeHighlighterValue[]
+	| { [key: string]: ThemeCodeHighlighterValue };
 type ThemeCodeHighlighterOverrides = { [key: string]: ThemeCodeHighlighterValue };
 
 export type Theme = {
@@ -133,9 +139,7 @@ function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): t
 
 export function compile(theme: Theme): CompiledTheme {
 	const base = theme.base === 'dark' ? darkTheme : theme.base === 'light' ? lightTheme : null;
-	const resolvedTheme: Theme = base == null
-		? theme
-		: { ...theme, props: { ...base.props, ...theme.props } };
+	const resolvedTheme: Theme = base == null ? theme : { ...theme, props: { ...base.props, ...theme.props } };
 	const props = {} as CompiledTheme;
 
 	for (const [k, v] of Object.entries(resolvedTheme.props)) {
@@ -158,14 +162,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isJsonValue(value: unknown, ancestors = new Set<object>()): value is ThemeCodeHighlighterValue {
-	if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
+	if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+		return true;
 	if (typeof value !== 'object') return false;
 	if (ancestors.has(value)) return false;
 
 	const nextAncestors = new Set(ancestors).add(value);
-	if (Array.isArray(value)) return value.every(item => isJsonValue(item, nextAncestors));
+	if (Array.isArray(value)) return value.every((item) => isJsonValue(item, nextAncestors));
 	if (!isRecord(value)) return false;
-	return Object.values(value).every(item => isJsonValue(item, nextAncestors));
+	return Object.values(value).every((item) => isJsonValue(item, nextAncestors));
 }
 
 export function validateTheme(theme: unknown): theme is Theme {
@@ -175,10 +180,14 @@ export function validateTheme(theme: unknown): theme is Theme {
 	if (typeof theme.author !== 'string') return false;
 	if (theme.desc !== undefined && typeof theme.desc !== 'string') return false;
 	if (theme.base !== 'light' && theme.base !== 'dark') return false;
-	if (!isRecord(theme.props) || !Object.values(theme.props).every(value => typeof value === 'string')) return false;
+	if (!isRecord(theme.props) || !Object.values(theme.props).every((value) => typeof value === 'string')) return false;
 	if (theme.codeHighlighter !== undefined) {
 		if (!isRecord(theme.codeHighlighter) || typeof theme.codeHighlighter.base !== 'string') return false;
-		if (theme.codeHighlighter.overrides !== undefined && (!isRecord(theme.codeHighlighter.overrides) || !isJsonValue(theme.codeHighlighter.overrides))) return false;
+		if (
+			theme.codeHighlighter.overrides !== undefined &&
+			(!isRecord(theme.codeHighlighter.overrides) || !isJsonValue(theme.codeHighlighter.overrides))
+		)
+			return false;
 		if (theme.codeHighlighter.base === '_none_' && theme.codeHighlighter.overrides === undefined) return false;
 	}
 	return true;

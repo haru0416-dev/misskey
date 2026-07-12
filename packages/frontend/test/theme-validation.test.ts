@@ -31,13 +31,15 @@ describe('theme validation', () => {
 	});
 
 	test('parses valid JSON5 and returns null for malformed or invalid themes', () => {
-		expect(parseThemeOrNull(`{
+		expect(
+			parseThemeOrNull(`{
 			id: 'json5-theme',
 			name: 'JSON5 theme',
 			author: 'tester',
 			base: 'dark',
 			props: { accent: '#123456' },
-		}`)?.id).toBe('json5-theme');
+		}`)?.id,
+		).toBe('json5-theme');
 		expect(parseThemeOrNull('{')).toBeNull();
 		expect(parseThemeOrNull(JSON.stringify({ ...validTheme, props: null }))).toBeNull();
 		expect(parseThemeOrNull(null)).toBeNull();
@@ -61,20 +63,24 @@ describe('theme validation', () => {
 	});
 
 	test('rejects non-JSON code highlighter overrides', () => {
-		expect(validateTheme({
-			...validTheme,
-			codeHighlighter: { base: '_none_', overrides: { transform: () => null } },
-		})).toBe(false);
+		expect(
+			validateTheme({
+				...validTheme,
+				codeHighlighter: { base: '_none_', overrides: { transform: () => null } },
+			}),
+		).toBe(false);
 	});
 
 	test('rejects circular code highlighter overrides', () => {
 		const overrides: Record<string, unknown> = {};
 		overrides.self = overrides;
 
-		expect(validateTheme({
-			...validTheme,
-			codeHighlighter: { base: '_none_', overrides },
-		})).toBe(false);
+		expect(
+			validateTheme({
+				...validTheme,
+				codeHighlighter: { base: '_none_', overrides },
+			}),
+		).toBe(false);
 	});
 
 	test.each([

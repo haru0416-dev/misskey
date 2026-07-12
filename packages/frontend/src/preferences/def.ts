@@ -68,10 +68,12 @@ function mergeItemsById<T extends { id: string }>(a: T[], b: T[]): T[] {
 		if (existing == null) {
 			itemsById.set(item.id, item);
 			mergedItems.push(item);
-		} else if (!deepEqual(
-			item as unknown as Parameters<typeof deepEqual>[0],
-			existing as unknown as Parameters<typeof deepEqual>[1],
-		)) {
+		} else if (
+			!deepEqual(
+				item as unknown as Parameters<typeof deepEqual>[0],
+				existing as unknown as Parameters<typeof deepEqual>[1],
+			)
+		) {
 			throw new Error();
 		}
 	}

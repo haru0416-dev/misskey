@@ -30,19 +30,24 @@ type UserAgentHighEntropyData = {
 function isUserAgentHighEntropyData(value: unknown): value is UserAgentHighEntropyData {
 	if (typeof value !== 'object' || value === null) return false;
 	const data = value as Record<string, unknown>;
-	return typeof data.platformVersion === 'string'
-		&& Array.isArray(data.fullVersionList)
-		&& data.fullVersionList.every(item => {
+	return (
+		typeof data.platformVersion === 'string' &&
+		Array.isArray(data.fullVersionList) &&
+		data.fullVersionList.every((item) => {
 			if (typeof item !== 'object' || item === null) return false;
 			const brand = item as Record<string, unknown>;
 			return typeof brand.brand === 'string' && typeof brand.version === 'string';
-		});
+		})
+	);
 }
 
 export async function getUserEnvironment(): Promise<UserEnvironment> {
 	if ('userAgentData' in navigator && navigator.userAgentData != null) {
 		try {
-			const uaData: unknown = await navigator.userAgentData.getHighEntropyValues(['fullVersionList', 'platformVersion']);
+			const uaData: unknown = await navigator.userAgentData.getHighEntropyValues([
+				'fullVersionList',
+				'platformVersion',
+			]);
 			if (!isUserAgentHighEntropyData(uaData)) return getViaUa();
 			const platform = navigator.userAgentData.platform;
 
@@ -60,7 +65,7 @@ export async function getUserEnvironment(): Promise<UserEnvironment> {
 				}
 			}
 
-			const browserData = uaData.fullVersionList.find(item => !/^\s*not.+a.+brand\s*$/i.test(item.brand));
+			const browserData = uaData.fullVersionList.find((item) => !/^\s*not.+a.+brand\s*$/i.test(item.brand));
 			return {
 				os: `${platform} ${osVersion}`,
 				browser: browserData ? `${browserData.brand} v${browserData.version}` : 'Unknown',

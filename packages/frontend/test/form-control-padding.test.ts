@@ -19,14 +19,17 @@ describe('useFormControlPadding', () => {
 		const resizeCallbacks: ResizeObserverCallback[] = [];
 		const observe = vi.fn();
 		const disconnect = vi.fn();
-		vi.stubGlobal('ResizeObserver', class {
-			constructor(callback: ResizeObserverCallback) {
-				resizeCallbacks.push(callback);
-			}
+		vi.stubGlobal(
+			'ResizeObserver',
+			class {
+				constructor(callback: ResizeObserverCallback) {
+					resizeCallbacks.push(callback);
+				}
 
-			observe = observe;
-			disconnect = disconnect;
-		});
+				observe = observe;
+				disconnect = disconnect;
+			},
+		);
 		const setInterval = vi.spyOn(window, 'setInterval');
 		const Component = defineComponent({
 			setup() {
@@ -34,11 +37,12 @@ describe('useFormControlPadding', () => {
 				const prefix = ref<HTMLElement | null>(null);
 				const suffix = ref<HTMLElement | null>(null);
 				useFormControlPadding(input, prefix, suffix);
-				return () => h('div', [
-					h('div', { ref: prefix, 'data-testid': 'prefix' }),
-					h('div', { ref: input, 'data-testid': 'input' }),
-					h('div', { ref: suffix, 'data-testid': 'suffix' }),
-				]);
+				return () =>
+					h('div', [
+						h('div', { ref: prefix, 'data-testid': 'prefix' }),
+						h('div', { ref: input, 'data-testid': 'input' }),
+						h('div', { ref: suffix, 'data-testid': 'suffix' }),
+					]);
 			},
 		});
 
