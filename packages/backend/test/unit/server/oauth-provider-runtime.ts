@@ -9,7 +9,7 @@ import * as htmlParser from 'node-html-parser';
 import { describe, expect, test } from 'vitest';
 import { createS256CodeChallenge } from '@/misc/pkce.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
-import { createOAuthProviderRuntime, parseUrlEncodedParameters } from '@/server/oauth/OAuthProviderRuntime.js';
+import { createMemoryOAuthEphemeralStore, createOAuthProviderRuntime, parseUrlEncodedParameters } from '@/server/oauth/OAuthProviderRuntime.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -155,5 +155,49 @@ describe('createOAuthProviderRuntime', () => {
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ error: 'invalid_grant' });
 		runtime.dispose();
+	});
+
+	test('shares authorization state across runtimes and consumes codes once', async () => {
+		const clientId = 'http://client.example/';
+		const redirectUri = 'http://client.example/callback';
+		const codeVerifier = secureRndstr(128);
+		const store = createMemoryOAuthEphemeralStore();
+		const dependencies = {
+			config,
+			db: {} as MiDrizzleDatabase,
+			httpRequestService: {
+				send: async (url: string) => responseWithUrl('<link rel="redirect_uri" href="/callback"><div class="h-app"><a href="/" class="u-url p-name">Client App</a></div>', url),
+			},
+			getCommonData: async () => commonData,
+			logger: { info: () => {}, error: () => {} } as any,
+			ephemeralStore: store,
+			fetchLocalUserByNativeToken: async () => ({ id: 'user-id' }) as MiLocalUser,
+			createAccessToken: async () => {},
+		};
+		const first = createOAuthProviderRuntime(dependencies);
+		const second = createOAuthProviderRuntime(dependencies);
+		const authorize = await first.authorize({
+			response_type: 'code',
+			client_id: clientId,
+			redirect_uri: redirectUri,
+			scope: 'write:notes',
+			code_challenge: createS256CodeChallenge(codeVerifier),
+			code_challenge_method: 'S256',
+		});
+		const doc = htmlParser.parse(await authorize.text());
+		const transactionId = doc.querySelector('meta[name="misskey:oauth:transaction-id"]')!.attributes.content;
+		const decision = await second.decision({ transaction_id: transactionId, login_token: 'login-token' });
+		const code = new URL(decision.headers.get('location')!).searchParams.get('code')!;
+		const request = {
+			grant_type: 'authorization_code',
+			code,
+			client_id: clientId,
+			redirect_uri: redirectUri,
+			code_verifier: codeVerifier,
+		};
+
+		const responses = await Promise.all([first.token(request), second.token(request)]);
+		expect(responses.map(response => response.status).sort()).toEqual([200, 400]);
+		store.dispose();
 	});
 });

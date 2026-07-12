@@ -5,11 +5,12 @@
 
 import dns from 'node:dns/promises';
 import * as htmlParser from 'node-html-parser';
+import type * as Redis from 'ioredis';
 import { extractLinkHeaderUrisByRel } from '@/misc/parse-link-header.js';
 import ipaddr from 'ipaddr.js';
 import { permissions as kinds } from 'misskey-js';
 import type { Config } from '@/config.js';
-import { createAccessTokenInDatabase, deleteAccessTokenByTokenFromDatabase } from '@/core/AccessTokenStore.js';
+import { createAccessTokenInDatabase } from '@/core/AccessTokenStore.js';
 import { fetchLocalUserByNativeTokenFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -113,9 +114,14 @@ interface AuthorizationCodeGrant {
 	redirectUri: string;
 	codeChallenge: string;
 	scopes: string[];
-	grantedToken?: string;
-	revoked?: boolean;
-	used?: boolean;
+}
+
+export interface OAuthEphemeralStore {
+	setAuthorizationTransaction(id: string, value: AuthorizationTransaction): Promise<void>;
+	consumeAuthorizationTransaction(id: string): Promise<AuthorizationTransaction | null>;
+	setGrantCode(code: string, value: AuthorizationCodeGrant): Promise<void>;
+	consumeGrantCode(code: string): Promise<AuthorizationCodeGrant | null>;
+	dispose(): void;
 }
 
 type HeaderSource = Headers | Record<string, string>;
@@ -137,9 +143,10 @@ export type OAuthProviderRuntimeDependencies = {
 	};
 	getCommonData: () => Promise<CommonData>;
 	logger: Logger;
+	redis?: Redis.Redis;
+	ephemeralStore?: OAuthEphemeralStore;
 	fetchLocalUserByNativeToken?: (token: string) => Promise<MiLocalUser | null>;
 	createAccessToken?: typeof createAccessTokenInDatabase;
-	deleteAccessTokenByToken?: typeof deleteAccessTokenByTokenFromDatabase;
 };
 
 export type OAuthProviderRuntime = {
@@ -394,12 +401,66 @@ function redirectWithQuery(redirectUriString: string, payload: Record<string, st
 	});
 }
 
+const OAUTH_STATE_TTL = 1000 * 60 * 5;
+const consumeRedisValueScript = `
+local value = redis.call('get', KEYS[1])
+if value then redis.call('del', KEYS[1]) end
+return value
+`;
+
+export function createMemoryOAuthEphemeralStore(): OAuthEphemeralStore {
+	const authorizationTransactions = new MemoryKVCache<AuthorizationTransaction>(OAUTH_STATE_TTL);
+	const grantCodes = new MemoryKVCache<AuthorizationCodeGrant>(OAUTH_STATE_TTL);
+	return {
+		async setAuthorizationTransaction(id, value) {
+			authorizationTransactions.set(id, value);
+		},
+		async consumeAuthorizationTransaction(id) {
+			const value = authorizationTransactions.get(id) ?? null;
+			authorizationTransactions.delete(id);
+			return value;
+		},
+		async setGrantCode(code, value) {
+			grantCodes.set(code, value);
+		},
+		async consumeGrantCode(code) {
+			const value = grantCodes.get(code) ?? null;
+			grantCodes.delete(code);
+			return value;
+		},
+		dispose() {
+			authorizationTransactions.dispose();
+			grantCodes.dispose();
+		},
+	};
+}
+
+function createRedisOAuthEphemeralStore(redis: Redis.Redis): OAuthEphemeralStore {
+	const set = async (key: string, value: unknown) => {
+		await redis.set(key, JSON.stringify(value), 'PX', OAUTH_STATE_TTL);
+	};
+	const consume = async <T>(key: string): Promise<T | null> => {
+		const raw = await redis.eval(consumeRedisValueScript, 1, key);
+		if (typeof raw !== 'string') return null;
+		try {
+			return JSON.parse(raw) as T;
+		} catch {
+			return null;
+		}
+	};
+	return {
+		setAuthorizationTransaction: (id, value) => set(`oauth:authorization:${id}`, value),
+		consumeAuthorizationTransaction: id => consume(`oauth:authorization:${id}`),
+		setGrantCode: (code, value) => set(`oauth:grant:${code}`, value),
+		consumeGrantCode: code => consume(`oauth:grant:${code}`),
+		dispose() {},
+	};
+}
+
 export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencies): OAuthProviderRuntime {
-	const authorizationTransactionCache = new MemoryKVCache<AuthorizationTransaction>(1000 * 60 * 5);
-	const grantCodeCache = new MemoryKVCache<AuthorizationCodeGrant>(1000 * 60 * 5);
+	const ephemeralStore = deps.ephemeralStore ?? (deps.redis ? createRedisOAuthEphemeralStore(deps.redis) : createMemoryOAuthEphemeralStore());
 	const fetchLocalUserByNativeToken = deps.fetchLocalUserByNativeToken ?? ((token: string) => fetchLocalUserByNativeTokenFromDatabase(deps.db, token));
 	const createAccessToken = deps.createAccessToken ?? createAccessTokenInDatabase;
-	const deleteAccessTokenByToken = deps.deleteAccessTokenByToken ?? deleteAccessTokenByTokenFromDatabase;
 
 	async function resolveAuthorizationRequest(params: OAuthRequestParameters): Promise<AuthorizationRequestSeed> {
 		const clientId = firstValue(params.client_id);
@@ -478,15 +539,6 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 		return user;
 	}
 
-	async function revokeGrantCode(granted: AuthorizationCodeGrant, code: string): Promise<void> {
-		deps.logger.info(`Detected multiple code use from ${granted.clientId} for user ${granted.userId}. Revoking the code.`);
-		grantCodeCache.delete(code);
-		granted.revoked = true;
-		if (granted.grantedToken) {
-			await deleteAccessTokenByToken(deps.db, granted.grantedToken);
-		}
-	}
-
 	async function authorize(params: OAuthRequestParameters): Promise<Response> {
 		let validatedRedirectUri: string | undefined;
 		let state: string | undefined;
@@ -499,7 +551,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 			const authorizationRequest = finalizeAuthorizationRequest(seed);
 
 			const transactionId = secureRndstr(128);
-			authorizationTransactionCache.set(transactionId, {
+			await ephemeralStore.setAuthorizationTransaction(transactionId, {
 				client: clientInfo,
 				request: authorizationRequest,
 			});
@@ -533,12 +585,10 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				throw new InvalidRequestError('Missing transaction ID');
 			}
 
-			const transaction = authorizationTransactionCache.get(transactionId);
+			const transaction = await ephemeralStore.consumeAuthorizationTransaction(transactionId);
 			if (!transaction) {
 				throw createForbiddenAccessDenied('Invalid or expired transaction ID');
 			}
-			authorizationTransactionCache.delete(transactionId);
-
 			const cancel = !!firstValue(params.cancel);
 			deps.logger.info(`Received the decision. Cancel: ${cancel}`);
 			if (cancel) {
@@ -559,7 +609,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 			deps.logger.info(`Sending authorization code on behalf of user ${user.id} to ${transaction.client.id} through ${transaction.request.redirectUri}, with scope: [${transaction.request.scopes}]`);
 
 			const code = secureRndstr(128);
-			grantCodeCache.set(code, {
+			await ephemeralStore.setGrantCode(code, {
 				clientId: transaction.client.id,
 				userId: user.id,
 				redirectUri: transaction.request.redirectUri,
@@ -596,16 +646,10 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				throw new InvalidGrantError('grant request is invalid');
 			}
 
-			const granted = grantCodeCache.get(code);
+			const granted = await ephemeralStore.consumeGrantCode(code);
 			if (!granted) {
 				throw new InvalidGrantError('grant request is invalid');
 			}
-
-			if (granted.used) {
-				await revokeGrantCode(granted, code);
-				throw new InvalidGrantError('grant request is invalid');
-			}
-			granted.used = true;
 
 			if (clientId !== granted.clientId || redirectUriValue !== granted.redirectUri) {
 				throw new InvalidGrantError('grant request is invalid');
@@ -633,13 +677,6 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				permission: granted.scopes,
 			});
 
-			if (granted.revoked) {
-				deps.logger.info('Canceling the token as the authorization code was revoked in parallel during the process.');
-				await deleteAccessTokenByToken(deps.db, accessToken);
-				throw new InvalidGrantError('grant request is invalid');
-			}
-
-			granted.grantedToken = accessToken;
 			deps.logger.info(`Generated access token for ${granted.clientId} for user ${granted.userId}, with scope: [${granted.scopes}]`);
 
 			return jsonResponse({
@@ -673,8 +710,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 	}
 
 	function dispose(): void {
-		authorizationTransactionCache.dispose();
-		grantCodeCache.dispose();
+		ephemeralStore.dispose();
 	}
 
 	return {
