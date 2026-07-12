@@ -6969,7 +6969,7 @@ export interface Locale extends ILocale {
          */
         "shortNameDescription": string;
         /**
-         * 有効にすると、各種タイムラインを取得する際のパフォーマンスが大幅に向上し、データベースへの負荷を軽減することが可能です。ただし、Redisのメモリ使用量は増加します。サーバーのメモリ容量が少ない場合、または動作が不安定な場合は無効にすることができます。
+         * 有効にすると、各種タイムラインを取得する際のパフォーマンスが大幅に向上し、データベースへの負荷を軽減することが可能です。ただし、Valkeyのメモリ使用量は増加します。サーバーのメモリ容量が少ない場合、または動作が不安定な場合は無効にすることができます。
          */
         "fanoutTimelineDescription": string;
         /**
@@ -6981,7 +6981,7 @@ export interface Locale extends ILocale {
          */
         "fanoutTimelineDbFallbackDescription": string;
         /**
-         * 有効にすると、リアクション作成時のパフォーマンスが大幅に向上し、データベースへの負荷を軽減することが可能です。ただし、Redisのメモリ使用量は増加します。
+         * 有効にすると、リアクション作成時のパフォーマンスが大幅に向上し、データベースへの負荷を軽減することが可能です。ただし、Valkeyのメモリ使用量は増加します。
          */
         "reactionsBufferingDescription": string;
         /**

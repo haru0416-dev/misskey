@@ -268,16 +268,23 @@ async function validateNoteDraft(
 	}
 }
 
-function scheduleNoteDraft(deps: HonoApiNoteDraftDependencies, draft: MiNoteDraft): void {
+async function scheduleNoteDraft(deps: HonoApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
 	if (!draft.isActuallyScheduled) return;
 	if (draft.scheduledAt == null) return;
 	if (draft.scheduledAt.getTime() <= Date.now()) return;
 
 	const delay = draft.scheduledAt.getTime() - Date.now();
-	deps.postScheduledNoteQueue.add(draft.id, {
+	await deps.postScheduledNoteQueue.add(draft.id, {
 		noteDraftId: draft.id,
+		scheduledAt: draft.scheduledAt.getTime(),
 	}, {
+		jobId: `scheduled-${draft.id}-${draft.scheduledAt.getTime()}`,
 		delay,
+		attempts: 3,
+		backoff: {
+			type: 'exponential',
+			delay: 30_000,
+		},
 		removeOnComplete: {
 			age: 3600 * 24 * 7,
 			count: 30,
@@ -289,10 +296,16 @@ function scheduleNoteDraft(deps: HonoApiNoteDraftDependencies, draft: MiNoteDraf
 	});
 }
 
-async function clearNoteDraftSchedule(deps: HonoApiNoteDraftDependencies, draftId: string): Promise<void> {
-	const jobs = await deps.postScheduledNoteQueue.getJobs(['delayed', 'waiting', 'active']);
+async function clearNoteDraftSchedule(deps: HonoApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
+	if (draft.scheduledAt != null) {
+		const job = await deps.postScheduledNoteQueue.getJob(`scheduled-${draft.id}-${draft.scheduledAt.getTime()}`);
+		if (job != null && !await job.isActive()) await job.remove();
+	}
+
+	// Remove legacy and stale-revision jobs created before deterministic IDs were introduced.
+	const jobs = await deps.postScheduledNoteQueue.getJobs(['delayed', 'waiting']);
 	for (const job of jobs) {
-		if (job.data.noteDraftId === draftId) {
+		if (job.data.noteDraftId === draft.id) {
 			await job.remove();
 		}
 	}
@@ -490,7 +503,7 @@ export async function handleHonoApiNotesDraftsCreate(
 	});
 
 	if (draft.scheduledAt && draft.isActuallyScheduled) {
-		scheduleNoteDraft(deps, draft);
+		await scheduleNoteDraft(deps, draft);
 	}
 
 	return { createdDraft: await packNoteDraftForHonoApi(deps, draft, me) };
@@ -514,11 +527,14 @@ export async function handleHonoApiNotesDraftsUpdate(
 		}
 	}
 
-	const scheduledAt = params.scheduledAt ? new Date(params.scheduledAt) : null;
+	const scheduledAt = params.scheduledAt === undefined
+		? existing.scheduledAt
+		: params.scheduledAt == null ? null : new Date(params.scheduledAt);
 	const pollExpiresAt = params.poll?.expiresAt ? new Date(params.poll.expiresAt) : null;
+	const isActuallyScheduled = params.isActuallyScheduled ?? existing.isActuallyScheduled;
 
 	await validateNoteDraft(deps, me, {
-		isActuallyScheduled: params.isActuallyScheduled,
+		isActuallyScheduled,
 		scheduledAt,
 		pollExpiresAt,
 		visibleUserIds: params.visibleUserIds,
@@ -561,12 +577,12 @@ export async function handleHonoApiNotesDraftsUpdate(
 		visibleUserIds: params.visibleUserIds,
 		channelId: params.channelId,
 		scheduledAt,
-		isActuallyScheduled: params.isActuallyScheduled,
+		isActuallyScheduled,
 	});
 
-	await clearNoteDraftSchedule(deps, params.draftId);
+	await clearNoteDraftSchedule(deps, existing);
 	if (updatedDraft.scheduledAt != null && updatedDraft.isActuallyScheduled) {
-		scheduleNoteDraft(deps, updatedDraft);
+		await scheduleNoteDraft(deps, updatedDraft);
 	}
 
 	return { updatedDraft: await packNoteDraftForHonoApi(deps, updatedDraft, me) };
@@ -583,7 +599,7 @@ export async function handleHonoApiNotesDraftsDelete(
 	if (draft.userId !== me.id) throw draftAccessDeniedError();
 
 	await deleteNoteDraftByIdFromDatabase(deps.db, draft.id);
-	await clearNoteDraftSchedule(deps, params.draftId);
+	await clearNoteDraftSchedule(deps, draft);
 }
 
 export async function handleHonoApiNotesDraftsList(

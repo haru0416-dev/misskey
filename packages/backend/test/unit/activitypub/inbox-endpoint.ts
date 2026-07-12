@@ -97,9 +97,10 @@ describe('hono-inbox-endpoint', () => {
 
 		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
+		const activityId = `https://${host}/activities/${genId()}`;
 
 		await signedPostForHonoApi({ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService }, user, url, {
-			id: `https://${host}/activities/${genId()}`,
+			id: activityId,
 			type: 'Follow',
 			actor: `https://${host}/users/${user.id}`,
 			object: `https://${host}/users/somebody`,
@@ -125,6 +126,9 @@ describe('hono-inbox-endpoint', () => {
 		const after = await runtime.inboxQueue.getJobCounts();
 		expect((after.waiting ?? 0) + (after.active ?? 0) + (after.delayed ?? 0))
 			.toBeGreaterThan((before.waiting ?? 0) + (before.active ?? 0) + (before.delayed ?? 0) - 1);
+		const queued = (await runtime.inboxQueue.getJobs(['waiting', 'active', 'delayed', 'completed', 'failed']))
+			.find(job => job.data.activity.id === activityId);
+		expect(queued?.opts.attempts).toBe(runtime.config.inboxJobMaxAttempts ?? 8);
 	});
 
 	test('federationがnoneの場合は403', async () => {

@@ -10,6 +10,7 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
+import { enqueueDbJobInOutbox } from '@/core/QueueOutboxStore.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -28,6 +29,17 @@ type DeleteAccountTarget = {
 	id: MiUser['id'];
 	host: MiUser['host'];
 };
+
+const DELETE_ACCOUNT_JOB_OPTIONS = {
+	removeOnComplete: {
+		age: 3600 * 24 * 7,
+		count: 30,
+	},
+	removeOnFail: {
+		age: 3600 * 24 * 7,
+		count: 100,
+	},
+} as const;
 
 function genLocalUserUri(config: Config, userId: MiUser['id']): string {
 	return `${config.url}/users/${userId}`;
@@ -50,24 +62,15 @@ function addActivityContext<T extends IObject>(config: Config, activity: T): T &
 	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
 }
 
-function enqueueDeleteAccountJob(
-	deps: Pick<DeleteAccountDependencies, 'dbQueue'>,
+async function enqueueDeleteAccountJob(
+	db: MiDrizzleDatabase,
 	user: DeleteAccountTarget,
 	soft: boolean,
-): void {
-	void deps.dbQueue.add('deleteAccount', {
+): Promise<string> {
+	return await enqueueDbJobInOutbox(db, 'deleteAccount', {
 		user: { id: user.id },
 		soft,
-	}, {
-		removeOnComplete: {
-			age: 3600 * 24 * 7,
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7,
-			count: 100,
-		},
-	});
+	}, DELETE_ACCOUNT_JOB_OPTIONS);
 }
 
 export async function deleteAccountWithSideEffects(
@@ -100,12 +103,23 @@ export async function deleteAccountWithSideEffects(
 			enqueueDeliverJob(deps.deliverQueue, deps.config, localUser, content as IActivity, inbox, true);
 		}
 
-		enqueueDeleteAccountJob(deps, user, false);
-	} else {
-		enqueueDeleteAccountJob(deps, user, true);
 	}
 
-	await updateUserDeletedStateInDatabase(deps.db, user.id, true);
+	const outboxId = await deps.db.transaction(async transaction => {
+		const id = await enqueueDeleteAccountJob(transaction as MiDrizzleDatabase, user, user.host !== null);
+		await updateUserDeletedStateInDatabase(transaction as MiDrizzleDatabase, user.id, true);
+		return id;
+	});
+
+	void deps.dbQueue.add('deleteAccount', {
+		user: { id: user.id },
+		soft: user.host !== null,
+	}, {
+		...DELETE_ACCOUNT_JOB_OPTIONS,
+		jobId: `outbox-${outboxId}`,
+	}).catch(() => {
+		// The outbox dispatcher retries when the low-latency enqueue path is unavailable.
+	});
 
 	deps.publishInternalEvent?.('userChangeDeletedState', { id: user.id, isDeleted: true });
 }

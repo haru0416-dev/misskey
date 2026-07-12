@@ -18,6 +18,8 @@ import type {
 	UserWebhookDeliverQueue,
 } from '@/core/queues.js';
 import type * as Bull from 'bullmq';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { getQueueOutboxStats } from '@/core/QueueOutboxStore.js';
 
 export const QUEUE_TYPES = [
 	'system',
@@ -36,6 +38,7 @@ export type QueueType = typeof QUEUE_TYPES[number];
 export type QueueClearState = '*' | 'completed' | 'wait' | 'active' | 'paused' | 'prioritized' | 'delayed' | 'failed';
 
 export type AdminQueueDependencies = {
+	db: MiDrizzleDatabase;
 	systemQueue: SystemQueue;
 	endedPollNotificationQueue: EndedPollNotificationQueue;
 	postScheduledNoteQueue: PostScheduledNoteQueue;
@@ -206,6 +209,7 @@ export async function getQueues(deps: AdminQueueDependencies) {
 			name: type,
 			counts,
 			isPaused,
+			outbox: type === 'db' ? await getQueueOutboxStats(deps.db) : null,
 			metrics: {
 				completed: metricsCompleted,
 				failed: metricsFailed,
@@ -229,13 +233,14 @@ export async function getQueueStats(deps: AdminQueueDependencies, queueType: Que
 		qualifiedName: queue.qualifiedName,
 		counts,
 		isPaused,
+		outbox: queueType === 'db' ? await getQueueOutboxStats(deps.db) : null,
 		metrics: {
 			completed: metricsCompleted,
 			failed: metricsFailed,
 		},
 		db: {
-			version: db.redis_version,
-			mode: db.redis_mode as 'cluster' | 'standalone' | 'sentinel',
+			version: db.valkey_version ?? db.redis_version,
+			mode: (db.server_mode ?? db.redis_mode) as 'cluster' | 'standalone' | 'sentinel',
 			runId: db.run_id,
 			processId: db.process_id,
 			port: parseInt(db.tcp_port, 10),

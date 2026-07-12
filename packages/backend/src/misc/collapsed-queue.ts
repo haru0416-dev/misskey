@@ -16,7 +16,16 @@ export class CollapsedQueue<K, V> {
 		private timeout: number,
 		private collapse: (oldValue: V, newValue: V) => V,
 		private perform: (key: K, value: V) => Promise<void>,
+		private onError: (error: unknown, key: K, value: V) => void,
 	) {}
+
+	private async performSafely(key: K, value: V): Promise<void> {
+		try {
+			await this.perform(key, value);
+		} catch (error) {
+			this.onError(error, key, value);
+		}
+	}
 
 	enqueue(key: K, value: V) {
 		if (this.jobs.has(key)) {
@@ -27,7 +36,7 @@ export class CollapsedQueue<K, V> {
 			const timer = setTimeout(() => {
 				const job = this.jobs.get(key)!;
 				this.jobs.delete(key);
-				this.perform(key, job.value);
+				void this.performSafely(key, job.value);
 			}, this.timeout);
 			this.jobs.set(key, { value, timer });
 		}
@@ -39,6 +48,6 @@ export class CollapsedQueue<K, V> {
 		for (const [_key, job] of entries) {
 			clearTimeout(job.timer);
 		}
-		await Promise.allSettled(entries.map(([key, job]) => this.perform(key, job.value)));
+		await Promise.all(entries.map(([key, job]) => this.performSafely(key, job.value)));
 	}
 }

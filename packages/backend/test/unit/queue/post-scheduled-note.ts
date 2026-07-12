@@ -53,16 +53,9 @@ describe('hono-queue-post-scheduled-note', () => {
 			isActuallyScheduled: true,
 		});
 
-		await handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId }));
+		await handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId, scheduledAt: (await fetchNoteDraftByIdFromDatabase(runtime.db, draftId))!.scheduledAt!.getTime() }));
 
-		// deleteNoteDraftByIdFromDatabase は元実装同様 fire-and-forget (void) で
-		// 呼ばれるため、DB反映完了をポーリングで待つ。
-		let draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
-		for (let i = 0; i < 20 && draftAfter != null; i++) {
-			await new Promise(resolve => setTimeout(resolve, 100));
-			draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
-		}
-
+		const draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
 		expect(draftAfter).toBeNull();
 	});
 
@@ -84,13 +77,13 @@ describe('hono-queue-post-scheduled-note', () => {
 			isActuallyScheduled: false,
 		});
 
-		await handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId }));
+		await handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId, scheduledAt: 0 }));
 
 		const draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
 		expect(draftAfter).not.toBeNull();
 	});
 
 	test('存在しないnoteDraftIdは何もしない', async () => {
-		await expect(handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId() }))).resolves.toBeUndefined();
+		await expect(handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId(), scheduledAt: Date.now() }))).resolves.toBeUndefined();
 	});
 });

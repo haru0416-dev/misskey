@@ -1,5 +1,4 @@
 import type { Server } from 'node:http';
-import { portToPid } from 'pid-port';
 import { Hono } from 'hono';
 import { loadConfig } from '@/config.js';
 import { createHonoNodeServer } from '@/server/node-server.js';
@@ -18,7 +17,6 @@ let controllerServer: Server | undefined;
  * テスト用のサーバインスタンスを起動する
  */
 export async function setup() {
-	await killTestServer();
 	await stopControllerEndpoints();
 
 	await startControllerEndpoints();
@@ -35,36 +33,6 @@ export async function setup() {
 export async function teardown() {
 	await stopApplication();
 	await stopControllerEndpoints();
-	await killTestServer();
-}
-
-/**
- * 既に重複したポートで待ち受けしているサーバがある場合はkillする
- */
-async function killTestServer() {
-	try {
-		const pid = await portToPid(config.port);
-		if (pid) {
-			process.kill(pid, 'SIGTERM');
-			if (!await waitForPortToClose(config.port, 5000)) {
-				process.kill(pid, 'SIGKILL');
-				await waitForPortToClose(config.port, 5000);
-			}
-		}
-	} catch {
-		// NOP;
-	}
-}
-
-async function waitForPortToClose(port: number, timeout: number): Promise<boolean> {
-	const deadline = Date.now() + timeout;
-	while (Date.now() < deadline) {
-		const pid = await portToPid(port).catch(() => undefined);
-		if (!pid) return true;
-		await new Promise(resolve => setTimeout(resolve, 100));
-	}
-
-	return false;
 }
 
 async function startApplication() {
@@ -107,7 +75,6 @@ async function startControllerEndpoints(port = config.port + 1000) {
 		process.env = JSON.parse(originEnv);
 
 		await stopApplication();
-		await killTestServer();
 		await startApplication();
 
 		return c.json({ success: true });

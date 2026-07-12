@@ -149,6 +149,9 @@ function getAdminDriveFileThumbnailUrl(deps: HonoApiAdminDriveDependencies, file
 
 function enqueueDeleteObjectStorageFile(queue: ObjectStorageQueue, key: string): unknown {
 	return queue.add('deleteFile', { key }, {
+		attempts: 5,
+		backoff: { type: 'exponential', delay: 10_000 },
+		deduplication: { id: key },
 		removeOnComplete: {
 			age: 3600 * 24 * 7,
 			count: 30,
@@ -214,6 +217,9 @@ export async function handleHonoApiAdminDriveCleanRemoteFiles(
 	parseHonoApiParams(adminDriveNoParamsDef, body);
 
 	await deps.objectStorageQueue.add('cleanRemoteFiles', {}, {
+		attempts: 2,
+		backoff: { type: 'exponential', delay: 60_000 },
+		deduplication: { id: 'cleanRemoteFiles' },
 		removeOnComplete: {
 			age: 3600 * 24 * 7,
 			count: 30,

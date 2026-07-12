@@ -4,6 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import ipaddr from 'ipaddr.js';
 import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
@@ -145,18 +146,33 @@ export function tokenFromRequest(c: Context, body: Record<string, unknown>): str
 }
 
 export function getRequestIp(c: Context, config: Config): string {
-	if (config.trustProxy !== false) {
-		const forwardedFor = c.req.header('x-forwarded-for')?.split(',')[0]?.trim();
-		if (forwardedFor) return forwardedFor;
+	const remoteAddress = c.req.header('x-misskey-remote-address') ?? '0.0.0.0';
+	if (config.trustProxy === false) return remoteAddress;
 
-		const realIp = c.req.header('x-real-ip');
-		if (realIp) return realIp;
+	const forwarded = c.req.header('x-forwarded-for')?.split(',').map(address => address.trim()).filter(Boolean)
+		?? [c.req.header('x-real-ip') ?? c.req.header('cf-connecting-ip')].filter((address): address is string => address != null && address !== '');
+	if (forwarded.length === 0) return remoteAddress;
 
-		const cfConnectingIp = c.req.header('cf-connecting-ip');
-		if (cfConnectingIp) return cfConnectingIp;
+	const addresses = [...forwarded, remoteAddress];
+	const configuredNetworks = typeof config.trustProxy === 'string'
+		? [config.trustProxy]
+		: Array.isArray(config.trustProxy) ? config.trustProxy : [];
+	const networks = configuredNetworks.map(network => ipaddr.parseCIDR(network));
+	const isTrusted = (address: string, hop: number): boolean => {
+		if (config.trustProxy === true) return true;
+		if (typeof config.trustProxy === 'number') return hop < config.trustProxy;
+		if (typeof config.trustProxy === 'function') return config.trustProxy(address, hop);
+		if (!ipaddr.isValid(address)) return false;
+
+		const parsed = ipaddr.process(address);
+		return networks.some(([network, prefix]) => parsed.kind() === network.kind() && parsed.match(network, prefix));
+	};
+
+	for (let index = addresses.length - 1, hop = 0; index > 0; index--, hop++) {
+		if (!isTrusted(addresses[index], hop)) return addresses[index];
 	}
 
-	return c.req.header('x-misskey-remote-address') ?? '0.0.0.0';
+	return addresses[0];
 }
 
 export async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {
@@ -167,8 +183,7 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 			return apiErrorResponse(c, err);
 		}
 
-		// ApiCallService.#onExecError 相当: 予期しない例外は INTERNAL_ERROR として
-		// `info.e` に元エラーの情報を載せて返す (元実装は ApiError(null, { e: ... }))
+		// 予期しない例外の詳細はテレメトリにのみ記録し、クライアントには公開しない。
 		if (err instanceof Error) {
 			recordException(err);
 			return apiErrorResponse(c, new HonoApiError({
@@ -177,13 +192,7 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 				code: 'INTERNAL_ERROR',
 				id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
 				kind: 'server',
-				info: {
-					e: {
-						message: err.message,
-						code: err.name,
-						id: randomUUID(),
-					},
-				},
+				info: { id: randomUUID() },
 			}));
 		}
 

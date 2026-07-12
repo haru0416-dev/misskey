@@ -1926,6 +1926,11 @@ export const endpointMetas = {
 						type: 'string',
 						optional: false, nullable: false,
 					},
+					redis: {
+						type: 'string',
+						optional: true, nullable: false,
+						description: 'Valkey server version. The property name is retained for API compatibility.',
+					},
 					cpu: {
 						type: 'object',
 						optional: false, nullable: false,
