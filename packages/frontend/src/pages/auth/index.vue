@@ -50,6 +50,7 @@ import { $i } from '@/i.js';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { login } from '@/accounts.js';
+import { createAuthCallbackUrl } from '@/pages/auth/callback-url.js';
 
 const props = defineProps<{
 	token: string;
@@ -61,9 +62,7 @@ const session = ref<Misskey.entities.AuthSessionShowResponse | null>(null);
 function accepted() {
 	state.value = 'accepted';
 	if (session.value && session.value.app.callbackUrl) {
-		const url = new URL(session.value.app.callbackUrl);
-		if (['javascript:', 'file:', 'data:', 'mailto:', 'tel:', 'vbscript:'].includes(url.protocol)) throw new Error('invalid url');
-		window.location.href = `${session.value.app.callbackUrl}?token=${session.value.token}`;
+		window.location.href = createAuthCallbackUrl(session.value.app.callbackUrl, session.value.token);
 	}
 }
 

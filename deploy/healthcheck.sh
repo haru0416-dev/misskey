@@ -3,6 +3,11 @@
 # SPDX-FileCopyrightText: syuilo and misskey-project
 # SPDX-License-Identifier: AGPL-3.0-only
 
-PORT=$(grep '^port:' /misskey/.config/default.yml | awk 'NR==1{print $2; exit}')
-# oven/bun イメージ (本番 runner / federation テスト) には curl が無いため、bun の fetch で確認する
-exec bun -e "const res = await fetch('http://localhost:${PORT}/healthz'); if (!res.ok) process.exit(1);"
+# Read the same compiled configuration as the server instead of reparsing YAML.
+exec bun -e '
+const config = await Bun.file("/misskey/packages/backend/built/.config.json").json();
+const port = config.port ?? Number(Bun.env.PORT);
+if (!Number.isInteger(port) || port <= 0 || port > 65535) process.exit(1);
+const res = await fetch(`http://127.0.0.1:${port}/healthz`);
+if (!res.ok) process.exit(1);
+'

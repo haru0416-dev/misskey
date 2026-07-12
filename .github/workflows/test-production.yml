@@ -39,6 +39,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
+      - name: Test source tarball
+        run: node --test scripts/tarball.test.mjs
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config/default.yml
       - name: Build

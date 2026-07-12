@@ -11,7 +11,7 @@ import type { PushNotificationDataMap } from '@/types.js';
 import type { I18n } from '@shared/utility/i18n.js';
 import type { Locale } from 'i18n';
 import { createEmptyNotification, createNotification } from '@/scripts/create-notification.js';
-import { swLang } from '@/scripts/lang.js';
+import { MISSKEY_CACHE_PREFIX, swLang } from '@/scripts/lang.js';
 import * as swos from '@/scripts/operations.js';
 
 async function respondToNavigation(request: Request): Promise<Response> {
@@ -82,7 +82,7 @@ globalThis.addEventListener('activate', ev => {
 		caches.keys()
 			.then(cacheNames => Promise.all(
 				cacheNames
-					.filter((v) => v !== swLang.cacheName)
+					.filter((name) => name.startsWith(MISSKEY_CACHE_PREFIX) && name !== swLang.cacheName)
 					.map(name => caches.delete(name)),
 			))
 			.then(() => globalThis.clients.claim()),
@@ -241,10 +241,11 @@ globalThis.addEventListener('message', (ev: ServiceWorkerGlobalScopeEventMap['me
 	ev.waitUntil((async (): Promise<void> => {
 		switch (ev.data) {
 			case 'clear':
-				// Cache Storage全削除
 				await caches.keys()
 					.then(cacheNames => Promise.all(
-						cacheNames.map(name => caches.delete(name)),
+						cacheNames
+							.filter(name => name.startsWith(MISSKEY_CACHE_PREFIX))
+							.map(name => caches.delete(name)),
 					));
 				return; // TODO
 		}

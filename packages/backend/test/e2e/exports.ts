@@ -11,19 +11,28 @@ process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
-import { api, port, post, signup, startJobQueue } from '../utils.js';
+import { loadConfig } from '@/config.js';
+import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { api, port, post, role, signup, startJobQueue, uploadFile } from '../utils.js';
 import type { JobQueueRuntime } from '@/boot/common.js';
 import type * as misskey from 'misskey-js';
 
 describe('export-clips', () => {
 	let queue: JobQueueRuntime;
+	let db: MiDrizzleDatabase;
+	let pool: MiDrizzlePool;
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
 	// XXX: Any better way to get the result?
 	async function pollFirstDriveFile(): Promise<any> {
-		while (true) {
-			const files = (await api('drive/files', {}, alice)).body;
+		const deadline = Date.now() + 30_000;
+		while (Date.now() < deadline) {
+			const filesResponse = await api('drive/files', {}, alice);
+			assert.strictEqual(filesResponse.status, 200);
+			const files = filesResponse.body;
 			if (!files.length) {
 				await new Promise(r => setTimeout(r, 100));
 				continue;
@@ -31,13 +40,20 @@ describe('export-clips', () => {
 			if (files.length > 1) {
 				throw new Error('Too many files?');
 			}
-			const file = (await api('drive/files/show', { fileId: files[0].id }, alice)).body;
+			const fileResponse = await api('drive/files/show', { fileId: files[0].id }, alice);
+			assert.strictEqual(fileResponse.status, 200);
+			const file = fileResponse.body;
 			const res = await fetch(new URL(new URL(file.url).pathname, `http://127.0.0.1:${port}`));
+			assert.strictEqual(res.status, 200);
 			return await res.json();
 		}
+		assert.fail('Timed out waiting for exported drive file');
 	}
 
 	beforeAll(async () => {
+		const config = loadConfig();
+		pool = createDrizzlePool(config);
+		db = createDrizzleDatabase(pool, config);
 		queue = await startJobQueue();
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -45,24 +61,25 @@ describe('export-clips', () => {
 
 	afterAll(async () => {
 		await queue.close();
+		await pool.end();
 	});
 
 	beforeEach(async () => {
 		// Clean all clips and files of alice
 		const clips = (await api('clips/list', {}, alice)).body;
-		for (const clip of clips) {
+		await Promise.all(clips.map(async clip => {
 			const res = await api('clips/delete', { clipId: clip.id }, alice);
 			if (res.status !== 204) {
 				throw new Error('Failed to delete clip');
 			}
-		}
+		}));
 		const files = (await api('drive/files', {}, alice)).body;
-		for (const file of files) {
+		await Promise.all(files.map(async file => {
 			const res = await api('drive/files/delete', { fileId: file.id }, alice);
 			if (res.status !== 204) {
 				throw new Error('Failed to delete file');
 			}
-		}
+		}));
 	});
 
 	test('basic export', async () => {
@@ -259,4 +276,67 @@ describe('export-clips', () => {
 		assert.strictEqual(exported[1].note.text, 'favorite2');
 		assert.deepStrictEqual(exported[1].note.poll.choices[0], 'sakura');
 	});
+
+	test('export notes includes only the requesting user\'s notes', async () => {
+		const aliceNote1 = await post(alice, { text: 'exported-note-1' });
+		const aliceNote2 = await post(alice, { text: 'exported-note-2' });
+		const bobNote = await post(bob, { text: 'must-not-be-exported' });
+
+		const exportRes = await api('i/export-notes', {}, alice);
+		assert.strictEqual(exportRes.status, 204);
+
+		const exported = await pollFirstDriveFile();
+		assert.ok(Array.isArray(exported));
+		assert.ok(exported.some(note => note.id === aliceNote1.id && note.text === aliceNote1.text));
+		assert.ok(exported.some(note => note.id === aliceNote2.id && note.text === aliceNote2.text));
+		assert.ok(!exported.some(note => note.id === bobNote.id || note.text === bobNote.text));
+	});
+
+	test('import blocking processes valid rows despite malformed and self rows', async () => {
+		const suffix = Date.now().toString(36).slice(-8);
+		const importer = await signup({ username: `importer${suffix}` });
+		const target = await signup({ username: `target${suffix}` });
+		const importRole = await role(alice, { name: `import blocking ${suffix}` }, {
+			canImportBlocking: { priority: 0, useDefault: false, value: true },
+		});
+		const assignRes = await api('admin/roles/assign', { roleId: importRole.id, userId: importer.id }, alice);
+		assert.strictEqual(assignRes.status, 204);
+
+		const csv = [
+			'not a valid acct',
+			`${importer.username}@misskey.local`,
+			`${target.username}@misskey.local`,
+		].join('\n');
+		const uploaded = await uploadFile(importer, {
+			name: `blocking-${suffix}.csv`,
+			blob: new Blob([csv], { type: 'text/csv' }),
+		});
+		assert.strictEqual(uploaded.status, 200);
+		assert.ok(uploaded.body);
+		const uploadedPath = new URL(uploaded.body.url).pathname;
+		await updateDriveFileInDatabase(db, uploaded.body.id, {
+			url: `http://127.0.0.1:${port}${uploadedPath}`,
+		});
+		const uploadedContent = await fetch(`http://127.0.0.1:${port}${uploadedPath}`);
+		assert.strictEqual(uploadedContent.status, 200);
+		assert.strictEqual(await uploadedContent.text(), csv);
+
+		const importRes = await api('i/import-blocking', { fileId: uploaded.body.id }, importer);
+		assert.strictEqual(importRes.status, 204);
+
+		const deadline = Date.now() + 30_000;
+		while (true) {
+			const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, target.id);
+			if (blocking != null) {
+				assert.strictEqual(blocking.blockerId, importer.id);
+				assert.strictEqual(blocking.blockeeId, target.id);
+				assert.strictEqual(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, importer.id), null);
+				break;
+			}
+			if (Date.now() >= deadline) {
+				assert.fail('Timed out waiting for imported blocking relationship');
+			}
+			await new Promise(resolve => setTimeout(resolve, 250));
+		}
+	}, 60_000);
 });

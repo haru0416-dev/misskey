@@ -1,0 +1,157 @@
+name: 'Release Manager: merge'
+
+on:
+  workflow_call:
+    inputs:
+      pr_number: { type: string, required: true }
+      user: { type: string, default: 'github-actions[bot]' }
+      package_jsons_to_rewrite: { type: string, default: 'package.json' }
+      changes_template: { type: string, required: true }
+      use_external_app_to_release: { type: boolean, default: false }
+      indent: { type: string, default: tab }
+    secrets:
+      RELEASE_APP_ID: { required: false }
+      RELEASE_APP_PRIVATE_KEY: { required: false }
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Get PR
+        id: pr
+        run: |
+          data=$(gh pr view "$PR_NUMBER" --json isDraft,headRefName)
+          echo "head_ref=$(jq -r '.headRefName' <<<"$data")" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ steps.pr.outputs.head_ref }}
+      - name: Configure Git
+        run: |
+          git config --local user.email "$USER@users.noreply.github.com"
+          git config --local user.name "$USER"
+        env:
+          USER: ${{ inputs.user }}
+      - name: Get target version
+        id: version
+        run: echo "target=$(jq -r '.version | split("-")[0]' package.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        id: release-token
+        if: inputs.use_external_app_to_release
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - name: Verify mergeability
+        run: |
+          gh pr view "$PR_NUMBER" --json mergeable >/dev/null
+          sleep 5
+          data=$(gh pr view "$PR_NUMBER" --json reviewDecision,isDraft,mergeStateStatus,statusCheckRollup,mergeable)
+          jq -e '
+            (.isDraft | not) and
+            .reviewDecision == "APPROVED" and
+            .mergeable == "MERGEABLE" and
+            (.mergeStateStatus == "CLEAN" or .mergeStateStatus == "BLOCKED") and
+            ([.statusCheckRollup[] | select((.conclusion // .state) != "SUCCESS" and (.conclusion // .state) != "COMPLETED")] | length == 0)
+          ' <<<"$data" >/dev/null
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+      - name: Write version
+        run: |
+          read -r -a files <<<"$PACKAGE_JSONS"
+          indent=(--tab)
+          if [ "$INDENT" != tab ]; then indent=(--indent "$INDENT"); fi
+          for file in "${files[@]}"; do
+            jq "${indent[@]}" --arg version "$VERSION" '.version = $version' "$file" > "$file.tmp"
+            mv "$file.tmp" "$file"
+          done
+        env:
+          PACKAGE_JSONS: ${{ inputs.package_jsons_to_rewrite }}
+          INDENT: ${{ inputs.indent }}
+          VERSION: ${{ steps.version.outputs.target }}
+      - name: Commit version
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -am "Release: $VERSION"
+            git push
+          fi
+        env:
+          VERSION: ${{ steps.version.outputs.target }}
+      - name: Wait for checks on the version commit
+        run: |
+          expected_head=$(git rev-parse HEAD)
+          for attempt in $(seq 1 60); do
+            data=$(gh pr view "$PR_NUMBER" --json headRefOid,reviewDecision,isDraft,mergeStateStatus,statusCheckRollup,mergeable)
+            head=$(jq -r '.headRefOid' <<<"$data")
+            checks=$(jq '.statusCheckRollup | length' <<<"$data")
+            pending=$(jq '[.statusCheckRollup[] | select((.conclusion // .state) != "SUCCESS" and (.conclusion // .state) != "COMPLETED")] | length' <<<"$data")
+            if [ "$head" = "$expected_head" ] && [ "$checks" -gt 0 ] && [ "$pending" -eq 0 ]; then
+              jq -e '
+                (.isDraft | not) and
+                .reviewDecision == "APPROVED" and
+                .mergeable == "MERGEABLE" and
+                (.mergeStateStatus == "CLEAN" or .mergeStateStatus == "BLOCKED")
+              ' <<<"$data" >/dev/null
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for checks on $expected_head" >&2
+          exit 1
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+      - name: Get changelog
+        id: changelog
+        run: |
+          {
+            echo 'value<<EOF'
+            sed -n "/## $VERSION/,/^## /p" CHANGELOG.md | sed -e 1d -e '$d'
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ steps.version.outputs.target }}
+      - name: Merge PR
+        uses: prichey/retry@c92c7ba2f5f4d0b3b7b2b04cc5c6672f9c884a3f
+        with:
+          command: gh pr merge "$PR_NUMBER" --merge --admin
+          timeout_seconds: 30
+          max_attempts: 3
+          retry_wait_seconds: 5
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+      - name: Create tag and release from the merge commit
+        run: |
+          merge_commit=$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')
+          git fetch origin "$merge_commit"
+          git checkout --detach "$merge_commit"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+          gh release create "$VERSION" --title "$VERSION" --notes "$CHANGELOG" --verify-tag
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          VERSION: ${{ steps.version.outputs.target }}
+          CHANGELOG: ${{ steps.changelog.outputs.value }}
+      - name: Prepend changelog template
+        run: |
+          git checkout "$HEAD_REF"
+          git pull --ff-only origin "$HEAD_REF"
+          output=$(mktemp)
+          printf '%s\n\n' "$CHANGES_TEMPLATE" > "$output"
+          cat CHANGELOG.md >> "$output"
+          mv "$output" CHANGELOG.md
+          git commit -am "[skip ci] Update CHANGELOG.md (prepend template)"
+          git push
+        env:
+          CHANGES_TEMPLATE: ${{ inputs.changes_template }}
+          HEAD_REF: ${{ steps.pr.outputs.head_ref }}

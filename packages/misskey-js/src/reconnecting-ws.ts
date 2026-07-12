@@ -39,6 +39,8 @@ export type ReconnectingWebSocketOptions = {
 };
 
 const WS_OPEN = 1;
+export const MAX_OFFLINE_MESSAGE_COUNT = 1_000;
+export const MAX_OFFLINE_MESSAGE_BYTES = 1024 * 1024;
 
 export class ReconnectingWebSocket {
 	private url: string;
@@ -59,6 +61,7 @@ export class ReconnectingWebSocket {
 	private retryCount = 0;
 	private closed = false;
 	private messageQueue: string[] = [];
+	private messageQueueBytes = 0;
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private connectionTimer: ReturnType<typeof setTimeout> | null = null;
 	// 明示的に設定されるまでソケットの binaryType には触れない (実装により有効値が異なり、
@@ -103,6 +106,12 @@ export class ReconnectingWebSocket {
 			this.ws.send(data);
 		} else {
 			this.messageQueue.push(data);
+			this.messageQueueBytes += new TextEncoder().encode(data).byteLength;
+			while (this.messageQueue.length > MAX_OFFLINE_MESSAGE_COUNT || this.messageQueueBytes > MAX_OFFLINE_MESSAGE_BYTES) {
+				const dropped = this.messageQueue.shift();
+				if (dropped == null) break;
+				this.messageQueueBytes -= new TextEncoder().encode(dropped).byteLength;
+			}
 		}
 	}
 
@@ -167,6 +176,7 @@ export class ReconnectingWebSocket {
 			if (this.messageQueue.length > 0) {
 				const queue = this.messageQueue;
 				this.messageQueue = [];
+				this.messageQueueBytes = 0;
 				for (const data of queue) {
 					ws.send(data);
 				}

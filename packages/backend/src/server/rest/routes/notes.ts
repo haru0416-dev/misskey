@@ -365,9 +365,9 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post('/notes/show-partial-bulk', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			await authenticateOptionalRequest(deps, c, body);
+			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(c, await handleHonoApiNotesShowPartialBulk(deps, body));
+			return jsonResponse(c, await handleHonoApiNotesShowPartialBulk(deps, auth.user, body));
 		});
 	});
 

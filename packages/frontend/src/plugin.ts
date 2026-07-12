@@ -300,6 +300,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 			storageKey: 'plugins:' + plugin.installId,
 		}),
 		{
+			maxStep: 100_000,
 			in: aiScriptReadline,
 			out: (value): void => {
 				pluginLogs.value.get(plugin.installId)!.push({
@@ -348,7 +349,7 @@ export function abortPlugin(plugin: Plugin): void {
 
 export function reloadPlugin(plugin: Plugin): void {
 	abortPlugin(plugin);
-	launchPlugin(plugin.installId);
+	void launchPlugin(plugin.installId).catch((error) => console.error('Failed to reload plugin:', error));
 }
 
 export async function configPlugin(plugin: Plugin) {
@@ -379,7 +380,7 @@ export function changePluginActive(plugin: Plugin, active: boolean) {
 	);
 
 	if (active) {
-		launchPlugin(plugin.installId);
+		void launchPlugin(plugin.installId).catch((error) => console.error('Failed to activate plugin:', error));
 	} else {
 		abortPlugin(plugin);
 	}
@@ -417,15 +418,17 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 				title: title.value,
 				handler: (form, update) =>
 					withContext((ctx) => {
-						ctx.execFn(handler, [
-							utils.jsToVal(form),
-							values.FN_NATIVE(([key, value]) => {
-								if (!key || !value) {
-									return;
-								}
-								update(utils.valToJs(key), utils.valToJs(value));
-							}),
-						]);
+						void ctx
+							.execFn(handler, [
+								utils.jsToVal(form),
+								values.FN_NATIVE(([key, value]) => {
+									if (!key || !value) {
+										return;
+									}
+									update(utils.valToJs(key), utils.valToJs(value));
+								}),
+							])
+							.catch((error) => console.error('Plugin post form action failed:', error));
 					}),
 			});
 		}),
@@ -437,7 +440,9 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 				title: title.value,
 				handler: (user) =>
 					withContext((ctx) => {
-						ctx.execFn(handler, [utils.jsToVal(user)]);
+						void ctx
+							.execFn(handler, [utils.jsToVal(user)])
+							.catch((error) => console.error('Plugin user action failed:', error));
 					}),
 			});
 		}),
@@ -449,7 +454,9 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 				title: title.value,
 				handler: (note) =>
 					withContext((ctx) => {
-						ctx.execFn(handler, [utils.jsToVal(note)]);
+						void ctx
+							.execFn(handler, [utils.jsToVal(note)])
+							.catch((error) => console.error('Plugin note action failed:', error));
 					}),
 			});
 		}),

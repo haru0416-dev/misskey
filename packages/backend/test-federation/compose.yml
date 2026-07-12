@@ -52,6 +52,10 @@ services:
         target: /misskey/packages/backend/test-federation/test
         read_only: true
       - type: bind
+        source: ./.config/dummy.yml
+        target: /misskey/.config/test.yml
+        read_only: true
+      - type: bind
         source: ../vitest.config.ts
         target: /misskey/packages/backend/vitest.config.ts
         read_only: true
