@@ -41,7 +41,9 @@ const MkPasswordDialog = defineAsyncComponent(() => import('@/features/auth/comp
 const MkFormDialog = defineAsyncComponent(() => import('@/features/dynamic-form/components/MkFormDialog.vue'));
 const MkUserSelectDialog = defineAsyncComponent(() => import('@/features/users/components/MkUserSelectDialog.vue'));
 const MkRoleSelectDialog = defineAsyncComponent(() => import('@/features/roles/components/MkRoleSelectDialog.vue'));
-const MkEmojiPickerDialog = defineAsyncComponent(() => import('@/features/emoji-picker/components/MkEmojiPickerDialog.vue'));
+const MkEmojiPickerDialog = defineAsyncComponent(
+	() => import('@/features/emoji-picker/components/MkEmojiPickerDialog.vue'),
+);
 const MkCropperDialog = defineAsyncComponent(() => import('@/features/image-editor/components/MkCropperDialog.vue'));
 
 export const openingWindowsCount = ref(0);
@@ -668,19 +670,15 @@ export async function selectRole(
 	params: ComponentProps<typeof MkRoleSelectDialog_TypeReferenceOnly>,
 ): Promise<{ canceled: true; result: undefined } | { canceled: false; result: Misskey.entities.Role[] }> {
 	return new Promise((resolve) => {
-		const { dispose } = popup(
-			MkRoleSelectDialog,
-			params,
-			{
-				done: (roles) => {
-					resolve({ canceled: false, result: roles });
-				},
-				close: () => {
-					resolve({ canceled: true, result: undefined });
-				},
-				closed: () => dispose(),
+		const { dispose } = popup(MkRoleSelectDialog, params, {
+			done: (roles) => {
+				resolve({ canceled: false, result: roles });
 			},
-		);
+			close: () => {
+				resolve({ canceled: true, result: undefined });
+			},
+			closed: () => dispose(),
+		});
 	});
 }
 

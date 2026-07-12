@@ -6,9 +6,21 @@
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import type * as Sentry from '@sentry/node';
-import type * as SentryVue from '@sentry/vue';
 import type { RedisOptions } from 'ioredis';
+
+export type TelemetryConfig = {
+	endpoint: string;
+	headers?: Record<string, string>;
+	serviceName?: string;
+	tracesSampleRatio?: number;
+};
+
+export type FrontendTelemetryConfig = {
+	endpoint: string;
+	serviceName?: string;
+	tracesSampleRatio?: number;
+	propagateTraceHeaderCorsUrls?: string[];
+};
 
 type RedisOptionsSource = Partial<RedisOptions> & {
 	host: string;
@@ -65,13 +77,8 @@ type Source = {
 		index: string;
 		scope?: 'local' | 'global' | string[];
 	};
-	sentryForBackend?: { options: Partial<Sentry.NodeOptions>; enableNodeProfiling: boolean };
-	sentryForFrontend?: {
-		options: Partial<SentryVue.BrowserOptions> & { dsn: string };
-		vueIntegration?: SentryVue.VueIntegrationOptions | null;
-		browserTracingIntegration?: Parameters<typeof SentryVue.browserTracingIntegration>[0] | null;
-		replayIntegration?: Parameters<typeof SentryVue.replayIntegration>[0] | null;
-	};
+	telemetryForBackend?: TelemetryConfig;
+	telemetryForFrontend?: FrontendTelemetryConfig;
 
 	publishTarballInsteadOfProvideRepositoryUrl?: boolean;
 
@@ -203,15 +210,8 @@ export type Config = {
 	redisForJobQueue: RedisOptions & RedisOptionsSource;
 	redisForTimelines: RedisOptions & RedisOptionsSource;
 	redisForReactions: RedisOptions & RedisOptionsSource;
-	sentryForBackend: { options: Partial<Sentry.NodeOptions>; enableNodeProfiling: boolean } | undefined;
-	sentryForFrontend:
-		| {
-				options: Partial<SentryVue.BrowserOptions> & { dsn: string };
-				vueIntegration?: SentryVue.VueIntegrationOptions | null;
-				browserTracingIntegration?: Parameters<typeof SentryVue.browserTracingIntegration>[0] | null;
-				replayIntegration?: Parameters<typeof SentryVue.replayIntegration>[0] | null;
-		  }
-		| undefined;
+	telemetryForBackend: TelemetryConfig | undefined;
+	telemetryForFrontend: FrontendTelemetryConfig | undefined;
 	perChannelMaxNoteCacheCount: number;
 	perUserNotificationsMaxCount: number;
 	deactivateAntennaThreshold: number;
@@ -256,6 +256,7 @@ export function loadConfig(): Config {
 	const frontendEmbedManifestExists = fs.existsSync(resolve(projectBuiltDir, '_frontend_embed_vite_/manifest.json'));
 
 	const config = JSON.parse(fs.readFileSync(compiledConfigFilePath, 'utf-8')) as Source;
+	const { telemetryForBackend, telemetryForFrontend } = validateTelemetryConfig(config);
 
 	const url = tryCreateUrl(config.url ?? process.env.MISSKEY_URL ?? '');
 	const version = meta.version;
@@ -312,8 +313,8 @@ export function loadConfig(): Config {
 		redisForJobQueue: config.redisForJobQueue ? convertRedisOptions(config.redisForJobQueue, host) : redis,
 		redisForTimelines: config.redisForTimelines ? convertRedisOptions(config.redisForTimelines, host) : redis,
 		redisForReactions: config.redisForReactions ? convertRedisOptions(config.redisForReactions, host) : redis,
-		sentryForBackend: config.sentryForBackend,
-		sentryForFrontend: config.sentryForFrontend,
+		telemetryForBackend,
+		telemetryForFrontend,
 		proxy: config.proxy,
 		proxySmtp: config.proxySmtp,
 		proxyBypassHosts: config.proxyBypassHosts,
@@ -348,6 +349,127 @@ export function loadConfig(): Config {
 		pidFile: config.pidFile,
 		logging: config.logging,
 	};
+}
+
+export function validateTelemetryConfig(config: {
+	telemetryForBackend?: unknown;
+	telemetryForFrontend?: unknown;
+}): Pick<Config, 'telemetryForBackend' | 'telemetryForFrontend'> {
+	return {
+		telemetryForBackend: validateBackendTelemetryConfig(config.telemetryForBackend),
+		telemetryForFrontend: validateFrontendTelemetryConfig(config.telemetryForFrontend),
+	};
+}
+
+function validateBackendTelemetryConfig(value: unknown): TelemetryConfig | undefined {
+	if (value == null) return undefined;
+	const config = validateTelemetryObject(value, 'telemetryForBackend', ['endpoint', 'headers', 'serviceName', 'tracesSampleRatio']);
+
+	return {
+		endpoint: validateTelemetryUrl(config.endpoint, 'telemetryForBackend.endpoint'),
+		headers: validateTelemetryHeaders(config.headers),
+		serviceName: validateOptionalNonEmptyString(config.serviceName, 'telemetryForBackend.serviceName'),
+		tracesSampleRatio: validateTraceSampleRatio(config.tracesSampleRatio, 'telemetryForBackend.tracesSampleRatio'),
+	};
+}
+
+function validateFrontendTelemetryConfig(value: unknown): FrontendTelemetryConfig | undefined {
+	if (value == null) return undefined;
+	const config = validateTelemetryObject(value, 'telemetryForFrontend', [
+		'endpoint',
+		'headers',
+		'serviceName',
+		'tracesSampleRatio',
+		'propagateTraceHeaderCorsUrls',
+	]);
+
+	if ('headers' in config) {
+		throw new Error(
+			'telemetryForFrontend.headers is not supported because frontend configuration is public. ' +
+			'Configure an unauthenticated, restricted collector endpoint or an authenticating same-origin proxy instead.',
+		);
+	}
+
+	return {
+		endpoint: validateTelemetryUrl(config.endpoint, 'telemetryForFrontend.endpoint', true),
+		serviceName: validateOptionalNonEmptyString(config.serviceName, 'telemetryForFrontend.serviceName'),
+		tracesSampleRatio: validateTraceSampleRatio(config.tracesSampleRatio, 'telemetryForFrontend.tracesSampleRatio'),
+		propagateTraceHeaderCorsUrls: validateTelemetryUrls(
+			config.propagateTraceHeaderCorsUrls,
+			'telemetryForFrontend.propagateTraceHeaderCorsUrls',
+		),
+	};
+}
+
+function validateTelemetryObject(
+	value: unknown,
+	path: string,
+	allowedKeys: readonly string[],
+): Record<string, unknown> {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		throw new Error(`${path} must be an object.`);
+	}
+
+	const config = value as Record<string, unknown>;
+	const unknownKey = Object.keys(config).find(key => !allowedKeys.includes(key));
+	if (unknownKey != null) throw new Error(`${path}.${unknownKey} is not a supported telemetry option.`);
+	return config;
+}
+
+function validateTelemetryUrl(value: unknown, path: string, disallowQuery = false): string {
+	if (typeof value !== 'string' || value.length === 0) throw new Error(`${path} must be a non-empty URL.`);
+
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch (error) {
+		throw new Error(`${path} must be a valid absolute URL.`, { cause: error });
+	}
+
+	if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(`${path} must use http or https.`);
+	if (url.username !== '' || url.password !== '') throw new Error(`${path} must not contain credentials.`);
+	if (url.hash !== '') throw new Error(`${path} must not contain a fragment.`);
+	if (disallowQuery && url.search !== '') {
+		throw new Error(`${path} must not contain query parameters because frontend configuration is public.`);
+	}
+
+	return value;
+}
+
+function validateTelemetryHeaders(value: unknown): Record<string, string> | undefined {
+	if (value === undefined) return undefined;
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		throw new Error('telemetryForBackend.headers must be an object.');
+	}
+
+	const headers = value as Record<string, unknown>;
+	for (const [name, headerValue] of Object.entries(headers)) {
+		if (name.length === 0 || typeof headerValue !== 'string') {
+			throw new Error('telemetryForBackend.headers must contain only non-empty header names with string values.');
+		}
+	}
+
+	return headers as Record<string, string>;
+}
+
+function validateOptionalNonEmptyString(value: unknown, path: string): string | undefined {
+	if (value === undefined) return undefined;
+	if (typeof value !== 'string' || value.trim().length === 0) throw new Error(`${path} must be a non-empty string.`);
+	return value;
+}
+
+function validateTraceSampleRatio(value: unknown, path: string): number | undefined {
+	if (value === undefined) return undefined;
+	if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+		throw new Error(`${path} must be a finite number between 0 and 1.`);
+	}
+	return value;
+}
+
+function validateTelemetryUrls(value: unknown, path: string): string[] | undefined {
+	if (value === undefined) return undefined;
+	if (!Array.isArray(value)) throw new Error(`${path} must be an array of absolute URLs.`);
+	return value.map((url, index) => validateTelemetryUrl(url, `${path}[${index}]`, true));
 }
 
 function tryCreateUrl(url: string) {

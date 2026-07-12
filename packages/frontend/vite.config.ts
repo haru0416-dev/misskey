@@ -269,11 +269,6 @@ export function getConfig(): UserConfig {
 			emptyOutDir: false,
 			sourcemap: process.env.NODE_ENV === 'development',
 			reportCompressedSize: false,
-
-			// https://vitejs.dev/guide/dep-pre-bundling.html#monorepos-and-linked-dependencies
-			commonjsOptions: {
-				include: [/misskey-js/, /node_modules/],
-			},
 		},
 
 		worker: {
@@ -283,21 +278,10 @@ export function getConfig(): UserConfig {
 		test: {
 			environment: 'happy-dom',
 			setupFiles: ['./test/init.ts'],
-			deps: {
-				optimizer: {
-					web: {
-						include: [
-							// XXX: misskey-dev/browser-image-resizer has no "type": "module"
-							'browser-image-resizer',
-						],
-					},
-				},
-			},
-			includeSource: ['src/**/*.ts'],
 		},
 	};
 }
 
-const config = defineConfig(({ command, mode }) => getConfig());
+const config = defineConfig(getConfig());
 
 export default config;

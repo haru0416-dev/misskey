@@ -28,11 +28,13 @@ async function main() {
 	const rgMap = new Map<string, string>();
 	let matches: RegExpExecArray | null;
 	while ((matches = cssRegex.exec(css)) !== null) {
-		rgMap.set(matches[1], matches[2]);
+		const [, icon, unicode] = matches;
+		if (icon !== undefined && unicode !== undefined) rgMap.set(icon, unicode);
 	}
 
 	// 3. tabler-icons-classes.cssから、.tiのルールを抽出
-	const classTiBaseRule = css.match(/\.ti\s*{[^}]*}/)![0];
+	const classTiBaseRule = css.match(/\.ti\s*{[^}]*}/)?.[0];
+	if (classTiBaseRule === undefined) throw new Error('Tabler Icons base CSS rule was not found.');
 
 	// 4. フォールバック用のtabler-icons.woff2をコピー
 	const fontPath = 'node_modules/@tabler/icons-webfont/dist/fonts/';
@@ -70,6 +72,9 @@ async function main() {
 
 	// 8. サブセット化したフォント・CSSを書き出し
 	await Promise.allSettled(Array.from(subsettedFonts.entries()).map(async ([key, buffer]) => {
+		const unicodeValues = unicodeRangeValues.get(key);
+		if (unicodeValues === undefined) throw new Error(`Unicode values for ${key} were not found.`);
+
 		const cssRules = [`@font-face {
 	font-family: "tabler-icons";
 	font-style: normal;
@@ -79,18 +84,21 @@ async function main() {
 }`];
 
 		// サブセット化したフォントの中身がある（＝unicodeRangeValuesの配列が空ではない）場合のみ、サブセットしたものに関する情報を追記
-		if (unicodeRangeValues.get(key)!.length > 0) {
+		if (unicodeValues.length > 0) {
 			await fsp.writeFile(`./built/tabler-icons-${key}.woff2`, buffer);
 
 			const unicodeRangeString = (() => {
-				const values = unicodeRangeValues.get(key)!.sort((a, b) => a - b);
+				const values = unicodeValues.sort((a, b) => a - b);
 				const ranges = [];
 
 				for (let i = 0; i < values.length; i++) {
 					const start = values[i];
-					let end = values[i];
-					while (values[i + 1] === end + 1) {
-						end = values[i + 1];
+					if (start === undefined) continue;
+					let end = start;
+					while (true) {
+						const next = values[i + 1];
+						if (next !== end + 1) break;
+						end = next;
 						i++;
 					}
 					if (start === end) {
@@ -117,7 +125,7 @@ async function main() {
 			cssRules.push(classTiBaseRule);
 
 			// 使用されているアイコンのclassとの対応を追記
-			for (const icon of unicodeRangeValues.get(key)!) {
+			for (const icon of unicodeValues) {
 				const iconClasses = Array.from(rgMap.entries()).filter(([_, unicode]) => parseInt(unicode, 16) === icon);
 				if (iconClasses.length > 1) {
 					console.warn(`[WARN] Multiple classes for the same unicode: ${iconClasses.map(([cls]) => cls).join(', ')}. Maybe it's deprecated?`);

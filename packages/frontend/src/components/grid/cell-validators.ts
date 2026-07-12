@@ -96,8 +96,8 @@ class ValidatorPreset {
 			name: 'unique',
 			validate: ({ column, row, value, allCells }): ValidatorResult => {
 				const bindTo = column.setting.bindTo;
-				const isUnique = !allCells.some((cell) =>
-					cell.column.setting.bindTo === bindTo && cell.row.index !== row.index && cell.value === value,
+				const isUnique = !allCells.some(
+					(cell) => cell.column.setting.bindTo === bindTo && cell.row.index !== row.index && cell.value === value,
 				);
 				return {
 					valid: isUnique,

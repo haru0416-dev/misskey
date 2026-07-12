@@ -21,7 +21,7 @@ export function pluginRemoveUnrefI18n({
 	i18nSymbolName?: string;
 } = {}): Plugin {
 	return {
-		name: 'UnwindCssModuleClassName',
+		name: 'remove-unref-i18n',
 		renderChunk(code, _chunk, _options, meta) {
 			if (!code.includes('unref(i18n)')) return null;
 			const ast = this.parse(code);

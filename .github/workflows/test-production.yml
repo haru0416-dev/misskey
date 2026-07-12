@@ -27,6 +27,8 @@ jobs:
         uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version-file: .bun-version
+      - name: Check runtime versions
+        run: bun run check:runtime-versions
       - name: Cache bun install cache
         uses: actions/cache@v4
         with:

@@ -37,10 +37,13 @@ watch([() => props.note.reactions, () => props.maxNumber], ([newSource, maxNumbe
 	hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
 
 	for (let i = 0; i < reactions.value.length; i++) {
-		const reaction = reactions.value[i][0];
-		if (reaction in newSource && newSource[reaction] !== 0) {
-			reactions.value[i][1] = newSource[reaction];
-			newReactions.push(reactions.value[i]);
+		const current = reactions.value[i];
+		if (current === undefined) continue;
+		const reaction = current[0];
+		const count = newSource[reaction];
+		if (count !== undefined && count !== 0) {
+			current[1] = count;
+			newReactions.push(current);
 		}
 	}
 

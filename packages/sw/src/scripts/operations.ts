@@ -61,7 +61,7 @@ export function openAntenna(antennaId: string, loginId: string): ReturnType<type
 	return openClient('push', `/timeline/antenna/${antennaId}`, loginId, { antennaId });
 }
 
-export function openChat(body: any, loginId: string): ReturnType<typeof openClient> {
+export function openChat(body: Misskey.entities.ChatMessage, loginId: string): ReturnType<typeof openClient> {
 	if (body.toRoomId != null) {
 		return openClient('push', `/chat/room/${body.toRoomId}`, loginId, { body });
 	} else {
@@ -85,7 +85,7 @@ export async function openClient(order: SwMessageOrderType, url: string, loginId
 	const client = await findClient();
 
 	if (client) {
-		client.postMessage({ type: 'order', ...query, order, loginId, url } satisfies SwMessage);
+		client.postMessage({ type: 'order', ...query, order, ...(loginId === undefined ? {} : { loginId }), url } satisfies SwMessage);
 		return client;
 	}
 

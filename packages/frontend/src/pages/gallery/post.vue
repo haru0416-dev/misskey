@@ -89,7 +89,7 @@ const props = defineProps<{
 }>();
 
 const post = ref<Misskey.entities.GalleryPost | null>(null);
-const error = ref<any>(null);
+const error = ref<unknown>(null);
 const otherPostsPaginator = markRaw(new Paginator('users/gallery/posts', {
 	limit: 6,
 	computedParams: computed(() => ({

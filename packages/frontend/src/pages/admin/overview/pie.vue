@@ -40,7 +40,10 @@ function render() {
 	chart.setOption({
 		animation: false,
 		aria: { enabled: true, description: ariaLabel.value },
-		tooltip: { trigger: 'item' },
+		tooltip: {
+			trigger: 'item',
+			appendTo: 'body',
+		},
 		series: [{ type: 'pie', radius: ['48%', '78%'], avoidLabelOverlap: true, label: { show: false }, data: props.data.map(item => ({ name: item.name, value: item.value, itemStyle: { color: item.color ?? undefined } })) }],
 	}, { notMerge: true });
 	chart.off('click');

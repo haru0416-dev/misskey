@@ -20,7 +20,7 @@ function createTimers() {
 	vi.spyOn(window, 'clearTimeout').mockImplementation((id) => {
 		if (id != null) timers.delete(id as TimerId);
 	});
-	const scheduledCount = (delay: number) => [...timers.values()].filter(timer => timer.delay === delay).length;
+	const scheduledCount = (delay: number) => [...timers.values()].filter((timer) => timer.delay === delay).length;
 	const runNext = (delay: number) => {
 		const [id, timer] = timers.entries().find(([, value]) => value.delay === delay)!;
 		timers.delete(id);
@@ -40,9 +40,12 @@ describe('useInterval', () => {
 		vi.spyOn(window.document, 'hidden', 'get').mockImplementation(() => hidden);
 		const { scheduledCount, runNext } = createTimers();
 		let resolveTask: (() => void) | null = null;
-		const task = vi.fn(() => new Promise<void>((resolve) => {
-			resolveTask = resolve;
-		}));
+		const task = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					resolveTask = resolve;
+				}),
+		);
 		const Component = defineComponent({
 			setup() {
 				useInterval(task, 1000, { immediate: false, afterMounted: true });

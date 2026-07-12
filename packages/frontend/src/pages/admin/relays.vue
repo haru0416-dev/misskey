@@ -35,6 +35,13 @@ import { definePage } from '@/page.js';
 
 const relays = ref<Misskey.entities.AdminRelaysListResponse>([]);
 
+function getErrorMessage(error: unknown): string {
+	if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+		return error.message;
+	}
+	return String(error);
+}
+
 async function addRelay() {
 	const { canceled, result: inbox } = await os.inputText({
 		title: i18n.ts.addRelay,
@@ -46,10 +53,10 @@ async function addRelay() {
 		inbox,
 	}).then(() => {
 		refresh();
-	}).catch((err: any) => {
+	}).catch((err: unknown) => {
 		os.alert({
 			type: 'error',
-			text: err.message || err,
+			text: getErrorMessage(err),
 		});
 	});
 }
@@ -59,10 +66,10 @@ function remove(inbox: string) {
 		inbox,
 	}).then(() => {
 		refresh();
-	}).catch((err: any) => {
+	}).catch((err: unknown) => {
 		os.alert({
 			type: 'error',
-			text: err.message || err,
+			text: getErrorMessage(err),
 		});
 	});
 }

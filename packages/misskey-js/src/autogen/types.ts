@@ -5563,21 +5563,11 @@ export type components = {
             enableEmail: boolean;
             enableServiceWorker: boolean;
             translatorAvailable: boolean;
-            sentryForFrontend: {
-                options: {
-                    dsn: string;
-                } & {
-                    [key: string]: unknown;
-                };
-                vueIntegration?: {
-                    [key: string]: unknown;
-                } | null;
-                browserTracingIntegration?: {
-                    [key: string]: unknown;
-                } | null;
-                replayIntegration?: {
-                    [key: string]: unknown;
-                } | null;
+            telemetryForFrontend: {
+                endpoint: string;
+                serviceName?: string;
+                tracesSampleRatio?: number;
+                propagateTraceHeaderCorsUrls?: string[];
             } | null;
             mediaProxy: string;
             enableUrlPreview: boolean;

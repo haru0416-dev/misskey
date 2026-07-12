@@ -7,20 +7,20 @@ import type { Server } from 'node:http';
 import * as fs from 'node:fs';
 import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import { createMisskeyHonoApp } from '@/server/app.js';
 import { createHonoNodeServer } from '@/server/node-server.js';
 import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
 import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
 import { attachHonoStreamServer, type HonoStreamServerDependencies } from '@/server/streaming/server.js';
 import { createBunNativeStreamRuntime } from '@/server/streaming/bun-native.js';
+import { traceHttpRequest } from '@/telemetry.js';
 import { startHonoQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
 import { startHonoServerStatsDaemon } from '@/server/daemons/server-stats.js';
 import { createHonoEventPublishers } from '@/server/rest/events.js';
 
 export type HonoServerRuntime = {
 	server: Server | Bun.Server;
-	deps: RuntimeDependencies;
 	dispose: () => Promise<void>;
 };
 
@@ -60,8 +60,44 @@ async function closeServer(server: Server): Promise<void> {
 	});
 }
 
+type RuntimeDisposer = () => void | Promise<void>;
+
+async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void> {
+	const pending = disposers.splice(0).reverse();
+	let firstError: unknown;
+	for (const dispose of pending) {
+		try {
+			// Cleanup order is significant, but every disposer must still be attempted.
+			// eslint-disable-next-line no-await-in-loop
+			await dispose();
+		} catch (error) {
+			firstError ??= error;
+		}
+	}
+	if (firstError != null) throw firstError;
+}
+
 export async function launchHonoServer(config: Config, logger = new Logger('hono', 'cyan')): Promise<HonoServerRuntime> {
 	const deps = await createRuntimeDependencies(config);
+	const disposers: RuntimeDisposer[] = [() => deps.dispose()];
+	try {
+		return await launchHonoServerWithDependencies(config, logger, deps, disposers);
+	} catch (error) {
+		try {
+			await disposeServerRuntime(disposers);
+		} catch (cleanupError) {
+			console.error('Failed to clean up Hono server resources after startup failed.', cleanupError);
+		}
+		throw error;
+	}
+}
+
+async function launchHonoServerWithDependencies(
+	config: Config,
+	logger: Logger,
+	deps: Awaited<ReturnType<typeof createRuntimeDependencies>>,
+	disposers: RuntimeDisposer[],
+): Promise<HonoServerRuntime> {
 	const eventPublishers = createHonoEventPublishers({
 		config,
 		publish: (host, message) => deps.redisForPub.publish(host, message),
@@ -77,6 +113,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		}),
 		logger: deps.loggerService.getLogger('oauth'),
 	});
+	disposers.push(() => oauthRuntime.dispose());
 	const app = createMisskeyHonoApp({
 		http: {
 			config,
@@ -222,9 +259,9 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 		deliverQueue: deps.deliverQueue,
 		inboxQueue: deps.inboxQueue,
 	});
+	disposers.push(() => queueStatsDaemon.dispose());
 	const serverStatsDaemon = startHonoServerStatsDaemon({ meta: deps.meta });
-
-	let disposed = false;
+	disposers.push(() => serverStatsDaemon.dispose());
 
 	// bun ランタイムの node:http compat 層は 'upgrade' イベントで生ソケットに書き込むパターンだと
 	// 同一プロセス内に他のソケット接続 (DB pool / ioredis 等) があるとレスポンスがクライアントに
@@ -232,6 +269,7 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 	// API はこの経路を通らないため、bun 実行時のみこちらを使う。詳細は streaming/bun-native.ts 参照。
 	if (typeof Bun !== 'undefined') {
 		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
+		disposers.push(() => streamRuntime.dispose());
 		const bunServer = Bun.serve({
 			...(config.socket ? { unix: config.socket } : { port: config.port, hostname: '0.0.0.0' }),
 			// Bun のデフォルト上限は 128 MiB で、maxFileSize がそれを超える設定だとアップロードが
@@ -248,10 +286,11 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 				if (remoteAddress != null && !request.headers.has('x-misskey-remote-address')) {
 					request.headers.set('x-misskey-remote-address', remoteAddress);
 				}
-				return app.fetch(request);
+				return traceHttpRequest(request, () => app.fetch(request));
 			},
 			websocket: streamRuntime.websocket,
 		});
+		disposers.push(() => bunServer.stop(true));
 
 		if (config.socket && config.chmodSocket) {
 			fs.chmodSync(config.socket, config.chmodSocket);
@@ -260,37 +299,19 @@ export async function launchHonoServer(config: Config, logger = new Logger('hono
 
 		return {
 			server: bunServer,
-			deps,
-			dispose: async () => {
-				if (disposed) return;
-				disposed = true;
-				oauthRuntime.dispose();
-				serverStatsDaemon.dispose();
-				queueStatsDaemon.dispose();
-				await streamRuntime.dispose();
-				await bunServer.stop(true);
-				await deps.dispose();
-			},
+			dispose: () => disposeServerRuntime(disposers),
 		};
 	}
 
 	const server = createHonoNodeServer({ app });
+	disposers.push(() => closeServer(server));
 	const streamServer = attachHonoStreamServer(server, streamDeps);
+	disposers.push(() => streamServer.detach());
 
 	await listen(server, config, logger);
 
 	return {
 		server,
-		deps,
-		dispose: async () => {
-			if (disposed) return;
-			disposed = true;
-			oauthRuntime.dispose();
-			serverStatsDaemon.dispose();
-			queueStatsDaemon.dispose();
-			await streamServer.detach();
-			await closeServer(server);
-			await deps.dispose();
-		},
+		dispose: () => disposeServerRuntime(disposers),
 	};
 }

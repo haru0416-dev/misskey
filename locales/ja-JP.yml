@@ -3057,6 +3057,8 @@ _abuseReport:
 _moderationLogTypes:
   clearQueue: "ジョブキューをクリア"
   promoteQueue: "キューのジョブを再試行"
+  pauseQueue: "ジョブキューを一時停止"
+  resumeQueue: "ジョブキューを再開"
   createRole: "ロールを作成"
   deleteRole: "ロールを削除"
   updateRole: "ロールを更新"

@@ -11523,6 +11523,14 @@ export interface Locale extends ILocale {
          */
         "promoteQueue": string;
         /**
+         * ジョブキューを一時停止
+         */
+        "pauseQueue": string;
+        /**
+         * ジョブキューを再開
+         */
+        "resumeQueue": string;
+        /**
          * ロールを作成
          */
         "createRole": string;

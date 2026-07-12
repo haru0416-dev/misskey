@@ -12,8 +12,22 @@ const meta = {
 	args: {
 		ariaLabel: 'Sample activity chart',
 		series: [
-			{ name: 'Notes', type: 'area', data: [{ x: Date.now() - 3600000, y: 2 }, { x: Date.now(), y: 5 }] },
-			{ name: 'Replies', type: 'bar', data: [{ x: Date.now() - 3600000, y: 1 }, { x: Date.now(), y: 2 }] },
+			{
+				name: 'Notes',
+				type: 'area',
+				data: [
+					{ x: Date.now() - 3600000, y: 2 },
+					{ x: Date.now(), y: 5 },
+				],
+			},
+			{
+				name: 'Replies',
+				type: 'bar',
+				data: [
+					{ x: Date.now() - 3600000, y: 1 },
+					{ x: Date.now(), y: 2 },
+				],
+			},
 		],
 	},
 } satisfies Meta<typeof MkDataChart>;

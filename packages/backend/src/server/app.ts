@@ -4,6 +4,7 @@
  */
 
 import { Hono } from 'hono';
+import { recordException } from '@/telemetry.js';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import type { MiMeta } from '@/models/_.js';
@@ -121,6 +122,7 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	// well-known / oauth 等) の未捕捉例外は Hono デフォルトだとログ無しの 500 テキストになる。
 	// サーバーログに残るように onError で明示的にハンドリングする。
 	app.onError((err, c) => {
+		recordException(err);
 		deps.http.logger?.error(err instanceof Error ? err : new Error(String(err)), { path: c.req.path });
 		return new Response('Internal Server Error', {
 			status: 500,

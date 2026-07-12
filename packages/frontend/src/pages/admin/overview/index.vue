@@ -6,57 +6,57 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div class="_spacer" style="--MI_SPACER-w: 1000px;">
 	<div ref="rootEl" :class="$style.root">
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="[$style.section, $style.summary]">
 			<template #header>Stats</template>
 			<XStats/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>Active users</template>
 			<XActiveUsers/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>Heatmap</template>
 			<XHeatmap/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="[$style.section, $style.wide]">
 			<template #header>Retention rate</template>
 			<XRetention/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>Moderators</template>
 			<XModerators/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>Federation</template>
 			<XFederation/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="[$style.section, $style.wide]">
 			<template #header>Instances</template>
 			<XInstances/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>Ap requests</template>
 			<XApRequests/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>New users</template>
 			<XUsers/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>Deliver queue</template>
 			<XQueue domain="deliver"/>
 		</MkFoldableSection>
 
-		<MkFoldableSection class="item">
+		<MkFoldableSection :class="$style.section">
 			<template #header>Inbox queue</template>
 			<XQueue domain="inbox"/>
 		</MkFoldableSection>
@@ -184,7 +184,23 @@ definePage(() => ({
 <style lang="scss" module>
 .root {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+	align-items: start;
+	gap: 24px 20px;
+}
+
+.section {
+	min-width: 0;
+}
+
+.summary,
+.wide {
+	grid-column: 1 / -1;
+}
+
+@media (max-width: 500px) {
+	.root {
+		gap: 20px;
+	}
 }
 </style>

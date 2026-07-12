@@ -260,7 +260,7 @@ type ObjectSchemaTypeDef<p extends Schema> =
 		p['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['anyOf']> :
 		p['allOf'] extends ReadonlyArray<Schema> ? ArrayToIntersection<p['allOf']> :
 		// NOTE: consumers (e.g. MetaEntityPacker.ts) assign concrete third-party option
-		// objects (Sentry BrowserOptions/VueOptions/etc.) into fields typed via this branch;
+		// configuration objects into fields typed via this branch;
 		// narrowing to Record<string, unknown> breaks that structural assignment. Kept as any.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		p['additionalProperties'] extends true ? Record<string, any> :

@@ -132,13 +132,18 @@ async function watchSrc(): Promise<void> {
 	const localesWatcher = chokidarWatch(_localesDir, {
 		ignoreInitial: true,
 	});
-	localesWatcher.on('all', async (event, path) => {
+	let localeBuildQueue = Promise.resolve();
+	localesWatcher.on('all', (event, path) => {
 		const file = basename(path);
 		if (!localeFiles.has(file)) return;
-		console.log(`[${_package.name}] locales changed: ${event} ${path}`);
-		copyLocales();
-		await writeFrontendLocalesJson();
-		if (file === 'ja-JP.yml') await generateLocaleInterface(_localesDir);
+		localeBuildQueue = localeBuildQueue.then(async () => {
+			console.log(`[${_package.name}] locales changed: ${event} ${path}`);
+			copyLocales();
+			await writeFrontendLocalesJson();
+			if (file === 'ja-JP.yml') await generateLocaleInterface(_localesDir);
+		}).catch((error) => {
+			console.error(`[${_package.name}] locale rebuild failed:`, error);
+		});
 	});
 
 	const plugins: Plugin[] = [

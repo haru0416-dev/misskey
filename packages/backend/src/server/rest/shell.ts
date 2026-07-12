@@ -23,6 +23,7 @@ import type Logger from '@/logger.js';
 import type { HonoApiAdminQueueDependencies } from './admin-queue.js';
 import type { HonoApiMainStreamPublisher } from './notification.js';
 import type { HonoApiAdminStreamPublisher, HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiNoteStreamPublisher, HonoApiNotesStreamPublisher, HonoApiUserListStreamPublisher } from './events.js';
+import { assertApiRouteContract } from './api-route-contract.js';
 import { jsonResponse, setApiHeaders } from './shell-helpers.js';
 import { registerAuthAccountRoutes } from './routes/auth-account.js';
 import { registerAdminRoutes } from './routes/admin.js';
@@ -130,6 +131,8 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 		return c.body(null, 405);
 	});
+
+	assertApiRouteContract(app);
 
 	app.all('/*', (c) => jsonResponse(c, unknownApiEndpoint, 404));
 

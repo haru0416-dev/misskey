@@ -35,18 +35,23 @@ function parseUploadResponse(value: unknown): Record<string, unknown> | null {
 }
 
 function getUploadError(value: Record<string, unknown> | null): Record<string, unknown> | null {
-	if (value == null || typeof value.error !== 'object' || value.error === null || Array.isArray(value.error)) return null;
+	if (value == null || typeof value.error !== 'object' || value.error === null || Array.isArray(value.error))
+		return null;
 	return value.error as Record<string, unknown>;
 }
 
-function isDriveFileResponse(value: Record<string, unknown> | null): value is Record<string, unknown> & Misskey.entities.DriveFile {
-	return value != null
-		&& typeof value.id === 'string'
-		&& typeof value.name === 'string'
-		&& typeof value.type === 'string'
-		&& typeof value.size === 'number'
-		&& Number.isFinite(value.size)
-		&& typeof value.url === 'string';
+function isDriveFileResponse(
+	value: Record<string, unknown> | null,
+): value is Record<string, unknown> & Misskey.entities.DriveFile {
+	return (
+		value != null &&
+		typeof value.id === 'string' &&
+		typeof value.name === 'string' &&
+		typeof value.type === 'string' &&
+		typeof value.size === 'number' &&
+		Number.isFinite(value.size) &&
+		typeof value.url === 'string'
+	);
 }
 
 export function uploadFile(
@@ -119,7 +124,10 @@ export function uploadFile(
 						os.alert({
 							type: 'error',
 							title: i18n.ts.failedToUpload,
-							text: error == null ? i18n.ts.invalidValue : `${String(error.message ?? '')}\n${String(error.code ?? '')}\n${String(error.id ?? '')}`,
+							text:
+								error == null
+									? i18n.ts.invalidValue
+									: `${String(error.message ?? '')}\n${String(error.code ?? '')}\n${String(error.id ?? '')}`,
 						});
 					}
 				} else {

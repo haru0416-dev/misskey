@@ -71,9 +71,12 @@ describe('i18n', () => {
 	it('preserves missing placeholders and reports them in dev mode', () => {
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 		try {
-			const i18n = new I18n({
-				message: 'Hello {name}' as unknown as ParameterizedString<'name'>,
-			}, true);
+			const i18n = new I18n(
+				{
+					message: 'Hello {name}' as unknown as ParameterizedString<'name'>,
+				},
+				true,
+			);
 			const interpolate = i18n.tsx.message as unknown as (arg: Readonly<Record<string, string | number>>) => string;
 
 			expect(interpolate({})).toBe('Hello {name}');

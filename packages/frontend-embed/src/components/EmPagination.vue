@@ -148,7 +148,7 @@ watch([() => props.pagination.reversed, scrollableElement], () => {
 	if (scrollObserver.value) scrollObserver.value.disconnect();
 
 	scrollObserver.value = new IntersectionObserver(entries => {
-		backed.value = entries[0].isIntersecting;
+		backed.value = entries[0]?.isIntersecting ?? false;
 	}, {
 		root: scrollableElement.value,
 		rootMargin: props.pagination.reversed ? '-100% 0px 100% 0px' : '100% 0px -100% 0px',
@@ -197,10 +197,8 @@ async function init(): Promise<void> {
 		limit: props.pagination.limit ?? 10,
 		allowPartial: true,
 	}).then(res => {
-		for (let i = 0; i < res.length; i++) {
-			const item = res[i];
-			if (i === 3) item._shouldInsertAd_ = true;
-		}
+		const adItem = res[3];
+		if (adItem !== undefined) adItem._shouldInsertAd_ = true;
 
 		if (res.length === 0 || props.pagination.noPaging) {
 			concatItems(res);
@@ -237,10 +235,8 @@ const fetchMore = async (): Promise<void> => {
 			untilId: Array.from(items.value.keys()).at(-1),
 		}),
 	}).then(res => {
-		for (let i = 0; i < res.length; i++) {
-			const item = res[i];
-			if (i === 10) item._shouldInsertAd_ = true;
-		}
+		const adItem = res[10];
+		if (adItem !== undefined) adItem._shouldInsertAd_ = true;
 
 		const reverseConcat = (_res: MisskeyEntity[]) => {
 			const oldHeight = scrollableElement.value ? scrollableElement.value.scrollHeight : getBodyScrollHeight();

@@ -21,15 +21,13 @@ describe('drag data', () => {
 		expect(getDragData(event, 'deckColumn')).toBe('column-id');
 	});
 
-	test.each([
-		'{',
-		'null',
-		JSON.stringify({ id: 'not-an-array' }),
-		JSON.stringify([{ id: null }]),
-	])('ignores malformed or invalid drive file data: %s', data => {
-		const event = dragEvent({ 'misskey/drivefiles': data });
-		expect(getDragData(event, 'driveFiles')).toBeNull();
-	});
+	test.each(['{', 'null', JSON.stringify({ id: 'not-an-array' }), JSON.stringify([{ id: null }])])(
+		'ignores malformed or invalid drive file data: %s',
+		(data) => {
+			const event = dragEvent({ 'misskey/drivefiles': data });
+			expect(getDragData(event, 'driveFiles')).toBeNull();
+		},
+	);
 
 	test('recognizes a supported type even when it is not first', () => {
 		const event = dragEvent({}, ['text/plain', 'misskey/drivefiles']);

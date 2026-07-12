@@ -5,6 +5,7 @@
 
 import { init } from 'slacc';
 import { loadConfig, type Config } from '@/config.js';
+import type { HonoQueueShellDependencies } from '@/queue/worker.js';
 
 let slaccInitialized = false;
 
@@ -46,14 +47,37 @@ export async function jobQueue(): Promise<JobQueueRuntime> {
 	// 原典の QueueProcessorService は DI 経由で GlobalEventService (全ストリーム配信) を持っていた。
 	// publisher を渡さないと、AP受信 (inbox) で作成されたノート・通知等のストリーム配信が
 	// optional チェーンで黙って無効化され、リモート発のイベントが一切WebSocketに流れなくなる
-	const workers = createHonoQueueWorkers({
-		...deps,
+	const workerDeps = {
+		config,
+		db: deps.db,
+		meta: deps.meta,
+		meilisearch: deps.meilisearch,
+		redis: deps.redis,
+		redisForTimelines: deps.redisForTimelines,
+		redisForReactions: deps.redisForReactions,
+		chartWriters: deps.chartWriters,
+		downloadService: deps.downloadService,
+		emailService: deps.emailService,
+		fileInfoService: deps.fileInfoService,
+		httpRequestService: deps.httpRequestService,
+		imageProcessingService: deps.imageProcessingService,
+		internalStorageService: deps.internalStorageService,
+		s3Service: deps.s3Service,
+		videoProcessingService: deps.videoProcessingService,
+		dbQueue: deps.dbQueue,
+		deliverQueue: deps.deliverQueue,
+		endedPollNotificationQueue: deps.endedPollNotificationQueue,
+		objectStorageQueue: deps.objectStorageQueue,
+		relationshipQueue: deps.relationshipQueue,
+		systemWebhookDeliverQueue: deps.systemWebhookDeliverQueue,
+		userWebhookDeliverQueue: deps.userWebhookDeliverQueue,
 		...createHonoEventPublishers({
 			config,
 			publish: (host, message) => deps.redisForPub.publish(host, message),
 		}),
 		logger,
-	});
+	} satisfies HonoQueueShellDependencies;
+	const workers = createHonoQueueWorkers(workerDeps);
 
 	// Bull.Worker#run() は内部のメインループが解決するまで (= close() されるまで) 待ち続けるため、
 	// 元の QueueProcessorService#start() 同様ここでは await しない。

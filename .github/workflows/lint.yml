@@ -12,12 +12,14 @@ on:
       - packages/frontend/**
       - packages/frontend-embed/**
       - packages/frontend-shared/**
+      - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/sw/**
       - packages/misskey-js/**
       - .devcontainer/**
       - .github/ISSUE_TEMPLATE/**
       - .github/scripts/**
+      - .github/workflows/**
       - .github/*.yml
       - .oxfmtrc.json
       - .oxlintrc.json
@@ -29,7 +31,7 @@ on:
       - bun.lock
       - package.json
       - scripts/**
-      - .github/workflows/lint.yml
+      - tests/e2e/**
   pull_request:
     paths:
       - packages/aiscript/**
@@ -38,12 +40,14 @@ on:
       - packages/frontend/**
       - packages/frontend-embed/**
       - packages/frontend-shared/**
+      - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/sw/**
       - packages/misskey-js/**
       - .devcontainer/**
       - .github/ISSUE_TEMPLATE/**
       - .github/scripts/**
+      - .github/workflows/**
       - .github/*.yml
       - .oxfmtrc.json
       - .oxlintrc.json
@@ -55,7 +59,7 @@ on:
       - bun.lock
       - package.json
       - scripts/**
-      - .github/workflows/lint.yml
+      - tests/e2e/**
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -103,7 +107,6 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       matrix:
         workspace:
@@ -111,6 +114,9 @@ jobs:
           - mfm-js
           - backend
           - frontend
+          - frontend-embed
+          - i18n
+          - icons-subsetter
           - sw
           - misskey-js
     steps:
@@ -131,3 +137,5 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build:frontend-deps
       - run: bun run --bun --filter ${{ matrix.workspace }} typecheck
+      - if: matrix.workspace == 'frontend'
+        run: bun run typecheck:playwright

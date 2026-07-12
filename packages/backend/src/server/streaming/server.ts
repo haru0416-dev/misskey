@@ -11,7 +11,7 @@ import type * as Redis from 'ioredis';
 import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
 import { authenticateHonoApiToken } from '../rest/auth.js';
-import { HonoStreamConnection, type HonoStreamConnectionDependencies } from './connection.js';
+import { HonoStreamConnection, refreshHonoStreamConnections, type HonoStreamConnectionDependencies } from './connection.js';
 
 export type HonoStreamServerDependencies = HonoStreamConnectionDependencies & {
 	redisForSub: Redis.Redis;
@@ -76,6 +76,25 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		globalEv.emit('message', parsed);
 	};
 	deps.redisForSub.on('message', onRedisMessage);
+	const activeConnections = new Map<HonoStreamConnection, () => void>();
+	let reconnectRefreshPromise: Promise<void> | undefined;
+	let reconnectRefreshQueued = false;
+	const onRedisReady = () => {
+		if (reconnectRefreshPromise != null) {
+			reconnectRefreshQueued = true;
+			return;
+		}
+		reconnectRefreshPromise = (async () => {
+			do {
+				reconnectRefreshQueued = false;
+				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// eslint-disable-next-line no-await-in-loop
+				await refreshHonoStreamConnections(activeConnections);
+			} while (reconnectRefreshQueued);
+		})().catch(error => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
+			.finally(() => { reconnectRefreshPromise = undefined; });
+	};
+	deps.redisForSub.on('ready', onRedisReady);
 
 	const connections = new Map<WebSocket.WebSocket, number>();
 
@@ -94,23 +113,30 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 			return;
 		}
 
+		const ev = new EventEmitter();
+		const onMessage = (data: { channel: string; message: unknown }) => {
+			ev.emit(data.channel, data.message);
+		};
+		globalEv.on('message', onMessage);
+
 		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
-		await connection.init();
+		try {
+			await connection.init(ev);
+		} catch (error) {
+			globalEv.off('message', onMessage);
+			throw error;
+		}
 
 		wss.handleUpgrade(request, socket, head, ws => {
-			wss.emit('connection', ws, request, connection);
+			wss.emit('connection', ws, request, connection, ev, onMessage);
 		});
 	};
 	server.on('upgrade', (request, socket, head) => {
 		void upgradeHandler(request, socket as Socket, head);
 	});
 
-	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: HonoStreamConnection) => {
-		const ev = new EventEmitter();
-		const onMessage = (data: { channel: string; message: unknown }) => {
-			ev.emit(data.channel, data.message);
-		};
-		globalEv.on('message', onMessage);
+	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: HonoStreamConnection, ev: EventEmitter, onMessage: (data: { channel: string; message: unknown }) => void) => {
+		activeConnections.set(connection, () => ws.terminate());
 		connections.set(ws, Date.now());
 
 		connection.listen(ev, raw => ws.send(raw));
@@ -126,6 +152,7 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		}
 
 		ws.on('close', () => {
+			activeConnections.delete(connection);
 			globalEv.off('message', onMessage);
 			connection.dispose();
 			connections.delete(ws);
@@ -152,6 +179,8 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		detach: async () => {
 			clearInterval(reaperIntervalId);
 			deps.redisForSub.off('message', onRedisMessage);
+			deps.redisForSub.off('ready', onRedisReady);
+			for (const ws of connections.keys()) ws.terminate();
 			await new Promise<void>((resolve, reject) => {
 				wss.close(err => err ? reject(err) : resolve());
 			});

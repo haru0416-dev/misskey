@@ -31,7 +31,7 @@ describe('useTooltip', () => {
 			setup() {
 				const source = ref<HTMLElement | null>(null);
 				useTooltip(source, onShow, 0);
-				return () => sourceVisible.value ? h('button', { ref: source }) : null;
+				return () => (sourceVisible.value ? h('button', { ref: source }) : null);
 			},
 		});
 

@@ -60,7 +60,7 @@ const props = withDefaults(defineProps<{
 const tab = ref(props.page);
 
 const user = ref<null | Misskey.entities.UserDetailed>(CTX_USER);
-const error = ref<any>(null);
+const error = ref<unknown>(null);
 
 function fetchUser(): void {
 	if (props.acct == null) return;

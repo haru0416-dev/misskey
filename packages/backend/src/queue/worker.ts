@@ -115,11 +115,7 @@ function renderError(e?: Error): unknown {
  * 元の QueueProcessorService が組み立てる10個の Worker (system/db/deliver/inbox/
  * userWebhookDeliver/systemWebhookDeliver/relationship/objectStorage/endedPollNotification/
  * postScheduledNote) 全てのコードがこの関数に揃った (inbox = ApInboxService の全アクティビティ種別
- * 移植を含む)。ただし **inbox はテストカバレッジ・レビューが未了** であり、AP連合の署名検証・
- * アクティビティ処理という性質上、本番投入前に十分な検証が必要。
- * **本番のジョブキュー起動経路 (`boot/common.ts` の `jobQueue()`) からはまだ呼ばれていない。**
- * inbox の検証が完了するまでは、この関数を実際のキュー起動に配線しないこと — 同じキューに対して
- * NestJS側のWorkerと二重に接続すると同一ジョブが二重処理される。
+ * 移植を含む)。本番のジョブキュー起動経路は `boot/common.ts` の `jobQueue()`。
  */
 export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
 	const userWebhookDeliverQueueWorker = new Bull.Worker(QUEUE.USER_WEBHOOK_DELIVER, (job) => {

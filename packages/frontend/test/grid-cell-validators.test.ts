@@ -32,7 +32,10 @@ describe('grid cell validators', () => {
 			},
 		] as Parameters<typeof validator.validate>[0]['allCells'];
 
-		expect(validator.validate({ column, row, value: 'duplicate', allCells } as Parameters<typeof validator.validate>[0]).valid).toBe(false);
+		expect(
+			validator.validate({ column, row, value: 'duplicate', allCells } as Parameters<typeof validator.validate>[0])
+				.valid,
+		).toBe(false);
 		expect(trailingValueRead).toBe(false);
 	});
 });

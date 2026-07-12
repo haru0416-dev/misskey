@@ -8,12 +8,14 @@ import { resolveInitialInstanceMeta } from '@/features/instances/instance-cache.
 
 describe('instance metadata cache', () => {
 	test('uses and stores newer provided metadata', () => {
-		expect(resolveInitialInstanceMeta({
-			cachedMeta: '{"version":"old"}',
-			cachedAt: '100',
-			providedMeta: '{"version":"new"}',
-			providedAt: '200',
-		})).toStrictEqual({
+		expect(
+			resolveInitialInstanceMeta({
+				cachedMeta: '{"version":"old"}',
+				cachedAt: '100',
+				providedMeta: '{"version":"new"}',
+				providedAt: '200',
+			}),
+		).toStrictEqual({
 			meta: { version: 'new' },
 			cachedAt: 200,
 			cacheAction: 'store',
@@ -21,38 +23,47 @@ describe('instance metadata cache', () => {
 	});
 
 	test('keeps a newer valid cache', () => {
-		expect(resolveInitialInstanceMeta({
-			cachedMeta: '{"version":"cached"}',
-			cachedAt: '200',
-			providedMeta: '{"version":"provided"}',
-			providedAt: '100',
-		})).toStrictEqual({
+		expect(
+			resolveInitialInstanceMeta({
+				cachedMeta: '{"version":"cached"}',
+				cachedAt: '200',
+				providedMeta: '{"version":"provided"}',
+				providedAt: '100',
+			}),
+		).toStrictEqual({
 			meta: { version: 'cached' },
 			cachedAt: 200,
 			cacheAction: 'none',
 		});
 	});
 
-	test.each(['{', '[]', 'null', '"text"'])('replaces an invalid cache with valid provided metadata: %s', (cachedMeta) => {
-		expect(resolveInitialInstanceMeta({
-			cachedMeta,
-			cachedAt: 'invalid',
-			providedMeta: '{"version":"provided"}',
-			providedAt: 'invalid',
-		})).toStrictEqual({
-			meta: { version: 'provided' },
-			cachedAt: 0,
-			cacheAction: 'store',
-		});
-	});
+	test.each(['{', '[]', 'null', '"text"'])(
+		'replaces an invalid cache with valid provided metadata: %s',
+		(cachedMeta) => {
+			expect(
+				resolveInitialInstanceMeta({
+					cachedMeta,
+					cachedAt: 'invalid',
+					providedMeta: '{"version":"provided"}',
+					providedAt: 'invalid',
+				}),
+			).toStrictEqual({
+				meta: { version: 'provided' },
+				cachedAt: 0,
+				cacheAction: 'store',
+			});
+		},
+	);
 
 	test('clears an invalid cache when no valid provided metadata exists', () => {
-		expect(resolveInitialInstanceMeta({
-			cachedMeta: '{',
-			cachedAt: '100',
-			providedMeta: '[]',
-			providedAt: '200',
-		})).toStrictEqual({
+		expect(
+			resolveInitialInstanceMeta({
+				cachedMeta: '{',
+				cachedAt: '100',
+				providedMeta: '[]',
+				providedAt: '200',
+			}),
+		).toStrictEqual({
 			meta: null,
 			cachedAt: 0,
 			cacheAction: 'clear',
@@ -60,12 +71,14 @@ describe('instance metadata cache', () => {
 	});
 
 	test('does nothing when no metadata exists', () => {
-		expect(resolveInitialInstanceMeta({
-			cachedMeta: null,
-			cachedAt: null,
-			providedMeta: null,
-			providedAt: null,
-		})).toStrictEqual({
+		expect(
+			resolveInitialInstanceMeta({
+				cachedMeta: null,
+				cachedAt: null,
+				providedMeta: null,
+				providedAt: null,
+			}),
+		).toStrictEqual({
 			meta: null,
 			cachedAt: 0,
 			cacheAction: 'none',

@@ -59,12 +59,12 @@ async function save() {
 				try {
 					const parsedRegexp = new RegExp(regexp[1], regexp[2]);
 					// note that regex lines will not be split by spaces!
-				} catch (err: any) {
+				} catch (err) {
 					// invalid syntax: do not save, do not reset changed flag
 					os.alert({
 						type: 'error',
 						title: i18n.ts.regexpError,
-						text: i18n.tsx.regexpErrorDescription({ tab: 'word mute', line: i + 1 }) + '\n' + err.toString(),
+						text: i18n.tsx.regexpErrorDescription({ tab: 'word mute', line: i + 1 }) + '\n' + String(err),
 					});
 					// re-throw error so these invalid settings are not saved
 					throw err;

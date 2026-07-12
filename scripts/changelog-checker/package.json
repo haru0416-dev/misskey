@@ -12,10 +12,8 @@
 		"test:coverage": "vitest run --coverage"
 	},
 	"devDependencies": {
-		"@types/node": "26.0.0",
+		"@types/node": "26.0.1",
 		"@vitest/coverage-v8": "4.1.9",
-		"typescript": "5.9.3",
-		"vite": "8.1.0",
 		"vitest": "4.1.9"
 	}
 }

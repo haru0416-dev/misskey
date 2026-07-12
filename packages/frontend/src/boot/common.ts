@@ -236,17 +236,25 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 			requestingWakeLock = true;
 			try {
 				wakeLock = await navigator.wakeLock.request('screen');
-				wakeLock.addEventListener('release', () => {
-					wakeLock = null;
-				}, { once: true });
+				wakeLock.addEventListener(
+					'release',
+					() => {
+						wakeLock = null;
+					},
+					{ once: true },
+				);
 			} catch {
 				if (waitingForActivation) return;
 				waitingForActivation = true;
 				// WebKit系ではユーザー操作後でないと要求できない場合がある。
-				window.document.addEventListener('click', () => {
-					waitingForActivation = false;
-					void requestWakeLock();
-				}, { once: true });
+				window.document.addEventListener(
+					'click',
+					() => {
+						waitingForActivation = false;
+						void requestWakeLock();
+					},
+					{ once: true },
+				);
 			} finally {
 				requestingWakeLock = false;
 			}
@@ -319,43 +327,13 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		return root;
 	})();
 
-	if (instance.sentryForFrontend) {
-		const Sentry = await import('@sentry/vue');
-		Sentry.init({
-			app,
-			integrations: [
-				...(instance.sentryForFrontend.vueIntegration !== undefined
-					? [Sentry.vueIntegration(instance.sentryForFrontend.vueIntegration ?? undefined)]
-					: []),
-				...(instance.sentryForFrontend.browserTracingIntegration !== undefined
-					? [Sentry.browserTracingIntegration(instance.sentryForFrontend.browserTracingIntegration ?? undefined)]
-					: []),
-				...(instance.sentryForFrontend.replayIntegration !== undefined
-					? [Sentry.replayIntegration(instance.sentryForFrontend.replayIntegration ?? undefined)]
-					: []),
-			],
-
-			// Set tracesSampleRate to 1.0 to capture 100%
-			tracesSampleRate: 1.0,
-
-			// Set `tracePropagationTargets` to control for which URLs distributed tracing should be enabled
-			...(instance.sentryForFrontend.browserTracingIntegration !== undefined
-				? {
-						tracePropagationTargets: [apiUrl],
-					}
-				: {}),
-
-			// Capture Replay for 10% of all sessions,
-			// plus for 100% of sessions with an error
-			...(instance.sentryForFrontend.replayIntegration !== undefined
-				? {
-						replaysSessionSampleRate: 0.1,
-						replaysOnErrorSampleRate: 1.0,
-					}
-				: {}),
-
-			...instance.sentryForFrontend.options,
-		});
+	if (instance.telemetryForFrontend) {
+		try {
+			const { initializeFrontendTelemetry } = await import('@/telemetry.js');
+			initializeFrontendTelemetry(instance.telemetryForFrontend, app, version, apiUrl);
+		} catch (error) {
+			console.error('Failed to initialize frontend OpenTelemetry; continuing without telemetry.', error);
+		}
 	}
 
 	try {

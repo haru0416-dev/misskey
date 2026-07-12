@@ -89,7 +89,7 @@ const props = defineProps<{
 }>();
 
 const flash = ref<Misskey.entities.Flash | null>(null);
-const error = ref<any>(null);
+const error = ref<unknown>(null);
 
 function fetchFlash() {
 	flash.value = null;
@@ -235,11 +235,11 @@ async function run() {
 	}
 	try {
 		await interpreter.exec(ast);
-	} catch (err: any) {
+	} catch (err) {
 		os.alert({
 			type: 'error',
 			title: 'AiScript Error',
-			text: err.message,
+			text: err instanceof Error ? err.message : String(err),
 		});
 	}
 }

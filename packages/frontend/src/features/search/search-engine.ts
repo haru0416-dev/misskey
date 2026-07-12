@@ -5,7 +5,7 @@
 
 export const searchEngines = ['google', 'duckduckgo', 'bing', 'brave'] as const;
 
-export type SearchEngine = typeof searchEngines[number];
+export type SearchEngine = (typeof searchEngines)[number];
 
 const searchEngineDefinitions: Record<SearchEngine, { origin: string; path: string; queryParameter: string }> = {
 	google: { origin: 'https://www.google.com', path: '/search', queryParameter: 'q' },

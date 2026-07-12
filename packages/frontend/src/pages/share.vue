@@ -173,11 +173,12 @@ async function init() {
 			);
 		}
 		//#endregion
-	} catch (err: any) {
+	} catch (err) {
+		const error = typeof err === 'object' && err !== null ? err : null;
 		os.alert({
 			type: 'error',
-			title: err.message,
-			text: err.name,
+			title: error !== null && 'message' in error && typeof error.message === 'string' ? error.message : String(err),
+			text: error !== null && 'name' in error && typeof error.name === 'string' ? error.name : undefined,
 		});
 	}
 

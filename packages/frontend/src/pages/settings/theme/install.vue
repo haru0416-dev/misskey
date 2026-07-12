@@ -53,7 +53,7 @@ async function install(code: string): Promise<void> {
 		});
 		installThemeCode.value = null;
 		router.push('/settings/theme');
-	} catch (err: any) {
+	} catch (err) {
 		handleThemeInstallError(err);
 	}
 }

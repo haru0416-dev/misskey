@@ -4,11 +4,11 @@
  */
 
 import { nextTick, ref, defineAsyncComponent } from 'vue';
-import getCaretCoordinates from 'textarea-caret';
 import { toASCII } from 'punycode.js';
 import type { Ref } from 'vue';
 import type { CompleteInfo } from '@/features/autocomplete/components/MkAutocomplete.vue';
 import { popup } from '@/os.js';
+import { getCaretCoordinates } from '@/utility/get-caret-coordinates.js';
 
 const MkAutocomplete = defineAsyncComponent(() => import('@/features/autocomplete/components/MkAutocomplete.vue'));
 

@@ -25,8 +25,10 @@ export type EmbedParams = {
 };
 
 /** 正規化されたパラメータ */
-export type ParsedEmbedParams = Required<Omit<EmbedParams, 'maxHeight' | 'colorMode'>> &
-	Pick<EmbedParams, 'maxHeight' | 'colorMode'>;
+export type ParsedEmbedParams = Required<Omit<EmbedParams, 'maxHeight' | 'colorMode'>> & {
+	maxHeight: number | undefined;
+	colorMode: 'light' | 'dark' | undefined;
+};
 
 /** パラメータのデフォルトの値 */
 export const defaultEmbedParams = {
@@ -36,7 +38,7 @@ export const defaultEmbedParams = {
 	border: true,
 	autoload: false,
 	header: true,
-} as const satisfies EmbedParams;
+} as const satisfies ParsedEmbedParams;
 
 //#endregion
 

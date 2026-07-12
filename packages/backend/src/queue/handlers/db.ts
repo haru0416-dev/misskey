@@ -486,6 +486,7 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 				muteeId: target.id,
 			});
 			await refreshUserMutingsCache(deps, user.id);
+			deps.publishInternalEvent?.('mute', { muterId: user.id, muteeId: target.id });
 		} catch {
 			// 元実装同様、行単位のエラーはログのみで処理を継続する
 		}

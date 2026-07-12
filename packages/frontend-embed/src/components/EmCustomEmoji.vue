@@ -36,7 +36,7 @@ const props = defineProps<{
 	normal?: boolean;
 	noStyle?: boolean;
 	host?: string | null;
-	url?: string;
+	url?: string | undefined;
 	useOriginalSize?: boolean;
 	fallbackToImage?: boolean;
 }>();

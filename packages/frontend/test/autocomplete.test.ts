@@ -56,23 +56,27 @@ describe('emoji autocomplete', () => {
 			{ name: 'foo', emoji: '完全一致' },
 		]);
 
-		assert.deepEqual(result.map(x => x.emoji), [
-			'完全一致',
-			'完全一致エイリアス',
-			'前方一致',
-			'前方一致エイリアス',
-			'部分一致',
-		]);
+		assert.deepEqual(
+			result.map((x) => x.emoji),
+			['完全一致', '完全一致エイリアス', '前方一致', '前方一致エイリアス', '部分一致'],
+		);
 	});
 
 	test('maxを超えずaliasOf単位で重複を除外する', () => {
-		const result = searchEmoji('foo', [
-			{ name: 'foo-a', emoji: 'A', aliasOf: 'same' },
-			{ name: 'foo-b', emoji: 'B', aliasOf: 'same' },
-			{ name: 'foo-c', emoji: 'C' },
-		], 2);
+		const result = searchEmoji(
+			'foo',
+			[
+				{ name: 'foo-a', emoji: 'A', aliasOf: 'same' },
+				{ name: 'foo-b', emoji: 'B', aliasOf: 'same' },
+				{ name: 'foo-c', emoji: 'C' },
+			],
+			2,
+		);
 
-		assert.deepEqual(result.map(x => x.emoji), ['C', 'A']);
+		assert.deepEqual(
+			result.map((x) => x.emoji),
+			['C', 'A'],
+		);
 	});
 
 	test('通常一致の検索ではDBを1回だけ走査する', () => {

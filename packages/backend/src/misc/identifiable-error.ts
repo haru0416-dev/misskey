@@ -4,7 +4,7 @@
  */
 
 export class IdentifiableError extends Error {
-	public message: string;
+	public override message: string;
 	public id: string;
 
 	constructor(id: string, message?: string) {

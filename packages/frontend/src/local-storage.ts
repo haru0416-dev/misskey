@@ -49,12 +49,20 @@ export function isJsonObject(value: unknown): value is Record<string, unknown> {
 }
 
 export function isStringArray(value: unknown): value is string[] {
-	return Array.isArray(value) && value.every(item => typeof item === 'string');
+	return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 export function getStorageItemAsJson(storage: ReadableStorage, key: string): unknown | undefined;
-export function getStorageItemAsJson<T>(storage: ReadableStorage, key: string, validate: JsonValidator<T>): T | undefined;
-export function getStorageItemAsJson<T>(storage: ReadableStorage, key: string, validate?: JsonValidator<T>): T | unknown | undefined {
+export function getStorageItemAsJson<T>(
+	storage: ReadableStorage,
+	key: string,
+	validate: JsonValidator<T>,
+): T | undefined;
+export function getStorageItemAsJson<T>(
+	storage: ReadableStorage,
+	key: string,
+	validate?: JsonValidator<T>,
+): T | unknown | undefined {
 	const item = storage.getItem(key);
 	if (item === null) return undefined;
 

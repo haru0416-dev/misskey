@@ -19,6 +19,7 @@ import type { MiMuting } from '@/models/Muting.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import { HonoApiError, clientError } from './error.js';
+import type { HonoApiInternalEventPublisher } from './events.js';
 import { packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -26,6 +27,7 @@ export type HonoApiAccountMuteDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
+	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
 export const muteCreateParamDef = z.object({
@@ -166,6 +168,7 @@ export async function handleHonoApiMuteCreate(
 		muteeId: mutee.id,
 	});
 	await refreshUserMutingsCache(deps, me.id);
+	deps.publishInternalEvent?.('mute', { muterId: me.id, muteeId: mutee.id });
 }
 
 export async function handleHonoApiMuteDelete(
@@ -188,6 +191,7 @@ export async function handleHonoApiMuteDelete(
 
 	await deleteMutingsByIdsFromDatabase(deps.db, [muting.id]);
 	await refreshUserMutingsCache(deps, me.id);
+	deps.publishInternalEvent?.('unmute', { muterId: me.id, muteeId: mutee.id });
 }
 
 export async function handleHonoApiMuteList(
@@ -229,6 +233,7 @@ export async function handleHonoApiRenoteMuteCreate(
 		muteeId: mutee.id,
 	});
 	await refreshRenoteMutingsCache(deps, me.id);
+	deps.publishInternalEvent?.('renoteMute', { muterId: me.id, muteeId: mutee.id });
 }
 
 export async function handleHonoApiRenoteMuteDelete(
@@ -251,6 +256,7 @@ export async function handleHonoApiRenoteMuteDelete(
 
 	await deleteRenoteMutingsByIdsFromDatabase(deps.db, [muting.id]);
 	await refreshRenoteMutingsCache(deps, me.id);
+	deps.publishInternalEvent?.('renoteUnmute', { muterId: me.id, muteeId: mutee.id });
 }
 
 export async function handleHonoApiRenoteMuteList(

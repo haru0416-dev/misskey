@@ -16,11 +16,13 @@ const theme = (base: 'light' | 'dark') => `{
 
 describe('admin branding JSON settings', () => {
 	test('normalizes valid JSON5 settings', () => {
-		expect(normalizeBrandingJsonSettings({
-			defaultLightTheme: theme('light'),
-			defaultDarkTheme: theme('dark'),
-			manifestJsonOverride: "{ name: 'Misskey', display: 'standalone', }",
-		})).toStrictEqual({
+		expect(
+			normalizeBrandingJsonSettings({
+				defaultLightTheme: theme('light'),
+				defaultDarkTheme: theme('dark'),
+				manifestJsonOverride: "{ name: 'Misskey', display: 'standalone', }",
+			}),
+		).toStrictEqual({
 			success: true,
 			value: {
 				defaultLightTheme: theme('light'),
@@ -31,11 +33,13 @@ describe('admin branding JSON settings', () => {
 	});
 
 	test('normalizes empty optional values', () => {
-		expect(normalizeBrandingJsonSettings({
-			defaultLightTheme: '  ',
-			defaultDarkTheme: null,
-			manifestJsonOverride: '',
-		})).toStrictEqual({
+		expect(
+			normalizeBrandingJsonSettings({
+				defaultLightTheme: '  ',
+				defaultDarkTheme: null,
+				manifestJsonOverride: '',
+			}),
+		).toStrictEqual({
 			success: true,
 			value: {
 				defaultLightTheme: null,
@@ -54,10 +58,12 @@ describe('admin branding JSON settings', () => {
 		['manifestJsonOverride', theme('light'), theme('dark'), '[]'],
 		['manifestJsonOverride', theme('light'), theme('dark'), 'null'],
 	] as const)('rejects an invalid %s value', (field, light, dark, manifest) => {
-		expect(normalizeBrandingJsonSettings({
-			defaultLightTheme: light,
-			defaultDarkTheme: dark,
-			manifestJsonOverride: manifest,
-		})).toStrictEqual({ success: false, field });
+		expect(
+			normalizeBrandingJsonSettings({
+				defaultLightTheme: light,
+				defaultDarkTheme: dark,
+				manifestJsonOverride: manifest,
+			}),
+		).toStrictEqual({ success: false, field });
 	});
 });

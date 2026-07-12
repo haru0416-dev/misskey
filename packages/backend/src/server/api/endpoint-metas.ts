@@ -32,6 +32,31 @@ import { endpointMetas as notesMetas } from './metas/notes.js';
 import { endpointMetas as pagesMetas } from './metas/pages.js';
 import { endpointMetas as usersMetas } from './metas/users.js';
 
+const endpointMetaGroups = [
+	adminMetas,
+	adminAbuseReportMetas,
+	adminEmojiMetas,
+	adminQueueMetas,
+	adminRolesMetas,
+	adminSystemWebhookMetas,
+	antennasMetas,
+	channelsMetas,
+	chartsMetas,
+	chatMetas,
+	clipsMetas,
+	driveMetas,
+	federationMetas,
+	flashMetas,
+	followingMetas,
+	galleryMetas,
+	hashtagsMetas,
+	iMetas,
+	miscMetas,
+	notesMetas,
+	pagesMetas,
+	usersMetas,
+] as const;
+
 export const endpointMetas = {
 	'admin/abuse-report/notification-recipient/create': adminAbuseReportMetas['admin/abuse-report/notification-recipient/create'],
 	'admin/abuse-report/notification-recipient/delete': adminAbuseReportMetas['admin/abuse-report/notification-recipient/delete'],
@@ -464,3 +489,19 @@ export const endpointMetas = {
 	'v2/admin/emoji/list': miscMetas['v2/admin/emoji/list'],
 	'verify-email': miscMetas['verify-email'],
 };
+
+const groupedEndpointNames = endpointMetaGroups.flatMap(group => Object.keys(group));
+const duplicateEndpointNames = groupedEndpointNames.filter((name, index) => groupedEndpointNames.indexOf(name) !== index);
+if (duplicateEndpointNames.length > 0) {
+	throw new Error(`Duplicate endpoint metadata: ${[...new Set(duplicateEndpointNames)].join(', ')}`);
+}
+
+const consolidatedEndpointNames = Object.keys(endpointMetas);
+const omittedEndpointNames = groupedEndpointNames.filter(name => !Object.hasOwn(endpointMetas, name));
+const unknownEndpointNames = consolidatedEndpointNames.filter(name => !groupedEndpointNames.includes(name));
+if (omittedEndpointNames.length > 0 || unknownEndpointNames.length > 0) {
+	throw new Error([
+		omittedEndpointNames.length > 0 ? `Endpoint metadata omitted from the consolidated map: ${omittedEndpointNames.join(', ')}` : '',
+		unknownEndpointNames.length > 0 ? `Unknown endpoint metadata in the consolidated map: ${unknownEndpointNames.join(', ')}` : '',
+	].filter(Boolean).join('\n'));
+}

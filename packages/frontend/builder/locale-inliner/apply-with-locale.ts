@@ -32,7 +32,12 @@ export function applyWithLocale(
 				if (accessed == null) {
 					fileLogger.warn(`Cannot find localization key ${modification.localizationKey.join('.')}`);
 				}
-				sourceCode.update(modification.begin, modification.end, JSON.stringify(accessed));
+				const serialized = JSON.stringify(accessed);
+				sourceCode.update(
+					modification.begin,
+					modification.end,
+					typeof accessed === 'object' && accessed !== null ? `(${serialized})` : serialized,
+				);
 				break;
 			}
 			case 'parameterized-function': {

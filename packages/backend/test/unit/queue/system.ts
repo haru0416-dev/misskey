@@ -184,6 +184,7 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueCheckExpiredMutings', () => {
 		test('期限切れのユーザーミュート/チャンネルミュートを削除する', async () => {
+			const published: { type: string; value: unknown }[] = [];
 			const muterId = genId();
 			await createUserInDatabase(db, {
 				id: muterId,
@@ -215,7 +216,10 @@ describe('hono-queue-system', () => {
 				expiresAt: new Date(Date.now() - 1000),
 			});
 
-			await handleHonoQueueCheckExpiredMutings(deps);
+			await handleHonoQueueCheckExpiredMutings({
+				...deps,
+				publishInternalEvent: (type, value) => { published.push({ type, value }); },
+			});
 
 			expect(await mutingExistsInDatabase(db, muterId, muteeId)).toBe(false);
 			expect(await listActiveMutedChannelIdsByUserIdFromDatabase(db, muterId, new Date())).not.toContain(channelId);
@@ -226,6 +230,8 @@ describe('hono-queue-system', () => {
 			expect(cachedMutings).not.toContain(muteeId);
 			const cachedChannelMutings = JSON.parse((await redis.get(`kvcache:channelMutingChannels:${muterId}`)) ?? '[]');
 			expect(cachedChannelMutings).not.toContain(channelId);
+			expect(published).toContainEqual({ type: 'unmute', value: { muterId, muteeId } });
+			expect(published).toContainEqual({ type: 'unmuteChannel', value: { userId: muterId, channelId } });
 		});
 	});
 

@@ -69,7 +69,7 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 		if (event.data.result) {
 			const workers = new WorkerMultiDispatch(
 				() => new DrawBlurhash(),
-				Math.min(navigator.hardwareConcurrency - 1, 4),
+				Math.max(1, Math.min(navigator.hardwareConcurrency - 1, 4)),
 			);
 			resolve(workers);
 		} else {
