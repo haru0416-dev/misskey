@@ -10166,6 +10166,10 @@ export interface operations {
                             [key: string]: number;
                         };
                         isPaused: boolean;
+                        outbox: {
+                            pending: number;
+                            oldestPendingAgeMs: number | null;
+                        } | null;
                         metrics: {
                             completed: components['schemas']['QueueMetrics'];
                             failed: components['schemas']['QueueMetrics'];
@@ -10265,6 +10269,10 @@ export interface operations {
                             [key: string]: number;
                         };
                         isPaused: boolean;
+                        outbox: {
+                            pending: number;
+                            oldestPendingAgeMs: number | null;
+                        } | null;
                         metrics: {
                             completed: components['schemas']['QueueMetrics'];
                             failed: components['schemas']['QueueMetrics'];

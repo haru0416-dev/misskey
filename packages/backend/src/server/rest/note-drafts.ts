@@ -278,7 +278,13 @@ async function scheduleNoteDraft(deps: HonoApiNoteDraftDependencies, draft: MiNo
 		noteDraftId: draft.id,
 		scheduledAt: draft.scheduledAt.getTime(),
 	}, {
+		jobId: `scheduled-${draft.id}-${draft.scheduledAt.getTime()}`,
 		delay,
+		attempts: 3,
+		backoff: {
+			type: 'exponential',
+			delay: 30_000,
+		},
 		removeOnComplete: {
 			age: 3600 * 24 * 7,
 			count: 30,
@@ -290,10 +296,16 @@ async function scheduleNoteDraft(deps: HonoApiNoteDraftDependencies, draft: MiNo
 	});
 }
 
-async function clearNoteDraftSchedule(deps: HonoApiNoteDraftDependencies, draftId: string): Promise<void> {
+async function clearNoteDraftSchedule(deps: HonoApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
+	if (draft.scheduledAt != null) {
+		const job = await deps.postScheduledNoteQueue.getJob(`scheduled-${draft.id}-${draft.scheduledAt.getTime()}`);
+		if (job != null && !await job.isActive()) await job.remove();
+	}
+
+	// Remove legacy and stale-revision jobs created before deterministic IDs were introduced.
 	const jobs = await deps.postScheduledNoteQueue.getJobs(['delayed', 'waiting']);
 	for (const job of jobs) {
-		if (job.data.noteDraftId === draftId) {
+		if (job.data.noteDraftId === draft.id) {
 			await job.remove();
 		}
 	}
@@ -568,6 +580,7 @@ export async function handleHonoApiNotesDraftsUpdate(
 		isActuallyScheduled,
 	});
 
+	await clearNoteDraftSchedule(deps, existing);
 	if (updatedDraft.scheduledAt != null && updatedDraft.isActuallyScheduled) {
 		await scheduleNoteDraft(deps, updatedDraft);
 	}
@@ -586,7 +599,7 @@ export async function handleHonoApiNotesDraftsDelete(
 	if (draft.userId !== me.id) throw draftAccessDeniedError();
 
 	await deleteNoteDraftByIdFromDatabase(deps.db, draft.id);
-	await clearNoteDraftSchedule(deps, params.draftId);
+	await clearNoteDraftSchedule(deps, draft);
 }
 
 export async function handleHonoApiNotesDraftsList(

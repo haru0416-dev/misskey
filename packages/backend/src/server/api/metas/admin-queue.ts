@@ -249,6 +249,14 @@ export const endpointMetas = {
 							type: 'boolean',
 							optional: false, nullable: false,
 						},
+						outbox: {
+							type: 'object',
+							optional: false, nullable: true,
+							properties: {
+								pending: { type: 'number', optional: false, nullable: false },
+								oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
+							},
+						},
 						metrics: {
 							type: 'object',
 							optional: false, nullable: false,
@@ -300,6 +308,14 @@ export const endpointMetas = {
 					isPaused: {
 						type: 'boolean',
 						optional: false, nullable: false,
+					},
+					outbox: {
+						type: 'object',
+						optional: false, nullable: true,
+						properties: {
+							pending: { type: 'number', optional: false, nullable: false },
+							oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
+						},
 					},
 					metrics: {
 						type: 'object',

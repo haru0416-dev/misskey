@@ -59,6 +59,7 @@ import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/NoteStore.js';
 import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { DbQueue } from '@/core/queues.js';
+import { enqueueDbJobInOutbox } from '@/core/QueueOutboxStore.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import {
@@ -443,14 +444,28 @@ async function deleteFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, uri: string): Promise<string> {
 	if (actor.uri !== uri) return `skip: delete actor ${actor.uri} !== ${uri}`;
 
-	if (!await updateUserDeletedStateIfNotDeletedInDatabase(deps.db, actor.id, true)) {
+	const outboxId = await deps.db.transaction(async transaction => {
+		if (!await updateUserDeletedStateIfNotDeletedInDatabase(transaction as MiDrizzleDatabase, actor.id, true)) return null;
+
+		return await enqueueDbJobInOutbox(transaction as MiDrizzleDatabase, 'deleteAccount', {
+			user: { id: actor.id },
+			soft: undefined,
+		}, dbQueueJobOptions);
+	});
+
+	if (outboxId == null) {
 		return 'skip: already deleted or actor not found';
 	}
 
-	const job = await deps.dbQueue.add('deleteAccount', { user: { id: actor.id }, soft: undefined }, dbQueueJobOptions);
+	void deps.dbQueue.add('deleteAccount', { user: { id: actor.id }, soft: undefined }, {
+		...dbQueueJobOptions,
+		jobId: `outbox-${outboxId}`,
+	}).catch(() => {
+		// The outbox dispatcher retries when the low-latency enqueue path is unavailable.
+	});
 	deps.publishInternalEvent?.('remoteUserUpdated', { id: actor.id });
 
-	return `ok: queued ${job.name} ${job.id}`;
+	return `ok: queued deleteAccount outbox-${outboxId}`;
 }
 
 async function deleteNoteFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, uri: string): Promise<string> {

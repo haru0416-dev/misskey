@@ -100,7 +100,9 @@ export async function handleHonoQueuePostScheduledNote(
 		if (error instanceof ScheduledNoteDraftUnavailableError) {
 			return;
 		}
-		createScheduledNotePostFailedNotification(deps, draft.userId, draft.id);
+		if (job.attemptsMade + 1 >= (job.opts.attempts ?? 1)) {
+			createScheduledNotePostFailedNotification(deps, draft.userId, draft.id);
+		}
 		throw error;
 	}
 }
