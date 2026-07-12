@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<MkNumber :value="stats.originalUsersCount" style="margin-right: 0.5em;"/>
 						<MkNumberDiff v-if="usersComparedToThePrevDay != null" v-tooltip="i18n.ts.dayOverDayChanges" class="diff" :value="usersComparedToThePrevDay"></MkNumberDiff>
 					</div>
-					<div class="label">Users</div>
+					<div class="label">{{ i18n.ts.users }}</div>
 				</div>
 			</div>
 			<div class="item _panel notes">
@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<MkNumber :value="stats.originalNotesCount" style="margin-right: 0.5em;"/>
 						<MkNumberDiff v-if="notesComparedToThePrevDay != null" v-tooltip="i18n.ts.dayOverDayChanges" class="diff" :value="notesComparedToThePrevDay"></MkNumberDiff>
 					</div>
-					<div class="label">Notes</div>
+					<div class="label">{{ i18n.ts.notes }}</div>
 				</div>
 			</div>
 			<div class="item _panel instances">
@@ -34,7 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="value">
 						<MkNumber :value="stats.instances" style="margin-right: 0.5em;"/>
 					</div>
-					<div class="label">Instances</div>
+					<div class="label">{{ i18n.ts.instances }}</div>
 				</div>
 			</div>
 			<div class="item _panel emojis">
@@ -43,7 +43,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="value">
 						<MkNumber :value="customEmojis.length" style="margin-right: 0.5em;"/>
 					</div>
-					<div class="label">Custom emojis</div>
+					<div class="label">{{ i18n.ts.customEmojis }}</div>
 				</div>
 			</div>
 			<div class="item _panel online">
@@ -52,7 +52,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="value">
 						<MkNumber :value="onlineUsersCount" style="margin-right: 0.5em;"/>
 					</div>
-					<div class="label">Online</div>
+					<div class="label">{{ i18n.ts.online }}</div>
 				</div>
 			</div>
 		</div>
@@ -100,21 +100,23 @@ onMounted(async () => {
 <style lang="scss" module>
 .root {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
 	gap: 12px;
 
 	&:global {
 		> .item {
 			display: flex;
+			align-items: center;
 			box-sizing: border-box;
-			padding: 12px;
+			min-height: 76px;
+			padding: 14px;
 
 			> .icon {
 				display: grid;
 				place-items: center;
-				height: 100%;
-				aspect-ratio: 1;
-				margin-right: 12px;
+				flex: 0 0 44px;
+				height: 44px;
+				margin-right: 14px;
 				background: var(--MI_THEME-accentedBg);
 				color: var(--MI_THEME-accent);
 				border-radius: 10px;
@@ -159,8 +161,10 @@ onMounted(async () => {
 				padding: 2px 0;
 
 				> .value {
-					font-size: 1.2em;
-					font-weight: bold;
+					font-size: 1.35em;
+					font-weight: 700;
+					font-variant-numeric: tabular-nums;
+					line-height: 1.15;
 
 					> .diff {
 						font-size: 0.65em;
@@ -169,11 +173,43 @@ onMounted(async () => {
 				}
 
 				> .label {
-					font-size: 0.8em;
-					opacity: 0.5;
+					margin-top: 4px;
+					font-size: 0.78em;
+					line-height: 1.2;
+					opacity: 0.72;
 				}
 			}
 		}
+	}
+}
+
+@media (max-width: 500px) {
+	.root {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.root:global > .item {
+		min-height: 68px;
+		padding: 10px;
+	}
+
+	.root:global > .item > .icon {
+		flex-basis: 40px;
+		height: 40px;
+		margin-right: 10px;
+	}
+
+	.root:global > .item > .body {
+		min-width: 0;
+	}
+
+	.root:global > .item > .body > .value {
+		font-size: 1.2em;
+	}
+
+	.root:global > .item > .body > .label {
+		font-size: 0.72em;
 	}
 }
 </style>

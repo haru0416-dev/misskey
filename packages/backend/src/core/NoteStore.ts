@@ -21,7 +21,10 @@ import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 function deserializeNote(row: NoteRow): MiNote {
 	return {
 		...row,
+		reply: null,
+		renote: null,
 		user: null,
+		channel: null,
 	} as MiNote;
 }
 

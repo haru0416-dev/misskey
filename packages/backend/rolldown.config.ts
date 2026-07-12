@@ -59,9 +59,11 @@ export default defineConfig((args) => {
 	// 通常のビルド時にexternalとするモジュール
 	const externalModules: ExternalOption = [
 		/^slacc-.*/,
-		/^@sentry\/.*/,
-		/^@sentry-internal\/.*/,
+		/^@opentelemetry\/.*/,
 		/^@napi-rs\/.*/,
+		'bullmq',
+		'ioredis',
+		'pg',
 		'sharp',
 		'jsdom',
 		'ipaddr.js',

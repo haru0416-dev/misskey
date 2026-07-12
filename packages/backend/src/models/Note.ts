@@ -37,7 +37,7 @@ export class MiNote {
 
 	public localOnly: boolean;
 
-	public reactionAcceptance: typeof noteReactionAcceptances[number];
+	public reactionAcceptance: typeof noteReactionAcceptances[number] | null;
 
 	public renoteCount: number;
 

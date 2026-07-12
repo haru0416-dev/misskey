@@ -62,26 +62,6 @@ export async function masterMain() {
 
 	initExtraThreadPool(config);
 
-	if (config.sentryForBackend) {
-		const Sentry = await import('@sentry/node');
-		const { nodeProfilingIntegration } = await import('@sentry/profiling-node');
-
-		Sentry.init({
-			integrations: [
-				...(config.sentryForBackend.enableNodeProfiling ? [nodeProfilingIntegration()] : []),
-			],
-
-			tracesSampleRate: 1.0, //  Capture 100% of the transactions
-
-			// Set sampling rate for profiling - this is relative to tracesSampleRate
-			profilesSampleRate: 1.0,
-
-			maxBreadcrumbs: 0,
-
-			...config.sentryForBackend.options,
-		});
-	}
-
 	bootLogger.info(
 		`mode: [disableClustering: ${envOption.disableClustering}, onlyServer: ${envOption.onlyServer}, onlyQueue: ${envOption.onlyQueue}]`,
 	);
