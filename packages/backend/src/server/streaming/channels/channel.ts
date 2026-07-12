@@ -11,7 +11,7 @@ import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, t
 import { isNoteVisibleForMeForHonoStream, type HonoStreamChannelContext, type HonoStreamChannelDefinition } from '../channel.js';
 
 function isNoteMutedOrBlockedForChannelChannel(ctx: HonoStreamChannelContext, channelId: string, note: Packed<'Note'>): boolean {
-	if (isInstanceMuted(note, new Set<string>(ctx.userProfile?.mutedInstances ?? []))) return true;
+	if (isInstanceMuted(note, ctx.userMutedInstances)) return true;
 	if (isUserRelated(note, ctx.userIdsWhoMeMuting)) return true;
 	if (isUserRelated(note, ctx.userIdsWhoBlockingMe)) return true;
 	if (isRenotePacked(note) && !isQuotePacked(note) && ctx.userIdsWhoMeMutingRenotes.has(note.user.id)) return true;

@@ -62,7 +62,9 @@ describe('WidgetActivityChart', () => {
 		for (const eventName of ['mousemove', 'mouseleave', 'mouseup']) {
 			const addedHandler = addEventListener.mock.calls.find(([name]) => name === eventName)?.[1];
 			expect(addedHandler).toBeDefined();
-			expect(removeEventListener.mock.calls.some(([name, handler]) => name === eventName && handler === addedHandler)).toBe(true);
+			expect(
+				removeEventListener.mock.calls.some(([name, handler]) => name === eventName && handler === addedHandler),
+			).toBe(true);
 		}
 
 		await fireEvent.mouseMove(window, { clientX: -20, clientY: -40 });

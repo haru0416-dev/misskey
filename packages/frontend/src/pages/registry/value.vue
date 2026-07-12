@@ -46,6 +46,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { watch, computed, ref } from 'vue';
 import JSON5 from 'json5';
+import type * as Misskey from 'misskey-js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
@@ -64,7 +65,7 @@ const props = defineProps<{
 const scope = computed(() => props.path.split('/').slice(0, -1));
 const key = computed(() => props.path.split('/').at(-1)!);
 
-const value = ref<any>(null);
+const value = ref<Misskey.entities.IRegistryGetDetailResponse | null>(null);
 const valueForEditor = ref<string>('');
 
 function fetchValue() {

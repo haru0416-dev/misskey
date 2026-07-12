@@ -150,7 +150,7 @@ async function composeNotification(data: PushNotificationDataMap[keyof PushNotif
 						const badgeUrl = new URL(`/emoji/${name}.webp`, origin);
 						badgeUrl.searchParams.set('badge', '1');
 						badge = badgeUrl.href;
-						reaction = name.split('@')[0];
+						reaction = name.split('@', 1)[0] ?? name;
 					} else {
 						// Unicode絵文字の場合
 						badge = `/twemoji-badge/${char2fileName(reaction)}.png`;
@@ -245,7 +245,7 @@ async function composeNotification(data: PushNotificationDataMap[keyof PushNotif
 				case 'app':
 					return [data.body.header ?? data.body.body, {
 						body: data.body.header ? data.body.body : '',
-						icon: data.body.icon ?? undefined,
+						...(data.body.icon == null ? {} : { icon: data.body.icon }),
 						data,
 					}];
 

@@ -27,7 +27,7 @@ export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDepen
 				case 'notification': {
 					const body = data.body as MainStreamNotificationBody;
 					// Ignore notifications from instances the user has muted
-					if (isUserFromMutedInstance(body as Packed<'Notification'>, new Set<string>(ctx.userProfile?.mutedInstances ?? []))) return;
+					if (isUserFromMutedInstance(body as Packed<'Notification'>, ctx.userMutedInstances)) return;
 					if (body.userId && ctx.userIdsWhoMeMuting.has(body.userId)) return;
 
 					if (body.note && body.note.isHidden) {
@@ -38,7 +38,7 @@ export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDepen
 				}
 				case 'mention': {
 					const note = data.body as Packed<'Note'>;
-					if (isInstanceMuted(note, new Set<string>(ctx.userProfile?.mutedInstances ?? []))) return;
+					if (isInstanceMuted(note, ctx.userMutedInstances)) return;
 					if (!isNoteVisibleForMeForHonoStream(ctx, note)) return;
 					if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
 					if (note.isHidden) {

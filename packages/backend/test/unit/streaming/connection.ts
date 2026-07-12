@@ -10,12 +10,12 @@ process.env.NODE_ENV = 'test';
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { EventEmitter } from 'node:events';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
+import { HonoStreamConnection, refreshHonoStreamConnections, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: string): Promise<MiUser> {
@@ -184,6 +184,77 @@ describe('hono-stream-connection', () => {
 		expect(parsed.body).toEqual({ foo: 'bar' });
 	});
 
+	test('internal イベントで接続中の関係スナップショットを更新する', async () => {
+		const user = await createTestUser(deps, 'honostreaminternal');
+		const other = await createTestUser(deps, 'honostreaminternalother');
+		const connection = new HonoStreamConnection(deps, user, null);
+		await connection.init();
+
+		const subscriber = new EventEmitter();
+		connection.listen(subscriber, () => {});
+		const state = connection as unknown as {
+			following: Record<string, { withReplies: boolean } | undefined>;
+			followingChannels: Set<string>;
+			mutingChannels: Set<string>;
+			userIdsWhoMeMuting: Set<string>;
+			userIdsWhoBlockingMe: Set<string>;
+			userIdsWhoMeMutingRenotes: Set<string>;
+			userMutedInstances: Set<string>;
+		};
+
+		subscriber.emit('internal', { type: 'follow', body: { followerId: user.id, followeeId: other.id, withReplies: true } });
+		expect(state.following[other.id]).toEqual({ withReplies: true });
+		subscriber.emit('internal', { type: 'followingUpdated', body: { followerId: user.id, followeeId: other.id, withReplies: false } });
+		expect(state.following[other.id]).toEqual({ withReplies: false });
+		subscriber.emit('internal', { type: 'followingsUpdated', body: { followerId: user.id, withReplies: true } });
+		expect(state.following[other.id]).toEqual({ withReplies: true });
+
+		subscriber.emit('internal', { type: 'followChannel', body: { userId: user.id, channelId: 'channel1' } });
+		subscriber.emit('internal', { type: 'muteChannel', body: { userId: user.id, channelId: 'channel2' } });
+		subscriber.emit('internal', { type: 'mute', body: { muterId: user.id, muteeId: other.id } });
+		subscriber.emit('internal', { type: 'renoteMute', body: { muterId: user.id, muteeId: other.id } });
+		subscriber.emit('internal', { type: 'blockingCreated', body: { blockerId: other.id, blockeeId: user.id } });
+		subscriber.emit('internal', { type: 'updateUserProfile', body: { userId: user.id, mutedInstances: ['example.com'] } });
+
+		expect(state.followingChannels).toContain('channel1');
+		expect(state.mutingChannels).toContain('channel2');
+		expect(state.userIdsWhoMeMuting).toContain(other.id);
+		expect(state.userIdsWhoMeMutingRenotes).toContain(other.id);
+		expect(state.userIdsWhoBlockingMe).toContain(other.id);
+		expect(state.userMutedInstances).toEqual(new Set(['example.com']));
+
+		subscriber.emit('internal', { type: 'unfollow', body: { followerId: user.id, followeeId: other.id } });
+		subscriber.emit('internal', { type: 'unfollowChannel', body: { userId: user.id, channelId: 'channel1' } });
+		subscriber.emit('internal', { type: 'unmuteChannel', body: { userId: user.id, channelId: 'channel2' } });
+		subscriber.emit('internal', { type: 'unmute', body: { muterId: user.id, muteeId: other.id } });
+		subscriber.emit('internal', { type: 'renoteUnmute', body: { muterId: user.id, muteeId: other.id } });
+		subscriber.emit('internal', { type: 'blockingDeleted', body: { blockerId: other.id, blockeeId: user.id } });
+
+		expect(state.following[other.id]).toBeUndefined();
+		expect(state.followingChannels).not.toContain('channel1');
+		expect(state.mutingChannels).not.toContain('channel2');
+		expect(state.userIdsWhoMeMuting).not.toContain(other.id);
+		expect(state.userIdsWhoMeMutingRenotes).not.toContain(other.id);
+		expect(state.userIdsWhoBlockingMe).not.toContain(other.id);
+	});
+
+	test('初期スナップショット取得中のinternalイベントを取得後に再適用する', async () => {
+		const user = await createTestUser(deps, 'honostreaminit');
+		const other = await createTestUser(deps, 'honostreaminitother');
+		const connection = new HonoStreamConnection(deps, user, null);
+		const subscriber = new EventEmitter();
+
+		const initializing = connection.init(subscriber);
+		subscriber.emit('internal', { type: 'follow', body: { followerId: user.id, followeeId: other.id, withReplies: true } });
+		await initializing;
+
+		const state = connection as unknown as {
+			following: Record<string, { withReplies: boolean } | undefined>;
+		};
+		expect(state.following[other.id]).toEqual({ withReplies: true });
+		connection.dispose();
+	});
+
 	test('dispose 後はチャンネルのイベントを受け取らない', async () => {
 		const user = await createTestUser(deps, 'honostreamdispose');
 		const connection = new HonoStreamConnection(deps, user, null);
@@ -200,5 +271,21 @@ describe('hono-stream-connection', () => {
 
 		const channelMessages = raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel');
 		expect(channelMessages.length).toBe(0);
+	});
+
+	test('Redis再接続後の再同期が失敗し続けた接続を切断する', async () => {
+		const refresh = vi.fn().mockRejectedValue(new Error('database unavailable'));
+		const terminate = vi.fn();
+		const connection = { refresh } as unknown as HonoStreamConnection;
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		try {
+			await refreshHonoStreamConnections(new Map([[connection, terminate]]));
+		} finally {
+			consoleError.mockRestore();
+		}
+
+		expect(refresh).toHaveBeenCalledTimes(3);
+		expect(terminate).toHaveBeenCalledOnce();
 	});
 });

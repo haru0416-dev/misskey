@@ -5,7 +5,24 @@
 
 import { i18n } from '@/i18n.js';
 
-type ChartLocaleKey = 'peak' | 'series' | 'noData' | 'read' | 'write' | 'completed' | 'failed' | 'process' | 'active' | 'delayed' | 'waiting' | 'incoming' | 'outgoing' | 'outgoingSucceeded' | 'outgoingFailed' | 'retention' | 'startDate';
+type ChartLocaleKey =
+	| 'peak'
+	| 'series'
+	| 'noData'
+	| 'read'
+	| 'write'
+	| 'completed'
+	| 'failed'
+	| 'process'
+	| 'active'
+	| 'delayed'
+	| 'waiting'
+	| 'incoming'
+	| 'outgoing'
+	| 'outgoingSucceeded'
+	| 'outgoingFailed'
+	| 'retention'
+	| 'startDate';
 
 const fallback: Record<ChartLocaleKey, string> = {
 	peak: 'Peak',

@@ -35,7 +35,12 @@ await Promise.all(
 ).then((sources) => {
 	writeFile(
 		new URL('./themes.ts', import.meta.url),
-		`export default ${JSON.stringify(
+		`/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+export default ${JSON.stringify(
 			Object.fromEntries(sources.map((source, i) => [keys[i], JSON5.parse(source)])),
 			undefined,
 			2,

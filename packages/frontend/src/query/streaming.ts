@@ -30,12 +30,8 @@ export function updateEmojiQueries(
 		| { type: 'update'; emojis: Misskey.entities.EmojiSimple[] }
 		| { type: 'delete'; emojis: Misskey.entities.EmojiSimple[] },
 ): void {
-	const changedByName = change.type === 'update'
-		? new Map(change.emojis.map((emoji) => [emoji.name, emoji]))
-		: null;
-	const deletedNames = change.type === 'delete'
-		? new Set(change.emojis.map((emoji) => emoji.name))
-		: null;
+	const changedByName = change.type === 'update' ? new Map(change.emojis.map((emoji) => [emoji.name, emoji])) : null;
+	const deletedNames = change.type === 'delete' ? new Set(change.emojis.map((emoji) => emoji.name)) : null;
 
 	queryClient.setQueriesData<{ emojis: Misskey.entities.EmojiSimple[] }>(
 		{ predicate: (query) => isEndpointQuery(query.queryKey, 'emojis') },

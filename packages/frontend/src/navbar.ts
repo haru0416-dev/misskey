@@ -156,48 +156,51 @@ export const navbarItemDef = reactive<{
 				set: (value: boolean) => prefer.commit('animation', !value),
 			});
 
-			os.popupMenu([
-				{
-					type: 'label',
-					text: i18n.ts.quickSettings,
-				},
-				{
-					type: 'switch',
-					text: i18n.ts._dataSaver._media.title,
-					icon: 'ti ti-photo-off',
-					ref: mediaDataSaver,
-				},
-				{
-					type: 'switch',
-					text: i18n.ts._dataSaver._avatar.title,
-					icon: 'ti ti-user-square-rounded',
-					ref: avatarDataSaver,
-				},
-				{
-					type: 'radio',
-					text: i18n.ts.sensitive,
-					icon: 'ti ti-eye-off',
-					ref: sensitiveMedia,
-					options: [
-						{ label: i18n.ts._displayOfSensitiveMedia.respect, value: 'respect' },
-						{ label: i18n.ts._displayOfSensitiveMedia.force, value: 'force' },
-						{ label: i18n.ts._displayOfSensitiveMedia.ignore, value: 'ignore' },
-					],
-				},
-				{
-					type: 'switch',
-					text: i18n.ts.reduceUiAnimation,
-					icon: 'ti ti-player-pause',
-					ref: reduceUiAnimation,
-				},
-				{ type: 'divider' },
-				{
-					type: 'link',
-					text: i18n.ts.settings,
-					icon: 'ti ti-settings',
-					to: '/settings/preferences',
-				},
-			], ev.currentTarget ?? ev.target);
+			os.popupMenu(
+				[
+					{
+						type: 'label',
+						text: i18n.ts.quickSettings,
+					},
+					{
+						type: 'switch',
+						text: i18n.ts._dataSaver._media.title,
+						icon: 'ti ti-photo-off',
+						ref: mediaDataSaver,
+					},
+					{
+						type: 'switch',
+						text: i18n.ts._dataSaver._avatar.title,
+						icon: 'ti ti-user-square-rounded',
+						ref: avatarDataSaver,
+					},
+					{
+						type: 'radio',
+						text: i18n.ts.sensitive,
+						icon: 'ti ti-eye-off',
+						ref: sensitiveMedia,
+						options: [
+							{ label: i18n.ts._displayOfSensitiveMedia.respect, value: 'respect' },
+							{ label: i18n.ts._displayOfSensitiveMedia.force, value: 'force' },
+							{ label: i18n.ts._displayOfSensitiveMedia.ignore, value: 'ignore' },
+						],
+					},
+					{
+						type: 'switch',
+						text: i18n.ts.reduceUiAnimation,
+						icon: 'ti ti-player-pause',
+						ref: reduceUiAnimation,
+					},
+					{ type: 'divider' },
+					{
+						type: 'link',
+						text: i18n.ts.settings,
+						icon: 'ti ti-settings',
+						to: '/settings/preferences',
+					},
+				],
+				ev.currentTarget ?? ev.target,
+			);
 		},
 	},
 	achievements: {

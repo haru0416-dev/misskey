@@ -13,8 +13,12 @@ import { writeHeapSnapshot } from 'node:v8';
 import chalk from 'chalk';
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import Logger from '@/logger.js';
+import { loadConfig } from '@/config.js';
 import { envOption } from '../env.js';
+import { initializeTelemetry, recordException, shutdownTelemetry } from '../telemetry.js';
 import { readyRef } from './ready.js';
+
+await initializeTelemetry(loadConfig());
 
 process.title = `Misskey (${cluster.isPrimary ? 'master' : 'worker'})`;
 
@@ -41,16 +45,26 @@ if (!envOption.quiet) {
 	process.on('unhandledRejection', console.dir);
 }
 
+process.on('unhandledRejection', recordException);
+
 process.on('uncaughtException', err => {
+	recordException(err);
 	try {
 		logger.error(err);
 		console.trace(err);
 	} catch { }
+	void shutdownTelemetry().finally(() => process.exit(1));
 });
 
 process.on('exit', code => {
 	logger.info(`The process is going to exit with code ${code}`);
 });
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+	process.once(signal, () => {
+		void shutdownTelemetry().finally(() => process.kill(process.pid, signal));
+	});
+}
 
 
 if (!envOption.disableClustering) {

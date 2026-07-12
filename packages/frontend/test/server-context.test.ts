@@ -20,7 +20,10 @@ describe('server context', () => {
 		expect(readServerContext('test-server-context')).toStrictEqual({ note: { id: 'note-id' } });
 	});
 
-	test.each([null, '', '{', '[]', 'null', '"text"'])('returns null for a missing or invalid JSON object: %j', (value) => {
-		expect(parseJsonObject(value)).toBeNull();
-	});
+	test.each([null, '', '{', '[]', 'null', '"text"'])(
+		'returns null for a missing or invalid JSON object: %j',
+		(value) => {
+			expect(parseJsonObject(value)).toBeNull();
+		},
+	);
 });

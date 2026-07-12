@@ -14,7 +14,7 @@ export function runViewTransition(
 		return update();
 	};
 	const runFallback = () => {
-		void Promise.resolve(updateOnce()).catch(err => console.error(err));
+		void Promise.resolve(updateOnce()).catch((err) => console.error(err));
 	};
 
 	if (document.startViewTransition == null) {
@@ -24,7 +24,7 @@ export function runViewTransition(
 
 	try {
 		const transition = document.startViewTransition(updateOnce);
-		void transition.finished.catch(err => console.error(err));
+		void transition.finished.catch((err) => console.error(err));
 		return transition;
 	} catch (err) {
 		console.error(err);

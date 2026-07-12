@@ -40,15 +40,18 @@ describe('MkSpot', () => {
 		const observe = vi.fn();
 		const unobserve = vi.fn();
 		const disconnect = vi.fn();
-		vi.stubGlobal('ResizeObserver', class {
-			constructor(callback: ResizeObserverCallback) {
-				resizeCallbacks.push(callback);
-			}
+		vi.stubGlobal(
+			'ResizeObserver',
+			class {
+				constructor(callback: ResizeObserverCallback) {
+					resizeCallbacks.push(callback);
+				}
 
-			observe = observe;
-			unobserve = unobserve;
-			disconnect = disconnect;
-		});
+				observe = observe;
+				unobserve = unobserve;
+				disconnect = disconnect;
+			},
+		);
 		let nextFrameId = 0;
 		const frames = new Map<number, FrameRequestCallback>();
 		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {

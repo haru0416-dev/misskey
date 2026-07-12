@@ -1,6 +1,14 @@
 {
 	"compilerOptions": {
+		"exactOptionalPropertyTypes": true,
 		"lib": ["dom"],
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noUncheckedIndexedAccess": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"strict": true,
 		"target": "esnext",
 		"types": ["node", "@playwright/test"]
 	},

@@ -146,25 +146,24 @@ fulltextSearch:
 #  index: ''
 #  scope: local
 
-#   ┌────────────────┐
-#───┘ Error tracking └──────────────────────────────────────────
+#   ┌─────────────┐
+#───┘ Telemetry   └──────────────────────────────────────────────
 
-# Sentry is available for error tracking.
-# See the Sentry documentation for more details on options.
+# OpenTelemetry traces and errors can be exported over OTLP/HTTP.
+# The endpoint must include /v1/traces. Frontend collector headers are not
+# supported because this configuration is public; allow browser requests with CORS.
 
-#sentryForBackend:
-#  enableNodeProfiling: true
-#  options:
-#    dsn: 'https://examplePublicKey@o0.ingest.sentry.io/0'
+#telemetryForBackend:
+#  endpoint: 'http://otel-collector:4318/v1/traces'
+#  serviceName: 'misskey-backend'
+#  tracesSampleRatio: 0.1
 
-#sentryForFrontend:
-#  vueIntegration:
-#    tracingOptions:
-#      trackComponents: true
-#  browserTracingIntegration:
-#  replayIntegration:
-#  options:
-#    dsn: 'https://examplePublicKey@o0.ingest.sentry.io/0'
+#telemetryForFrontend:
+#  endpoint: 'https://collector.example.com/v1/traces'
+#  serviceName: 'misskey-frontend'
+#  tracesSampleRatio: 0.1
+#  propagateTraceHeaderCorsUrls:
+#    - 'https://misskey.example.com/api'
 
 #   ┌─────────────────────┐
 #───┘ Other configuration └─────────────────────────────────────

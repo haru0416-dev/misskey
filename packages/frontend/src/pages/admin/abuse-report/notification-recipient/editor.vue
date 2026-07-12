@@ -84,6 +84,13 @@ const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
+function getErrorMessage(error: unknown): string {
+	if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+		return error.message;
+	}
+	return i18n.ts.internalServerErrorDescription;
+}
+
 const props = defineProps<{
 	mode: 'create' | 'edit';
 	id?: string;
@@ -182,9 +189,8 @@ async function onSubmitClicked() {
 
 			dialogEl.value?.close();
 			emit('submitted');
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} catch (ex: any) {
-			const msg = ex.message ?? i18n.ts.internalServerErrorDescription;
+		} catch (ex) {
+			const msg = getErrorMessage(ex);
 			await os.alert({ type: 'error', title: i18n.ts.error, text: msg });
 			dialogEl.value?.close();
 			emit('canceled');
@@ -275,9 +281,8 @@ onMounted(async () => {
 				userId.value = res.userId ?? null;
 				systemWebhookId.value = res.systemWebhookId ?? null;
 				isActive.value = res.isActive;
-				// eslint-disable-next-line
-			} catch (ex: any) {
-				const msg = ex.message ?? i18n.ts.internalServerErrorDescription;
+			} catch (ex) {
+				const msg = getErrorMessage(ex);
 				await os.alert({ type: 'error', title: i18n.ts.error, text: msg });
 				dialogEl.value?.close();
 				emit('canceled');

@@ -24,9 +24,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<li v-for="emoji in emojis" :key="emoji.emoji" :class="$style.item" tabindex="-1" @click="complete(type, emoji.emoji)" @keydown="onKeydown">
 			<MkCustomEmoji v-if="'isCustomEmoji' in emoji && emoji.isCustomEmoji" :name="emoji.emoji" :class="$style.emoji" :fallbackToImage="true"/>
 			<MkEmoji v-else :emoji="emoji.emoji" :class="$style.emoji"/>
-			<!-- eslint-disable-next-line vue/no-v-html -->
-			<span v-if="q != null && typeof q === 'string'" :class="$style.emojiName" v-html="sanitizeHtml(emoji.name.replace(q, `<b>${q}</b>`))"></span>
-			<span v-else v-text="emoji.name"></span>
+			<span :class="$style.emojiName">
+				<template v-if="typeof q === 'string' && q !== '' && emoji.name.includes(q)">{{ emoji.name.slice(0, emoji.name.indexOf(q)) }}<b>{{ q }}</b>{{ emoji.name.slice(emoji.name.indexOf(q) + q.length) }}</template>
+				<template v-else>{{ emoji.name }}</template>
+			</span>
 			<span v-if="emoji.aliasOf" :class="$style.emojiAlias">({{ emoji.aliasOf }})</span>
 		</li>
 	</ol>
@@ -46,7 +47,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts">
 import { markRaw, ref, useTemplateRef, computed, onUpdated, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import sanitizeHtml from 'sanitize-html';
 import { emojilist, getEmojiName } from '@shared/utility/emojilist.js';
 import { char2twemojiFilePath, char2fluentEmojiFilePath } from '@shared/utility/emoji-base.js';
 import { MFM_TAGS, MFM_PARAMS } from '@shared/utility/const.js';

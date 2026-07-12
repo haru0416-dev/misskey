@@ -35,7 +35,9 @@ describe('miLocalStorage JSON values', () => {
 	test('removes a value rejected by the supplied type guard', () => {
 		window.localStorage.setItem('debug', '"not a number"');
 
-		expect(miLocalStorage.getItemAsJson('debug', (value): value is number => typeof value === 'number')).toBeUndefined();
+		expect(
+			miLocalStorage.getItemAsJson('debug', (value): value is number => typeof value === 'number'),
+		).toBeUndefined();
 		expect(window.localStorage.getItem('debug')).toBeNull();
 	});
 
@@ -85,7 +87,7 @@ describe('account data validation', () => {
 		{ ...account, token: null },
 		{ ...account, notesCount: Number.NaN },
 		{ ...account, policies: [] },
-	])('rejects invalid account data: %j', value => {
+	])('rejects invalid account data: %j', (value) => {
 		expect(isAccountWithToken(value)).toBe(false);
 	});
 });

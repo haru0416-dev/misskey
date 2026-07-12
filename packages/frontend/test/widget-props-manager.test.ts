@@ -19,12 +19,7 @@ describe('useWidgetPropsManager', () => {
 		let save!: () => void;
 		const Component = defineComponent({
 			setup() {
-				({ save } = useWidgetPropsManager(
-					'clock',
-					{ value: { type: 'number', default: 1 } },
-					{},
-					emit,
-				));
+				({ save } = useWidgetPropsManager('clock', { value: { type: 'number', default: 1 } }, {}, emit));
 			},
 			template: '<div />',
 		});

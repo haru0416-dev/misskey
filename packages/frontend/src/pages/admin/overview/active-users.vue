@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root" class="_panel">
-	<MkDataChart :series="series" :ariaLabel="i18n.ts._charts.activeUsers" :loading="fetching" :height="260"/>
+	<MkDataChart :series="series" :ariaLabel="i18n.ts._charts.activeUsers" :loading="fetching" :height="220"/>
 </div>
 </template>
 
@@ -33,4 +33,8 @@ onMounted(async () => {
 
 <style lang="scss" module>
 .root { padding: 20px; }
+
+@media (max-width: 500px) {
+	.root { padding: 16px 12px; }
+}
 </style>

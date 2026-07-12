@@ -39,10 +39,10 @@ jobs:
           check() {
             local file="$1"
             if ! (
-              grep -q "SPDX-FileCopyrightText: syuilo and misskey-project" "$file" ||
+              grep -q "SPDX-FileCopyrightText:" "$file" &&
               grep -q "SPDX-License-Identifier: AGPL-3.0-only" "$file"
             ); then
-              echo "Missing: $file"
+              echo "Missing SPDX header line: $file"
               ((counter++))
             fi
           }
@@ -75,9 +75,9 @@ jobs:
           done
 
           if [ $counter -gt 0 ]; then
-            echo "SPDX-License-Identifier is missing in $counter files."
+            echo "SPDX header is missing in $counter files."
             exit 1
           else
-            echo "SPDX-License-Identifier is certainly described in all target files!"
+            echo "Both SPDX header lines are present in all target files!"
             exit 0
           fi

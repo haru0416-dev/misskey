@@ -70,6 +70,36 @@ jobs:
         run: bun run build-pre && bun run build:frontend-deps
       - name: Test
         run: bun run --bun --filter frontend test
+      - name: Test AiScript
+        run: bun run --bun --filter '@syuilo/aiscript' test
+      - name: Test MFM
+        run: bun run --bun --filter mfm-js test
+
+  storybook:
+    name: Build Storybook
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Cache bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Check bun.lock
+        run: git diff --exit-code bun.lock
+      - name: Build Storybook
+        run: bun run build-storybook
 
   e2e:
     name: E2E tests (frontend)

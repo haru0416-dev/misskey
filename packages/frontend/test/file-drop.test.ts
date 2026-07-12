@@ -19,7 +19,7 @@ describe('flattenDroppedFiles', () => {
 			droppedFile('d'),
 		]);
 
-		expect(files.map(file => file.path)).toEqual(['a', 'b', 'c', 'd']);
+		expect(files.map((file) => file.path)).toEqual(['a', 'b', 'c', 'd']);
 	});
 
 	test('handles deeply nested directories without recursive stack growth', () => {
@@ -28,6 +28,6 @@ describe('flattenDroppedFiles', () => {
 			item = { isFile: false, path: `dir-${depth}`, children: [item] };
 		}
 
-		expect(flattenDroppedFiles([item]).map(file => file.path)).toEqual(['leaf']);
+		expect(flattenDroppedFiles([item]).map((file) => file.path)).toEqual(['leaf']);
 	});
 });

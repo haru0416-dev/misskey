@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { moderationLogTypes } from 'misskey-js/consts.js';
 import type {
 	MiAbuseUserReport,
 	MiAnnouncement,
@@ -20,6 +21,8 @@ import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import type { AvatarDecorationRow } from '@/db/schema/avatar-decoration.js';
 import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
+
+export { moderationLogTypes };
 
 /**
  * note - 通知オンにしているユーザーが投稿した
@@ -96,64 +99,6 @@ export const userExportableEntities = ['antenna', 'blocking', 'clip', 'customEmo
  * （主にインポート完了通知で使用するものであり、既存のDBの名称等と必ずしも一致しない）
  */
 export const userImportableEntities = ['antenna', 'blocking', 'customEmoji', 'following', 'muting', 'userList'] as const;
-
-export const moderationLogTypes = [
-	'updateServerSettings',
-	'suspend',
-	'unsuspend',
-	'updateUserNote',
-	'addCustomEmoji',
-	'updateCustomEmoji',
-	'deleteCustomEmoji',
-	'assignRole',
-	'unassignRole',
-	'createRole',
-	'updateRole',
-	'deleteRole',
-	'clearQueue',
-	'promoteQueue',
-	'pauseQueue',
-	'resumeQueue',
-	'deleteDriveFile',
-	'deleteNote',
-	'createGlobalAnnouncement',
-	'createUserAnnouncement',
-	'updateGlobalAnnouncement',
-	'updateUserAnnouncement',
-	'deleteGlobalAnnouncement',
-	'deleteUserAnnouncement',
-	'resetPassword',
-	'suspendRemoteInstance',
-	'unsuspendRemoteInstance',
-	'updateRemoteInstanceNote',
-	'markSensitiveDriveFile',
-	'unmarkSensitiveDriveFile',
-	'resolveAbuseReport',
-	'forwardAbuseReport',
-	'updateAbuseReportNote',
-	'createInvitation',
-	'createAd',
-	'updateAd',
-	'deleteAd',
-	'createAvatarDecoration',
-	'updateAvatarDecoration',
-	'deleteAvatarDecoration',
-	'unsetMfa',
-	'unsetUserAvatar',
-	'unsetUserBanner',
-	'createSystemWebhook',
-	'updateSystemWebhook',
-	'deleteSystemWebhook',
-	'createAbuseReportNotificationRecipient',
-	'updateAbuseReportNotificationRecipient',
-	'deleteAbuseReportNotificationRecipient',
-	'deleteAccount',
-	'deletePage',
-	'deleteFlash',
-	'deleteGalleryPost',
-	'deleteChatRoom',
-	'updateProxyAccountDescription',
-] as const;
 
 export type ModerationLogPayloads = {
 	updateServerSettings: {

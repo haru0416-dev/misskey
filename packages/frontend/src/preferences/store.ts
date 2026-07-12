@@ -95,10 +95,12 @@ function isNullableString(value: unknown): value is string | null | undefined {
 }
 
 function isScope(value: unknown): value is Scope {
-	return isRecord(value)
-		&& isNullableString(value.server)
-		&& isNullableString(value.account)
-		&& isNullableString(value.device);
+	return (
+		isRecord(value) &&
+		isNullableString(value.server) &&
+		isNullableString(value.account) &&
+		isNullableString(value.device)
+	);
 }
 
 function isValueMeta(value: unknown): value is ValueMeta {
@@ -106,22 +108,23 @@ function isValueMeta(value: unknown): value is ValueMeta {
 }
 
 function isPreferenceRecord(value: unknown): value is [scope: Scope, value: unknown, meta: ValueMeta] {
-	return Array.isArray(value)
-		&& value.length === 3
-		&& isScope(value[0])
-		&& isValueMeta(value[2]);
+	return Array.isArray(value) && value.length === 3 && isScope(value[0]) && isValueMeta(value[2]);
 }
 
-export function isPossiblyNonNormalizedPreferencesProfile(value: unknown): value is PossiblyNonNormalizedPreferencesProfile {
+export function isPossiblyNonNormalizedPreferencesProfile(
+	value: unknown,
+): value is PossiblyNonNormalizedPreferencesProfile {
 	if (!isRecord(value) || !isRecord(value.preferences)) return false;
 
-	return typeof value.id === 'string'
-		&& typeof value.version === 'string'
-		&& value.type === 'main'
-		&& typeof value.modifiedAt === 'number'
-		&& Number.isFinite(value.modifiedAt)
-		&& typeof value.name === 'string'
-		&& Object.values(value.preferences).every(records => Array.isArray(records) && records.every(isPreferenceRecord));
+	return (
+		typeof value.id === 'string' &&
+		typeof value.version === 'string' &&
+		value.type === 'main' &&
+		typeof value.modifiedAt === 'number' &&
+		Number.isFinite(value.modifiedAt) &&
+		typeof value.name === 'string' &&
+		Object.values(value.preferences).every((records) => Array.isArray(records) && records.every(isPreferenceRecord))
+	);
 }
 
 export type StorageProvider = {

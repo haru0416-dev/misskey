@@ -7,7 +7,7 @@ import { EventEmitter } from 'node:events';
 import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
 import { authenticateHonoApiToken } from '../rest/auth.js';
-import { HonoStreamConnection } from './connection.js';
+import { HonoStreamConnection, refreshHonoStreamConnections } from './connection.js';
 import type { HonoStreamServerDependencies } from './server.js';
 
 const IDLE_TIMEOUT_MS = 1000 * 60 * 2;
@@ -16,6 +16,8 @@ const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
 type WsData = {
 	connection: HonoStreamConnection;
+	subscriber: EventEmitter;
+	onMessage: (data: { channel: string; message: unknown }) => void;
 	cleanup?: () => void;
 };
 
@@ -48,6 +50,25 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		globalEv.emit('message', parsed);
 	};
 	deps.redisForSub.on('message', onRedisMessage);
+	const activeConnections = new Map<HonoStreamConnection, () => void>();
+	let reconnectRefreshPromise: Promise<void> | undefined;
+	let reconnectRefreshQueued = false;
+	const onRedisReady = () => {
+		if (reconnectRefreshPromise != null) {
+			reconnectRefreshQueued = true;
+			return;
+		}
+		reconnectRefreshPromise = (async () => {
+			do {
+				reconnectRefreshQueued = false;
+				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// eslint-disable-next-line no-await-in-loop
+				await refreshHonoStreamConnections(activeConnections);
+			} while (reconnectRefreshQueued);
+		})().catch(error => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
+			.finally(() => { reconnectRefreshPromise = undefined; });
+	};
+	deps.redisForSub.on('ready', onRedisReady);
 
 	const connections = new Map<Bun.ServerWebSocket<WsData>, number>();
 
@@ -85,11 +106,23 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 			return errorResponse(new HonoApiError({ status: 403, message: 'Your account has been suspended.', code: 'YOUR_ACCOUNT_SUSPENDED', id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7' }));
 		}
 
-		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
-		await connection.init();
+		const subscriber = new EventEmitter();
+		const onMessage = (data: { channel: string; message: unknown }) => {
+			subscriber.emit(data.channel, data.message);
+		};
+		globalEv.on('message', onMessage);
 
-		const upgraded = server.upgrade<WsData>(request, { data: { connection } });
+		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
+		try {
+			await connection.init(subscriber);
+		} catch (error) {
+			globalEv.off('message', onMessage);
+			throw error;
+		}
+
+		const upgraded = server.upgrade<WsData>(request, { data: { connection, subscriber, onMessage } });
 		if (!upgraded) {
+			globalEv.off('message', onMessage);
 			connection.dispose();
 			return new Response('WebSocket upgrade failed', { status: 400 });
 		}
@@ -98,15 +131,11 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 
 	const websocket: Bun.WebSocketHandler<WsData> = {
 		open(ws) {
-			const { connection } = ws.data;
-			const ev = new EventEmitter();
-			const onMessage = (data: { channel: string; message: unknown }) => {
-				ev.emit(data.channel, data.message);
-			};
-			globalEv.on('message', onMessage);
+			const { connection, subscriber, onMessage } = ws.data;
+			activeConnections.set(connection, () => ws.terminate());
 			connections.set(ws, Date.now());
 
-			connection.listen(ev, raw => { ws.send(raw); });
+			connection.listen(subscriber, raw => { ws.send(raw); });
 
 			let lastActiveIntervalId: NodeJS.Timeout | undefined;
 			if (connection.user) {
@@ -117,6 +146,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 			}
 
 			ws.data.cleanup = () => {
+				activeConnections.delete(connection);
 				globalEv.off('message', onMessage);
 				connection.dispose();
 				connections.delete(ws);
@@ -141,6 +171,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		dispose: async () => {
 			clearInterval(reaperIntervalId);
 			deps.redisForSub.off('message', onRedisMessage);
+			deps.redisForSub.off('ready', onRedisReady);
 		},
 	};
 }

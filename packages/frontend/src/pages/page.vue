@@ -132,7 +132,7 @@ const props = defineProps<{
 }>();
 
 const page = ref<Misskey.entities.Page | null>(null);
-const error = ref<any>(null);
+const error = ref<unknown>(null);
 const otherPostsPaginator = markRaw(new Paginator('users/pages', {
 	limit: 6,
 	computedParams: computed(() => page.value ? ({

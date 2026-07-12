@@ -72,7 +72,10 @@ test.describe('Virtualized note list', () => {
 			const rects = elements.map((element) => element.getBoundingClientRect());
 			return {
 				rowCount: elements.length,
-				overlaps: rects.some((rect, i) => i > 0 && rect.top < rects[i - 1].bottom - 0.5),
+				overlaps: rects.some((rect, i) => {
+					const previous = rects[i - 1];
+					return previous !== undefined && rect.top < previous.bottom - 0.5;
+				}),
 			};
 		});
 		expect(state.rowCount).toBeLessThan(30);
@@ -247,7 +250,10 @@ async function inspectVirtualRows(list: Locator): Promise<{ rowCount: number; ov
 		const rects = elements.map((element) => element.getBoundingClientRect());
 		return {
 			rowCount: elements.length,
-			overlaps: rects.some((rect, i) => i > 0 && rect.top < rects[i - 1].bottom - 0.5),
+			overlaps: rects.some((rect, i) => {
+				const previous = rects[i - 1];
+				return previous !== undefined && rect.top < previous.bottom - 0.5;
+			}),
 		};
 	});
 }

@@ -25,6 +25,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import { refreshUserMutingsCache } from '../../server/rest/account-mutes.js';
 import type { HonoChartWriters } from '../../server/chart-runtime.js';
+import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js';
 
 const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
 const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
@@ -36,6 +37,7 @@ export type HonoQueueSystemDependencies = {
 	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
 	redis: Redis.Redis;
 	redisForReactions: Redis.Redis;
+	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
 async function refreshMutingChannelsCache(deps: Pick<HonoQueueSystemDependencies, 'db' | 'redis'>, userId: string): Promise<void> {
@@ -143,6 +145,9 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 		for (const muterId of muterIds) {
 			await refreshUserMutingsCache(deps, muterId);
 		}
+		for (const muting of expiredMutings) {
+			deps.publishInternalEvent?.('unmute', { muterId: muting.muterId, muteeId: muting.muteeId });
+		}
 	}
 
 	const expiredChannelMutings = await listExpiredChannelMutingsFromDatabase(deps.db, new Date());
@@ -152,6 +157,9 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 		const userIds = [...new Set(expiredChannelMutings.map(m => m.userId))];
 		for (const userId of userIds) {
 			await refreshMutingChannelsCache(deps, userId);
+		}
+		for (const muting of expiredChannelMutings) {
+			deps.publishInternalEvent?.('unmuteChannel', { userId: muting.userId, channelId: muting.channelId });
 		}
 	}
 }

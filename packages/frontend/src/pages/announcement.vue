@@ -63,7 +63,7 @@ const props = defineProps<{
 }>();
 
 const announcement = ref<Misskey.entities.Announcement | null>(null);
-const error = ref<any>(null);
+const error = ref<unknown>(null);
 const path = computed(() => props.announcementId);
 
 function _fetch_() {

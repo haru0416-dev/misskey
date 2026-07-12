@@ -104,7 +104,12 @@ export async function packMetaLite(
 
 		policies: { ...DEFAULT_POLICIES, ...meta.policies },
 
-		sentryForFrontend: deps.config.sentryForFrontend ?? null,
+		telemetryForFrontend: deps.config.telemetryForFrontend == null ? null : {
+			endpoint: deps.config.telemetryForFrontend.endpoint,
+			serviceName: deps.config.telemetryForFrontend.serviceName,
+			tracesSampleRatio: deps.config.telemetryForFrontend.tracesSampleRatio,
+			propagateTraceHeaderCorsUrls: deps.config.telemetryForFrontend.propagateTraceHeaderCorsUrls,
+		},
 		mediaProxy: deps.config.mediaProxy,
 		enableUrlPreview: meta.urlPreviewEnabled,
 		noteSearchableScope: (deps.config.fulltextSearch?.provider === 'meilisearch' && deps.config.meilisearch?.scope === 'local') ? 'local' : 'global',

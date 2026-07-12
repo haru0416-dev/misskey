@@ -153,23 +153,23 @@ async function run() {
 	let ast;
 	try {
 		ast = parser.parse(code.value);
-	} catch (err: any) {
+	} catch (err) {
 		os.alert({
 			type: 'error',
 			title: 'Syntax Error',
-			text: err.toString(),
+			text: String(err),
 		});
 		return;
 	}
 	try {
 		await aiscript.exec(ast);
-	} catch (err: any) {
+	} catch (err) {
 		// AiScript runtime errors should be processed by error callback function
 		// so errors caught here are AiScript's internal errors.
 		os.alert({
 			type: 'error',
 			title: 'Internal Error',
-			text: err.toString(),
+			text: String(err),
 		});
 	}
 }

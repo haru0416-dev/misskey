@@ -12,10 +12,13 @@ describe('useMutationObserver', () => {
 	test('disconnects the old target when its ref changes', async () => {
 		const observe = vi.fn();
 		const disconnect = vi.fn();
-		vi.stubGlobal('MutationObserver', class {
-			public observe = observe;
-			public disconnect = disconnect;
-		});
+		vi.stubGlobal(
+			'MutationObserver',
+			class {
+				public observe = observe;
+				public disconnect = disconnect;
+			},
+		);
 		const Component = defineComponent({
 			props: { alternate: { type: Boolean, required: true } },
 			setup() {

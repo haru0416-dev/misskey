@@ -17,7 +17,13 @@ const inliner = {
 	i18nSymbol: 'n',
 } as LocaleInliner;
 
-const locale = { hello: 'こんにちは' } as unknown as Locale;
+const locale = {
+	hello: 'こんにちは',
+	searchEngine: {
+		google: 'Google',
+		duckduckgo: 'DuckDuckGo',
+	},
+} as unknown as Locale;
 
 function inline(source: string): string {
 	const output = new MagicString(source);
@@ -40,5 +46,12 @@ describe('locale inliner imports', () => {
 	test('ignores an import from the i18n chunk without the i18n export', () => {
 		const source = 'import{t as chartText}from"./i18n.js";console.log(chartText("peak"));';
 		expect(inline(source)).toBe(source);
+	});
+});
+
+describe('locale inliner expressions', () => {
+	test('parenthesizes localized objects used as arrow function expressions', () => {
+		const source = 'import{n as i18n}from"./i18n.js";const getEngine=()=>i18n.ts.searchEngine[selected];';
+		expect(inline(source)).toBe('const getEngine=()=>({"google":"Google","duckduckgo":"DuckDuckGo"})[selected];');
 	});
 });

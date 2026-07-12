@@ -29,9 +29,13 @@ import { unisonReload } from '@/utility/unison-reload.js';
 
 const MkUpdated = defineAsyncComponent(() => import('@/components/display/MkUpdated.vue'));
 const MkUserSetupDialog = defineAsyncComponent(() => import('@/features/onboarding/components/MkUserSetupDialog.vue'));
-const MkAnnouncementDialog = defineAsyncComponent(() => import('@/features/announcements/components/MkAnnouncementDialog.vue'));
+const MkAnnouncementDialog = defineAsyncComponent(
+	() => import('@/features/announcements/components/MkAnnouncementDialog.vue'),
+);
 const MkDonation = defineAsyncComponent(() => import('@/features/support/components/MkDonation.vue'));
-const MkSourceCodeAvailablePopup = defineAsyncComponent(() => import('@/features/support/components/MkSourceCodeAvailablePopup.vue'));
+const MkSourceCodeAvailablePopup = defineAsyncComponent(
+	() => import('@/features/support/components/MkSourceCodeAvailablePopup.vue'),
+);
 
 export async function mainBoot(app: App<Element>, setRootComponent: (component: Component) => void) {
 	const { isClientUpdated } = await common(app, async () => {
@@ -153,7 +157,9 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		}
 
 		const createdAt = new Date($i.createdAt);
-		void import('@/features/achievements/initialize-achievements.js').then(({ initializeAchievements }) => initializeAchievements());
+		void import('@/features/achievements/initialize-achievements.js').then(({ initializeAchievements }) =>
+			initializeAchievements(),
+		);
 
 		const latestDonationInfoShownAt = miLocalStorage.getItem('latestDonationInfoShownAt');
 		const neverShowDonationInfo = miLocalStorage.getItem('neverShowDonationInfo');

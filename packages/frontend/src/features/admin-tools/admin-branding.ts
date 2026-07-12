@@ -41,7 +41,11 @@ export function normalizeBrandingJsonSettings(input: {
 	} catch {
 		return { success: false, field: 'manifestJsonOverride' };
 	}
-	if (typeof manifestJsonOverride !== 'object' || manifestJsonOverride === null || Array.isArray(manifestJsonOverride)) {
+	if (
+		typeof manifestJsonOverride !== 'object' ||
+		manifestJsonOverride === null ||
+		Array.isArray(manifestJsonOverride)
+	) {
 		return { success: false, field: 'manifestJsonOverride' };
 	}
 

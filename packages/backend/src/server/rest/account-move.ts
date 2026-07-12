@@ -166,6 +166,9 @@ async function copyMutingsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 	}
 
 	await createMutingsInDatabase(deps.db, Array.from(newMutings.entries()).map(([id, value]) => ({ id, ...value })));
+	for (const { muterId, muteeId } of newMutings.values()) {
+		deps.publishInternalEvent?.('mute', { muterId, muteeId });
+	}
 }
 
 async function copyRolesForHonoApi(deps: HonoApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {

@@ -25,7 +25,8 @@ export function applyTheme(theme: Theme) {
 
 	for (const tag of window.document.head.children) {
 		if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {
-			tag.setAttribute('content', props['htmlThemeColor']);
+			const htmlThemeColor = props['htmlThemeColor'];
+			if (htmlThemeColor !== undefined) tag.setAttribute('content', htmlThemeColor);
 			break;
 		}
 	}

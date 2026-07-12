@@ -42,7 +42,7 @@ export type CaptchaSetting = {
 
 export class CaptchaError extends Error {
 	public readonly code: CaptchaErrorCode;
-	public readonly cause?: unknown;
+	public override readonly cause?: unknown;
 
 	constructor(code: CaptchaErrorCode, message: string, cause?: unknown) {
 		super(message);

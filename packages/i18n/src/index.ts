@@ -71,7 +71,7 @@ function build(): Record<Language, Locale> {
 	removeEmpty(locales);
 
 	return Object.entries(locales).reduce<Record<Language, Locale>>((a, [k, v]) => {
-		const lang = k.split('-')[0];
+		const [lang = k] = k.split('-');
 		const key = k as Language;
 
 		switch (key) {

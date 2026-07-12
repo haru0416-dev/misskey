@@ -36,9 +36,12 @@ describe('PollingScheduler', () => {
 		vi.spyOn(window.document, 'hidden', 'get').mockImplementation(() => hidden);
 		const { timers, runNext } = createTimers();
 		let resolveTask: (() => void) | null = null;
-		const task = vi.fn(() => new Promise<void>((resolve) => {
-			resolveTask = resolve;
-		}));
+		const task = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					resolveTask = resolve;
+				}),
+		);
 		const scheduler = new PollingScheduler(task, 10_000);
 
 		expect(timers.size).toBe(0);

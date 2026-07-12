@@ -40,11 +40,11 @@ async function install() {
 		code.value = null;
 
 		router.push('/settings/plugin');
-	} catch (err: any) {
+	} catch (err) {
 		os.alert({
 			type: 'error',
 			title: 'Install failed',
-			text: err.toString() ?? null,
+			text: String(err),
 		});
 	}
 }

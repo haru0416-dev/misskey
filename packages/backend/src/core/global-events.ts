@@ -4,6 +4,7 @@
  */
 
 import type { MiChannel } from '@/models/Channel.js';
+import type { MiFollowing } from '@/models/Following.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { MiNote } from '@/models/Note.js';
@@ -190,8 +191,10 @@ export interface InternalEventTypes {
 	userTokenRegenerated: { id: MiUser['id']; oldToken: string; newToken: string; };
 	remoteUserUpdated: { id: MiUser['id']; };
 	localUserUpdated: { id: MiUser['id']; };
-	follow: { followerId: MiUser['id']; followeeId: MiUser['id']; };
+	follow: { followerId: MiUser['id']; followeeId: MiUser['id']; withReplies: MiFollowing['withReplies']; };
 	unfollow: { followerId: MiUser['id']; followeeId: MiUser['id']; };
+	followingUpdated: { followerId: MiUser['id']; followeeId: MiUser['id']; withReplies: MiFollowing['withReplies']; };
+	followingsUpdated: { followerId: MiUser['id']; withReplies: MiFollowing['withReplies']; };
 	blockingCreated: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
 	blockingDeleted: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
 	// 実際に publish しているのは root ポリシー上書き (MiMeta['policies']、フラットな Partial<RolePolicies>) であり、
@@ -222,6 +225,8 @@ export interface InternalEventTypes {
 	updateUserProfile: MiUserProfile;
 	mute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
 	unmute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
+	renoteMute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
+	renoteUnmute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
 	userListMemberAdded: { userListId: MiUserList['id']; memberId: MiUser['id']; };
 	userListMemberRemoved: { userListId: MiUserList['id']; memberId: MiUser['id']; };
 }

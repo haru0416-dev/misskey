@@ -59,14 +59,17 @@ describe('lightweight directives', () => {
 		vi.useFakeTimers();
 		let observerCallback!: IntersectionObserverCallback;
 		const disconnect = vi.fn();
-		vi.stubGlobal('IntersectionObserver', class {
-			constructor(callback: IntersectionObserverCallback) {
-				observerCallback = callback;
-			}
+		vi.stubGlobal(
+			'IntersectionObserver',
+			class {
+				constructor(callback: IntersectionObserverCallback) {
+					observerCallback = callback;
+				}
 
-			public observe() {}
-			public disconnect = disconnect;
-		});
+				public observe() {}
+				public disconnect = disconnect;
+			},
+		);
 		const onAppear = vi.fn();
 		const Component = defineComponent({
 			setup: () => ({ onAppear }),

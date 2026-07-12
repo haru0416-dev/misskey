@@ -30,7 +30,7 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 		if (event.data.result) {
 			const workers = new WorkerMultiDispatch(
 				() => new DrawBlurhash(),
-				Math.min(navigator.hardwareConcurrency - 1, 4),
+				Math.max(1, Math.min(navigator.hardwareConcurrency - 1, 4)),
 			);
 			resolve(workers);
 		} else {
@@ -53,8 +53,8 @@ const props = withDefaults(defineProps<{
 	hash?: string | null;
 	alt?: string | null;
 	title?: string | null;
-	height?: number;
-	width?: number;
+	height?: number | undefined;
+	width?: number | undefined;
 	cover?: boolean;
 	forceBlurhash?: boolean;
 	onlyAvgColor?: boolean; // 軽量化のためにBlurhashを使わずに平均色だけを描画

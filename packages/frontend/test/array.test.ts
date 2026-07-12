@@ -9,7 +9,7 @@ import { countIf, difference, intersperse, maximum } from '@/utility/array.js';
 describe('array utilities', () => {
 	test('counts matching values without changing the source', () => {
 		const values = [1, 2, 3, 4];
-		expect(countIf(value => value % 2 === 0, values)).toBe(2);
+		expect(countIf((value) => value % 2 === 0, values)).toBe(2);
 		expect(values).toEqual([1, 2, 3, 4]);
 	});
 

@@ -16,7 +16,7 @@ import EmEmoji from './EmEmoji.vue';
 const props = defineProps<{
 	reaction: string;
 	noStyle?: boolean;
-	emojiUrl?: string;
+	emojiUrl?: string | undefined;
 	withTooltip?: boolean;
 }>();
 

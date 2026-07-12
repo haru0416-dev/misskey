@@ -20,10 +20,13 @@ describe('sound utilities', () => {
 
 	beforeEach(() => {
 		decodeAudioData.mockReset();
-		vi.stubGlobal('AudioContext', class {
-			public decodeAudioData = decodeAudioData;
-			public close() {}
-		});
+		vi.stubGlobal(
+			'AudioContext',
+			class {
+				public decodeAudioData = decodeAudioData;
+				public close() {}
+			},
+		);
 	});
 
 	afterEach(() => {
@@ -39,10 +42,7 @@ describe('sound utilities', () => {
 		});
 		vi.stubGlobal('fetch', fetch);
 
-		const [first, second] = await Promise.all([
-			loadAudio('/audio/shared.mp3'),
-			loadAudio('/audio/shared.mp3'),
-		]);
+		const [first, second] = await Promise.all([loadAudio('/audio/shared.mp3'), loadAudio('/audio/shared.mp3')]);
 
 		expect(first).toBe(buffer);
 		expect(second).toBe(buffer);
@@ -52,7 +52,7 @@ describe('sound utilities', () => {
 
 	test('reads duration from metadata events without polling', async () => {
 		const setInterval = vi.spyOn(window, 'setInterval');
-		vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function(this: HTMLMediaElement) {
+		vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function (this: HTMLMediaElement) {
 			Object.defineProperty(this, 'duration', { value: 2.5, configurable: true });
 			this.dispatchEvent(new Event('loadedmetadata'));
 		});

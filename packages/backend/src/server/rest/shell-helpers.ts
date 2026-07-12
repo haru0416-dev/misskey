@@ -4,6 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
 import { assertOptionalCredential, authenticateHonoApiToken, type HonoApiAuthenticated } from './auth.js';
@@ -169,6 +170,7 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 		// ApiCallService.#onExecError 相当: 予期しない例外は INTERNAL_ERROR として
 		// `info.e` に元エラーの情報を載せて返す (元実装は ApiError(null, { e: ... }))
 		if (err instanceof Error) {
+			recordException(err);
 			return apiErrorResponse(c, new HonoApiError({
 				status: 500,
 				message: 'Internal error occurred. Please contact us if the error persists.',

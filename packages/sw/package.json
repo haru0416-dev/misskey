@@ -8,13 +8,14 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
+		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
-		"esbuild": "0.28.1",
 		"idb-keyval": "6.2.5",
 		"misskey-js": "workspace:*"
 	},
 	"devDependencies": {
-		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74"
+		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74",
+		"esbuild": "0.28.1"
 	},
 	"type": "module"
 }
