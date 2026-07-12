@@ -8,15 +8,16 @@ import { hashPassword } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { EmailService } from '@/core/EmailService.js';
-import { createPasswordResetRequestInDatabase, deletePasswordResetRequestFromDatabase, fetchPasswordResetRequestByTokenFromDatabase } from '@/core/PasswordResetRequestStore.js';
+import { consumePasswordResetRequestInDatabase, createPasswordResetRequestInDatabase, fetchPasswordResetRequestByTokenFromDatabase } from '@/core/PasswordResetRequestStore.js';
 import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
+import { passwordSchema } from '@/models/User.js';
 import { rateLimitExceededError } from './error.js';
 import { isHonoApiRateLimited } from './rate-limit.js';
 import { parseHonoApiParams } from './validation.js';
@@ -40,7 +41,7 @@ type RequestResetPasswordParams = {
 
 export const resetPasswordParamDef = z.object({
 	token: z.string(),
-	password: z.string(),
+	password: passwordSchema,
 });
 
 type ResetPasswordParams = {
@@ -98,9 +99,5 @@ export async function handleHonoApiResetPassword(
 
 	const hash = await hashPassword(params.password);
 
-	await updateUserProfileInDatabase(deps.db, req.userId, {
-		password: hash,
-	});
-
-	await deletePasswordResetRequestFromDatabase(deps.db, req.id);
+	await consumePasswordResetRequestInDatabase(deps.db, params.token, hash);
 }

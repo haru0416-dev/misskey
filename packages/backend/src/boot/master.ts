@@ -44,6 +44,7 @@ function greet(props: { version: string }) {
  */
 export async function masterMain() {
 	let config!: Config;
+	const disposers: Array<() => Promise<void>> = [];
 
 	try {
 		config = loadConfigBoot();
@@ -74,9 +75,11 @@ export async function masterMain() {
 			// そのため、メインプロセスでも直接listenするとポートの競合が発生して起動に失敗してしまう。
 			// see: https://nodejs.org/api/cluster.html#cluster
 		} else if (envOption.onlyQueue) {
-			await jobQueue();
+			const runtime = await jobQueue();
+			disposers.push(() => runtime.close());
 		} else {
-			await server();
+			const runtime = await server();
+			disposers.push(() => runtime.dispose());
 		}
 
 		await spawnWorkers(config.clusterLimit);
@@ -84,12 +87,15 @@ export async function masterMain() {
 		// clusterモジュール無効時
 
 		if (envOption.onlyServer) {
-			await server();
+			const runtime = await server();
+			disposers.push(() => runtime.dispose());
 		} else if (envOption.onlyQueue) {
-			await jobQueue();
+			const runtime = await jobQueue();
+			disposers.push(() => runtime.close());
 		} else {
-			await server();
-			await jobQueue();
+			const serverRuntime = await server();
+			const queueRuntime = await jobQueue();
+			disposers.push(() => queueRuntime.close(), () => serverRuntime.dispose());
 		}
 	}
 
@@ -98,6 +104,16 @@ export async function masterMain() {
 	} else {
 		bootLogger.succ(config.socket ? `Now listening on socket ${config.socket} on ${config.url}` : `Now listening on port ${config.port} on ${config.url}`, null, true);
 	}
+
+	return async () => {
+		if (!envOption.disableClustering) {
+			await Promise.all(Object.values(cluster.workers ?? {}).filter(worker => worker != null).map(worker => new Promise<void>(resolve => {
+				worker!.once('exit', () => resolve());
+				worker!.process.kill('SIGTERM');
+			})));
+		}
+		await Promise.allSettled(disposers.map(dispose => dispose()));
+	};
 }
 
 function showEnvironment(): void {

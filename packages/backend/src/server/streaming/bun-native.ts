@@ -154,6 +154,11 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 			};
 		},
 		message(ws, message) {
+			const byteLength = typeof message === 'string' ? Buffer.byteLength(message) : message.byteLength;
+			if (byteLength > 1024 * 1024) {
+				ws.close(1009, 'Message too large');
+				return;
+			}
 			ws.data.connection.handleClientMessage(message.toString());
 		},
 		close(ws) {

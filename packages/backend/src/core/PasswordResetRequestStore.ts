@@ -5,7 +5,9 @@
 
 import { eq } from 'drizzle-orm';
 import { passwordResetRequest, type PasswordResetRequestInsert, type PasswordResetRequestRow } from '@/db/schema/password-reset-request.js';
+import { userProfile } from '@/db/schema/user-profile.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { parseId } from '@/misc/id/parse-id.js';
 
 export async function createPasswordResetRequestInDatabase(db: MiDrizzleDatabase, data: PasswordResetRequestInsert): Promise<void> {
 	await db
@@ -27,8 +29,23 @@ export async function fetchPasswordResetRequestByTokenFromDatabase(db: MiDrizzle
 	return row;
 }
 
-export async function deletePasswordResetRequestFromDatabase(db: MiDrizzleDatabase, id: PasswordResetRequestRow['id']): Promise<void> {
-	await db
-		.delete(passwordResetRequest)
-		.where(eq(passwordResetRequest.id, id));
+export async function consumePasswordResetRequestInDatabase(db: MiDrizzleDatabase, token: string, passwordHash: string): Promise<void> {
+	await db.transaction(async tx => {
+		const [request] = await tx
+			.delete(passwordResetRequest)
+			.where(eq(passwordResetRequest.token, token))
+			.returning();
+
+		if (!request) {
+			throw new Error('Password reset request was not found');
+		}
+		if (Date.now() - parseId(request.id).date.getTime() > 1000 * 60 * 30) {
+			throw new Error('Password reset request has expired');
+		}
+
+		await tx
+			.update(userProfile)
+			.set({ password: passwordHash })
+			.where(eq(userProfile.userId, request.userId));
+	});
 }

@@ -30,8 +30,12 @@ export function createInternalStorageService(config: Config) {
 		return `${config.url}/files/${key}`;
 	}
 
-	function del(key: string) {
-		fs.unlink(resolvePath(key), () => {});
+	async function del(key: string): Promise<void> {
+		try {
+			await fs.promises.unlink(resolvePath(key));
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+		}
 	}
 
 	return { resolvePath, read, saveFromPath, saveFromBuffer, del };

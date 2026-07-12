@@ -6,6 +6,7 @@
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { note, type NoteInsert, type NoteRow } from '@/db/schema/note.js';
+import { noteReaction } from '@/db/schema/note-reaction.js';
 import { driveFile } from '@/db/schema/drive-file.js';
 import { poll, type PollInsert } from '@/db/schema/poll.js';
 import { user as userTable } from '@/db/schema/user.js';
@@ -17,6 +18,7 @@ import type { MiChannel } from '@/models/Channel.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import { deserializeUser } from '@/core/UserStore.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
 
 function deserializeNote(row: NoteRow): MiNote {
 	return {
@@ -581,15 +583,13 @@ export async function incrementNoteReactionInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiNote['id'],
 	reaction: string,
-	pairToAppend: string | null,
+	pairToAppend: string,
 ): Promise<void> {
 	await db
 		.update(note)
 		.set({
 			reactions: sql`jsonb_set(${note.reactions}, ARRAY[${reaction}]::text[], (COALESCE(${note.reactions}->>${reaction}, '0')::int + 1)::text::jsonb)`,
-			...(pairToAppend != null ? {
-				reactionAndUserPairCache: sql`array_append(${note.reactionAndUserPairCache}, ${pairToAppend})`,
-			} : {}),
+			reactionAndUserPairCache: sql`CASE WHEN cardinality(${note.reactionAndUserPairCache}) < ${PER_NOTE_REACTION_USER_PAIR_CACHE_MAX} THEN array_append(${note.reactionAndUserPairCache}, ${pairToAppend}) ELSE ${note.reactionAndUserPairCache} END`,
 		})
 		.where(eq(note.id, id));
 }
@@ -609,25 +609,39 @@ export async function decrementNoteReactionInDatabase(
 		.where(eq(note.id, id));
 }
 
-export async function applyBufferedNoteReactionsInDatabase(
+export async function rebuildNoteReactionsInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiNote['id'],
-	deltas: Record<string, number>,
-	pairs: string[],
 ): Promise<void> {
-	const entries = Object.entries(deltas);
-	const reactions = entries.length > 0
-		? sql.join(entries.map(([reaction, count]) =>
-			sql`jsonb_set(${note.reactions}, ARRAY[${reaction}]::text[], (COALESCE(${note.reactions}->>${reaction}, '0')::int + ${count})::text::jsonb)`), sql` || `)
-		: sql`${note.reactions}`;
+	await db.transaction(async transaction => {
+		const [target] = await transaction
+			.select({ id: note.id })
+			.from(note)
+			.where(eq(note.id, id))
+			.for('update')
+			.limit(1);
+		if (target == null) return;
 
-	await db
-		.update(note)
-		.set({
-			reactions,
-			reactionAndUserPairCache: pairs,
-		})
-		.where(eq(note.id, id));
+		const counts = await transaction
+			.select({ reaction: noteReaction.reaction, count: count() })
+			.from(noteReaction)
+			.where(eq(noteReaction.noteId, id))
+			.groupBy(noteReaction.reaction);
+		const recentPairs = await transaction
+			.select({ userId: noteReaction.userId, reaction: noteReaction.reaction })
+			.from(noteReaction)
+			.where(eq(noteReaction.noteId, id))
+			.orderBy(desc(noteReaction.id))
+			.limit(PER_NOTE_REACTION_USER_PAIR_CACHE_MAX);
+
+		await transaction
+			.update(note)
+			.set({
+				reactions: Object.fromEntries(counts.map(row => [row.reaction, row.count])),
+				reactionAndUserPairCache: recentPairs.reverse().map(row => `${row.userId}/${row.reaction}`),
+			})
+			.where(eq(note.id, id));
+	});
 }
 
 export async function listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(

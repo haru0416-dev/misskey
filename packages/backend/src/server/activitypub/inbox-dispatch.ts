@@ -563,14 +563,21 @@ async function undoFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRem
 	if (isBlock(object)) return await undoBlockFromApForHonoApi(deps, actor, object);
 	if (isLike(object)) return await undoLikeFromApForHonoApi(deps, actor, object);
 	if (isAnnounce(object)) return await undoAnnounceFromApForHonoApi(deps, actor, object);
-	if (isAccept(object)) return await undoAcceptFromApForHonoApi(deps, actor, object);
+	if (isAccept(object)) return await undoAcceptFromApForHonoApi(deps, actor, object, history);
 
 	return `skip: unknown object type ${getApType(object)}`;
 }
 
-async function undoAcceptFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAccept): Promise<string> {
-	const follower = await getUserFromApIdForHonoApi(deps, activity.object);
+async function undoAcceptFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IAccept, history: Set<string>): Promise<string> {
+	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
+
+	const follow = await resolveApObjectForHonoApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
+	if (!isFollow(follow)) return 'skip: Accept object is not a Follow';
+	if (getApId(follow.object) !== actor.uri) return 'invalid followee';
+
+	const follower = await getUserFromApIdForHonoApi(deps, follow.actor);
 	if (follower == null) return 'skip: follower not found';
+	if (follower.host != null) return 'skip: follower is not a local user';
 
 	const isFollowing = await followingExistsInDatabase(deps.db, follower.id, actor.id);
 	if (isFollowing) {

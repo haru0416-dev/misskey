@@ -126,7 +126,6 @@
 		"cbor2": "2.3.0",
 		"drizzle-kit": "0.31.10",
 		"execa": "9.6.1",
-		"pid-port": "2.1.1",
 		"rolldown": "1.1.3",
 		"simple-oauth2": "5.1.0",
 		"vitest": "4.1.9",

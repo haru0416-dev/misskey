@@ -339,7 +339,7 @@ export function loadConfig(): Config {
 				? config.videoThumbnailGenerator.substring(0, config.videoThumbnailGenerator.length - 1)
 				: config.videoThumbnailGenerator
 			: null,
-		userAgent: `Misskey/${version} (${config.url})`,
+		userAgent: `Misskey/${version} (${url.origin})`,
 		frontendManifestExists: frontendManifestExists,
 		frontendEmbedManifestExists: frontendEmbedManifestExists,
 		rootDir,

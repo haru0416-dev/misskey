@@ -4,7 +4,11 @@
  */
 
 import type * as Bull from 'bullmq';
-import { deleteNoteDraftByIdFromDatabase, fetchNoteDraftWithUserByIdFromDatabase } from '@/core/NoteDraftStore.js';
+import { eq } from 'drizzle-orm';
+import { fetchNoteDraftWithUserByIdFromDatabase } from '@/core/NoteDraftStore.js';
+import { noteDraft, type NoteDraftRow } from '@/db/schema/note-draft.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { PostScheduledNoteJobData } from '@/queue/types.js';
 import { fetchAndCreateNoteForHonoApi, type HonoApiNotesCreateDependencies } from '../../server/rest/notes-create.js';
 import {
@@ -15,12 +19,44 @@ import {
 
 export type HonoQueuePostScheduledNoteDependencies = HonoApiNotesCreateDependencies & HonoApiNotificationDependencies;
 
+class ScheduledNoteDraftUnavailableError extends Error {}
+
+function scheduledNoteDraftFingerprint(draft: MiNoteDraft | NoteDraftRow): string {
+	return JSON.stringify({
+		replyId: draft.replyId,
+		renoteId: draft.renoteId,
+		text: draft.text,
+		cw: draft.cw,
+		userId: draft.userId,
+		localOnly: draft.localOnly,
+		reactionAcceptance: draft.reactionAcceptance,
+		visibility: draft.visibility,
+		fileIds: draft.fileIds,
+		visibleUserIds: draft.visibleUserIds,
+		channelId: draft.channelId,
+		hasPoll: draft.hasPoll,
+		pollChoices: draft.pollChoices,
+		pollMultiple: draft.pollMultiple,
+		pollExpiresAt: draft.pollExpiresAt,
+		pollExpiredAfter: draft.pollExpiredAfter,
+		scheduledAt: draft.scheduledAt,
+		isActuallyScheduled: draft.isActuallyScheduled,
+	});
+}
+
 export async function handleHonoQueuePostScheduledNote(
 	deps: HonoQueuePostScheduledNoteDependencies,
 	job: Bull.Job<PostScheduledNoteJobData>,
 ): Promise<void> {
 	const draft = await fetchNoteDraftWithUserByIdFromDatabase(deps.db, job.data.noteDraftId);
-	if (draft == null || draft.user == null || draft.scheduledAt == null || !draft.isActuallyScheduled) {
+	if (
+		draft == null
+		|| draft.user == null
+		|| draft.scheduledAt == null
+		|| draft.scheduledAt.getTime() > Date.now()
+		|| (job.data.scheduledAt != null && draft.scheduledAt.getTime() !== job.data.scheduledAt)
+		|| !draft.isActuallyScheduled
+	) {
 		return;
 	}
 
@@ -42,12 +78,29 @@ export async function handleHonoQueuePostScheduledNote(
 			visibility: draft.visibility,
 			visibleUserIds: draft.visibleUserIds,
 			channelId: draft.channelId,
-		});
+		}, async insert => deps.db.transaction(async transaction => {
+			const [currentDraft] = await transaction
+				.select()
+				.from(noteDraft)
+				.where(eq(noteDraft.id, draft.id))
+				.for('update')
+				.limit(1);
 
-		void deleteNoteDraftByIdFromDatabase(deps.db, draft.id);
+			if (currentDraft == null || scheduledNoteDraftFingerprint(currentDraft) !== scheduledNoteDraftFingerprint(draft)) {
+				throw new ScheduledNoteDraftUnavailableError();
+			}
+
+			const note = await insert(transaction as MiDrizzleDatabase);
+			await transaction.delete(noteDraft).where(eq(noteDraft.id, draft.id));
+			return note;
+		}));
 
 		createScheduledNotePostedNotification(deps, draft.userId, note.id);
-	} catch {
+	} catch (error) {
+		if (error instanceof ScheduledNoteDraftUnavailableError) {
+			return;
+		}
 		createScheduledNotePostFailedNotification(deps, draft.userId, draft.id);
+		throw error;
 	}
 }
