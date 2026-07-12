@@ -161,9 +161,7 @@ export async function handleHonoApiNotesUnrenote(
 	const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(deps.db, me.id, note.id);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
-	for (const renote of renotes) {
-		void deleteNoteForHonoApi(deps, user, renote);
-	}
+	await Promise.all(renotes.map(renote => deleteNoteForHonoApi(deps, user, renote)));
 }
 
 export const notesUnrenoteRateLimit = {
