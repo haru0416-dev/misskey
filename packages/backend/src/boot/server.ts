@@ -283,7 +283,7 @@ async function launchHonoServerWithDependencies(
 				}
 
 				const remoteAddress = bunServerInstance.requestIP(request)?.address;
-				if (remoteAddress != null && !request.headers.has('x-misskey-remote-address')) {
+				if (remoteAddress != null) {
 					request.headers.set('x-misskey-remote-address', remoteAddress);
 				}
 				return traceHttpRequest(request, () => app.fetch(request));

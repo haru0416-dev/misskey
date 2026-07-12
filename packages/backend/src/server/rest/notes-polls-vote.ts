@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
@@ -13,6 +14,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
+import { isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import {
 	addActivityContext,
 	deliverQuestionUpdateForHonoApi,
@@ -24,7 +26,7 @@ import {
 import type { HonoApiNoteStreamPublisher } from './events.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiNotesPollsVoteDependencies = HonoApiRelayDeliverDependencies & {
+export type HonoApiNotesPollsVoteDependencies = HonoApiRelayDeliverDependencies & HonoApiNoteDependencies & {
 	config: HonoApiNoteApDependencies['config'];
 	publishNoteStream?: HonoApiNoteStreamPublisher;
 };
@@ -64,10 +66,10 @@ export async function handleHonoApiNotesPollsVote(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(notesPollsVoteParamDef, body);
-	const createdAt = new Date();
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw pollsVoteNoSuchNoteError();
+	if (!await isVisibleForMeForHonoApi(deps, note, me.id)) throw pollsVoteNoSuchNoteError();
 
 	if (!note.hasPoll) throw pollsVoteNoPollError();
 
@@ -76,29 +78,27 @@ export async function handleHonoApiNotesPollsVote(
 		if (blocked) throw pollsVoteYouHaveBeenBlockedError();
 	}
 
-	const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
+	const { vote, poll } = await deps.db.transaction(async transaction => {
+		await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${note.id}), hashtext(${me.id}))`);
+		const poll = await fetchPollByNoteIdOrFailFromDatabase(transaction as typeof deps.db, note.id);
+		const createdAt = new Date();
+		if (poll.expiresAt && poll.expiresAt < createdAt) throw pollsVoteAlreadyExpiredError();
+		if (poll.choices[params.choice] == null) throw pollsVoteInvalidChoiceError();
 
-	if (poll.expiresAt && poll.expiresAt < createdAt) throw pollsVoteAlreadyExpiredError();
-
-	if (poll.choices[params.choice] == null) throw pollsVoteInvalidChoiceError();
-
-	const exist = await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, me.id);
-	if (exist.length) {
-		if (poll.multiple) {
-			if (exist.some(x => x.choice === params.choice)) throw pollsVoteAlreadyVotedError();
-		} else {
+		const exist = await listPollVotesByNoteAndUserFromDatabase(transaction as typeof deps.db, note.id, me.id);
+		if (exist.length > 0 && (!poll.multiple || exist.some(x => x.choice === params.choice))) {
 			throw pollsVoteAlreadyVotedError();
 		}
-	}
 
-	const vote = await createPollVoteInDatabase(deps.db, {
-		id: genId(createdAt.getTime()),
-		noteId: note.id,
-		userId: me.id,
-		choice: params.choice,
+		const createdVote = await createPollVoteInDatabase(transaction as typeof deps.db, {
+			id: genId(createdAt.getTime()),
+			noteId: note.id,
+			userId: me.id,
+			choice: params.choice,
+		});
+		await incrementPollVoteInDatabase(transaction as typeof deps.db, poll.noteId, params.choice);
+		return { vote: createdVote, poll };
 	});
-
-	await incrementPollVoteInDatabase(deps.db, poll.noteId, params.choice);
 
 	deps.publishNoteStream?.(note, 'pollVoted', {
 		choice: params.choice,

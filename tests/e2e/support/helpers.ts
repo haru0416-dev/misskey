@@ -74,6 +74,5 @@ export async function closeInitialUserSetup(page: Page): Promise<void> {
 }
 
 export async function waitForPageCarryoverGuard(page: Page): Promise<void> {
-	await page.goto('about:blank').catch(() => undefined);
-	await new Promise((resolve) => setTimeout(resolve, 1_000));
+	await page.goto('about:blank', { waitUntil: 'load' });
 }

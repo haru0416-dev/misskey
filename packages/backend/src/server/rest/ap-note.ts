@@ -316,7 +316,7 @@ export async function createNoteFromApForHonoApi(
 	const files = resolvedFiles.filter(file => file != null);
 
 	const reply = note.inReplyTo
-		? await resolveNoteForHonoApi(deps, note.inReplyTo as string | IObject, { resolver: history }).then(x => {
+		? await resolveNoteForHonoApi(deps, note.inReplyTo as string | IObject, { sentFrom: new URL(actor.uri), resolver: history }).then(x => {
 			if (x == null) throw new Error('inReplyTo not found');
 			return x;
 		})

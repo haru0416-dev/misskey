@@ -102,6 +102,9 @@ export function decodeReactionForHonoApi(str: string): { reaction: string; name?
 function reactionNoSuchNoteError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '033d0620-5bfe-4027-965d-980b0c85a3ea' });
 }
+function reactionsNoSuchNoteError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '263fff3d-d0e1-4af4-bea7-8408059b451a' });
+}
 function reactionAlreadyReactedError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'You are already reacting to that note.', code: 'ALREADY_REACTED', id: '71efcf98-86d6-4e2b-b2ad-9d032369366b' });
 }
@@ -392,6 +395,10 @@ export async function handleHonoApiNotesReactions(
 	body: Record<string, unknown>,
 ): Promise<Array<{ id: string; createdAt: string; user: unknown; type: string }>> {
 	const params = parseHonoApiParams(notesReactionsParamDef, body);
+	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
+	if (note == null || !await isVisibleForMeForHonoApi(deps, note, me?.id ?? null)) {
+		throw reactionsNoSuchNoteError();
+	}
 
 	let type: string | null = null;
 	if (params.type) {

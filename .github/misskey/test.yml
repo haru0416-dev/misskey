@@ -16,3 +16,7 @@ redis:
   port: 56312
 
 proxyRemoteFiles: true
+
+# E2E fixtures serve ActivityPub and media responses from ephemeral loopback ports.
+allowedPrivateNetworks:
+  - 127.0.0.1/32

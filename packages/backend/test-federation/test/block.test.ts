@@ -1,7 +1,7 @@
 import { describe, test, beforeAll } from 'vitest';
 import { deepStrictEqual, rejects, strictEqual } from 'node:assert';
 import * as Misskey from 'misskey-js';
-import { assertNotificationReceived, createAccount, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep } from './utils.js';
+import { assertNotificationReceived, createAccount, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, waitFor } from './utils.js';
 
 describe('Block', () => {
 	describe('Check follow', () => {
@@ -68,23 +68,34 @@ describe('Block', () => {
 			strictEqual(followers.length, 1);
 		});
 
-		test.skip('Remove follower when block them', async () => {
-			test('before block', async () => {
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 1);
-				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 1);
+		test('Remove follower when block them', async () => {
+			const [blocker, follower] = await Promise.all([
+				createAccount('a.test'),
+				createAccount('b.test'),
+			]);
+			const [followerInA, blockerInB] = await Promise.all([
+				resolveRemoteUser('b.test', follower.id, blocker),
+				resolveRemoteUser('a.test', blocker.id, follower),
+			]);
+
+			await follower.client.request('following/create', { userId: blockerInB.id });
+			await waitFor(async () => {
+				const following = await follower.client.request('users/following', { userId: follower.id });
+				const followers = await blocker.client.request('users/followers', { userId: blocker.id });
+				return following.length === 1 && followers.length === 1;
 			});
 
-			await alice.client.request('blocking/create', { userId: bobInA.id });
-			await sleep();
-
-			test('after block', async () => {
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 0);
-				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 0);
+			await blocker.client.request('blocking/create', { userId: followerInA.id });
+			await waitFor(async () => {
+				const following = await follower.client.request('users/following', { userId: follower.id });
+				const followers = await blocker.client.request('users/followers', { userId: blocker.id });
+				return following.length === 0 && followers.length === 0;
 			});
+
+			const followingAfterBlock = await follower.client.request('users/following', { userId: follower.id });
+			strictEqual(followingAfterBlock.length, 0);
+			const followersAfterBlock = await blocker.client.request('users/followers', { userId: blocker.id });
+			strictEqual(followersAfterBlock.length, 0);
 		});
 	});
 

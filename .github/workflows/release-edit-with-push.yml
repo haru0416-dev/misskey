@@ -19,7 +19,7 @@ jobs:
   edit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # headが$GITHUB_REF_NAME, baseが$STABLE_BRANCHかつopenのPRを1つ取得
       - name: Get PR
         run: |
@@ -29,14 +29,19 @@ jobs:
           STABLE_BRANCH: ${{ vars.STABLE_BRANCH }}
       - name: Get target version
         if: steps.get_pr.outputs.pr_number != ''
-        uses: misskey-dev/release-manager-actions/.github/actions/get-target-version@v2
+        run: echo "target_version=$(jq -r '.version | split("-")[0]' package.json)" >> "$GITHUB_OUTPUT"
         id: v
       # CHANGELOG.mdの内容を取得
       - name: Get changelog
         if: steps.get_pr.outputs.pr_number != ''
-        uses: misskey-dev/release-manager-actions/.github/actions/get-changelog@v2
-        with:
-          version: ${{ steps.v.outputs.target_version }}
+        run: |
+          {
+            echo 'changelog<<EOF'
+            sed -n "/## $VERSION/,/^## /p" CHANGELOG.md | sed -e 1d -e '$d'
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ steps.v.outputs.target_version }}
         id: changelog
       # PRのnotesを更新
       - name: Update PR

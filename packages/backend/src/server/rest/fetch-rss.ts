@@ -10,6 +10,8 @@ import { parseHonoApiParams } from './validation.js';
 
 const rssParser = new Parser();
 
+export const FETCH_RSS_MAX_SIZE = 1024 * 1024;
+
 export type HonoApiFetchRssDependencies = {
 	httpRequestService: HttpRequestService;
 };
@@ -33,6 +35,7 @@ export async function handleHonoApiFetchRss(
 			Accept: 'application/rss+xml, */*',
 		},
 		timeout: 5000,
+		size: FETCH_RSS_MAX_SIZE,
 	});
 	const text = await res.text();
 

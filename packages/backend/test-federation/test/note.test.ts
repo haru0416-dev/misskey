@@ -2,7 +2,7 @@ import { describe, test, beforeAll, afterAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Announce, Note, Question } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
-import { addCustomEmoji, createAccount, createModerator, deepStrictEqualWithExcludedFields, fetchActivityPubObject, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, uploadFile } from './utils.js';
+import { addCustomEmoji, createAccount, createModerator, deepStrictEqualWithExcludedFields, fetchActivityPubObject, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, uploadFile, waitFor } from './utils.js';
 
 describe('Note', () => {
 	let alice: LoginUser, bob: LoginUser;
@@ -144,6 +144,45 @@ describe('Note', () => {
 			strictEqual(activityPubRenote.id?.href, `https://a.test/notes/${note.id}/activity`);
 			strictEqual(activityPubRenote.actorId?.href, `https://a.test/users/${alice.id}`);
 			strictEqual(activityPubRenote.objectId?.href, `https://a.test/notes/${renotedNote.id}`);
+		});
+
+		test('Undo(Announce) removes the remote Renote but keeps the original Note', async () => {
+			const follower = await createAccount('b.test');
+			const [aliceInFollower, followerInA] = await Promise.all([
+				resolveRemoteUser('a.test', alice.id, follower),
+				resolveRemoteUser('b.test', follower.id, alice),
+			]);
+			await follower.client.request('following/create', { userId: aliceInFollower.id });
+			await waitFor(async () => (await alice.client.request('users/followers', { userId: alice.id }))
+				.some(({ followerId }) => followerId === followerInA.id));
+
+			try {
+				const originalNote = (await alice.client.request('notes/create', {
+					text: 'a',
+				})).createdNote;
+				const renote = (await alice.client.request('notes/create', {
+					renoteId: originalNote.id,
+				})).createdNote;
+
+				let renoteInB: Misskey.entities.Note | undefined;
+				await waitFor(async () => {
+					renoteInB = (await follower.client.request('notes/timeline', {}))
+						.find(note => note.uri === `https://a.test/notes/${renote.id}/activity`);
+					return renoteInB != null;
+				});
+				assert(renoteInB != null);
+				assert(renoteInB.renoteId != null);
+				const renoteInBId = renoteInB.id;
+				const originalNoteInB = await follower.client.request('notes/show', { noteId: renoteInB.renoteId });
+
+				await alice.client.request('notes/delete', { noteId: renote.id });
+				await waitFor(async () => await follower.client.request('notes/show', { noteId: renoteInBId })
+					.then(() => false)
+					.catch(err => err.code === 'NO_SUCH_NOTE'));
+				strictEqual((await follower.client.request('notes/show', { noteId: originalNoteInB.id })).id, originalNoteInB.id);
+			} finally {
+				await follower.client.request('following/delete', { userId: aliceInFollower.id });
+			}
 		});
 	});
 
@@ -317,6 +356,16 @@ describe('Note', () => {
 				strictEqual(reactions.length, 1);
 				strictEqual(reactions[0].type, `:${emoji.name}@b.test:`);
 				strictEqual(reactions[0].user.id, bobInA.id);
+			});
+
+			test('Undo(Like) removes the remote reaction', async () => {
+				const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
+				const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
+				await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '❤' });
+				await waitFor(async () => (await alice.client.request('notes/reactions', { noteId: note.id })).length === 1);
+
+				await bob.client.request('notes/reactions/delete', { noteId: resolvedNote.id });
+				await waitFor(async () => (await alice.client.request('notes/reactions', { noteId: note.id })).length === 0);
 			});
 		});
 
