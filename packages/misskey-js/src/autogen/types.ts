@@ -3480,7 +3480,7 @@ export type paths = {
     '/reset-db': {
         /**
          * reset-db
-         * @description Only available when running with <code>NODE_ENV=testing</code>. Reset the database and flush Redis.
+         * @description Only available when running with <code>NODE_ENV=testing</code>. Reset the database and flush Valkey.
          *
          *     **Credential required**: *No*
          */
@@ -11812,6 +11812,8 @@ export interface operations {
                         os: string;
                         node: string;
                         psql: string;
+                        /** @description Valkey server version. The property name is retained for API compatibility. */
+                        redis?: string;
                         cpu: {
                             model: string;
                             cores: number;

@@ -50,7 +50,8 @@ export async function handleHonoApiAdminServerInfo(
 	const fsStats = await si.fsSize();
 	const netInterface = await si.networkInterfaceDefault();
 	const redisServerInfo = await deps.redis.info('Server');
-	const redisVersion = redisServerInfo.match(new RegExp('^redis_version:(.*)', 'm'))?.[1];
+	const redisVersion = (redisServerInfo.match(new RegExp('^valkey_version:(.*)', 'm'))?.[1]
+		?? redisServerInfo.match(new RegExp('^redis_version:(.*)', 'm'))?.[1])?.trim();
 	const psqlVersion = await deps.db
 		.execute<{ server_version: string }>(sql`SHOW server_version`)
 		.then(result => result.rows[0].server_version);
