@@ -168,7 +168,7 @@ async function measureRepo(
 	round: number,
 	options: { heapSnapshotSavePath?: string } = {},
 ) {
-	process.stderr.write(`[${label}] Resetting database and Redis\n`);
+	process.stderr.write(`[${label}] Resetting database and Valkey\n`);
 	await util.resetTestServices(repoDir);
 
 	process.stderr.write(`[${label}] Running migrations\n`);
@@ -261,7 +261,7 @@ async function main() {
 	for (let round = 1; round <= warmupRounds; round++) {
 		process.stderr.write(`Starting warmup round ${round}/${warmupRounds}\n`);
 		for (const label of ['base', 'head'] as const) {
-			// Measurements must not overlap because they share the database, Redis, and host memory.
+			// Measurements must not overlap because they share the database, Valkey, and host memory.
 			// eslint-disable-next-line no-await-in-loop
 			await measureRepo(label, reports[label].dir, -round);
 		}

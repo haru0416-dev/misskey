@@ -6,8 +6,9 @@
 process.env.NODE_ENV = 'test';
 
 import * as htmlParser from 'node-html-parser';
-import pkceChallenge from 'pkce-challenge';
 import { describe, expect, test } from 'vitest';
+import { createS256CodeChallenge } from '@/misc/pkce.js';
+import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { createOAuthProviderRuntime, parseUrlEncodedParameters } from '@/server/oauth/OAuthProviderRuntime.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -57,7 +58,8 @@ describe('createOAuthProviderRuntime', () => {
 		const clientId = 'http://client.example/';
 		const redirectUri = 'http://client.example/callback';
 		const createdTokens: unknown[] = [];
-		const { code_challenge, code_verifier } = await pkceChallenge(128);
+		const code_verifier = secureRndstr(128);
+		const code_challenge = createS256CodeChallenge(code_verifier);
 		const runtime = createOAuthProviderRuntime({
 			config,
 			db: {} as MiDrizzleDatabase,

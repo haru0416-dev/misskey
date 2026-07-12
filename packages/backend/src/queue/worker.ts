@@ -55,6 +55,7 @@ import {
 import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, type HonoQueueEmojisDependencies } from './handlers/emojis.js';
 import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
+import { dispatchQueueOutbox } from '@/core/QueueOutboxStore.js';
 
 export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueInboxDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & HonoQueueCheckModeratorsActivityDependencies & {
 	config: Config;
@@ -118,14 +119,28 @@ function renderError(e?: Error): unknown {
  * 移植を含む)。本番のジョブキュー起動経路は `boot/common.ts` の `jobQueue()`。
  */
 export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
+	const outboxLogger = deps.logger.createSubLogger('queue-outbox');
+	let outboxTimer: ReturnType<typeof setInterval> | undefined;
+	let isDispatchingOutbox = false;
+	const dispatchOutbox = async (): Promise<void> => {
+		if (isDispatchingOutbox) return;
+		isDispatchingOutbox = true;
+		try {
+			await dispatchQueueOutbox(deps.db, deps.dbQueue);
+		} catch (error) {
+			outboxLogger.error('Failed to dispatch queue outbox', { e: renderError(error instanceof Error ? error : new Error(String(error))) });
+		} finally {
+			isDispatchingOutbox = false;
+		}
+	};
 	const userWebhookDeliverQueueWorker = new Bull.Worker(QUEUE.USER_WEBHOOK_DELIVER, (job) => {
 		return handleHonoQueueUserWebhookDeliver(deps, job);
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.USER_WEBHOOK_DELIVER),
 		autorun: false,
-		concurrency: 64,
+		concurrency: deps.config.userWebhookJobConcurrency ?? 64,
 		limiter: {
-			max: 64,
+			max: deps.config.userWebhookJobConcurrency ?? 64,
 			duration: 1000,
 		},
 		settings: {
@@ -148,9 +163,9 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.SYSTEM_WEBHOOK_DELIVER),
 		autorun: false,
-		concurrency: 16,
+		concurrency: deps.config.systemWebhookJobConcurrency ?? 16,
 		limiter: {
-			max: 16,
+			max: deps.config.systemWebhookJobConcurrency ?? 16,
 			duration: 1000,
 		},
 		settings: {
@@ -221,6 +236,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.SYSTEM),
 		autorun: false,
+		concurrency: deps.config.systemJobConcurrency ?? 1,
 	});
 
 	{
@@ -299,7 +315,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.OBJECT_STORAGE),
 		autorun: false,
-		concurrency: 16,
+		concurrency: deps.config.objectStorageJobConcurrency ?? 16,
 	});
 
 	{
@@ -339,6 +355,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.DB),
 		autorun: false,
+		concurrency: deps.config.dbJobConcurrency ?? 1,
 	});
 
 	{
@@ -363,6 +380,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		objectStorageQueueWorker,
 		dbQueueWorker,
 		start: async () => {
+			await dispatchOutbox();
+			outboxTimer = setInterval(() => void dispatchOutbox(), 1000);
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
 				systemWebhookDeliverQueueWorker.run(),
@@ -377,6 +396,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			]);
 		},
 		stop: async () => {
+			if (outboxTimer != null) clearInterval(outboxTimer);
 			await Promise.all([
 				userWebhookDeliverQueueWorker.close(),
 				systemWebhookDeliverQueueWorker.close(),

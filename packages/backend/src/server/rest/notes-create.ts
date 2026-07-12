@@ -581,6 +581,7 @@ export async function insertNoteForHonoApi(
 	tags: string[],
 	emojis: string[],
 	mentionedUsers: MiUser[],
+	db: MiDrizzleDatabase = deps.db,
 ): Promise<MiNote> {
 	const insert: Record<string, unknown> = {
 		id: genId(data.createdAt?.getTime()),
@@ -621,7 +622,7 @@ export async function insertNoteForHonoApi(
 
 	if (mentionedUsers.length > 0) {
 		insert.mentions = mentionedUsers.map(u => u.id);
-		const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, mentionedUsers.map(u => u.id));
+		const profiles = await listUserProfilesByUserIdsFromDatabase(db, mentionedUsers.map(u => u.id));
 		const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
 		insert.mentionedRemoteUsers = JSON.stringify(mentionedUsers.filter((u): u is MiUser & { host: string } => u.host != null).map(u => {
 			const profile = profileByUserId.get(u.id);
@@ -631,7 +632,7 @@ export async function insertNoteForHonoApi(
 
 	try {
 		if (data.poll != null) {
-			await createNoteWithPollInDatabase(deps.db, insert as Parameters<typeof createNoteInDatabase>[1], {
+			await createNoteWithPollInDatabase(db, insert as Parameters<typeof createNoteInDatabase>[1], {
 				noteId: insert.id as string,
 				choices: data.poll.choices,
 				expiresAt: data.poll.expiresAt,
@@ -643,7 +644,7 @@ export async function insertNoteForHonoApi(
 				channelId: insert.channelId as string | null,
 			});
 		} else {
-			await createNoteInDatabase(deps.db, insert as Parameters<typeof createNoteInDatabase>[1]);
+			await createNoteInDatabase(db, insert as Parameters<typeof createNoteInDatabase>[1]);
 		}
 
 		return { ...insert, reply: data.reply ?? null, renote: data.renote ?? null } as unknown as MiNote;
@@ -928,6 +929,7 @@ export async function createNoteForHonoApi(
 	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	data: CreateNoteData,
 	silent = false,
+	persist: (insert: (db: MiDrizzleDatabase) => Promise<MiNote>) => Promise<MiNote> = insert => insert(deps.db),
 ): Promise<MiNote> {
 	if (data.reply && data.channel && data.reply.channelId !== data.channel.id) {
 		data.channel = data.reply.channelId ? await fetchChannelByIdFromDatabase(deps.db, data.reply.channelId) : null;
@@ -1050,7 +1052,7 @@ export async function createNoteForHonoApi(
 		throw new IdentifiableError('9f466dab-c856-48cd-9e65-ff90ff750580', 'Note contains too many mentions');
 	}
 
-	const note = await insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers);
+	const note = await persist(db => insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers, db));
 
 	setImmediate(() => {
 		postNoteCreatedForHonoApi(deps, note, user, data, tags!, finalMentionedUsers, silent).catch(() => {});
@@ -1079,6 +1081,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		apHashtags?: string[] | null;
 		apEmojis?: string[] | null;
 	},
+	persist?: (insert: (db: MiDrizzleDatabase) => Promise<MiNote>) => Promise<MiNote>,
 ): Promise<MiNote> {
 	const visibleUsers = data.visibleUserIds.length > 0
 		? await listUsersByIdsFromDatabase(deps.db, data.visibleUserIds, { includeSuspended: true })
@@ -1156,7 +1159,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		apMentions: data.apMentions,
 		apHashtags: data.apHashtags,
 		apEmojis: data.apEmojis,
-	});
+	}, false, persist);
 }
 
 /**

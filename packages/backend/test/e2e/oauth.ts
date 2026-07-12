@@ -20,16 +20,25 @@ import {
 	ModuleOptions,
 	ResourceOwnerPassword,
 } from 'simple-oauth2';
-import pkceChallenge from 'pkce-challenge';
 import * as htmlParser from 'node-html-parser';
 import { api, port, sendEnvUpdateRequest, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
+import { createS256CodeChallenge } from '@/misc/pkce.js';
+import { secureRndstr } from '@/misc/secure-rndstr.js';
 
 const host = `http://127.0.0.1:${port}`;
 
 const clientPort = port + 1;
 const redirect_uri = `http://127.0.0.1:${clientPort}/redirect`;
 const redirect_uri2 = `http://127.0.0.1:${clientPort}/redirect2`;
+
+function pkceChallenge(_length = 128) {
+	const code_verifier = secureRndstr(128);
+	return {
+		code_verifier,
+		code_challenge: createS256CodeChallenge(code_verifier),
+	};
+}
 
 type ClientMetadataReply = {
 	header: (name: string, value: string) => ClientMetadataReply;

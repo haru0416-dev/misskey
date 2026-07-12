@@ -7,7 +7,6 @@ import dns from 'node:dns/promises';
 import * as htmlParser from 'node-html-parser';
 import { extractLinkHeaderUrisByRel } from '@/misc/parse-link-header.js';
 import ipaddr from 'ipaddr.js';
-import { verifyChallenge } from 'pkce-challenge';
 import { permissions as kinds } from 'misskey-js';
 import type { Config } from '@/config.js';
 import { createAccessTokenInDatabase, deleteAccessTokenByTokenFromDatabase } from '@/core/AccessTokenStore.js';
@@ -17,6 +16,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
+import { verifyS256CodeChallenge } from '@/misc/pkce.js';
 import { StatusError } from '@/misc/status-error.js';
 import type Logger from '@/logger.js';
 import type { CommonData } from '@/server/web/views/_.js';
@@ -615,7 +615,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				throw new InvalidGrantError('grant request is invalid');
 			}
 
-			const challengeResult = await verifyChallenge(codeVerifier, granted.codeChallenge);
+			const challengeResult = verifyS256CodeChallenge(codeVerifier, granted.codeChallenge);
 			if (!challengeResult) {
 				throw new InvalidGrantError('grant request is invalid');
 			}

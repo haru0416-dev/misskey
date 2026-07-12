@@ -4650,17 +4650,16 @@ describe('Endpoints', () => {
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
 			assert.strictEqual(jobs.some(job => job.data.noteDraftId === draft.id), true);
 
-			// Omitting scheduledAt on update always clears it to null, matching the original
-			// notes/drafts/update endpoint's `scheduledAt: ps.scheduledAt ? new Date(ps.scheduledAt) : null` behavior.
-			const clearedBySchedule = await api('notes/drafts/update', {
+			const updatedWithoutSchedule = await api('notes/drafts/update', {
 				draftId: draft.id,
 				text: 'schedule omitted on update',
 			}, alice);
-			assert.strictEqual(clearedBySchedule.status, 200);
-			assert.strictEqual((clearedBySchedule.body as any).updatedDraft.scheduledAt, null);
+			assert.strictEqual(updatedWithoutSchedule.status, 200);
+			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.scheduledAt, futureScheduledAt);
+			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.isActuallyScheduled, true);
 
-			const jobsAfterClear = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-			assert.strictEqual(jobsAfterClear.some(job => job.data.noteDraftId === draft.id), false);
+			const jobsAfterUpdate = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			assert.strictEqual(jobsAfterUpdate.some(job => job.data.noteDraftId === draft.id), true);
 
 			const original = await post(alice, { text: 'update pure renote source' });
 			const pureRenote = await post(alice, { renoteId: original.id });
@@ -4706,7 +4705,7 @@ describe('Endpoints', () => {
 				isActuallyScheduled: true,
 				scheduledAt: new Date(futureScheduledAt),
 			});
-			await postScheduledNoteQueue!.add(draft.id, { noteDraftId: draft.id }, { delay: 1000 * 60 * 60 });
+			await postScheduledNoteQueue!.add(draft.id, { noteDraftId: draft.id, scheduledAt: futureScheduledAt }, { delay: 1000 * 60 * 60 });
 
 			const deleted = await api('notes/drafts/delete', { draftId: draft.id }, alice);
 			assert.strictEqual(deleted.status, 204);

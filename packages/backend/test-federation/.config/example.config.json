@@ -11,7 +11,7 @@
   "dbReplications": false,
   "trustProxy": true,
   "redis": {
-    "host": "redis.test",
+    "host": "valkey.test",
     "port": 6379
   },
   "id": "aidx",

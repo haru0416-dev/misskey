@@ -4,7 +4,7 @@
  */
 
 import { domainToASCII } from 'node:url';
-import { SECOND, HOUR, PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
+import { SECOND, HOUR } from '@/const.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { emojiRegex } from '@/misc/emoji-regex.js';
@@ -56,38 +56,6 @@ export type HonoApiNotesReactionsDependencies =
 		publishNoteStream?: HonoApiNoteStreamPublisher;
 		redisForReactions: Redis.Redis;
 	};
-
-const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
-const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
-
-async function bufferNoteReactionCreateForHonoApi(
-	deps: HonoApiNotesReactionsDependencies,
-	noteId: MiNote['id'],
-	userId: MiUser['id'],
-	reaction: string,
-	currentPairs: string[],
-): Promise<void> {
-	const pipeline = deps.redisForReactions.pipeline();
-	pipeline.hincrby(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`, reaction, 1);
-	for (let i = 0; i < currentPairs.length; i++) {
-		pipeline.zadd(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, i, currentPairs[i]!);
-	}
-	pipeline.zadd(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, Date.now(), `${userId}/${reaction}`);
-	pipeline.zremrangebyrank(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, -(PER_NOTE_REACTION_USER_PAIR_CACHE_MAX + 1));
-	await pipeline.exec();
-}
-
-async function bufferNoteReactionDeleteForHonoApi(
-	deps: HonoApiNotesReactionsDependencies,
-	noteId: MiNote['id'],
-	userId: MiUser['id'],
-	reaction: string,
-): Promise<void> {
-	const pipeline = deps.redisForReactions.pipeline();
-	pipeline.hincrby(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`, reaction, -1);
-	pipeline.zrem(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, `${userId}/${reaction}`);
-	await pipeline.exec();
-}
 
 const FALLBACK = '❤';
 
@@ -216,30 +184,25 @@ export async function createNoteReactionForHonoApi(
 	};
 
 	try {
-		await createNoteReactionInDatabase(deps.db, record);
+		await deps.db.transaction(async transaction => {
+			await createNoteReactionInDatabase(transaction as typeof deps.db, record);
+			await incrementNoteReactionInDatabase(transaction as typeof deps.db, note.id, reaction, `${user.id}/${reaction}`);
+		});
 	} catch (err) {
 		if (isDuplicateKeyValueDatabaseError(err)) {
 			const exists = await fetchNoteReactionByUserAndNoteOrFailFromDatabase(deps.db, user.id, note.id);
 			if (exists.reaction !== reaction) {
 				await deleteNoteReactionForHonoApi(deps, user, note);
-				await createNoteReactionInDatabase(deps.db, record);
+				await deps.db.transaction(async transaction => {
+					await createNoteReactionInDatabase(transaction as typeof deps.db, record);
+					await incrementNoteReactionInDatabase(transaction as typeof deps.db, note.id, reaction, `${user.id}/${reaction}`);
+				});
 			} else {
 				throw new IdentifiableError('51c42bb4-931a-456b-bff7-e5a8a70dd298');
 			}
 		} else {
 			throw err;
 		}
-	}
-
-	if (deps.meta.enableReactionsBuffering) {
-		await bufferNoteReactionCreateForHonoApi(deps, note.id, user.id, reaction, note.reactionAndUserPairCache);
-	} else {
-		await incrementNoteReactionInDatabase(
-			deps.db,
-			note.id,
-			reaction,
-			note.reactionAndUserPairCache.length < PER_NOTE_REACTION_USER_PAIR_CACHE_MAX ? `${user.id}/${reaction}` : null,
-		);
 	}
 
 	if (deps.meta.enableChartsForRemoteUser || user.host == null) {
@@ -294,14 +257,11 @@ export async function deleteNoteReactionForHonoApi(
 	const exist = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, user.id, note.id);
 	if (exist == null) throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
 
-	const result = await deleteNoteReactionByIdFromDatabase(deps.db, exist.id);
-	if (result.affected !== 1) throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
-
-	if (deps.meta.enableReactionsBuffering) {
-		await bufferNoteReactionDeleteForHonoApi(deps, note.id, user.id, exist.reaction);
-	} else {
-		await decrementNoteReactionInDatabase(deps.db, note.id, exist.reaction, `${user.id}/${exist.reaction}`);
-	}
+	await deps.db.transaction(async transaction => {
+		const result = await deleteNoteReactionByIdFromDatabase(transaction as typeof deps.db, exist.id);
+		if (result.affected !== 1) throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
+		await decrementNoteReactionInDatabase(transaction as typeof deps.db, note.id, exist.reaction, `${user.id}/${exist.reaction}`);
+	});
 
 	deps.publishNoteStream?.(note, 'unreacted', {
 		reaction: decodeReactionForHonoApi(exist.reaction).reaction,

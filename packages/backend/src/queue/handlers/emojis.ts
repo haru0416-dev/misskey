@@ -4,7 +4,7 @@
  */
 
 import * as fs from 'node:fs';
-import { format as dateFormat } from 'date-fns';
+import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { ZipReader } from 'slacc';
@@ -88,7 +88,7 @@ export async function handleHonoQueueExportCustomEmojis(deps: HonoQueueEmojisDep
 			zlib: { level: 0 },
 		});
 		archiveStream.on('close', async () => {
-			const fileName = 'custom-emojis-' + dateFormat(new Date(), 'yyyy-MM-dd-HH-mm-ss') + '.zip';
+			const fileName = 'custom-emojis-' + formatDateTimeForFileName(new Date()) + '.zip';
 			const driveFile = await addDriveFileForHonoApi(deps, { user, path: archivePath, name: fileName, force: true });
 
 			createExportCompletedNotification(deps, user.id, 'customEmoji', driveFile.id);

@@ -6,8 +6,8 @@
 import cluster from 'node:cluster';
 import chalk from 'chalk';
 import { default as convertColor } from 'color-convert';
-import { format as dateFormat } from 'date-fns';
 import { bindThis } from '@/decorators.js';
+import { formatTime } from '@/misc/format-date-time.js';
 import { envOption } from './env.js';
 import type { Keyword } from 'color-convert';
 
@@ -54,7 +54,7 @@ export default class Logger {
 			return;
 		}
 
-		const time = dateFormat(new Date(), 'HH:mm:ss');
+		const time = formatTime(new Date());
 		const worker = cluster.isPrimary ? '*' : cluster.worker!.id;
 		const l =
 			level === 'error' ? important ? chalk.bgRed.white('ERR ') : chalk.red('ERR ') :

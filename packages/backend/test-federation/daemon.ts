@@ -31,7 +31,7 @@ console.log('Daemon started running');
 
 {
 	const redisClient = new Redis({
-		host: 'redis.test',
+		host: 'valkey.test',
 	});
 
 	setInterval(() => {

@@ -5,13 +5,12 @@
 
 /**
  * YAMLファイルをJSONファイルに変換するスクリプト
- * ビルド前に実行し、ランタイムにjs-yamlを含まないようにする
+ * ビルド前に実行し、ランタイムにYAMLパーサーを含まないようにする
  */
 
 import fs from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as yaml from 'js-yaml';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
@@ -19,29 +18,29 @@ const _dirname = dirname(_filename);
 const configDir = resolve(_dirname, '../../../.config');
 const OUTPUT_PATH = resolve(_dirname, '../../../built/.config.json');
 
-// TODO: yamlのパースに失敗したときのエラーハンドリング
-
 /**
  * YAMLファイルをJSONファイルに変換
  * @param {string} ymlPath - YAMLファイルのパス
  */
 function yamlToJson(ymlPath) {
 	if (!fs.existsSync(ymlPath)) {
-		console.warn(`YAML file not found: ${ymlPath}`);
-		return;
+		fs.rmSync(OUTPUT_PATH, { force: true });
+		throw new Error(`YAML file not found: ${ymlPath}`);
 	}
 
 	console.log(`${ymlPath} → ${OUTPUT_PATH}`);
 
 	const yamlContent = fs.readFileSync(ymlPath, 'utf-8');
-	const jsonContent = yaml.load(yamlContent);
+	const jsonContent = Bun.YAML.parse(yamlContent);
 	if (!fs.existsSync(dirname(OUTPUT_PATH))) {
 		fs.mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
 	}
-	fs.writeFileSync(OUTPUT_PATH, JSON.stringify({
+	const temporaryOutputPath = `${OUTPUT_PATH}.${process.pid}.tmp`;
+	fs.writeFileSync(temporaryOutputPath, JSON.stringify({
 		'_NOTE_': 'This file is auto-generated from YAML file. DO NOT EDIT.',
 		...jsonContent,
 	}), 'utf-8');
+	fs.renameSync(temporaryOutputPath, OUTPUT_PATH);
 }
 
 if (process.env.MISSKEY_CONFIG_YML) {

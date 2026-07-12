@@ -45,15 +45,17 @@ export async function deleteObjectStorageFileForHonoApi(deps: HonoQueueObjectSto
 
 export async function deleteFileSyncForHonoApi(deps: HonoQueueObjectStorageDependencies, file: MiDriveFile, isExpired = false, deleter?: MiUser): Promise<void> {
 	if (file.storedInternal) {
-		deps.internalStorageService.del(file.accessKey!);
+		const promises = [deps.internalStorageService.del(file.accessKey!)];
 
 		if (file.thumbnailUrl) {
-			deps.internalStorageService.del(file.thumbnailAccessKey!);
+			promises.push(deps.internalStorageService.del(file.thumbnailAccessKey!));
 		}
 
 		if (file.webpublicUrl) {
-			deps.internalStorageService.del(file.webpublicAccessKey!);
+			promises.push(deps.internalStorageService.del(file.webpublicAccessKey!));
 		}
+
+		await Promise.all(promises);
 	} else if (!file.isLink) {
 		const promises = [];
 

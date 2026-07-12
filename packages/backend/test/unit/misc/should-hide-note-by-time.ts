@@ -3,25 +3,21 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { describe, expect, test, beforeEach, afterEach } from 'vitest';
-import * as lolex from '@sinonjs/fake-timers';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 
 describe('misc:should-hide-note-by-time', () => {
-	let clock: lolex.Clock;
 	const epoch = Date.UTC(2000, 0, 1, 0, 0, 0);
 
 	beforeEach(() => {
-		clock = lolex.install({
-			// https://github.com/sinonjs/sinon/issues/2620
-			toFake: Object.keys(lolex.timers).filter((key) => !['nextTick', 'queueMicrotask'].includes(key)) as lolex.FakeMethod[],
+		vi.useFakeTimers({
+			toFake: ['Date'],
 			now: new Date(epoch),
-			shouldClearNativeTimers: true,
 		});
 	});
 
 	afterEach(() => {
-		clock.uninstall();
+		vi.useRealTimers();
 	});
 
 	describe('hiddenBefore が null または undefined の場合', () => {

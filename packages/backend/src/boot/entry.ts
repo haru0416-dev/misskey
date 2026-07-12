@@ -27,6 +27,8 @@ EventEmitter.defaultMaxListeners = 128;
 
 const logger = new Logger('core', 'cyan');
 const clusterLogger = logger.createSubLogger('cluster', 'orange');
+let shuttingDown = false;
+let disposeRuntime: (() => Promise<void>) | undefined;
 
 cluster.on('fork', worker => {
 	clusterLogger.debug(`Process forked: [${worker.id}]`);
@@ -38,7 +40,7 @@ cluster.on('online', worker => {
 
 cluster.on('exit', worker => {
 	clusterLogger.error(chalk.red(`[${worker.id}] died :(`));
-	cluster.fork();
+	if (!shuttingDown) cluster.fork();
 });
 
 if (!envOption.quiet) {
@@ -62,7 +64,16 @@ process.on('exit', code => {
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 	process.once(signal, () => {
-		void shutdownTelemetry().finally(() => process.kill(process.pid, signal));
+		shuttingDown = true;
+		process.once(signal, () => process.exit(1));
+		void (async () => {
+			await disposeRuntime?.();
+			await shutdownTelemetry();
+			process.exit(0);
+		})().catch(error => {
+			logger.error(error);
+			process.exit(1);
+		});
 	});
 }
 
@@ -71,12 +82,12 @@ if (!envOption.disableClustering) {
 	if (cluster.isPrimary) {
 		logger.info(`Start main process... pid: ${process.pid}`);
 		const { masterMain } = await import('./master.js');
-		await masterMain();
+		disposeRuntime = await masterMain();
 		globalEventBus.mount();
 	} else if (cluster.isWorker) {
 		logger.info(`Start worker process... pid: ${process.pid}`);
 		const { workerMain } = await import('./worker.js');
-		await workerMain();
+		disposeRuntime = await workerMain();
 	} else {
 		throw new Error('Unknown process type');
 	}
@@ -84,7 +95,7 @@ if (!envOption.disableClustering) {
 	// 非clusterの場合はMasterのみが起動するため、Workerの処理は行わない(cluster.isWorker === trueの状態でこのブロックに来ることはない)
 	logger.info(`Start main process... pid: ${process.pid}`);
 	const { masterMain } = await import('./master.js');
-	await masterMain();
+	disposeRuntime = await masterMain();
 	globalEventBus.mount();
 }
 

@@ -159,7 +159,7 @@ For newly added languages, once the translation progress per language exceeds 70
 
 ## Development
 ### Setup
-Before developing, you have to set up environment. Misskey requires Redis, PostgreSQL, and FFmpeg.
+Before developing, you have to set up environment. Misskey requires Valkey, PostgreSQL, and FFmpeg.
 
 You would want to install Meilisearch to experiment related features. Technically, meilisearch is not strict requirement, but some features and tests require it.
 
@@ -230,7 +230,7 @@ There are three types of test codes for the backend:
 cp .github/misskey/test.yml .config/
 ```
 
-2. Start DB and Redis servers for testing:
+2. Start DB and Valkey servers for testing:
 ```sh
 docker compose -f packages/backend/test/compose.yml up
 ```

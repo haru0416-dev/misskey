@@ -17,7 +17,7 @@ import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/Us
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { jobQueue, type JobQueueRuntime } from '@/boot/common.js';
-import { api, castAsError, initTestDb, signup, successfulApiCall, uploadFile } from '../utils.js';
+import { api, castAsError, signup, successfulApiCall, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Account Move', () => {
@@ -40,7 +40,6 @@ describe('Account Move', () => {
 
 		const config = loadConfig();
 		url = new URL(config.url);
-		await initTestDb(false);
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
 		root = await signup({ username: 'root' });

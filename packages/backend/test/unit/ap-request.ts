@@ -35,7 +35,7 @@ describe('ap-request', () => {
 	test('createSignedPost with verify', async () => {
 		const keypair = await genRsaKeyPair();
 		const key = { keyId: 'x', 'privateKeyPem': keypair.privateKey };
-		const url = 'https://example.com/inbox';
+		const url = 'https://example.com/inbox?sharedInbox=true';
 		const activity = { a: 1 };
 		const body = JSON.stringify(activity);
 		const headers = {
@@ -48,12 +48,13 @@ describe('ap-request', () => {
 
 		const result = httpSignature.verifySignature(parsed, keypair.publicKey);
 		assert.deepStrictEqual(result, true);
+		assert.match(req.signingString, /^\(request-target\): post \/inbox\?sharedInbox=true$/m);
 	});
 
 	test('createSignedGet with verify', async () => {
 		const keypair = await genRsaKeyPair();
 		const key = { keyId: 'x', 'privateKeyPem': keypair.privateKey };
-		const url = 'https://example.com/outbox';
+		const url = 'https://example.com/outbox?page=true';
 		const headers = {
 			'User-Agent': 'UA',
 		};
@@ -64,6 +65,7 @@ describe('ap-request', () => {
 
 		const result = httpSignature.verifySignature(parsed, keypair.publicKey);
 		assert.deepStrictEqual(result, true);
+		assert.match(req.signingString, /^\(request-target\): get \/outbox\?page=true$/m);
 	});
 
 	test('rejects non matching domain', () => {

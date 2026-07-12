@@ -13,18 +13,24 @@ import { initExtraThreadPool, jobQueue, server } from './common.js';
  */
 export async function workerMain() {
 	const config = loadConfig();
+	let dispose: () => Promise<void>;
 
 	initExtraThreadPool(config);
 
 	if (envOption.onlyServer) {
-		await server();
+		const runtime = await server();
+		dispose = () => runtime.dispose();
 	} else if (envOption.onlyQueue) {
-		await jobQueue();
+		const runtime = await jobQueue();
+		dispose = () => runtime.close();
 	} else {
-		await jobQueue();
+		const runtime = await jobQueue();
+		dispose = () => runtime.close();
 	}
 
 	if (cluster.isWorker) {
 		process.send!('ready');
 	}
+
+	return dispose;
 }

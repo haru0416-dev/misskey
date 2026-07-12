@@ -23,7 +23,7 @@ import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/queue/types
 import type { MiUser } from '@/models/User.js';
 
 function fakeJob<T>(data: T): Bull.Job<T> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<T>;
+	return { id: genId(), data, updateProgress: async () => {} } as unknown as Bull.Job<T>;
 }
 
 async function serveText(text: string): Promise<{ url: string; server: Server }> {

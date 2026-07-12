@@ -8,7 +8,6 @@ import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import RE2 from '@/misc/re2.js';
 import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
-import { updateMetaInDatabase } from '@/core/MetaStore.js';
 import { fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
@@ -107,15 +106,6 @@ function assertSignupGateOpen(meta: MiMeta): void {
 	if (meta.disableRegistration) throw signupValidationError('INVITATION_REQUIRED');
 }
 
-async function assignRootUserIfMissing(deps: SignupDependencies, userId: MiUser['id']): Promise<void> {
-	if (deps.meta.rootUserId != null) return;
-
-	const { before, after } = await updateMetaInDatabase(deps.db, { rootUserId: userId });
-	Object.assign(deps.meta, after);
-	deps.meta.rootUser = null;
-	deps.publishInternalEvent?.('metaUpdated', { before, after });
-}
-
 export async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
 	return {
 		...await packMeDetailedForHonoApi(deps, user, { includeSecrets: true }),
@@ -158,7 +148,8 @@ export async function createLocalSignupAccount(
 	const token = generateNativeUserToken();
 	const keyPair = await genRsaKeyPair();
 	const remoteUri = params.host == null ? null : `https://${params.host}/users/${params.username}`;
-	const account = await createSignupAccountInDatabase(deps.db, {
+	const beforeMeta = { ...deps.meta };
+	const { account, rootClaimed } = await createSignupAccountInDatabase(deps.db, {
 		id: genId(),
 		username: params.username,
 		usernameLower,
@@ -171,9 +162,14 @@ export async function createLocalSignupAccount(
 		passwordHash: params.passwordHash,
 		publicKey: keyPair.publicKey,
 		privateKey: keyPair.privateKey,
+		claimRoot: deps.meta.rootUserId == null,
 	});
 
-	await assignRootUserIfMissing(deps, account.id);
+	if (rootClaimed) {
+		deps.meta.rootUserId = account.id;
+		deps.meta.rootUser = null;
+		deps.publishInternalEvent?.('metaUpdated', { before: beforeMeta, after: deps.meta });
+	}
 
 	// SignupService.signup 相当: userCreated system webhook をエンキューする (原典同様 await しない)。
 	if (deps.systemWebhookDeliverQueue != null) {

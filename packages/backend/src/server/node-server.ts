@@ -78,9 +78,10 @@ export function createHonoNodeServer(options: HonoNodeServerOptions): Server {
 				res.destroy();
 				return;
 			}
+			console.error(err);
 			res.statusCode = 500;
 			res.setHeader('content-type', 'text/plain; charset=utf-8');
-			res.end(err instanceof Error ? err.message : String(err));
+			res.end('Internal Server Error');
 		}
 	});
 }
