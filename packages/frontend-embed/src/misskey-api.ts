@@ -9,6 +9,12 @@ import { apiUrl } from '@shared/utility/config.js';
 
 export const pendingApiRequestsCount = ref(0);
 
+type ApiRequestArgs<P> = {} extends P
+	? [data?: P, signal?: AbortSignal]
+	: [data: P, signal?: AbortSignal];
+
+type ApiGetRequestArgs<P> = {} extends P ? [data?: P] : [data: P];
+
 // Implements Misskey.api.ApiClient.request
 export function misskeyApi<
 	ResT = void,
@@ -17,8 +23,7 @@ export function misskeyApi<
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(
 	endpoint: E,
-	data: P = {} as any,
-	signal?: AbortSignal,
+	...[data, signal]: ApiRequestArgs<P>
 ): Promise<_ResT> {
 	if (endpoint.includes('://')) throw new Error('invalid endpoint');
 	pendingApiRequestsCount.value++;
@@ -31,13 +36,13 @@ export function misskeyApi<
 		// Send request
 		window.fetch(`${apiUrl}/${endpoint}`, {
 			method: 'POST',
-			body: JSON.stringify(data),
+			body: JSON.stringify(data ?? {}),
 			credentials: 'omit',
 			cache: 'no-cache',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			signal,
+			...(signal === undefined ? {} : { signal }),
 		}).then(async (res) => {
 			const body = res.status === 204 ? null : await res.json();
 
@@ -64,7 +69,7 @@ export function misskeyApiGet<
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(
 	endpoint: E,
-	data: P = {} as any,
+	...[data]: ApiGetRequestArgs<P>
 ): Promise<_ResT> {
 	pendingApiRequestsCount.value++;
 
@@ -72,7 +77,9 @@ export function misskeyApiGet<
 		pendingApiRequestsCount.value--;
 	};
 
-	const query = new URLSearchParams(data as any);
+	const query = new URLSearchParams(
+		Object.entries(data ?? {}).map(([key, value]): [string, string] => [key, String(value)]),
+	);
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
 		// Send request

@@ -18,6 +18,7 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 	private finalizationRegistry: FinalizationRegistry<symbol>;
 
 	constructor(workerConstructor: () => Worker, concurrency: number, getUseWorkerNumber = defaultUseWorkerNumber) {
+		if (concurrency < 1) throw new RangeError('concurrency must be at least 1');
 		this.getUseWorkerNumber = getUseWorkerNumber;
 		for (let i = 0; i < concurrency; i++) {
 			this.workers.push(workerConstructor());
@@ -38,6 +39,8 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 	) {
 		let workerNumber = useWorkerNumber(this.prevWorkerNumber, this.workers.length);
 		workerNumber = Math.abs(Math.round(workerNumber)) % this.workers.length;
+		const worker = this.workers[workerNumber];
+		if (worker === undefined) throw new Error('Worker selection failed');
 		// if (_DEV_) console.log('WorkerMultiDispatch: Posting message to worker', workerNumber, useWorkerNumber);
 		this.prevWorkerNumber = workerNumber;
 
@@ -45,16 +48,15 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 		// https://stackoverflow.com/questions/66507585/overload-signatures-union-types-and-no-overload-matches-this-call-error
 		// https://github.com/microsoft/TypeScript/issues/14107
 		if (Array.isArray(options)) {
-			this.workers[workerNumber].postMessage(message, options);
+			worker.postMessage(message, options);
 		} else {
-			this.workers[workerNumber].postMessage(message, options);
+			worker.postMessage(message, options);
 		}
 		return workerNumber;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public addListener(
-		callback: (this: Worker, ev: MessageEvent<RETURN>) => any,
+		callback: (this: Worker, ev: MessageEvent<RETURN>) => void,
 		options?: boolean | AddEventListenerOptions,
 	) {
 		this.workers.forEach((worker) => {
@@ -62,9 +64,8 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 		});
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public removeListener(
-		callback: (this: Worker, ev: MessageEvent<RETURN>) => any,
+		callback: (this: Worker, ev: MessageEvent<RETURN>) => void,
 		options?: boolean | AddEventListenerOptions,
 	) {
 		this.workers.forEach((worker) => {
