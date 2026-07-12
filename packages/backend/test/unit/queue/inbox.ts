@@ -177,6 +177,31 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
+	test('正しい署名でもactivity.actorが署名者と異なる場合は拒否する', async () => {
+		const host = `hono-queue-inbox-actor-mismatch-${genId()}.example.com`;
+		const { job } = await createSignedInboxJob(host, {
+			actor: `http://${host}/users/${genId()}`,
+		});
+
+		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+	});
+
+	test('正しい署名でもactivity.idのホストが署名者と異なる場合は拒否する', async () => {
+		const host = `hono-queue-inbox-id-mismatch-${genId()}.example.com`;
+		const { job } = await createSignedInboxJob(host, {
+			id: `http://other-${genId()}.example.com/activities/${genId()}`,
+		});
+
+		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+	});
+
+	test('正しい署名でもactivity.idが無い場合は拒否する', async () => {
+		const host = `hono-queue-inbox-missing-id-${genId()}.example.com`;
+		const { job } = await createSignedInboxJob(host, { id: undefined });
+
+		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+	});
+
 	test('federationでブロックされたホストからのリクエストはBlocked requestを返す', async () => {
 		const host = `hono-queue-inbox-blocked-${genId()}.example.com`;
 		const { job } = await createSignedInboxJob(host);

@@ -4083,7 +4083,6 @@ describe('Endpoints', () => {
 
 	describe('reset-password endpoint', () => {
 		test('reset-password updates password and consumes reset token', async () => {
-			const config = loadConfig();
 			const token = `reset-token-${genId()}`;
 			await createPasswordResetRequestInDatabase(db, {
 				id: genId(),
@@ -4100,6 +4099,16 @@ describe('Endpoints', () => {
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
 			assert.strictEqual(await bcrypt.compare('new-reset-password', profile.password!), true);
+
+			const reused = await api('reset-password', {
+				token,
+				password: 'reused-reset-password',
+			});
+			assert.notStrictEqual(reused.status, 204);
+
+			const profileAfterReuse = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
+			assert.strictEqual(await bcrypt.compare('new-reset-password', profileAfterReuse.password!), true);
+			assert.strictEqual(await bcrypt.compare('reused-reset-password', profileAfterReuse.password!), false);
 		});
 	});
 

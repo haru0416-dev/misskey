@@ -145,6 +145,44 @@ describe('Note', () => {
 			strictEqual(activityPubRenote.actorId?.href, `https://a.test/users/${alice.id}`);
 			strictEqual(activityPubRenote.objectId?.href, `https://a.test/notes/${renotedNote.id}`);
 		});
+
+		test('Undo(Announce) removes the remote Renote but keeps the original Note', async () => {
+			const follower = await createAccount('b.test');
+			const aliceInFollower = await resolveRemoteUser('a.test', alice.id, follower);
+			await follower.client.request('following/create', { userId: aliceInFollower.id });
+			await sleep();
+
+			try {
+				const originalNote = (await alice.client.request('notes/create', {
+					text: 'a',
+				})).createdNote;
+				const renote = (await alice.client.request('notes/create', {
+					renoteId: originalNote.id,
+				})).createdNote;
+				await sleep();
+
+				const renoteInB = (await follower.client.request('notes/timeline', {}))
+					.find(note => note.uri === `https://a.test/notes/${renote.id}/activity`);
+				assert(renoteInB != null);
+				assert(renoteInB.renoteId != null);
+				const originalNoteInB = await follower.client.request('notes/show', { noteId: renoteInB.renoteId });
+
+				await alice.client.request('notes/delete', { noteId: renote.id });
+				await sleep();
+
+				await rejects(
+					async () => await follower.client.request('notes/show', { noteId: renoteInB.id }),
+					(err: any) => {
+						strictEqual(err.code, 'NO_SUCH_NOTE');
+						return true;
+					},
+				);
+				strictEqual((await follower.client.request('notes/show', { noteId: originalNoteInB.id })).id, originalNoteInB.id);
+			} finally {
+				await follower.client.request('following/delete', { userId: aliceInFollower.id });
+				await sleep();
+			}
+		});
 	});
 
 	describe('Other props', () => {
@@ -317,6 +355,20 @@ describe('Note', () => {
 				strictEqual(reactions.length, 1);
 				strictEqual(reactions[0].type, `:${emoji.name}@b.test:`);
 				strictEqual(reactions[0].user.id, bobInA.id);
+			});
+
+			test('Undo(Like) removes the remote reaction', async () => {
+				const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
+				const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
+				await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '❤' });
+				await sleep();
+
+				strictEqual((await alice.client.request('notes/reactions', { noteId: note.id })).length, 1);
+
+				await bob.client.request('notes/reactions/delete', { noteId: resolvedNote.id });
+				await sleep();
+
+				strictEqual((await alice.client.request('notes/reactions', { noteId: note.id })).length, 0);
 			});
 		});
 

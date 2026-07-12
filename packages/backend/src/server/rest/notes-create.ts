@@ -797,7 +797,8 @@ export async function postNoteCreatedForHonoApi(
 					isQuote: isRenoteData(data) && isQuoteData(data),
 				}, note);
 
-				const directRecipients = (await Promise.all(mentionedUsers.filter(u => u.host != null).map(u => resolveRemoteRecipientForHonoApi(deps, u.id)))).filter((u): u is NonNullable<typeof u> => u != null);
+				const recipientUsers = note.visibility === 'specified' ? (data.visibleUsers ?? []) : mentionedUsers;
+				const directRecipients = (await Promise.all(recipientUsers.filter(u => u.host != null).map(u => resolveRemoteRecipientForHonoApi(deps, u.id)))).filter((u): u is NonNullable<typeof u> => u != null);
 
 				if (data.reply && data.reply.userHost !== null) {
 					const u = await resolveRemoteRecipientForHonoApi(deps, data.reply.userId);
@@ -1033,12 +1034,6 @@ export async function createNoteForHonoApi(
 
 	if (data.visibility === 'specified') {
 		if (data.visibleUsers == null) throw new Error('invalid param');
-		for (const u of data.visibleUsers) {
-			if (!finalMentionedUserIds.has(u.id)) {
-				finalMentionedUsers.push(u);
-				finalMentionedUserIds.add(u.id);
-			}
-		}
 		const visibleUserIds = new Set(data.visibleUsers.map(user => user.id));
 		if (data.reply && !visibleUserIds.has(data.reply.userId)) {
 			const replyUser = replyUserForVisibility ?? await fetchUserByIdOrFailFromDatabase(deps.db, data.reply.userId);

@@ -68,23 +68,19 @@ describe('Block', () => {
 			strictEqual(followers.length, 1);
 		});
 
-		test.skip('Remove follower when block them', async () => {
-			test('before block', async () => {
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 1);
-				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 1);
-			});
+		test('Remove follower when block them', async () => {
+			const followingBeforeBlock = await bob.client.request('users/following', { userId: bob.id });
+			strictEqual(followingBeforeBlock.length, 1);
+			const followersBeforeBlock = await alice.client.request('users/followers', { userId: alice.id });
+			strictEqual(followersBeforeBlock.length, 1);
 
 			await alice.client.request('blocking/create', { userId: bobInA.id });
 			await sleep();
 
-			test('after block', async () => {
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 0);
-				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 0);
-			});
+			const followingAfterBlock = await bob.client.request('users/following', { userId: bob.id });
+			strictEqual(followingAfterBlock.length, 0);
+			const followersAfterBlock = await alice.client.request('users/followers', { userId: alice.id });
+			strictEqual(followersAfterBlock.length, 0);
 		});
 	});
 

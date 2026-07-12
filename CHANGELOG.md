@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### General
+- Fix: 指定公開ノートのメンション配送と、非公開の親ノートを持つ指定公開返信の連合を修正
 - Enhance: エラー・トレース収集をSentryからOpenTelemetry OTLPへ移行
 - Enhance: ノート翻訳サービスとしてセルフホスト可能なLibreTranslateに対応
 - Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除
