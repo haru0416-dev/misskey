@@ -90,7 +90,7 @@ describe('WidgetUnixClock', () => {
 
 		const result = render(WidgetUnixClock);
 		expect(requestAnimationFrame).not.toHaveBeenCalled();
-		expect([...timers.values()].some(timer => timer.delay === 766)).toBe(true);
+		expect([...timers.values()].some((timer) => timer.delay === 766)).toBe(true);
 
 		visibilityState = 'hidden';
 		window.document.dispatchEvent(new Event('visibilitychange'));

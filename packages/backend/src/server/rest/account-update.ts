@@ -601,6 +601,7 @@ export async function handleHonoApiIUpdate(
 	const iObj = await packMeDetailedForHonoApi(deps, freshUser, { includeSecrets: isSecure });
 
 	const updatedProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+	deps.publishInternalEvent?.('updateUserProfile', updatedProfile);
 
 	deps.publishMainStream?.(user.id, 'meUpdated', iObj);
 

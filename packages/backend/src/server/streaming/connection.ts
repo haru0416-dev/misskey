@@ -4,6 +4,7 @@
  */
 
 import type { EventEmitter } from 'node:events';
+import type { GlobalEvents } from '@/core/global-events.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
@@ -36,6 +37,8 @@ import { honoStreamChannelQueueStats } from './channels/queue-stats.js';
 import { honoStreamChannelServerStats } from './channels/server-stats.js';
 
 const MAX_CHANNELS_PER_CONNECTION = 32;
+const REFRESH_CONCURRENCY = 8;
+const REFRESH_RETRY_DELAYS_MS = [0, 250, 1000] as const;
 
 export type HonoStreamConnectionDependencies =
 	& HonoApiNotificationDependencies
@@ -129,7 +132,78 @@ export class HonoStreamConnection {
 	private userIdsWhoBlockingMe: Set<string> = new Set();
 	private userIdsWhoMeMutingRenotes: Set<string> = new Set();
 	private userMutedInstances: Set<string> = new Set();
-	private fetchIntervalId: NodeJS.Timeout | null = null;
+	private pendingInternalEvents: GlobalEvents['internal']['payload'][] | null = null;
+	private refreshPromise?: Promise<void>;
+	private readonly onBroadcast = (data: { type: string; body: JsonValue }): void => {
+		this.sendMessageToWs(data.type, data.body);
+	};
+	private readonly onInternalEvent = (data: GlobalEvents['internal']['payload']): void => {
+		if (this.pendingInternalEvents != null) {
+			this.pendingInternalEvents.push(data);
+			return;
+		}
+		this.applyInternalEvent(data);
+	};
+	private applyInternalEvent(data: GlobalEvents['internal']['payload']): void {
+		if (this.user == null) return;
+
+		switch (data.type) {
+			case 'follow':
+			case 'followingUpdated':
+				if (data.body.followerId === this.user.id) {
+					this.following[data.body.followeeId] = { withReplies: data.body.withReplies };
+				}
+				break;
+			case 'unfollow':
+				if (data.body.followerId === this.user.id) {
+					delete this.following[data.body.followeeId];
+				}
+				break;
+			case 'followingsUpdated':
+				if (data.body.followerId === this.user.id) {
+					for (const followeeId of Object.keys(this.following)) {
+						this.following[followeeId] = { withReplies: data.body.withReplies };
+					}
+				}
+				break;
+			case 'followChannel':
+				if (data.body.userId === this.user.id) this.followingChannels.add(data.body.channelId);
+				break;
+			case 'unfollowChannel':
+				if (data.body.userId === this.user.id) this.followingChannels.delete(data.body.channelId);
+				break;
+			case 'muteChannel':
+				if (data.body.userId === this.user.id) this.mutingChannels.add(data.body.channelId);
+				break;
+			case 'unmuteChannel':
+				if (data.body.userId === this.user.id) this.mutingChannels.delete(data.body.channelId);
+				break;
+			case 'mute':
+				if (data.body.muterId === this.user.id) this.userIdsWhoMeMuting.add(data.body.muteeId);
+				break;
+			case 'unmute':
+				if (data.body.muterId === this.user.id) this.userIdsWhoMeMuting.delete(data.body.muteeId);
+				break;
+			case 'renoteMute':
+				if (data.body.muterId === this.user.id) this.userIdsWhoMeMutingRenotes.add(data.body.muteeId);
+				break;
+			case 'renoteUnmute':
+				if (data.body.muterId === this.user.id) this.userIdsWhoMeMutingRenotes.delete(data.body.muteeId);
+				break;
+			case 'blockingCreated':
+				if (data.body.blockeeId === this.user.id) this.userIdsWhoBlockingMe.add(data.body.blockerId);
+				break;
+			case 'blockingDeleted':
+				if (data.body.blockeeId === this.user.id) this.userIdsWhoBlockingMe.delete(data.body.blockerId);
+				break;
+			case 'updateUserProfile':
+				if (data.body.userId === this.user.id) {
+					this.userMutedInstances.clear();
+					for (const host of data.body.mutedInstances) this.userMutedInstances.add(host);
+				}
+				break;
+		}
+	}
 	private readonly onNoteStreamMessage = (data: { type: string; body: { id: string; userId: string; visibility: string; visibleUserIds?: string[]; body: JsonValue } }): void => {
 		if (data.body.userId !== this.user?.id) {
 			if (data.body.visibility === 'specified' && (this.user == null || !(data.body.visibleUserIds ?? []).includes(this.user.id))) {
@@ -169,25 +243,46 @@ export class HonoStreamConnection {
 		this.userMutedInstances = snapshot.userMutedInstances;
 	}
 
-	public async init(): Promise<void> {
-		if (this.user != null) {
-			await this.fetch();
-			if (!this.fetchIntervalId) {
-				// 原典は RedisKVCache 越しの 10 秒間隔 (実質イベント駆動で安価) だったが、hono 側は
-				// 毎回 7 クエリの直接 DB 読みなので間隔を 60 秒に伸ばす。接続直後は上の await fetch()
-				// が即時反映するため、影響は「接続中にミュート等を変更した場合の反映が最大60秒遅れる」のみ。
-				this.fetchIntervalId = setInterval(() => void this.fetch(), 1000 * 60);
-			}
+	public async init(subscriber?: EventEmitter): Promise<void> {
+		if (subscriber != null) {
+			this.subscriber = subscriber;
+			this.pendingInternalEvents = [];
+			subscriber.on('internal', this.onInternalEvent);
+		}
+
+		try {
+			await this.refresh();
+		} catch (error) {
+			this.dispose();
+			throw error;
 		}
 	}
 
+	public refresh(): Promise<void> {
+		if (this.user == null) return Promise.resolve();
+		if (this.refreshPromise != null) return this.refreshPromise;
+
+		this.pendingInternalEvents = [];
+		const refreshPromise = this.fetch().finally(() => {
+			const pendingInternalEvents = this.pendingInternalEvents;
+			this.pendingInternalEvents = null;
+			for (const event of pendingInternalEvents ?? []) this.applyInternalEvent(event);
+			if (this.refreshPromise === refreshPromise) this.refreshPromise = undefined;
+		});
+		this.refreshPromise = refreshPromise;
+		return refreshPromise;
+	}
+
 	public listen(subscriber: EventEmitter, sendToClient: (raw: string) => void): void {
-		this.subscriber = subscriber;
+		if (this.subscriber == null) {
+			this.subscriber = subscriber;
+			this.subscriber.on('internal', this.onInternalEvent);
+		} else if (this.subscriber !== subscriber) {
+			throw new Error('Stream connection initialized with a different subscriber');
+		}
 		this.sendToClient = sendToClient;
 
-		this.subscriber.on('broadcast', (data: { type: string; body: JsonValue }) => {
-			this.sendMessageToWs(data.type, data.body);
-		});
+		this.subscriber.on('broadcast', this.onBroadcast);
 	}
 
 	public handleClientMessage(raw: string): void {
@@ -345,10 +440,51 @@ export class HonoStreamConnection {
 	}
 
 	public dispose(): void {
-		if (this.fetchIntervalId) clearInterval(this.fetchIntervalId);
+		this.subscriber?.off('broadcast', this.onBroadcast);
+		this.subscriber?.off('internal', this.onInternalEvent);
+		for (const noteId of Object.keys(this.subscribingNotes)) {
+			this.subscriber?.off(`noteStream:${noteId}`, this.onNoteStreamMessage);
+		}
 		for (const entry of this.channels.values()) {
 			entry.handle.dispose?.();
 		}
 		this.channels.clear();
 	}
+}
+
+export async function refreshHonoStreamConnections(
+	connections: ReadonlyMap<HonoStreamConnection, () => void>,
+): Promise<void> {
+	const pending = [...connections.entries()];
+	let index = 0;
+	const workers = Array.from({ length: Math.min(REFRESH_CONCURRENCY, pending.length) }, async () => {
+		while (index < pending.length) {
+			const [connection, terminate] = pending[index++]!;
+			if (!connections.has(connection)) continue;
+			let lastError: unknown;
+			let refreshed = false;
+			for (const delayMs of REFRESH_RETRY_DELAYS_MS) {
+				// Retries are deliberately serialized to avoid amplifying a recovering database outage.
+				// eslint-disable-next-line no-await-in-loop
+				if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
+				try {
+					// eslint-disable-next-line no-await-in-loop
+					await connection.refresh();
+					refreshed = true;
+					break;
+				} catch (error) {
+					lastError = error;
+				}
+			}
+			if (!refreshed && connections.has(connection)) {
+				console.error('Failed to refresh a streaming connection after Redis reconnected; terminating the connection.', lastError);
+				try {
+					terminate();
+				} catch (error) {
+					console.error('Failed to terminate a stale streaming connection.', error);
+				}
+			}
+		}
+	});
+	await Promise.all(workers);
 }

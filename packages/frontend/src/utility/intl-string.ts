@@ -104,10 +104,8 @@ export function compareStringEquals(a: string, b: string) {
 	const normalizedA = normalizeString(a);
 	const normalizedB = normalizeString(b);
 	if (normalizedA === normalizedB) return true;
-	if (
-		normalizeStringWithHiraganaFromNormalized(normalizedA) ===
-		normalizeStringWithHiraganaFromNormalized(normalizedB)
-	) return true;
+	if (normalizeStringWithHiraganaFromNormalized(normalizedA) === normalizeStringWithHiraganaFromNormalized(normalizedB))
+		return true;
 	return false;
 }
 
@@ -122,6 +120,7 @@ export function compareStringIncludes(base: string, query: string) {
 		normalizeStringWithHiraganaFromNormalized(normalizedBase).includes(
 			normalizeStringWithHiraganaFromNormalized(normalizedQuery),
 		)
-	) return true;
+	)
+		return true;
 	return false;
 }

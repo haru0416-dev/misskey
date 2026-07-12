@@ -482,6 +482,5 @@ export class SnowfallEffect {
 
 		this.setUniform('wind', wind.current);
 		this.setUniform('time', elapsed);
-
 	}
 }

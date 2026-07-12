@@ -149,7 +149,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							case 'jelly': {
 								const speed = validTime(token.props.args.speed) ?? '1s';
 								const delay = validTime(token.props.args.delay) ?? '0s';
-								style = useAnim ? { animation: `mfm-rubberBand ${speed} linear infinite both`, animationDelay: delay } : {};
+								style = useAnim
+									? { animation: `mfm-rubberBand ${speed} linear infinite both`, animationDelay: delay }
+									: {};
 								break;
 							}
 							case 'twitch': {
@@ -173,7 +175,13 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								const anime = token.props.args.x ? 'mfm-spinX' : token.props.args.y ? 'mfm-spinY' : 'mfm-spin';
 								const speed = validTime(token.props.args.speed) ?? '1.5s';
 								const delay = validTime(token.props.args.delay) ?? '0s';
-								style = useAnim ? { animation: `${anime} ${speed} linear infinite`, animationDirection: direction, animationDelay: delay } : {};
+								style = useAnim
+									? {
+											animation: `${anime} ${speed} linear infinite`,
+											animationDirection: direction,
+											animationDelay: delay,
+										}
+									: {};
 								break;
 							}
 							case 'jump': {
@@ -185,7 +193,13 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							case 'bounce': {
 								const speed = validTime(token.props.args.speed) ?? '0.75s';
 								const delay = validTime(token.props.args.delay) ?? '0s';
-								style = useAnim ? { animation: `mfm-bounce ${speed} linear infinite`, transformOrigin: 'center bottom', animationDelay: delay } : {};
+								style = useAnim
+									? {
+											animation: `mfm-bounce ${speed} linear infinite`,
+											transformOrigin: 'center bottom',
+											animationDelay: delay,
+										}
+									: {};
 								break;
 							}
 							case 'flip': {

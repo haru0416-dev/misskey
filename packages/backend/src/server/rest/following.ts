@@ -463,8 +463,9 @@ async function incrementFollowing(
 	deps: HonoApiFollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
+	withReplies: MiFollowing['withReplies'],
 ): Promise<void> {
-	deps.publishInternalEvent?.('follow', { followerId: follower.id, followeeId: followee.id });
+	deps.publishInternalEvent?.('follow', { followerId: follower.id, followeeId: followee.id, withReplies });
 
 	if (!follower.movedToUri && !followee.movedToUri) {
 		await Promise.all([
@@ -589,7 +590,7 @@ export async function insertFollowingWithSideEffects(
 		}
 	}
 
-	await incrementFollowing(deps, follower, followee);
+	await incrementFollowing(deps, follower, followee, options.withReplies ?? false);
 	await Promise.all([
 		options.silent ? Promise.resolve() : publishFollowToLocalFollower(deps, follower, followee),
 		publishFollowedToLocalFollowee(deps, followee, follower),
@@ -683,6 +684,9 @@ export async function handleHonoApiFollowingUpdateAll(
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
 	});
+	if (params.withReplies != null) {
+		deps.publishInternalEvent?.('followingsUpdated', { followerId: me.id, withReplies: params.withReplies });
+	}
 }
 
 export async function handleHonoApiFollowingDelete(
@@ -732,6 +736,9 @@ export async function handleHonoApiFollowingUpdate(
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
 	});
+	if (params.withReplies != null) {
+		deps.publishInternalEvent?.('followingUpdated', { followerId: me.id, followeeId: followee.id, withReplies: params.withReplies });
+	}
 
 	return await packUserLiteForHonoApi(deps, follower);
 }

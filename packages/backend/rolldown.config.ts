@@ -46,7 +46,6 @@ function backendDevServerPlugin(): Plugin {
 		async watchChange() {
 			if (backendProcess) {
 				await killBackendProcess();
-				await runBuildAssets();
 			}
 		},
 	};
@@ -59,9 +58,11 @@ export default defineConfig((args) => {
 	// 通常のビルド時にexternalとするモジュール
 	const externalModules: ExternalOption = [
 		/^slacc-.*/,
-		/^@sentry\/.*/,
-		/^@sentry-internal\/.*/,
+		/^@opentelemetry\/.*/,
 		/^@napi-rs\/.*/,
+		'bullmq',
+		'ioredis',
+		'pg',
 		'sharp',
 		'jsdom',
 		'ipaddr.js',

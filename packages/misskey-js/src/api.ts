@@ -117,7 +117,7 @@ export class APIClient {
 				} else {
 					reject({
 						[MK_API_ERROR]: true,
-						...(this.assertIsRecord(body) && this.assertIsRecord(body.error) ? body.error : {}),
+						...(this.assertIsRecord(body) && this.assertIsRecord(body['error']) ? body['error'] : {}),
 					});
 				}
 			}).catch(reject);

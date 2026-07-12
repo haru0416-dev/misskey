@@ -7,7 +7,9 @@ import { defineAsyncComponent } from 'vue';
 import * as Misskey from 'misskey-js';
 import * as os from '@/os.js';
 
-const MkSystemWebhookEditor = defineAsyncComponent(() => import('@/features/webhooks/components/MkSystemWebhookEditor.vue'));
+const MkSystemWebhookEditor = defineAsyncComponent(
+	() => import('@/features/webhooks/components/MkSystemWebhookEditor.vue'),
+);
 
 export type SystemWebhookEventType = Misskey.entities.SystemWebhook['on'][number];
 
@@ -30,21 +32,17 @@ export async function showSystemWebhookEditorDialog(
 	props: MkSystemWebhookEditorProps,
 ): Promise<MkSystemWebhookResult | null> {
 	const { result } = await new Promise<{ result: MkSystemWebhookResult | null }>((resolve) => {
-		const { dispose } = os.popup(
-			MkSystemWebhookEditor,
-			props,
-			{
-				submitted: (ev: MkSystemWebhookResult) => {
-					resolve({ result: ev });
-				},
-				canceled: () => {
-					resolve({ result: null });
-				},
-				closed: () => {
-					dispose();
-				},
+		const { dispose } = os.popup(MkSystemWebhookEditor, props, {
+			submitted: (ev: MkSystemWebhookResult) => {
+				resolve({ result: ev });
 			},
-		);
+			canceled: () => {
+				resolve({ result: null });
+			},
+			closed: () => {
+				dispose();
+			},
+		});
 	});
 
 	return result;

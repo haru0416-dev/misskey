@@ -38,7 +38,7 @@ type MfmProps = {
 	nowrap?: boolean;
 	author?: Misskey.entities.UserLite;
 	isNote?: boolean;
-	emojiUrls?: Record<string, string>;
+	emojiUrls?: Record<string, string> | undefined;
 	rootScale?: number;
 	nyaize?: boolean | 'respect';
 	parsedNodes?: mfm.MfmNode[] | null;
@@ -275,6 +275,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'ruby': {
 						if (token.children.length === 1) {
 							const child = token.children[0];
+							if (child === undefined) return h('ruby');
 							let text = child.type === 'text' ? child.props.text : '';
 							if (!disableNyaize && shouldNyaize) {
 								text = Misskey.nyaize(text);
@@ -291,7 +292,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					}
 					case 'unixtime': {
 						const child = token.children[0];
-						const unixtime = parseInt(child.type === 'text' ? child.props.text : '');
+						const unixtime = parseInt(child?.type === 'text' ? child.props.text : '');
 						return h('span', {
 							style: 'display: inline-block; font-size: 90%; border: solid 1px var(--MI_THEME-divider); border-radius: 999px; padding: 4px 10px 4px 6px;',
 						}, [
@@ -398,7 +399,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					return [h(EmCustomEmoji, {
 						key: Math.random(),
 						name: token.props.name,
-						normal: props.plain,
+						normal: props.plain ?? false,
 						host: null,
 						useOriginalSize: scale >= 2.5,
 						fallbackToImage: false,
@@ -408,11 +409,12 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					if (props.emojiUrls && (props.emojiUrls[token.props.name] == null)) {
 						return [h('span', `:${token.props.name}:`)];
 					} else {
+						const emojiUrl = props.emojiUrls?.[token.props.name];
 						return [h(EmCustomEmoji, {
 							key: Math.random(),
 							name: token.props.name,
-							url: props.emojiUrls && props.emojiUrls[token.props.name],
-							normal: props.plain,
+							...(emojiUrl === undefined ? {} : { url: emojiUrl }),
+							normal: props.plain ?? false,
 							host: props.author.host,
 							useOriginalSize: scale >= 2.5,
 						})];
@@ -446,8 +448,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 			}
 
 			default: {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				console.error('unrecognized ast type:', (token as any).type);
+				console.error('unrecognized ast:', token);
 
 				return [];
 			}

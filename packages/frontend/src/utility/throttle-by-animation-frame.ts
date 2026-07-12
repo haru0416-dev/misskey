@@ -8,7 +8,9 @@ export type AnimationFrameThrottled<T extends unknown[]> = ((...args: T) => void
 	flush: () => void;
 };
 
-export function throttleByAnimationFrame<T extends unknown[]>(callback: (...args: T) => void): AnimationFrameThrottled<T> {
+export function throttleByAnimationFrame<T extends unknown[]>(
+	callback: (...args: T) => void,
+): AnimationFrameThrottled<T> {
 	let frameId: number | null = null;
 	let latestArgs: T | null = null;
 

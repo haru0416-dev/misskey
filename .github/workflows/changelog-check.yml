@@ -21,6 +21,8 @@ jobs:
         uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version-file: .bun-version
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Checkout base
         run: |
@@ -39,7 +41,9 @@ jobs:
         run: diff -u CHANGELOG-base.md CHANGELOG-head.md
         working-directory: scripts/changelog-checker
 
-      # checker は実行時依存ゼロなので bun install 不要 (bun が TypeScript を直接実行する)
+      - name: Test Checker
+        run: bun run --bun --filter changelog-checker test
+
       - name: Run Checker
         run: bun run run
         working-directory: scripts/changelog-checker

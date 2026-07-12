@@ -27,7 +27,7 @@ describe('custom emoji validation', () => {
 		{ ...emoji, name: null },
 		{ ...emoji, url: 1 },
 		{ ...emoji, localOnly: 'false' },
-	])('rejects an invalid simple emoji: %j', value => {
+	])('rejects an invalid simple emoji: %j', (value) => {
 		expect(isEmojiSimple(value)).toBe(false);
 	});
 

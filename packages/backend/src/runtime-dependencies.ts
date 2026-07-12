@@ -12,7 +12,7 @@ import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/global-events.js';
-import { createAiService, type AiService } from '@/core/AiService.js';
+import { createAiService } from '@/core/AiService.js';
 import { createDownloadService, type DownloadService } from '@/core/DownloadService.js';
 import { createFileInfoService, type FileInfoService } from '@/core/FileInfoService.js';
 import { createHttpRequestService, type HttpRequestService } from '@/core/HttpRequestService.js';
@@ -22,7 +22,7 @@ import { createLoggerService, type LoggerService } from '@/core/LoggerService.js
 import { createS3Service, type S3Service } from '@/core/S3Service.js';
 import { createEmailService, type EmailService } from '@/core/EmailService.js';
 import { createUserAuthService, type UserAuthService } from '@/core/UserAuthService.js';
-import { createUtilityService, type UtilityService } from '@/core/UtilityService.js';
+import { createUtilityService } from '@/core/UtilityService.js';
 import { createWebAuthnService, type WebAuthnService } from '@/core/WebAuthnService.js';
 import {
 	createDbQueue,
@@ -56,7 +56,6 @@ export type RuntimeDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	meilisearch: Meilisearch | null;
-	aiService: AiService;
 	downloadService: DownloadService;
 	emailService: EmailService;
 	fileInfoService: FileInfoService;
@@ -66,7 +65,6 @@ export type RuntimeDependencies = {
 	loggerService: LoggerService;
 	s3Service: S3Service;
 	userAuthService: UserAuthService;
-	utilityService: UtilityService;
 	urlPreviewService: UrlPreviewService;
 	videoProcessingService: VideoProcessingService;
 	webAuthnService: WebAuthnService;
@@ -90,12 +88,12 @@ export type RuntimeDependencies = {
 };
 
 export type RuntimeResources = {
-	drizzlePool: MiDrizzlePool;
-	redis: Redis.Redis;
-	redisForPub: Redis.Redis;
-	redisForSub: Redis.Redis;
-	redisForTimelines: Redis.Redis;
-	redisForReactions: Redis.Redis;
+	drizzlePool?: MiDrizzlePool;
+	redis?: Redis.Redis;
+	redisForPub?: Redis.Redis;
+	redisForSub?: Redis.Redis;
+	redisForTimelines?: Redis.Redis;
+	redisForReactions?: Redis.Redis;
 	systemQueue?: SystemQueue;
 	endedPollNotificationQueue?: EndedPollNotificationQueue;
 	postScheduledNoteQueue?: PostScheduledNoteQueue;
@@ -133,8 +131,13 @@ export function createRedisForPub(config: Config): Redis.Redis {
 
 export async function createRedisForSub(config: Config): Promise<Redis.Redis> {
 	const redis = new Redis.Redis(config.redisForPubsub);
-	await redis.subscribe(config.host);
-	return redis;
+	try {
+		await redis.subscribe(config.host);
+		return redis;
+	} catch (error) {
+		await closeRedisConnection(redis);
+		throw error;
+	}
 }
 
 export function createRedisForTimelines(config: Config): Redis.Redis {
@@ -193,59 +196,61 @@ export async function disposeRuntimeResources(resources: RuntimeResources): Prom
 		resources.objectStorageQueue?.close(),
 		resources.userWebhookDeliverQueue?.close(),
 		resources.systemWebhookDeliverQueue?.close(),
-		resources.drizzlePool.end(),
-		closeRedisConnection(resources.redis),
-		closeRedisConnection(resources.redisForPub),
-		closeRedisConnection(resources.redisForSub),
-		closeRedisConnection(resources.redisForTimelines),
-		closeRedisConnection(resources.redisForReactions),
+		resources.drizzlePool?.end(),
+		resources.redis ? closeRedisConnection(resources.redis) : undefined,
+		resources.redisForPub ? closeRedisConnection(resources.redisForPub) : undefined,
+		resources.redisForSub ? closeRedisConnection(resources.redisForSub) : undefined,
+		resources.redisForTimelines ? closeRedisConnection(resources.redisForTimelines) : undefined,
+		resources.redisForReactions ? closeRedisConnection(resources.redisForReactions) : undefined,
 	]);
 }
 
 export async function createRuntimeDependencies(config: Config): Promise<RuntimeDependencies> {
-	const drizzlePool = createDrizzlePool(config);
-	const db = createDrizzleDatabase(drizzlePool, config);
-	const redis = createRedisClient(config);
-	const redisForPub = createRedisForPub(config);
-	const redisForSub = await createRedisForSub(config);
-	const redisForTimelines = createRedisForTimelines(config);
-	const redisForReactions = createRedisForReactions(config);
-	const systemQueue = createSystemQueue(config);
-	const endedPollNotificationQueue = createEndedPollNotificationQueue(config);
-	const postScheduledNoteQueue = createPostScheduledNoteQueue(config);
-	const deliverQueue = createDeliverQueue(config);
-	const inboxQueue = createInboxQueue(config);
-	const dbQueue = createDbQueue(config);
-	const relationshipQueue = createRelationshipQueue(config);
-	const objectStorageQueue = createObjectStorageQueue(config);
-	const userWebhookDeliverQueue = createUserWebhookDeliverQueue(config);
-	const systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config);
-	const meilisearch = createMeilisearchClient(config);
-	const meta = await fetchReactiveMeta(db, redisForSub);
-	const loggerService = createLoggerService();
-	const httpRequestService = createHttpRequestService(config);
-	const aiService = createAiService(meta, httpRequestService, loggerService);
-	const fileInfoService = createFileInfoService(aiService, loggerService);
-	const downloadService = createDownloadService(config, httpRequestService, loggerService);
-	const urlPreviewService = createUrlPreviewService(config, meta, httpRequestService, loggerService);
-	const imageProcessingService = createImageProcessingService();
-	const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
-	const internalStorageService = createInternalStorageService(config);
-	const s3Service = createS3Service(httpRequestService);
-	const utilityService = createUtilityService(config, meta);
-	const emailService = createEmailService(config, meta, db, loggerService, utilityService, httpRequestService);
-	const userAuthService = createUserAuthService(redis, db);
-	const webAuthnService = createWebAuthnService(config, meta, redis, db);
-	const chartWriters = createHonoChartWriters({ db, redis, meta, logger: loggerService.getLogger('chart', 'white') });
-	const chartWriterSaveIntervalId = startHonoChartWriterSaveInterval(chartWriters);
+	const resources: RuntimeResources = {};
+	try {
+		const drizzlePool = resources.drizzlePool = createDrizzlePool(config);
+		const db = createDrizzleDatabase(drizzlePool, config);
+		const redis = resources.redis = createRedisClient(config);
+		const redisForPub = resources.redisForPub = createRedisForPub(config);
+		const redisForSub = resources.redisForSub = await createRedisForSub(config);
+		const redisForTimelines = resources.redisForTimelines = createRedisForTimelines(config);
+		const redisForReactions = resources.redisForReactions = createRedisForReactions(config);
+		const systemQueue = resources.systemQueue = createSystemQueue(config);
+		const endedPollNotificationQueue = resources.endedPollNotificationQueue = createEndedPollNotificationQueue(config);
+		const postScheduledNoteQueue = resources.postScheduledNoteQueue = createPostScheduledNoteQueue(config);
+		const deliverQueue = resources.deliverQueue = createDeliverQueue(config);
+		const inboxQueue = resources.inboxQueue = createInboxQueue(config);
+		const dbQueue = resources.dbQueue = createDbQueue(config);
+		const relationshipQueue = resources.relationshipQueue = createRelationshipQueue(config);
+		const objectStorageQueue = resources.objectStorageQueue = createObjectStorageQueue(config);
+		const userWebhookDeliverQueue = resources.userWebhookDeliverQueue = createUserWebhookDeliverQueue(config);
+		const systemWebhookDeliverQueue = resources.systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config);
+		const meilisearch = createMeilisearchClient(config);
+		const meta = await fetchReactiveMeta(db, redisForSub);
+		const loggerService = createLoggerService();
+		const httpRequestService = createHttpRequestService(config);
+		const aiService = createAiService(meta, httpRequestService, loggerService);
+		const fileInfoService = createFileInfoService(aiService, loggerService);
+		const downloadService = createDownloadService(config, httpRequestService, loggerService);
+		const urlPreviewService = createUrlPreviewService(config, meta, httpRequestService, loggerService);
+		const imageProcessingService = createImageProcessingService();
+		const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
+		const internalStorageService = createInternalStorageService(config);
+		const s3Service = createS3Service(httpRequestService);
+		const utilityService = createUtilityService(config, meta);
+		const emailService = createEmailService(config, meta, db, loggerService, utilityService, httpRequestService);
+		const userAuthService = createUserAuthService(redis, db);
+		const webAuthnService = createWebAuthnService(config, meta, redis, db);
+		const chartWriters = createHonoChartWriters({ db, redis, meta, logger: loggerService.getLogger('chart', 'white') });
+		const chartWriterSaveIntervalId = startHonoChartWriterSaveInterval(chartWriters);
+		let disposed = false;
 
-	return {
+		return {
 		config,
 		drizzlePool,
 		db,
 		meta,
 		meilisearch,
-		aiService,
 		downloadService,
 		emailService,
 		fileInfoService,
@@ -255,7 +260,6 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		loggerService,
 		s3Service,
 		userAuthService,
-		utilityService,
 		urlPreviewService,
 		videoProcessingService,
 		webAuthnService,
@@ -276,28 +280,20 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		redisForReactions,
 		chartWriters,
 		dispose: async () => {
+			if (disposed) return;
+			disposed = true;
 			clearInterval(chartWriterSaveIntervalId);
-			if (process.env.NODE_ENV !== 'test') {
-				await saveHonoChartWriters(chartWriters);
+			try {
+				if (process.env.NODE_ENV !== 'test') {
+					await saveHonoChartWriters(chartWriters);
+				}
+			} finally {
+				await disposeRuntimeResources(resources);
 			}
-			await disposeRuntimeResources({
-				drizzlePool,
-				redis,
-				redisForPub,
-				redisForSub,
-				redisForTimelines,
-				redisForReactions,
-				systemQueue,
-				endedPollNotificationQueue,
-				postScheduledNoteQueue,
-				deliverQueue,
-				inboxQueue,
-				dbQueue,
-				relationshipQueue,
-				objectStorageQueue,
-				userWebhookDeliverQueue,
-				systemWebhookDeliverQueue,
-			});
 		},
-	};
+		};
+	} catch (error) {
+		await disposeRuntimeResources(resources);
+		throw error;
+	}
 }

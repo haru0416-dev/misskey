@@ -13,7 +13,9 @@ import { queryKeys } from '@/query/keys.js';
 import { updateEmojiQueries } from '@/query/streaming.js';
 
 const [storageCache, lastEmojisFetchedAt] = await Promise.all([get('emojis'), get('lastEmojisFetchedAt')]);
-export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(isEmojiSimpleArray(storageCache) ? storageCache : []);
+export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(
+	isEmojiSimpleArray(storageCache) ? storageCache : [],
+);
 const emojisQueryKey = queryKeys.endpoint(null, 'emojis', {});
 if (isEmojiSimpleArray(storageCache)) {
 	queryClient.setQueryData(

@@ -136,7 +136,7 @@ class HttpRequestServiceAgent extends http.Agent {
 	}
 
 	@bindThis
-	public createConnection(options: http.ClientRequestArgs, callback?: (err: Error | null, stream: stream.Duplex) => void): stream.Duplex {
+	public override createConnection(options: http.ClientRequestArgs, callback?: (err: Error | null, stream: stream.Duplex) => void): stream.Duplex {
 		const socket = super.createConnection(options, callback);
 
 		if (socket == null) {
@@ -167,7 +167,7 @@ class HttpsRequestServiceAgent extends https.Agent {
 	}
 
 	@bindThis
-	public createConnection(options: http.ClientRequestArgs, callback?: (err: Error | null, stream: stream.Duplex) => void): stream.Duplex {
+	public override createConnection(options: http.ClientRequestArgs, callback?: (err: Error | null, stream: stream.Duplex) => void): stream.Duplex {
 		const socket = super.createConnection(options, callback);
 
 		if (socket == null) {
