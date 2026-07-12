@@ -1,6 +1,8 @@
 ## Unreleased
 
 ### General
+- Fix: 非公開ノートのリアクション・差分取得とアンケート投票のアクセス制御を修正
+- Fix: AiScriptとストリーミング接続の無制限なメモリ消費を防止
 - Fix: 指定公開ノートのメンション配送と、非公開の親ノートを持つ指定公開返信の連合を修正
 - Enhance: エラー・トレース収集をSentryからOpenTelemetry OTLPへ移行
 - Enhance: ノート翻訳サービスとしてセルフホスト可能なLibreTranslateに対応
@@ -27,6 +29,8 @@
 
 ### Client
 
+- Fix: プラグインがクライアント起動を妨げる問題、認証callback URL、ミュートノートのキーボード操作を修正
+- Fix: Service WorkerがMisskey以外のCache Storageを削除する問題を修正
 - Enhance: コントロールパネルのダッシュボードを見やすく整理
 - Enhance: コードハイライト・URL抽出・文字列検索の重複処理を抑制
 - Enhance: 物理演算・WebGLエフェクト・タイムライン整形の処理とリソース管理を最適化
@@ -115,6 +119,9 @@
 
 ### Server
 
+- Fix: アンケート投票を直列化・トランザクション化し、並行投票と集計不整合を防止
+- Fix: migrationの同時実行、履歴改変、リリース・tarball・Compose設定の安全性を改善
+- Enhance: 未認証RSS取得にIPレート制限とレスポンスサイズ上限を追加
 - Enhance: キャッシュ・ジョブキュー基盤をRedisからValkey 8へ移行
 - Enhance: ジョブキューのバッチ処理、再試行、並列度、永続outboxを最適化
 - Fix: プロキシ経由のIP判定、パスワードリセット、ActivityPub署名、内部エラー応答などの安全性と整合性を改善

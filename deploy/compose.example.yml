@@ -13,7 +13,7 @@ services:
       valkey:
         condition: service_healthy
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     networks:
       - internal_network
       - external_network

@@ -1,0 +1,115 @@
+name: 'Release Manager: create prerelease'
+
+on:
+  workflow_call:
+    inputs:
+      pr_number: { type: string, required: true }
+      user: { type: string, default: 'github-actions[bot]' }
+      package_jsons_to_rewrite: { type: string, default: 'package.json' }
+      use_external_app_to_release: { type: boolean, default: false }
+      indent: { type: string, default: tab }
+      draft_prerelease_channel: { type: string, default: beta }
+      ready_start_prerelease_channel: { type: string, default: rc }
+      reset_number_on_channel_change: { type: boolean, default: false }
+      prerelease_channel: { type: string, required: false }
+    secrets:
+      RELEASE_APP_ID: { required: false }
+      RELEASE_APP_PRIVATE_KEY: { required: false }
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  create-prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Get PR
+        id: pr
+        run: |
+          data=$(gh pr view "$PR_NUMBER" --json isDraft,headRefName)
+          echo "is_draft=$(jq -r '.isDraft' <<<"$data")" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$(jq -r '.headRefName' <<<"$data")" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ steps.pr.outputs.head_ref }}
+      - name: Configure Git
+        run: |
+          git config --local user.email "$USER@users.noreply.github.com"
+          git config --local user.name "$USER"
+        env:
+          USER: ${{ inputs.user }}
+      - name: Calculate prerelease version
+        id: version
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          IS_DRAFT: ${{ steps.pr.outputs.is_draft }}
+          REQUESTED_CHANNEL: ${{ inputs.prerelease_channel }}
+          DRAFT_CHANNEL: ${{ inputs.draft_prerelease_channel }}
+          READY_CHANNEL: ${{ inputs.ready_start_prerelease_channel }}
+          RESET_NUMBER: ${{ inputs.reset_number_on_channel_change }}
+        with:
+          result-encoding: string
+          script: |
+            const current = require('./package.json').version;
+            const [main, prerelease = ''] = current.split('-');
+            const [channel, numberText] = prerelease.split('.');
+            const number = Number(numberText);
+            if (!channel || Number.isNaN(number)) throw new Error(`Invalid prerelease version: ${current}`);
+            const draft = process.env.IS_DRAFT === 'true';
+            const requested = process.env.REQUESTED_CHANNEL;
+            const reset = process.env.RESET_NUMBER === 'true';
+            if (requested && draft) throw new Error('Cannot specify prerelease_channel for draft PR');
+            const nextChannel = draft ? process.env.DRAFT_CHANNEL : requested || (channel === process.env.DRAFT_CHANNEL ? process.env.READY_CHANNEL : channel);
+            if (reset && draft && channel !== process.env.DRAFT_CHANNEL) throw new Error('Returning a ready PR to draft is unsupported when prerelease numbers reset');
+            const nextNumber = reset && nextChannel !== channel ? 0 : number + 1;
+            return `${main}-${nextChannel}.${nextNumber}`;
+      - name: Write version
+        run: |
+          read -r -a files <<<"$PACKAGE_JSONS"
+          indent=(--tab)
+          if [ "$INDENT" != tab ]; then indent=(--indent "$INDENT"); fi
+          for file in "${files[@]}"; do
+            jq "${indent[@]}" --arg version "$VERSION" '.version = $version' "$file" > "$file.tmp"
+            mv "$file.tmp" "$file"
+          done
+        env:
+          PACKAGE_JSONS: ${{ inputs.package_jsons_to_rewrite }}
+          INDENT: ${{ inputs.indent }}
+          VERSION: ${{ steps.version.outputs.result }}
+      - name: Commit and tag
+        run: |
+          git commit -am "Bump version to $VERSION"
+          git push
+          git tag "$VERSION"
+          git push origin "$VERSION"
+        env:
+          VERSION: ${{ steps.version.outputs.result }}
+      - name: Get changelog
+        id: changelog
+        run: |
+          target=${VERSION%%-*}
+          {
+            echo 'value<<EOF'
+            sed -n "/## $target/,/^## /p" CHANGELOG.md | sed -e 1d -e '$d'
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ steps.version.outputs.result }}
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        id: release-token
+        if: inputs.use_external_app_to_release
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - name: Create release
+        run: gh release create "$VERSION" --prerelease --title "$VERSION" --notes "$CHANGELOG"
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          VERSION: ${{ steps.version.outputs.result }}
+          CHANGELOG: ${{ steps.changelog.outputs.value }}

@@ -1,0 +1,101 @@
+name: 'Release Manager: create target'
+
+on:
+  workflow_call:
+    inputs:
+      user: { type: string, default: 'github-actions[bot]' }
+      version_increment_script: { type: string, required: true }
+      package_jsons_to_rewrite: { type: string, default: 'package.json' }
+      use_external_app_to_release: { type: boolean, default: false }
+      indent: { type: string, default: tab }
+      stable_branch: { type: string, default: stable }
+      draft_prerelease_channel: { type: string, default: beta }
+    secrets:
+      RELEASE_APP_ID: { required: false }
+      RELEASE_APP_PRIVATE_KEY: { required: false }
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  create-target:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure Git
+        run: |
+          git config --local user.email "$USER@users.noreply.github.com"
+          git config --local user.name "$USER"
+        env:
+          USER: ${{ inputs.user }}
+      - name: Get current version
+        id: current
+        run: echo "value=$(jq -r '.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Calculate target version
+        id: target
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          CURRENT_VERSION: ${{ steps.current.outputs.value }}
+        with:
+          result-encoding: string
+          script: ${{ inputs.version_increment_script }}
+      - name: Set prerelease version
+        id: version
+        run: echo "value=$TARGET-$CHANNEL.0" >> "$GITHUB_OUTPUT"
+        env:
+          TARGET: ${{ steps.target.outputs.result }}
+          CHANNEL: ${{ inputs.draft_prerelease_channel }}
+      - name: Write version
+        run: |
+          read -r -a files <<<"$PACKAGE_JSONS"
+          indent=(--tab)
+          if [ "$INDENT" != tab ]; then indent=(--indent "$INDENT"); fi
+          for file in "${files[@]}"; do
+            jq "${indent[@]}" --arg version "$VERSION" '.version = $version' "$file" > "$file.tmp"
+            mv "$file.tmp" "$file"
+          done
+        env:
+          PACKAGE_JSONS: ${{ inputs.package_jsons_to_rewrite }}
+          INDENT: ${{ inputs.indent }}
+          VERSION: ${{ steps.version.outputs.value }}
+      - name: Get changelog
+        id: changelog
+        run: |
+          {
+            echo 'value<<EOF'
+            sed -n '/## Unreleased/,/^## /p' CHANGELOG.md | sed -e 1d -e '$d'
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Update changelog and commit
+        run: |
+          sed -i "s/## Unreleased/## $TARGET/" CHANGELOG.md
+          git commit -am "Bump version to $VERSION"
+          git push
+          git tag "$VERSION"
+          git push origin "$VERSION"
+        env:
+          TARGET: ${{ steps.target.outputs.result }}
+          VERSION: ${{ steps.version.outputs.value }}
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        id: release-token
+        if: inputs.use_external_app_to_release
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - name: Create PR
+        run: |
+          gh pr create --draft --title "Release: $TARGET" --body "$CHANGELOG" --head "$GITHUB_REF_NAME" --base "$STABLE_BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ steps.target.outputs.result }}
+          CHANGELOG: ${{ steps.changelog.outputs.value }}
+          STABLE_BRANCH: ${{ inputs.stable_branch }}
+      - name: Create release
+        run: |
+          gh release create "$VERSION" --prerelease --title "$VERSION" --notes "$CHANGELOG"
+        env:
+          GH_TOKEN: ${{ inputs.use_external_app_to_release && steps.release-token.outputs.token || github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+          CHANGELOG: ${{ steps.changelog.outputs.value }}

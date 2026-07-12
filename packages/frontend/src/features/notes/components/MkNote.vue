@@ -165,7 +165,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</article>
 </div>
-<div v-else-if="!hardMuted && !hideByPlugin" :class="$style.muted" @click="muted = false">
+<div v-else-if="!hardMuted && !hideByPlugin" :class="$style.muted">
 	<I18n v-if="muted === 'sensitiveMute'" :src="i18n.ts.userSaysSomethingSensitive" tag="small">
 		<template #name>
 			<MkA v-user-preview="appearNote.userId" :to="userPage(appearNote.user)">
@@ -190,6 +190,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			{{ Array.isArray(muted) ? muted.map(words => Array.isArray(words) ? words.join() : words).slice(0, 3).join(' ') : muted }}
 		</template>
 	</I18n>
+	<button type="button" class="_button" :class="$style.showMuted" @click="muted = false">{{ i18n.ts.show }}</button>
 </div>
 <div v-else>
 	<!--
@@ -1230,6 +1231,17 @@ function emitUpdReaction(emoji: string, delta: number) {
 	padding: 8px;
 	text-align: center;
 	opacity: 0.7;
+}
+
+.showMuted {
+	margin-left: 8px;
+	text-decoration: underline;
+	cursor: pointer;
+
+	&:focus-visible {
+		outline: 2px solid var(--MI_THEME-focus);
+		outline-offset: 2px;
+	}
 }
 
 .reactionOmitted {

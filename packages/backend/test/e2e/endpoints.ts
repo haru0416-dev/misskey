@@ -42,7 +42,8 @@ import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
 import { createPageInDatabase } from '@/core/PageStore.js';
-import { createPollInDatabase } from '@/core/PollStore.js';
+import { createPollInDatabase, fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+import { listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
 import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
 import { fetchRenoteMutingFromDatabase } from '@/core/RenoteMutingStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
@@ -2154,7 +2155,7 @@ describe('Endpoints', () => {
 				});
 
 				const res = await api('federation/update-remote-user', { userId: remoteUser.id });
-				assert.strictEqual(res.status, 204);
+				assert.strictEqual(res.status, 204, JSON.stringify(res.body));
 
 				const updated = await fetchUserByIdOrFailFromDatabase(db, remoteUser.id);
 				assert.strictEqual(updated.name, 'Updated Remote Name');
@@ -2265,7 +2266,7 @@ describe('Endpoints', () => {
 				noteUri = `http://${host}/notes/note${suffix}`;
 
 				const userRes = await api('ap/show', { uri: actorUri }, alice);
-				assert.strictEqual(userRes.status, 200);
+				assert.strictEqual(userRes.status, 200, JSON.stringify(userRes.body));
 				assert.strictEqual(userRes.body.type, 'User');
 				assert.strictEqual(userRes.body.object.username, `apshowremote${suffix}`);
 				assert.strictEqual(userRes.body.object.host, host);
@@ -9098,6 +9099,24 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body[0].reactions['👍'], 3);
 		});
 
+		test('notes/show-partial-bulk は閲覧できないノートを返さない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnsv${suffix}` });
+			const viewer = await signup({ username: `hnsvv${suffix}` });
+			const publicNote = await post(author, { text: 'visible partial bulk' });
+			const specifiedNote = await post(author, {
+				text: 'invisible partial bulk',
+				visibility: 'specified',
+				visibleUserIds: [author.id],
+			});
+
+			for (const user of [undefined, viewer]) {
+				const res = await api('notes/show-partial-bulk', { noteIds: [publicNote.id, specifiedNote.id] }, user);
+				assert.strictEqual(res.status, 200);
+				assert.deepStrictEqual(res.body.map(note => note.id), [publicNote.id]);
+			}
+		});
+
 		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
@@ -12724,6 +12743,28 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('notes/reactions', () => {
+		test('specified/followersノートの反応を匿名・非受信者へ返さない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnrv${suffix}` });
+			const viewer = await signup({ username: `hnrvv${suffix}` });
+			const notes = [
+				await post(author, { text: 'specified reactions', visibility: 'specified', visibleUserIds: [author.id] }),
+				await post(author, { text: 'followers reactions', visibility: 'followers' }),
+			];
+
+			for (const note of notes) {
+				assert.strictEqual((await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, author)).status, 204);
+				for (const user of [undefined, viewer]) {
+					const res = await api('notes/reactions', { noteId: note.id }, user);
+					assert.strictEqual(res.status, 400);
+					assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_NOTE');
+					assert.strictEqual(castAsError(res.body as any).error.id, '263fff3d-d0e1-4af4-bea7-8408059b451a');
+				}
+			}
+		});
+	});
+
 	describe('notes/reactions/delete', () => {
 		test('リアクションを取り消せる', async () => {
 			const bobNote = await post(bob, { text: 'hi' });
@@ -12800,6 +12841,41 @@ describe('Endpoints', () => {
 			const second = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 1 }, alice);
 			assert.strictEqual(second.status, 400);
 			assert.strictEqual(castAsError(second.body as any).error.id, '0963fc77-efac-419b-9424-b391608dc6d8');
+		});
+
+		test('複数投票不可の場合は並行投票の一方だけ成功する', async () => {
+			const created = await api('notes/create', {
+				text: 'concurrent single poll',
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+			const noteId = created.body.createdNote.id;
+
+			const results = await Promise.all([
+				api('notes/polls/vote', { noteId, choice: 0 }, alice),
+				api('notes/polls/vote', { noteId, choice: 1 }, alice),
+			]);
+			assert.deepStrictEqual(results.map(result => result.status).sort(), [204, 400]);
+
+			const votes = await listPollVotesByNoteAndUserFromDatabase(db, noteId, alice.id);
+			const poll = await fetchPollByNoteIdOrFailFromDatabase(db, noteId);
+			assert.strictEqual(votes.length, 1);
+			assert.strictEqual(poll.votes.reduce((sum, count) => sum + count, 0), 1);
+			assert.strictEqual(poll.votes[votes[0]!.choice], 1);
+		});
+
+		test('閲覧できないpollには投票できない', async () => {
+			const created = await api('notes/create', {
+				text: 'private poll',
+				visibility: 'specified',
+				visibleUserIds: [bob.id],
+				poll: { choices: ['a', 'b'], multiple: false },
+			}, bob);
+			assert.strictEqual(created.status, 200);
+
+			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
+			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_NOTE');
 		});
 
 		test('無効な選択肢では怒られる', async () => {
