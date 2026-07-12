@@ -23,7 +23,7 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import type * as misskey from 'misskey-js';
-import { describe, beforeAll, beforeEach, afterAll, test } from 'vitest';
+import { describe, beforeAll, beforeEach, afterEach, afterAll, test } from 'vitest';
 
 describe('2要素認証', () => {
 	let alice: misskey.entities.SignupResponse;
@@ -219,6 +219,10 @@ describe('2要素認証', () => {
 		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 	});
 
+	afterEach(async () => {
+		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+	});
+
 	test('が設定でき、OTPでログインできる。', async () => {
 		const registerResponse = await api('i/2fa/register', {
 			password,
@@ -406,8 +410,11 @@ describe('2要素認証', () => {
 		} as any) as any, passkeyUser);
 		assert.strictEqual(keyDoneResponse.status, 200);
 
+		let lastPasskeyCallAt = 0;
 		const callPasskey = async (params: misskey.entities.SigninWithPasskeyRequest) => {
-			await new Promise(resolve => setTimeout(resolve, 300));
+			const wait = lastPasskeyCallAt + 300 - Date.now();
+			if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+			lastPasskeyCallAt = Date.now();
 			return await api('signin-with-passkey', params);
 		};
 
@@ -633,27 +640,32 @@ describe('2要素認証', () => {
 			assert.strictEqual(newPasswordResponse.status, 403);
 		};
 
-		const missingTokenResponse = await api('i/change-password', {
-			currentPassword: password,
-			newPassword,
-		}, user);
-		assert.notStrictEqual(missingTokenResponse.status, 204);
-		await assertPasswordUnchanged();
+		try {
+			const missingTokenResponse = await api('i/change-password', {
+				currentPassword: password,
+				newPassword,
+			}, user);
+			assert.notStrictEqual(missingTokenResponse.status, 204);
+			await assertPasswordUnchanged();
 
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-		const invalidTokenResponse = await api('i/change-password', {
-			currentPassword: password,
-			newPassword,
-			token: invalidOtpToken(secret),
-		}, user);
-		assert.notStrictEqual(invalidTokenResponse.status, 204);
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-		await assertPasswordUnchanged();
-
-		await api('i/2fa/unregister', {
-			password,
-			token: otpToken(secret),
-		}, user);
+			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
+			try {
+				const invalidTokenResponse = await api('i/change-password', {
+					currentPassword: password,
+					newPassword,
+					token: invalidOtpToken(secret),
+				}, user);
+				assert.notStrictEqual(invalidTokenResponse.status, 204);
+			} finally {
+				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+			}
+			await assertPasswordUnchanged();
+		} finally {
+			await api('i/2fa/unregister', {
+				password,
+				token: otpToken(secret),
+			}, user);
+		}
 	});
 
 	test('が有効な場合、メールアドレス変更はTOTPなしまたは不正なTOTPでは失敗し、メールアドレスを変更しない。', async () => {
@@ -669,27 +681,32 @@ describe('2要素認証', () => {
 			assert.strictEqual(afterResponse.body.emailVerified, beforeResponse.body.emailVerified);
 		};
 
-		const missingTokenResponse = await api('i/update-email', {
-			password,
-			email: 'missing-token@example.com',
-		}, user);
-		assert.notStrictEqual(missingTokenResponse.status, 200);
-		await assertEmailUnchanged();
+		try {
+			const missingTokenResponse = await api('i/update-email', {
+				password,
+				email: 'missing-token@example.com',
+			}, user);
+			assert.notStrictEqual(missingTokenResponse.status, 200);
+			await assertEmailUnchanged();
 
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-		const invalidTokenResponse = await api('i/update-email', {
-			password,
-			email: 'invalid-token@example.com',
-			token: invalidOtpToken(secret),
-		}, user);
-		assert.notStrictEqual(invalidTokenResponse.status, 200);
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-		await assertEmailUnchanged();
-
-		await api('i/2fa/unregister', {
-			password,
-			token: otpToken(secret),
-		}, user);
+			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
+			try {
+				const invalidTokenResponse = await api('i/update-email', {
+					password,
+					email: 'invalid-token@example.com',
+					token: invalidOtpToken(secret),
+				}, user);
+				assert.notStrictEqual(invalidTokenResponse.status, 200);
+			} finally {
+				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+			}
+			await assertEmailUnchanged();
+		} finally {
+			await api('i/2fa/unregister', {
+				password,
+				token: otpToken(secret),
+			}, user);
+		}
 	});
 
 	test('が有効な場合、アカウント削除はTOTPなしまたは不正なTOTPでは失敗し、アカウントを削除しない。', async () => {
@@ -702,25 +719,30 @@ describe('2要素認証', () => {
 			assert.strictEqual(iResponse.body.isDeleted, false);
 		};
 
-		const missingTokenResponse = await api('i/delete-account', {
-			password,
-		}, user);
-		assert.notStrictEqual(missingTokenResponse.status, 204);
-		await assertAccountNotDeleted();
+		try {
+			const missingTokenResponse = await api('i/delete-account', {
+				password,
+			}, user);
+			assert.notStrictEqual(missingTokenResponse.status, 204);
+			await assertAccountNotDeleted();
 
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-		const invalidTokenResponse = await api('i/delete-account', {
-			password,
-			token: invalidOtpToken(secret),
-		}, user);
-		assert.notStrictEqual(invalidTokenResponse.status, 204);
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-		await assertAccountNotDeleted();
-
-		await api('i/2fa/unregister', {
-			password,
-			token: otpToken(secret),
-		}, user);
+			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
+			try {
+				const invalidTokenResponse = await api('i/delete-account', {
+					password,
+					token: invalidOtpToken(secret),
+				}, user);
+				assert.notStrictEqual(invalidTokenResponse.status, 204);
+			} finally {
+				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+			}
+			await assertAccountNotDeleted();
+		} finally {
+			await api('i/2fa/unregister', {
+				password,
+				token: otpToken(secret),
+			}, user);
+		}
 	});
 
 	test('のTOTPトークンは一度使うと同じトークンは再利用できない。', async () => {
@@ -737,18 +759,18 @@ describe('2要素認証', () => {
 		}, alice);
 		assert.strictEqual(doneResponse.status, 200);
 
-		const signinResponse = await api('signin-flow', {
-			...signinParam(),
-			token: sharedOtpToken,
-		});
-		assert.strictEqual(signinResponse.status, 403);
-
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-
-		// 後片付け
-		await api('i/2fa/unregister', {
-			password,
-			token: otpToken(registerResponse.body.secret),
-		}, alice);
+		try {
+			const signinResponse = await api('signin-flow', {
+				...signinParam(),
+				token: sharedOtpToken,
+			});
+			assert.strictEqual(signinResponse.status, 403);
+		} finally {
+			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+			await api('i/2fa/unregister', {
+				password,
+				token: otpToken(registerResponse.body.secret),
+			}, alice);
+		}
 	});
 });

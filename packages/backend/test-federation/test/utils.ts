@@ -53,6 +53,20 @@ export async function sleep(ms = 250): Promise<void> {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export async function waitFor(
+	condition: () => boolean | Promise<boolean>,
+	timeoutMs = 5000,
+	intervalMs = 100,
+): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	do {
+		if (await condition()) return;
+		await sleep(intervalMs);
+	} while (Date.now() < deadline);
+
+	throw new Error(`Condition was not met within ${timeoutMs}ms`);
+}
+
 async function signin(
 	host: Host,
 	params: Misskey.entities.SigninFlowRequest,
@@ -262,10 +276,17 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 
 		await connection.ready;
 		await trigger();
-		return await Promise.race([
-			receivePromise,
-			sleep(timeoutMs).then(() => false),
-		]);
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+		try {
+			return await Promise.race([
+				receivePromise,
+				new Promise<boolean>(resolve => {
+					timeout = setTimeout(() => resolve(false), timeoutMs);
+				}),
+			]);
+		} finally {
+			if (timeout != null) clearTimeout(timeout);
+		}
 	} finally {
 		stream.close();
 	}
@@ -295,10 +316,17 @@ export async function isNoteUpdatedEventFired(
 
 		await trigger();
 
-		return await Promise.race([
-			receivePromise,
-			sleep(2000).then(() => false),
-		]);
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+		try {
+			return await Promise.race([
+				receivePromise,
+				new Promise<boolean>(resolve => {
+					timeout = setTimeout(() => resolve(false), 2000);
+				}),
+			]);
+		} finally {
+			if (timeout != null) clearTimeout(timeout);
+		}
 	} finally {
 		stream.close();
 	}

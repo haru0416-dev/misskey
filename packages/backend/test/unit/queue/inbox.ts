@@ -57,11 +57,13 @@ function captureRequestServer(): Promise<{ server: Server; url: string; capture:
 describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	let runtime: RuntimeDependencies;
 	let deps: HonoQueueInboxDependencies;
+	let keyPair: Awaited<ReturnType<typeof genRsaKeyPair>>;
 	const servers: Server[] = [];
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = { ...runtime, logger: runtime.loggerService.getLogger('test-queue-inbox') };
+		keyPair = await genRsaKeyPair();
 		// 新規テストDBでは meta.federation が既定で 'none' になっており、そのままだと
 		// isFederationAllowedHost がすべてのホストを拒否してしまう。
 		runtime.meta.federation = 'all';
@@ -87,7 +89,6 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		servers.push(server);
 
 		const id = genId();
-		const keyPair = await genRsaKeyPair();
 		const keyId = `http://${host}/users/${id}#main-key`;
 		const user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {

@@ -28,8 +28,11 @@ describe('export-clips', () => {
 
 	// XXX: Any better way to get the result?
 	async function pollFirstDriveFile(): Promise<any> {
-		while (true) {
-			const files = (await api('drive/files', {}, alice)).body;
+		const deadline = Date.now() + 30_000;
+		while (Date.now() < deadline) {
+			const filesResponse = await api('drive/files', {}, alice);
+			assert.strictEqual(filesResponse.status, 200);
+			const files = filesResponse.body;
 			if (!files.length) {
 				await new Promise(r => setTimeout(r, 100));
 				continue;
@@ -37,10 +40,14 @@ describe('export-clips', () => {
 			if (files.length > 1) {
 				throw new Error('Too many files?');
 			}
-			const file = (await api('drive/files/show', { fileId: files[0].id }, alice)).body;
+			const fileResponse = await api('drive/files/show', { fileId: files[0].id }, alice);
+			assert.strictEqual(fileResponse.status, 200);
+			const file = fileResponse.body;
 			const res = await fetch(new URL(new URL(file.url).pathname, `http://127.0.0.1:${port}`));
+			assert.strictEqual(res.status, 200);
 			return await res.json();
 		}
+		assert.fail('Timed out waiting for exported drive file');
 	}
 
 	beforeAll(async () => {
@@ -60,19 +67,19 @@ describe('export-clips', () => {
 	beforeEach(async () => {
 		// Clean all clips and files of alice
 		const clips = (await api('clips/list', {}, alice)).body;
-		for (const clip of clips) {
+		await Promise.all(clips.map(async clip => {
 			const res = await api('clips/delete', { clipId: clip.id }, alice);
 			if (res.status !== 204) {
 				throw new Error('Failed to delete clip');
 			}
-		}
+		}));
 		const files = (await api('drive/files', {}, alice)).body;
-		for (const file of files) {
+		await Promise.all(files.map(async file => {
 			const res = await api('drive/files/delete', { fileId: file.id }, alice);
 			if (res.status !== 204) {
 				throw new Error('Failed to delete file');
 			}
-		}
+		}));
 	});
 
 	test('basic export', async () => {
@@ -329,7 +336,7 @@ describe('export-clips', () => {
 			if (Date.now() >= deadline) {
 				assert.fail('Timed out waiting for imported blocking relationship');
 			}
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise(resolve => setTimeout(resolve, 250));
 		}
 	}, 60_000);
 });

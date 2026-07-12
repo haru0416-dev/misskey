@@ -27,13 +27,16 @@ test.describe('Product flows', () => {
 	});
 
 	test('Alice and Bob exchange 1:1 chat messages', async ({ page, browser }) => {
-		const { alice, bob } = await setupUsers(page);
+		const { alice } = await setupUsers(page);
+		const bob = await registerUser(page, 'bob', passwords.bob);
 		await follow(page, alice.token, bob.id);
 		await follow(page, bob.token, alice.id);
 		const aliceMessage = `Hello Bob ${Date.now()}`;
 		const bobMessage = `Hello Alice ${Date.now()}`;
-		const alicePage = await loginAs(browser, alice.username, passwords.alice);
-		const bobPage = await loginAs(browser, bob.username, passwords.bob);
+		const [alicePage, bobPage] = await Promise.all([
+			loginAs(browser, alice.username, passwords.alice),
+			loginAs(browser, bob.username, passwords.bob),
+		]);
 
 		try {
 			await Promise.all([alicePage.goto(`/chat/user/${bob.id}`), bobPage.goto(`/chat/user/${alice.id}`)]);
@@ -168,24 +171,28 @@ test.describe('Mobile Chromium smoke', () => {
 	});
 });
 
-async function setupUsers(page: Page): Promise<{ admin: TestUser; alice: TestUser; bob: TestUser }> {
+async function setupUsers(page: Page): Promise<{ admin: TestUser; alice: TestUser }> {
 	await resetState(page);
 	const admin = await registerUser(page, 'admin', 'pass', true);
 	const alice = await registerUser(page, 'alice', passwords.alice);
-	const bob = await registerUser(page, 'bob', passwords.bob);
-	return { admin, alice, bob };
+	return { admin, alice };
 }
 
 async function loginAs(browser: Browser, username: string, password: string): Promise<Page> {
 	const context = await browser.newContext({ locale: 'ja-JP' });
-	await context.addInitScript(() => {
-		window.localStorage.setItem('__MISSKEY_E2E_TEST__', 'true');
-	});
-	const page = await context.newPage();
-	await login(page, username, password);
-	await closeInitialUserSetup(page);
-	await expect(page.locator('[data-cy-user-setup]')).toBeHidden();
-	return page;
+	try {
+		await context.addInitScript(() => {
+			window.localStorage.setItem('__MISSKEY_E2E_TEST__', 'true');
+		});
+		const page = await context.newPage();
+		await login(page, username, password);
+		await closeInitialUserSetup(page);
+		await expect(page.locator('[data-cy-user-setup]')).toBeHidden();
+		return page;
+	} catch (error) {
+		await context.close().catch(() => undefined);
+		throw error;
+	}
 }
 
 async function sendChatMessage(page: Page, text: string): Promise<void> {

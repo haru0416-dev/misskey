@@ -1,7 +1,7 @@
 import { describe, test, beforeAll, afterAll } from 'vitest';
 import { strictEqual } from 'assert';
 import * as Misskey from 'misskey-js';
-import { createAccount, fetchAdmin, isNoteUpdatedEventFired, isFired, type LoginUser, type Request, resolveRemoteUser, sleep, createRole } from './utils.js';
+import { createAccount, fetchAdmin, isNoteUpdatedEventFired, isFired, type LoginUser, type Request, resolveRemoteUser, sleep, createRole, waitFor } from './utils.js';
 
 const bAdmin = await fetchAdmin('b.test');
 
@@ -64,9 +64,15 @@ describe('Timeline', () => {
 			endpoint === 'roles/notes' ? { roleId: (channelParams as Misskey.Channels['roleTimeline']['params']).roleId } :
 			{};
 
-		await sleep();
-		const notes = await (bob.client.request as Request)(endpoint, params);
-		const noteInB = notes.filter(({ uri }) => uri === `https://a.test/notes/${note!.id}`).pop();
+		let notes = await (bob.client.request as Request)(endpoint, params);
+		let noteInB = notes.find(({ uri }) => uri === `https://a.test/notes/${note!.id}`);
+		if (expect && noteInB == null) {
+			await waitFor(async () => {
+				notes = await (bob.client.request as Request)(endpoint, params);
+				noteInB = notes.find(({ uri }) => uri === `https://a.test/notes/${note!.id}`);
+				return noteInB != null;
+			});
+		}
 		const endpointFired = noteInB != null;
 		strictEqual(endpointFired, expect);
 
@@ -79,8 +85,13 @@ describe('Timeline', () => {
 			);
 			strictEqual(streamingFired, true);
 
-			await sleep();
-			const notes = await (bob.client.request as Request)(endpoint, params);
+			let notes = await (bob.client.request as Request)(endpoint, params);
+			if (notes.some(({ uri }) => uri === `https://a.test/notes/${note!.id}`)) {
+				await waitFor(async () => {
+					notes = await (bob.client.request as Request)(endpoint, params);
+					return notes.every(({ uri }) => uri !== `https://a.test/notes/${note!.id}`);
+				});
+			}
 			const endpointFired = notes.every(({ uri }) => uri !== `https://a.test/notes/${note!.id}`);
 			strictEqual(endpointFired, true);
 		}

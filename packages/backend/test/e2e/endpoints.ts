@@ -4097,18 +4097,19 @@ describe('Endpoints', () => {
 			assert.strictEqual(reset.status, 204);
 			assert.strictEqual(reset.body, null);
 
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
-			assert.strictEqual(await bcrypt.compare('new-reset-password', profile.password!), true);
-
 			const reused = await api('reset-password', {
 				token,
 				password: 'reused-reset-password',
 			});
 			assert.notStrictEqual(reused.status, 204);
 
-			const profileAfterReuse = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
-			assert.strictEqual(await bcrypt.compare('new-reset-password', profileAfterReuse.password!), true);
-			assert.strictEqual(await bcrypt.compare('reused-reset-password', profileAfterReuse.password!), false);
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
+			const [matchesNewPassword, matchesReusedPassword] = await Promise.all([
+				bcrypt.compare('new-reset-password', profile.password!),
+				bcrypt.compare('reused-reset-password', profile.password!),
+			]);
+			assert.strictEqual(matchesNewPassword, true);
+			assert.strictEqual(matchesReusedPassword, false);
 		});
 	});
 
