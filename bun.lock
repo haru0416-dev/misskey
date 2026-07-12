@@ -186,9 +186,7 @@
         "punycode.js": "2.3.1",
         "qr-code-styling": "1.9.2",
         "qr-scanner": "1.4.2",
-        "sanitize-html": "2.17.5",
         "shiki": "4.2.0",
-        "textarea-caret": "3.1.0",
         "throttle-debounce": "5.0.2",
         "tinycolor2": "1.6.0",
         "v-code-diff": "1.13.1",
@@ -209,9 +207,7 @@
         "@types/matter-js": "0.20.2",
         "@types/node": "26.0.1",
         "@types/punycode.js": "npm:@types/punycode@2.1.4",
-        "@types/sanitize-html": "2.16.1",
         "@types/seedrandom": "3.0.8",
-        "@types/textarea-caret": "3.0.4",
         "@types/throttle-debounce": "5.0.2",
         "@types/tinycolor2": "1.4.6",
         "@vitejs/plugin-vue": "6.0.7",
@@ -1521,8 +1517,6 @@
     "@types/statuses": ["@types/statuses@2.0.6", "", {}, "sha512-xMAgYwceFhRA2zY+XbEA7mxYbA093wdiW8Vu6gZPGWy9cmOyU9XesH1tNcEWsKFd5Vzrqx5T3D38PWx1FIIXkA=="],
 
     "@types/tedious": ["@types/tedious@4.0.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-KHPsfX/FoVbUGbyYvk1q9MMQHLPeRZhRJZdO45Q4YjvFkv4hMNghCWTvy7rdKessBsmtz4euWCWAB6/tVpI1Iw=="],
-
-    "@types/textarea-caret": ["@types/textarea-caret@3.0.4", "", {}, "sha512-epJGYB37/sNrTDbhfyRjHkXsQSAcO6zby0JBDS0QMt6HQ1f1W2E4YpSc7TQkNmWaWmYXv92zOIfN5PHA8CmThg=="],
 
     "@types/throttle-debounce": ["@types/throttle-debounce@5.0.2", "", {}, "sha512-pDzSNulqooSKvSNcksnV72nk8p7gRqN8As71Sp28nov1IgmPKWbOEIwAWvBME5pPTtaXJAvG3O4oc76HlQ4kqQ=="],
 
@@ -3155,8 +3149,6 @@
     "terser": ["terser@5.48.0", "", { "dependencies": { "@jridgewell/source-map": "0.3.11", "acorn": "8.17.0", "commander": "2.20.3", "source-map-support": "0.5.21" }, "bin": { "terser": "bin/terser" } }, "sha512-J/9An6vs9Us6wKRriSFXBWdRZapREHqFzdNUKk0pmu804EMR6dr6winwo7e5JDxN4xahxQsuysyYFwlwj4XN/Q=="],
 
     "text-decoder": ["text-decoder@1.2.7", "", { "dependencies": { "b4a": "1.8.1" } }, "sha512-vlLytXkeP4xvEq2otHeJfSQIRyWxo/oZGEbXrtEEF9Hnmrdly59sUbzZ/QgyWuLYHctCHxFF4tRQZNQ9k60ExQ=="],
-
-    "textarea-caret": ["textarea-caret@3.1.0", "", {}, "sha512-cXAvzO9pP5CGa6NKx0WYHl+8CHKZs8byMkt3PCJBCmq2a34YA9pO1NrQET5pzeqnBjBdToF5No4rrmkDUgQC2Q=="],
 
     "thenify": ["thenify@3.3.1", "", { "dependencies": { "any-promise": "^1.0.0" } }, "sha512-RVZSIV5IG10Hk3enotrhvz0T9em6cyHBLkH/YAZuKqd8hRkKhSfCGIcP2KUY0EPxndzANBmNllzWPwak+bheSw=="],
 
