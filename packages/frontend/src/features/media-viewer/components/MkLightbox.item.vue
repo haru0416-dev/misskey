@@ -174,7 +174,7 @@ function getSourceTransform() {
 	if (sourceElement == null || contentRect == null) return null;
 	const sourceRect = sourceElement.getBoundingClientRect();
 	if (sourceRect.width <= 0 || sourceRect.height <= 0) return null;
-	return calculateSourceTransform({ fit: window.getComputedStyle(sourceElement).objectFit, contentRenderingRect: contentRect, sourceRect });
+	return calculateSourceTransform({ fit: sourceElement.dataset.objectFit ?? window.getComputedStyle(sourceElement).objectFit, contentRenderingRect: contentRect, sourceRect });
 }
 
 if (props.activated) {

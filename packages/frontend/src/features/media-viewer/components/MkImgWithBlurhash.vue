@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div ref="root" :class="['chromatic-ignore', $style.root, { [$style.cover]: cover }]" :title="title ?? ''">
+<div ref="root" :class="['chromatic-ignore', $style.root, { [$style.cover]: cover }]" :title="title ?? ''" :data-marker="marker ?? undefined" :data-object-fit="cover ? 'cover' : 'contain'">
 	<TransitionGroup
 		:duration="prefer.animation && props.transition?.duration || undefined"
 		:enterActiveClass="prefer.animation && props.transition?.enterActiveClass || undefined"
@@ -17,7 +17,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkBlurhash
 			key="canvas"
 			:class="$style.canvas"
-			:data-marker="hide ? marker ?? undefined : undefined"
 			:blurhash="hash ?? null"
 			:width="imgWidth ?? undefined"
 			:height="imgHeight ?? undefined"
@@ -34,7 +33,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:src="imgSrc"
 			:title="title ?? undefined"
 			:alt="alt ?? undefined"
-			:data-marker="hide ? undefined : marker ?? undefined"
 			decoding="async"
 			draggable="false"
 			tabindex="-1"

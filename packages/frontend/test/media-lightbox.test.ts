@@ -61,14 +61,15 @@ describe('media lightbox', () => {
 		assert.match(transformer.style.transform, /translate\(0px, 0px\) scale\(1\)/);
 	});
 
-	test('places the source marker on the visible blurhash while loading', () => {
+	test('places the source marker on the stable media wrapper', () => {
 		const result = render(MkImgWithBlurhash, {
 			props: { hash: null, src: 'https://example.test/image.png', marker: 'source' },
 			global: { components, directives },
 		});
 		const marked = result.container.querySelectorAll('[data-marker="source"]');
 		assert.equal(marked.length, 1);
-		assert.equal(marked[0].tagName, 'CANVAS');
+		assert.equal(marked[0].tagName, 'DIV');
+		assert.equal(marked[0].getAttribute('data-object-fit'), 'cover');
 	});
 
 	test('coalesces concurrent opens into one task', async () => {
@@ -126,6 +127,44 @@ describe('media lightbox', () => {
 		dialog.appendChild(range);
 		range.focus();
 		await fireEvent.keyDown(range, { key: 'Escape' });
+		await waitFor(() => assert.equal(dialog.style.display, 'none'));
+	});
+
+	test('restores dialog focus when the navigation button disappears', async () => {
+		const result = render(MkLightbox, {
+			props: {
+				contents: [
+					{ id: 'first', type: 'image', url: 'https://example.test/first.png' },
+					{ id: 'second', type: 'image', url: 'https://example.test/second.png' },
+				],
+			},
+			global: { components, directives },
+		});
+		const dialog = result.getByRole('dialog');
+		const next = result.getByRole('button', { name: 'Next' });
+		next.focus();
+		await fireEvent.click(next);
+		await waitFor(() => assert.equal(window.document.activeElement, dialog));
+		await fireEvent.keyDown(dialog, { key: 'Escape' });
+		await waitFor(() => assert.equal(dialog.style.display, 'none'));
+	});
+
+	test('restores dialog focus when the focused slide becomes inert', async () => {
+		const result = render(MkLightbox, {
+			props: {
+				contents: [
+					{ id: 'first', type: 'image', url: 'https://example.test/first.png' },
+					{ id: 'second', type: 'image', url: 'https://example.test/second.png' },
+				],
+			},
+			global: { components, directives },
+		});
+		const dialog = result.getByRole('dialog');
+		const menu = result.getByRole('button', { name: 'Menu' });
+		menu.focus();
+		await fireEvent.keyDown(menu, { key: 'ArrowRight' });
+		await waitFor(() => assert.equal(window.document.activeElement, dialog));
+		await fireEvent.keyDown(dialog, { key: 'Escape' });
 		await waitFor(() => assert.equal(dialog.style.display, 'none'));
 	});
 

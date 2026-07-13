@@ -87,7 +87,7 @@ watch(currentIndex, newIndex => {
 		const source = props.contents[i].sourceElement;
 		if (source != null) source.style.visibility = i === newIndex ? 'hidden' : '';
 	}
-});
+}, { immediate: true });
 
 function scrollToCurrentIndex() {
 	const targetOffset = currentIndex.value * -screenWidth.value;
@@ -105,11 +105,22 @@ function onHorizontalSwipe(offset: number) {
 function onNext() {
 	if (currentIndex.value < props.contents.length - 1) currentIndex.value++;
 	scrollToCurrentIndex();
+	refocusRootIfNeeded();
 }
 
 function onPrev() {
 	if (currentIndex.value > 0) currentIndex.value--;
 	scrollToCurrentIndex();
+	refocusRootIfNeeded();
+}
+
+function refocusRootIfNeeded() {
+	void nextTick(() => {
+		const root = rootEl.value;
+		const activeElement = window.document.activeElement;
+		const focusIsInert = activeElement instanceof Element && activeElement.closest('[inert]') != null;
+		if (root != null && (!root.contains(activeElement) || focusIsInert)) root.focus({ preventScroll: true });
+	});
 }
 
 
