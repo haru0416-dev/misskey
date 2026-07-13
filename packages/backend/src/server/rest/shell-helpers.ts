@@ -125,7 +125,7 @@ const JSON_BODY_LIMIT = 1024 * 1024;
 const textDecoder = new TextDecoder();
 
 export async function jsonBody(c: Context): Promise<Record<string, unknown>> {
-	const raw = await readRequestBodyWithLimit(c, JSON_BODY_LIMIT, payloadTooLargeError);
+	const raw = await readRequestBodyWithLimit(c.req.raw, JSON_BODY_LIMIT, payloadTooLargeError);
 	try {
 		const body = JSON.parse(textDecoder.decode(raw)) as unknown;
 		return body != null && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};

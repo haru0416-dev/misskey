@@ -30,7 +30,7 @@ async function bodyParameters(c: Context): Promise<OAuthRequestParameters> {
 	class BodyLimitExceeded extends Error {}
 	let raw: Uint8Array;
 	try {
-		raw = await readRequestBodyWithLimit(c, OAUTH_BODY_LIMIT, () => new BodyLimitExceeded());
+		raw = await readRequestBodyWithLimit(c.req.raw, OAUTH_BODY_LIMIT, () => new BodyLimitExceeded());
 	} catch (err) {
 		if (err instanceof BodyLimitExceeded) return toRequestParameters(null);
 		throw err;
