@@ -482,7 +482,7 @@ const urlPreviewForm = useForm({
 		urlPreviewRequireContentLength: state.urlPreviewRequireContentLength,
 		urlPreviewUserAgent: state.urlPreviewUserAgent,
 		urlPreviewSummaryProxyUrl: state.urlPreviewSummaryProxyUrl,
-		urlPreviewSensitiveList: state.urlPreviewSensitiveList.split('\n'),
+		urlPreviewSensitiveList: state.urlPreviewSensitiveList.split('\n').map(value => value.trim()).filter(Boolean),
 	});
 	fetchInstance(true);
 });

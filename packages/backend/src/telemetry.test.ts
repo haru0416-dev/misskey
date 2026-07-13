@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { shouldPropagateTraceContext } from '@/telemetry.js';
+import { getClientRequestTarget, shouldPropagateTraceContext } from '@/telemetry.js';
 
 describe('shouldPropagateTraceContext', () => {
 	test('denies external targets by default', () => {
@@ -21,5 +21,16 @@ describe('shouldPropagateTraceContext', () => {
 		const targets = ['https://api.example'];
 		expect(shouldPropagateTraceContext('https://api.example/notes', targets)).toBe(true);
 		expect(shouldPropagateTraceContext('https://api.example.evil/notes', targets)).toBe(false);
+	});
+});
+
+describe('getClientRequestTarget', () => {
+	test('preserves non-standard ports', () => {
+		expect(getClientRequestTarget({
+			host: 'service.internal',
+			path: '/api',
+			port: 8080,
+			protocol: 'http:',
+		})).toEqual(new URL('http://service.internal:8080/api'));
 	});
 });
