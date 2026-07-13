@@ -69,8 +69,16 @@ export async function login(page: Page, username: string, password: string): Pro
 export async function closeInitialUserSetup(page: Page): Promise<void> {
 	const close = page.locator('[data-cy-user-setup] [data-cy-modal-window-close]');
 	await expect(close).toBeVisible({ timeout: 30_000 });
+	const persisted = page.waitForResponse((response) => {
+		if (!response.url().includes('/api/i/registry/set') || response.request().method() !== 'POST') return false;
+		const body = response.request().postDataJSON() as { scope?: unknown; key?: unknown; value?: unknown };
+		return Array.isArray(body.scope) && body.scope.join('/') === 'client/base' && body.key === 'accountSetupWizard' && body.value === -1;
+	});
 	await close.click();
 	await page.locator('[data-cy-modal-dialog-ok]').click();
+	const response = await persisted;
+	if (!response.ok()) throw new Error(`${response.url()} failed: ${response.status()}`);
+	await expect(page.locator('[data-cy-user-setup]')).toBeHidden();
 }
 
 export async function waitForPageCarryoverGuard(page: Page): Promise<void> {
