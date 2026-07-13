@@ -194,10 +194,14 @@ export async function handleHonoApiPagesLike(
 	}
 
 	try {
-		await createPageLikeInDatabase(deps.db, {
-			id: genId(),
-			pageId: page.id,
-			userId: me.id,
+		await deps.db.transaction(async transaction => {
+			const db = transaction as typeof deps.db;
+			await createPageLikeInDatabase(db, {
+				id: genId(),
+				pageId: page.id,
+				userId: me.id,
+			});
+			await incrementPageLikedCountInDatabase(db, page.id);
 		});
 	} catch (err) {
 		if (isDuplicateKeyValueDatabaseError(err)) {
@@ -205,8 +209,6 @@ export async function handleHonoApiPagesLike(
 		}
 		throw err;
 	}
-
-	void incrementPageLikedCountInDatabase(deps.db, page.id);
 }
 
 export async function handleHonoApiPagesUnlike(
@@ -225,8 +227,13 @@ export async function handleHonoApiPagesUnlike(
 		throw clientErrorWithStatus(400, 'You have not liked that page.', 'NOT_LIKED', 'f5e586b0-ce93-4050-b0e3-7f31af5259ee');
 	}
 
-	await deletePageLikeByIdFromDatabase(deps.db, like.id);
-	void decrementPageLikedCountInDatabase(deps.db, page.id);
+	await deps.db.transaction(async transaction => {
+		const db = transaction as typeof deps.db;
+		if (!await deletePageLikeByIdFromDatabase(db, like.id)) {
+			throw clientErrorWithStatus(400, 'You have not liked that page.', 'NOT_LIKED', 'f5e586b0-ce93-4050-b0e3-7f31af5259ee');
+		}
+		await decrementPageLikedCountInDatabase(db, page.id);
+	});
 }
 
 export async function handleHonoApiFlashLike(
@@ -248,10 +255,14 @@ export async function handleHonoApiFlashLike(
 	}
 
 	try {
-		await createFlashLikeInDatabase(deps.db, {
-			id: genId(),
-			flashId: flash.id,
-			userId: me.id,
+		await deps.db.transaction(async transaction => {
+			const db = transaction as typeof deps.db;
+			await createFlashLikeInDatabase(db, {
+				id: genId(),
+				flashId: flash.id,
+				userId: me.id,
+			});
+			await incrementFlashLikedCountInDatabase(db, flash.id);
 		});
 	} catch (err) {
 		if (isDuplicateKeyValueDatabaseError(err)) {
@@ -259,8 +270,6 @@ export async function handleHonoApiFlashLike(
 		}
 		throw err;
 	}
-
-	void incrementFlashLikedCountInDatabase(deps.db, flash.id);
 }
 
 export async function handleHonoApiFlashUnlike(
@@ -279,8 +288,13 @@ export async function handleHonoApiFlashUnlike(
 		throw clientErrorWithStatus(400, 'You have not liked that flash.', 'NOT_LIKED', '755f25a7-9871-4f65-9f34-51eaad9ae0ac');
 	}
 
-	await deleteFlashLikeByIdFromDatabase(deps.db, like.id);
-	void decrementFlashLikedCountInDatabase(deps.db, flash.id);
+	await deps.db.transaction(async transaction => {
+		const db = transaction as typeof deps.db;
+		if (!await deleteFlashLikeByIdFromDatabase(db, like.id)) {
+			throw clientErrorWithStatus(400, 'You have not liked that flash.', 'NOT_LIKED', '755f25a7-9871-4f65-9f34-51eaad9ae0ac');
+		}
+		await decrementFlashLikedCountInDatabase(db, flash.id);
+	});
 }
 
 export const iFavoritesParamDef = z.object({

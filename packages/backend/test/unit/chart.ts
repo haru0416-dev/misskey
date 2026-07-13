@@ -32,6 +32,7 @@ describe('Chart', () => {
 	let redisClient = {
 		set: () => Promise.resolve('OK'),
 		get: () => Promise.resolve(null),
+		eval: () => Promise.resolve(1),
 	} as unknown as Mocked<Redis.Redis>;
 
 	let testChart: TestChart;

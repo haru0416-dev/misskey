@@ -4,6 +4,14 @@
  */
 
 import * as Redis from 'ioredis';
+import { randomUUID } from 'node:crypto';
+
+const releaseLockScript = `
+if redis.call('get', KEYS[1]) == ARGV[1] then
+	return redis.call('del', KEYS[1])
+end
+return 0
+`;
 
 export async function acquireDistributedLock(
 	redis: Redis.Redis,
@@ -13,17 +21,14 @@ export async function acquireDistributedLock(
 	retryInterval: number,
 ): Promise<() => Promise<void>> {
 	const lockKey = `lock:${name}`;
-	const identifier = Math.random().toString(36).slice(2);
+	const identifier = randomUUID();
 
 	let retries = 0;
 	while (retries < maxRetries) {
 		const result = await redis.set(lockKey, identifier, 'PX', timeout, 'NX');
 		if (result === 'OK') {
 			return async () => {
-				const currentIdentifier = await redis.get(lockKey);
-				if (currentIdentifier === identifier) {
-					await redis.del(lockKey);
-				}
+				await redis.eval(releaseLockScript, 1, lockKey, identifier);
 			};
 		}
 

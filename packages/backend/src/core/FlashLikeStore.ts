@@ -116,10 +116,12 @@ export async function createFlashLikeInDatabase(
 export async function deleteFlashLikeByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: FlashLikeRow['id'],
-): Promise<void> {
-	await db
+): Promise<boolean> {
+	const deleted = await db
 		.delete(flashLike)
-		.where(eq(flashLike.id, id));
+		.where(eq(flashLike.id, id))
+		.returning({ id: flashLike.id });
+	return deleted.length === 1;
 }
 
 export async function listLikedFlashIdsByUserIdFromDatabase(
