@@ -192,7 +192,7 @@ export async function onMoveAccountForHonoApi(
 
 /**
  * AntennaService.addNoteToAntennas 相当。原典はプロセス内キャッシュからアクティブなアンテナ一覧を
- * 取得していた。DB負荷を抑えつつ更新反映を遅らせすぎないよう、一覧は短時間だけ共有する。
+ * 取得していたが、更新直後の取りこぼしを避けるためDBから取得し、評価だけを分割実行する。
  * FanoutTimelineService.push と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
  */
 export async function addNoteToAntennasForHonoApi(
@@ -200,7 +200,7 @@ export async function addNoteToAntennasForHonoApi(
 	note: MiNote,
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
 ): Promise<void> {
-	const antennas = await getActiveAntennas(deps.db);
+	const antennas = await listActiveAntennasFromDatabase(deps.db);
 
 	// src === 'list' なアンテナの userListId をまとめて1クエリで所属判定する (アンテナ毎の exists クエリを回避)。
 	const listAntennaUserListIds = [...new Set(
@@ -236,20 +236,6 @@ export async function addNoteToAntennasForHonoApi(
 	}
 
 	await redisPipeline.exec();
-}
-
-const activeAntennaCache = new WeakMap<MiDrizzleDatabase, { expiresAt: number; value: Promise<MiAntenna[]> }>();
-
-function getActiveAntennas(db: MiDrizzleDatabase): Promise<MiAntenna[]> {
-	const now = Date.now();
-	const cached = activeAntennaCache.get(db);
-	if (cached != null && cached.expiresAt > now) return cached.value;
-	const value = listActiveAntennasFromDatabase(db).catch(error => {
-		activeAntennaCache.delete(db);
-		throw error;
-	});
-	activeAntennaCache.set(db, { expiresAt: now + 1000, value });
-	return value;
 }
 
 function noSuchAntennaError(id: string): HonoApiError {

@@ -43,8 +43,14 @@ export async function set(key: string, val: unknown) {
 export async function update(key: string, updater: (value: unknown) => unknown) {
 	if (idbAvailable) return iupdate(key, updater);
 	const storageKey = `${PREFIX}${key}` as `idbfallback::${string}`;
-	const value = updater(miLocalStorage.getItemAsJson(storageKey));
-	return miLocalStorage.setItemAsJson(storageKey, value);
+	const write = () => {
+		const value = updater(miLocalStorage.getItemAsJson(storageKey));
+		miLocalStorage.setItemAsJson(storageKey, value);
+	};
+	if (typeof navigator !== 'undefined' && navigator.locks != null) {
+		return navigator.locks.request(storageKey, write);
+	}
+	write();
 }
 
 export async function del(key: string) {
