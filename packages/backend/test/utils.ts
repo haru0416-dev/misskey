@@ -643,7 +643,7 @@ export async function sendEnvResetRequest() {
 	);
 
 	if (res.status !== 200) {
-		throw new Error('server env update failed.');
+		throw new Error('server env reset failed.');
 	}
 }
 

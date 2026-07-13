@@ -5,6 +5,7 @@ export default mergeConfig(
 	baseConfig,
 	defineConfig({
 		test: {
+			fileParallelism: false,
 			include: ['./test/e2e/**/*.ts'],
 			globalSetup: './built-test/entry.js',
 			setupFiles: ['./test/setup.e2e.ts'],
