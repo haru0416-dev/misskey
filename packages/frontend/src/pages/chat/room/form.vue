@@ -157,6 +157,8 @@ function onDrop(ev: DragEvent): void {
 }
 
 function onKeydown(ev: KeyboardEvent) {
+	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return;
+
 	if (ev.key === 'Enter') {
 		if (prefer['chat.sendOnEnter']) {
 			if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
