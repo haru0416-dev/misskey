@@ -1015,6 +1015,7 @@ export async function createNoteForHonoApi(
 
 	tags = tags.filter(tag => Array.from(tag).length <= 128).splice(0, 32);
 
+	const resolvedApMentionUserIds = new Set((data.apMentions ?? []).map(user => user.id));
 	const finalMentionedUsers: MiUser[] = mentionedUsers ?? [];
 	const finalMentionedUserIds = new Set(finalMentionedUsers.map(user => user.id));
 	let replyUserForVisibility: MiUser | null = null;
@@ -1035,7 +1036,15 @@ export async function createNoteForHonoApi(
 		}
 	}
 
-	const effectiveMentionCount = Math.max(finalMentionedUsers.length, data.apMentionRawCount ?? 0);
+	const countedMentionUserIds = new Set(finalMentionedUserIds);
+	if (data.visibility === 'specified') {
+		for (const visibleUser of data.visibleUsers ?? []) {
+			countedMentionUserIds.add(visibleUser.id);
+		}
+	}
+	const effectiveMentionCount = data.apMentionRawCount == null
+		? countedMentionUserIds.size
+		: data.apMentionRawCount + Array.from(countedMentionUserIds).filter(userId => !resolvedApMentionUserIds.has(userId)).length;
 	if (effectiveMentionCount > 0 && effectiveMentionCount > policies.mentionLimit) {
 		throw new IdentifiableError('9f466dab-c856-48cd-9e65-ff90ff750580', 'Note contains too many mentions');
 	}
