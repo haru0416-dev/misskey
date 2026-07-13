@@ -311,6 +311,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.body.translatorProvider, meta.translatorProvider);
 			assert.strictEqual(res.body.libreTranslateApiUrl, meta.libreTranslateApiUrl);
 			assert.strictEqual(res.body.federation, meta.federation);
+			assert.deepStrictEqual(res.body.urlPreviewSensitiveList, meta.urlPreviewSensitiveList);
 			assert.strictEqual(typeof res.body.proxyAccountId, 'string');
 			assert.strictEqual((res.body.policies as { canPublicNote?: boolean }).canPublicNote, true);
 
@@ -367,6 +368,7 @@ describe('Endpoints', () => {
 					tosUrl: `https://example.com/tos-${now}`,
 					repositoryUrl: 'not a url',
 					urlPreviewSummaryProxyUrl: ` https://example.com/summary-${now} `,
+					urlPreviewSensitiveList: [`example.com ${now}`, '', `/preview-${now}/`],
 					clientOptions: {
 						entrancePageStyle: 'simple',
 						showTimelineForVisitor: false,
@@ -397,6 +399,10 @@ describe('Endpoints', () => {
 				assert.strictEqual(after.termsOfServiceUrl, `https://example.com/tos-${now}`);
 				assert.strictEqual(after.repositoryUrl, null);
 				assert.strictEqual(after.urlPreviewSummaryProxyUrl, `https://example.com/summary-${now}`);
+				assert.deepStrictEqual(after.urlPreviewSensitiveList, [`example.com ${now}`, `/preview-${now}/`]);
+				const adminMeta = await api('admin/meta', {}, alice);
+				assert.strictEqual(adminMeta.status, 200);
+				assert.deepStrictEqual(adminMeta.body.urlPreviewSensitiveList, after.urlPreviewSensitiveList);
 				assert.strictEqual(after.clientOptions.entrancePageStyle, 'simple');
 				assert.strictEqual(after.clientOptions.showTimelineForVisitor, false);
 				assert.strictEqual(after.clientOptions.showActivitiesForVisitor, before.clientOptions.showActivitiesForVisitor);
@@ -432,6 +438,7 @@ describe('Endpoints', () => {
 					tosUrl: before.termsOfServiceUrl,
 					repositoryUrl: before.repositoryUrl,
 					urlPreviewSummaryProxyUrl: before.urlPreviewSummaryProxyUrl,
+					urlPreviewSensitiveList: before.urlPreviewSensitiveList,
 					clientOptions: before.clientOptions,
 					federationHosts: before.federationHosts,
 				}, alice);

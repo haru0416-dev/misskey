@@ -1,0 +1,1 @@
+ALTER TABLE "meta" ADD COLUMN "urlPreviewSensitiveList" varchar(3072)[] DEFAULT '{}'::character varying[] NOT NULL;

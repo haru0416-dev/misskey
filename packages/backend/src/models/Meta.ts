@@ -263,6 +263,8 @@ export class MiMeta {
 
 	public urlPreviewUserAgent: string | null;
 
+	public urlPreviewSensitiveList: string[];
+
 	public federation: 'all' | 'specified' | 'none';
 
 	public federationHosts: string[];

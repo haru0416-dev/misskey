@@ -12034,6 +12034,14 @@ export interface Locale extends ILocale {
          * プロキシには下記パラメータがクエリ文字列として連携されます。プロキシ側がこれらをサポートしない場合、設定値は無視されます。
          */
         "summaryProxyDescription2": string;
+        /**
+         * サムネイルの表示を制限するURL
+         */
+        "sensitiveList": string;
+        /**
+         * スペース区切りでAND、改行区切りでORとして判定します。スラッシュで囲むと正規表現として判定し、一致したURLプレビューのサムネイルをセンシティブ扱いにします。
+         */
+        "sensitiveListDescription": string;
     };
     "_mediaControls": {
         /**

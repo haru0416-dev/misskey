@@ -104,6 +104,7 @@ export type RuntimeResources = {
 	objectStorageQueue?: ObjectStorageQueue;
 	userWebhookDeliverQueue?: UserWebhookDeliverQueue;
 	systemWebhookDeliverQueue?: SystemWebhookDeliverQueue;
+	urlPreviewService?: UrlPreviewService;
 };
 
 export function createMeilisearchClient(config: Config): Meilisearch | null {
@@ -184,6 +185,7 @@ export async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
 }
 
 export async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
+	resources.urlPreviewService?.dispose();
 	await allSettled();
 	await Promise.all([
 		resources.systemQueue?.close(),
@@ -232,7 +234,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const aiService = createAiService(meta, httpRequestService, loggerService);
 		const fileInfoService = createFileInfoService(aiService, loggerService);
 		const downloadService = createDownloadService(config, httpRequestService, loggerService);
-		const urlPreviewService = createUrlPreviewService(config, meta, httpRequestService, loggerService);
+		const urlPreviewService = resources.urlPreviewService = createUrlPreviewService(config, meta, httpRequestService, loggerService);
 		const imageProcessingService = createImageProcessingService();
 		const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
 		const internalStorageService = createInternalStorageService(config);
