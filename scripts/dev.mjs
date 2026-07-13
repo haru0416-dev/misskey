@@ -11,73 +11,133 @@ const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 const rootDir = _dirname + '/../';
 
-const bun = (args) =>
-	execa('bun', args, {
+/** @type {Set<import('execa').ResultPromise>} */
+const childProcesses = new Set();
+let shuttingDown = false;
+/** @type {Promise<void> | null} */
+let shutdownPromise = null;
+
+function spawnBun(args) {
+	const isWindows = process.platform === 'win32';
+	const shouldForceColor =
+		(process.stdout.isTTY || process.stderr.isTTY) && process.env.FORCE_COLOR == null && process.env.NO_COLOR == null;
+	const command = isWindows ? (process.env.ComSpec ?? 'cmd.exe') : 'bun';
+	const commandArgs = isWindows
+		? ['/d', '/s', '/c', `start "" /b /wait "${process.execPath}" ${args.map((arg) => `"${arg}"`).join(' ')}`]
+		: args;
+	const childProcess = execa(command, commandArgs, {
 		cwd: rootDir,
-		stdout: process.stdout,
-		stderr: process.stderr,
+		...(isWindows
+			? {
+					// Keep Ctrl+C handling in this supervisor, then relay output manually.
+					windowsVerbatimArguments: true,
+					windowsHide: false,
+					env: shouldForceColor ? { FORCE_COLOR: '1' } : undefined,
+					stdout: 'pipe',
+					stderr: 'pipe',
+					buffer: false,
+				}
+			: {
+					stdout: process.stdout,
+					stderr: process.stderr,
+				}),
 	});
 
-await bun(['run', 'clean']);
+	if (isWindows) {
+		childProcess.stdout?.pipe(process.stdout, { end: false });
+		childProcess.stderr?.pipe(process.stderr, { end: false });
+	}
 
-// アセットのビルドで依存しているので一番最初に必要
-await bun(['run', '--bun', '--filter', 'i18n', 'build']);
+	childProcesses.add(childProcess);
+	return childProcess;
+}
 
-// build:backend-deps (= i18n + misskey-js build) は、i18n が直前で・misskey-js がこの
-// Promise.all 内でそれぞれビルドされるため呼ばない (同一 built/ への並行二重ビルドになる)
-await Promise.all([
-	bun(['run', 'build-pre']),
-	bun(['run', 'build-assets']),
-	bun(['run', '--bun', '--filter', 'mfm-js', 'build']),
-	// icons-subsetterは開発段階では使用されないが、型エラーを抑制するためにはじめの一度だけビルドする
-	bun(['run', '--bun', '--filter', 'icons-subsetter', 'build']),
-	bun(['run', '--bun', '--filter', 'misskey-js', 'build']),
-]);
+async function runBun(args) {
+	const childProcess = spawnBun(args);
+	try {
+		return await childProcess;
+	} finally {
+		childProcesses.delete(childProcess);
+	}
+}
 
-execa('bun', ['run', 'build-pre', '--watch'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
+function startBun(args) {
+	const childProcess = spawnBun(args);
+	void childProcess.then(
+		() => {
+			childProcesses.delete(childProcess);
+			if (!shuttingDown) void shutdown(1);
+		},
+		(error) => {
+			childProcesses.delete(childProcess);
+			if (!shuttingDown) {
+				console.error(error);
+				void shutdown(1);
+			}
+		},
+	);
+}
+
+async function stopChildProcess(childProcess) {
+	if (process.platform === 'win32' && childProcess.pid != null) {
+		const result = await execa('taskkill', ['/pid', childProcess.pid.toString(), '/t', '/f'], {
+			reject: false,
+		});
+		if (result.failed) childProcess.kill();
+	} else {
+		childProcess.kill();
+	}
+
+	await childProcess.catch(() => {});
+}
+
+function shutdown(exitCode) {
+	if (shutdownPromise != null) return shutdownPromise;
+
+	shuttingDown = true;
+	shutdownPromise = (async () => {
+		await Promise.allSettled([...childProcesses].map(stopChildProcess));
+		process.exit(exitCode);
+	})();
+	return shutdownPromise;
+}
+
+process.on('SIGINT', () => {
+	void shutdown(0);
 });
 
-execa('bun', ['run', '--bun', '--filter', 'backend', 'dev'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
+process.on('SIGTERM', () => {
+	void shutdown(0);
 });
 
-execa('bun', ['run', '--bun', '--filter', 'frontend', 'watch'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
+try {
+	await runBun(['run', 'clean']);
 
-execa('bun', ['run', '--bun', '--filter', 'frontend-embed', 'watch'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
+	// アセットのビルドで依存しているので一番最初に必要
+	await runBun(['run', '--bun', '--filter', 'i18n', 'build']);
 
-execa('bun', ['run', '--bun', '--filter', 'sw', 'watch'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
+	// build:backend-deps (= i18n + misskey-js build) は、i18n が直前で・misskey-js がこの
+	// Promise.all 内でそれぞれビルドされるため呼ばない (同一 built/ への並行二重ビルドになる)
+	await Promise.all([
+		runBun(['run', 'build-pre']),
+		runBun(['run', 'build-assets']),
+		runBun(['run', '--bun', '--filter', 'mfm-js', 'build']),
+		// icons-subsetterは開発段階では使用されないが、型エラーを抑制するためにはじめの一度だけビルドする
+		runBun(['run', '--bun', '--filter', 'icons-subsetter', 'build']),
+		runBun(['run', '--bun', '--filter', 'misskey-js', 'build']),
+	]);
 
-execa('bun', ['run', '--bun', '--filter', 'misskey-js', 'watch', '--no-clean'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
-
-execa('bun', ['run', '--bun', '--filter', 'mfm-js', 'watch'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
-
-execa('bun', ['run', '--bun', '--filter', 'i18n', 'watch', '--no-clean'], {
-	cwd: rootDir,
-	stdout: process.stdout,
-	stderr: process.stderr,
-});
+	startBun(['run', 'build-pre', '--watch']);
+	startBun(['run', '--bun', '--filter', 'backend', 'dev']);
+	startBun(['run', '--bun', '--filter', 'frontend', 'watch']);
+	startBun(['run', '--bun', '--filter', 'frontend-embed', 'watch']);
+	startBun(['run', '--bun', '--filter', 'sw', 'watch']);
+	startBun(['run', '--bun', '--filter', 'misskey-js', 'watch', '--no-clean']);
+	startBun(['run', '--bun', '--filter', 'mfm-js', 'watch']);
+	startBun(['run', '--bun', '--filter', 'i18n', 'watch', '--no-clean']);
+} catch (error) {
+	if (!shuttingDown) {
+		console.error(error);
+		await shutdown(1);
+	}
+}

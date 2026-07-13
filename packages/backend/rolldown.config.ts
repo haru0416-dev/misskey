@@ -9,6 +9,7 @@ import type { ResultPromise } from 'execa';
  */
 function backendDevServerPlugin(): Plugin {
 	let backendProcess: ResultPromise | null = null;
+	let backendShutdownPromise: Promise<void> | null = null;
 
 	async function runBuildAssets() {
 		await execa('bun', ['run', 'build-assets'], {
@@ -19,21 +20,36 @@ function backendDevServerPlugin(): Plugin {
 	}
 
 	async function killBackendProcess() {
-		if (backendProcess) {
-			backendProcess.catch(() => {}); // backendProcess.kill()によって発生する例外を無視するためにcatch()を呼び出す
-			backendProcess.kill();
-			await new Promise((resolve) => backendProcess!.on('exit', resolve));
-			backendProcess = null;
-		}
+		if (backendShutdownPromise) return backendShutdownPromise;
+		if (!backendProcess) return;
+
+		const processToKill = backendProcess;
+		backendProcess = null;
+		processToKill.catch(() => {});
+
+		backendShutdownPromise = (async () => {
+			if (process.platform === 'win32' && processToKill.pid != null) {
+				const result = await execa('taskkill', ['/pid', processToKill.pid.toString(), '/t', '/f'], {
+					reject: false,
+				});
+				if (result.failed) processToKill.kill();
+			} else {
+				processToKill.kill();
+			}
+
+			await processToKill.catch(() => {});
+		})().finally(() => {
+			backendShutdownPromise = null;
+		});
+
+		return backendShutdownPromise;
 	}
 
 	return {
 		name: 'backend-dev-server',
 		async closeBundle() {
 			await runBuildAssets();
-			if (backendProcess) {
-				await killBackendProcess();
-			}
+			await killBackendProcess();
 			backendProcess = execa('bun', ['./built/entry.js'], {
 				stdout: process.stdout,
 				stderr: process.stderr,
@@ -43,9 +59,10 @@ function backendDevServerPlugin(): Plugin {
 			});
 		},
 		async watchChange() {
-			if (backendProcess) {
-				await killBackendProcess();
-			}
+			await killBackendProcess();
+		},
+		async closeWatcher() {
+			await killBackendProcess();
 		},
 	};
 }

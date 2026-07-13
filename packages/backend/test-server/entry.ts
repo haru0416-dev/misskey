@@ -1,6 +1,9 @@
 import type { Server } from 'node:http';
 import { Hono } from 'hono';
+import { Redis } from 'ioredis';
 import { loadConfig } from '@/config.js';
+import { createDrizzlePool } from '@/drizzle.js';
+import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import { createHonoNodeServer } from '@/server/node-server.js';
 import { initExtraThreadPool, server as startServer } from '@/boot/common.js';
 import type { HonoServerRuntime } from '@/boot/server.js';
@@ -12,6 +15,13 @@ process.env.NODE_ENV = 'test';
 
 let runtime: HonoServerRuntime | undefined;
 let controllerServer: Server | undefined;
+let controllerOperation = Promise.resolve();
+
+async function runControllerOperation<T>(operation: () => Promise<T>): Promise<T> {
+	const result = controllerOperation.then(operation, operation);
+	controllerOperation = result.then(() => undefined, () => undefined);
+	return result;
+}
 
 /**
  * テスト用のサーバインスタンスを起動する
@@ -59,25 +69,48 @@ async function startControllerEndpoints(port = config.port + 1000) {
 	const controller = new Hono();
 
 	controller.post('/env', async (c) => {
-		const body = await c.req.json<{ key?: string, value?: string }>().catch(() => ({}));
-		console.log(body);
-		const key = body.key;
-		if (!key) {
-			return c.json({ success: false }, 400);
-		}
+		return runControllerOperation(async () => {
+			const body = await c.req.json<{ key?: string, value?: string }>().catch(() => ({}));
+			console.log(body);
+			const key = body.key;
+			if (!key) {
+				return c.json({ success: false }, 400);
+			}
 
-		process.env[key] = body.value;
+			process.env[key] = body.value;
 
-		return c.json({ success: true });
+			return c.json({ success: true });
+		});
 	});
 
 	controller.post('/env-reset', async (c) => {
-		process.env = JSON.parse(originEnv);
+		return runControllerOperation(async () => {
+			try {
+				await stopApplication();
+				process.env = JSON.parse(originEnv);
 
-		await stopApplication();
-		await startApplication();
+				const pool = createDrizzlePool(config);
+				try {
+					await resetDatabase(pool);
+					await runMigrations(pool);
+				} finally {
+					await pool.end();
+				}
 
-		return c.json({ success: true });
+				const redis = new Redis(config.redis);
+				try {
+					await redis.flushdb();
+				} finally {
+					await redis.quit();
+				}
+
+				await startApplication();
+				return c.json({ success: true });
+			} catch (error) {
+				console.error('environment reset failed.', error);
+				return c.json({ success: false }, 500);
+			}
+		});
 	});
 
 	controllerServer = createHonoNodeServer({ app: controller });
