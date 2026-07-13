@@ -6,7 +6,7 @@
 import type { PersistedStateIo } from '@/store/persisted-state.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { get, set } from '@/utility/idb-proxy.js';
+import { get, set, update } from '@/utility/idb-proxy.js';
 import { TAB_ID } from '@/tab-id.js';
 
 export const persistedStateIo: PersistedStateIo = {
@@ -14,6 +14,7 @@ export const persistedStateIo: PersistedStateIo = {
 	currentAccountId: () => $i?.id ?? null,
 	get,
 	set,
+	update,
 	loadAccount: (namespace) => misskeyApi('i/registry/get-all', { scope: ['client', namespace] }),
 	saveAccount: (namespace, key, value) =>
 		misskeyApi('i/registry/set', {

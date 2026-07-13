@@ -302,13 +302,7 @@ async function clearNoteDraftSchedule(deps: HonoApiNoteDraftDependencies, draft:
 		if (job != null && !await job.isActive()) await job.remove();
 	}
 
-	// Remove legacy and stale-revision jobs created before deterministic IDs were introduced.
-	const jobs = await deps.postScheduledNoteQueue.getJobs(['delayed', 'waiting']);
-	for (const job of jobs) {
-		if (job.data.noteDraftId === draft.id) {
-			await job.remove();
-		}
-	}
+	// Stale revisions are rejected by the worker, so request handling never scans the entire queue.
 }
 
 async function packNoteDraftForHonoApi(

@@ -33,6 +33,7 @@ export type PersistedStateIo = {
 	currentAccountId: () => string | null;
 	get: (key: string) => Promise<unknown>;
 	set: (key: string, value: unknown) => Promise<void>;
+	update: (key: string, updater: (value: unknown) => unknown) => Promise<void>;
 	loadAccount: (namespace: string) => Promise<Record<string, unknown>>;
 	saveAccount: (namespace: string, key: string, value: unknown) => Promise<void>;
 	createChannel: (name: string) => PersistedStateChannel | null;
@@ -290,9 +291,11 @@ class PersistedStateController {
 		writes: Map<string, unknown>,
 	): Promise<void> {
 		if (writes.size === 0) return;
-		const state = toRecord(await this.io.get(storageKey));
-		for (const [key, value] of writes) state[key] = cloneValue(value);
-		await this.io.set(storageKey, state);
+		await this.io.update(storageKey, current => {
+			const state = toRecord(current);
+			for (const [key, value] of writes) state[key] = cloneValue(value);
+			return state;
+		});
 
 		for (const [key, value] of writes) {
 			const stamp = this.nextLocalStamp(key);
@@ -311,9 +314,11 @@ class PersistedStateController {
 
 	private async persistAccountBatch(writes: Map<string, unknown>): Promise<void> {
 		if (writes.size === 0 || this.io.currentAccountId() == null) return;
-		const cache = toRecord(await this.io.get(this.registryCacheKeyName));
-		for (const [key, value] of writes) cache[key] = cloneValue(value);
-		await this.io.set(this.registryCacheKeyName, cache);
+		await this.io.update(this.registryCacheKeyName, current => {
+			const cache = toRecord(current);
+			for (const [key, value] of writes) cache[key] = cloneValue(value);
+			return cache;
+		});
 		await Promise.all(Array.from(writes, ([key, value]) => this.io.saveAccount(this.definition.namespace, key, value)));
 	}
 

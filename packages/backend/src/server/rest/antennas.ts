@@ -192,7 +192,7 @@ export async function onMoveAccountForHonoApi(
 
 /**
  * AntennaService.addNoteToAntennas 相当。原典はプロセス内キャッシュからアクティブなアンテナ一覧を
- * 取得していたが、ここでは毎回DBから読む (このコードベースのキャッシュ再導入リスクを踏まえた判断)。
+ * 取得していたが、更新直後の取りこぼしを避けるためDBから取得し、評価だけを分割実行する。
  * FanoutTimelineService.push と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
  */
 export async function addNoteToAntennasForHonoApi(
@@ -210,7 +210,11 @@ export async function addNoteToAntennasForHonoApi(
 	)];
 	const listMembershipUserListIds = await listUserListIdsContainingUserFromDatabase(deps.db, note.userId, listAntennaUserListIds);
 
-	const antennasWithMatchResult = await Promise.all(antennas.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser, { listMembershipUserListIds }).then(hit => [antenna, hit] as const)));
+	const antennasWithMatchResult: (readonly [MiAntenna, boolean])[] = [];
+	for (let index = 0; index < antennas.length; index += 50) {
+		const batch = antennas.slice(index, index + 50);
+		antennasWithMatchResult.push(...await Promise.all(batch.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser, { listMembershipUserListIds }).then(hit => [antenna, hit] as const))));
+	}
 	const matchedAntennas = antennasWithMatchResult.filter(([, hit]) => hit).map(([antenna]) => antenna);
 
 	const redisPipeline = deps.redisForTimelines.pipeline();
@@ -223,16 +227,15 @@ export async function addNoteToAntennasForHonoApi(
 				redisPipeline.ltrim('list:' + tl, 0, 200 - 1);
 			}
 		} else {
-			void deps.redisForTimelines.lindex('list:' + tl, -1).then(lastId => {
-				if (lastId == null || parseId(note.id).date.getTime() > parseId(lastId).date.getTime()) {
-					void deps.redisForTimelines.lpush('list:' + tl, note.id);
-				}
-			});
+			const lastId = await deps.redisForTimelines.lindex('list:' + tl, -1);
+			if (lastId == null || parseId(note.id).date.getTime() > parseId(lastId).date.getTime()) {
+				await deps.redisForTimelines.lpush('list:' + tl, note.id);
+			}
 		}
 		deps.publishAntennaStream?.(antenna.id, 'note', note);
 	}
 
-	void redisPipeline.exec();
+	await redisPipeline.exec();
 }
 
 function noSuchAntennaError(id: string): HonoApiError {

@@ -90,10 +90,12 @@ export async function createPageLikeInDatabase(
 export async function deletePageLikeByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: PageLikeRow['id'],
-): Promise<void> {
-	await db
+): Promise<boolean> {
+	const deleted = await db
 		.delete(pageLike)
-		.where(eq(pageLike.id, id));
+		.where(eq(pageLike.id, id))
+		.returning({ id: pageLike.id });
+	return deleted.length === 1;
 }
 
 export async function listLikedPageIdsByUserIdAndPageIdsFromDatabase(
