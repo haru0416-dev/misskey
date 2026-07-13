@@ -34,7 +34,7 @@ function createMeta(): MiMeta {
 		urlPreviewMaximumContentLength: 1024,
 		urlPreviewRequireContentLength: false,
 		urlPreviewSensitiveList: [],
-	} as MiMeta;
+	} as unknown as MiMeta;
 }
 
 function createSummary(): SummalyResult {
@@ -76,11 +76,13 @@ describe('createUrlPreviewService', () => {
 		const service = createService(getJson);
 
 		try {
-			const first = await service.handle({ query: { url: 'https://example.com/article', lang: 'en-US' } }, createReply());
+			const firstReply = createReply();
+			const first = await service.handle({ query: { url: 'https://example.com/article', lang: 'en-US' } }, firstReply);
 			const second = await service.handle({ query: { url: 'https://example.com/article', lang: 'en-US' } }, createReply());
 
 			expect(getJson).toHaveBeenCalledOnce();
 			expect(first).toEqual(second);
+			expect(firstReply.header).toHaveBeenCalledWith('Cache-Control', 'private, no-store');
 			expect((first as SummalyResult).icon).toContain('https://media.test/preview.webp?');
 			expect(source.icon).toBe('https://example.com/icon.png');
 			expect(source.thumbnail).toBe('https://example.com/thumbnail.png');

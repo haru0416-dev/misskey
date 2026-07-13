@@ -104,8 +104,8 @@ export function createUrlPreviewService(
 				summary.sensitive = isKeywordIncluded(summary.url, meta.urlPreviewSensitiveList);
 			}
 
-			// Cache 1day
-			reply.header('Cache-Control', 'max-age=86400, immutable');
+			// The summary is cached server-side, but moderation rules must take effect immediately.
+			reply.header('Cache-Control', 'private, no-store');
 
 			return summary;
 		} catch (err) {

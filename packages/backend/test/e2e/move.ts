@@ -9,9 +9,8 @@ process.env.NODE_ENV = 'test';
 // (test-server 経由でなく) vitest プロセス内で直接呼ぶため、ビルド時injectionが効かない。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
-import { setTimeout } from 'node:timers/promises';
 import * as assert from 'assert';
-import { afterAll, beforeAll, afterEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, afterEach, describe, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
@@ -19,6 +18,9 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { jobQueue, type JobQueueRuntime } from '@/boot/common.js';
 import { api, castAsError, signup, successfulApiCall, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
+
+const waitForMoveJobOptions = { timeout: 5000, interval: 50 };
+const waitForDelayedUnfollowJobOptions = { timeout: 15000, interval: 100 };
 
 describe('Account Move', () => {
 	let jq: JobQueueRuntime;
@@ -278,53 +280,55 @@ describe('Account Move', () => {
 
 			assert.strictEqual(move.status, 200);
 
-			await setTimeout(1000 * 3); // wait for jobs to finish
+			await vi.waitFor(async () => {
+				const aliceFollowings = await api('users/following', {
+					userId: alice.id,
+				}, alice);
+				assert.strictEqual(aliceFollowings.status, 200);
+				assert.strictEqual(aliceFollowings.body.length, 3);
+			}, waitForMoveJobOptions);
 
-			// Unfollow delayed?
-			const aliceFollowings = await api('users/following', {
-				userId: alice.id,
-			}, alice);
-			assert.strictEqual(aliceFollowings.status, 200);
-			assert.ok(aliceFollowings);
-			assert.strictEqual(aliceFollowings.body.length, 3);
+			await vi.waitFor(async () => {
+				const carolFollowings = await api('users/following', {
+					userId: carol.id,
+				}, carol);
+				assert.strictEqual(carolFollowings.status, 200);
+				assert.strictEqual(carolFollowings.body.length, 2);
+				assert.strictEqual(carolFollowings.body[0].followeeId, bob.id);
+				assert.strictEqual(carolFollowings.body[1].followeeId, alice.id);
+			}, waitForMoveJobOptions);
 
-			const carolFollowings = await api('users/following', {
-				userId: carol.id,
-			}, carol);
-			assert.strictEqual(carolFollowings.status, 200);
-			assert.ok(carolFollowings);
-			assert.strictEqual(carolFollowings.body.length, 2);
-			assert.strictEqual(carolFollowings.body[0].followeeId, bob.id);
-			assert.strictEqual(carolFollowings.body[1].followeeId, alice.id);
+			await vi.waitFor(async () => {
+				const blockings = await api('blocking/list', {}, dave);
+				assert.strictEqual(blockings.status, 200);
+				assert.strictEqual(blockings.body.length, 2);
+				assert.strictEqual(blockings.body[0].blockeeId, bob.id);
+				assert.strictEqual(blockings.body[1].blockeeId, alice.id);
+			}, waitForMoveJobOptions);
 
-			const blockings = await api('blocking/list', {}, dave);
-			assert.strictEqual(blockings.status, 200);
-			assert.ok(blockings);
-			assert.strictEqual(blockings.body.length, 2);
-			assert.strictEqual(blockings.body[0].blockeeId, bob.id);
-			assert.strictEqual(blockings.body[1].blockeeId, alice.id);
+			await vi.waitFor(async () => {
+				const mutings = await api('mute/list', {}, dave);
+				assert.strictEqual(mutings.status, 200);
+				assert.strictEqual(mutings.body.length, 2);
+				assert.strictEqual(mutings.body[0].muteeId, bob.id);
+				assert.strictEqual(mutings.body[1].muteeId, alice.id);
+			}, waitForMoveJobOptions);
 
-			const mutings = await api('mute/list', {}, dave);
-			assert.strictEqual(mutings.status, 200);
-			assert.ok(mutings);
-			assert.strictEqual(mutings.body.length, 2);
-			assert.strictEqual(mutings.body[0].muteeId, bob.id);
-			assert.strictEqual(mutings.body[1].muteeId, alice.id);
+			await vi.waitFor(async () => {
+				const rootLists = await api('users/lists/list', {}, root);
+				assert.strictEqual(rootLists.status, 200);
+				const userIds = rootLists.body[0].userIds;
+				assert.ok(userIds);
+				assert.strictEqual(userIds.length, 2);
+				assert.ok(userIds.includes(bob.id));
+				assert.ok(userIds.includes(alice.id));
+			}, waitForMoveJobOptions);
 
-			const rootLists = await api('users/lists/list', {}, root);
-			assert.strictEqual(rootLists.status, 200);
-			assert.ok(rootLists);
-			assert.ok(rootLists.body[0].userIds);
-			assert.strictEqual(rootLists.body[0].userIds.length, 2);
-			assert.ok(rootLists.body[0].userIds.find((id: string) => id === bob.id));
-			assert.ok(rootLists.body[0].userIds.find((id: string) => id === alice.id));
-
-			const eveLists = await api('users/lists/list', {}, eve);
-			assert.strictEqual(eveLists.status, 200);
-			assert.ok(eveLists);
-			assert.ok(eveLists.body[0].userIds);
-			assert.strictEqual(eveLists.body[0].userIds.length, 1);
-			assert.ok(eveLists.body[0].userIds.find((id: string) => id === bob.id));
+			await vi.waitFor(async () => {
+				const eveLists = await api('users/lists/list', {}, eve);
+				assert.strictEqual(eveLists.status, 200);
+				assert.deepStrictEqual(eveLists.body[0].userIds, [bob.id]);
+			}, waitForMoveJobOptions);
 		});
 
 		test('A locked account automatically accept the follow request if it had already accepted the old account.', async () => {
@@ -345,14 +349,14 @@ describe('Account Move', () => {
 		});
 
 		test('Unfollowed after 10 sec (24 hours in production).', async () => {
-			await setTimeout(1000 * 8);
+			await vi.waitFor(async () => {
+				const following = await api('users/following', {
+					userId: alice.id,
+				}, alice);
 
-			const following = await api('users/following', {
-				userId: alice.id,
-			}, alice);
-
-			assert.strictEqual(following.status, 200);
-			assert.strictEqual(following.body.length, 0);
+				assert.strictEqual(following.status, 200);
+				assert.strictEqual(following.body.length, 0);
+			}, waitForDelayedUnfollowJobOptions);
 		});
 
 		test('Unable to move if the destination account has already moved.', async () => {

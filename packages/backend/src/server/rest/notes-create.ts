@@ -19,7 +19,6 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { isReply } from '@/misc/is-reply.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
-import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { concat } from '@/misc/prelude/array.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
@@ -118,7 +117,23 @@ function concatNoteContentsForKeyWordCheck(content: { cw?: string | null; text?:
 }
 
 export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): boolean {
-	return isKeywordIncluded(text, keyWords);
+	if (keyWords.length === 0) return false;
+	if (text === '') return false;
+
+	const regexpregexp = /^\/(.+)\/(.*)$/;
+
+	return keyWords.some(filter => {
+		const regexp = filter.match(regexpregexp);
+		if (!regexp) {
+			const words = filter.split(' ');
+			return words.every(keyword => text.includes(keyword));
+		}
+		try {
+			return new RegExp(regexp[1], regexp[2]).test(text);
+		} catch {
+			return false;
+		}
+	});
 }
 
 /** HashtagService#updateHashtagsRanking 相当。hashtags は normalizeForSearch 済みで渡すこと。 */
