@@ -556,7 +556,7 @@ export function buildAdminUpdateMetaPatch(
 	}
 
 	if (Array.isArray(params.urlPreviewSensitiveList)) {
-		set.urlPreviewSensitiveList = filterTruthyStrings(params.urlPreviewSensitiveList);
+		set.urlPreviewSensitiveList = params.urlPreviewSensitiveList.map(value => value.trim()).filter(Boolean);
 	}
 
 	copyDefinedMetaFields(set, params);
