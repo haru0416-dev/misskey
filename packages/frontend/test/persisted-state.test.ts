@@ -82,6 +82,11 @@ function createTestIo(options: TestIoOptions) {
 			setCalls.push([key, value]);
 			storage.set(key, value);
 		},
+		update: async (key, updater) => {
+			const value = updater(storage.get(key));
+			setCalls.push([key, value]);
+			storage.set(key, value);
+		},
 		loadAccount: async () => options.accountValues ?? {},
 		saveAccount: async (namespace, key, value) => {
 			accountSetCalls.push([namespace, key, value]);
@@ -150,6 +155,29 @@ describe('Pinia persisted state plugin', () => {
 		expect(fixture.storage.get('pinia::batch::device')).toEqual({ first: 1, second: 2 });
 	});
 
+	test('preserves different keys written concurrently by multiple tabs', async () => {
+		const storage = new Map<string, unknown>();
+		const hub = new ChannelHub();
+		const firstFixture = createTestIo({ sourceId: 'tab-a', storage, hub });
+		const secondFixture = createTestIo({ sourceId: 'tab-b', storage, hub });
+		const persist = {
+			namespace: 'concurrent',
+			properties: {
+				first: { where: 'device' },
+				second: { where: 'device' },
+			},
+		} as const;
+		const first = createStore('concurrent-first', () => ({ first: 0, second: 0 }), persist, firstFixture.io);
+		const second = createStore('concurrent-second', () => ({ first: 0, second: 0 }), persist, secondFixture.io);
+		await Promise.all([first.$persistReady, second.$persistReady]);
+
+		first.first = 1;
+		second.second = 2;
+		await Promise.all([first.$persistFlush(), second.$persistFlush()]);
+
+		expect(storage.get('pinia::concurrent::device')).toEqual({ first: 1, second: 2 });
+	});
+
 	test('coalesces a burst of writes to the latest value', async () => {
 		const fixture = createTestIo({ sourceId: 'tab-a' });
 		const store = createStore(
@@ -172,14 +200,14 @@ describe('Pinia persisted state plugin', () => {
 
 	test('continues processing writes after a storage failure', async () => {
 		const fixture = createTestIo({ sourceId: 'tab-a' });
-		const set = fixture.io.set;
+		const update = fixture.io.update;
 		let shouldFail = true;
-		fixture.io.set = async (key, value) => {
+		fixture.io.update = async (key, updater) => {
 			if (key === 'pinia::recovery::device' && shouldFail) {
 				shouldFail = false;
 				throw new Error('storage unavailable');
 			}
-			await set(key, value);
+			await update(key, updater);
 		};
 		const store = createStore(
 			'write-recovery',

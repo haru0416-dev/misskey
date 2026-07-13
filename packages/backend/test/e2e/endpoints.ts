@@ -12559,14 +12559,8 @@ describe('Endpoints', () => {
 			const res = await api('notes/unrenote', { noteId: target.body.createdNote.id }, bob);
 			assert.strictEqual(res.status, 204);
 
-			// fire-and-forget な削除が反映されるまでポーリングする
-			let shown;
-			for (let i = 0; i < 20; i++) {
-				shown = await api('notes/show', { noteId: renote.body.createdNote.id }, bob);
-				if (shown.status === 400) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
-			}
-			assert.strictEqual(shown!.status, 400);
+			const shown = await api('notes/show', { noteId: renote.body.createdNote.id }, bob);
+			assert.strictEqual(shown.status, 400);
 		});
 
 		test('存在しない投稿のunrenoteで怒られる', async () => {

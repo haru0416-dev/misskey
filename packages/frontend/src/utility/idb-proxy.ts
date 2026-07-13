@@ -5,7 +5,7 @@
 
 // FirefoxのプライベートモードなどではindexedDBが使用不可能なので、
 // indexedDBが使えない環境ではlocalStorageを使う
-import { get as iget, set as iset, del as idel, clear as iclear } from 'idb-keyval';
+import { get as iget, set as iset, update as iupdate, del as idel, clear as iclear } from 'idb-keyval';
 import { miLocalStorage } from '@/local-storage.js';
 
 const PREFIX = 'idbfallback::';
@@ -38,6 +38,19 @@ export async function get(key: string) {
 export async function set(key: string, val: unknown) {
 	if (idbAvailable) return iset(key, val);
 	return miLocalStorage.setItemAsJson(`${PREFIX}${key}`, val);
+}
+
+export async function update(key: string, updater: (value: unknown) => unknown) {
+	if (idbAvailable) return iupdate(key, updater);
+	const storageKey = `${PREFIX}${key}` as `idbfallback::${string}`;
+	const write = () => {
+		const value = updater(miLocalStorage.getItemAsJson(storageKey));
+		miLocalStorage.setItemAsJson(storageKey, value);
+	};
+	if (typeof navigator !== 'undefined' && navigator.locks != null) {
+		return navigator.locks.request(storageKey, write);
+	}
+	write();
 }
 
 export async function del(key: string) {

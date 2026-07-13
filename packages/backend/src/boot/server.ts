@@ -112,6 +112,7 @@ async function launchHonoServerWithDependencies(
 			meta: deps.meta,
 		}),
 		logger: deps.loggerService.getLogger('oauth'),
+		redis: deps.redis,
 	});
 	disposers.push(() => oauthRuntime.dispose());
 	const app = createMisskeyHonoApp({
