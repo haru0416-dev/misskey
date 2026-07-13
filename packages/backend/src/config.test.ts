@@ -41,6 +41,8 @@ describe('telemetry config validation', () => {
 				headers: { Authorization: 'Bearer secret' },
 				serviceName: undefined,
 				tracesSampleRatio: undefined,
+				tracePropagationTargets: undefined,
+				disabledInstrumentations: undefined,
 			},
 			telemetryForFrontend: {
 				endpoint: 'https://collector.example/v1/traces',
@@ -49,5 +51,34 @@ describe('telemetry config validation', () => {
 				propagateTraceHeaderCorsUrls: ['https://misskey.example/api'],
 			},
 		});
+	});
+
+	test('accepts safe backend propagation targets and known instrumentation names', () => {
+		expect(validateTelemetryConfig({
+			telemetryForBackend: {
+				endpoint: 'http://localhost:4318/v1/traces',
+				tracePropagationTargets: ['https://api.example.com', 'https://internal.example.com/v1/'],
+				disabledInstrumentations: ['@opentelemetry/instrumentation-pg'],
+			},
+		}).telemetryForBackend).toMatchObject({
+			tracePropagationTargets: ['https://api.example.com', 'https://internal.example.com/v1/'],
+			disabledInstrumentations: ['@opentelemetry/instrumentation-pg'],
+		});
+	});
+
+	test('rejects invalid propagation targets and unknown instrumentation names', () => {
+		expect(() => validateTelemetryConfig({
+			telemetryForBackend: {
+				endpoint: 'http://localhost:4318/v1/traces',
+				tracePropagationTargets: ['api.example.com'],
+			},
+		})).toThrow(/tracePropagationTargets\[0\] must be a valid absolute URL/);
+
+		expect(() => validateTelemetryConfig({
+			telemetryForBackend: {
+				endpoint: 'http://localhost:4318/v1/traces',
+				disabledInstrumentations: ['@opentelemetry/instrumentation-unknown'],
+			},
+		})).toThrow(/disabledInstrumentations\[0\] is not a supported instrumentation package name/);
 	});
 });
