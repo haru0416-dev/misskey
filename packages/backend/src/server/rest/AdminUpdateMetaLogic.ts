@@ -133,6 +133,7 @@ export const adminUpdateMetaParamDef = z.object({
 	urlPreviewRequireContentLength: z.boolean().optional(),
 	urlPreviewUserAgent: z.string().nullable().optional(),
 	urlPreviewSummaryProxyUrl: z.string().nullable().optional(),
+	urlPreviewSensitiveList: z.array(z.string()).nullable().optional(),
 	federation: z.enum(['all', 'none', 'specified']).optional(),
 	federationHosts: z.array(z.string()).optional(),
 	deliverSuspendedSoftware: z.array(z.object({
@@ -325,6 +326,11 @@ export const adminUpdateMetaJsonSchema = {
 		urlPreviewRequireContentLength: { type: 'boolean' },
 		urlPreviewUserAgent: { type: 'string', nullable: true },
 		urlPreviewSummaryProxyUrl: { type: 'string', nullable: true },
+		urlPreviewSensitiveList: {
+			type: 'array',
+			nullable: true,
+			items: { type: 'string' },
+		},
 		federation: {
 			type: 'string',
 			enum: ['all', 'none', 'specified'],
@@ -547,6 +553,10 @@ export function buildAdminUpdateMetaPatch(
 
 	if (Array.isArray(params.mediaSilencedHosts)) {
 		set.mediaSilencedHosts = normalizeSilencedHosts(params.mediaSilencedHosts, set.blockedHosts);
+	}
+
+	if (Array.isArray(params.urlPreviewSensitiveList)) {
+		set.urlPreviewSensitiveList = filterTruthyStrings(params.urlPreviewSensitiveList);
 	}
 
 	copyDefinedMetaFields(set, params);

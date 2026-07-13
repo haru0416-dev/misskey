@@ -228,6 +228,7 @@ export async function handleHonoApiAdminMeta(
 		urlPreviewRequireContentLength: instance.urlPreviewRequireContentLength,
 		urlPreviewUserAgent: instance.urlPreviewUserAgent,
 		urlPreviewSummaryProxyUrl: instance.urlPreviewSummaryProxyUrl,
+		urlPreviewSensitiveList: instance.urlPreviewSensitiveList,
 		federation: instance.federation,
 		federationHosts: instance.federationHosts,
 		deliverSuspendedSoftware: instance.deliverSuspendedSoftware,

@@ -8,6 +8,7 @@ import type { Config } from '@/config.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { deepClone } from '@/misc/clone.js';
 import { MemoryKVCache } from '@/misc/cache.js';
+import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { query } from '@/misc/prelude/url.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
@@ -99,6 +100,9 @@ export function createUrlPreviewService(
 
 			summary.icon = wrap(summary.icon);
 			summary.thumbnail = wrap(summary.thumbnail);
+			if (summary.sensitive !== true) {
+				summary.sensitive = isKeywordIncluded(summary.url, meta.urlPreviewSensitiveList);
+			}
 
 			// Cache 1day
 			reply.header('Cache-Control', 'max-age=86400, immutable');

@@ -33,6 +33,7 @@ function createMeta(): MiMeta {
 		urlPreviewTimeout: 1000,
 		urlPreviewMaximumContentLength: 1024,
 		urlPreviewRequireContentLength: false,
+		urlPreviewSensitiveList: [],
 	} as MiMeta;
 }
 
@@ -53,10 +54,10 @@ function createReply() {
 	};
 }
 
-function createService(getJson: HttpRequestService['getJson']) {
+function createService(getJson: HttpRequestService['getJson'], meta = createMeta()) {
 	return createUrlPreviewService(
 		config,
-		createMeta(),
+		meta,
 		{ getJson } as HttpRequestService,
 		{
 			getLogger: () => ({
@@ -102,6 +103,37 @@ describe('createUrlPreviewService', () => {
 			expect(getJson).toHaveBeenCalledTimes(2);
 			expect(firstReply.code).toHaveBeenCalledWith(422);
 			expect(secondReply.code).toHaveBeenCalledWith(422);
+		} finally {
+			service.dispose();
+		}
+	});
+
+	test('marks matching URL previews as sensitive', async () => {
+		const getJson = vi.fn().mockResolvedValue(createSummary());
+		const service = createService(getJson, {
+			...createMeta(),
+			urlPreviewSensitiveList: ['example.com article'],
+		} as MiMeta);
+
+		try {
+			const result = await service.handle({ query: { url: 'https://example.com/article' } }, createReply());
+			expect((result as SummalyResult).sensitive).toBe(true);
+		} finally {
+			service.dispose();
+		}
+	});
+
+	test('preserves Summaly sensitive result and ignores invalid or unsafe regular expressions', async () => {
+		const summary = { ...createSummary(), sensitive: true } as SummalyResult;
+		const getJson = vi.fn().mockResolvedValue(summary);
+		const service = createService(getJson, {
+			...createMeta(),
+			urlPreviewSensitiveList: ['/([a-z]+)+$/', '/[/'],
+		} as MiMeta);
+
+		try {
+			const result = await service.handle({ query: { url: 'https://example.com/article' } }, createReply());
+			expect((result as SummalyResult).sensitive).toBe(true);
 		} finally {
 			service.dispose();
 		}
