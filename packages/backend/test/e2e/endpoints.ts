@@ -4723,7 +4723,10 @@ describe('Endpoints', () => {
 				isActuallyScheduled: true,
 				scheduledAt: new Date(futureScheduledAt),
 			});
-			await postScheduledNoteQueue!.add(draft.id, { noteDraftId: draft.id, scheduledAt: futureScheduledAt }, { delay: 1000 * 60 * 60 });
+			await postScheduledNoteQueue!.add(draft.id, { noteDraftId: draft.id, scheduledAt: futureScheduledAt }, {
+				delay: 1000 * 60 * 60,
+				jobId: `scheduled-${draft.id}-${futureScheduledAt}`,
+			});
 
 			const deleted = await api('notes/drafts/delete', { draftId: draft.id }, alice);
 			assert.strictEqual(deleted.status, 204);
