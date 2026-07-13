@@ -47,7 +47,7 @@ jobs:
       - name: Find bundle report run
         if: github.event_name == 'pull_request_target'
         id: find-report-run
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const workflow_id = 'frontend-bundle-report.yml';
@@ -131,7 +131,7 @@ jobs:
       - name: Find bundle report artifact
         if: github.event_name == 'workflow_run'
         id: find-report-artifact
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const artifactName = 'frontend-bundle-report';
@@ -172,7 +172,7 @@ jobs:
 
       - name: Comment on pull request
         if: (github.event_name == 'workflow_run' && steps.find-report-artifact.outputs.exists == 'true') || steps.find-report-run.outputs.run-id != ''
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           github-token: ${{ secrets.FRONTEND_BUNDLE_REPORT_COMMENT_TOKEN || secrets.FRONTEND_JS_SIZE_COMMENT_TOKEN || secrets.FRONTEND_BUNDLE_VISUALIZER_COMMENT_TOKEN || github.token }}
           script: |

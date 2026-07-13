@@ -46,7 +46,7 @@ jobs:
         run: echo "pr-number=$(cat artifacts/pr_number)" >> "$GITHUB_OUTPUT"
       - name: Find head heap snapshot artifact
         id: find-heap-snapshot-artifact
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const { owner, repo } = context.repo;
