@@ -5,8 +5,6 @@
 
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
-import { ApiDocPage } from './api/openapi/api-doc.js';
-import { genOpenapiSpec } from './api/openapi/gen-spec.js';
 
 export type OpenApiDependencies = {
 	config: Config;
@@ -14,9 +12,12 @@ export type OpenApiDependencies = {
 
 export function createOpenApiApp(deps: OpenApiDependencies): Hono {
 	const app = new Hono();
+	let apiDocHtmlPromise: Promise<string> | undefined;
+	let openApiJsonPromise: Promise<string> | undefined;
 
 	app.get('/api-doc', async () => {
-		return new Response(String(await ApiDocPage()), {
+		apiDocHtmlPromise ??= import('./api/openapi/api-doc.js').then(async ({ ApiDocPage }) => String(await ApiDocPage()));
+		return new Response(await apiDocHtmlPromise, {
 			status: 200,
 			headers: {
 				'Cache-Control': 'public, max-age=86400',
@@ -25,8 +26,9 @@ export function createOpenApiApp(deps: OpenApiDependencies): Hono {
 		});
 	});
 
-	app.get('/api.json', () => {
-		return new Response(JSON.stringify(genOpenapiSpec(deps.config)), {
+	app.get('/api.json', async () => {
+		openApiJsonPromise ??= import('./api/openapi/gen-spec.js').then(({ genOpenapiSpec }) => JSON.stringify(genOpenapiSpec(deps.config)));
+		return new Response(await openApiJsonPromise, {
 			status: 200,
 			headers: {
 				'Cache-Control': 'public, max-age=600',
