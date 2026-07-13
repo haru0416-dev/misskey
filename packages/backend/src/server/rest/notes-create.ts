@@ -1042,7 +1042,12 @@ export async function createNoteForHonoApi(
 
 	const note = await persist(db => insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers, db));
 
-	await postNoteCreatedForHonoApi(deps, note, user, data, tags!, finalMentionedUsers, silent);
+	try {
+		await postNoteCreatedForHonoApi(deps, note, user, data, tags!, finalMentionedUsers, silent);
+	} catch (error) {
+		// The note is already committed, so returning an error would invite clients to create a duplicate.
+		console.error(`Failed to complete post-create processing for note ${note.id}`, error);
+	}
 
 	return note;
 }
