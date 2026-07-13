@@ -17,7 +17,7 @@
 		"mfm-js": "workspace:*",
 		"misskey-js": "workspace:*",
 		"punycode.js": "2.3.1",
-		"shiki": "4.2.0",
+		"shiki": "4.3.1",
 		"tinycolor2": "1.6.0",
 		"vue": "3.5.38"
 	},
