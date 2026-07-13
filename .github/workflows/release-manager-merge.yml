@@ -43,7 +43,7 @@ jobs:
       - name: Get target version
         id: version
         run: echo "target=$(jq -r '.version | split("-")[0]' package.json)" >> "$GITHUB_OUTPUT"
-      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: release-token
         if: inputs.use_external_app_to_release
         with:
