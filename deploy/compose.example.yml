@@ -1,10 +1,13 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
 services:
   web:
     build: ..
-    restart: always
-    links:
-      - db
-      - valkey
+    restart: unless-stopped
     #     - mcaptcha
     #     - meilisearch
     depends_on:
@@ -22,9 +25,11 @@ services:
     volumes:
       - ../files:/misskey/files
       - ../.config:/misskey/.config:ro
+    stop_grace_period: 30s
+    logging: *default-logging
 
   valkey:
-    restart: always
+    restart: unless-stopped
     image: valkey/valkey:8-alpine
     networks:
       - internal_network
@@ -32,12 +37,16 @@ services:
       # Keep the existing path so upgrades reuse Redis-compatible persisted data.
       - ../redis:/data
     healthcheck:
-      test: 'valkey-cli ping'
+      test: ['CMD', 'valkey-cli', 'ping']
       interval: 5s
+      timeout: 3s
+      start_period: 5s
       retries: 20
+    stop_grace_period: 30s
+    logging: *default-logging
 
   db:
-    restart: always
+    restart: unless-stopped
     image: postgres:18-alpine
     networks:
       - internal_network
@@ -45,10 +54,15 @@ services:
       - ../.config/docker.env
     volumes:
       - ../db:/var/lib/postgresql
+    shm_size: 256mb
     healthcheck:
-      test: 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB'
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
+      timeout: 5s
+      start_period: 10s
       retries: 20
+    stop_grace_period: 60s
+    logging: *default-logging
 
 #  mcaptcha:
 #    restart: always

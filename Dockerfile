@@ -17,7 +17,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
-COPY --link ["scripts", "./scripts"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
 COPY --link ["packages/frontend-embed/package.json", "./packages/frontend-embed/"]
@@ -43,16 +42,19 @@ RUN rm -rf .git/
 
 # build native dependencies for target platform
 
-FROM --platform=$TARGETPLATFORM oven/bun:${BUN_VERSION}-debian AS target-builder
+FROM oven/bun:${BUN_VERSION}-debian AS target-builder
 
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+	--mount=type=cache,target=/var/lib/apt,sharing=locked \
+	rm -f /etc/apt/apt.conf.d/docker-clean \
+	; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache \
+	&& apt-get update \
 	&& apt-get install -yqq --no-install-recommends \
 	build-essential
 
 WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
-COPY --link ["scripts", "./scripts"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
 COPY --link ["packages/frontend-embed/package.json", "./packages/frontend-embed/"]
@@ -69,16 +71,18 @@ COPY --link ["scripts/changelog-checker/package.json", "./scripts/changelog-chec
 ARG NODE_ENV=production
 
 RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
-	bun install --frozen-lockfile --production
+	bun install --frozen-lockfile --production --filter backend
 
-FROM --platform=$TARGETPLATFORM oven/bun:${BUN_VERSION}-slim AS runner
+FROM oven/bun:${BUN_VERSION}-slim AS runner
 
 ARG UID="991"
 ARG GID="991"
 
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+	--mount=type=cache,target=/var/lib/apt,sharing=locked \
+	apt-get update \
 	&& apt-get install -y --no-install-recommends \
-	ffmpeg tini curl libjemalloc-dev libjemalloc2 \
+	ffmpeg tini libjemalloc2 \
 	&& ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so \
 	&& groupadd -g "${GID}" misskey \
 	&& useradd -l -u "${UID}" -g "${GID}" -m -d /misskey misskey \
@@ -97,10 +101,22 @@ COPY --chown=misskey:misskey --from=native-builder /misskey/built ./built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/built ./packages/misskey-js/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/built ./packages/backend/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/i18n/built ./packages/i18n/built
-COPY --chown=misskey:misskey . ./
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/mfm-js/built ./packages/mfm-js/built
+COPY --chown=misskey:misskey --from=native-builder /misskey/package.json ./package.json
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/package.json ./packages/backend/package.json
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/i18n/package.json ./packages/i18n/package.json
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/mfm-js/package.json ./packages/mfm-js/package.json
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/package.json ./packages/misskey-js/package.json
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/scripts/compile_config.js ./packages/backend/scripts/compile_config.js
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/scripts/check_connect.js ./packages/backend/scripts/check_connect.js
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/migration ./packages/backend/migration
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/assets ./packages/backend/assets
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/src/server/assets ./packages/backend/src/server/assets
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/frontend/assets ./packages/frontend/assets
+COPY --chown=misskey:misskey --from=native-builder /misskey/deploy/healthcheck.sh ./deploy/healthcheck.sh
 
 ENV LD_PRELOAD=/usr/local/lib/libjemalloc.so
 ENV NODE_ENV=production
-HEALTHCHECK --interval=5s --retries=20 CMD ["/bin/bash", "/misskey/deploy/healthcheck.sh"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=6 CMD ["/bin/bash", "/misskey/deploy/healthcheck.sh"]
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["bun", "run", "migrateandstart"]
