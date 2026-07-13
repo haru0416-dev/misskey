@@ -8,7 +8,6 @@ import * as os from 'node:os';
 import cluster from 'node:cluster';
 import chalk from 'chalk';
 import Logger from '@/logger.js';
-import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
 import { showMachineInfo } from '@/misc/show-machine-info.js';
 import { envOption } from '@/env.js';
@@ -42,12 +41,11 @@ function greet(props: { version: string }) {
 /**
  * Init master process
  */
-export async function masterMain() {
-	let config!: Config;
+export async function masterMain(config: Config) {
 	const disposers: Array<() => Promise<void>> = [];
 
 	try {
-		config = loadConfigBoot();
+		bootLogger.createSubLogger('config').succ('Loaded');
 		greet({ version: config.version });
 		showEnvironment();
 		await showMachineInfo(bootLogger);
@@ -75,10 +73,10 @@ export async function masterMain() {
 			// そのため、メインプロセスでも直接listenするとポートの競合が発生して起動に失敗してしまう。
 			// see: https://nodejs.org/api/cluster.html#cluster
 		} else if (envOption.onlyQueue) {
-			const runtime = await jobQueue();
+			const runtime = await jobQueue(config);
 			disposers.push(() => runtime.close());
 		} else {
-			const runtime = await server();
+			const runtime = await server(config);
 			disposers.push(() => runtime.dispose());
 		}
 
@@ -87,14 +85,14 @@ export async function masterMain() {
 		// clusterモジュール無効時
 
 		if (envOption.onlyServer) {
-			const runtime = await server();
+			const runtime = await server(config);
 			disposers.push(() => runtime.dispose());
 		} else if (envOption.onlyQueue) {
-			const runtime = await jobQueue();
+			const runtime = await jobQueue(config);
 			disposers.push(() => runtime.close());
 		} else {
-			const serverRuntime = await server();
-			const queueRuntime = await jobQueue();
+			const serverRuntime = await server(config);
+			const queueRuntime = await jobQueue(config);
 			disposers.push(() => queueRuntime.close(), () => serverRuntime.dispose());
 		}
 	}
@@ -131,28 +129,6 @@ function showNodejsVersion(): void {
 	const nodejsLogger = bootLogger.createSubLogger('nodejs');
 
 	nodejsLogger.info(`Version ${process.version} detected.`);
-}
-
-function loadConfigBoot(): Config {
-	const configLogger = bootLogger.createSubLogger('config');
-	let config;
-
-	try {
-		config = loadConfig();
-	} catch (exception) {
-		if (typeof exception === 'string') {
-			configLogger.error(exception);
-			process.exit(1);
-		} else if (exception instanceof Error && 'code' in exception && exception.code === 'ENOENT') {
-			configLogger.error('Configuration file not found', null, true);
-			process.exit(1);
-		}
-		throw exception;
-	}
-
-	configLogger.succ('Loaded');
-
-	return config;
 }
 
 async function spawnWorkers(limit = 1) {

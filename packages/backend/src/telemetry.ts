@@ -14,7 +14,7 @@ type TelemetryProvider = { shutdown: () => Promise<void> };
 let providers: TelemetryProvider[] = [];
 let shutdownPromise: Promise<void> | undefined;
 let recordExceptionImpl: (error: unknown) => void = () => {};
-let traceHttpRequestImpl = async (_request: Request, handler: () => Response | Promise<Response>): Promise<Response> => handler();
+let traceHttpRequestImpl = (_request: Request, handler: () => Response | Promise<Response>): Response | Promise<Response> => handler();
 
 export function shouldPropagateTraceContext(target: string | URL, configuredTargets: readonly string[]): boolean {
 	let targetUrl: URL;
@@ -133,7 +133,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			kind: api.SpanKind.SERVER,
 			attributes: {
 				'http.request.method': request.method,
-				'server.address': new URL(request.url).hostname,
+				'server.address': config.hostname,
 			},
 		}, api.propagation.extract(api.context.active(), request.headers, headerGetter), async span => {
 			try {
@@ -172,7 +172,7 @@ export function recordException(error: unknown): void {
 	}
 }
 
-export function traceHttpRequest(request: Request, handler: () => Response | Promise<Response>): Promise<Response> {
+export function traceHttpRequest(request: Request, handler: () => Response | Promise<Response>): Response | Promise<Response> {
 	return traceHttpRequestImpl(request, handler);
 }
 
@@ -182,7 +182,7 @@ export async function shutdownTelemetry(): Promise<void> {
 	const activeProviders = providers;
 	providers = [];
 	recordExceptionImpl = () => {};
-	traceHttpRequestImpl = async (_request, handler) => handler();
+	traceHttpRequestImpl = (_request, handler) => handler();
 	if (activeProviders.length === 0) return;
 
 	shutdownPromise = shutdownWithTimeout(activeProviders);

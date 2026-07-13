@@ -18,7 +18,8 @@ import { envOption } from '../env.js';
 import { initializeTelemetry, recordException, shutdownTelemetry } from '../telemetry.js';
 import { readyRef } from './ready.js';
 
-await initializeTelemetry(loadConfig());
+const config = loadConfig();
+await initializeTelemetry(config);
 
 process.title = `Misskey (${cluster.isPrimary ? 'master' : 'worker'})`;
 
@@ -82,12 +83,12 @@ if (!envOption.disableClustering) {
 	if (cluster.isPrimary) {
 		logger.info(`Start main process... pid: ${process.pid}`);
 		const { masterMain } = await import('./master.js');
-		disposeRuntime = await masterMain();
+		disposeRuntime = await masterMain(config);
 		globalEventBus.mount();
 	} else if (cluster.isWorker) {
 		logger.info(`Start worker process... pid: ${process.pid}`);
 		const { workerMain } = await import('./worker.js');
-		disposeRuntime = await workerMain();
+		disposeRuntime = await workerMain(config);
 	} else {
 		throw new Error('Unknown process type');
 	}
@@ -95,7 +96,7 @@ if (!envOption.disableClustering) {
 	// 非clusterの場合はMasterのみが起動するため、Workerの処理は行わない(cluster.isWorker === trueの状態でこのブロックに来ることはない)
 	logger.info(`Start main process... pid: ${process.pid}`);
 	const { masterMain } = await import('./master.js');
-	disposeRuntime = await masterMain();
+	disposeRuntime = await masterMain(config);
 	globalEventBus.mount();
 }
 

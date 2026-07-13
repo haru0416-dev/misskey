@@ -19,9 +19,9 @@ export function initExtraThreadPool(config: Config) {
 	slaccInitialized = true;
 }
 
-export async function server() {
+export async function server(config = loadConfig()) {
 	const { launchHonoServer } = await import('./server.js');
-	return await launchHonoServer(loadConfig());
+	return await launchHonoServer(config);
 }
 
 export type JobQueueRuntime = {
@@ -34,13 +34,12 @@ export type JobQueueRuntime = {
  * (20分間隔) は createRuntimeDependencies 内で常に起動される (startHonoChartWriterSaveInterval)
  * ため、ここで個別に呼び出す必要はない。
  */
-export async function jobQueue(): Promise<JobQueueRuntime> {
+export async function jobQueue(config = loadConfig()): Promise<JobQueueRuntime> {
 	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
 	const { createHonoQueueWorkers } = await import('../queue/worker.js');
 	const { syncSystemJobSchedulers } = await import('../queue/system-job-schedulers.js');
 	const { createHonoEventPublishers } = await import('../server/rest/events.js');
 
-	const config = loadConfig();
 	const deps = await createRuntimeDependencies(config);
 	const logger = deps.loggerService.getLogger('queue', 'orange');
 	await syncSystemJobSchedulers(deps.systemQueue);

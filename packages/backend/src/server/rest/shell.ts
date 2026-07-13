@@ -23,7 +23,6 @@ import type Logger from '@/logger.js';
 import type { HonoApiAdminQueueDependencies } from './admin-queue.js';
 import type { HonoApiMainStreamPublisher } from './notification.js';
 import type { HonoApiAdminStreamPublisher, HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiNoteStreamPublisher, HonoApiNotesStreamPublisher, HonoApiUserListStreamPublisher } from './events.js';
-import { assertApiRouteContract } from './api-route-contract.js';
 import { jsonResponse, setApiHeaders } from './shell-helpers.js';
 import { registerAuthAccountRoutes } from './routes/auth-account.js';
 import { registerAdminRoutes } from './routes/admin.js';
@@ -89,12 +88,8 @@ const unknownApiEndpoint = {
 export function createApiShellApp(deps: ApiShellDependencies): Hono {
 	const app = new Hono();
 
-	app.use('*', async (c, next) => {
-		setApiHeaders(c);
-		await next();
-	});
-
 	app.options('*', (c) => {
+		setApiHeaders(c);
 		c.header('Access-Control-Allow-Methods', 'GET,HEAD,POST,OPTIONS');
 		const requestedHeaders = c.req.header('Access-Control-Request-Headers');
 		if (requestedHeaders != null) {
@@ -124,6 +119,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 	registerUsersRoutes(app, deps);
 
 	app.all('/clear-browser-cache', (c) => {
+		setApiHeaders(c);
 		if (c.req.method === 'GET' || c.req.method === 'POST') {
 			c.header('Clear-Site-Data', '"cache", "prefetchCache", "prerenderCache", "executionContexts"');
 			return c.body(null, 204);
@@ -131,8 +127,6 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 		return c.body(null, 405);
 	});
-
-	assertApiRouteContract(app);
 
 	app.all('/*', (c) => jsonResponse(c, unknownApiEndpoint, 404));
 
