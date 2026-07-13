@@ -3207,6 +3207,8 @@ _urlPreviewSetting:
   sensitiveListDescription: "スペース区切りでAND、改行区切りでORとして判定します。スラッシュで囲むと正規表現として判定し、一致したURLプレビューのサムネイルをセンシティブ扱いにします。"
 
 _mediaControls:
+  play: "再生"
+  pause: "一時停止"
   pip: "ピクチャインピクチャ"
   playbackRate: "再生速度"
   loop: "ループ再生"

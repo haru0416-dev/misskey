@@ -6,9 +6,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div v-if="show" ref="el" :class="[$style.root]">
 	<div :class="[$style.upper, { [$style.slim]: narrow, [$style.thin]: thin_ }]">
-		<div v-if="!thin_ && (narrow || isSmartphone) && props.displayMyAvatar && $i" class="_button" @click="openAccountMenu">
+		<button v-if="!thin_ && (narrow || deviceKind === 'smartphone') && props.displayMyAvatar && $i" type="button" class="_button" :aria-label="i18n.ts.account" @click="openAccountMenu">
 			<MkAvatar :class="$style.avatar" :user="$i"/>
-		</div>
+		</button>
 		<div v-else-if="!thin_ && narrow && !hideTitle" :class="$style.buttons"></div>
 
 		<template v-if="pageMetadata">
@@ -62,11 +62,11 @@ import { onMounted, onUnmounted, ref, inject, useTemplateRef, computed } from 'v
 import { scrollToTop } from '@shared/utility/scroll.js';
 import XTabs from './MkPageHeader.tabs.vue';
 import { getAccountMenu } from '@/accounts.js';
-import { DEFAULT_DEVICE_KIND } from '@/utility/device-kind.js';
+import { deviceKind } from '@/utility/device-kind.js';
 import { $i } from '@/i.js';
 import { DI } from '@/di.js';
 import * as os from '@/os.js';
-import { prefer } from '@/preferences.js';
+import { i18n } from '@/i18n.js';
 
 const props = withDefaults(defineProps<PageHeaderProps>(), {
 	tabs: () => ([] as Tab[]),
@@ -84,7 +84,6 @@ const thin_ = props.thin || inject('shouldHeaderThin', false);
 
 const el = useTemplateRef('el');
 const narrow = ref(false);
-const isSmartphone = computed(() => (prefer.overridedDeviceKind ?? DEFAULT_DEVICE_KIND) === 'smartphone');
 const hasTabs = computed(() => props.tabs.length > 0);
 const hasActions = computed(() => props.actions && props.actions.length > 0);
 const show = computed(() => {

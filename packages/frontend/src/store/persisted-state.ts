@@ -291,7 +291,7 @@ class PersistedStateController {
 		writes: Map<string, unknown>,
 	): Promise<void> {
 		if (writes.size === 0) return;
-		await this.io.update(storageKey, current => {
+		await this.io.update(storageKey, (current) => {
 			const state = toRecord(current);
 			for (const [key, value] of writes) state[key] = cloneValue(value);
 			return state;
@@ -314,7 +314,7 @@ class PersistedStateController {
 
 	private async persistAccountBatch(writes: Map<string, unknown>): Promise<void> {
 		if (writes.size === 0 || this.io.currentAccountId() == null) return;
-		await this.io.update(this.registryCacheKeyName, current => {
+		await this.io.update(this.registryCacheKeyName, (current) => {
 			const cache = toRecord(current);
 			for (const [key, value] of writes) cache[key] = cloneValue(value);
 			return cache;

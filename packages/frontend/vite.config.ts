@@ -232,10 +232,6 @@ export function getConfig(): UserConfig {
 								test: /node_modules[\\/]vue/,
 							},
 							{
-								name: 'photoswipe',
-								test: /node_modules[\\/]photoswipe/,
-							},
-							{
 								// ECharts は管理画面/アクティビティpage等から利用されるため、
 								// 個別ページのコード変更でvendorチャンクのハッシュが変わりキャッシュが無効化されるのを防ぐ
 								name: 'chart',
