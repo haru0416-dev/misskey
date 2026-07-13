@@ -9,10 +9,18 @@ import { registerUser, resetState } from '../support/helpers.js';
 type DriveFile = { id: string };
 
 function svg(label: string, color: string): Buffer {
-	return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="sans-serif" font-size="72">${label}</text></svg>`);
+	return Buffer.from(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="sans-serif" font-size="72">${label}</text></svg>`,
+	);
 }
 
-async function uploadImage(request: APIRequestContext, token: string, name: string, label: string, color: string): Promise<DriveFile> {
+async function uploadImage(
+	request: APIRequestContext,
+	token: string,
+	name: string,
+	label: string,
+	color: string,
+): Promise<DriveFile> {
 	const response = await request.post('/api/drive/files/create', {
 		multipart: {
 			i: token,
@@ -26,7 +34,7 @@ async function uploadImage(request: APIRequestContext, token: string, name: stri
 		},
 	});
 	expect(response.ok(), await response.text()).toBe(true);
-	return await response.json() as DriveFile;
+	return (await response.json()) as DriveFile;
 }
 
 test('実画像ごとにlightboxを開いて移動・ズーム・閉じる', async ({ page }) => {
@@ -38,10 +46,10 @@ test('実画像ごとにlightboxを開いて移動・ズーム・閉じる', asy
 		data: { i: admin.token, text: 'Native lightbox browser verification', fileIds: [first.id, second.id] },
 	});
 	expect(noteResponse.ok(), await noteResponse.text()).toBe(true);
-	const note = await noteResponse.json() as { createdNote: { id: string } };
+	const note = (await noteResponse.json()) as { createdNote: { id: string } };
 
 	const pageErrors: string[] = [];
-	page.on('pageerror', error => pageErrors.push(error.message));
+	page.on('pageerror', (error) => pageErrors.push(error.message));
 
 	await page.goto(`/notes/${note.createdNote.id}`);
 	const firstLink = page.getByRole('link', { name: 'lightbox-first.svg' }).first();

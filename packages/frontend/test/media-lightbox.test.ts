@@ -8,7 +8,11 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/vue';
 import './init';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
-import MkLightboxItem, { calculatePinchScale, calculateSourceTransform, normalizeGestureTransform } from '@/features/media-viewer/components/MkLightbox.item.vue';
+import MkLightboxItem, {
+	calculatePinchScale,
+	calculateSourceTransform,
+	normalizeGestureTransform,
+} from '@/features/media-viewer/components/MkLightbox.item.vue';
 import MkLightbox from '@/features/media-viewer/components/MkLightbox.vue';
 import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
 import MkMediaVideo from '@/features/media-viewer/components/MkMediaVideo.vue';
@@ -25,12 +29,12 @@ describe('media lightbox', () => {
 		assert.deepEqual(calculateSourceTransform({ fit: 'contain', contentRenderingRect, sourceRect }), {
 			x: -5,
 			y: 42.5,
-			scale: .25,
+			scale: 0.25,
 		});
 		assert.deepEqual(calculateSourceTransform({ fit: 'cover', contentRenderingRect, sourceRect }), {
 			x: -80,
 			y: 5,
-			scale: .5,
+			scale: 0.5,
 		});
 	});
 
@@ -44,11 +48,28 @@ describe('media lightbox', () => {
 	test('starts source animation from the original image without a thumbnail', async () => {
 		const sourceElement = window.document.createElement('img');
 		sourceElement.style.objectFit = 'contain';
-		vi.spyOn(sourceElement, 'getBoundingClientRect').mockReturnValue({ x: 10, y: 10, left: 10, top: 10, right: 110, bottom: 110, width: 100, height: 100, toJSON: () => ({}) });
+		vi.spyOn(sourceElement, 'getBoundingClientRect').mockReturnValue({
+			x: 10,
+			y: 10,
+			left: 10,
+			top: 10,
+			right: 110,
+			bottom: 110,
+			width: 100,
+			height: 100,
+			toJSON: () => ({}),
+		});
 		const result = render(MkLightboxItem, {
 			props: {
 				activated: true,
-				content: { id: 'image', type: 'image', url: 'https://example.test/image.png', width: 400, height: 300, sourceElement },
+				content: {
+					id: 'image',
+					type: 'image',
+					url: 'https://example.test/image.png',
+					width: 400,
+					height: 300,
+					sourceElement,
+				},
 			},
 			global: { components, directives },
 		});
@@ -74,7 +95,12 @@ describe('media lightbox', () => {
 
 	test('coalesces concurrent opens into one task', async () => {
 		let resolve: (() => void) | undefined;
-		const task = vi.fn((_id: string) => new Promise<void>(done => { resolve = done; }));
+		const task = vi.fn(
+			(_id: string) =>
+				new Promise<void>((done) => {
+					resolve = done;
+				}),
+		);
 		const open = singleFlight(task);
 		const first = open('first');
 		const second = open('second');

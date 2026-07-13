@@ -11,7 +11,10 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import * as os from '@/os.js';
 import type { MenuItem } from '@/types/menu.js';
 
-export function getFileMenu(file: Misskey.entities.DriveFile, onHideStateUpdated?: (newState: boolean) => void): MenuItem[] {
+export function getFileMenu(
+	file: Misskey.entities.DriveFile,
+	onHideStateUpdated?: (newState: boolean) => void,
+): MenuItem[] {
 	const menuItems: MenuItem[] = [];
 
 	if (onHideStateUpdated != null) {
@@ -61,11 +64,14 @@ export function getFileMenu(file: Misskey.entities.DriveFile, onHideStateUpdated
 	if (details.length > 0) menuItems.push({ type: 'divider' }, ...details);
 
 	if (prefer.devMode) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-hash',
-			text: i18n.ts.copyFileId,
-			action: () => copyToClipboard(file.id),
-		});
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-hash',
+				text: i18n.ts.copyFileId,
+				action: () => copyToClipboard(file.id),
+			},
+		);
 	}
 
 	return menuItems;

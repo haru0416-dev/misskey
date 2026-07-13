@@ -96,7 +96,10 @@ describe('MkVideoControl', () => {
 
 	test('does not autoplay after hasAudio resolves for an inactive item', async () => {
 		let resolveHasAudio: ((value: boolean) => void) | undefined;
-		hasAudioState.implementation = () => new Promise(resolve => { resolveHasAudio = resolve; });
+		hasAudioState.implementation = () =>
+			new Promise((resolve) => {
+				resolveHasAudio = resolve;
+			});
 		const video = window.document.createElement('video');
 		const play = vi.spyOn(video, 'play').mockResolvedValue();
 		const pause = vi.spyOn(video, 'pause');
