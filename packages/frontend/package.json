@@ -42,7 +42,7 @@
 		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
 		"icons-subsetter": "workspace:*",
-		"idb-keyval": "6.2.5",
+		"idb-keyval": "6.3.0",
 		"is-file-animated": "1.0.2",
 		"json5": "2.2.3",
 		"matter-js": "0.20.0",
