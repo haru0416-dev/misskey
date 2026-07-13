@@ -30,7 +30,7 @@ jobs:
       - name: Check runtime versions
         run: bun run check:runtime-versions
       - name: Cache bun install cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
