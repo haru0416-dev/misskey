@@ -6,6 +6,8 @@
 import type { SummalyResult } from '@misskey-dev/summaly';
 import type { Config } from '@/config.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { deepClone } from '@/misc/clone.js';
+import { MemoryKVCache } from '@/misc/cache.js';
 import { query } from '@/misc/prelude/url.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
@@ -31,6 +33,7 @@ export function createUrlPreviewService(
 ) {
 	const logger = loggerService.getLogger('url-preview');
 	const summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${config.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
+	const summaryCache = new MemoryKVCache<SummalyResult>(1000 * 60 * 60, 100); // 1h, 100 entries
 
 	function wrap(url?: string | null): string | null {
 		return url != null
@@ -79,19 +82,20 @@ export function createUrlPreviewService(
 			: `Getting preview of ${url}@${normalizedLang} ...`);
 
 		try {
-			const summary = meta.urlPreviewSummaryProxyUrl
-				? await fetchSummaryFromProxy(url, meta, normalizedLang)
-				: await fetchSummary(url, meta, normalizedLang);
+			const summary = deepClone(await summaryCache.fetchMaybe(JSON.stringify([url, normalizedLang]), async () => {
+				const result = meta.urlPreviewSummaryProxyUrl
+					? await fetchSummaryFromProxy(url, meta, normalizedLang)
+					: await fetchSummary(url, meta, normalizedLang);
+
+				if (!(result.url.startsWith('http://') || result.url.startsWith('https://'))) return undefined;
+				if (result.player.url && !(result.player.url.startsWith('http://') || result.player.url.startsWith('https://'))) return undefined;
+
+				return result;
+			}));
+
+			if (summary == null) throw new Error('Invalid summary');
 
 			logger.succ(`Got preview of ${url}: ${summary.title}`);
-
-			if (!(summary.url.startsWith('http://') || summary.url.startsWith('https://'))) {
-				throw new Error('unsupported schema included');
-			}
-
-			if (summary.player.url && !(summary.player.url.startsWith('http://') || summary.player.url.startsWith('https://'))) {
-				throw new Error('unsupported schema included');
-			}
 
 			summary.icon = wrap(summary.icon);
 			summary.thumbnail = wrap(summary.thumbnail);
@@ -148,7 +152,11 @@ export function createUrlPreviewService(
 		return httpRequestService.getJson<SummalyResult>(`${proxy}?${queryStr}`, 'application/json, */*', undefined, true);
 	}
 
-	return { handle };
+	function dispose(): void {
+		summaryCache.dispose();
+	}
+
+	return { handle, dispose };
 }
 
 export type UrlPreviewService = ReturnType<typeof createUrlPreviewService>;

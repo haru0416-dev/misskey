@@ -1,0 +1,109 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { SummalyResult } from '@misskey-dev/summaly';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import type { Config } from '@/config.js';
+import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { LoggerService } from '@/core/LoggerService.js';
+import type { MiMeta } from '@/models/Meta.js';
+import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
+
+beforeAll(() => {
+	vi.stubGlobal('_SUMMALY_VERSION_', 'test');
+});
+
+afterAll(() => {
+	vi.unstubAllGlobals();
+});
+
+const config = {
+	url: 'https://misskey.test',
+	mediaProxy: 'https://media.test',
+} as Config;
+
+function createMeta(): MiMeta {
+	return {
+		urlPreviewEnabled: true,
+		urlPreviewSummaryProxyUrl: 'https://preview.test',
+		urlPreviewAllowRedirect: false,
+		urlPreviewUserAgent: null,
+		urlPreviewTimeout: 1000,
+		urlPreviewMaximumContentLength: 1024,
+		urlPreviewRequireContentLength: false,
+	} as MiMeta;
+}
+
+function createSummary(): SummalyResult {
+	return {
+		url: 'https://example.com/article',
+		title: 'Example',
+		icon: 'https://example.com/icon.png',
+		thumbnail: 'https://example.com/thumbnail.png',
+		player: { url: null },
+	} as SummalyResult;
+}
+
+function createReply() {
+	return {
+		code: vi.fn(),
+		header: vi.fn(),
+	};
+}
+
+function createService(getJson: HttpRequestService['getJson']) {
+	return createUrlPreviewService(
+		config,
+		createMeta(),
+		{ getJson } as HttpRequestService,
+		{
+			getLogger: () => ({
+				info: vi.fn(),
+				succ: vi.fn(),
+				warn: vi.fn(),
+			}),
+		} as unknown as LoggerService,
+	);
+}
+
+describe('createUrlPreviewService', () => {
+	test('reuses a cached summary without mutating the cached original', async () => {
+		const source = createSummary();
+		const getJson = vi.fn().mockResolvedValue(source);
+		const service = createService(getJson);
+
+		try {
+			const first = await service.handle({ query: { url: 'https://example.com/article', lang: 'en-US' } }, createReply());
+			const second = await service.handle({ query: { url: 'https://example.com/article', lang: 'en-US' } }, createReply());
+
+			expect(getJson).toHaveBeenCalledOnce();
+			expect(first).toEqual(second);
+			expect((first as SummalyResult).icon).toContain('https://media.test/preview.webp?');
+			expect(source.icon).toBe('https://example.com/icon.png');
+			expect(source.thumbnail).toBe('https://example.com/thumbnail.png');
+		} finally {
+			service.dispose();
+		}
+	});
+
+	test('does not cache invalid summaries', async () => {
+		const invalid = { ...createSummary(), url: 'file:///etc/passwd' };
+		const getJson = vi.fn().mockResolvedValue(invalid);
+		const service = createService(getJson);
+
+		try {
+			const firstReply = createReply();
+			const secondReply = createReply();
+			await service.handle({ query: { url: 'https://example.com/article' } }, firstReply);
+			await service.handle({ query: { url: 'https://example.com/article' } }, secondReply);
+
+			expect(getJson).toHaveBeenCalledTimes(2);
+			expect(firstReply.code).toHaveBeenCalledWith(422);
+			expect(secondReply.code).toHaveBeenCalledWith(422);
+		} finally {
+			service.dispose();
+		}
+	});
+});
