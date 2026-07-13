@@ -157,6 +157,12 @@ fulltextSearch:
 #  endpoint: 'http://otel-collector:4318/v1/traces'
 #  serviceName: 'misskey-backend'
 #  tracesSampleRatio: 0.1
+#  # Trace headers are not sent to outgoing HTTP requests by default.
+#  # Allow only trusted origins or URL prefixes. Do not add the OTLP endpoint.
+#  tracePropagationTargets:
+#    - 'https://trusted-service.example.com/api/'
+#  disabledInstrumentations:
+#    - '@opentelemetry/instrumentation-pg'
 
 #telemetryForFrontend:
 #  endpoint: 'https://collector.example.com/v1/traces'

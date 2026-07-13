@@ -7,12 +7,65 @@ import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import type { RedisOptions } from 'ioredis';
+import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node';
+
+export type TelemetryInstrumentationName = keyof InstrumentationConfigMap;
+
+const TELEMETRY_INSTRUMENTATION_NAMES = [
+	'@opentelemetry/instrumentation-amqplib',
+	'@opentelemetry/instrumentation-aws-lambda',
+	'@opentelemetry/instrumentation-aws-sdk',
+	'@opentelemetry/instrumentation-bunyan',
+	'@opentelemetry/instrumentation-cassandra-driver',
+	'@opentelemetry/instrumentation-connect',
+	'@opentelemetry/instrumentation-cucumber',
+	'@opentelemetry/instrumentation-dataloader',
+	'@opentelemetry/instrumentation-dns',
+	'@opentelemetry/instrumentation-express',
+	'@opentelemetry/instrumentation-fs',
+	'@opentelemetry/instrumentation-generic-pool',
+	'@opentelemetry/instrumentation-graphql',
+	'@opentelemetry/instrumentation-grpc',
+	'@opentelemetry/instrumentation-hapi',
+	'@opentelemetry/instrumentation-host-metrics',
+	'@opentelemetry/instrumentation-http',
+	'@opentelemetry/instrumentation-ioredis',
+	'@opentelemetry/instrumentation-kafkajs',
+	'@opentelemetry/instrumentation-knex',
+	'@opentelemetry/instrumentation-koa',
+	'@opentelemetry/instrumentation-lru-memoizer',
+	'@opentelemetry/instrumentation-memcached',
+	'@opentelemetry/instrumentation-mongodb',
+	'@opentelemetry/instrumentation-mongoose',
+	'@opentelemetry/instrumentation-mysql',
+	'@opentelemetry/instrumentation-mysql2',
+	'@opentelemetry/instrumentation-nestjs-core',
+	'@opentelemetry/instrumentation-net',
+	'@opentelemetry/instrumentation-openai',
+	'@opentelemetry/instrumentation-oracledb',
+	'@opentelemetry/instrumentation-pg',
+	'@opentelemetry/instrumentation-pino',
+	'@opentelemetry/instrumentation-redis',
+	'@opentelemetry/instrumentation-restify',
+	'@opentelemetry/instrumentation-router',
+	'@opentelemetry/instrumentation-runtime-node',
+	'@opentelemetry/instrumentation-socket.io',
+	'@opentelemetry/instrumentation-tedious',
+	'@opentelemetry/instrumentation-undici',
+	'@opentelemetry/instrumentation-winston',
+] as const satisfies readonly TelemetryInstrumentationName[];
+
+const ALL_TELEMETRY_INSTRUMENTATION_NAMES_LISTED: Exclude<TelemetryInstrumentationName, typeof TELEMETRY_INSTRUMENTATION_NAMES[number]> extends never ? true : never = true;
+void ALL_TELEMETRY_INSTRUMENTATION_NAMES_LISTED;
+const TELEMETRY_INSTRUMENTATION_NAME_SET = new Set<string>(TELEMETRY_INSTRUMENTATION_NAMES);
 
 export type TelemetryConfig = {
 	endpoint: string;
 	headers?: Record<string, string>;
 	serviceName?: string;
 	tracesSampleRatio?: number;
+	tracePropagationTargets?: string[];
+	disabledInstrumentations?: TelemetryInstrumentationName[];
 };
 
 export type FrontendTelemetryConfig = {
@@ -378,13 +431,25 @@ export function validateTelemetryConfig(config: {
 
 function validateBackendTelemetryConfig(value: unknown): TelemetryConfig | undefined {
 	if (value == null) return undefined;
-	const config = validateTelemetryObject(value, 'telemetryForBackend', ['endpoint', 'headers', 'serviceName', 'tracesSampleRatio']);
+	const config = validateTelemetryObject(value, 'telemetryForBackend', [
+		'endpoint',
+		'headers',
+		'serviceName',
+		'tracesSampleRatio',
+		'tracePropagationTargets',
+		'disabledInstrumentations',
+	]);
 
 	return {
 		endpoint: validateTelemetryUrl(config.endpoint, 'telemetryForBackend.endpoint'),
 		headers: validateTelemetryHeaders(config.headers),
 		serviceName: validateOptionalNonEmptyString(config.serviceName, 'telemetryForBackend.serviceName'),
 		tracesSampleRatio: validateTraceSampleRatio(config.tracesSampleRatio, 'telemetryForBackend.tracesSampleRatio'),
+		tracePropagationTargets: validateTelemetryUrls(
+			config.tracePropagationTargets,
+			'telemetryForBackend.tracePropagationTargets',
+		),
+		disabledInstrumentations: validateDisabledInstrumentations(config.disabledInstrumentations),
 	};
 }
 
@@ -412,6 +477,7 @@ function validateFrontendTelemetryConfig(value: unknown): FrontendTelemetryConfi
 		propagateTraceHeaderCorsUrls: validateTelemetryUrls(
 			config.propagateTraceHeaderCorsUrls,
 			'telemetryForFrontend.propagateTraceHeaderCorsUrls',
+			true,
 		),
 	};
 }
@@ -481,10 +547,22 @@ function validateTraceSampleRatio(value: unknown, path: string): number | undefi
 	return value;
 }
 
-function validateTelemetryUrls(value: unknown, path: string): string[] | undefined {
+function validateTelemetryUrls(value: unknown, path: string, disallowQuery = false): string[] | undefined {
 	if (value === undefined) return undefined;
 	if (!Array.isArray(value)) throw new Error(`${path} must be an array of absolute URLs.`);
-	return value.map((url, index) => validateTelemetryUrl(url, `${path}[${index}]`, true));
+	return value.map((url, index) => validateTelemetryUrl(url, `${path}[${index}]`, disallowQuery));
+}
+
+function validateDisabledInstrumentations(value: unknown): TelemetryInstrumentationName[] | undefined {
+	if (value === undefined) return undefined;
+	if (!Array.isArray(value)) throw new Error('telemetryForBackend.disabledInstrumentations must be an array of instrumentation package names.');
+
+	return value.map((name, index) => {
+		if (typeof name !== 'string' || !TELEMETRY_INSTRUMENTATION_NAME_SET.has(name)) {
+			throw new Error(`telemetryForBackend.disabledInstrumentations[${index}] is not a supported instrumentation package name.`);
+		}
+		return name as TelemetryInstrumentationName;
+	});
 }
 
 function tryCreateUrl(url: string) {
