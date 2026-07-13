@@ -34,7 +34,7 @@ function createMeta(): MiMeta {
 		urlPreviewMaximumContentLength: 1024,
 		urlPreviewRequireContentLength: false,
 		urlPreviewSensitiveList: [],
-	} as MiMeta;
+	} as unknown as MiMeta;
 }
 
 function createSummary(): SummalyResult {
