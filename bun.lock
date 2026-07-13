@@ -371,6 +371,7 @@
     },
   },
   "trustedDependencies": [
+    "@parcel/watcher",
     "esbuild",
     "sharp",
     "msw",
@@ -378,7 +379,7 @@
     "msgpackr-extract",
     "vue-demi",
     "bufferutil",
-    "@parcel/watcher",
+    "v-code-diff",
   ],
   "overrides": {
     "chokidar": "5.0.0",
