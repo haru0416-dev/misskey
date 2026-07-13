@@ -368,7 +368,7 @@ describe('Endpoints', () => {
 					tosUrl: `https://example.com/tos-${now}`,
 					repositoryUrl: 'not a url',
 					urlPreviewSummaryProxyUrl: ` https://example.com/summary-${now} `,
-					urlPreviewSensitiveList: [`example.com ${now}`, '', `/preview-${now}/`],
+					urlPreviewSensitiveList: [`  example.com ${now}  `, '   ', `/preview-${now}/`],
 					clientOptions: {
 						entrancePageStyle: 'simple',
 						showTimelineForVisitor: false,

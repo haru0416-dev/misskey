@@ -8,8 +8,10 @@ process.env.NODE_ENV = 'test';
 import * as assert from 'assert';
 import { describe, beforeAll, afterAll, test } from 'vitest';
 import { WebSocket } from 'ws';
+import { eq } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import { createFollowingInDatabase } from '@/core/FollowingStore.js';
+import { hashtag } from '@/db/schema/hashtag.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { api, createAppToken, initTestDb, port, post, signup, waitFire, type UserToken } from '../utils.js';
@@ -766,164 +768,63 @@ describe('Streaming', () => {
 			assert.strictEqual(fired, true);
 		});
 
-		// XXX: QueryFailedError: duplicate key value violates unique constraint "IDX_347fec870eafea7b26c8a73bac"
-		/*
 		describe('Hashtag Timeline', () => {
-			test('指定したハッシュタグの投稿が流れる', () => new Promise<void>(async done => {
-				const ws = await connectStream(chitose, 'hashtag', ({ type, body }) => {
-					if (type === 'note') {
-						assert.deepStrictEqual(body.text, '#foo');
-						ws.close();
-						done();
-					}
-				}, {
-					q: [
-						['foo'],
-					],
-				});
+			const receives = (query: string[][], text: string) => waitFire(
+				chitose,
+				'hashtag',
+				() => post(chitose, { text }),
+				msg => msg.type === 'note' && msg.body.text === text,
+				{ q: query },
+			);
 
-				post(chitose, {
-					text: '#foo',
-				});
-			}));
+			const doesNotReceive = (query: string[][], text: string) => waitFireWithoutEvent(
+				chitose,
+				'hashtag',
+				() => post(chitose, { text }),
+				msg => msg.type === 'note' && msg.body.text === text,
+				{ q: query },
+			);
 
-			test('指定したハッシュタグの投稿が流れる (AND)', () => new Promise<void>(async done => {
-				let fooCount = 0;
-				let barCount = 0;
-				let fooBarCount = 0;
+			test('指定したハッシュタグの投稿が流れる', async () => {
+				assert.strictEqual(await receives([['streaminghashtag']], '#streaminghashtag'), true);
+			});
 
-				const ws = await connectStream(chitose, 'hashtag', ({ type, body }) => {
-					if (type === 'note') {
-						if (body.text === '#foo') fooCount++;
-						if (body.text === '#bar') barCount++;
-						if (body.text === '#foo #bar') fooBarCount++;
-					}
-				}, {
-					q: [
-						['foo', 'bar'],
-					],
-				});
+			test('指定したハッシュタグの投稿が流れる (AND)', async () => {
+				const query = [['streamingandfoo', 'streamingandbar']];
+				assert.strictEqual(await receives(query, '#streamingandfoo #streamingandbar'), true);
+				assert.strictEqual(await doesNotReceive(query, '#streamingandfoo'), false);
+			});
 
-				post(chitose, {
-					text: '#foo',
-				});
+			test('指定したハッシュタグの投稿が流れる (OR)', async () => {
+				const query = [['streamingorfoo'], ['streamingorbar']];
+				assert.strictEqual(await receives(query, '#streamingorfoo'), true);
+				assert.strictEqual(await receives(query, '#streamingorbar'), true);
+				assert.strictEqual(await receives(query, '#streamingorfoo #streamingorbar'), true);
+				assert.strictEqual(await doesNotReceive(query, '#streamingorpiyo'), false);
+			});
 
-				post(chitose, {
-					text: '#bar',
-				});
+			test('指定したハッシュタグの投稿が流れる (AND + OR)', async () => {
+				const query = [['streamingmixedfoo', 'streamingmixedbar'], ['streamingmixedpiyo']];
+				assert.strictEqual(await receives(query, '#streamingmixedfoo #streamingmixedbar'), true);
+				assert.strictEqual(await receives(query, '#streamingmixedpiyo'), true);
+				assert.strictEqual(await doesNotReceive(query, '#streamingmixedfoo'), false);
+				assert.strictEqual(await doesNotReceive(query, '#streamingmixedwaaa'), false);
+			});
 
-				post(chitose, {
-					text: '#foo #bar',
-				});
+			test('同名タグの並行作成でユーザー情報を失わない', async () => {
+				const tag = `concurrenthashtag${Date.now().toString(36)}`;
+				await Promise.all([
+					post(ayano, { text: `#${tag}` }),
+					post(chitose, { text: `#${tag}` }),
+				]);
 
-				setTimeout(() => {
-					assert.strictEqual(fooCount, 0);
-					assert.strictEqual(barCount, 0);
-					assert.strictEqual(fooBarCount, 1);
-					ws.close();
-					done();
-				}, 3000);
-			}));
-
-			test('指定したハッシュタグの投稿が流れる (OR)', () => new Promise<void>(async done => {
-				let fooCount = 0;
-				let barCount = 0;
-				let fooBarCount = 0;
-				let piyoCount = 0;
-
-				const ws = await connectStream(chitose, 'hashtag', ({ type, body }) => {
-					if (type === 'note') {
-						if (body.text === '#foo') fooCount++;
-						if (body.text === '#bar') barCount++;
-						if (body.text === '#foo #bar') fooBarCount++;
-						if (body.text === '#piyo') piyoCount++;
-					}
-				}, {
-					q: [
-						['foo'],
-						['bar'],
-					],
-				});
-
-				post(chitose, {
-					text: '#foo',
-				});
-
-				post(chitose, {
-					text: '#bar',
-				});
-
-				post(chitose, {
-					text: '#foo #bar',
-				});
-
-				post(chitose, {
-					text: '#piyo',
-				});
-
-				setTimeout(() => {
-					assert.strictEqual(fooCount, 1);
-					assert.strictEqual(barCount, 1);
-					assert.strictEqual(fooBarCount, 1);
-					assert.strictEqual(piyoCount, 0);
-					ws.close();
-					done();
-				}, 3000);
-			}));
-
-			test('指定したハッシュタグの投稿が流れる (AND + OR)', () => new Promise<void>(async done => {
-				let fooCount = 0;
-				let barCount = 0;
-				let fooBarCount = 0;
-				let piyoCount = 0;
-				let waaaCount = 0;
-
-				const ws = await connectStream(chitose, 'hashtag', ({ type, body }) => {
-					if (type === 'note') {
-						if (body.text === '#foo') fooCount++;
-						if (body.text === '#bar') barCount++;
-						if (body.text === '#foo #bar') fooBarCount++;
-						if (body.text === '#piyo') piyoCount++;
-						if (body.text === '#waaa') waaaCount++;
-					}
-				}, {
-					q: [
-						['foo', 'bar'],
-						['piyo'],
-					],
-				});
-
-				post(chitose, {
-					text: '#foo',
-				});
-
-				post(chitose, {
-					text: '#bar',
-				});
-
-				post(chitose, {
-					text: '#foo #bar',
-				});
-
-				post(chitose, {
-					text: '#piyo',
-				});
-
-				post(chitose, {
-					text: '#waaa',
-				});
-
-				setTimeout(() => {
-					assert.strictEqual(fooCount, 0);
-					assert.strictEqual(barCount, 0);
-					assert.strictEqual(fooBarCount, 1);
-					assert.strictEqual(piyoCount, 1);
-					assert.strictEqual(waaaCount, 0);
-					ws.close();
-					done();
-				}, 3000);
-			}));
+				const rows = await db.select().from(hashtag).where(eq(hashtag.name, tag));
+				assert.strictEqual(rows.length, 1);
+				assert.deepStrictEqual(rows[0].mentionedUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
+				assert.strictEqual(rows[0].mentionedUsersCount, 2);
+				assert.deepStrictEqual(rows[0].mentionedLocalUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
+				assert.strictEqual(rows[0].mentionedLocalUsersCount, 2);
+			});
 		});
-		*/
 	});
 });

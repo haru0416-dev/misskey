@@ -32,6 +32,11 @@ export function shouldPropagateTraceContext(target: string | URL, configuredTarg
 	});
 }
 
+export function getClientRequestTarget(request: { host: string; path: string; port?: string | number; protocol: string }): URL {
+	const authority = request.port == null || request.port === '' ? request.host : `${request.host}:${request.port}`;
+	return new URL(request.path, `${request.protocol}//${authority}`);
+}
+
 export async function initializeTelemetry(config: Config): Promise<void> {
 	const telemetry = config.telemetryForBackend;
 	if (telemetry == null) return;
@@ -81,7 +86,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			'@opentelemetry/instrumentation-http': {
 				requestHook: (span, request) => {
 					if (!isClientRequest(request)) return;
-					const target = new URL(request.path, `${request.protocol}//${request.host}`);
+					const target = getClientRequestTarget(request);
 					injectIfAllowed(target, api.trace.setSpan(api.context.active(), span), request, {
 						set: (carrier: ClientRequest, key, value) => carrier.setHeader(key, value),
 					});

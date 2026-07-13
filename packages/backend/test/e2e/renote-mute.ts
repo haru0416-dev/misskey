@@ -7,7 +7,6 @@ process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import { beforeAll, describe, test } from 'vitest';
-import { setTimeout } from 'node:timers/promises';
 import { api, post, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -38,9 +37,6 @@ describe('Renote Mute', () => {
 		const carolRenote = await post(carol, { renoteId: bobNote.id });
 		const carolNote = await post(carol, { text: 'hi' });
 
-		// redisに追加されるのを待つ
-		await setTimeout(100);
-
 		const res = await api('notes/local-timeline', {}, alice);
 
 		assert.strictEqual(res.status, 200);
@@ -55,9 +51,6 @@ describe('Renote Mute', () => {
 		const carolRenote = await post(carol, { renoteId: bobNote.id, text: 'kore' });
 		const carolNote = await post(carol, { text: 'hi' });
 
-		// redisに追加されるのを待つ
-		await setTimeout(100);
-
 		const res = await api('notes/local-timeline', {}, alice);
 
 		assert.strictEqual(res.status, 200);
@@ -71,9 +64,6 @@ describe('Renote Mute', () => {
 	test('タイムラインにリノートミュートしているユーザーの通常ノートのリノートが含まれる', async () => {
 		const carolNote = await post(carol, { text: 'hi' });
 		const bobRenote = await post(bob, { renoteId: carolNote.id });
-
-		// redisに追加されるのを待つ
-		await setTimeout(100);
 
 		const res = await api('notes/local-timeline', {}, alice);
 

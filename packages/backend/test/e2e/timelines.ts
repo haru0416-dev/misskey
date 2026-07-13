@@ -10,7 +10,6 @@
 
 import * as assert from 'assert';
 import { describe, beforeAll, test } from 'vitest';
-import { setTimeout } from 'node:timers/promises';
 import { entities } from 'misskey-js';
 import { Redis } from 'ioredis';
 import { SignupResponse, Note } from 'misskey-js/entities.js';
@@ -23,10 +22,6 @@ function genHost() {
 
 let redisForTimelines: Redis;
 let root: SignupResponse;
-// fanout への push は note 作成時に await されない副作用のため、伝播を固定時間待つ。
-// 上流の元実装と同じ 250ms (50ms まで縮めるとフルスイート負荷時に DB 読み込みを伴う
-// fanout が間に合わず flake する)。
-const TIMELINE_PROPAGATION_DELAY_MS = 250;
 
 async function renote(noteId: string, user: UserToken): Promise<entities.Note> {
 	return await api('notes/create', { renoteId: noteId }, user).then((it) => it.body.createdNote);
@@ -59,7 +54,6 @@ async function pushList(listId: string, pushUserIds: string[] = [], user: UserTo
 	for (const userId of pushUserIds) {
 		await api('users/lists/push', { listId, userId }, user);
 	}
-	await setTimeout(500);
 }
 
 async function createRole(name: string, user: UserToken): Promise<entities.AdminRolesCreateResponse> {
@@ -113,10 +107,6 @@ describe('Timelines', () => {
 	describe.each([{ enableFanoutTimeline: true }, { enableFanoutTimeline: false }])(
 		'Timelines (enableFanoutTimeline: $enableFanoutTimeline)',
 		({ enableFanoutTimeline }) => {
-			function waitForPushToTl() {
-				return setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
-			}
-
 			beforeAll(
 				async () => {
 					await api('admin/update-meta', { enableFanoutTimeline }, root);
@@ -129,8 +119,6 @@ describe('Timelines', () => {
 					const [alice] = await Promise.all([signup()]);
 
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -145,11 +133,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi' });
 					const carolNote = await post(carol, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -167,11 +152,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
 					const carolNote = await post(carol, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -190,11 +172,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -215,11 +194,8 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -238,7 +214,6 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, {
 						text: 'hi',
@@ -246,8 +221,6 @@ describe('Timelines', () => {
 						visibility: 'specified',
 						visibleUserIds: [carolNote.id],
 					});
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -267,11 +240,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -294,11 +264,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, alice);
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -321,11 +288,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/create', { userId: alice.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -345,7 +309,6 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/create', { userId: carol.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, {
 						text: 'hi',
@@ -353,8 +316,6 @@ describe('Timelines', () => {
 						visibility: 'specified',
 						visibleUserIds: [carolNote.id],
 					});
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -372,11 +333,8 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: bobNote1.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -396,11 +354,8 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -422,8 +377,6 @@ describe('Timelines', () => {
 					const bobNote = await post(bob, { text: 'hi' });
 					const aliceNote = await post(alice, { text: 'hi', replyId: bobNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -440,11 +393,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { renoteId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -462,11 +412,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi' });
 					const carolNote = await post(carol, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api(
 						'notes/timeline',
@@ -491,15 +438,12 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const [bobFile, carolFile] = await Promise.all([
 						uploadTimelineFile(bob),
 						uploadTimelineFile(carol),
 					]);
 					const bobNote = await post(bob, { fileIds: [bobFile.id] });
 					const carolNote = await post(carol, { fileIds: [carolFile.id] });
-
-					await waitForPushToTl();
 
 					const res = await api(
 						'notes/timeline',
@@ -524,11 +468,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { renoteId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api(
 						'notes/timeline',
@@ -552,11 +493,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api(
 						'notes/timeline',
@@ -580,10 +518,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [carol.id] });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -598,11 +533,8 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -622,11 +554,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -645,12 +574,9 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', renoteId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -673,12 +599,9 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', replyId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -704,8 +627,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -722,8 +643,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -738,7 +657,6 @@ describe('Timelines', () => {
 						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 						await api('following/create', { userId: bob.id }, alice);
-						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 						const [bobFile, carolFile] = await Promise.all([
 							uploadTimelineFile(bob),
 							uploadTimelineFile(carol),
@@ -747,8 +665,6 @@ describe('Timelines', () => {
 						const bobNote2 = await post(bob, { fileIds: [bobFile.id] });
 						const carolNote1 = await post(carol, { text: 'hi' });
 						const carolNote2 = await post(carol, { fileIds: [carolFile.id] });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100, withFiles: true }, alice);
 
@@ -777,10 +693,7 @@ describe('Timelines', () => {
 
 					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -795,8 +708,6 @@ describe('Timelines', () => {
 
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'specified' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -810,10 +721,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [alice.id] });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -829,8 +737,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [alice.id] });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -843,10 +749,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [carol.id] });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -869,8 +772,6 @@ describe('Timelines', () => {
 						replyId: bobNote.id,
 					});
 
-					await waitForPushToTl();
-
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -885,7 +786,6 @@ describe('Timelines', () => {
 				const [alice, bob] = await Promise.all([signup(), signup()]);
 				const aliceNote = await post(alice, { text: 'hi', visibility: 'specified', visibleUserIds: [bob.id] });
 				const bobNote = await post(bob, { text: 'ok', visibility: 'specified', visibleUserIds: [alice.id], replyId: aliceNote.id });
-				await waitForPushToTl();
 				const res = await api('notes/timeline', { limit: 100 }, alice);
 				assert.strictEqual(res.body.some(note => note.id === bobNote.id), true);
 				assert.strictEqual(res.body.find(note => note.id === bobNote.id).text, 'ok');
@@ -904,8 +804,6 @@ describe('Timelines', () => {
 						replyId: aliceNote.id,
 					});
 
-					await waitForPushToTl();
-
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -922,8 +820,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -942,8 +838,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -960,8 +854,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -981,8 +873,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -999,8 +889,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1020,8 +908,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1039,8 +925,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1061,8 +945,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1079,8 +961,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1100,8 +980,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1119,8 +997,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1141,8 +1017,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1160,8 +1034,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1182,8 +1054,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1202,8 +1072,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1224,8 +1092,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1250,8 +1116,6 @@ describe('Timelines', () => {
 					const aliceNote = await post(alice, { text: "I'm Alice." });
 					const bobNote = await post(bob, { text: "I'm Bob." });
 					const carolNote = await post(carol, { text: "I'm Carol." });
-
-					await waitForPushToTl();
 
 					if (enableFanoutTimeline) {
 						// NOTE: notes/timeline だと DB へのフォールバックが効くので Redis を直接見て確かめる
@@ -1280,8 +1144,6 @@ describe('Timelines', () => {
 					await post(alice, { text: "I'm Alice." });
 					await post(bob, { text: "I'm Bob." });
 
-					await waitForPushToTl();
-
 					// NOTE: notes/timeline だと DB へのフォールバックが効くので Redis を直接見て確かめる
 					assert.strictEqual(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`), 0);
 				});
@@ -1299,10 +1161,7 @@ describe('Timelines', () => {
 						bobNote = await post(bob, { text: 'yo' });
 						carolNote = await post(carol, { text: "kon'nichiwa" });
 
-						await waitForPushToTl();
-
 						await api('admin/suspend-user', { userId: carol.id }, root);
-						await setTimeout(100);
 					});
 
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
@@ -1323,7 +1182,6 @@ describe('Timelines', () => {
 
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
 						await api('admin/unsuspend-user', { userId: carol.id }, root);
-						await setTimeout(100);
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1358,10 +1216,7 @@ describe('Timelines', () => {
 						bobRenote = await post(bob, { renoteId: carolNote.id });
 						carolRenote = await post(carol, { renoteId: bobNote.id });
 
-						await waitForPushToTl();
-
 						await api('admin/suspend-user', { userId: carol.id }, root);
-						await setTimeout(100);
 					});
 
 					test('凍結後に凍結されたユーザーに対するRenoteや凍結されたユーザーのRenoteが見えなくなる', async () => {
@@ -1390,7 +1245,6 @@ describe('Timelines', () => {
 
 					test('凍結解除後に凍結されていたユーザーに対するRenoteや凍結されたユーザーのRenoteが見えるようになる', async () => {
 						await api('admin/unsuspend-user', { userId: carol.id }, root);
-						await setTimeout(100);
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1435,10 +1289,7 @@ describe('Timelines', () => {
 						bobNote = await post(bob, { text: 'yo' });
 						carolNote = await post(carol, { text: "kon'nichiwa" });
 
-						await waitForPushToTl();
-
 						await api('admin/suspend-user', { userId: carol.id }, root);
-						await setTimeout(100);
 					});
 
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
@@ -1460,7 +1311,6 @@ describe('Timelines', () => {
 
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
 						await api('admin/unsuspend-user', { userId: carol.id }, root);
-						await setTimeout(100);
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1487,8 +1337,6 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: 'hi', visibility: 'home' });
 					const bobNote = await post(bob, { text: 'hi' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -1506,8 +1354,6 @@ describe('Timelines', () => {
 
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1527,8 +1373,6 @@ describe('Timelines', () => {
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: bobNote1.id });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -1547,8 +1391,6 @@ describe('Timelines', () => {
 					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -1561,8 +1403,6 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup({ host: genHost() })]);
 
 					const bobNote = await post(bob, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1577,11 +1417,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'home' });
 					const bobNote = await post(bob, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1599,11 +1436,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1622,11 +1456,8 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1646,11 +1477,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1668,12 +1496,9 @@ describe('Timelines', () => {
 					const [alice, bob, carol, dave] = await Promise.all([signup(), signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', renoteId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1695,12 +1520,9 @@ describe('Timelines', () => {
 					const [alice, bob, carol, dave] = await Promise.all([signup(), signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', replyId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1724,11 +1546,8 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1747,11 +1566,8 @@ describe('Timelines', () => {
 
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1771,8 +1587,6 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/local-timeline', { limit: 100, withReplies: true }, alice);
 
 					assert.strictEqual(
@@ -1789,8 +1603,6 @@ describe('Timelines', () => {
 						const file = await uploadTimelineFile(bob);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100, withFiles: true }, alice);
 
@@ -1815,8 +1627,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1834,8 +1644,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1852,8 +1660,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1873,8 +1679,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1891,8 +1695,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1912,8 +1714,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1931,8 +1731,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1953,8 +1751,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -1971,8 +1767,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -1992,8 +1786,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2011,8 +1803,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -2033,8 +1823,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2052,8 +1840,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -2074,8 +1860,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2094,8 +1878,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -2117,8 +1899,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2135,8 +1915,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -2150,8 +1928,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -2164,10 +1940,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2184,11 +1957,8 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2208,11 +1978,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2236,11 +2003,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: carol.id }, alice);
 					await api('following/create', { userId: carol.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2264,11 +2028,8 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					await api('following/create', { userId: alice.id }, bob);
 					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2288,8 +2049,6 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -2307,8 +2066,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -2324,8 +2081,6 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 
 					const bobNote = await post(bob, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2343,8 +2098,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 					assert.strictEqual(
@@ -2359,11 +2112,8 @@ describe('Timelines', () => {
 
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
@@ -2383,8 +2133,6 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('notes/hybrid-timeline', { limit: 100, withReplies: true }, alice);
 
 					assert.strictEqual(
@@ -2401,8 +2149,6 @@ describe('Timelines', () => {
 						const file = await uploadTimelineFile(bob);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100, withFiles: true }, alice);
 
@@ -2427,8 +2173,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2446,8 +2190,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2464,8 +2206,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2485,8 +2225,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2503,8 +2241,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2524,8 +2260,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2543,8 +2277,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2565,8 +2297,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2583,8 +2313,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2604,8 +2332,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2623,8 +2349,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2645,8 +2369,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2664,8 +2386,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2686,8 +2406,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						assert.strictEqual(
@@ -2706,8 +2424,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2728,8 +2444,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2758,11 +2472,8 @@ describe('Timelines', () => {
 						carolNote = await post(carol, { text: "kon'nichiwa" });
 						daveNote = await post(dave, { text: 'hello' });
 
-						await waitForPushToTl();
-
 						await api('admin/suspend-user', { userId: carol.id }, root);
 						await api('admin/suspend-user', { userId: dave.id }, root);
-						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					});
 
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
@@ -2789,7 +2500,6 @@ describe('Timelines', () => {
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
 						await api('admin/unsuspend-user', { userId: carol.id }, root);
 						await api('admin/unsuspend-user', { userId: dave.id }, root);
-						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2833,11 +2543,8 @@ describe('Timelines', () => {
 						carolNote = await post(carol, { text: "kon'nichiwa" });
 						elleNote = await post(elle, { text: 'hi there' });
 
-						await waitForPushToTl();
-
 						await api('admin/suspend-user', { userId: carol.id }, root);
 						await api('admin/suspend-user', { userId: elle.id }, root);
-						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					});
 
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
@@ -2860,7 +2567,6 @@ describe('Timelines', () => {
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
 						await api('admin/unsuspend-user', { userId: carol.id }, root);
 						await api('admin/unsuspend-user', { userId: elle.id }, root);
-						await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
@@ -2886,10 +2592,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -2904,10 +2607,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -2922,10 +2622,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -2940,11 +2637,8 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -2959,11 +2653,8 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: bobNote1.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -2983,11 +2674,8 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: false }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3003,11 +2691,8 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: false }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3023,11 +2708,8 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: true }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3043,10 +2725,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3062,10 +2741,7 @@ describe('Timelines', () => {
 					await api('following/create', { userId: bob.id }, alice);
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3081,10 +2757,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: alice.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3101,10 +2774,7 @@ describe('Timelines', () => {
 					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3125,8 +2795,6 @@ describe('Timelines', () => {
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { listId: list.id, withFiles: true }, alice);
 
 						assert.strictEqual(
@@ -3146,10 +2814,7 @@ describe('Timelines', () => {
 
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [alice.id] });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3166,10 +2831,7 @@ describe('Timelines', () => {
 					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
 					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
 					await api('users/lists/push', { listId: list.id, userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [carol.id] });
-
-					await waitForPushToTl();
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -3190,8 +2852,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3211,8 +2871,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3231,8 +2889,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
@@ -3254,8 +2910,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3274,8 +2928,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
@@ -3297,8 +2949,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3318,8 +2968,6 @@ describe('Timelines', () => {
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						await waitForPushToTl();
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
@@ -3342,8 +2990,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3362,8 +3008,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
@@ -3385,8 +3029,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3406,8 +3048,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
@@ -3430,8 +3070,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3451,8 +3089,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
@@ -3475,8 +3111,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3497,8 +3131,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
@@ -3522,8 +3154,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
 						assert.strictEqual(
@@ -3540,8 +3170,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi' });
 
-					await waitForPushToTl();
-
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
 					assert.strictEqual(
@@ -3555,8 +3183,6 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
 
-					await waitForPushToTl();
-
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
 					assert.strictEqual(
@@ -3569,10 +3195,7 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote = await post(bob, { text: 'hi', visibility: 'followers' });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
@@ -3588,8 +3211,6 @@ describe('Timelines', () => {
 
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'followers' });
 
-					await waitForPushToTl();
-
 					const res = await api('users/notes', { userId: alice.id }, alice);
 
 					assert.strictEqual(
@@ -3604,8 +3225,6 @@ describe('Timelines', () => {
 
 					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
@@ -3623,8 +3242,6 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
@@ -3645,8 +3262,6 @@ describe('Timelines', () => {
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('users/notes', { userId: bob.id, withReplies: true }, alice);
 
 					assert.strictEqual(
@@ -3665,8 +3280,6 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: carolNote.id, visibility: 'specified' });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id, withReplies: true }, alice);
 
@@ -3689,8 +3302,6 @@ describe('Timelines', () => {
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [file.id] });
 
-						await waitForPushToTl();
-
 						const res = await api('users/notes', { userId: bob.id, withFiles: true }, alice);
 
 						assert.strictEqual(
@@ -3711,8 +3322,6 @@ describe('Timelines', () => {
 					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
 
-					await waitForPushToTl();
-
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
 					assert.strictEqual(
@@ -3726,8 +3335,6 @@ describe('Timelines', () => {
 
 					const channel = await api('channels/create', { name: 'channel', isSensitive: true }, bob).then((x) => x.body);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
@@ -3743,8 +3350,6 @@ describe('Timelines', () => {
 					const channel = await api('channels/create', { name: 'channel', isSensitive: true }, bob).then((x) => x.body);
 					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
 
-					await waitForPushToTl();
-
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, bob);
 
 					assert.strictEqual(
@@ -3757,11 +3362,8 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', renoteId: carolNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
@@ -3775,12 +3377,9 @@ describe('Timelines', () => {
 					const [alice, bob, carol, dave] = await Promise.all([signup(), signup(), signup(), signup()]);
 
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', renoteId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id, limit: 100 }, alice);
 
@@ -3795,12 +3394,9 @@ describe('Timelines', () => {
 
 					await api('following/create', { userId: bob.id }, alice);
 					await api('mute/create', { userId: carol.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const carolNote = await post(carol, { text: 'hi' });
 					const daveNote = await post(dave, { text: 'quote hi', replyId: carolNote.id });
 					const bobNote = await post(bob, { renoteId: daveNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id, limit: 100 }, alice);
 
@@ -3814,14 +3410,11 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					await api('mute/create', { userId: bob.id }, alice);
-					await setTimeout(TIMELINE_PROPAGATION_DELAY_MS);
 					const bobNote1 = await post(bob, { text: 'hi' });
 					const bobNote2 = await post(bob, { text: 'hi', replyId: bobNote1.id });
 					const bobNote3 = await post(bob, { text: 'hi', renoteId: bobNote1.id });
 					const bobNote4 = await post(bob, { renoteId: bobNote2.id });
 					const bobNote5 = await post(bob, { renoteId: bobNote3.id });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
@@ -3852,8 +3445,6 @@ describe('Timelines', () => {
 
 					const aliceNote = await post(alice, { text: 'hi', visibility: 'specified' });
 
-					await waitForPushToTl();
-
 					const res = await api('users/notes', { userId: alice.id, withReplies: true }, alice);
 
 					assert.strictEqual(
@@ -3866,8 +3457,6 @@ describe('Timelines', () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					const bobNote = await post(bob, { text: 'hi', visibility: 'specified' });
-
-					await waitForPushToTl();
 
 					const res = await api('users/notes', { userId: bob.id, withReplies: true }, alice);
 
@@ -3913,8 +3502,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
 						assert.strictEqual(
@@ -3932,8 +3519,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						await waitForPushToTl();
-
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
 						assert.strictEqual(
@@ -3950,8 +3535,6 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
-
-						await waitForPushToTl();
 
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
@@ -3971,8 +3554,6 @@ describe('Timelines', () => {
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 						const bobRenote = await renote(bobNote.id, bob);
 
-						await waitForPushToTl();
-
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
 						assert.strictEqual(
@@ -3991,8 +3572,6 @@ describe('Timelines', () => {
 
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
@@ -4015,8 +3594,6 @@ describe('Timelines', () => {
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel2.id });
 
-					await waitForPushToTl();
-
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
 					assert.strictEqual(
@@ -4038,8 +3615,6 @@ describe('Timelines', () => {
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
 					assert.strictEqual(
@@ -4058,8 +3633,6 @@ describe('Timelines', () => {
 					const bobNote = await post(bob, { text: 'ok', channelId: channel2.id });
 					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
 					assert.strictEqual(
@@ -4076,8 +3649,6 @@ describe('Timelines', () => {
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 					const aliceNote = await post(alice, { text: 'hi', replyId: bobNote.id, channelId: channel.id });
 
-					await waitForPushToTl();
-
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
 					assert.strictEqual(
@@ -4093,8 +3664,6 @@ describe('Timelines', () => {
 
 					const aliceNote = await post(alice, { text: 'hi', channelId: channel.id });
 					const bobNote = await post(bob, { text: 'ok', replyId: aliceNote.id, channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
@@ -4113,8 +3682,6 @@ describe('Timelines', () => {
 
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
@@ -4138,8 +3705,6 @@ describe('Timelines', () => {
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-					await waitForPushToTl();
-
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
 					assert.strictEqual(
@@ -4160,8 +3725,6 @@ describe('Timelines', () => {
 
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-					await waitForPushToTl();
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
@@ -4185,8 +3748,6 @@ describe('Timelines', () => {
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
 
-					await waitForPushToTl();
-
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
 					assert.strictEqual(
@@ -4204,8 +3765,6 @@ describe('Timelines', () => {
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 					const bobRenote = await post(bob, { channelId: channel.id, replyId: bobNote.id, text: 'ho' });
-
-					await waitForPushToTl();
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
@@ -4225,8 +3784,6 @@ describe('Timelines', () => {
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel2.id });
 					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
-
-					await waitForPushToTl();
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
