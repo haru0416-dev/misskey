@@ -7,6 +7,7 @@ import type { Server } from 'node:http';
 import * as fs from 'node:fs';
 import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
+import { envOption } from '@/env.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import { createMisskeyHonoApp } from '@/server/app.js';
 import { createHonoNodeServer } from '@/server/node-server.js';
@@ -255,14 +256,16 @@ async function launchHonoServerWithDependencies(
 		publishMainStream: eventPublishers.publishMainStream,
 	} satisfies HonoStreamServerDependencies;
 
-	const queueStatsDaemon = startHonoQueueStatsDaemon({
-		config,
-		deliverQueue: deps.deliverQueue,
-		inboxQueue: deps.inboxQueue,
-	});
-	disposers.push(() => queueStatsDaemon.dispose());
-	const serverStatsDaemon = startHonoServerStatsDaemon({ meta: deps.meta });
-	disposers.push(() => serverStatsDaemon.dispose());
+	if (!envOption.noDaemons) {
+		const queueStatsDaemon = startHonoQueueStatsDaemon({
+			config,
+			deliverQueue: deps.deliverQueue,
+			inboxQueue: deps.inboxQueue,
+		});
+		disposers.push(() => queueStatsDaemon.dispose());
+		const serverStatsDaemon = startHonoServerStatsDaemon({ meta: deps.meta });
+		disposers.push(() => serverStatsDaemon.dispose());
+	}
 
 	// bun ランタイムの node:http compat 層は 'upgrade' イベントで生ソケットに書き込むパターンだと
 	// 同一プロセス内に他のソケット接続 (DB pool / ioredis 等) があるとレスポンスがクライアントに
@@ -277,10 +280,12 @@ async function launchHonoServerWithDependencies(
 			// アプリ層に届く前に拒否される。ファイル本体 + multipart オーバーヘッドぶんを許容する
 			// (エンドポイント毎の細かい上限は body-limit.ts が実バイト数で守る)。
 			maxRequestBodySize: config.maxFileSize + 1024 * 1024,
-			fetch: async (request, bunServerInstance) => {
-				const url = new URL(request.url);
-				if (url.pathname === streamRuntime.streamingPath && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
-					return streamRuntime.tryUpgrade(request, url, bunServerInstance);
+			fetch: (request, bunServerInstance) => {
+				if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+					const url = new URL(request.url);
+					if (url.pathname === streamRuntime.streamingPath) {
+						return streamRuntime.tryUpgrade(request, url, bunServerInstance);
+					}
 				}
 
 				const remoteAddress = bunServerInstance.requestIP(request)?.address;

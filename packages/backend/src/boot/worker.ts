@@ -5,26 +5,25 @@
 
 import cluster from 'node:cluster';
 import { envOption } from '@/env.js';
-import { loadConfig } from '@/config.js';
+import type { Config } from '@/config.js';
 import { initExtraThreadPool, jobQueue, server } from './common.js';
 
 /**
  * Init worker process
  */
-export async function workerMain() {
-	const config = loadConfig();
+export async function workerMain(config: Config) {
 	let dispose: () => Promise<void>;
 
 	initExtraThreadPool(config);
 
 	if (envOption.onlyServer) {
-		const runtime = await server();
+		const runtime = await server(config);
 		dispose = () => runtime.dispose();
 	} else if (envOption.onlyQueue) {
-		const runtime = await jobQueue();
+		const runtime = await jobQueue(config);
 		dispose = () => runtime.close();
 	} else {
-		const runtime = await jobQueue();
+		const runtime = await jobQueue(config);
 		dispose = () => runtime.close();
 	}
 
