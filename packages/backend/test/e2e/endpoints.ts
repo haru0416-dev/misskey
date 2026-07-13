@@ -7503,7 +7503,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('users/recommendation', () => {
-		test('鍵垢/非表示/フォロー済み/リモート/自分自身を除外したおすすめユーザーを返す', async () => {
+		test('鍵垢/非表示/凍結済み/削除済み/フォロー済み/リモート/自分自身を除外したおすすめユーザーを返す', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const me = await signup({ username: `hur${suffix}` });
 			const candidate = await signup({ username: `hurc${suffix}` });
@@ -7512,6 +7512,10 @@ describe('Endpoints', () => {
 			await updateUserInDatabase(db, lockedUser.id, { isLocked: true, updatedAt: new Date() });
 			const notExplorable = await signup({ username: `hurn${suffix}` });
 			await updateUserInDatabase(db, notExplorable.id, { isExplorable: false, updatedAt: new Date() });
+			const suspendedUser = await signup({ username: `hurs${suffix}` });
+			await updateUserInDatabase(db, suspendedUser.id, { isSuspended: true, updatedAt: new Date() });
+			const deletedUser = await signup({ username: `hurd${suffix}` });
+			await updateUserInDatabase(db, deletedUser.id, { isDeleted: true, updatedAt: new Date() });
 			const alreadyFollowed = await signup({ username: `huraf${suffix}` });
 			await updateUserInDatabase(db, alreadyFollowed.id, { updatedAt: new Date() });
 			await api('following/create', { userId: alreadyFollowed.id }, me);
@@ -7539,6 +7543,8 @@ describe('Endpoints', () => {
 			assert.ok(ids.includes(candidate.id));
 			assert.ok(!ids.includes(lockedUser.id));
 			assert.ok(!ids.includes(notExplorable.id));
+			assert.ok(!ids.includes(suspendedUser.id));
+			assert.ok(!ids.includes(deletedUser.id));
 			assert.ok(!ids.includes(alreadyFollowed.id));
 			assert.ok(!ids.includes(remoteId));
 			assert.ok(!ids.includes(me.id));
