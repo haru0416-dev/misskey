@@ -491,7 +491,7 @@ class HonoNotificationManager {
 				requests.push({ notifieeId: x.target, type: x.reason, extra: { noteId: this.note.id } });
 			}
 		}
-		void createNoteNotificationsForHonoApi(deps, this.notifier.id, requests);
+		await createNoteNotificationsForHonoApi(deps, this.notifier.id, requests);
 	}
 }
 
@@ -698,35 +698,32 @@ export async function postNoteCreatedForHonoApi(
 	await incrementUserNotesCountAndUpdatedAtInDatabase(deps.db, user.id, new Date());
 
 	if (deps.meta.enableFanoutTimeline) {
-		void pushNoteToFanoutTimelinesForHonoApi(deps, note, user);
+		await pushNoteToFanoutTimelinesForHonoApi(deps, note, user);
 	}
 
-	// アンテナへのマッチング。原典 (NoteCreateService) と同じく enableFanoutTimeline に関わらず常時実行し、awaitしない。
-	void addNoteToAntennasForHonoApi(deps, { ...note, channel: data.channel ?? null }, user).catch(() => {});
+	// アンテナへのマッチングは enableFanoutTimeline に関わらず常時実行する。
+	await addNoteToAntennasForHonoApi(deps, { ...note, channel: data.channel ?? null }, user);
 
 	if (data.reply) {
 		await incrementNoteRepliesCountInDatabase(deps.db, data.reply.id, 1);
 	}
 
 	if (data.reply == null) {
-		listNotificationFollowerIdsByFolloweeIdFromDatabase(deps.db, user.id).then(async followerIds => {
-			if (note.visibility !== 'specified') {
-				const isPureRenote = isRenoteData(data) && !isQuoteData(data);
-				// 原典はキャッシュ済み Set (userIdsWhoMeMutingRenotes) の per-follower 参照だった。
-				// フォロワー毎の exists クエリではなく1クエリで Set を作って判定する。
-				const renoteMuterIds = isPureRenote
-					? new Set(await listRenoteMuterIdsByMuteeIdFromDatabase(deps.db, user.id))
-					: null;
-				const requests = followerIds
-					.filter(followerId => !renoteMuterIds?.has(followerId))
-					.map(followerId => ({ notifieeId: followerId, type: 'note' as const, extra: { noteId: note.id } }));
-				void createNoteNotificationsForHonoApi(deps, user.id, requests);
-			}
-		}).catch(() => {});
+		const followerIds = await listNotificationFollowerIdsByFolloweeIdFromDatabase(deps.db, user.id);
+		if (note.visibility !== 'specified') {
+			const isPureRenote = isRenoteData(data) && !isQuoteData(data);
+			const renoteMuterIds = isPureRenote
+				? new Set(await listRenoteMuterIdsByMuteeIdFromDatabase(deps.db, user.id))
+				: null;
+			const requests = followerIds
+				.filter(followerId => !renoteMuterIds?.has(followerId))
+				.map(followerId => ({ notifieeId: followerId, type: 'note' as const, extra: { noteId: note.id } }));
+			await createNoteNotificationsForHonoApi(deps, user.id, requests);
+		}
 	}
 
 	if (data.renote && data.renote.userId !== user.id && !user.isBot) {
-		void incrementNoteRenoteCountInDatabase(deps.db, data.renote.id, 1);
+		await incrementNoteRenoteCountInDatabase(deps.db, data.renote.id, 1);
 	}
 
 	if (data.poll && data.poll.expiresAt) {
@@ -747,10 +744,10 @@ export async function postNoteCreatedForHonoApi(
 
 		deps.publishNotesStream?.(noteObj);
 
-		// 原典 NoteCreateService と同じく、投稿者の保持ロールのタイムラインへ配信する (awaitしない)
-		void addNoteToRoleTimelinesForHonoApi(deps, noteObj).catch(() => {});
+		// 投稿者の保持ロールのタイムラインへ配信する。
+		await addNoteToRoleTimelinesForHonoApi(deps, noteObj);
 
-		void enqueueUserWebhookForHonoApi(deps, user.id, 'note', noteObj);
+		await enqueueUserWebhookForHonoApi(deps, user.id, 'note', noteObj);
 
 		const nm = new HonoNotificationManager(user, note);
 
@@ -761,7 +758,7 @@ export async function postNoteCreatedForHonoApi(
 		await Promise.all(localMentionedUsers.filter(u => !threadMutedUserIds.has(u.id)).map(async u => {
 			const detailPackedNote = await packNoteForHonoApi(deps, note, u, { detail: true });
 			deps.publishMainStream?.(u.id, 'mention', detailPackedNote);
-			void enqueueUserWebhookForHonoApi(deps, u.id, 'mention', detailPackedNote);
+			await enqueueUserWebhookForHonoApi(deps, u.id, 'mention', detailPackedNote);
 			nm.push(u.id, 'mention');
 		}));
 
@@ -771,7 +768,7 @@ export async function postNoteCreatedForHonoApi(
 				if (!isThreadMuted) {
 					nm.push(data.reply.userId, 'reply');
 					deps.publishMainStream?.(data.reply.userId, 'reply', noteObj);
-					void enqueueUserWebhookForHonoApi(deps, data.reply.userId, 'reply', noteObj);
+					await enqueueUserWebhookForHonoApi(deps, data.reply.userId, 'reply', noteObj);
 				}
 			}
 		}
@@ -783,50 +780,46 @@ export async function postNoteCreatedForHonoApi(
 			}
 			if (user.id !== data.renote.userId && data.renote.userHost === null) {
 				deps.publishMainStream?.(data.renote.userId, 'renote', noteObj);
-				void enqueueUserWebhookForHonoApi(deps, data.renote.userId, 'renote', noteObj);
+				await enqueueUserWebhookForHonoApi(deps, data.renote.userId, 'renote', noteObj);
 			}
 		}
 
 		await nm.notify(deps);
 
 		if (!data.localOnly && user.host == null) {
-			(async () => {
-				const activity = await renderNoteOrRenoteActivityForHonoApi(deps, {
+			const activity = await renderNoteOrRenoteActivityForHonoApi(deps, {
 					localOnly: data.localOnly,
 					renote: data.renote,
 					isQuote: isRenoteData(data) && isQuoteData(data),
-				}, note);
+			}, note);
 
-				const recipientUsers = note.visibility === 'specified' ? (data.visibleUsers ?? []) : mentionedUsers;
-				const directRecipients = (await Promise.all(recipientUsers.filter(u => u.host != null).map(u => resolveRemoteRecipientForHonoApi(deps, u.id)))).filter((u): u is NonNullable<typeof u> => u != null);
+			const recipientUsers = note.visibility === 'specified' ? (data.visibleUsers ?? []) : mentionedUsers;
+			const directRecipients = (await Promise.all(recipientUsers.filter(u => u.host != null).map(u => resolveRemoteRecipientForHonoApi(deps, u.id)))).filter((u): u is NonNullable<typeof u> => u != null);
 
-				if (data.reply && data.reply.userHost !== null) {
-					const u = await resolveRemoteRecipientForHonoApi(deps, data.reply.userId);
-					if (u) directRecipients.push(u);
-				}
-				if (data.renote && data.renote.userHost !== null) {
-					const u = await resolveRemoteRecipientForHonoApi(deps, data.renote.userId);
-					if (u) directRecipients.push(u);
-				}
+			if (data.reply && data.reply.userHost !== null) {
+				const u = await resolveRemoteRecipientForHonoApi(deps, data.reply.userId);
+				if (u) directRecipients.push(u);
+			}
+			if (data.renote && data.renote.userHost !== null) {
+				const u = await resolveRemoteRecipientForHonoApi(deps, data.renote.userId);
+				if (u) directRecipients.push(u);
+			}
 
-				await deliverNoteActivityForHonoApi(deps, user, activity, {
-					directRecipients,
-					deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
-				});
+			await deliverNoteActivityForHonoApi(deps, user, activity, {
+				directRecipients,
+				deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
+			});
 
-				// 原典 NoteCreateService 同様、public ノートのみリレーへ配信 (fire-and-forget)。
-				if (note.visibility === 'public') {
-					void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, activity).catch(() => {});
-				}
-			})().catch(() => {});
+			if (note.visibility === 'public') {
+				await deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, activity);
+			}
 		}
 	}
 
 	if (data.channel) {
 		await incrementChannelNotesCountAndUpdateLastNotedAtInDatabase(deps.db, data.channel.id, new Date());
-		countNotesByUserIdAndChannelIdFromDatabase(deps.db, user.id, data.channel.id).then(count => {
-			if (count === 1) void incrementChannelUsersCountInDatabase(deps.db, data.channel!.id);
-		}).catch(() => {});
+		const count = await countNotesByUserIdAndChannelIdFromDatabase(deps.db, user.id, data.channel.id);
+		if (count === 1) await incrementChannelUsersCountInDatabase(deps.db, data.channel.id);
 	}
 }
 
@@ -1049,9 +1042,7 @@ export async function createNoteForHonoApi(
 
 	const note = await persist(db => insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers, db));
 
-	setImmediate(() => {
-		postNoteCreatedForHonoApi(deps, note, user, data, tags!, finalMentionedUsers, silent).catch(() => {});
-	});
+	await postNoteCreatedForHonoApi(deps, note, user, data, tags!, finalMentionedUsers, silent);
 
 	return note;
 }
