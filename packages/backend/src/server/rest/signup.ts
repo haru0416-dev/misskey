@@ -6,7 +6,7 @@
 import { domainToASCII } from 'node:url';
 import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
-import RE2 from '@/misc/re2.js';
+import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
 import { fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { isUsedUsername } from '@/core/UsedUsernameStore.js';
@@ -71,27 +71,6 @@ function normalizeHost(host: unknown): string | null {
 	if (normalized === '') throw signupValidationError('INVALID_HOST');
 
 	return normalized;
-}
-
-function isKeywordIncluded(text: string, keywords: string[]): boolean {
-	if (keywords.length === 0) return false;
-	if (text === '') return false;
-
-	const regexpPattern = /^\/(.+)\/(.*)$/;
-
-	return keywords.some(filter => {
-		const regexp = filter.match(regexpPattern);
-		if (!regexp) {
-			const words = filter.split(' ');
-			return words.every(keyword => text.includes(keyword));
-		}
-
-		try {
-			return new RE2(regexp[1], regexp[2]).test(text);
-		} catch {
-			return false;
-		}
-	});
 }
 
 function assertSignupGateOpen(meta: MiMeta): void {
