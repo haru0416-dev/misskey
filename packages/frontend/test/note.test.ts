@@ -85,4 +85,10 @@ describe('MkMediaImage', () => {
 		assert.ok(gif);
 		assert.ok(alt);
 	});
+
+	test('Icon-only media controls have accessible names', () => {
+		const mkMediaImage = renderMediaImage({ type: 'image/png' });
+		assert.ok(mkMediaImage.getByRole('button', { name: 'Menu' }));
+		assert.ok(mkMediaImage.getByRole('button', { name: 'Hide' }));
+	});
 });

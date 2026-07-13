@@ -12045,6 +12045,14 @@ export interface Locale extends ILocale {
     };
     "_mediaControls": {
         /**
+         * 再生
+         */
+        "play": string;
+        /**
+         * 一時停止
+         */
+        "pause": string;
+        /**
          * ピクチャインピクチャ
          */
         "pip": string;

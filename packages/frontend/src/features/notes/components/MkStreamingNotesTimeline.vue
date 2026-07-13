@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<div v-if="props.viewMode === 'media'" ref="notesEl" :class="$style.mediaGrid">
 			<article v-for="note in mediaNotes" :key="note.id" :data-scroll-anchor="note.id" :class="$style.mediaCard">
-				<MkMediaList :mediaList="mediaFiles(note).slice(0, 4)" :square="true" :eagerLightbox="false"/>
+				<MkMediaList :mediaList="mediaFiles(note).slice(0, 4)" :square="true"/>
 				<div v-if="mediaFiles(note).length > 4" :class="$style.mediaCount">+{{ mediaFiles(note).length - 4 }}</div>
 				<MkA :to="notePage(note)" :class="$style.mediaMeta">
 					<MkAvatar :user="note.user" :class="$style.mediaAvatar"/>
