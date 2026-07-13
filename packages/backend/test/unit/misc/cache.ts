@@ -38,6 +38,34 @@ describe('misc:MemoryKVCache', () => {
 		cache.dispose();
 	});
 
+	test('keeps current behavior when limit is omitted', () => {
+		const cache = new MemoryKVCache<number>(1000 * 60);
+		cache.set('a', 1);
+		cache.set('b', 2);
+		cache.set('c', 3);
+		expect(cache.get('a')).toBe(1);
+		expect(cache.get('b')).toBe(2);
+		expect(cache.get('c')).toBe(3);
+		expect([...cache.entries].map(([key]) => key)).toEqual(['a', 'b', 'c']);
+		cache.dispose();
+	});
+
+	test('evicts the least recently used entry when limit is reached', () => {
+		const cache = new MemoryKVCache<number>(1000 * 60, 2);
+		cache.set('a', 1);
+		cache.set('b', 2);
+		expect(cache.get('a')).toBe(1);
+		cache.set('c', 3);
+		expect(cache.get('a')).toBe(1);
+		expect(cache.get('b')).toBeUndefined();
+		expect(cache.get('c')).toBe(3);
+		cache.dispose();
+	});
+
+	test.each([0, -1, 1.5, Infinity, Number.NaN])('rejects invalid limit %s', limit => {
+		expect(() => new MemoryKVCache(1000, limit)).toThrow(TypeError);
+	});
+
 	describe('gc()', () => {
 		test('removes expired entries', () => {
 			const cache = new MemoryKVCache<string>(1000);
@@ -170,6 +198,22 @@ describe('misc:MemoryKVCache', () => {
 			// A second call should invoke the fetcher again because undefined was not cached
 			await cache.fetchMaybe('key', fetcher);
 			expect(fetcher).toHaveBeenCalledTimes(2);
+			cache.dispose();
+		});
+
+		test('shares an in-flight fetch for the same key', async () => {
+			const cache = new MemoryKVCache<string>(1000);
+			let resolveFetch!: (value: string) => void;
+			const fetcher = vi.fn(() => new Promise<string>(resolve => {
+				resolveFetch = resolve;
+			}));
+
+			const first = cache.fetchMaybe('key', fetcher);
+			const second = cache.fetchMaybe('key', fetcher);
+			expect(fetcher).toHaveBeenCalledOnce();
+
+			resolveFetch('fetched');
+			await expect(Promise.all([first, second])).resolves.toEqual(['fetched', 'fetched']);
 			cache.dispose();
 		});
 	});

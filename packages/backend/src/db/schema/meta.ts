@@ -188,6 +188,7 @@ export const meta = pgTable('meta', {
 	urlPreviewRequireContentLength: boolean().default(false).notNull(),
 	urlPreviewSummaryProxyUrl: varchar({ length: 1024 }),
 	urlPreviewUserAgent: varchar({ length: 1024 }),
+	urlPreviewSensitiveList: varchar({ length: 3072 }).array().default(emptyVarcharArray).notNull(),
 	federation: varchar({ length: 128, enum: ['all', 'specified', 'none'] }).default('none').notNull(),
 	federationHosts: varchar({ length: 1024 }).array().default(emptyVarcharArray).notNull(),
 	ugcVisibilityForVisitor: varchar({ length: 128, enum: ['all', 'local', 'none'] }).default('local').notNull(),

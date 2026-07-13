@@ -108,11 +108,19 @@ export class RedisKVCache<T> {
 
 export class MemoryKVCache<T> {
 	private readonly cache = new Map<string, { date: number; value: T; }>();
+	private readonly pendingFetches = new Map<string, Promise<T | undefined>>();
 	private readonly gcIntervalHandle = setInterval(() => this.gc(), 1000 * 60 * 3); // 3m
+	private readonly limit: number;
 
 	constructor(
 		private readonly lifetime: number,
-	) {}
+		limit?: number,
+	) {
+		if (limit !== undefined && (!Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0)) {
+			throw new TypeError('limit must be a positive finite integer');
+		}
+		this.limit = limit ?? Infinity;
+	}
 
 	@bindThis
 	/**
@@ -120,6 +128,17 @@ export class MemoryKVCache<T> {
 	 * @deprecated これを直接呼び出すべきではない。InternalEventなどで変更を全てのプロセス/マシンに通知するべき
 	 */
 	public set(key: string, value: T): void {
+		if (this.limit !== Infinity) {
+			this.gc();
+			this.cache.delete(key);
+
+			while (this.cache.size >= this.limit) {
+				const oldestKey = this.cache.keys().next().value;
+				if (oldestKey === undefined) break;
+				this.cache.delete(oldestKey);
+			}
+		}
+
 		this.cache.set(key, {
 			date: Date.now(),
 			value,
@@ -133,6 +152,10 @@ export class MemoryKVCache<T> {
 		if ((Date.now() - cached.date) > this.lifetime) {
 			this.cache.delete(key);
 			return undefined;
+		}
+		if (this.limit !== Infinity) {
+			this.cache.delete(key);
+			this.cache.set(key, cached);
 		}
 		return cached.value;
 	}
@@ -173,11 +196,21 @@ export class MemoryKVCache<T> {
 			}
 		}
 
-		const value = await fetcher();
-		if (value !== undefined) {
-			this.set(key, value);
-		}
-		return value;
+		const pendingFetch = this.pendingFetches.get(key);
+		if (pendingFetch !== undefined) return pendingFetch;
+
+		const fetchPromise = fetcher().then(value => {
+			if (value !== undefined) {
+				this.set(key, value);
+			}
+			return value;
+		}).finally(() => {
+			if (this.pendingFetches.get(key) === fetchPromise) {
+				this.pendingFetches.delete(key);
+			}
+		});
+		this.pendingFetches.set(key, fetchPromise);
+		return fetchPromise;
 	}
 
 	@bindThis

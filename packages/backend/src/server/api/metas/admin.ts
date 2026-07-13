@@ -1638,6 +1638,14 @@ export const endpointMetas = {
 						type: 'string',
 						optional: false, nullable: true,
 					},
+					urlPreviewSensitiveList: {
+						type: 'array',
+						optional: false, nullable: false,
+						items: {
+							type: 'string',
+							optional: false, nullable: false,
+						},
+					},
 					federation: {
 						type: 'string',
 						enum: ['all', 'specified', 'none'],
