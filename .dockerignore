@@ -1,6 +1,9 @@
 .autogen
+.agents/
+.claude/
 .git
 .github
+.playwright-mcp/
 .travis
 .vscode
 .config
@@ -31,3 +34,7 @@ fluent-emojis/
 packages/*/.vscode/
 packages/backend/test/compose.yml
 packages/backend/test-federation/volumes/
+coverage/
+**/coverage/
+playwright-report/
+test-results/
