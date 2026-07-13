@@ -4,18 +4,22 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="[hide ? $style.hidden : $style.visible, (image.isSensitive && prefer.highlightSensitiveMedia) && $style.sensitive]" @click="reveal" @contextmenu.stop="onContextmenu">
+<div :class="[hide ? $style.hidden : $style.visible, (image.isSensitive && prefer.highlightSensitiveMedia) && $style.sensitive]" @click="onClick" @contextmenu.stop="onContextmenu">
 	<component
 		:is="disableImageLink ? 'div' : 'a'"
 		v-bind="disableImageLink ? {
 			title: image.name,
 			class: $style.imageContainer,
+			role: controls ? 'button' : undefined,
+			tabindex: controls ? 0 : undefined,
 		} : {
 			title: image.name,
 			class: $style.imageContainer,
 			href: image.url,
 			style: 'cursor: zoom-in;'
 		}"
+		@keydown.enter="onKeyboardOpen"
+		@keydown.space.prevent="onKeyboardOpen"
 	>
 		<MkImgWithBlurhash
 			v-if="prefer.enableHighQualityImagePlaceholders"
@@ -29,12 +33,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:height="image.properties.height"
 			:style="hide ? 'filter: brightness(0.7);' : null"
 			:class="$style.image"
+			:marker="marker"
 		/>
 		<div
 			v-else-if="prefer.dataSaver.media || hide"
 			:title="image.comment || image.name"
 			:style="hide ? 'background: #888;' : null"
 			:class="$style.image"
+			:data-marker="marker"
 		></div>
 		<img
 			v-else
@@ -42,6 +48,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:alt="image.comment || image.name"
 			:title="image.comment || image.name"
 			:class="$style.image"
+			:data-marker="marker"
 		/>
 	</component>
 	<template v-if="hide">
@@ -59,8 +66,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div v-if="image.comment" :class="$style.indicator">ALT</div>
 			<div v-if="image.isSensitive" :class="$style.indicator" style="color: var(--MI_THEME-warn);" :title="i18n.ts.sensitive"><i class="ti ti-eye-exclamation"></i></div>
 		</div>
-		<button :class="$style.menu" class="_button" @click.stop="showMenu"><i class="ti ti-dots" style="vertical-align: middle;"></i></button>
-		<i class="ti ti-eye-off" :class="$style.hide" @click.stop="hide = true"></i>
+		<button type="button" :class="$style.menu" class="_button" :aria-label="i18n.ts.menu" @click.stop="showMenu"><i class="ti ti-dots" style="vertical-align: middle;"></i></button>
+		<button type="button" class="_button" :class="$style.hide" :aria-label="i18n.ts.hide" @click.stop="hide = true"><i class="ti ti-eye-off"></i></button>
 	</template>
 </div>
 </template>
@@ -68,16 +75,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { watch, ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
-import type { MenuItem } from '@/types/menu.js';
-import { copyToClipboard } from '@/utility/copy-to-clipboard';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import bytes from '@/filters/bytes.js';
 import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
-import { $i, iAmModerator } from '@/i.js';
 import { prefer } from '@/preferences.js';
 import { shouldHideFileByDefault, canRevealFile } from '@/features/media-viewer/sensitive-file.js';
+import { getFileMenu } from '@/features/media-viewer/get-file-menu.js';
 
 const props = withDefaults(defineProps<{
 	image: Misskey.entities.DriveFile;
@@ -85,11 +90,16 @@ const props = withDefaults(defineProps<{
 	cover?: boolean;
 	disableImageLink?: boolean;
 	controls?: boolean;
+	marker?: string;
 }>(), {
 	cover: false,
 	disableImageLink: false,
 	controls: true,
 });
+
+const emit = defineEmits<{
+	(event: 'mediaClick', ev: Event): void;
+}>();
 
 const hide = ref(true);
 
@@ -100,8 +110,9 @@ const url = computed(() => (props.raw || prefer.loadRawImages)
 		: props.image.thumbnailUrl!,
 );
 
-async function reveal(ev: PointerEvent) {
+async function onClick(ev: Event) {
 	if (!props.controls) {
+		emit('mediaClick', ev);
 		return;
 	}
 
@@ -112,7 +123,14 @@ async function reveal(ev: PointerEvent) {
 		}
 
 		hide.value = false;
+	} else {
+		emit('mediaClick', ev);
 	}
+}
+
+function onKeyboardOpen(ev: KeyboardEvent) {
+	if (!props.disableImageLink) return;
+	void onClick(ev);
 }
 
 // Plugin:register_note_view_interruptor を使って書き換えられる可能性があるためwatchする
@@ -123,80 +141,12 @@ watch(() => props.image, (newImage) => {
 	immediate: true,
 });
 
-function getMenu() {
-	const menuItems: MenuItem[] = [];
-
-	menuItems.push({
-		text: i18n.ts.hide,
-		icon: 'ti ti-eye-off',
-		action: () => {
-			hide.value = true;
-		},
-	});
-
-	if (iAmModerator) {
-		menuItems.push({
-			text: props.image.isSensitive ? i18n.ts.unmarkAsSensitive : i18n.ts.markAsSensitive,
-			icon: 'ti ti-eye-exclamation',
-			danger: true,
-			action: async () => {
-				const { canceled } = await os.confirm({
-					type: 'warning',
-					text: props.image.isSensitive ? i18n.ts.unmarkAsSensitiveConfirm : i18n.ts.markAsSensitiveConfirm,
-				});
-
-				if (canceled) return;
-
-				os.apiWithDialog('drive/files/update', {
-					fileId: props.image.id,
-					isSensitive: !props.image.isSensitive,
-				});
-			},
-		});
-	}
-
-	const details: MenuItem[] = [];
-	if ($i?.id === props.image.userId) {
-		details.push({
-			type: 'link',
-			text: i18n.ts._fileViewer.title,
-			icon: 'ti ti-info-circle',
-			to: `/my/drive/file/${props.image.id}`,
-		});
-	}
-
-	if (iAmModerator) {
-		details.push({
-			type: 'link',
-			text: i18n.ts.moderation,
-			icon: 'ti ti-photo-exclamation',
-			to: `/admin/file/${props.image.id}`,
-		});
-	}
-
-	if (details.length > 0) {
-		menuItems.push({ type: 'divider' }, ...details);
-	}
-
-	if (prefer.devMode) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-hash',
-			text: i18n.ts.copyFileId,
-			action: () => {
-				copyToClipboard(props.image.id);
-			},
-		});
-	}
-
-	return menuItems;
-}
-
 function showMenu(ev: PointerEvent) {
-	os.popupMenu(getMenu(), (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
+	os.popupMenu(getFileMenu(props.image, value => { hide.value = value; }), (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
 }
 
 function onContextmenu(ev: PointerEvent) {
-	os.contextMenu(getMenu(), ev);
+	os.contextMenu(getFileMenu(props.image, value => { hide.value = value; }), ev);
 }
 </script>
 

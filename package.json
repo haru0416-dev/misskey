@@ -86,6 +86,7 @@
 		"msw",
 		"sharp",
 		"utf-8-validate",
+		"v-code-diff",
 		"vue-demi"
 	],
 	"overrides": {
