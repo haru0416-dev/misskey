@@ -72,7 +72,12 @@ export async function closeInitialUserSetup(page: Page): Promise<void> {
 	const persisted = page.waitForResponse((response) => {
 		if (!response.url().includes('/api/i/registry/set') || response.request().method() !== 'POST') return false;
 		const body = response.request().postDataJSON() as { scope?: unknown; key?: unknown; value?: unknown };
-		return Array.isArray(body.scope) && body.scope.join('/') === 'client/base' && body.key === 'accountSetupWizard' && body.value === -1;
+		return (
+			Array.isArray(body.scope) &&
+			body.scope.join('/') === 'client/base' &&
+			body.key === 'accountSetupWizard' &&
+			body.value === -1
+		);
 	});
 	await close.click();
 	await page.locator('[data-cy-modal-dialog-ok]').click();
