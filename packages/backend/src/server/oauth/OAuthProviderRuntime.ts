@@ -10,7 +10,7 @@ import { extractLinkHeaderUrisByRel } from '@/misc/parse-link-header.js';
 import ipaddr from 'ipaddr.js';
 import { permissions as kinds } from 'misskey-js';
 import type { Config } from '@/config.js';
-import { createAccessTokenInDatabase } from '@/core/AccessTokenStore.js';
+import { createAccessTokenInDatabase, deleteAccessTokenByTokenFromDatabase } from '@/core/AccessTokenStore.js';
 import { fetchLocalUserByNativeTokenFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -116,11 +116,22 @@ interface AuthorizationCodeGrant {
 	scopes: string[];
 }
 
+type AuthorizationCodeGrantState =
+	| { status: 'pending'; grant: AuthorizationCodeGrant; }
+	| { status: 'exchanging'; grant: AuthorizationCodeGrant; }
+	| { status: 'issued'; grant: AuthorizationCodeGrant; accessToken: string; }
+	| { status: 'revoked'; grant: AuthorizationCodeGrant; accessToken?: string; };
+
+type AuthorizationCodeGrantClaim =
+	| { status: 'claimed'; grant: AuthorizationCodeGrant; }
+	| { status: 'reused'; grant: AuthorizationCodeGrant; accessToken?: string; };
+
 export interface OAuthEphemeralStore {
 	setAuthorizationTransaction(id: string, value: AuthorizationTransaction): Promise<void>;
 	consumeAuthorizationTransaction(id: string): Promise<AuthorizationTransaction | null>;
 	setGrantCode(code: string, value: AuthorizationCodeGrant): Promise<void>;
-	consumeGrantCode(code: string): Promise<AuthorizationCodeGrant | null>;
+	claimGrantCode(code: string): Promise<AuthorizationCodeGrantClaim | null>;
+	finalizeGrantCode(code: string, accessToken: string): Promise<'issued' | 'revoked'>;
 	dispose(): void;
 }
 
@@ -147,6 +158,7 @@ export type OAuthProviderRuntimeDependencies = {
 	ephemeralStore?: OAuthEphemeralStore;
 	fetchLocalUserByNativeToken?: (token: string) => Promise<MiLocalUser | null>;
 	createAccessToken?: typeof createAccessTokenInDatabase;
+	deleteAccessTokenByToken?: typeof deleteAccessTokenByTokenFromDatabase;
 };
 
 export type OAuthProviderRuntime = {
@@ -402,15 +414,61 @@ function redirectWithQuery(redirectUriString: string, payload: Record<string, st
 }
 
 const OAUTH_STATE_TTL = 1000 * 60 * 5;
+const OAUTH_TOKEN_REVOCATION_ATTEMPTS = 3;
 const consumeRedisValueScript = `
 local value = redis.call('get', KEYS[1])
 if value then redis.call('del', KEYS[1]) end
 return value
 `;
+const claimRedisGrantCodeScript = `
+local raw = redis.call('get', KEYS[1])
+if not raw then
+	local legacyRaw = redis.call('get', KEYS[2])
+	if not legacyRaw then return nil end
+	local legacyTtl = redis.call('pttl', KEYS[2])
+	redis.call('del', KEYS[2])
+	local legacyGrant = cjson.decode(legacyRaw)
+	local migrated = { status = 'exchanging', grant = legacyGrant }
+	if legacyTtl > 0 then
+		redis.call('set', KEYS[1], cjson.encode(migrated), 'PX', legacyTtl)
+	else
+		redis.call('set', KEYS[1], cjson.encode(migrated))
+	end
+	return cjson.encode({ status = 'claimed', grant = legacyGrant })
+end
+local value = cjson.decode(raw)
+local result = { grant = value.grant }
+if value.status == 'pending' then
+	value.status = 'exchanging'
+	result.status = 'claimed'
+else
+	result.status = 'reused'
+	if value.accessToken then result.accessToken = value.accessToken end
+	value.status = 'revoked'
+end
+redis.call('set', KEYS[1], cjson.encode(value), 'KEEPTTL')
+return cjson.encode(result)
+`;
+const finalizeRedisGrantCodeScript = `
+local raw = redis.call('get', KEYS[1])
+if not raw then return 'revoked' end
+local value = cjson.decode(raw)
+if value.status ~= 'exchanging' then
+	if value.status == 'revoked' then
+		value.accessToken = ARGV[1]
+		redis.call('set', KEYS[1], cjson.encode(value), 'KEEPTTL')
+	end
+	return 'revoked'
+end
+value.status = 'issued'
+value.accessToken = ARGV[1]
+redis.call('set', KEYS[1], cjson.encode(value), 'KEEPTTL')
+return 'issued'
+`;
 
 export function createMemoryOAuthEphemeralStore(): OAuthEphemeralStore {
 	const authorizationTransactions = new MemoryKVCache<AuthorizationTransaction>(OAUTH_STATE_TTL);
-	const grantCodes = new MemoryKVCache<AuthorizationCodeGrant>(OAUTH_STATE_TTL);
+	const grantCodes = new MemoryKVCache<AuthorizationCodeGrantState>(OAUTH_STATE_TTL);
 	return {
 		async setAuthorizationTransaction(id, value) {
 			authorizationTransactions.set(id, value);
@@ -421,12 +479,34 @@ export function createMemoryOAuthEphemeralStore(): OAuthEphemeralStore {
 			return value;
 		},
 		async setGrantCode(code, value) {
-			grantCodes.set(code, value);
+			grantCodes.set(code, { status: 'pending', grant: value });
 		},
-		async consumeGrantCode(code) {
-			const value = grantCodes.get(code) ?? null;
-			grantCodes.delete(code);
-			return value;
+		async claimGrantCode(code) {
+			const value = grantCodes.get(code);
+			if (value == null) return null;
+			if (value.status === 'pending') {
+				grantCodes.set(code, { status: 'exchanging', grant: value.grant });
+				return { status: 'claimed', grant: value.grant };
+			}
+			grantCodes.set(code, {
+				status: 'revoked',
+				grant: value.grant,
+				...(value.status === 'issued' || value.status === 'revoked' ? { accessToken: value.accessToken } : {}),
+			});
+			return {
+				status: 'reused',
+				grant: value.grant,
+				...(value.status === 'issued' || value.status === 'revoked' ? { accessToken: value.accessToken } : {}),
+			};
+		},
+		async finalizeGrantCode(code, accessToken) {
+			const value = grantCodes.get(code);
+			if (value?.status !== 'exchanging') {
+				if (value?.status === 'revoked') grantCodes.set(code, { ...value, accessToken });
+				return 'revoked';
+			}
+			grantCodes.set(code, { status: 'issued', grant: value.grant, accessToken });
+			return 'issued';
 		},
 		dispose() {
 			authorizationTransactions.dispose();
@@ -451,8 +531,20 @@ function createRedisOAuthEphemeralStore(redis: Redis.Redis): OAuthEphemeralStore
 	return {
 		setAuthorizationTransaction: (id, value) => set(`oauth:authorization:${id}`, value),
 		consumeAuthorizationTransaction: id => consume(`oauth:authorization:${id}`),
-		setGrantCode: (code, value) => set(`oauth:grant:${code}`, value),
-		consumeGrantCode: code => consume(`oauth:grant:${code}`),
+		setGrantCode: (code, value) => set(`oauth:grant:v2:${code}`, { status: 'pending', grant: value }),
+		async claimGrantCode(code) {
+			const raw = await redis.eval(claimRedisGrantCodeScript, 2, `oauth:grant:v2:${code}`, `oauth:grant:${code}`);
+			if (typeof raw !== 'string') return null;
+			try {
+				return JSON.parse(raw) as AuthorizationCodeGrantClaim;
+			} catch {
+				return null;
+			}
+		},
+		async finalizeGrantCode(code, accessToken) {
+			const result = await redis.eval(finalizeRedisGrantCodeScript, 1, `oauth:grant:v2:${code}`, accessToken);
+			return result === 'issued' ? 'issued' : 'revoked';
+		},
 		dispose() {},
 	};
 }
@@ -461,6 +553,21 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 	const ephemeralStore = deps.ephemeralStore ?? (deps.redis ? createRedisOAuthEphemeralStore(deps.redis) : createMemoryOAuthEphemeralStore());
 	const fetchLocalUserByNativeToken = deps.fetchLocalUserByNativeToken ?? ((token: string) => fetchLocalUserByNativeTokenFromDatabase(deps.db, token));
 	const createAccessToken = deps.createAccessToken ?? createAccessTokenInDatabase;
+	const deleteAccessTokenByToken = deps.deleteAccessTokenByToken ?? deleteAccessTokenByTokenFromDatabase;
+
+	async function revokeAccessToken(accessToken: string): Promise<void> {
+		let lastError: unknown;
+		for (let attempt = 0; attempt < OAUTH_TOKEN_REVOCATION_ATTEMPTS; attempt++) {
+			try {
+				await deleteAccessTokenByToken(deps.db, accessToken);
+				return;
+			} catch (error) {
+				lastError = error;
+			}
+		}
+		deps.logger.error('Failed to revoke an access token after repeated authorization code use.', lastError instanceof Error ? lastError : null);
+		throw new OAuthProviderError('temporarily_unavailable', 'access token revocation is temporarily unavailable');
+	}
 
 	async function resolveAuthorizationRequest(params: OAuthRequestParameters): Promise<AuthorizationRequestSeed> {
 		const clientId = firstValue(params.client_id);
@@ -646,10 +753,16 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				throw new InvalidGrantError('grant request is invalid');
 			}
 
-			const granted = await ephemeralStore.consumeGrantCode(code);
-			if (!granted) {
+			const claim = await ephemeralStore.claimGrantCode(code);
+			if (!claim) {
 				throw new InvalidGrantError('grant request is invalid');
 			}
+			if (claim.status === 'reused') {
+				deps.logger.info(`Detected multiple code use from ${claim.grant.clientId} for user ${claim.grant.userId}. Revoking the code.`);
+				if (claim.accessToken) await revokeAccessToken(claim.accessToken);
+				throw new InvalidGrantError('grant request is invalid');
+			}
+			const granted = claim.grant;
 
 			if (clientId !== granted.clientId || redirectUriValue !== granted.redirectUri) {
 				throw new InvalidGrantError('grant request is invalid');
@@ -676,6 +789,12 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				name: granted.clientId,
 				permission: granted.scopes,
 			});
+
+			if (await ephemeralStore.finalizeGrantCode(code, accessToken) === 'revoked') {
+				deps.logger.info('Canceling the token as the authorization code was revoked in parallel during the exchange.');
+				await revokeAccessToken(accessToken);
+				throw new InvalidGrantError('grant request is invalid');
+			}
 
 			deps.logger.info(`Generated access token for ${granted.clientId} for user ${granted.userId}, with scope: [${granted.scopes}]`);
 
