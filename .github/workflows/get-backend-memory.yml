@@ -39,13 +39,13 @@ jobs:
 
     steps:
       - name: Checkout base
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.base_ref }}
           path: base
           submodules: true
       - name: Checkout head
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7
         with:
           ref: refs/pull/${{ github.event.number }}/merge
           path: head

@@ -22,7 +22,7 @@ jobs:
     if: ${{ github.event.pull_request.mergeable == null || github.event.pull_request.mergeable == true }}
     steps:
       - name: checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7
         with:
           submodules: true
           persist-credentials: false
@@ -73,7 +73,7 @@ jobs:
     if: ${{ github.event.pull_request.mergeable == null || github.event.pull_request.mergeable == true }}
     steps:
       - name: checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7
         with:
           submodules: true
           persist-credentials: false
