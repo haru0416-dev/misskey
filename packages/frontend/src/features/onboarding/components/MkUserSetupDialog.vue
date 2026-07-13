@@ -11,6 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	data-cy-user-setup
 	@close="close(true)"
 	@closed="emit('closed')"
+	@esc="close(true)"
 >
 	<template v-if="page === 1" #header><i class="ti ti-user-edit"></i> {{ i18n.ts._initialAccountSetting.profileSetting }}</template>
 	<template v-else-if="page === 2" #header><i class="ti ti-lock"></i> {{ i18n.ts._initialAccountSetting.privacySetting }}</template>
@@ -19,8 +20,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template v-else-if="page === 5" #header>{{ i18n.ts.done }}</template>
 	<template v-else #header>{{ i18n.ts.initialAccountSetting }}</template>
 
-	<div style="overflow-x: clip;">
-		<div :class="$style.progressBar">
+	<div style="overflow-x: clip;" :inert="closing || savingPage" :aria-busy="closing || savingPage">
+		<div :class="$style.progressBar" role="progressbar" :aria-label="i18n.ts.initialAccountSetting" aria-valuemin="0" aria-valuemax="5" :aria-valuenow="page">
 			<div :class="$style.progressBarValue" :style="{ width: `${(page / 5) * 100}%` }"></div>
 		</div>
 		<Transition
@@ -128,7 +129,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, useTemplateRef, watch, nextTick, defineAsyncComponent } from 'vue';
+import { ref, useTemplateRef, watch, nextTick } from 'vue';
 import { host } from '@shared/utility/config.js';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import MkButton from '@/components/form/MkButton.vue';
@@ -149,31 +150,57 @@ const emit = defineEmits<{
 const dialog = useTemplateRef('dialog');
 
 const page = ref(store.accountSetupWizard);
+const closing = ref(false);
+const savingPage = ref(false);
+let restoringPage = false;
 
-watch(page, () => {
-	store.set('accountSetupWizard', page.value);
+watch(page, async (value, previousValue) => {
+	if (closing.value || restoringPage) return;
+	savingPage.value = true;
+	try {
+		await store.set('accountSetupWizard', value);
+	} catch (error) {
+		restoringPage = true;
+		page.value = previousValue;
+		store.$patch({ accountSetupWizard: previousValue });
+		await store.$persistFlush().catch(rollbackError => console.error(rollbackError));
+		await nextTick();
+		restoringPage = false;
+		console.error(error);
+		await os.alert({
+			type: 'error',
+			text: i18n.ts.somethingHappened,
+		});
+	} finally {
+		savingPage.value = false;
+	}
 });
 
 async function close(skip: boolean) {
+	if (closing.value || savingPage.value) return;
+	closing.value = true;
 	if (skip) {
 		const { canceled } = await os.confirm({
 			type: 'warning',
 			text: i18n.ts._initialAccountSetting.skipAreYouSure,
 		});
-		if (canceled) return;
+		if (canceled) {
+			closing.value = false;
+			return;
+		}
 	}
 
-	dialog.value?.close();
-	store.set('accountSetupWizard', -1);
+	await persistAndClose(-1);
 }
 
-function setupComplete() {
-	store.set('accountSetupWizard', -1);
-	dialog.value?.close();
+async function setupComplete(): Promise<boolean> {
+	if (closing.value || savingPage.value) return false;
+	closing.value = true;
+	return persistAndClose(-1);
 }
 
-function launchTutorial() {
-	setupComplete();
+async function launchTutorial() {
+	if (!await setupComplete()) return;
 	nextTick(async () => {
 		const { dispose } = await os.popupAsyncWithDialog(import('@/features/onboarding/components/MkTutorialDialog.vue').then(x => x.default), {
 			initialPage: 1,
@@ -183,17 +210,39 @@ function launchTutorial() {
 	});
 }
 
-async function later(later: boolean) {
-	if (later) {
+async function later(defer: boolean) {
+	if (closing.value || savingPage.value) return;
+	closing.value = true;
+	if (defer) {
 		const { canceled } = await os.confirm({
 			type: 'warning',
 			text: i18n.ts._initialAccountSetting.laterAreYouSure,
 		});
-		if (canceled) return;
+		if (canceled) {
+			closing.value = false;
+			return;
+		}
 	}
 
-	dialog.value?.close();
-	store.set('accountSetupWizard', 0);
+	await persistAndClose(0);
+}
+
+async function persistAndClose(value: number): Promise<boolean> {
+	try {
+		await store.set('accountSetupWizard', value);
+		dialog.value?.close();
+		return true;
+	} catch (error) {
+		store.$patch({ accountSetupWizard: page.value });
+		await store.$persistFlush().catch(rollbackError => console.error(rollbackError));
+		closing.value = false;
+		console.error(error);
+		await os.alert({
+			type: 'error',
+			text: i18n.ts.somethingHappened,
+		});
+		return false;
+	}
 }
 </script>
 

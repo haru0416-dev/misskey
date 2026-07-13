@@ -534,6 +534,32 @@ describe('OAuth', () => {
 			});
 			assert.strictEqual(createResult2.status, 401);
 		});
+
+		test('Concurrent exchanges do not leave a usable access token', async () => {
+			const { code_challenge, code_verifier } = await pkceChallenge(128);
+			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
+			const exchange = () => client.getToken({
+				code,
+				redirect_uri,
+				code_verifier,
+			} as AuthorizationTokenConfigExtended);
+
+			const results = await Promise.allSettled([exchange(), exchange()]);
+			const rejected = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+			assert.ok(rejected.length >= 1);
+			for (const result of rejected) {
+				assert.strictEqual((result.reason as GetTokenError).data.payload.error, 'invalid_grant');
+			}
+
+			for (const result of results) {
+				if (result.status !== 'fulfilled') continue;
+				const createResult = await api('notes/create', { text: 'test' }, {
+					token: result.value.token.access_token as string,
+					bearer: true,
+				});
+				assert.strictEqual(createResult.status, 401);
+			}
+		});
 	});
 
 	test('Cancellation', async () => {

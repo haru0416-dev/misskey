@@ -51,7 +51,7 @@ jobs:
       - name: Smoke test production image
         run: |
           set -eux
-          docker run -d \
+          docker run --disable-content-trust=true --pull=never -d \
             --name misskey-production-ci \
             --network host \
             --mount type=bind,src="$PWD/.github/misskey/test.yml",dst=/misskey/.config/default.yml,readonly \
