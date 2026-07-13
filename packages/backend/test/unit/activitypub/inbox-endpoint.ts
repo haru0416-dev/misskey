@@ -139,6 +139,24 @@ describe('hono-inbox-endpoint', () => {
 		expect(response.status).toBe(403);
 	});
 
+	test('Content-Lengthのない上限超過リクエストは413', async () => {
+		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
+		const request = new Request('http://example.com/inbox', {
+			method: 'POST',
+			body: new ReadableStream({
+				start(controller) {
+					controller.enqueue(new Uint8Array(1024 * 64));
+					controller.enqueue(new Uint8Array(1));
+					controller.close();
+				},
+			}),
+			duplex: 'half',
+		} as RequestInit & { duplex: 'half' });
+
+		const response = await handleInboxRequest(deps, request);
+		expect(response.status).toBe(413);
+	});
+
 	test('署名ヘッダーがない場合は401', async () => {
 		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
 		const request = new Request('http://example.com/inbox', {

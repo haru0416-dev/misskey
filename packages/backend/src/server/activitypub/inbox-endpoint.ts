@@ -12,6 +12,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { InboxQueue } from '@/core/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { InboxJobData } from '@/queue/types.js';
+import { readRequestBodyWithLimit } from '../body-limit.js';
 
 export type InboxEndpointDependencies = {
 	config: Config;
@@ -25,6 +26,7 @@ function rawStatus(status: number): Response {
 
 // ActivityPubServerService の inbox ルート登録時の bodyLimit: 1024 * 64 相当。
 const INBOX_BODY_LIMIT_BYTES = 1024 * 64;
+class InboxBodyLimitExceeded extends Error {}
 
 /**
  * QueueService.inbox 相当。ジョブ名はアクティビティIDから生成する。
@@ -59,14 +61,12 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		return rawStatus(403);
 	}
 
-	const contentLength = request.headers.get('content-length');
-	if (contentLength != null && Number(contentLength) > INBOX_BODY_LIMIT_BYTES) {
-		return rawStatus(413);
-	}
-
-	const rawBody = await request.arrayBuffer();
-	if (rawBody.byteLength > INBOX_BODY_LIMIT_BYTES) {
-		return rawStatus(413);
+	let rawBody: Uint8Array;
+	try {
+		rawBody = await readRequestBodyWithLimit(request, INBOX_BODY_LIMIT_BYTES, () => new InboxBodyLimitExceeded());
+	} catch (error) {
+		if (error instanceof InboxBodyLimitExceeded) return rawStatus(413);
+		throw error;
 	}
 	const headers = Object.fromEntries(request.headers.entries());
 	const url = new URL(request.url);
@@ -111,7 +111,7 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		return rawStatus(401);
 	}
 
-	const hash = crypto.createHash('sha256').update(Buffer.from(rawBody)).digest('base64');
+	const hash = crypto.createHash('sha256').update(rawBody).digest('base64');
 	if (hash !== digestValue) {
 		return rawStatus(401);
 	}

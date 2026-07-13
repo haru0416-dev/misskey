@@ -86,7 +86,7 @@ export async function readHonoApiMultipartRequest(
 	class BodyLimitExceeded extends Error {}
 	let rawBody: Uint8Array;
 	try {
-		rawBody = await readRequestBodyWithLimit(c, config.maxFileSize + MULTIPART_OVERHEAD, () => new BodyLimitExceeded());
+		rawBody = await readRequestBodyWithLimit(c.req.raw, config.maxFileSize + MULTIPART_OVERHEAD, () => new BodyLimitExceeded());
 	} catch (err) {
 		if (err instanceof BodyLimitExceeded) return { status: 'too-large' };
 		throw err;

@@ -4,7 +4,6 @@
  */
 
 import { Buffer } from 'node:buffer';
-import type { Context } from 'hono';
 
 /**
  * リクエストボディを上限バイト数つきで読み切る。上限超過時は makeLimitError() の戻り値を throw する。
@@ -14,14 +13,28 @@ import type { Context } from 'hono';
  * 失われていた。content-length ヘッダは chunked 転送や虚偽申告で回避できるので、事前チェックに
  * 加えて実バイト数を数えながら読み、超過した時点で読み込みを打ち切る。
  */
-export async function readRequestBodyWithLimit(c: Context, limit: number, makeLimitError: () => Error): Promise<Uint8Array> {
-	const contentLength = Number(c.req.header('content-length'));
-	if (Number.isFinite(contentLength) && contentLength > limit) {
-		throw makeLimitError();
+export async function readRequestBodyWithLimit(request: Request, limit: number, makeLimitError: () => Error): Promise<Uint8Array> {
+	const hasTransferEncoding = request.headers.has('transfer-encoding');
+	const contentLengthHeader = request.headers.get('content-length');
+	const hasDecimalContentLength = contentLengthHeader != null && /^\d+$/.test(contentLengthHeader);
+	const contentLength = hasDecimalContentLength ? Number(contentLengthHeader) : null;
+	const hasSafeContentLength = contentLength != null && Number.isSafeInteger(contentLength);
+	if (!hasTransferEncoding && hasDecimalContentLength) {
+		if (!hasSafeContentLength || contentLength > limit) throw makeLimitError();
 	}
 
-	const body = c.req.raw.body;
+	const body = request.body;
 	if (body == null) return new Uint8Array(0);
+
+	// Hono's bodyLimit middleware trusts the HTTP framing when Content-Length is present and
+	// Transfer-Encoding is absent. Avoiding per-chunk Web Streams work is important for the
+	// overwhelmingly common fixed-length JSON request. The post-read check preserves correctness
+	// for direct Request callers whose declared and actual sizes differ.
+	if (!hasTransferEncoding && hasSafeContentLength) {
+		const raw = new Uint8Array(await request.arrayBuffer());
+		if (raw.byteLength > limit) throw makeLimitError();
+		return raw;
+	}
 
 	const chunks: Uint8Array[] = [];
 	let total = 0;
@@ -41,5 +54,7 @@ export async function readRequestBodyWithLimit(c: Context, limit: number, makeLi
 		reader.releaseLock();
 	}
 
+	if (chunks.length === 0) return new Uint8Array(0);
+	if (chunks.length === 1) return chunks[0];
 	return Buffer.concat(chunks, total);
 }
