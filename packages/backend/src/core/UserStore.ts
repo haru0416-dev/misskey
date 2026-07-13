@@ -462,6 +462,8 @@ export async function listRecommendedUsersFromDatabase(
 	const conditions: SQL[] = [
 		eq(userTable.isLocked, false),
 		eq(userTable.isExplorable, true),
+		eq(userTable.isSuspended, false),
+		eq(userTable.isDeleted, false),
 		isNull(userTable.host),
 		gte(userTable.updatedAt, options.updatedAfter),
 		ne(userTable.id, meId),

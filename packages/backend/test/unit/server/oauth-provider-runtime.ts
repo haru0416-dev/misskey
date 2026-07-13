@@ -157,11 +157,22 @@ describe('createOAuthProviderRuntime', () => {
 		runtime.dispose();
 	});
 
-	test('shares authorization state across runtimes and consumes codes once', async () => {
+	test('revokes a token when an authorization code is exchanged concurrently across runtimes', async () => {
 		const clientId = 'http://client.example/';
 		const redirectUri = 'http://client.example/callback';
 		const codeVerifier = secureRndstr(128);
 		const store = createMemoryOAuthEphemeralStore();
+		const createdTokens: string[] = [];
+		const deletedTokens: string[] = [];
+		let deletionFailuresRemaining = 3;
+		let releaseTokenCreation!: () => void;
+		const tokenCreationBlocked = new Promise<void>(resolve => {
+			releaseTokenCreation = resolve;
+		});
+		let tokenCreationStarted!: () => void;
+		const tokenCreationStart = new Promise<void>(resolve => {
+			tokenCreationStarted = resolve;
+		});
 		const dependencies = {
 			config,
 			db: {} as MiDrizzleDatabase,
@@ -172,7 +183,18 @@ describe('createOAuthProviderRuntime', () => {
 			logger: { info: () => {}, error: () => {} } as any,
 			ephemeralStore: store,
 			fetchLocalUserByNativeToken: async () => ({ id: 'user-id' }) as MiLocalUser,
-			createAccessToken: async () => {},
+			createAccessToken: async (_db: MiDrizzleDatabase, values: { token: string }) => {
+				createdTokens.push(values.token);
+				tokenCreationStarted();
+				await tokenCreationBlocked;
+			},
+			deleteAccessTokenByToken: async (_db: MiDrizzleDatabase, token: string) => {
+				deletedTokens.push(token);
+				if (deletionFailuresRemaining > 0) {
+					deletionFailuresRemaining--;
+					throw new Error('temporary database failure');
+				}
+			},
 		};
 		const first = createOAuthProviderRuntime(dependencies);
 		const second = createOAuthProviderRuntime(dependencies);
@@ -196,8 +218,21 @@ describe('createOAuthProviderRuntime', () => {
 			code_verifier: codeVerifier,
 		};
 
-		const responses = await Promise.all([first.token(request), second.token(request)]);
-		expect(responses.map(response => response.status).sort()).toEqual([200, 400]);
+		const firstResponsePromise = first.token(request);
+		await tokenCreationStart;
+		const secondResponse = await second.token(request);
+		releaseTokenCreation();
+		const firstResponse = await firstResponsePromise;
+
+		expect([firstResponse.status, secondResponse.status]).toEqual([400, 400]);
+		expect(((await firstResponse.json()) as { error: string }).error).toBe('temporarily_unavailable');
+		expect(((await secondResponse.json()) as { error: string }).error).toBe('invalid_grant');
+		expect(createdTokens).toHaveLength(1);
+
+		const retryResponse = await first.token(request);
+		expect(retryResponse.status).toBe(400);
+		expect(((await retryResponse.json()) as { error: string }).error).toBe('invalid_grant');
+		expect(deletedTokens).toEqual([createdTokens[0], createdTokens[0], createdTokens[0], createdTokens[0]]);
 		store.dispose();
 	});
 });
