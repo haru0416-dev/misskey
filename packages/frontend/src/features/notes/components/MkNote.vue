@@ -49,7 +49,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-if="appearNote.channel" :class="$style.colorBar" :style="{ background: appearNote.channel.color }"></div>
 		<MkAvatar :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="appearNote.user" :link="!mock" :preview="!mock"/>
 		<div :class="$style.main">
-			<MkNoteHeader :note="appearNote" :mini="true"/>
+			<MkNoteHeader :class="$style.header" :note="appearNote" :mini="true"/>
 			<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :instance="appearNote.user.instance" :displayMode="prefer.instanceTickerDisplay"/>
 			<div style="container-type: inline-size;">
 				<p v-if="appearNote.cw != null" :class="$style.cw">
@@ -781,11 +781,6 @@ function emitUpdReaction(emoji: string, delta: number) {
 	font-size: 1em;
 	overflow: clip;
 	contain: content;
-	transition: background-color var(--MI-duration-normal) var(--MI-ease-out);
-
-	&:hover {
-		background: var(--MI-surface-panel-hover);
-	}
 
 	&:focus-visible {
 		outline: none;
@@ -857,7 +852,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 .tip {
 	display: flex;
 	align-items: center;
-	padding: 16px 32px 8px 32px;
+	padding: 16px 24px 8px 24px;
 	line-height: 24px;
 	font-size: 90%;
 	white-space: pre;
@@ -877,7 +872,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	position: relative;
 	display: flex;
 	align-items: center;
-	padding: 16px 32px 8px 32px;
+	padding: 16px 24px 8px 24px;
 	line-height: 28px;
 	white-space: pre;
 	color: var(--MI_THEME-renote);
@@ -918,6 +913,8 @@ function emitUpdReaction(emoji: string, delta: number) {
 .renoteTime {
 	flex-shrink: 0;
 	color: inherit;
+	padding: 6px 0 6px 8px;
+	margin: -6px 0 -6px -8px;
 }
 
 .renoteMenu {
@@ -929,7 +926,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	align-items: center;
 	line-height: 28px;
 	white-space: pre;
-	padding: 0 32px 18px;
+	padding: 0 24px 18px;
 }
 
 .collapsedRenoteTargetAvatar {
@@ -988,6 +985,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 	flex: 1;
 	min-width: 0;
 	line-height: 1.55;
+}
+
+.header {
+	margin-bottom: 2px;
 }
 
 .cw {
@@ -1069,7 +1070,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 }
 
 .quote {
-	padding: 8px 0;
+	padding: 8px 0 0;
 }
 
 .quoteNote {
@@ -1086,9 +1087,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .footer {
 	display: flex;
-	justify-content: space-between;
-	max-width: 380px;
-	margin: 12px 0 -4px;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--MI-space-sm);
+	margin: 12px 0 -4px calc(-1 * var(--MI-space-sm));
 }
 
 .footerButton {
@@ -1099,7 +1101,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	min-height: var(--MI-control-sm);
 	margin: 0;
 	padding: 6px var(--MI-space-sm);
-	border-radius: var(--MI-radius-full);
+	border-radius: var(--MI-radius-sm);
 	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%); // opacityなど不透明度で表現するとレンダリングパフォーマンスに影響するので通常の色の混合で代用
 
 	&:hover {
@@ -1119,7 +1121,15 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 
 	.renote {
-		padding: 12px 26px 0 26px;
+		padding: 12px 22px 0 22px;
+	}
+
+	.tip {
+		padding: 16px 22px 8px;
+	}
+
+	.collapsedRenoteTarget {
+		padding: 0 22px 18px;
 	}
 
 	.article {
@@ -1138,7 +1148,15 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 
 	.renote {
-		padding: 10px 22px 0 22px;
+		padding: 10px 18px 0 18px;
+	}
+
+	.tip {
+		padding: 16px 18px 8px;
+	}
+
+	.collapsedRenoteTarget {
+		padding: 0 18px 18px;
 	}
 
 	.article {
@@ -1147,6 +1165,13 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 	.footer {
 		margin-bottom: -8px;
+	}
+
+	.root:not(.showActionsOnlyHover) {
+		.footerButton {
+			min-width: var(--MI-control-md);
+			min-height: var(--MI-control-md);
+		}
 	}
 }
 
@@ -1181,25 +1206,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 }
 
-@container (max-width: 400px) {
-	.root:not(.showActionsOnlyHover) {
-		.footerButton {
-			&:not(:last-child) {
-				margin-right: 18px;
-			}
-		}
-	}
-}
-
 @container (max-width: 350px) {
-	.root:not(.showActionsOnlyHover) {
-		.footerButton {
-			&:not(:last-child) {
-				margin-right: 12px;
-			}
-		}
-	}
-
 	.colorBar {
 		top: 6px;
 		left: 6px;
@@ -1208,24 +1215,16 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 }
 
+@container (max-width: 320px) {
+	.quoteNote {
+		padding: 12px;
+	}
+}
+
 @container (max-width: 300px) {
 	.avatar {
 		width: 44px;
 		height: 44px;
-	}
-
-	.root:not(.showActionsOnlyHover) {
-		.footerButton {
-			&:not(:last-child) {
-				margin-right: 8px;
-			}
-		}
-	}
-}
-
-@container (max-width: 250px) {
-	.quoteNote {
-		padding: 12px;
 	}
 }
 
@@ -1256,7 +1255,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 .deleted {
 	text-align: center;
 	padding: 32px;
-	margin: 6px 32px 28px;
+	margin: 6px 24px 28px;
 	--color: light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.15));
 	background-size: auto auto;
 	background-image: repeating-linear-gradient(135deg, transparent, transparent 10px, var(--color) 4px, var(--color) 14px);

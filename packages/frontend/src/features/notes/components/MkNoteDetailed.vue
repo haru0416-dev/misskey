@@ -891,8 +891,8 @@ function loadConversation() {
 
 .quoteNote {
 	padding: 16px;
-	border: dashed 1px var(--MI_THEME-renote);
-	border-radius: 8px;
+	border: solid 1px var(--MI-border-muted);
+	border-radius: var(--MI-radius-md);
 	overflow: clip;
 }
 

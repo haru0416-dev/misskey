@@ -93,6 +93,12 @@ const mock = inject(DI.mock, false);
 	flex-shrink: 0;
 	margin-left: auto;
 	font-size: 0.9em;
+
+	> a {
+		display: inline-block;
+		padding: 6px 0 6px 6px;
+		margin: -6px 0 -6px -6px;
+	}
 }
 
 .badgeRoles {

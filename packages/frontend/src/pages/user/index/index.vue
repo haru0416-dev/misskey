@@ -113,30 +113,37 @@ const headerTabs = computed(() => user.value ? [{
 	key: 'reactions',
 	title: i18n.ts.reaction,
 	icon: 'ti ti-mood-happy',
+	iconOnly: true,
 }] : [], {
 	key: 'clips',
 	title: i18n.ts.clips,
 	icon: 'ti ti-paperclip',
+	iconOnly: true,
 }, {
 	key: 'lists',
 	title: i18n.ts.lists,
 	icon: 'ti ti-list',
+	iconOnly: true,
 }, {
 	key: 'pages',
 	title: i18n.ts.pages,
 	icon: 'ti ti-news',
+	iconOnly: true,
 }, {
 	key: 'flashs',
 	title: 'Play',
 	icon: 'ti ti-player-play',
+	iconOnly: true,
 }, {
 	key: 'gallery',
 	title: i18n.ts.gallery,
 	icon: 'ti ti-icons',
+	iconOnly: true,
 }, {
 	key: 'raw',
 	title: 'Raw',
 	icon: 'ti ti-code',
+	iconOnly: true,
 }] : []);
 
 definePage(() => ({
