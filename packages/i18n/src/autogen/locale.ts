@@ -8787,17 +8787,61 @@ export interface Locale extends ILocale {
     };
     "_aboutErebia": {
         /**
-         * Erebiaは、自由につながり、表現できるオープンソースの分散型ソーシャルプラットフォームです。
+         * つながり方を、自分たちの手に。
+         */
+        "tagline": string;
+        /**
+         * Erebiaは、自由につながり、自分らしく表現できる場所を目指すオープンソースの分散型ソーシャルプラットフォームです。
          */
         "about": string;
         /**
-         * ErebiaはMisskeyを基盤として開発されています。基盤となったプロジェクトについては「Misskeyについて」をご覧ください。
+         * ErebiaはMisskeyを基盤として開発されています。
          */
         "basedOnMisskey": string;
+        /**
+         * Erebiaが大切にすること
+         */
+        "values": string;
+        /**
+         * 自由につながる
+         */
+        "freedom": string;
+        /**
+         * ひとつの場所に閉じず、それぞれのコミュニティが自分たちらしい場を育てられることを大切にします。
+         */
+        "freedomDescription": string;
+        /**
+         * 自分らしく表現する
+         */
+        "expression": string;
+        /**
+         * ことば、画像、リアクションなど、多様な表現を気軽に共有できる体験を磨き続けます。
+         */
+        "expressionDescription": string;
+        /**
+         * みんなで育てる
+         */
+        "community": string;
+        /**
+         * オープンな開発を通じて、使う人と運営する人の声をプロダクトへつなげます。
+         */
+        "communityDescription": string;
+        /**
+         * 開発情報
+         */
+        "development": string;
+        /**
+         * Erebiaはオープンソースで開発されています。ソースコード、更新履歴、配布物を公開しています。
+         */
+        "developmentDescription": string;
         /**
          * Erebiaのソースコード
          */
         "source": string;
+        /**
+         * 更新履歴
+         */
+        "releases": string;
         /**
          * I $[jelly ❤] #Erebia
          */
