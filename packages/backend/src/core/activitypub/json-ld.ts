@@ -37,7 +37,7 @@ export class JsonLdCacheFrozenError extends JsonLdError {
 
 export class JsonLdForbiddenDirectiveError extends JsonLdError {
 	constructor(public directive: string) {
-		super('0297f79b-0ed9-4b6c-875f-b0a82ff96781', `${directive} is forbidden by Misskey in ActivityPub documents`);
+		super('0297f79b-0ed9-4b6c-875f-b0a82ff96781', `${directive} is forbidden by Erebia in ActivityPub documents`);
 	}
 }
 

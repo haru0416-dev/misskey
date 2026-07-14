@@ -12,15 +12,15 @@ export function CliPage(props: {
 			<html>
 				<head>
 					<meta charset="UTF-8" />
-					<meta name="application-name" content="Misskey" />
-					<title>Misskey CLI Tool</title>
+					<meta name="application-name" content="Erebia" />
+					<title>Erebia CLI Tool</title>
 
 					<link rel="stylesheet" href="/static-assets/misc/cli.css" />
 				</head>
 
 				<body>
 					<header>
-						<h1 safe>Misskey CLI {props.version}</h1>
+						<h1 safe>Erebia CLI {props.version}</h1>
 					</header>
 					<main>
 						<div id="form">

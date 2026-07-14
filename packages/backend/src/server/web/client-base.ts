@@ -45,7 +45,7 @@ export function createClientBaseApp(deps: ClientBaseDependencies): Hono {
 	} = {}): Promise<Response> {
 		return htmlResponse(BasePage({
 			img: deps.meta.bannerUrl ?? undefined,
-			title: deps.meta.name ?? 'Misskey',
+			title: deps.meta.name ?? 'Erebia',
 			desc: deps.meta.description ?? undefined,
 			...(await getCommonData()),
 			noindex: options.noindex,

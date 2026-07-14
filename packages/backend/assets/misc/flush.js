@@ -1,6 +1,6 @@
 (async () => {
 	const msg = document.getElementById('msg');
-	const successText = `\nSuccess Flush! <a href="/">Back to Misskey</a>\n成功しました。<a href="/">Misskeyを開き直してください。</a>`;
+	const successText = `\nSuccess Flush! <a href="/">Back to Erebia</a>\n成功しました。<a href="/">Erebiaを開き直してください。</a>`;
 
 	if (!document.cookie) {
 		message('Your site data is fully cleared by your browser.');

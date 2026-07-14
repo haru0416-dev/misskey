@@ -9,7 +9,7 @@ import { updateMetaInDatabase } from '@/core/MetaStore.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
 import { createHonoEventPublishers } from '@/server/rest/events.js';
 
-process.title = 'Misskey Cli';
+process.title = 'Erebia CLI';
 
 async function ping(): Promise<void> {
 	console.log('pong');

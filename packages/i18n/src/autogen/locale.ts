@@ -12,14 +12,14 @@ export interface Locale extends ILocale {
      */
     "headlineMisskey": string;
     /**
-     * ようこそ！Misskeyは、オープンソースの分散型マイクロブログサービスです。
+     * ようこそ！Erebiaは、オープンソースの分散型マイクロブログサービスです。
      * 「ノート」を作成して、いま起こっていることを共有したり、あなたについて皆に発信しよう📡
      * 「リアクション」機能で、皆のノートに素早く反応を追加することもできます👍
      * 新しい世界を探検しよう🚀
      */
     "introMisskey": string;
     /**
-     * {name}は、オープンソースのプラットフォーム<b>Misskey</b>のサーバーのひとつです。
+     * {name}は、オープンソースのプラットフォーム<b>Erebia</b>のサーバーのひとつです。
      */
     "poweredByMisskeyDescription": ParameterizedString<"name">;
     /**
@@ -55,8 +55,8 @@ export interface Locale extends ILocale {
      */
     "initialPasswordIsIncorrect": string;
     /**
-     * Misskeyを自分でインストールした場合は、設定ファイルに入力したパスワードを使用してください。
-     * Misskeyのホスティングサービスなどを使用している場合は、提供されたパスワードを使用してください。
+     * Erebiaを自分でインストールした場合は、設定ファイルに入力したパスワードを使用してください。
+     * Erebiaのホスティングサービスなどを使用している場合は、提供されたパスワードを使用してください。
      * パスワードを設定していない場合は、空欄にしたまま続行してください。
      */
     "initialPasswordForSetupDescription": string;
@@ -729,7 +729,7 @@ export interface Locale extends ILocale {
      */
     "flagAsBot": string;
     /**
-     * このアカウントがプログラムによって運用される場合は、このフラグをオンにします。オンにすると、反応の連鎖を防ぐためのフラグとして他の開発者に役立ったり、Misskeyのシステム上での扱いがBotに合ったものになります。
+     * このアカウントがプログラムによって運用される場合は、このフラグをオンにします。オンにすると、反応の連鎖を防ぐためのフラグとして他の開発者に役立ったり、Erebiaのシステム上での扱いがBotに合ったものになります。
      */
     "flagAsBotDescription": string;
     /**
@@ -1895,7 +1895,7 @@ export interface Locale extends ILocale {
      */
     "about": string;
     /**
-     * Misskeyについて
+     * Erebiaについて
      */
     "aboutMisskey": string;
     /**
@@ -2467,7 +2467,7 @@ export interface Locale extends ILocale {
      */
     "notUseSound": string;
     /**
-     * Misskeyがアクティブな時のみサウンドを出力する
+     * Erebiaがアクティブな時のみサウンドを出力する
      */
     "useSoundOnlyWhenActive": string;
     /**
@@ -2535,7 +2535,7 @@ export interface Locale extends ILocale {
      */
     "scratchpad": string;
     /**
-     * スクラッチパッドは、AiScriptの実験環境を提供します。Misskeyと対話するコードの記述、実行、結果の確認ができます。
+     * スクラッチパッドは、AiScriptの実験環境を提供します。Erebiaと対話するコードの記述、実行、結果の確認ができます。
      */
     "scratchpadDescription": string;
     /**
@@ -3131,7 +3131,7 @@ export interface Locale extends ILocale {
      */
     "private": string;
     /**
-     * Misskeyは有志によって様々な言語に翻訳されています。{link}で翻訳に協力できます。
+     * Erebiaは有志によって様々な言語に翻訳されています。{link}で翻訳に協力できます。
      */
     "i18nInfo": ParameterizedString<"link">;
     /**
@@ -3351,7 +3351,7 @@ export interface Locale extends ILocale {
      */
     "sendErrorReports": string;
     /**
-     * オンにすると、問題が発生したときにエラーの詳細情報がMisskeyに共有され、ソフトウェアの品質向上に役立てることができます。エラー情報には、OSのバージョン、ブラウザの種類、行動履歴などが含まれます。
+     * オンにすると、問題が発生したときにエラーの詳細情報がErebiaに共有され、ソフトウェアの品質向上に役立てることができます。エラー情報には、OSのバージョン、ブラウザの種類、行動履歴などが含まれます。
      */
     "sendErrorReportsDescription": string;
     /**
@@ -3731,7 +3731,7 @@ export interface Locale extends ILocale {
      */
     "learnMore": string;
     /**
-     * Misskeyが更新されました！
+     * Erebiaが更新されました！
      */
     "misskeyUpdated": string;
     /**
@@ -4343,11 +4343,11 @@ export interface Locale extends ILocale {
      */
     "remindMeLater": string;
     /**
-     * Misskeyを気に入っていただけましたか？
+     * Erebiaを気に入っていただけましたか？
      */
     "didYouLikeMisskey": string;
     /**
-     * Misskeyは{host}が使用している無料のソフトウェアです。これからも開発を続けられるように、ぜひ寄付をお願いします！
+     * {host}で利用されているErebiaの基盤、Misskeyは無料のソフトウェアです。開発を支援するため、寄付をご検討ください。
      */
     "pleaseDonate": ParameterizedString<"host">;
     /**
@@ -4863,7 +4863,7 @@ export interface Locale extends ILocale {
      */
     "later": string;
     /**
-     * Misskeyへ
+     * Erebiaへ
      */
     "goToMisskey": string;
     /**
@@ -5131,7 +5131,7 @@ export interface Locale extends ILocale {
      */
     "repositoryUrl": string;
     /**
-     * ソースコードが公開されているリポジトリがある場合、そのURLを記入します。Misskeyを現状のまま（ソースコードにいかなる変更も加えずに）使用している場合は https://github.com/misskey-dev/misskey と記入します。
+     * Erebiaのソースコードが公開されているリポジトリのURLを記入します。
      */
     "repositoryUrlDescription": string;
     /**
@@ -6651,7 +6651,7 @@ export interface Locale extends ILocale {
          */
         "haveFun": ParameterizedString<"name">;
         /**
-         * このまま{name}(Misskey)の使い方についてのチュートリアルに進むこともできますが、ここで中断してすぐに使い始めることもできます。
+         * このまま{name}(Erebia)の使い方についてのチュートリアルに進むこともできますが、ここで中断してすぐに使い始めることもできます。
          */
         "youCanContinueTutorial": ParameterizedString<"name">;
         /**
@@ -6690,7 +6690,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * ここでは、Misskeyの基本的な使い方や機能を確認できます。
+             * ここでは、Erebiaの基本的な使い方や機能を確認できます。
              */
             "description": string;
         };
@@ -6700,7 +6700,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * Misskeyでの投稿は「ノート」と呼びます。ノートはタイムラインに時系列で並んでいて、リアルタイムで更新されていきます。
+             * Erebiaでの投稿は「ノート」と呼びます。ノートはタイムラインに時系列で並んでいて、リアルタイムで更新されていきます。
              */
             "description": string;
             /**
@@ -6752,7 +6752,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * Misskeyには、使い方に応じて複数のタイムラインが用意されています（サーバーによってはいずれかが無効になっていることがあります）。
+             * Erebiaには、使い方に応じて複数のタイムラインが用意されています（サーバーによってはいずれかが無効になっていることがあります）。
              */
             "description1": string;
             /**
@@ -6786,7 +6786,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * Misskeyにノートを投稿する際には、様々なオプションの設定が可能です。投稿フォームはこのようになっています。
+             * Erebiaにノートを投稿する際には、様々なオプションの設定が可能です。投稿フォームはこのようになっています。
              */
             "description1": string;
             "_visibility": {
@@ -6886,7 +6886,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * ここで紹介した機能はほんの一部にすぎません。Misskeyの使い方をより詳しく知るには、{link}をご覧ください。
+             * ここで紹介した機能はほんの一部にすぎません。Erebiaの使い方をより詳しく知るには、{link}をご覧ください。
              */
             "description": ParameterizedString<"link">;
         };
@@ -7147,7 +7147,7 @@ export interface Locale extends ILocale {
          * フォロワーの移行は自動ですが、フォローの移行は手動で行う必要があります。移行前にこのアカウントでフォローエクスポートし、移行後すぐに移行先アカウントでインポートを行なってください。
          * リスト・ミュート・ブロックについても同様ですので、手動で移行する必要があります。
          *
-         * （この説明はこのサーバー（Misskey v13.12.0以降）の仕様です。Mastodonなどの他のActivityPubソフトウェアでは挙動が異なる場合があります。）
+         * （この説明はこのサーバー（Erebia v13.12.0以降）の仕様です。Mastodonなどの他のActivityPubソフトウェアでは挙動が異なる場合があります。）
          */
         "moveAccountDescription": string;
         /**
@@ -7195,7 +7195,7 @@ export interface Locale extends ILocale {
                  */
                 "description": string;
                 /**
-                 * 良いMisskeyライフを！
+                 * 良いErebiaライフを！
                  */
                 "flavor": string;
             };
@@ -7519,7 +7519,7 @@ export interface Locale extends ILocale {
                  */
                 "description": string;
                 /**
-                 * Misskeyを使ってくれてありがとう！
+                 * Erebiaを使ってくれてありがとう！
                  */
                 "flavor": string;
             };
@@ -7719,15 +7719,15 @@ export interface Locale extends ILocale {
             };
             "_iLoveMisskey": {
                 /**
-                 * I Love Misskey
+                 * I Love Erebia
                  */
                 "title": string;
                 /**
-                 * "I ❤ #Misskey"を投稿した
+                 * "I ❤ #Erebia"を投稿した
                  */
                 "description": string;
                 /**
-                 * Misskeyを使ってくださりありがとうございます！ by 開発チーム
+                 * Erebiaを使ってくださりありがとうございます！ by 開発チーム
                  */
                 "flavor": string;
             };
@@ -7753,7 +7753,7 @@ export interface Locale extends ILocale {
             };
             "_client60min": {
                 /**
-                 * Misskeyの見すぎ
+                 * Erebiaの見すぎ
                  */
                 "title": string;
                 /**
@@ -7979,7 +7979,7 @@ export interface Locale extends ILocale {
             };
             "_tutorialCompleted": {
                 /**
-                 * Misskey初心者講座 修了証
+                 * Erebia初心者講座 修了証
                  */
                 "title": string;
                 /**
@@ -8192,7 +8192,7 @@ export interface Locale extends ILocale {
              */
             "maxFileSize_caption": string;
             /**
-             * サーバー全体の最大ファイルサイズ設定は {max} です。これより大きいファイルをアップロードできるようにするには、Misskeyの設定ファイルからこの設定を緩和してください。
+             * サーバー全体の最大ファイルサイズ設定は {max} です。これより大きいファイルをアップロードできるようにするには、Erebiaの設定ファイルからこの設定を緩和してください。
              */
             "maxFileSize_caption2": ParameterizedString<"max">;
             /**
@@ -8737,7 +8737,7 @@ export interface Locale extends ILocale {
     };
     "_aboutMisskey": {
         /**
-         * Misskeyはsyuiloによって2014年から開発されている、オープンソースのソフトウェアです。
+         * ErebiaはMisskeyを基盤とする、オープンソースの分散型ソーシャルプラットフォームです。
          */
         "about": string;
         /**
@@ -8757,7 +8757,7 @@ export interface Locale extends ILocale {
          */
         "original": string;
         /**
-         * {name}はオリジナルのMisskeyを改変したバージョンを使用しています。
+         * {name}はErebiaを改変したバージョンを使用しています。
          */
         "thisIsModifiedVersion": ParameterizedString<"name">;
         /**
@@ -9259,7 +9259,7 @@ export interface Locale extends ILocale {
          */
         "driveFileDurationWarn": string;
         /**
-         * 長い音声を使用するとMisskeyの使用に支障をきたす可能性があります。それでも続行しますか？
+         * 長い音声を使用するとErebiaの使用に支障をきたす可能性があります。それでも続行しますか？
          */
         "driveFileDurationWarnDescription": string;
         /**
@@ -12027,7 +12027,7 @@ export interface Locale extends ILocale {
          */
         "summaryProxy": string;
         /**
-         * Misskey本体ではなく、サマリープロキシを使用してプレビューを生成します。
+         * Erebia本体ではなく、サマリープロキシを使用してプレビューを生成します。
          */
         "summaryProxyDescription": string;
         /**
@@ -12516,7 +12516,7 @@ export interface Locale extends ILocale {
          */
         "otherOption3": string;
         /**
-         * Misskeyをセーフモードで起動
+         * Erebiaをセーフモードで起動
          */
         "otherOption4": string;
     };
@@ -12576,7 +12576,7 @@ export interface Locale extends ILocale {
     };
     "_serverSetupWizard": {
         /**
-         * Misskeyのインストールが完了しました！
+         * Erebiaのインストールが完了しました！
          */
         "installCompleted": string;
         /**
@@ -12600,7 +12600,7 @@ export interface Locale extends ILocale {
          */
         "settingsYouMakeHereCanBeChangedLater": string;
         /**
-         * Misskeyをどのように使いますか？
+         * Erebiaをどのように使いますか？
          */
         "howWillYouUseMisskey": string;
         "_use": {
@@ -12729,7 +12729,7 @@ export interface Locale extends ILocale {
         "donationRequest": string;
         "_donationRequest": {
             /**
-             * Misskeyは有志によって開発されている無料のソフトウェアです。
+             * Erebiaの基盤であるMisskeyは、有志によって開発されている無料のソフトウェアです。
              */
             "text1": string;
             /**

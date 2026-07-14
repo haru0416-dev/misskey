@@ -18,7 +18,7 @@ export const wsOrigin = window.location.origin;
 export const lang = localStorage.getItem('lang') ?? 'en-US';
 export const langs = _LANGS_;
 export const version = _VERSION_;
-export const instanceName = siteName === 'Misskey' || siteName == null ? host : siteName;
+export const instanceName = siteName === 'Erebia' || siteName === 'Misskey' || siteName == null ? host : siteName;
 export const ui = localStorage.getItem('ui');
 export const debug = localStorage.getItem('debug') === 'true';
 export const isSafeMode = localStorage.getItem('isSafeMode') === 'true';

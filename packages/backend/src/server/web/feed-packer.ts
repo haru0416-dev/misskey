@@ -46,7 +46,7 @@ export async function packFeed(
 		id: author.link,
 		title: `${author.name} (@${user.username}@${deps.config.host})`,
 		updated: notes.length !== 0 ? parseId(notes[0].id).date : undefined,
-		generator: 'Misskey',
+		generator: 'Erebia',
 		description: `${user.notesCount} Notes, ${profile.followingVisibility === 'public' ? user.followingCount : '?'} Following, ${profile.followersVisibility === 'public' ? user.followersCount : '?'} Followers${profile.description ? ` · ${profile.description}` : ''}`,
 		link: author.link,
 		image: (user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),

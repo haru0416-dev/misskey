@@ -1,0 +1,9 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+	<title id="title">Erebia</title>
+	<rect width="128" height="128" rx="28" fill="#86b300"/>
+	<path d="M36 28h58v18H56v10h32v17H56v9h40v18H36z" fill="#fff"/>
+</svg>

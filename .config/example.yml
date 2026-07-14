@@ -1,5 +1,5 @@
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Misskey configuration
+# Erebia configuration
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 #   ┌──────────────────────────────┐
@@ -16,7 +16,7 @@
 #
 
 # --------
-# Option 1: If you host Misskey AS-IS (without any changes to
+# Option 1: If you host Erebia AS-IS (without any changes to
 #           the source code. forks are not included).
 #
 # Step 1: Congratulations! You don't need to do anything.
@@ -28,7 +28,7 @@
 #           this repository.  Strictly speaking, it doesn't have
 #           to be a Git repository, but you'll probably use Git!
 #
-# Step 1: Build and run the Misskey server first.
+# Step 1: Build and run the Erebia server first.
 # Step 2: Open <https://your.misskey.example/admin/settings> in
 #         your browser with the administrator account.
 # Step 3: Enter the URL of your Git repository in the
@@ -37,7 +37,7 @@
 # --------
 # Option 3: If neither of the above applies to you.
 #           (In this case, the source code should be published
-#           on the Misskey interface.  IT IS NOT ENOUGH TO
+#           on the Erebia interface.  IT IS NOT ENOUGH TO
 #           DISCLOSE THE SOURCE CODE WHEN A USER REQUESTS IT BY
 #           E-MAIL OR OTHER MEANS.  If you are not satisfied
 #           with this, it is recommended that you read the
@@ -67,7 +67,7 @@
 #
 # Be sure to change this when you set up Misskey via the Internet.
 #
-# The provider of the service who sets up Misskey on behalf of the customer should
+# The provider of the service who sets up Erebia on behalf of the customer should
 # set this value to something unique when generating the Misskey config file,
 # and provide it to the customer.
 #
@@ -86,11 +86,11 @@ url: https://example.tld/
 #───┘ Port and TLS settings └───────────────────────────────────
 
 #
-# Misskey requires a reverse proxy to support HTTPS connections.
+# Erebia requires a reverse proxy to support HTTPS connections.
 #
 #                 +----- https://example.tld/ ------------+
 #   +------+      |+-------------+      +----------------+|
-#   | User | ---> || Proxy (443) | ---> | Misskey (3000) ||
+#   | User | ---> || Proxy (443) | ---> | Erebia (3000) ||
 #   +------+      |+-------------+      +----------------+|
 #                 +---------------------------------------+
 #
@@ -98,7 +98,7 @@ url: https://example.tld/
 #   An encrypted connection with HTTPS is highly recommended
 #   because tokens may be transferred in GET requests.
 
-# The port that your Misskey server should listen on.
+# The port that your Erebia server should listen on.
 port: 3000
 
 # You can also use UNIX domain socket.
@@ -285,7 +285,7 @@ fulltextSearch:
 
 #telemetryForBackend:
 #  endpoint: 'http://localhost:4318/v1/traces'
-#  serviceName: 'misskey-backend'
+#  serviceName: 'erebia-backend'
 #  tracesSampleRatio: 0.1
 #  headers:
 #    Authorization: 'Bearer example'
@@ -298,7 +298,7 @@ fulltextSearch:
 
 #telemetryForFrontend:
 #  endpoint: 'https://collector.example.com/v1/traces'
-#  serviceName: 'misskey-frontend'
+#  serviceName: 'erebia-frontend'
 #  tracesSampleRatio: 0.1
 #  propagateTraceHeaderCorsUrls:
 #    - 'https://misskey.example.com/api'
