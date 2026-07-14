@@ -90,7 +90,7 @@
 		"magic-string": "0.30.21",
 		"micromatch": "4.0.8",
 		"minimatch": "10.2.5",
-		"msw": "2.14.6",
+		"msw": "2.15.0",
 		"msw-storybook-addon": "2.0.7",
 		"oxc-walker": "1.0.0",
 		"prettier": "3.8.4",
