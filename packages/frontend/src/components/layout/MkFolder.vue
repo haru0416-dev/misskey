@@ -132,12 +132,12 @@ const bgSame = ref(false);
 const opened = ref(asPage ? false : props.defaultOpen);
 const openedAtLeastOnce = ref(opened.value);
 
-//#region interpolate-sizeに対応していないブラウザ向け（TODO: 主要ブラウザが対応したら消す）
+// 高さはインラインstyleで常にJS駆動する (MkContainer/MkFoldableSectionと同一パス)。
+// CSSクラス (enterFrom等) 頼みの開始状態はペイントタイミング次第で1フレーム全高が見える
+// レースがあるため、interpolate-size対応ブラウザでもJS側で駆動する
 const { enter, afterEnter, leave, afterLeave } = useHeightTransition({
 	maxHeight: () => props.maxHeight,
-	skip: () => CSS.supports('interpolate-size', 'allow-keywords'),
 });
-//#endregion
 
 let pageId = pageFolderTeleportCount.value;
 pageFolderTeleportCount.value += 1000;
@@ -193,19 +193,13 @@ watch(opened, (isOpened) => {
 <style lang="scss" module>
 .transition_toggle_enterActive,
 .transition_toggle_leaveActive {
-	overflow-y: hidden; // 子要素のmarginが突き出るため clip を使ってはいけない
+	// overflow-y: hidden はスクロールコンテナを作るため、アニメーション中だけ子孫のsticky header
+	// (入れ子のMkFolderヘッダー等) の吸着基準がこのwrapperに切り替わり、ヘッダーが下方向へ
+	// 押し出されて終了時にカクっと戻る。clip はスクロールコンテナを作らないのでこれを防げる。
+	// clip 単体だと子要素のmarginが突き抜けるため flow-root でBFCを作って抑える (hiddenと同じ包含挙動)
+	overflow-y: clip;
+	display: flow-root;
 	transition: opacity 0.3s, height 0.3s;
-}
-
-@supports (interpolate-size: allow-keywords) {
-	.transition_toggle_enterFrom,
-	.transition_toggle_leaveTo {
-		height: 0;
-	}
-
-	.root {
-		interpolate-size: allow-keywords; // heightのtransitionを動作させるために必要
-	}
 }
 
 .transition_toggle_enterFrom,
