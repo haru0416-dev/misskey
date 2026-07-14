@@ -10,7 +10,7 @@ import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/c
 import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase, listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase, listNoteReactionsByNoteIdsAndUserIdsFromDatabase, listNoteReactionsByUserAndNoteIdsFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase, listPollsByNoteIdsFromDatabase } from '@/core/PollStore.js';
 import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase, listPollVotesByNoteIdsAndUserFromDatabase, listPollVotesByNoteIdsAndUserIdsFromDatabase } from '@/core/PollVoteStore.js';
@@ -774,6 +774,21 @@ export async function packNoteManyForHonoApi(
 
 	const detail = options?.detail ?? true;
 	const meId = me ? me.id : null;
+	if (detail) {
+		const relationIds = new Set<MiNote['id']>();
+		for (const note of notes) {
+			if (note.replyId != null && note.reply == null) relationIds.add(note.replyId);
+			if (note.renoteId != null && note.renote == null) relationIds.add(note.renoteId);
+		}
+		if (relationIds.size > 0) {
+			const relations = await listNotesByIdsFromDatabase(deps.db, [...relationIds]);
+			const relationById = new Map(relations.map(note => [note.id, note]));
+			for (const note of notes) {
+				if (note.replyId != null && note.reply == null) note.reply = relationById.get(note.replyId) ?? null;
+				if (note.renoteId != null && note.renote == null) note.renote = relationById.get(note.renoteId) ?? null;
+			}
+		}
+	}
 	const targetInfo = collectPackNoteTargets(notes, detail);
 	const { targets, detailTargetIds, pollTargetIds } = targetInfo;
 	const followeeIdCoverage = options?.followeeIds == null && meId != null && !options?.skipHide
