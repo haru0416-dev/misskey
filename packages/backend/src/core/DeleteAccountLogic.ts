@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { DbQueue, DeliverQueue } from '@/core/queues.js';
+import { addDbJob, type DbQueue, type DeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { enqueueDbJobInOutbox } from '@/core/QueueOutboxStore.js';
@@ -102,12 +102,16 @@ export async function deleteAccountWithSideEffects(
 		return id;
 	});
 
-	void deps.dbQueue.add('deleteAccount', {
-		user: { id: user.id },
-		soft: user.host !== null,
-	}, {
-		...queueRetentionOptions(deps.config),
-		jobId: `outbox-${outboxId}`,
+	void addDbJob(deps.dbQueue, {
+		name: 'deleteAccount',
+		data: {
+			user: { id: user.id },
+			soft: user.host !== null,
+		},
+		opts: {
+			...queueRetentionOptions(deps.config),
+			jobId: `outbox-${outboxId}`,
+		},
 	}).catch(() => {
 		// The outbox dispatcher retries when the low-latency enqueue path is unavailable.
 	});
