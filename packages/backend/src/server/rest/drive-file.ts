@@ -26,7 +26,7 @@ type DriveFilePackOptions = {
 
 function getProxiedUrl(config: Config, url: string, mode?: 'static' | 'avatar'): string {
 	return appendQuery(
-		`${config.mediaProxy}/${mode ?? 'image'}.webp`,
+		`${config.media.proxyUrl}/${mode ?? 'image'}.webp`,
 		query({
 			url,
 			...(mode ? { [mode]: '1' } : {}),
@@ -35,10 +35,10 @@ function getProxiedUrl(config: Config, url: string, mode?: 'static' | 'avatar'):
 }
 
 function getExternalVideoThumbnailUrl(config: Config, url: string): string | null {
-	if (config.videoThumbnailGenerator == null) return null;
+	if (config.media.videoThumbnailGeneratorUrl == null) return null;
 
 	return appendQuery(
-		`${config.videoThumbnailGenerator}/thumbnail.webp`,
+		`${config.media.videoThumbnailGeneratorUrl}/thumbnail.webp`,
 		query({
 			thumbnail: '1',
 			url,
@@ -64,7 +64,7 @@ function getThumbnailUrl(deps: HonoApiDriveFileDependencies, file: MiDriveFile):
 		if (file.thumbnailUrl) return file.thumbnailUrl;
 
 		return getExternalVideoThumbnailUrl(deps.config, file.webpublicUrl ?? file.url);
-	} else if (file.uri != null && file.userHost != null && deps.config.externalMediaProxyEnabled) {
+	} else if (file.uri != null && file.userHost != null && deps.config.media.externalProxyEnabled) {
 		return getProxiedUrl(deps.config, file.uri, 'static');
 	}
 

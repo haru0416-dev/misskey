@@ -51,17 +51,17 @@ export type HonoApiAntennaFanoutDependencies = {
 	publishAntennaStream?: HonoApiAntennaStreamPublisher;
 };
 
-function getFullApAccount(config: Pick<Config, 'host'>, username: string, host: string | null): string {
-	return host ? `${username}@${domainToASCII(host.toLowerCase())}` : `${username}@${domainToASCII(config.host.toLowerCase())}`;
+function getFullApAccount(config: { runtime: Pick<Config['runtime'], 'host'> }, username: string, host: string | null): string {
+	return host ? `${username}@${domainToASCII(host.toLowerCase())}` : `${username}@${domainToASCII(config.runtime.host.toLowerCase())}`;
 }
 
 export function antennaUsersIncludes(
-	config: Pick<Config, 'host'>,
+	config: { runtime: Pick<Config['runtime'], 'host'> },
 	users: string[],
 	user: { username: string; host: string | null },
 ): boolean {
 	const account = getFullApAccount(config, user.username, user.host).toLowerCase();
-	const accountHost = domainToASCII((user.host ?? config.host).toLowerCase());
+	const accountHost = domainToASCII((user.host ?? config.runtime.host).toLowerCase());
 
 	return users.some((value) => {
 		const { username, host } = Acct.parse(value);
@@ -163,7 +163,7 @@ export async function checkHitAntennaForHonoApi(
  * と同じ判断で毎回DBから読む。
  */
 export async function onMoveAccountForHonoApi(
-	deps: { config: Pick<Config, 'host'>; db: MiDrizzleDatabase; publishInternalEvent?: HonoApiInternalEventPublisher },
+	deps: { config: { runtime: Pick<Config['runtime'], 'host'> }; db: MiDrizzleDatabase; publishInternalEvent?: HonoApiInternalEventPublisher },
 	src: MiUser,
 	dst: MiUser,
 ): Promise<void> {

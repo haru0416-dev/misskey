@@ -95,7 +95,7 @@ async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user
 	if (user == null) return apError(404);
 
 	if (isRemoteUser(user)) {
-		if (user.uri == null || isSelfHost(deps.config.host, user.host)) {
+		if (user.uri == null || isSelfHost(deps.config.runtime.host, user.host)) {
 			return apError(500);
 		}
 		return c.redirect(user.uri, 301);
@@ -126,7 +126,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		}
 
 		if (note.userHost != null) {
-			if (note.uri == null || isSelfHost(deps.config.host, note.userHost)) {
+			if (note.uri == null || isSelfHost(deps.config.runtime.host, note.userHost)) {
 				return apError(500);
 			}
 			return c.redirect(note.uri);
@@ -163,7 +163,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		if (user == null) return apError(404);
 
 		const limit = 20;
-		const partOf = `${deps.config.url}/users/${userId}/outbox`;
+		const partOf = `${deps.config.instance.url}/users/${userId}/outbox`;
 
 		if (page) {
 			const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, dbLimit: number) =>
@@ -240,7 +240,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		}
 
 		const limit = 10;
-		const partOf = `${deps.config.url}/users/${userId}/${kind}`;
+		const partOf = `${deps.config.instance.url}/users/${userId}/${kind}`;
 		const totalItems = kind === 'followers' ? user.followersCount : user.followingCount;
 
 		if (page) {
@@ -299,7 +299,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		const renderedNotes = await Promise.all(pinnedNotes.map(note => renderNoteForHonoApi(deps, note, true)));
 
 		return apJson(c, withApContext({
-			id: `${deps.config.url}/users/${user.id}/collections/featured`,
+			id: `${deps.config.instance.url}/users/${user.id}/collections/featured`,
 			type: 'OrderedCollection',
 			totalItems: renderedNotes.length,
 			orderedItems: renderedNotes,
@@ -350,7 +350,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		if (deps.meta.federation === 'none') return apError(403);
 
 		const acct = Acct.parse(rest);
-		const host = isSelfHost(deps.config.host, acct.host) ? null : acct.host;
+		const host = isSelfHost(deps.config.runtime.host, acct.host) ? null : acct.host;
 
 		const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, acct.username, host);
 		return await renderUserInfo(deps, c, user?.isSuspended ? null : user);

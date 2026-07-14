@@ -73,7 +73,7 @@ describe('hono-queue-db (importBlocking)', () => {
 		const blocker = await createTestUser('honoqueueimpblockme');
 		const target = await createTestUser('honoqueueimpblocktarget');
 
-		const { url, server } = await serveText(`${target.username}@${runtime.config.host}\n`);
+		const { url, server } = await serveText(`${target.username}@${runtime.config.runtime.host}\n`);
 		servers.push(server);
 
 		const fileId = genId();
@@ -103,7 +103,7 @@ describe('hono-queue-db (importBlocking)', () => {
 
 		await handleHonoQueueImportBlockingToDb(deps, fakeJob<DbUserImportToDbJobData>({
 			user: { id: blocker.id },
-			target: `${target.username}@${runtime.config.host}`,
+			target: `${target.username}@${runtime.config.runtime.host}`,
 		}));
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);
@@ -117,7 +117,7 @@ describe('hono-queue-db (importBlocking)', () => {
 
 		await handleHonoQueueImportBlockingToDb(deps, fakeJob<DbUserImportToDbJobData>({
 			user: { id: blocker.id },
-			target: `${blocker.username}@${runtime.config.host}`,
+			target: `${blocker.username}@${runtime.config.runtime.host}`,
 		}));
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);

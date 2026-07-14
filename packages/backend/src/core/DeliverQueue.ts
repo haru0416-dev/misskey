@@ -8,10 +8,11 @@ import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import type { DeliverQueue } from '@/core/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverJobData, ThinUser } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 
 export function enqueueDeliverJob(
 	queue: DeliverQueue,
-	config: Pick<Config, 'deliverJobMaxAttempts'>,
+	config: Pick<Config, 'queues'>,
 	user: ThinUser,
 	content: IActivity | null,
 	to: string | null,
@@ -34,17 +35,10 @@ export function enqueueDeliverJob(
 	const label = to.replace('https://', '').replace('/inbox', '');
 
 	return queue.add(label, data, {
-		attempts: config.deliverJobMaxAttempts ?? 12,
+		attempts: config.queues.deliver.maximumAttempts ?? 12,
 		backoff: {
 			type: 'custom',
 		},
-		removeOnComplete: {
-			age: 3600 * 24 * 7, // keep up to 7 days
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7, // keep up to 7 days
-			count: 100,
-		},
+		...queueRetentionOptions(config),
 	});
 }

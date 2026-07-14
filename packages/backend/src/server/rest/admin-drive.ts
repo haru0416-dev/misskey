@@ -109,7 +109,7 @@ function noSuchFileError(): HonoApiError {
 
 function getProxiedUrl(deps: HonoApiAdminDriveDependencies, url: string, mode?: 'static' | 'avatar'): string {
 	return appendQuery(
-		`${deps.config.mediaProxy}/${mode ?? 'image'}.webp`,
+		`${deps.config.media.proxyUrl}/${mode ?? 'image'}.webp`,
 		query({
 			url,
 			...(mode ? { [mode]: '1' } : {}),
@@ -118,10 +118,10 @@ function getProxiedUrl(deps: HonoApiAdminDriveDependencies, url: string, mode?: 
 }
 
 function getExternalVideoThumbnailUrl(deps: HonoApiAdminDriveDependencies, url: string): string | null {
-	if (deps.config.videoThumbnailGenerator == null) return null;
+	if (deps.config.media.videoThumbnailGeneratorUrl == null) return null;
 
 	return appendQuery(
-		`${deps.config.videoThumbnailGenerator}/thumbnail.webp`,
+		`${deps.config.media.videoThumbnailGeneratorUrl}/thumbnail.webp`,
 		query({
 			thumbnail: '1',
 			url,
@@ -134,7 +134,7 @@ function getAdminDriveFileThumbnailUrl(deps: HonoApiAdminDriveDependencies, file
 		if (file.thumbnailUrl) return file.thumbnailUrl;
 
 		return getExternalVideoThumbnailUrl(deps, file.webpublicUrl ?? file.url);
-	} else if (file.uri != null && file.userHost != null && deps.config.externalMediaProxyEnabled) {
+	} else if (file.uri != null && file.userHost != null && deps.config.media.externalProxyEnabled) {
 		return getProxiedUrl(deps, file.uri, 'static');
 	}
 

@@ -131,8 +131,8 @@ function emojiSecurityHeaders(): Record<string, string> {
 
 export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 	const app = new Hono();
-	const backendRoot = resolve(deps.config.rootDir, 'packages/backend');
-	const frontendRoot = resolve(deps.config.rootDir, 'packages/frontend');
+	const backendRoot = resolve(deps.config.runtime.rootDir, 'packages/backend');
+	const frontendRoot = resolve(deps.config.runtime.rootDir, 'packages/frontend');
 	const staticAssets = resolve(backendRoot, 'assets');
 	const fluentEmojiDir = resolve(backendRoot, 'node_modules/@misskey-dev/emoji-assets/built/fluent-emoji');
 	const twemojiDir = resolve(backendRoot, 'node_modules/@misskey-dev/emoji-assets/built/twemoji');
@@ -149,22 +149,22 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 	});
 	registerStaticMount(app, {
 		prefix: '/assets/',
-		root: resolve(deps.config.rootDir, 'built/_frontend_dist_'),
+		root: resolve(deps.config.runtime.rootDir, 'built/_frontend_dist_'),
 		cacheControl: 'public, max-age=604800',
 	});
-	if (deps.config.frontendManifestExists) {
+	if (deps.config.runtime.frontendManifestExists) {
 		registerStaticMount(app, {
 			prefix: '/vite/',
-			root: resolve(deps.config.rootDir, 'built/_frontend_vite_'),
+			root: resolve(deps.config.runtime.rootDir, 'built/_frontend_vite_'),
 			cacheControl: 'public, max-age=2592000, immutable',
 		});
 	} else {
 		registerViteDevProxy(app, { prefix: '/vite/', upstream: 'http://localhost:5173' });
 	}
-	if (deps.config.frontendEmbedManifestExists) {
+	if (deps.config.runtime.frontendEmbedManifestExists) {
 		registerStaticMount(app, {
 			prefix: '/embed_vite/',
-			root: resolve(deps.config.rootDir, 'built/_frontend_embed_vite_'),
+			root: resolve(deps.config.runtime.rootDir, 'built/_frontend_embed_vite_'),
 			cacheControl: 'public, max-age=2592000, immutable',
 		});
 	} else {
@@ -172,7 +172,7 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 	}
 	registerStaticMount(app, {
 		prefix: '/tarball/',
-		root: resolve(deps.config.rootDir, 'built/tarball'),
+		root: resolve(deps.config.runtime.rootDir, 'built/tarball'),
 		cacheControl: 'public, max-age=2592000, immutable',
 	});
 
@@ -243,8 +243,8 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 			},
 		});
 	});
-	app.get('/sw.js', async (c) => await serveFile(c, resolve(deps.config.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
-	app.on('HEAD', '/sw.js', async (c) => await serveFile(c, resolve(deps.config.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
+	app.get('/sw.js', async (c) => await serveFile(c, resolve(deps.config.runtime.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
+	app.on('HEAD', '/sw.js', async (c) => await serveFile(c, resolve(deps.config.runtime.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
 	app.get('/embed.js', async (c) => await serveFile(c, resolve(staticAssets, 'embed.js'), 'public, max-age=86400'));
 	app.on('HEAD', '/embed.js', async (c) => await serveFile(c, resolve(staticAssets, 'embed.js'), 'public, max-age=86400'));
 

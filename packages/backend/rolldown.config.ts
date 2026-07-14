@@ -113,6 +113,7 @@ export default defineConfig((args) => {
 				'./src/boot/entry.ts',
 				'./src/boot/cli.ts',
 				'./src/config.ts',
+				'./src/config-schema.ts',
 				'./src/drizzle.ts',
 				'./src/migration-runner.ts',
 				'./src/server/api/openapi/gen-spec.ts',

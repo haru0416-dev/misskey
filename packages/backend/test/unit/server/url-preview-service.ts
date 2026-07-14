@@ -20,8 +20,8 @@ afterAll(() => {
 });
 
 const config = {
-	url: 'https://misskey.test',
-	mediaProxy: 'https://media.test',
+	instance: { url: 'https://misskey.test' },
+	media: { proxyUrl: 'https://media.test' },
 } as Config;
 
 function createMeta(): MiMeta {

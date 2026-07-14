@@ -18,7 +18,7 @@ export function AnnouncementPage(props: CommonProps<{
 				<meta property="og:type" content="article" />
 				<meta property="og:title" content={props.announcement.title} />
 				<meta property="og:description" content={description} />
-				<meta property="og:url" content={`${props.config.url}/announcements/${props.announcement.id}`} />
+				<meta property="og:url" content={`${props.config.instance.url}/announcements/${props.announcement.id}`} />
 				{props.announcement.imageUrl ? (
 					<>
 						<meta property="og:image" content={props.announcement.imageUrl} />

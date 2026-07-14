@@ -82,7 +82,7 @@ function serializeAlsoKnownAs(value: string[] | null | undefined): string | null
 	return value == null ? value : value.join(',');
 }
 
-export function validateActorForHonoApi(config: Pick<Config, 'url'>, x: IObject, uri: string): IActor {
+export function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, uri: string): IActor {
 	const expectHost = punyHostForHonoApi(uri);
 
 	if (!isActor(x)) {
@@ -173,7 +173,7 @@ export function punyHostForHonoApi(url: string): string {
 	return `${toPunyForHonoApi(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-export function analyzeAttachmentsForHonoApi(config: Pick<Config, 'url'>, attachments: IObject | IObject[] | undefined): { name: string; value: string }[] {
+export function analyzeAttachmentsForHonoApi(config: Pick<Config, 'instance'>, attachments: IObject | IObject[] | undefined): { name: string; value: string }[] {
 	const fields: { name: string; value: string }[] = [];
 
 	if (Array.isArray(attachments)) {
@@ -516,7 +516,7 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
  */
 export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string, history: Set<string> = new Set()): Promise<MiRemoteUser> {
 	const host = punyHostForHonoApi(uri);
-	if (host === toPunyForHonoApi(deps.config.host)) {
+	if (host === toPunyForHonoApi(deps.config.runtime.host)) {
 		throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
 	}
 
@@ -642,7 +642,7 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 
 /** ApPersonService.fetchPerson 相当。プロセス内キャッシュ (uriPersonCache) は既存の移行方針に沿って省略。 */
 export async function fetchPersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string): Promise<MiLocalUser | MiRemoteUser | null> {
-	if (uri.startsWith(`${deps.config.url}/`)) {
+	if (uri.startsWith(`${deps.config.instance.url}/`)) {
 		const id = uri.split('/').pop();
 		if (id == null) return null;
 		const u = await fetchUserByIdFromDatabase(deps.db, id);
@@ -668,8 +668,8 @@ export async function getAuthUserFromApIdForHonoApi(deps: HonoApiApPersonDepende
 	return { user, key };
 }
 
-function getUserUriForApPerson(config: Pick<Config, 'url'>, user: MiLocalUser | MiRemoteUser): string {
-	return user.host == null ? `${config.url}/users/${user.id}` : user.uri;
+function getUserUriForApPerson(config: Pick<Config, 'instance'>, user: MiLocalUser | MiRemoteUser): string {
+	return user.host == null ? `${config.instance.url}/users/${user.id}` : user.uri;
 }
 
 /**
@@ -796,7 +796,7 @@ export async function resolveUserForHonoApi(
 ): Promise<MiLocalUser | MiRemoteUser> {
 	const usernameLower = username.toLowerCase();
 
-	if (host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.host)) {
+	if (host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host)) {
 		const localUser = await fetchLocalUserByUsernameFromDatabase(deps.db, usernameLower);
 		if (localUser == null) {
 			throw new Error('user not found');
@@ -812,7 +812,7 @@ export async function resolveUserForHonoApi(
 	if (user == null) {
 		const self = await resolveSelfForHonoApi(deps, acctLower);
 
-		if (punyHostForHonoApi(self.href) === toPunyForHonoApi(deps.config.host)) {
+		if (punyHostForHonoApi(self.href) === toPunyForHonoApi(deps.config.runtime.host)) {
 			const local = parseLocalApUri(deps.config, self.href);
 			if (local.local && local.type === 'users') {
 				const u = await getUserFromApIdForHonoApi(deps, self.href);

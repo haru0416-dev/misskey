@@ -1,208 +1,33 @@
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Erebia configuration
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+configVersion: 2
 
-#   ┌────────────────────────┐
-#───┘ Initial Setup Password └─────────────────────────────────────────────────────
+instance:
+  url: http://misskey.local
+  setupPassword:
+    plainText: example_password_please_change_this_or_you_will_get_hacked
 
-# Password to initiate setting up admin account.
-# It will not be used after the initial setup is complete.
-#
-# Be sure to change this when you set up Misskey via the Internet.
-#
-# The provider of the service who sets up Erebia on behalf of the customer should
-# set this value to something unique when generating the Misskey config file,
-# and provide it to the customer.
-setupPassword: example_password_please_change_this_or_you_will_get_hacked
+server:
+  listen:
+    tcp:
+      address: 0.0.0.0
+      port: 61812
 
-#   ┌─────┐
-#───┘ URL └─────────────────────────────────────────────────────
+database:
+  primary:
+    host: db
+    port: 5432
+    name: misskey
+    user: postgres
+    password:
+      plainText: postgres
 
-# Final accessible URL seen by a user.
-url: 'http://misskey.local'
+valkey:
+  connections:
+    primary:
+      host: valkey
+      port: 6379
 
-# ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
-# URL SETTINGS AFTER THAT!
-
-#   ┌───────────────────────┐
-#───┘ Port and TLS settings └───────────────────────────────────
-
-#
-# Erebia requires a reverse proxy to support HTTPS connections.
-#
-#                 +----- https://example.tld/ ------------+
-#   +------+      |+-------------+      +----------------+|
-#   | User | ---> || Proxy (443) | ---> | Erebia (3000) ||
-#   +------+      |+-------------+      +----------------+|
-#                 +---------------------------------------+
-#
-#   You need to set up a reverse proxy. (e.g. nginx)
-#   An encrypted connection with HTTPS is highly recommended
-#   because tokens may be transferred in GET requests.
-
-# The port that your Erebia server should listen on.
-port: 61812
-
-#   ┌──────────────────────────┐
-#───┘ PostgreSQL configuration └────────────────────────────────
-
-db:
-  host: db
-  port: 5432
-
-  # Database name
-  db: misskey
-
-  # Auth
-  user: postgres
-  pass: postgres
-
-  # Whether disable Caching queries
-  #disableCache: true
-
-  # Extra Connection options
-  #extra:
-  #  ssl: true
-
-dbReplications: false
-
-# You can configure any number of replicas here
-#dbSlaves:
-#  -
-#    host:
-#    port:
-#    db:
-#    user:
-#    pass:
-#  -
-#    host:
-#    port:
-#    db:
-#    user:
-#    pass:
-
-#   ┌─────────────────────┐
-#───┘ Valkey configuration └────────────────────────────────────
-
-redis:
-  host: valkey
-  port: 6379
-  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-  #pass: example-pass
-  #prefix: example-prefix
-  #db: 1
-
-#redisForPubsub:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#redisForJobQueue:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#redisForTimelines:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#redisForReactions:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#   ┌───────────────────────────┐
-#───┘ MeiliSearch configuration └─────────────────────────────
-
-#meilisearch:
-#  host: meilisearch
-#  port: 7700
-#  apiKey: ''
-#  ssl: true
-#  index: ''
-
-#   ┌─────────────┐
-#───┘ Telemetry   └──────────────────────────────────────────────
-
-# OpenTelemetry traces and errors can be exported over OTLP/HTTP.
-# The endpoint must include /v1/traces. Frontend collector headers are not
-# supported because this configuration is public; allow browser requests with CORS.
-
-#telemetryForBackend:
-#  endpoint: 'http://localhost:4318/v1/traces'
-#  serviceName: 'erebia-backend'
-#  tracesSampleRatio: 0.1
-
-#telemetryForFrontend:
-#  endpoint: 'http://localhost:4318/v1/traces'
-#  serviceName: 'erebia-frontend'
-#  tracesSampleRatio: 0.1
-
-#   ┌─────────────────────┐
-#───┘ Other configuration └─────────────────────────────────────
-
-# Whether disable HSTS
-#disableHsts: true
-
-# Number of worker processes
-#clusterLimit: 1
-
-# Number of threads of extra thread pool for CPU-intensive tasks (per worker)
-#threadPoolSize: 1
-
-# Job concurrency per worker
-# deliverJobConcurrency: 128
-# inboxJobConcurrency: 16
-# dbJobConcurrency: 1
-# systemJobConcurrency: 1
-# objectStorageJobConcurrency: 16
-# userWebhookJobConcurrency: 64
-# systemWebhookJobConcurrency: 16
-
-# Job rate limiter
-# deliverJobPerSec: 128
-# inboxJobPerSec: 32
-
-# Job attempts
-# deliverJobMaxAttempts: 12
-# inboxJobMaxAttempts: 8
-
-# IP address family used for outgoing request (ipv4, ipv6 or dual)
-#outgoingAddressFamily: ipv4
-
-# Proxy for HTTP/HTTPS
-#proxy: http://127.0.0.1:3128
-
-proxyBypassHosts:
-  - api.deepl.com
-  - api-free.deepl.com
-  - www.recaptcha.net
-  - hcaptcha.com
-  - challenges.cloudflare.com
-
-# Proxy for SMTP/SMTPS
-#proxySmtp: http://127.0.0.1:3128   # use HTTP/1.1 CONNECT
-#proxySmtp: socks4://127.0.0.1:1080 # use SOCKS4
-#proxySmtp: socks5://127.0.0.1:1080 # use SOCKS5
-
-# Media Proxy
-#mediaProxy: https://example.com/proxy
-
-allowedPrivateNetworks:
-  - '127.0.0.1/32'
-
-# Upload or download file size limits (bytes)
-#maxFileSize: 262144000
+outboundNetwork:
+  privateNetworkAccess:
+    allowedNetworks:
+      - 127.0.0.1/32
+      - 172.16.0.0/12

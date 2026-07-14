@@ -81,7 +81,7 @@ type PackMeDetailedOptions = {
 
 export function getHonoApiUserPolicies(config: Config, meta: MiMeta): RolePolicies {
 	const policies = { ...DEFAULT_POLICIES, ...meta.policies };
-	const serverMaxFileSizeMb = Math.floor(config.maxFileSize / (1024 * 1024));
+	const serverMaxFileSizeMb = Math.floor(config.limits.maximumFileSizeBytes / (1024 * 1024));
 
 	return {
 		...policies,
@@ -392,7 +392,7 @@ export async function packUserDetailedNotMeManyForHonoApi(
 export async function resolveAlsoKnownAsForHonoApi(deps: UserPackingDependencies, alsoKnownAs: string[] | null): Promise<string[] | null> {
 	if (alsoKnownAs == null || alsoKnownAs.length === 0) return null;
 
-	const localPrefix = `${deps.config.url}/users/`;
+	const localPrefix = `${deps.config.instance.url}/users/`;
 	const remoteUris = alsoKnownAs.filter(uri => !uri.startsWith(localPrefix));
 	const remoteUsers = remoteUris.length > 0 ? await listUsersByUrisOrIdsFromDatabase(deps.db, { uris: remoteUris, ids: [] }) : [];
 	const remoteIdByUri = new Map(remoteUsers.map(u => [u.uri, u.id]));
@@ -403,7 +403,7 @@ export async function resolveAlsoKnownAsForHonoApi(deps: UserPackingDependencies
 }
 
 async function resolveAlsoKnownAsManyForHonoApi(deps: UserPackingDependencies, users: MiUser[]): Promise<Map<MiUser['id'], string[] | null>> {
-	const localPrefix = `${deps.config.url}/users/`;
+	const localPrefix = `${deps.config.instance.url}/users/`;
 	const remoteUris = [...new Set(users
 		.flatMap(user => user.alsoKnownAs ?? [])
 		.filter(uri => !uri.startsWith(localPrefix)))];
@@ -524,11 +524,11 @@ function getOnlineStatus(user: MiUser): 'unknown' | 'online' | 'active' | 'offli
 }
 
 export function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.host) && user.username.includes('.') && meta.iconUrl) {
+	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
 		return meta.iconUrl;
 	}
 
-	return `${config.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.host}`;
+	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
 }
 
 function backupCodesStock(profile: MiUserProfile): 'none' | 'partial' | 'full' {
@@ -1043,7 +1043,7 @@ function buildBaseUserSearchConditionsForHonoApi(
 	}
 
 	if (params.host) {
-		if (params.host === config.hostname || params.host === '.') {
+		if (params.host === config.runtime.hostname || params.host === '.') {
 			conditions.push(sql`"user"."host" IS NULL`);
 		} else {
 			conditions.push(sql`"user"."host" LIKE ${sqlLikeEscape(params.host.toLowerCase()) + '%'}`);

@@ -8,6 +8,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiRole } from '@/models/Role.js';
+import type { Config } from '@/config.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
@@ -76,7 +77,7 @@ export type HonoApiNoteStreamPublisher = <K extends keyof NoteEventTypes>(
 ) => void;
 
 export type HonoRedisEventPublisherDependencies = {
-	config: { host: string };
+	config: { runtime: Pick<Config['runtime'], 'host'> };
 	publish: (host: string, message: string) => void;
 };
 
@@ -87,7 +88,7 @@ export type HonoRedisEventPublisherDependencies = {
 function publishToChannel(deps: HonoRedisEventPublisherDependencies, channel: string, type: string | null, value?: unknown): void {
 	const message = type == null ? value : (value === undefined ? { type, body: null } : { type, body: value });
 
-	deps.publish(deps.config.host, JSON.stringify({ channel, message }));
+	deps.publish(deps.config.runtime.host, JSON.stringify({ channel, message }));
 }
 
 export type HonoEventPublishers = {

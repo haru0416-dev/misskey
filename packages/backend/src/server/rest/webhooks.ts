@@ -13,6 +13,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { UserWebhookDeliverQueue } from '@/core/queues.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { MiNote } from '@/models/Note.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { MiUser } from '@/models/User.js';
@@ -526,8 +527,7 @@ export async function handleHonoApiIWebhooksTest(
 		deps.userWebhookDeliverQueue.add(merged.id, data, {
 			attempts: 1,
 			backoff: { type: 'custom' },
-			removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-			removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+			...queueRetentionOptions(deps.config),
 		});
 	};
 

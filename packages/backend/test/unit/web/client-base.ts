@@ -13,8 +13,8 @@ import type { CommonData } from '@/server/web/views/_.js';
 
 function createCommonData(): CommonData {
 	const config = {
-		url: 'http://example.test',
-		version: 'test-version',
+		instance: { url: 'http://example.test' },
+		runtime: { version: 'test-version' },
 	} as Config;
 
 	return {

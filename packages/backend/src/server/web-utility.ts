@@ -52,10 +52,10 @@ function shouldSendFlushHeader(origin: string | undefined, configUrl: URL): bool
 
 export function createWebUtilityApp(deps: WebUtilityDependencies): Hono {
 	const app = new Hono();
-	const configUrl = new URL(deps.config.url);
+	const configUrl = new URL(deps.config.instance.url);
 
 	app.get('/_info_card_', (c) => htmlResponse(c, InfoCardPage({
-		version: deps.config.version,
+		version: deps.config.runtime.version,
 		config: deps.config,
 		meta: deps.meta,
 	}), {
@@ -63,11 +63,11 @@ export function createWebUtilityApp(deps: WebUtilityDependencies): Hono {
 	}));
 
 	app.get('/bios', (c) => htmlResponse(c, BiosPage({
-		version: deps.config.version,
+		version: deps.config.runtime.version,
 	})));
 
 	app.get('/cli', (c) => htmlResponse(c, CliPage({
-		version: deps.config.version,
+		version: deps.config.runtime.version,
 	})));
 
 	app.get('/flush', (c) => {

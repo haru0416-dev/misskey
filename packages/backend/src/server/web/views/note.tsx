@@ -26,7 +26,7 @@ export function NotePage(props: CommonProps<{
 				<meta property="og:type" content="article" />
 				<meta property="og:title" content={title} />
 				<meta property="og:description" content={summary} />
-				<meta property="og:url" content={`${props.config.url}/notes/${props.note.id}`} />
+				<meta property="og:url" content={`${props.config.instance.url}/notes/${props.note.id}`} />
 				{videos.map(video => (
 					<>
 						<meta property="og:video:url" content={video.url} />
@@ -74,7 +74,7 @@ export function NotePage(props: CommonProps<{
 
 				{props.federationEnabled ? (
 					<>
-						{props.note.user.host == null ? <link rel="alternate" type="application/activity+json" href={`${props.config.url}/notes/${props.note.id}`} /> : null}
+						{props.note.user.host == null ? <link rel="alternate" type="application/activity+json" href={`${props.config.instance.url}/notes/${props.note.id}`} /> : null}
 						{props.note.uri != null ? <link rel="alternate" type="application/activity+json" href={props.note.uri} /> : null}
 					</>
 				) : null}

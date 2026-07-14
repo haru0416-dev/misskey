@@ -73,7 +73,7 @@ describe('hono-queue-db (importFollowing)', () => {
 		const follower = await createTestUser('honoqueueimpfollowme');
 		const followee = await createTestUser('honoqueueimpfollowtarget');
 
-		const { url, server } = await serveText(`${followee.username}@${runtime.config.host},withReplies=true\n`);
+		const { url, server } = await serveText(`${followee.username}@${runtime.config.runtime.host},withReplies=true\n`);
 		servers.push(server);
 
 		const fileId = genId();
@@ -109,7 +109,7 @@ describe('hono-queue-db (importFollowing)', () => {
 		// 忠実に再現しており、修正はしていない。
 		await handleHonoQueueImportFollowingToDb(deps, fakeJob<DbUserImportToDbJobData>({
 			user: { id: follower.id },
-			target: `${followee.username}@${runtime.config.host},withReplies=true`,
+			target: `${followee.username}@${runtime.config.runtime.host},withReplies=true`,
 			withReplies: false,
 		}));
 
@@ -125,7 +125,7 @@ describe('hono-queue-db (importFollowing)', () => {
 
 		await handleHonoQueueImportFollowingToDb(deps, fakeJob<DbUserImportToDbJobData>({
 			user: { id: follower.id },
-			target: `${follower.username}@${runtime.config.host}`,
+			target: `${follower.username}@${runtime.config.runtime.host}`,
 			withReplies: false,
 		}));
 

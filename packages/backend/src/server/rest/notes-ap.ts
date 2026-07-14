@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
@@ -34,7 +35,7 @@ import type { MiUser } from '@/models/User.js';
 import type { DeliverJobData } from '@/queue/types.js';
 
 export type HonoApiNoteApDependencies = {
-	config: Pick<Config, 'url' | 'deliverJobMaxAttempts' | 'mediaProxy' | 'externalMediaProxyEnabled'>;
+	config: Pick<Config, 'instance' | 'queues' | 'media'>;
 	meta: Pick<MiMeta, 'proxyRemoteFiles'>;
 	db: MiDrizzleDatabase;
 	deliverQueue: DeliverQueue;
@@ -50,26 +51,26 @@ function isRemoteUser(user: Pick<MiUser, 'host'>): boolean {
 	return user.host !== null;
 }
 
-function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
+function genLocalUserUri(config: Pick<Config, 'instance'>, userId: MiUser['id']): string {
+	return `${config.instance.url}/users/${userId}`;
 }
 
-export function addActivityContext<T extends Record<string, unknown>>(config: Pick<Config, 'url'>, activity: T): T & { '@context': typeof CONTEXT; id: string } {
+export function addActivityContext<T extends Record<string, unknown>>(config: Pick<Config, 'instance'>, activity: T): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
-		(activity as Record<string, unknown>).id = `${config.url}/${randomUUID()}`;
+		(activity as Record<string, unknown>).id = `${config.instance.url}/${randomUUID()}`;
 	}
 	return Object.assign({ '@context': CONTEXT }, activity) as T & { '@context': typeof CONTEXT; id: string };
 }
 
-function renderMention(config: Pick<Config, 'url'>, user: MiUser): { type: 'Mention'; href: string; name: string } {
+function renderMention(config: Pick<Config, 'instance'>, user: MiUser): { type: 'Mention'; href: string; name: string } {
 	const href = isRemoteUser(user) ? user.uri! : genLocalUserUri(config, user.id);
 	const name = isRemoteUser(user) ? `@${user.username}@${user.host}` : `@${user.username}`;
 	return { type: 'Mention', href, name };
 }
 
-export function renderEmoji(config: Pick<Config, 'url'>, emoji: MiEmoji): Record<string, unknown> {
+export function renderEmoji(config: Pick<Config, 'instance'>, emoji: MiEmoji): Record<string, unknown> {
 	return {
-		id: `${config.url}/emojis/${emoji.name}`,
+		id: `${config.instance.url}/emojis/${emoji.name}`,
 		type: 'Emoji',
 		name: `:${emoji.name}:`,
 		updated: emoji.updatedAt != null ? emoji.updatedAt.toISOString() : new Date().toISOString(),
@@ -108,7 +109,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 			} else if (dive) {
 				inReplyTo = JSON.stringify(await renderNoteForHonoApi(deps, inReplyToNote, false));
 			} else {
-				inReplyTo = `${deps.config.url}/notes/${inReplyToNote.id}`;
+				inReplyTo = `${deps.config.instance.url}/notes/${inReplyToNote.id}`;
 			}
 		}
 	}
@@ -117,7 +118,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 	if (note.renoteId) {
 		const renoteNote = note.renote ?? await fetchNoteByIdFromDatabase(deps.db, note.renoteId);
 		if (renoteNote) {
-			quote = renoteNote.uri ?? `${deps.config.url}/notes/${renoteNote.id}`;
+			quote = renoteNote.uri ?? `${deps.config.instance.url}/notes/${renoteNote.id}`;
 		}
 	}
 
@@ -136,7 +137,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 
 	const hashtagTags = note.tags.map(tag => ({
 		type: 'Hashtag' as const,
-		href: `${deps.config.url}/tags/${encodeURIComponent(tag)}`,
+		href: `${deps.config.instance.url}/tags/${encodeURIComponent(tag)}`,
 		name: `#${tag}`,
 	}));
 
@@ -200,7 +201,7 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 	} : {};
 
 	return {
-		id: `${deps.config.url}/notes/${note.id}`,
+		id: `${deps.config.instance.url}/notes/${note.id}`,
 		type: 'Note',
 		attributedTo,
 		summary,
@@ -222,9 +223,9 @@ export async function renderNoteForHonoApi(deps: HonoApiNoteApDependencies, note
 	};
 }
 
-export function renderCreateForHonoApi(config: Pick<Config, 'url'>, object: Record<string, unknown>, note: MiNote): Record<string, unknown> {
+export function renderCreateForHonoApi(config: Pick<Config, 'instance'>, object: Record<string, unknown>, note: MiNote): Record<string, unknown> {
 	const activity: Record<string, unknown> = {
-		id: `${config.url}/notes/${note.id}/activity`,
+		id: `${config.instance.url}/notes/${note.id}/activity`,
 		actor: genLocalUserUri(config, note.userId),
 		type: 'Create',
 		published: parseId(note.id).date.toISOString(),
@@ -235,7 +236,7 @@ export function renderCreateForHonoApi(config: Pick<Config, 'url'>, object: Reco
 	return activity;
 }
 
-function renderAnnounceForHonoApi(config: Pick<Config, 'url'>, object: string, note: MiNote): Record<string, unknown> {
+function renderAnnounceForHonoApi(config: Pick<Config, 'instance'>, object: string, note: MiNote): Record<string, unknown> {
 	const attributedTo = genLocalUserUri(config, note.userId);
 	const Public = 'https://www.w3.org/ns/activitystreams#Public';
 	const followers = `${attributedTo}/followers`;
@@ -260,7 +261,7 @@ function renderAnnounceForHonoApi(config: Pick<Config, 'url'>, object: string, n
 	}
 
 	return {
-		id: `${config.url}/notes/${note.id}/activity`,
+		id: `${config.instance.url}/notes/${note.id}/activity`,
 		actor: attributedTo,
 		type: 'Announce',
 		published: parseId(note.id).date.toISOString(),
@@ -278,7 +279,7 @@ export async function renderNoteOrRenoteActivityForHonoApi(
 	if (data.localOnly) return null;
 
 	const content = data.renote != null && !data.isQuote
-		? renderAnnounceForHonoApi(deps.config, data.renote.uri ?? `${deps.config.url}/notes/${data.renote.id}`, note)
+		? renderAnnounceForHonoApi(deps.config, data.renote.uri ?? `${deps.config.instance.url}/notes/${data.renote.id}`, note)
 		: renderCreateForHonoApi(deps.config, await renderNoteForHonoApi(deps, note, false), note);
 
 	return addActivityContext(deps.config, content);
@@ -319,10 +320,9 @@ export async function deliverNoteActivityForHonoApi(
 	const contentBody = JSON.stringify(activity);
 	const digest = ApRequestCreator.createDigest(contentBody);
 	const opts = {
-		attempts: deps.config.deliverJobMaxAttempts ?? 12,
+		attempts: deps.config.queues.deliver.maximumAttempts ?? 12,
 		backoff: { type: 'custom' as const },
-		removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-		removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+		...queueRetentionOptions(deps.config),
 	};
 
 	await deps.deliverQueue.addBulk(Array.from(inboxes.entries(), ([to, isSharedInbox]) => ({
@@ -342,7 +342,7 @@ function renderTombstoneForHonoApi(id: string): Record<string, unknown> {
 	return { id, type: 'Tombstone' };
 }
 
-function renderDeleteForHonoApi(config: Pick<Config, 'url'>, object: Record<string, unknown> | string, user: { id: MiUser['id'] }): Record<string, unknown> {
+function renderDeleteForHonoApi(config: Pick<Config, 'instance'>, object: Record<string, unknown> | string, user: { id: MiUser['id'] }): Record<string, unknown> {
 	return {
 		type: 'Delete',
 		actor: genLocalUserUri(config, user.id),
@@ -351,8 +351,8 @@ function renderDeleteForHonoApi(config: Pick<Config, 'url'>, object: Record<stri
 	};
 }
 
-export function renderUndoForHonoApi(config: Pick<Config, 'url'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
-	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
+export function renderUndoForHonoApi(config: Pick<Config, 'instance'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
+	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.instance.url) ? `${object.id}/undo` : undefined;
 	return {
 		type: 'Undo',
 		...(id ? { id } : {}),
@@ -371,9 +371,9 @@ export async function renderLikeForHonoApi(
 
 	const object: Record<string, unknown> = {
 		type: 'Like',
-		id: `${deps.config.url}/likes/${noteReaction.id}`,
-		actor: `${deps.config.url}/users/${noteReaction.userId}`,
-		object: note.uri ? note.uri : `${deps.config.url}/notes/${note.id}`,
+		id: `${deps.config.instance.url}/likes/${noteReaction.id}`,
+		actor: `${deps.config.instance.url}/users/${noteReaction.userId}`,
+		object: note.uri ? note.uri : `${deps.config.instance.url}/notes/${note.id}`,
 		content: reaction,
 		_misskey_reaction: reaction,
 	};
@@ -403,8 +403,8 @@ export async function renderNoteDeleteOrUndoAnnounceActivityForHonoApi(
 	}
 
 	const content = renote != null
-		? renderUndoForHonoApi(deps.config, renderAnnounceForHonoApi(deps.config, renote.uri ?? `${deps.config.url}/notes/${renote.id}`, note), user)
-		: renderDeleteForHonoApi(deps.config, renderTombstoneForHonoApi(`${deps.config.url}/notes/${note.id}`), user);
+		? renderUndoForHonoApi(deps.config, renderAnnounceForHonoApi(deps.config, renote.uri ?? `${deps.config.instance.url}/notes/${renote.id}`, note), user)
+		: renderDeleteForHonoApi(deps.config, renderTombstoneForHonoApi(`${deps.config.instance.url}/notes/${note.id}`), user);
 
 	return addActivityContext(deps.config, content);
 }
@@ -421,9 +421,9 @@ export async function resolveMentionedAndInvolvedRemoteUsersForHonoApi(deps: Hon
 	return all.filter((u, i, self) => i === self.findIndex(u2 => u.id === u2.id));
 }
 
-export function renderUpdateForHonoApi(config: Pick<Config, 'url'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
+export function renderUpdateForHonoApi(config: Pick<Config, 'instance'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
 	return {
-		id: `${config.url}/users/${user.id}#updates/${Date.now()}`,
+		id: `${config.instance.url}/users/${user.id}#updates/${Date.now()}`,
 		actor: genLocalUserUri(config, user.id),
 		type: 'Update',
 		to: ['https://www.w3.org/ns/activitystreams#Public'],
@@ -433,7 +433,7 @@ export function renderUpdateForHonoApi(config: Pick<Config, 'url'>, object: stri
 }
 
 export function renderVoteForHonoApi(
-	config: Pick<Config, 'url'>,
+	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	vote: { id: string; choice: number },
 	note: { uri: string | null },
@@ -441,13 +441,13 @@ export function renderVoteForHonoApi(
 	pollOwner: { uri: string },
 ): Record<string, unknown> {
 	return {
-		id: `${config.url}/users/${user.id}#votes/${vote.id}/activity`,
+		id: `${config.instance.url}/users/${user.id}#votes/${vote.id}/activity`,
 		actor: genLocalUserUri(config, user.id),
 		type: 'Create',
 		to: [pollOwner.uri],
 		published: new Date().toISOString(),
 		object: {
-			id: `${config.url}/users/${user.id}#votes/${vote.id}`,
+			id: `${config.instance.url}/users/${user.id}#votes/${vote.id}`,
 			type: 'Note',
 			attributedTo: genLocalUserUri(config, user.id),
 			to: [pollOwner.uri],
@@ -492,7 +492,7 @@ export async function attachLdSignatureForHonoApi(
 
 	const jsonLd = new JsonLd(deps.httpRequestService);
 	jsonLd.debug = false;
-	return await jsonLd.signRsaSignature2017(activity, keypair.privateKey, `${deps.config.url}/users/${user.id}#main-key`);
+	return await jsonLd.signRsaSignature2017(activity, keypair.privateKey, `${deps.config.instance.url}/users/${user.id}#main-key`);
 }
 
 /** RelayService#deliverToRelays 相当。原典の 10 分 MemorySingleCache (relaysCache) は、確立済みの

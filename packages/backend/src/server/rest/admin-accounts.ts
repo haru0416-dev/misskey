@@ -84,8 +84,8 @@ export async function handleHonoApiAdminAccountsCreate(
 	const params = parseHonoApiParams(adminAccountCreateParamDef, body);
 
 	if (deps.meta.rootUserId == null && auth.user == null && auth.token == null) {
-		if (deps.config.setupPassword != null) {
-			if (params.setupPassword !== deps.config.setupPassword) {
+		if (deps.config.instance.setupPassword != null) {
+			if (params.setupPassword !== deps.config.instance.setupPassword) {
 				throw adminAccountCreateWrongInitialPasswordError();
 			}
 		} else if (params.setupPassword != null && params.setupPassword.trim() !== '') {

@@ -211,7 +211,7 @@ export async function handleHonoApiIUpdateEmail(
 			emailVerifyCode: code,
 		});
 
-		const link = `${deps.config.url}/verify-email/${code}`;
+		const link = `${deps.config.instance.url}/verify-email/${code}`;
 
 		void deps.emailService.sendEmail(
 			params.email,

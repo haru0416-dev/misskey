@@ -9,6 +9,7 @@ import { default as convertColor } from 'color-convert';
 import { bindThis } from '@/decorators.js';
 import { formatTime } from '@/misc/format-date-time.js';
 import { envOption } from './env.js';
+import type { Config } from './config.js';
 import type { Keyword } from 'color-convert';
 
 type Context = {
@@ -18,12 +19,29 @@ type Context = {
 
 type Level = 'error' | 'success' | 'warning' | 'debug' | 'info';
 
+let loggingConfig: Config['observability']['logging'] = {
+	level: 'info',
+	format: 'pretty',
+	includeTimestamp: false,
+	sql: { enabled: false, logParameters: false, maximumQueryLength: 100 },
+};
+
+export function configureLogger(config: Config): void {
+	loggingConfig = config.observability.logging;
+}
+
+function shouldLog(level: Level): boolean {
+	if (envOption.verbose) return true;
+	const severity = { debug: 10, info: 20, success: 20, warning: 30, error: 40 } as const;
+	return severity[level] >= severity[loggingConfig.level];
+}
+
 /**
  * Logger.debug が実際にログを出すかどうか。production では既定でdebugログを破棄するため、
  * 呼び出し側でメッセージ文字列の構築自体を省略したい場合 (高頻度呼び出し箇所) にこれで事前判定できる。
  */
 export function isDebugLoggingEnabled(): boolean {
-	return process.env.NODE_ENV !== 'production' || envOption.verbose;
+	return (process.env.NODE_ENV !== 'production' || loggingConfig.level === 'debug' || envOption.verbose) && !envOption.quiet;
 }
 
 // eslint-disable-next-line import/no-default-export
@@ -47,7 +65,7 @@ export default class Logger {
 
 	@bindThis
 	private log(level: Level, message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false, subContexts: Context[] = []): void {
-		if (envOption.quiet) return;
+		if (envOption.quiet || !shouldLog(level)) return;
 
 		if (this.parentLogger) {
 			this.parentLogger.log(level, message, data, important, [this.context].concat(subContexts));
@@ -56,6 +74,18 @@ export default class Logger {
 
 		const time = formatTime(new Date());
 		const worker = cluster.isPrimary ? '*' : cluster.worker!.id;
+		const contextNames = [this.context].concat(subContexts).map(context => context.name);
+		if (loggingConfig.format === 'json') {
+			console.log(JSON.stringify({
+				time: new Date().toISOString(),
+				level,
+				worker,
+				contexts: contextNames,
+				message,
+				...(data == null ? {} : { data }),
+			}));
+			return;
+		}
 		const l =
 			level === 'error' ? important ? chalk.bgRed.white('ERR ') : chalk.red('ERR ') :
 			level === 'warning' ? chalk.yellow('WARN') :
@@ -73,7 +103,7 @@ export default class Logger {
 			null;
 
 		let log = `${l} ${worker}\t[${contexts.join(' ')}]\t${m}`;
-		if (envOption.withLogTime) log = chalk.gray(time) + ' ' + log;
+		if (envOption.withLogTime || loggingConfig.includeTimestamp) log = chalk.gray(time) + ' ' + log;
 
 		const args: unknown[] = [important ? chalk.bold(log) : log];
 		if (data != null) {

@@ -77,7 +77,7 @@ function renderBlock(config: Config, blocking: MiBlocking & { blockee: MiUser })
 
 	return {
 		type: 'Block',
-		id: `${config.url}/blocks/${blocking.id}`,
+		id: `${config.instance.url}/blocks/${blocking.id}`,
 		actor: genLocalUserUri(config, blocking.blockerId),
 		object: blocking.blockee.uri,
 	};

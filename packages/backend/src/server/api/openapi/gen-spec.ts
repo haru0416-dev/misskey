@@ -26,7 +26,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		openapi: '3.1.0',
 
 		info: {
-			version: config.version,
+			version: config.runtime.version,
 			title: 'Erebia API',
 		},
 
@@ -36,7 +36,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		},
 
 		servers: [{
-			url: config.apiUrl,
+			url: config.runtime.apiUrl,
 		}],
 
 		paths: {} as Record<string, { get?: Record<string, unknown>; post: Record<string, unknown> }>,

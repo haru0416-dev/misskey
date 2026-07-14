@@ -18,7 +18,7 @@ export function ClipPage(props: CommonProps<{
 				<meta property="og:type" content="article" />
 				<meta property="og:title" content={props.clip.name} />
 				{props.clip.description != null ? <meta property="og:description" content={props.clip.description} /> : null}
-				<meta property="og:url" content={`${props.config.url}/clips/${props.clip.id}`} />
+				<meta property="og:url" content={`${props.config.instance.url}/clips/${props.clip.id}`} />
 				{props.clip.user.avatarUrl ? (
 					<>
 						<meta property="og:image" content={props.clip.user.avatarUrl} />

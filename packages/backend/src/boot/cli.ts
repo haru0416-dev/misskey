@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { loadConfig } from '@/config.js';
+import * as Redis from 'ioredis';
+import { createRedactedConfig, loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { updateMetaInDatabase } from '@/core/MetaStore.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
@@ -13,6 +14,37 @@ process.title = 'Erebia CLI';
 
 async function ping(): Promise<void> {
 	console.log('pong');
+}
+
+function validateConfig(): void {
+	loadConfig();
+	console.log('Configuration is valid.');
+}
+
+function showConfig(): void {
+	console.log(JSON.stringify(createRedactedConfig(loadConfig()), null, 2));
+}
+
+async function diagnoseConfig(): Promise<void> {
+	const config = loadConfig();
+	const pool = createDrizzlePool(config);
+	const connections = Array.from(new Set(Object.values(config.valkey)));
+	try {
+		await pool.query('SELECT 1');
+		console.log('PostgreSQL: ok');
+		for (const [index, options] of connections.entries()) {
+			const redis = new Redis.Redis({ ...options, lazyConnect: true });
+			try {
+				await redis.connect();
+				await redis.ping();
+				console.log(`Valkey connection ${index + 1}: ok`);
+			} finally {
+				redis.disconnect(false);
+			}
+		}
+	} finally {
+		await pool.end();
+	}
 }
 
 async function resetCaptcha(): Promise<void> {
@@ -57,6 +89,9 @@ switch (command) {
 		console.log('Available commands:');
 		console.log('  help - Displays this help message');
 		console.log('  reset-captcha - Resets the captcha');
+		console.log('  config validate - Validates the effective server configuration');
+		console.log('  config show - Prints the effective configuration with secrets redacted');
+		console.log('  config doctor - Checks PostgreSQL and Valkey connectivity');
 		break;
 	}
 	case 'ping': {
@@ -66,6 +101,23 @@ switch (command) {
 	case 'reset-captcha': {
 		await resetCaptcha();
 		console.log('Captcha has been reset.');
+		break;
+	}
+	case 'config': {
+		switch (process.argv[3]) {
+			case 'validate':
+				validateConfig();
+				break;
+			case 'show':
+				showConfig();
+				break;
+			case 'doctor':
+				await diagnoseConfig();
+				break;
+			default:
+				console.error('Use config validate, config show, or config doctor.');
+				process.exit(1);
+		}
 		break;
 	}
 	default: {

@@ -90,7 +90,7 @@ describe('Timelines', () => {
 
 	beforeAll(
 		async () => {
-			redisForTimelines = new Redis(loadConfig().redisForTimelines);
+			redisForTimelines = new Redis(loadConfig().valkey.timelines);
 			root = await signup({ username: 'root' });
 		},
 		1000 * 60 * 2,

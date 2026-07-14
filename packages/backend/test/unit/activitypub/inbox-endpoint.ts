@@ -116,7 +116,7 @@ describe('hono-inbox-endpoint', () => {
 
 		const depsWithFixtureHost: InboxEndpointDependencies = {
 			...deps,
-			config: { ...runtime.config, host },
+			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host } },
 		};
 
 		const before = await runtime.inboxQueue.getJobCounts();
@@ -128,7 +128,7 @@ describe('hono-inbox-endpoint', () => {
 			.toBeGreaterThan((before.waiting ?? 0) + (before.active ?? 0) + (before.delayed ?? 0) - 1);
 		const queued = (await runtime.inboxQueue.getJobs(['waiting', 'active', 'delayed', 'completed', 'failed']))
 			.find(job => job.data.activity.id === activityId);
-		expect(queued?.opts.attempts).toBe(runtime.config.inboxJobMaxAttempts ?? 8);
+		expect(queued?.opts.attempts).toBe(runtime.config.queues.inbox.maximumAttempts ?? 8);
 	});
 
 	test('federationがnoneの場合は403', async () => {
@@ -161,7 +161,7 @@ describe('hono-inbox-endpoint', () => {
 		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
 		const request = new Request('http://example.com/inbox', {
 			method: 'POST',
-			headers: { host: runtime.config.host },
+			headers: { host: runtime.config.runtime.host },
 			body: JSON.stringify({ actor: 'https://example.com/users/x' }),
 		});
 
@@ -184,10 +184,10 @@ describe('hono-inbox-endpoint', () => {
 		});
 		const captured = await capture();
 
-		// config.host をフィクスチャのホストと変えることで不一致を再現する
+		// config.runtime.host をフィクスチャのホストと変えることで不一致を再現する
 		const depsWithMismatchedHost: InboxEndpointDependencies = {
 			...deps,
-			config: { ...runtime.config, host: 'totally-different-host.example.com' },
+			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host: 'totally-different-host.example.com' } },
 		};
 
 		const request = new Request(url, { method: captured.method, headers: captured.headers, body: captured.body });
@@ -213,7 +213,7 @@ describe('hono-inbox-endpoint', () => {
 
 		const depsWithFixtureHost: InboxEndpointDependencies = {
 			...deps,
-			config: { ...runtime.config, host },
+			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host } },
 		};
 
 		const request = new Request(url, { method: captured.method, headers: captured.headers, body: captured.body });

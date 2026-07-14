@@ -169,7 +169,7 @@ function toPunyNullable(host: string | null | undefined): string | null {
 
 function isSelfHost(config: Config, host: string | null): boolean {
 	if (host == null) return true;
-	return toPuny(config.host) === toPuny(host);
+	return toPuny(config.runtime.host) === toPuny(host);
 }
 
 const parseEmojiStrRegexp = /^([-\w]+)(?:@([\w.-]+))?$/;

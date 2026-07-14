@@ -76,7 +76,7 @@ describe('hono-queue-db (importUserLists)', () => {
 		const member = await createTestUser('honoqueueimpulmember');
 		const listName = `imported-list-${genId()}`;
 
-		const { url, server } = await serveText(`${listName},${member.username}@${runtime.config.host},withReplies=true\n`);
+		const { url, server } = await serveText(`${listName},${member.username}@${runtime.config.runtime.host},withReplies=true\n`);
 		servers.push(server);
 
 		const fileId = genId();

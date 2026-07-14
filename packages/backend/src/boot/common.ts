@@ -13,7 +13,7 @@ let slaccInitialized = false;
 export function initExtraThreadPool(config: Config) {
 	if (slaccInitialized) return;
 
-	const threadPoolSize = Math.max(config.threadPoolSize ?? 1, 1);
+	const threadPoolSize = Math.max(config.server.process.computationThreadsPerWorker ?? 1, 1);
 
 	init(threadPoolSize);
 

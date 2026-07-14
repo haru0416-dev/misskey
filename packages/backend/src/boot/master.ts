@@ -43,11 +43,11 @@ export async function masterMain(config: Config) {
 
 	try {
 		bootLogger.createSubLogger('config').succ('Loaded');
-		greet({ version: config.version });
+		greet({ version: config.runtime.version });
 		showEnvironment();
 		await showMachineInfo(bootLogger);
 		showNodejsVersion();
-		if (config.pidFile) fs.writeFileSync(config.pidFile, process.pid.toString());
+		if (config.server.process.pidFile) fs.writeFileSync(config.server.process.pidFile, process.pid.toString());
 	} catch (e) {
 		bootLogger.error('Fatal error occurred during initialization: ' + e, null, true);
 		process.exit(1);
@@ -77,7 +77,7 @@ export async function masterMain(config: Config) {
 			disposers.push(() => runtime.dispose());
 		}
 
-		await spawnWorkers(config.clusterLimit);
+		await spawnWorkers(config.server.process.workers);
 	} else {
 		// clusterモジュール無効時
 
@@ -117,7 +117,10 @@ export async function masterMain(config: Config) {
 	if (envOption.onlyQueue) {
 		bootLogger.succ('Queue started', null, true);
 	} else {
-		bootLogger.succ(config.socket ? `Now listening on socket ${config.socket} on ${config.url}` : `Now listening on port ${config.port} on ${config.url}`, null, true);
+		const listen = config.server.listen;
+		bootLogger.succ('unixSocket' in listen
+			? `Now listening on socket ${listen.unixSocket.path} on ${config.instance.url}`
+			: `Now listening on ${listen.tcp.address}:${listen.tcp.port} on ${config.instance.url}`, null, true);
 	}
 
 	return async () => {

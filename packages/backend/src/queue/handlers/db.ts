@@ -39,6 +39,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
 import type { DbQueue, RelationshipQueue } from '@/core/queues.js';
 import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '../../server/rest/drive-file-upload.js';
 import { packDriveFileManyByIdsForHonoApi } from '../../server/rest/drive-file.js';
 import { isSelfHost } from '../../server/rest/ap-resolve.js';
@@ -57,17 +58,12 @@ export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoA
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-const dbQueueJobOptions = {
-	removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-	removeOnFail: { age: 3600 * 24 * 7, count: 100 },
-};
-
 const importLineJobOptions = {
 	removeOnComplete: { age: 3600, count: 100_000 },
 	removeOnFail: { age: 3600 * 24 * 7, count: 100 },
 };
 
-function toRelationshipJobForHonoApi(name: 'follow' | 'unfollow' | 'block' | 'unblock', data: RelationshipJobData) {
+function toRelationshipJobForHonoApi(config: Pick<Config, 'queues'>, name: 'follow' | 'unfollow' | 'block' | 'unblock', data: RelationshipJobData) {
 	return {
 		name,
 		data: {
@@ -77,7 +73,7 @@ function toRelationshipJobForHonoApi(name: 'follow' | 'unfollow' | 'block' | 'un
 			requestId: data.requestId,
 			withReplies: data.withReplies,
 		},
-		opts: dbQueueJobOptions,
+		opts: queueRetentionOptions(config),
 	};
 }
 
@@ -85,8 +81,8 @@ function toPuny(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-function getFullApAccountForHonoApi(config: Pick<Config, 'host'>, username: string, host: string | null): string {
-	return host ? `${username}@${toPuny(host)}` : `${username}@${toPuny(config.host)}`;
+function getFullApAccountForHonoApi(config: Pick<Config, 'runtime'>, username: string, host: string | null): string {
+	return host ? `${username}@${toPuny(host)}` : `${username}@${toPuny(config.runtime.host)}`;
 }
 
 function writeLineToStream(stream: fs.WriteStream, content: string): Promise<void> {
@@ -614,7 +610,7 @@ export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDepende
 		if (target.id === job.data.user.id) return;
 
 		await deps.relationshipQueue.addBulk([
-			toRelationshipJobForHonoApi('block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
+			toRelationshipJobForHonoApi(deps.config, 'block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
 		]);
 	} catch {
 		// 元実装同様、行単位のエラーはログのみで処理を継続する
@@ -663,7 +659,7 @@ export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDepend
 		if (target.id === job.data.user.id) return;
 
 		await deps.relationshipQueue.addBulk([
-			toRelationshipJobForHonoApi('follow', {
+			toRelationshipJobForHonoApi(deps.config, 'follow', {
 				from: user,
 				to: { id: target.id },
 				silent: true,

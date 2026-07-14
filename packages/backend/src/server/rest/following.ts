@@ -179,8 +179,8 @@ export function isRemoteUser(user: MiUser): user is MiUser & { host: string; uri
 	return user.host !== null;
 }
 
-export function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
+export function genLocalUserUri(config: Pick<Config, 'instance'>, userId: MiUser['id']): string {
+	return `${config.instance.url}/users/${userId}`;
 }
 
 export function getUserUri(config: Config, user: MiUser): string {
@@ -189,7 +189,7 @@ export function getUserUri(config: Config, user: MiUser): string {
 
 export function renderFollow(config: Config, follower: MiUser, followee: MiUser, requestId?: string | null): IFollow {
 	return {
-		id: requestId ?? `${config.url}/follows/${follower.id}/${followee.id}`,
+		id: requestId ?? `${config.instance.url}/follows/${follower.id}/${followee.id}`,
 		type: 'Follow',
 		actor: getUserUri(config, follower),
 		object: getUserUri(config, followee),
@@ -197,7 +197,7 @@ export function renderFollow(config: Config, follower: MiUser, followee: MiUser,
 }
 
 export function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
-	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.url) ? `${object.id}/undo` : undefined;
+	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.instance.url) ? `${object.id}/undo` : undefined;
 
 	return {
 		type: 'Undo',
@@ -226,7 +226,7 @@ export function renderAccept(config: Config, object: string | IObject, user: { i
 
 export function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
-		activity.id = `${config.url}/${randomUUID()}`;
+		activity.id = `${config.instance.url}/${randomUUID()}`;
 	}
 
 	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
@@ -455,7 +455,7 @@ export async function createFollowRequestWithSideEffects(
 	}
 
 	if (isLocalUser(follower) && isRemoteUser(followee)) {
-		await deliverFollowActivity(deps, follower, followee, requestId ?? `${deps.config.url}/follows/${followRequest.id}`);
+		await deliverFollowActivity(deps, follower, followee, requestId ?? `${deps.config.instance.url}/follows/${followRequest.id}`);
 	}
 }
 

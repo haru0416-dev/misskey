@@ -77,7 +77,7 @@ describe('2要素認証', () => {
 
 	const rpIdHash = (): Buffer => {
 		return crypto.createHash('sha256')
-			.update(Buffer.from(config.host, 'utf-8'))
+			.update(Buffer.from(config.runtime.host, 'utf-8'))
 			.digest();
 	};
 
@@ -129,7 +129,7 @@ describe('2要素認証', () => {
 					clientDataJSON: Buffer.from(JSON.stringify({
 						type: 'webauthn.create',
 						challenge: param.creationOptions.challenge,
-						origin: config.scheme + '://' + config.host,
+						origin: config.instance.url,
 						androidPackageName: 'org.mozilla.firefox',
 					}), 'utf-8').toString('base64url'),
 					attestationObject: Buffer.from(encodeToCbor({
@@ -176,7 +176,7 @@ describe('2要素認証', () => {
 		const clientDataJSONBuffer = Buffer.from(JSON.stringify({
 			type: 'webauthn.get',
 			challenge: param.requestOptions.challenge,
-			origin: config.scheme + '://' + config.host,
+			origin: config.instance.url,
 			androidPackageName: 'org.mozilla.firefox',
 		}), 'utf-8');
 		const hashedclientDataJSON = crypto.createHash('sha256')
@@ -232,7 +232,7 @@ describe('2要素認証', () => {
 		assert.notEqual(registerResponse.body.url, undefined);
 		assert.notEqual(registerResponse.body.secret, undefined);
 		assert.strictEqual(registerResponse.body.label, username);
-		assert.strictEqual(registerResponse.body.issuer, config.host);
+		assert.strictEqual(registerResponse.body.issuer, config.runtime.host);
 
 		const doneResponse = await api('i/2fa/done', {
 			token: otpToken(registerResponse.body.secret),

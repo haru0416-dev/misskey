@@ -48,7 +48,7 @@ export function Layout(props: PropsWithChildren<CommonProps<{
 					<link rel="icon" href={props.icon || '/client-assets/erebia-icon.svg'} />
 					<link rel="apple-touch-icon" href={props.appleTouchIcon || '/client-assets/erebia-icon.png'} />
 					<link rel="manifest" href="/manifest.json" />
-					<link rel="search" type="application/opensearchdescription+xml" title={props.title || 'Erebia'} href={`${props.config.url}/opensearch.xml`} />
+					<link rel="search" type="application/opensearchdescription+xml" title={props.title || 'Erebia'} href={`${props.config.instance.url}/opensearch.xml`} />
 					{props.serverErrorImageUrl != null ? <link rel="prefetch" as="image" href={props.serverErrorImageUrl} /> : null}
 					{props.infoImageUrl != null ? <link rel="prefetch" as="image" href={props.infoImageUrl} /> : null}
 					{props.notFoundImageUrl != null ? <link rel="prefetch" as="image" href={props.notFoundImageUrl} /> : null}

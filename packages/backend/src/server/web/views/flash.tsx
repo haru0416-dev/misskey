@@ -18,7 +18,7 @@ export function FlashPage(props: CommonProps<{
 				<meta property="og:type" content="article" />
 				<meta property="og:title" content={props.flash.title} />
 				<meta property="og:description" content={props.flash.summary} />
-				<meta property="og:url" content={`${props.config.url}/play/${props.flash.id}`} />
+				<meta property="og:url" content={`${props.config.instance.url}/play/${props.flash.id}`} />
 				{props.flash.user.avatarUrl ? (
 					<>
 						<meta property="og:image" content={props.flash.user.avatarUrl} />

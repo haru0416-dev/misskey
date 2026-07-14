@@ -57,9 +57,9 @@ function punyHost(url: string): string {
 	return `${toPuny(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-export function isSelfHost(config: Pick<Config, 'host'>, host: string | null): boolean {
+export function isSelfHost(config: Pick<Config, 'runtime'>, host: string | null): boolean {
 	if (host == null) return true;
-	return toPuny(config.host) === toPuny(host);
+	return toPuny(config.runtime.host) === toPuny(host);
 }
 
 function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
@@ -67,7 +67,7 @@ function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 	return blockedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
-export function isFederationAllowedHost(config: Pick<Config, 'host'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, host: string): boolean {
+export function isFederationAllowedHost(config: Pick<Config, 'runtime'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, host: string): boolean {
 	if (isSelfHost(config, host)) return true;
 	if (meta.federation === 'none') return false;
 	if (meta.federation === 'specified' && !meta.federationHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`))) return false;
@@ -75,13 +75,13 @@ export function isFederationAllowedHost(config: Pick<Config, 'host'>, meta: Pick
 	return true;
 }
 
-export function isFederationAllowedUri(config: Pick<Config, 'host'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, uri: string): boolean {
+export function isFederationAllowedUri(config: Pick<Config, 'runtime'>, meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>, uri: string): boolean {
 	return isFederationAllowedHost(config, meta, extractDbHost(uri));
 }
 
-export function parseLocalApUri(config: Pick<Config, 'host'>, uri: string): LocalApUriParseResult {
+export function parseLocalApUri(config: Pick<Config, 'runtime'>, uri: string): LocalApUriParseResult {
 	const url = new URL(uri);
-	if (toPuny(url.host) !== toPuny(config.host)) {
+	if (toPuny(url.host) !== toPuny(config.runtime.host)) {
 		return { local: false, uri: url.href };
 	}
 
@@ -96,7 +96,7 @@ export function parseLocalApUri(config: Pick<Config, 'host'>, uri: string): Loca
 
 /** ApDbResolverService.getNoteFromApId 相当。ローカルの MemoryKVCache は認証済み・レート制限付き
  * エンドポイント (ap/show) 限定の利用のため省略し、直接DBを読む。 */
-export async function getNoteFromApIdForHonoApi(deps: { config: Pick<Config, 'host'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiNote | null> {
+export async function getNoteFromApIdForHonoApi(deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiNote | null> {
 	const parsed = parseLocalApUri(deps.config, getApId(value));
 	if (parsed.local) {
 		if (parsed.type !== 'notes') return null;
@@ -106,7 +106,7 @@ export async function getNoteFromApIdForHonoApi(deps: { config: Pick<Config, 'ho
 }
 
 /** ApDbResolverService.getUserFromApId 相当。キャッシュ省略は上記と同様の理由。 */
-export async function getUserFromApIdForHonoApi(deps: { config: Pick<Config, 'host'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiLocalUser | MiRemoteUser | null> {
+export async function getUserFromApIdForHonoApi(deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiLocalUser | MiRemoteUser | null> {
 	const parsed = parseLocalApUri(deps.config, getApId(value));
 	if (parsed.local) {
 		if (parsed.type !== 'users') return null;
@@ -134,15 +134,15 @@ export async function getAuthUserFromKeyIdForHonoApi(deps: { db: MiDrizzleDataba
 }
 
 function renderQuestionForHonoApi(
-	config: Pick<Config, 'url'>,
+	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	note: { id: string; text: string | null },
 	poll: { multiple: boolean; choices: string[]; votes: number[] },
 ): Record<string, unknown> {
 	return {
 		type: 'Question',
-		id: `${config.url}/questions/${note.id}`,
-		actor: `${config.url}/users/${user.id}`,
+		id: `${config.instance.url}/questions/${note.id}`,
+		actor: `${config.instance.url}/users/${user.id}`,
 		content: note.text ?? '',
 		[poll.multiple ? 'anyOf' : 'oneOf']: poll.choices.map((text, i) => ({
 			name: text,
@@ -155,10 +155,10 @@ function renderQuestionForHonoApi(
 	};
 }
 
-function renderFollowForHonoApi(config: Pick<Config, 'url'>, follower: MiLocalUser | MiRemoteUser, followee: MiLocalUser | MiRemoteUser, requestId?: string | null): Record<string, unknown> {
-	const uri = (user: MiLocalUser | MiRemoteUser) => user.host != null ? user.uri! : `${config.url}/users/${user.id}`;
+function renderFollowForHonoApi(config: Pick<Config, 'instance'>, follower: MiLocalUser | MiRemoteUser, followee: MiLocalUser | MiRemoteUser, requestId?: string | null): Record<string, unknown> {
+	const uri = (user: MiLocalUser | MiRemoteUser) => user.host != null ? user.uri! : `${config.instance.url}/users/${user.id}`;
 	return {
-		id: requestId ?? `${config.url}/follows/${follower.id}/${followee.id}`,
+		id: requestId ?? `${config.instance.url}/follows/${follower.id}/${followee.id}`,
 		type: 'Follow',
 		actor: uri(follower),
 		object: uri(followee),
@@ -220,7 +220,7 @@ async function signedGetForHonoApi(
 	const req = await ApRequestCreator.createSignedGet({
 		key: {
 			privateKeyPem: keypair.privateKey,
-			keyId: `${deps.config.url}/users/${user.id}#main-key`,
+			keyId: `${deps.config.instance.url}/users/${user.id}#main-key`,
 		},
 		url,
 		additionalHeaders: {},
@@ -265,7 +265,7 @@ async function signedGetForHonoApi(
 }
 
 export type HonoApiSignedPostDependencies = {
-	config: Pick<Config, 'url'>;
+	config: Pick<Config, 'instance'>;
 	db: MiDrizzleDatabase;
 	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
@@ -284,7 +284,7 @@ export async function signedPostForHonoApi(
 	const req = await ApRequestCreator.createSignedPost({
 		key: {
 			privateKeyPem: keypair.privateKey,
-			keyId: `${deps.config.url}/users/${user.id}#main-key`,
+			keyId: `${deps.config.instance.url}/users/${user.id}#main-key`,
 		},
 		url,
 		body,

@@ -61,7 +61,7 @@ async function generateDriveFileAlts(
 	thumbnail: IImage | null;
 }> {
 	if (type.startsWith('video/')) {
-		if (deps.config.videoThumbnailGenerator != null) {
+		if (deps.config.media.videoThumbnailGeneratorUrl != null) {
 			return {
 				webpublic: null,
 				thumbnail: null,

@@ -33,12 +33,12 @@ export function createUrlPreviewService(
 	loggerService: LoggerService,
 ) {
 	const logger = loggerService.getLogger('url-preview');
-	const summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${config.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
+	const summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${config.instance.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
 	const summaryCache = new MemoryKVCache<SummalyResult>(1000 * 60 * 60, 100); // 1h, 100 entries
 
 	function wrap(url?: string | null): string | null {
 		return url != null
-			? `${config.mediaProxy}/preview.webp?${query({
+			? `${config.media.proxyUrl}/preview.webp?${query({
 				url,
 				preview: '1',
 			})}`
