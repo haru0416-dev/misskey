@@ -41,7 +41,7 @@
 		"init": "bun run migrate",
 		"migrate": "cd packages/backend && bun run migrate",
 		"check:connect": "cd packages/backend && bun run check:connect",
-		"migrateandstart": "bun run migrate && bun run start",
+		"migrateandstart": "bun run compile-config && cd packages/backend && bun ./built/migration-runner.js up && bun ./built/entry.js",
 		"watch": "bun run dev",
 		"dev": "bun scripts/dev.mjs",
 		"lint": "bun run lint:ox && bun run typecheck:playwright && bun run --bun --filter '*' --if-present typecheck",
