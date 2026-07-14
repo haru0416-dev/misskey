@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div class="_panel">
 	<div :class="$style.container" :style="{ backgroundImage: instance.bannerUrl ? `url(${ instance.bannerUrl })` : undefined }">
 		<div :class="$style.iconContainer">
-			<img :src="instance.iconUrl ?? '/favicon.ico'" alt="" :class="$style.icon"/>
+			<img :src="instance.iconUrl ?? '/client-assets/erebia-icon.svg'" alt="" :class="$style.icon"/>
 		</div>
 		<div :class="$style.bodyContainer">
 			<div :class="$style.body">

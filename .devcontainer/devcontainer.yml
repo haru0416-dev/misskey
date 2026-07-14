@@ -149,14 +149,14 @@ id: 'uuidv7'
 
 #telemetryForBackend:
 #  endpoint: 'http://localhost:4318/v1/traces'
-#  serviceName: 'misskey-backend'
+#  serviceName: 'erebia-backend'
 #  tracesSampleRatio: 0.1
 #  headers:
 #    Authorization: 'Bearer example'
 
 #telemetryForFrontend:
 #  endpoint: 'https://collector.example.com/v1/traces'
-#  serviceName: 'misskey-frontend'
+#  serviceName: 'erebia-frontend'
 #  tracesSampleRatio: 0.1
 #  propagateTraceHeaderCorsUrls:
 #    - 'https://misskey.example.com/api'

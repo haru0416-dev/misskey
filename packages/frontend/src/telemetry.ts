@@ -31,7 +31,7 @@ export function initializeFrontendTelemetry(
 ): void {
 	const exporter = new OTLPTraceExporter({ url: config.endpoint });
 	const resource = resourceFromAttributes({
-		[ATTR_SERVICE_NAME]: config.serviceName ?? 'misskey-frontend',
+		[ATTR_SERVICE_NAME]: config.serviceName ?? 'erebia-frontend',
 		[ATTR_SERVICE_VERSION]: version,
 	});
 	const provider = new WebTracerProvider({
@@ -95,7 +95,7 @@ export function initializeFrontendTelemetry(
 		});
 	});
 
-	const tracer = errorProvider.getTracer('misskey-frontend-errors', version);
+	const tracer = errorProvider.getTracer('erebia-frontend-errors', version);
 	const reportException = (error: unknown, source: string) => {
 		const span = tracer.startSpan(source);
 		span.recordException(error instanceof Error ? error : String(error));

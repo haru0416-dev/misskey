@@ -32,7 +32,7 @@ function getBundleVisualizerPlugin(): PluginOption[] {
 	if (process.env.FRONTEND_BUNDLE_VISUALIZER !== 'true') return [];
 
 	const visualizerOptions = {
-		title: 'Misskey frontend bundle visualizer',
+		title: 'Erebia frontend bundle visualizer',
 		gzipSize: true,
 		brotliSize: true,
 		projectRoot: path.resolve(__dirname, '../..'),
@@ -206,7 +206,7 @@ export function getConfig(): UserConfig {
 			_LANGS_: JSON.stringify(Object.entries(locales).map(([k, v]) => [k, v._lang_])),
 			_ENV_: JSON.stringify(process.env.NODE_ENV),
 			_DEV_: process.env.NODE_ENV !== 'production',
-			_PERF_PREFIX_: JSON.stringify('Misskey:'),
+			_PERF_PREFIX_: JSON.stringify('Erebia:'),
 			__VUE_OPTIONS_API__: false,
 			__VUE_PROD_DEVTOOLS__: false,
 		},

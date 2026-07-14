@@ -32,7 +32,7 @@ import { $i } from '@/i.js';
 import { launchPlugins } from '@/plugin.js';
 
 export async function common(app: App<Element>, prepareVue: () => Promise<void>) {
-	console.info(`Misskey v${version}`);
+	console.info(`Erebia v${version}`);
 
 	if (_DEV_) {
 		console.warn('Development mode!!!');

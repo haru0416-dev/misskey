@@ -21,21 +21,18 @@ const themeColor = chalk.hex('#86b300');
 function greet(props: { version: string }) {
 	if (!envOption.quiet) {
 		const v = `v${props.version}`;
-		console.log(themeColor('  _____ _         _           '));
-		console.log(themeColor(' |     |_|___ ___| |_ ___ _ _ '));
-		console.log(themeColor(' | | | | |_ -|_ -| \'_| -_| | |'));
-		console.log(themeColor(' |_|_|_|_|___|___|_,_|___|_  |'));
-		console.log(' ' + chalk.gray(v) + themeColor('                        |___|\n'.substring(v.length)));
+		console.log(themeColor('  E R E B I A  '));
+		console.log(themeColor('  federated social platform'));
+		console.log(' ' + chalk.gray(v) + '\n');
 
-		console.log(' Misskey is an open-source decentralized microblogging platform.');
-		console.log(chalk.rgb(255, 136, 0)(' If you like Misskey, please consider donating to support dev. https://misskey-hub.net/docs/donate/'));
+		console.log(' Erebia is an open-source decentralized social platform based on Misskey.');
 
 		console.log('');
 		console.log(`--- ${os.hostname()} ${chalk.gray(`(PID: ${process.pid})`)} ---`);
 	}
 
-	bootLogger.info('Welcome to Misskey!');
-	bootLogger.info(`Misskey v${props.version}`, null, true);
+	bootLogger.info('Welcome to Erebia!');
+	bootLogger.info(`Erebia v${props.version}`, null, true);
 }
 
 /**
@@ -56,7 +53,7 @@ export async function masterMain(config: Config) {
 		process.exit(1);
 	}
 
-	bootLogger.succ('Misskey initialized');
+	bootLogger.succ('Erebia initialized');
 
 	initExtraThreadPool(config);
 

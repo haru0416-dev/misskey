@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div class="_spacer" style="--MI_SPACER-w: 700px; --MI_SPACER-min: 16px;">
 			<div class="lxpfedzu _gaps">
 				<div class="banner">
-					<img :src="instance.iconUrl || '/favicon.ico'" alt="" class="icon"/>
+					<img :src="instance.iconUrl || '/client-assets/erebia-icon.svg'" alt="" class="icon"/>
 				</div>
 
 				<div class="_gaps_s">
