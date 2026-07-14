@@ -47,7 +47,7 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { packClipsManyForHonoApi, type HonoApiClipDependencies } from './clips.js';
 import { HonoApiError } from './error.js';
-import { fetchNoteDiffsForHonoApi, isVisibleForMeForHonoApi, packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import { fetchNoteDiffsForHonoApi, filterVisibleNotesForHonoApi, packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
 import { grantAchievementForHonoApi, type HonoApiNotificationDependencies } from './notification.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
@@ -1089,8 +1089,8 @@ export async function handleHonoApiNotesShowPartialBulk(
 ): Promise<{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string> }[]> {
 	const params = parseHonoApiParams(notesShowPartialBulkParamDef, body);
 	const notes = await listNotesByIdsFromDatabase(deps.db, params.noteIds);
-	const visibility = await Promise.all(notes.map(note => isVisibleForMeForHonoApi(deps, note, me?.id ?? null)));
-	return await fetchNoteDiffsForHonoApi(deps, notes.filter((_, index) => visibility[index]));
+	const visibleNotes = await filterVisibleNotesForHonoApi(deps, notes, me?.id ?? null);
+	return await fetchNoteDiffsForHonoApi(deps, visibleNotes);
 }
 
 export const notesTimelineParamDef = z.object({
