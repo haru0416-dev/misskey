@@ -157,7 +157,7 @@ export async function createLocalSignupAccount(
 			const webhooks = await listSystemWebhooksFromDatabase(deps.db, { isActive: true, on: ['userCreated'] });
 			if (webhooks.length === 0) return;
 			const packed = await packUserLiteForHonoApi(deps, account);
-			await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(queue, webhook, 'userCreated', packed)));
+			await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(queue, deps.config, webhook, 'userCreated', packed)));
 		})().catch(() => {});
 	}
 

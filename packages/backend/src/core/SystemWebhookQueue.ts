@@ -8,9 +8,12 @@ import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
 import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { Config } from '@/config.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 
 export function enqueueSystemWebhookDeliverJob<T extends SystemWebhookEventType>(
 	queue: SystemWebhookDeliverQueue,
+	config: Pick<Config, 'queues'>,
 	webhook: MiSystemWebhook,
 	type: T,
 	content: SystemWebhookPayload<T>,
@@ -31,13 +34,6 @@ export function enqueueSystemWebhookDeliverJob<T extends SystemWebhookEventType>
 		backoff: {
 			type: 'custom',
 		},
-		removeOnComplete: {
-			age: 3600 * 24 * 7, // keep up to 7 days
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7, // keep up to 7 days
-			count: 100,
-		},
+		...queueRetentionOptions(config),
 	});
 }

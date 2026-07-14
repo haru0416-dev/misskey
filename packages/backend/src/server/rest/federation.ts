@@ -37,6 +37,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiInstance, MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import type Logger from '@/logger.js';
 import { startHonoApiAdminDriveFileDeletion, type HonoApiAdminDriveDependencies } from './admin-drive.js';
 import { packFollowingsForHonoApi, type FollowingListItem } from './following.js';
@@ -246,7 +247,7 @@ export async function unlockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redi
 	return await deps.redis.del(`fetchInstanceMetadata:mutex:v2:${host}`);
 }
 
-function toRelationshipJob(name: 'unfollow', data: RelationshipJobData) {
+function toRelationshipJob(config: Pick<Config, 'queues'>, name: 'unfollow', data: RelationshipJobData) {
 	return {
 		name,
 		data: {
@@ -256,16 +257,7 @@ function toRelationshipJob(name: 'unfollow', data: RelationshipJobData) {
 			requestId: data.requestId,
 			withReplies: data.withReplies,
 		},
-		opts: {
-			removeOnComplete: {
-				age: 3600 * 24 * 7,
-				count: 30,
-			},
-			removeOnFail: {
-				age: 3600 * 24 * 7,
-				count: 100,
-			},
-		},
+		opts: queueRetentionOptions(config),
 	};
 }
 
@@ -479,7 +471,7 @@ export async function handleHonoApiAdminFederationRemoveAllFollowing(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminFederationHostParamDef, body);
 	const followings = await listFollowingsByFollowerHostFromDatabase(deps.db, params.host);
-	const jobs = followings.map(following => toRelationshipJob('unfollow', {
+	const jobs = followings.map(following => toRelationshipJob(deps.config, 'unfollow', {
 		from: { id: following.followerId },
 		to: { id: following.followeeId },
 		silent: true,

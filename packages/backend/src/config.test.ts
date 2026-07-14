@@ -38,6 +38,7 @@ describe('configVersion 2 schema', () => {
 
 		expect(config.server.listen).toEqual({ tcp: { address: '0.0.0.0', port: 3000 } });
 		expect(config.database.pool.statementTimeoutMs).toBe(10_000);
+		expect(config.database.primary.ssl).toBeUndefined();
 		expect(config.limits.maximumFileSizeBytes).toBe(250 * 1024 * 1024);
 		expect(config.queues.deliver.concurrencyPerWorker).toBe(128);
 	});
@@ -97,6 +98,16 @@ describe('configVersion 2 schema', () => {
 					smtpUrl: 'socks5://smtp-user:smtp-password@proxy.example.test:1080',
 				},
 			},
+			media: {
+				videoThumbnailGeneratorUrl: 'https://media.example.test/thumbnail?token=media-secret',
+			},
+			observability: {
+				telemetry: {
+					backend: {
+						endpoint: 'https://telemetry.example.test/v1/traces?token=telemetry-secret',
+					},
+				},
+			},
 		});
 		const serialized = JSON.stringify(createRedactedConfig(materializeConfig(source, { version: 'test' })));
 		expect(serialized).not.toContain('database-secret');
@@ -104,6 +115,8 @@ describe('configVersion 2 schema', () => {
 		expect(serialized).not.toContain('proxy-password');
 		expect(serialized).not.toContain('smtp-user');
 		expect(serialized).not.toContain('smtp-password');
+		expect(serialized).not.toContain('media-secret');
+		expect(serialized).not.toContain('telemetry-secret');
 		expect(serialized).toContain('***');
 	});
 });

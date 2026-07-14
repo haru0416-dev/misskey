@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import type { RelationshipQueue } from '@/core/queues.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import {
 	createUserListMembershipWithinLimitInDatabase,
@@ -86,16 +87,7 @@ function createFollowJobForHonoApi(
 			from: { id: rel.from.id },
 			to: { id: rel.to.id },
 		},
-		opts: {
-			removeOnComplete: {
-				age: 3600 * 24 * 7,
-				count: 30,
-			},
-			removeOnFail: {
-				age: 3600 * 24 * 7,
-				count: 100,
-			},
-		},
+		opts: queueRetentionOptions(deps.config),
 	}));
 	return deps.relationshipQueue.addBulk(jobs);
 }

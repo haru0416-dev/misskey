@@ -18,6 +18,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { addActivityContext, genLocalUserUri, renderUndo } from './following.js';
 import { isHonoApiModerator } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
@@ -84,30 +85,14 @@ async function enqueueUnfollowAllJobs(
 	follower: MiUser,
 ): Promise<void> {
 	const followings = await listFollowingsForUnfollowByFollowerIdFromDatabase(deps.db, follower.id);
-	const jobs = followings.map<{
-		name: 'unfollow';
-		data: RelationshipJobData;
-		opts: {
-			removeOnComplete: { age: number; count: number };
-			removeOnFail: { age: number; count: number };
-		};
-	}>(following => ({
+	const jobs = followings.map(following => ({
 		name: 'unfollow',
 		data: {
 			from: { id: following.followerId },
 			to: { id: following.followeeId },
 			silent: true,
 		},
-		opts: {
-			removeOnComplete: {
-				age: 3600 * 24 * 7,
-				count: 30,
-			},
-			removeOnFail: {
-				age: 3600 * 24 * 7,
-				count: 100,
-			},
-		},
+		opts: queueRetentionOptions(deps.config),
 	}));
 
 	if (jobs.length > 0) {

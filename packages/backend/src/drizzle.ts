@@ -63,7 +63,7 @@ export function createDrizzlePool(config: Config): MiDrizzlePool {
 		user: config.database.primary.user,
 		password: config.database.primary.password,
 		database: config.database.primary.name,
-		ssl: config.database.primary.ssl,
+		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),
 		min: config.database.pool.minimumConnections,
 		max: config.database.pool.maximumConnections,
 		connectionTimeoutMillis: config.database.pool.connectionTimeoutMs,

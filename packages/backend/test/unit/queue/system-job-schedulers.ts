@@ -5,7 +5,19 @@
 
 import { describe, expect, test, vi } from 'vitest';
 import type { SystemQueue } from '@/core/queues.js';
+import type { Config } from '@/config.js';
 import { syncSystemJobSchedulers, systemJobSchedulers } from '@/queue/system-job-schedulers.js';
+
+const config = {
+	queues: {
+		retention: {
+			completedMaximumAgeSeconds: 600,
+			completedMaximumCount: 20,
+			failedMaximumAgeSeconds: 1200,
+			failedMaximumCount: 40,
+		},
+	},
+} as Pick<Config, 'queues'>;
 
 function createQueue(registeredKeys: string[] = []) {
 	const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
@@ -28,7 +40,7 @@ describe('syncSystemJobSchedulers', () => {
 	test('registers every system scheduler with the expected cron pattern and retention', async () => {
 		const { queue, upsertJobScheduler } = createQueue();
 
-		await syncSystemJobSchedulers(queue);
+		await syncSystemJobSchedulers(queue, config);
 
 		expect(upsertJobScheduler).toHaveBeenCalledTimes(systemJobSchedulers.length);
 		for (const scheduler of systemJobSchedulers) {
@@ -38,8 +50,8 @@ describe('syncSystemJobSchedulers', () => {
 			}, {
 				name: scheduler.name,
 				opts: {
-					removeOnComplete: { age: 60 * 60 * 24 * 7 },
-					removeOnFail: { age: 60 * 60 * 24 * 7 },
+					removeOnComplete: { age: 600, count: 20 },
+					removeOnFail: { age: 1200, count: 40 },
 				},
 			});
 		}
@@ -49,7 +61,7 @@ describe('syncSystemJobSchedulers', () => {
 		const currentKey = systemJobSchedulers[0].name;
 		const { queue, removeJobScheduler } = createQueue([currentKey, 'obsoleteJob']);
 
-		await syncSystemJobSchedulers(queue);
+		await syncSystemJobSchedulers(queue, config);
 
 		expect(removeJobScheduler).toHaveBeenCalledOnce();
 		expect(removeJobScheduler).toHaveBeenCalledWith('obsoleteJob');
@@ -59,7 +71,7 @@ describe('syncSystemJobSchedulers', () => {
 		const { queue, upsertJobScheduler, getJobSchedulers, removeJobScheduler } = createQueue(['obsoleteJob']);
 		upsertJobScheduler.mockRejectedValueOnce(new Error('Redis unavailable'));
 
-		await expect(syncSystemJobSchedulers(queue)).rejects.toThrow('Redis unavailable');
+		await expect(syncSystemJobSchedulers(queue, config)).rejects.toThrow('Redis unavailable');
 
 		expect(getJobSchedulers).not.toHaveBeenCalled();
 		expect(removeJobScheduler).not.toHaveBeenCalled();

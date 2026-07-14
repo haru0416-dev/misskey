@@ -40,7 +40,7 @@ database:
     user: misskey
     password:
       fromEnvironment: DATABASE_PASSWORD
-    ssl: false
+    # ssl: true
   pool:
     minimumConnections: 0
     maximumConnections: 30

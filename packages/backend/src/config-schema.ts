@@ -132,7 +132,7 @@ export const sourceConfigV2Schema = z.strictObject({
 			name: z.string().min(1),
 			user: z.string().min(1),
 			password: secretSourceSchema,
-			ssl: z.boolean().default(false),
+			ssl: z.boolean().optional(),
 		}),
 		pool: z.strictObject({
 			minimumConnections: nonNegativeIntegerSchema.default(0),

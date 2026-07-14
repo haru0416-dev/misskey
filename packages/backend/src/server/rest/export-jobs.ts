@@ -5,24 +5,16 @@
 
 import { z } from 'zod';
 import type { DbQueue } from '@/core/queues.js';
+import type { Config } from '@/config.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { parseHonoApiParams } from './validation.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ThinUser } from '@/queue/types.js';
 
 export type HonoApiExportJobDependencies = {
+	config: Config;
 	dbQueue: DbQueue;
 };
-
-const EXPORT_JOB_OPTIONS = {
-	removeOnComplete: {
-		age: 3600 * 24 * 7,
-		count: 30,
-	},
-	removeOnFail: {
-		age: 3600 * 24 * 7,
-		count: 100,
-	},
-} as const;
 
 export const exportFollowingParamDef = z.object({
 	excludeMuting: z.boolean().optional().default(false),
@@ -37,7 +29,7 @@ type ExportFollowingParams = {
 function enqueueSimpleExportJob(deps: HonoApiExportJobDependencies, jobName: string, user: ThinUser): void {
 	deps.dbQueue.add(jobName, {
 		user: { id: user.id },
-	}, EXPORT_JOB_OPTIONS);
+	}, queueRetentionOptions(deps.config));
 }
 
 export function handleHonoApiExportCustomEmojis(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
@@ -82,5 +74,5 @@ export function handleHonoApiIExportFollowing(
 		user: { id: me.id },
 		excludeMuting: params.excludeMuting,
 		excludeInactive: params.excludeInactive,
-	}, EXPORT_JOB_OPTIONS);
+	}, queueRetentionOptions(deps.config));
 }
