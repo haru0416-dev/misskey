@@ -1,0 +1,29 @@
+// Erebia デフォルトダークテーマ
+// 黄昏 (Erebus) を基調に、アイリスバイオレットのアクセントと眼状紋のコッパーを添える
+{
+	id: '7613ea17-80f4-4754-bfe5-18844f86aab0',
+
+	name: 'Erebia Dark',
+	author: 'erebia',
+	desc: 'Erebia default dark theme',
+
+	base: 'dark',
+
+	props: {
+		accent: 'oklch(0.663 0.159 279.5)',
+		navActive: 'oklch(0.74 0.15 279.5)',
+		bg: 'oklch(0.22 0.014 277)',
+		fg: 'oklch(0.847 0.02 276.3)',
+		fgHighlighted: 'oklch(0.956 0.011 274.9)',
+		divider: 'oklch(0.713 0.053 277.6 / 0.16)',
+		panel: 'oklch(0.27 0.018 277)',
+		popup: 'oklch(0.31 0.02 277)',
+		navBg: 'oklch(0.245 0.016 277)',
+		deckBg: 'oklch(0.19 0.012 277)',
+		link: 'oklch(0.731 0.111 263.8)',
+		hashtag: 'oklch(0.72 0.109 55.7)',
+		mentionMe: 'oklch(0.768 0.128 71.4)',
+		renote: 'oklch(0.706 0.113 169.6)',
+		shadow: 'oklch(0 0 0 / 0.349)',
+	},
+}
