@@ -409,13 +409,13 @@ definePage(() => ({
 <style lang="scss" module>
 .meter {
 	height: 10px;
-	background: rgba(0, 0, 0, 0.1);
-	border-radius: 999px;
+	background: var(--MI_THEME-switchOffBg);
+	border-radius: var(--MI-radius-sm);
 	overflow: clip;
 }
 
 .meterValue {
 	height: 100%;
-	border-radius: 999px;
+	border-radius: var(--MI-radius-sm);
 }
 </style>

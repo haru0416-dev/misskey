@@ -5,25 +5,26 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="{ [$style.vertical]: vertical }">
-	<div :class="$style.label">
+	<div :id="labelId" :class="$style.label">
 		<slot name="label"></slot>
 	</div>
 
-	<div :class="$style.body">
+	<div :class="$style.body" role="radiogroup" :aria-labelledby="labelId">
 		<div
 			v-for="option in options"
 			:key="getKey(option.value)"
 			v-adaptive-border
 			:class="[$style.optionRoot, { [$style.disabled]: option.disabled, [$style.checked]: model === option.value }]"
-			:aria-checked="model === option.value"
-			:aria-disabled="option.disabled"
-			role="checkbox"
 			@click="toggle(option)"
 		>
 			<input
 				type="radio"
+				:name="radioGroupName"
+				:checked="model === option.value"
 				:disabled="option.disabled"
+				:aria-label="option.label ?? String(option.value)"
 				:class="$style.optionInput"
+				@change="toggle(option)"
 			>
 			<span :class="$style.optionButton">
 				<span></span>
@@ -64,10 +65,15 @@ export type MkRadiosOption<T = OptionValue, S = string> = {
 </script>
 
 <script setup lang="ts" generic="const T extends MkRadiosOption">
+import { useId } from 'vue';
+
 defineProps<{
 	options: T[];
 	vertical?: boolean;
 }>();
+
+const radioGroupName = useId();
+const labelId = useId();
 
 type SlotNames = NonNullable<T extends MkRadiosOption<any, infer U> ? U : never>;
 
