@@ -1,7 +1,7 @@
 ## Unreleased
 
 ### General
-- Enhance: プロジェクトの表示名をErebiaへ変更
+- Enhance: プロジェクトの表示名とNodeInfoのソフトウェア名をErebiaへ変更
 - Feat: 条件に一致したURLプレビューのサムネイルをセンシティブ扱いにできるように
 - Fix: 非公開ノートのリアクション・差分取得とアンケート投票のアクセス制御を修正
 - Fix: AiScriptとストリーミング接続の無制限なメモリ消費を防止

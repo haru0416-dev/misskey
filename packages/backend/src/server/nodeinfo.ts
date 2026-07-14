@@ -14,7 +14,6 @@ import { MemorySingleCache } from '@/misc/cache.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import type { MiMeta } from '@/models/_.js';
 import { nodeinfo2_0path, nodeinfo2_1path } from './nodeinfo-links.js';
-const nodeinfoHomepage = 'https://misskey-hub.net';
 
 export type NodeinfoDependencies = {
 	config: Config;
@@ -50,9 +49,9 @@ async function createNodeinfoDocument(deps: NodeinfoDependencies, version: '2.0'
 	const meta = deps.meta;
 	const basePolicies = { ...DEFAULT_POLICIES, ...meta.policies };
 	const software: Record<string, unknown> = {
-		name: 'misskey',
+		name: 'erebia',
 		version: deps.config.version,
-		homepage: nodeinfoHomepage,
+		homepage: meta.repositoryUrl,
 		repository: meta.repositoryUrl,
 	};
 
