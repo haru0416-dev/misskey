@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="timctyfi" :class="{ disabled, easing }">
-	<div class="label">
+	<div :id="labelId" class="label">
 		<slot name="label"></slot>
 	</div>
 	<div v-adaptive-border class="body" :class="{ 'disabled': disabled }">
@@ -25,10 +25,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div
 				ref="thumbEl"
 				class="thumb"
+				role="slider"
+				tabindex="0"
+				:aria-labelledby="labelId"
+				:aria-valuemin="min"
+				:aria-valuemax="max"
+				:aria-valuenow="Math.round(finalValue * 1000) / 1000"
+				:aria-valuetext="textConverter(finalValue)"
+				:aria-disabled="disabled"
 				:style="{ left: thumbPosition + 'px' }"
 				@mouseenter.passive="onMouseenter"
 				@mousedown="onMousedown"
 				@touchstart="onMousedown"
+				@keydown="onKeydown"
 			>
 				<div class="thumbInner"></div>
 			</div>
@@ -42,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, defineAsyncComponent, onMounted, onUnmounted, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, onBeforeUnmount, ref, useId, useTemplateRef, watch } from 'vue';
 import { isTouchUsing } from '@/utility/touch.js';
 import * as os from '@/os.js';
 
@@ -70,6 +79,7 @@ const emit = defineEmits<{
 
 const containerEl = useTemplateRef('containerEl');
 const thumbEl = useTemplateRef('thumbEl');
+const labelId = useId();
 
 const maxRatio = computed(() => Math.abs(props.max) / (props.max + Math.abs(Math.min(0, props.min))));
 const minRatio = computed(() => Math.abs(Math.min(0, props.min)) / (props.max + Math.abs(Math.min(0, props.min))));
@@ -251,6 +261,37 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 		}
 	}
 }
+
+function onKeydown(ev: KeyboardEvent) {
+	if (props.disabled) return;
+
+	let newValue: number | null = null;
+	switch (ev.key) {
+		case 'ArrowRight':
+		case 'ArrowUp':
+			newValue = Math.min(props.max, finalValue.value + (props.step || 1));
+			break;
+		case 'ArrowLeft':
+		case 'ArrowDown':
+			newValue = Math.max(props.min, finalValue.value - (props.step || 1));
+			break;
+		case 'Home':
+			newValue = props.min;
+			break;
+		case 'End':
+			newValue = props.max;
+			break;
+	}
+	if (newValue == null) return;
+
+	ev.preventDefault();
+	const beforeValue = finalValue.value;
+	rawValue.value = calcRawValue(newValue);
+	if (finalValue.value === beforeValue) return; // ステップ吸着で値が変わらなければ通知しない
+
+	emit('update:modelValue', finalValue.value);
+	emit('dragEnded', finalValue.value);
+}
 </script>
 
 <style lang="scss" scoped>
@@ -309,7 +350,7 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 				margin: auto;
 				width: calc(100% - #{$thumbWidth});
 				height: 3px;
-				background: rgba(0, 0, 0, 0.1);
+				background: var(--MI_THEME-switchOffBg);
 				border-radius: 999px;
 				overflow: clip;
 

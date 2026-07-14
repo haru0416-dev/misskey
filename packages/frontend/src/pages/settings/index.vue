@@ -7,23 +7,26 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader :tabs="headerTabs" :actions="headerActions">
 	<div class="_spacer" style="--MI_SPACER-w: 900px; --MI_SPACER-min: 20px; --MI_SPACER-max: 32px;">
 		<div ref="el" class="vvcocwet" :class="{ wide: !narrow }">
+			<div v-if="showSuggestionBanners && (!narrow || currentPage?.route.name == null)" class="_gaps_s" style="margin-bottom: var(--MI-space-2xl);">
+				<MkInfo v-if="emailNotConfigured" warn class="info">{{ i18n.ts.emailNotConfiguredWarning }} <MkA to="/settings/email" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
+				<MkInfo v-if="storagePersistenceSupported && !storagePersisted && store.showStoragePersistenceSuggestion" class="info">
+					<div>{{ i18n.ts._settings.settingsPersistence_description1 }}</div>
+					<div>{{ i18n.ts._settings.settingsPersistence_description2 }}</div>
+					<div><button class="_textButton" @click="enableStoragePersistence">{{ i18n.ts.enable }}</button> | <button class="_textButton" @click="skipStoragePersistence">{{ i18n.ts.skip }}</button></div>
+				</MkInfo>
+				<MkInfo v-else-if="!store.enablePreferencesAutoCloudBackup && store.showPreferencesAutoCloudBackupSuggestion" class="info">
+					<div>{{ i18n.ts._preferencesBackup.autoPreferencesBackupIsNotEnabledForThisDevice }}</div>
+					<div><button class="_textButton" @click="enableAutoBackup">{{ i18n.ts.enable }}</button> | <button class="_textButton" @click="skipAutoBackup">{{ i18n.ts.skip }}</button></div>
+				</MkInfo>
+			</div>
 			<div class="body">
 				<div v-if="!narrow || currentPage?.route.name == null" class="nav">
 					<div class="_gaps_s">
-						<MkInfo v-if="emailNotConfigured" warn class="info">{{ i18n.ts.emailNotConfiguredWarning }} <MkA to="/settings/email" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-						<MkInfo v-if="storagePersistenceSupported && !storagePersisted && store.showStoragePersistenceSuggestion" class="info">
-							<div>{{ i18n.ts._settings.settingsPersistence_description1 }}</div>
-							<div>{{ i18n.ts._settings.settingsPersistence_description2 }}</div>
-							<div><button class="_textButton" @click="enableStoragePersistence">{{ i18n.ts.enable }}</button> | <button class="_textButton" @click="skipStoragePersistence">{{ i18n.ts.skip }}</button></div>
-						</MkInfo>
-						<MkInfo v-if="!store.enablePreferencesAutoCloudBackup && store.showPreferencesAutoCloudBackupSuggestion" class="info">
-							<div>{{ i18n.ts._preferencesBackup.autoPreferencesBackupIsNotEnabledForThisDevice }}</div>
-							<div><button class="_textButton" @click="enableAutoBackup">{{ i18n.ts.enable }}</button> | <button class="_textButton" @click="skipAutoBackup">{{ i18n.ts.skip }}</button></div>
-						</MkInfo>
 						<MkSuperMenu :def="menuDef" :grid="narrow" :searchIndex="searchIndex"></MkSuperMenu>
 					</div>
 				</div>
 				<div v-if="!(narrow && currentPage?.route.name == null)" class="main">
+					<MkA v-if="narrow" to="/settings" class="backLink"><i class="ti ti-arrow-left"></i> {{ i18n.ts.settings }}</MkA>
 					<div style="container-type: inline-size;">
 						<NestedRouterView/>
 					</div>
@@ -229,6 +232,12 @@ watch(router.currentRef, (to) => {
 
 const emailNotConfigured = computed(() => $i && instance.enableEmail && ($i.email == null || !$i.emailVerified));
 
+const showSuggestionBanners = computed(() =>
+	emailNotConfigured.value
+	|| (storagePersistenceSupported && !storagePersisted.value && store.showStoragePersistenceSuggestion)
+	|| (!store.enablePreferencesAutoCloudBackup && store.showPreferencesAutoCloudBackupSuggestion),
+);
+
 provideMetadataReceiver((metadataGetter) => {
 	const info = metadataGetter();
 	if (info == null) {
@@ -251,6 +260,14 @@ definePage(() => INFO.value);
 
 <style lang="scss" scoped>
 .vvcocwet {
+	.backLink {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--MI-space-sm);
+		min-height: var(--MI-control-md);
+		font-size: 0.9em;
+	}
+
 	&.wide {
 		> .body {
 			display: flex;

@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-adaptive-border class="rfqxtzch _panel">
 			<div class="toggle">
 				<div class="toggleWrapper">
-					<div class="toggle" :class="store.darkMode ? 'checked' : null" @click="toggleDarkMode()">
+					<button type="button" class="_button toggle" :class="store.darkMode ? 'checked' : null" role="switch" :aria-checked="store.darkMode" @click="toggleDarkMode()">
 						<span class="before">{{ i18n.ts.light }}</span>
 						<span class="after">{{ i18n.ts.dark }}</span>
 						<span class="toggle__handler">
@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<span class="star star--4"></span>
 						<span class="star star--5"></span>
 						<span class="star star--6"></span>
-					</div>
+					</button>
 				</div>
 			</div>
 			<div class="sync">
@@ -454,9 +454,15 @@ definePage(() => ({
 			width: 90px;
 			height: 50px;
 			margin: 4px; // focus用のアウトライン
-			background-color: #83D8FF;
+			background-color: #b9bcf9;
 			border-radius: 90px - 6;
 			transition: background-color 200ms cubic-bezier(0.445, 0.05, 0.55, 0.95) !important;
+
+			// アクセント系の塗り面上ではグローバルの半透明accentリングが見えないため明示する
+			&:focus-visible {
+				outline: 2px solid var(--MI_THEME-fg);
+				outline-offset: 2px;
+			}
 
 			> .before, > .after {
 				position: absolute;
@@ -475,7 +481,7 @@ definePage(() => ({
 			}
 
 			&.checked {
-				background-color: #749DD6;
+				background-color: #8185f2;
 
 				> .before {
 					color: var(--MI_THEME-fg);
