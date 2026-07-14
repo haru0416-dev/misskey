@@ -29,24 +29,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #label>{{ i18n.ts._aboutErebia.values }}</template>
 					<div :class="$style.values">
 						<div :class="$style.value">
-							<i class="ti ti-world" :class="$style.valueIcon"></i>
+							<i class="ti ti-gauge" :class="$style.valueIcon"></i>
 							<div>
-								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.freedom }}</div>
-								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.freedomDescription }}</div>
+								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.performance }}</div>
+								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.performanceDescription }}</div>
 							</div>
 						</div>
 						<div :class="$style.value">
-							<i class="ti ti-sparkles" :class="$style.valueIcon"></i>
+							<i class="ti ti-shield-check" :class="$style.valueIcon"></i>
 							<div>
-								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.expression }}</div>
-								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.expressionDescription }}</div>
+								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.reliability }}</div>
+								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.reliabilityDescription }}</div>
 							</div>
 						</div>
 						<div :class="$style.value">
-							<i class="ti ti-heart-handshake" :class="$style.valueIcon"></i>
+							<i class="ti ti-activity-heartbeat" :class="$style.valueIcon"></i>
 							<div>
-								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.community }}</div>
-								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.communityDescription }}</div>
+								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.operations }}</div>
+								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.operationsDescription }}</div>
 							</div>
 						</div>
 					</div>
