@@ -408,6 +408,26 @@ describe('アンテナ', () => {
 			assert.deepStrictEqual(response, expected);
 		});
 
+		test('followersノートは投稿者をフォローしている所有者のアンテナだけに入る', async () => {
+			const keyword = 'followers antenna keyword';
+			const followerAntenna = await successfulApiCall({
+				endpoint: 'antennas/create',
+				parameters: { ...defaultParam, keywords: [[keyword]] },
+				user: alice,
+			});
+			const strangerAntenna = await successfulApiCall({
+				endpoint: 'antennas/create',
+				parameters: { ...defaultParam, keywords: [[keyword]] },
+				user: bob,
+			});
+			const note = await post(userFollowedByAlice, { text: keyword, visibility: 'followers' });
+
+			const followerNotes = await waitForAntennaNotes(alice, followerAntenna.id, 1);
+			const strangerNotes = await waitForAntennaNotes(bob, strangerAntenna.id, 0);
+			assert.deepStrictEqual(followerNotes, [note]);
+			assert.deepStrictEqual(strangerNotes, []);
+		});
+
 		test('から指定したノートだけ削除でき、ノート本体や他人のアンテナには影響しないこと。', async () => {
 			const keyword = 'キーワード';
 			const antenna = await successfulApiCall({
