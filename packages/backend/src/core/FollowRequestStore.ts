@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { followRequest, type FollowRequestInsert, type FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -196,6 +196,24 @@ export async function listFollowRequestFolloweeIdsByFollowerIdFromDatabase(
 	return rows.map(row => row.followeeId);
 }
 
+export async function listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followerId: MiUser['id'],
+	followeeIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (followeeIds.length === 0) return [];
+
+	const rows = await db
+		.select({ followeeId: followRequest.followeeId })
+		.from(followRequest)
+		.where(and(
+			eq(followRequest.followerId, followerId),
+			sql`${followRequest.followeeId} = ANY(${sql.param(followeeIds)})`,
+		));
+
+	return rows.map(row => row.followeeId);
+}
+
 export async function listFollowRequestFollowerIdsByFolloweeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
@@ -204,6 +222,24 @@ export async function listFollowRequestFollowerIdsByFolloweeIdFromDatabase(
 		.select({ followerId: followRequest.followerId })
 		.from(followRequest)
 		.where(eq(followRequest.followeeId, followeeId));
+
+	return rows.map(row => row.followerId);
+}
+
+export async function listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followeeId: MiUser['id'],
+	followerIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (followerIds.length === 0) return [];
+
+	const rows = await db
+		.select({ followerId: followRequest.followerId })
+		.from(followRequest)
+		.where(and(
+			eq(followRequest.followeeId, followeeId),
+			sql`${followRequest.followerId} = ANY(${sql.param(followerIds)})`,
+		));
 
 	return rows.map(row => row.followerId);
 }

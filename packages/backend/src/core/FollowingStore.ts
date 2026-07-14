@@ -79,6 +79,24 @@ export async function listAllFollowingsByFollowerIdFromDatabase(
 	return rows.map(row => deserializeFollowing(row));
 }
 
+export async function listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	followerId: MiUser['id'],
+	followeeIds: MiUser['id'][],
+): Promise<MiFollowing[]> {
+	if (followeeIds.length === 0) return [];
+
+	const rows = await db
+		.select()
+		.from(following)
+		.where(and(
+			eq(following.followerId, followerId),
+			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
+		));
+
+	return rows.map(row => deserializeFollowing(row));
+}
+
 /**
  * タイムライン組み立て用にフォロー先IDだけを取得する軽量版。
  * フォロー数の多いユーザーで全カラムのフェッチ+デシリアライズを避ける。

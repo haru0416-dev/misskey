@@ -196,6 +196,24 @@ export async function listMuteeIdsByMuterIdFromDatabase(
 	return rows.map(row => row.muteeId);
 }
 
+export async function listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	muterId: MiUser['id'],
+	muteeIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (muteeIds.length === 0) return [];
+
+	const rows = await db
+		.select({ muteeId: muting.muteeId })
+		.from(muting)
+		.where(and(
+			eq(muting.muterId, muterId),
+			sql`${muting.muteeId} = ANY(${sql.param(muteeIds)})`,
+		));
+
+	return rows.map(row => row.muteeId);
+}
+
 export async function listActiveMutingsByMuteeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	muteeId: MiUser['id'],
