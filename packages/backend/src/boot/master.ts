@@ -91,9 +91,29 @@ export async function masterMain(config: Config) {
 			const runtime = await jobQueue(config);
 			disposers.push(() => runtime.close());
 		} else {
-			const serverRuntime = await server(config);
-			const queueRuntime = await jobQueue(config);
-			disposers.push(() => queueRuntime.close(), () => serverRuntime.dispose());
+			const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
+			const dependencies = await createRuntimeDependencies(config);
+			let serverRuntime: Awaited<ReturnType<typeof server>> | undefined;
+			try {
+				const startedServerRuntime = serverRuntime = await server(config, dependencies);
+				const queueRuntime = await jobQueue(config, dependencies);
+					disposers.push(async () => {
+						await Promise.allSettled([queueRuntime.close(), startedServerRuntime.dispose()]);
+						await dependencies.dispose();
+					});
+			} catch (error) {
+				try {
+					await serverRuntime?.dispose();
+				} catch (cleanupError) {
+					bootLogger.error('Failed to stop server after queue startup failed', { e: cleanupError });
+				}
+				try {
+					await dependencies.dispose();
+				} catch (cleanupError) {
+					bootLogger.error('Failed to dispose shared runtime dependencies after startup failed', { e: cleanupError });
+				}
+				throw error;
+			}
 		}
 	}
 
