@@ -151,6 +151,7 @@
 - Enhance: HTTPリクエスト処理、OpenAPIの遅延読み込み、起動時の設定ロードを最適化
 - Enhance: Fanout Timelineのノート取得とreply・renoteのpack処理を一括化
 - Enhance: single-process構成でserverとqueueのDB・Valkey接続とruntime servicesを共有
+- Enhance: ユーザー一覧の関係状態取得を対象ユーザーだけに絞り、大規模アカウントでのDB転送量を削減
 - Fix: DBから取得するタイムラインとノート検索で、CW・返信・添付・アンケートを含む引用ノートが純粋なリノートとして除外される問題を修正
 
 - Fix: アンケート投票を直列化・トランザクション化し、並行投票と集計不整合を防止
