@@ -8,12 +8,6 @@ export type HeightTransitionOptions = {
 	 * enter時にコンテンツの高さをこの値でクランプする (未指定/nullなら無制限)
 	 */
 	maxHeight?: () => number | null;
-
-	/**
-	 * trueを返す間は高さの手動アニメーションをスキップする
-	 * (例: CSSの interpolate-size に対応済みのブラウザではJS側の高さ操作が不要なため)
-	 */
-	skip?: () => boolean;
 };
 
 /**
@@ -24,9 +18,11 @@ export type HeightTransitionOptions = {
  */
 export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	function enter(el: Element) {
-		if (options.skip?.()) return;
 		if (!(el instanceof HTMLElement)) return;
 
+		// 中断されたleaveが残したインラインheightを掃除してから自然高さを測る
+		// (これが残っていると clip された高さ (≈0) を自然高さとして採寸してしまう)
+		el.style.height = '';
 		const elementHeight = el.getBoundingClientRect().height;
 		const maxHeight = options.maxHeight?.() ?? Infinity;
 		el.style.height = '0';
@@ -35,14 +31,12 @@ export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	}
 
 	function afterEnter(el: Element) {
-		if (options.skip?.()) return;
 		if (!(el instanceof HTMLElement)) return;
 
 		el.style.height = '';
 	}
 
 	function leave(el: Element) {
-		if (options.skip?.()) return;
 		if (!(el instanceof HTMLElement)) return;
 
 		const elementHeight = el.getBoundingClientRect().height;
@@ -52,7 +46,6 @@ export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	}
 
 	function afterLeave(el: Element) {
-		if (options.skip?.()) return;
 		if (!(el instanceof HTMLElement)) return;
 
 		el.style.height = '';
