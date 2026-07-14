@@ -27,6 +27,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkKeyValue>
 			<div v-html="i18n.tsx.poweredByMisskeyDescription({ name: instance.name ?? host })">
 			</div>
+			<FormLink to="/about-erebia">
+				<template #icon><i class="ti ti-info-circle"></i></template>
+				{{ i18n.ts.aboutErebia }}
+			</FormLink>
 			<FormLink to="/about-misskey">
 				<template #icon><i class="ti ti-info-circle"></i></template>
 				{{ i18n.ts.aboutMisskey }}

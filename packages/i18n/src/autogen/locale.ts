@@ -1895,6 +1895,10 @@ export interface Locale extends ILocale {
      */
     "about": string;
     /**
+     * Erebiaについて
+     */
+    "aboutErebia": string;
+    /**
      * Misskeyについて
      */
     "aboutMisskey": string;
@@ -8780,6 +8784,24 @@ export interface Locale extends ILocale {
          * プロジェクトメンバー
          */
         "projectMembers": string;
+    };
+    "_aboutErebia": {
+        /**
+         * Erebiaは、自由につながり、表現できるオープンソースの分散型ソーシャルプラットフォームです。
+         */
+        "about": string;
+        /**
+         * ErebiaはMisskeyを基盤として開発されています。基盤となったプロジェクトについては「Misskeyについて」をご覧ください。
+         */
+        "basedOnMisskey": string;
+        /**
+         * Erebiaのソースコード
+         */
+        "source": string;
+        /**
+         * I $[jelly ❤] #Erebia
+         */
+        "love": string;
     };
     "_displayOfSensitiveMedia": {
         /**
