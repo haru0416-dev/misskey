@@ -9133,6 +9133,29 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('notes/show-partial-bulk はフォロー中のfollowersノートだけ返す', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const viewer = await signup({ username: `hnfv${suffix}` });
+			const followee = await signup({ username: `hnff${suffix}` });
+			const stranger = await signup({ username: `hnfs${suffix}` });
+			await api('following/create', { userId: followee.id }, viewer);
+
+			const followeeNote = await post(followee, {
+				text: 'visible followers note',
+				visibility: 'followers',
+			});
+			const strangerNote = await post(stranger, {
+				text: 'invisible followers note',
+				visibility: 'followers',
+			});
+
+			const res = await api('notes/show-partial-bulk', {
+				noteIds: [followeeNote.id, strangerNote.id],
+			}, viewer);
+			assert.strictEqual(res.status, 200);
+			assert.deepStrictEqual(res.body.map(note => note.id), [followeeNote.id]);
+		});
+
 		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
