@@ -47,6 +47,14 @@
 	//#endregion
 
 	//#region Script
+	for (const file of [CLIENT_ENTRY, ...CLIENT_PRELOADS]) {
+		if (file == null) continue;
+		const link = document.createElement('link');
+		link.rel = 'modulepreload';
+		link.href = `/vite/${file.replace('scripts', lang)}`;
+		document.head.appendChild(link);
+	}
+
 	async function importAppScript() {
 		await import(CLIENT_ENTRY ? `/vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/vite/src/_boot_.ts').catch(
 			async (e) => {

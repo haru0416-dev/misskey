@@ -63,6 +63,7 @@ export function BaseEmbed(props: PropsWithChildren<CommonProps<{
 					<script>
 						const VERSION = '{props.version}';
 						const CLIENT_ENTRY = {JSON.stringify(props.frontendEmbedViteFiles?.entryJs ?? null)};
+						const CLIENT_PRELOADS = {JSON.stringify(props.frontendEmbedViteFiles?.modulePreloads ?? [])};
 						const LANGS = {JSON.stringify(props.langs)};
 					</script>
 
@@ -85,4 +86,3 @@ export function BaseEmbed(props: PropsWithChildren<CommonProps<{
 		</>
 	);
 }
-
