@@ -181,7 +181,7 @@ export async function handleHonoApiAdminSystemWebhookTest(
 	try {
 		await testSystemWebhookWithQueue({
 			fetchSystemWebhooksByIds: ids => listSystemWebhooksFromDatabase(deps.db, { ids }),
-			enqueueSystemWebhookDeliver: (webhook, type, content, opts) => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, type, content, opts),
+			enqueueSystemWebhookDeliver: (webhook, type, content, opts) => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content, opts),
 			populateEmojis: async () => ({}),
 		}, params);
 	} catch (e) {

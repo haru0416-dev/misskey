@@ -43,7 +43,7 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 
 	const deps = dependencies ?? await createRuntimeDependencies(config);
 	const logger = deps.loggerService.getLogger('queue', 'orange');
-	await syncSystemJobSchedulers(deps.systemQueue);
+	await syncSystemJobSchedulers(deps.systemQueue, deps.config);
 	// 原典の QueueProcessorService は DI 経由で GlobalEventService (全ストリーム配信) を持っていた。
 	// publisher を渡さないと、AP受信 (inbox) で作成されたノート・通知等のストリーム配信が
 	// optional チェーンで黙って無効化され、リモート発のイベントが一切WebSocketに流れなくなる

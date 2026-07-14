@@ -120,7 +120,7 @@ export type Config = {
 			name: string;
 			user: string;
 			password: string;
-			ssl: boolean;
+			ssl?: boolean;
 		};
 		pool: {
 			minimumConnections: number;
@@ -442,12 +442,14 @@ export function loadConfig(): Config {
 }
 
 export function createRedactedConfig(config: Config): object {
-	const redactUrlCredentials = (value: string | undefined): string | undefined => {
+	const redactUrlSecrets = (value: string | undefined): string | undefined => {
 		if (value == null) return undefined;
 		const url = new URL(value);
-		if (url.username === '' && url.password === '') return value;
-		url.username = '***';
-		url.password = '***';
+		if (url.username !== '' || url.password !== '') {
+			url.username = '***';
+			url.password = '***';
+		}
+		if (url.search !== '') url.search = '?***';
 		return url.toString();
 	};
 
@@ -467,9 +469,14 @@ export function createRedactedConfig(config: Config): object {
 			...config.outboundNetwork,
 			proxy: {
 				...config.outboundNetwork.proxy,
-				url: redactUrlCredentials(config.outboundNetwork.proxy.url),
-				smtpUrl: redactUrlCredentials(config.outboundNetwork.proxy.smtpUrl),
+				url: redactUrlSecrets(config.outboundNetwork.proxy.url),
+				smtpUrl: redactUrlSecrets(config.outboundNetwork.proxy.smtpUrl),
 			},
+		},
+		media: {
+			...config.media,
+			proxyUrl: redactUrlSecrets(config.media.proxyUrl),
+			videoThumbnailGeneratorUrl: redactUrlSecrets(config.media.videoThumbnailGeneratorUrl ?? undefined) ?? null,
 		},
 		observability: {
 			...config.observability,
@@ -477,6 +484,8 @@ export function createRedactedConfig(config: Config): object {
 				...config.observability.telemetry,
 				backend: config.observability.telemetry.backend == null ? undefined : {
 					...config.observability.telemetry.backend,
+					endpoint: redactUrlSecrets(config.observability.telemetry.backend.endpoint),
+					tracePropagationTargets: config.observability.telemetry.backend.tracePropagationTargets?.map(target => redactUrlSecrets(target)!),
 					headers: config.observability.telemetry.backend.headers == null ? undefined : Object.fromEntries(
 						Object.keys(config.observability.telemetry.backend.headers).map(name => [name, '***']),
 					),

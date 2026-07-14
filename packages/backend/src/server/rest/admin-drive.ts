@@ -4,10 +4,12 @@
  */
 
 import { z } from 'zod';
+import type { Config } from '@/config.js';
 import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, listAllDriveFilesByUserIdFromDatabase, listDriveFilesForAdminFromDatabase, listOrphanDriveFilesFromDatabase } from '@/core/DriveFileStore.js';
 import { startDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import type { ObjectStorageQueue } from '@/core/queues.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -147,19 +149,12 @@ function getAdminDriveFileThumbnailUrl(deps: HonoApiAdminDriveDependencies, file
 	return file.thumbnailUrl ?? (isMimeImage(file.type, 'sharp-convertible-image') ? url : null);
 }
 
-function enqueueDeleteObjectStorageFile(queue: ObjectStorageQueue, key: string): unknown {
+function enqueueDeleteObjectStorageFile(queue: ObjectStorageQueue, config: Pick<Config, 'queues'>, key: string): unknown {
 	return queue.add('deleteFile', { key }, {
 		attempts: 5,
 		backoff: { type: 'exponential', delay: 10_000 },
 		deduplication: { id: key },
-		removeOnComplete: {
-			age: 3600 * 24 * 7,
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7,
-			count: 100,
-		},
+		...queueRetentionOptions(config),
 	});
 }
 
@@ -171,7 +166,7 @@ export function startHonoApiAdminDriveFileDeletion(
 		db: deps.db,
 		meta: deps.meta,
 		deleteInternalFile: key => deps.internalStorageService.del(key),
-		enqueueDeleteObjectStorageFile: key => enqueueDeleteObjectStorageFile(deps.objectStorageQueue, key),
+		enqueueDeleteObjectStorageFile: key => enqueueDeleteObjectStorageFile(deps.objectStorageQueue, deps.config, key),
 		publishDriveStream: deps.publishDriveStream,
 	}, file);
 }
@@ -220,14 +215,7 @@ export async function handleHonoApiAdminDriveCleanRemoteFiles(
 		attempts: 2,
 		backoff: { type: 'exponential', delay: 60_000 },
 		deduplication: { id: 'cleanRemoteFiles' },
-		removeOnComplete: {
-			age: 3600 * 24 * 7,
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7,
-			count: 100,
-		},
+		...queueRetentionOptions(deps.config),
 	});
 }
 

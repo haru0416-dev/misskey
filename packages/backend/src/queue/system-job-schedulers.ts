@@ -4,6 +4,8 @@
  */
 
 import type { SystemQueue } from '@/core/queues.js';
+import type { Config } from '@/config.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 
 export const systemJobSchedulers = [
 	{ name: 'tickCharts', pattern: '55 * * * *' },
@@ -21,20 +23,13 @@ export type SystemJobName = typeof systemJobSchedulers[number]['name'];
 
 const schedulerKeys = new Set<string>(systemJobSchedulers.map(scheduler => scheduler.name));
 
-export async function syncSystemJobSchedulers(systemQueue: SystemQueue): Promise<void> {
+export async function syncSystemJobSchedulers(systemQueue: SystemQueue, config: Pick<Config, 'queues'>): Promise<void> {
 	await Promise.all(systemJobSchedulers.map(scheduler => systemQueue.upsertJobScheduler(scheduler.name, {
 		pattern: scheduler.pattern,
 		immediately: false,
 	}, {
 		name: scheduler.name,
-		opts: {
-			removeOnComplete: {
-				age: 60 * 60 * 24 * 7,
-			},
-			removeOnFail: {
-				age: 60 * 60 * 24 * 7,
-			},
-		},
+		opts: queueRetentionOptions(config),
 	})));
 
 	const registeredSchedulers = await systemQueue.getJobSchedulers();

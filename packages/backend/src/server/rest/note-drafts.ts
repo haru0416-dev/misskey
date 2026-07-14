@@ -18,6 +18,7 @@ import {
 } from '@/core/NoteDraftStore.js';
 import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import type { PostScheduledNoteQueue } from '@/core/queues.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -285,14 +286,7 @@ async function scheduleNoteDraft(deps: HonoApiNoteDraftDependencies, draft: MiNo
 			type: 'exponential',
 			delay: 30_000,
 		},
-		removeOnComplete: {
-			age: 3600 * 24 * 7,
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7,
-			count: 100,
-		},
+		...queueRetentionOptions(deps.config),
 	});
 }
 

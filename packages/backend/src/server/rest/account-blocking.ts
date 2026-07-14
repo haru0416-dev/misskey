@@ -25,6 +25,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
@@ -132,14 +133,7 @@ async function enqueueUnfollowWebhook(
 			backoff: {
 				type: 'custom',
 			},
-			removeOnComplete: {
-				age: 3600 * 24 * 7,
-				count: 30,
-			},
-			removeOnFail: {
-				age: 3600 * 24 * 7,
-				count: 100,
-			},
+			...queueRetentionOptions(deps.config),
 		});
 	}));
 }
