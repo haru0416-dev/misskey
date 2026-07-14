@@ -391,6 +391,11 @@ export async function isVisibleForMeForHonoApi(
 	deps: HonoApiNoteDependencies,
 	note: MiNote,
 	meId: MiUser['id'] | null,
+	hint?: {
+		followeeIds: Set<MiUser['id']>;
+		followeeIdCoverage: Set<MiUser['id']>;
+		meHost: MiUser['host'];
+	},
 ): Promise<boolean> {
 	if (note.visibility === 'specified') {
 		if (meId == null) return false;
@@ -404,14 +409,52 @@ export async function isVisibleForMeForHonoApi(
 		if (note.reply && meId === note.reply.userId) return true;
 		if (note.mentions?.some(id => meId === id)) return true;
 
-		const [isFollowing, user] = await Promise.all([
-			followingExistsInDatabase(deps.db, meId, note.userId),
-			fetchUserByIdOrFailFromDatabase(deps.db, meId),
+		const [isFollowing, meHost] = await Promise.all([
+			hint?.followeeIdCoverage.has(note.userId)
+				? hint.followeeIds.has(note.userId)
+				: followingExistsInDatabase(deps.db, meId, note.userId),
+			hint != null
+				? hint.meHost
+				: fetchUserByIdOrFailFromDatabase(deps.db, meId).then(user => user.host),
 		]);
-		return isFollowing || (note.userHost != null && user.host != null);
+		return isFollowing || (note.userHost != null && meHost != null);
 	}
 
 	return true;
+}
+
+export async function filterVisibleNotesForHonoApi(
+	deps: HonoApiNoteDependencies,
+	notes: MiNote[],
+	meId: MiUser['id'] | null,
+): Promise<MiNote[]> {
+	const followeeIdCoverage = new Set(notes
+		.filter(note => note.visibility === 'followers'
+			&& meId != null
+			&& note.userId !== meId
+			&& note.reply?.userId !== meId
+			&& !note.mentions?.includes(meId))
+		.map(note => note.userId));
+
+	if (meId == null || followeeIdCoverage.size === 0) {
+		const visibility = await Promise.all(notes.map(note => isVisibleForMeForHonoApi(deps, note, meId)));
+		return notes.filter((_, index) => visibility[index]);
+	}
+
+	const needsMeHost = notes.some(note => followeeIdCoverage.has(note.userId) && note.userHost != null);
+	const [followeeIds, meHost] = await Promise.all([
+		listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, meId, [...followeeIdCoverage]),
+		needsMeHost
+			? fetchUserByIdOrFailFromDatabase(deps.db, meId).then(user => user.host)
+			: Promise.resolve(null),
+	]);
+	const hint = {
+		followeeIds: new Set(followeeIds),
+		followeeIdCoverage,
+		meHost,
+	};
+	const visibility = await Promise.all(notes.map(note => isVisibleForMeForHonoApi(deps, note, meId, hint)));
+	return notes.filter((_, index) => visibility[index]);
 }
 
 type PackNoteChannel = NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFromDatabase>>>;
