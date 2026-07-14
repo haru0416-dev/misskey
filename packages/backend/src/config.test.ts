@@ -3,82 +3,119 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { describe, expect, test } from 'vitest';
-import { validateTelemetryConfig } from '@/config.js';
+import { afterEach, describe, expect, test } from 'vitest';
+import { createRedactedConfig, materializeConfig } from '@/config.js';
+import { parseByteSize, parseDuration, sourceConfigV2Schema } from '@/config-schema.js';
 
-describe('telemetry config validation', () => {
-	test('rejects frontend collector headers because public meta exposes frontend config', () => {
-		expect(() => validateTelemetryConfig({
-			telemetryForFrontend: {
-				endpoint: 'https://collector.example/v1/traces',
-				headers: { Authorization: 'Bearer secret' },
+function createSourceConfig() {
+	return {
+		configVersion: 2 as const,
+		instance: { url: 'https://example.test' },
+		database: {
+			primary: {
+				host: 'localhost',
+				name: 'misskey',
+				user: 'misskey',
+				password: { plainText: 'database-secret' },
 			},
-		})).toThrow(/telemetryForFrontend\.headers is not supported/);
+		},
+		valkey: {
+			connections: {
+				primary: { host: 'localhost' },
+			},
+		},
+	};
+}
+
+afterEach(() => {
+	delete process.env.TEST_CONFIG_SECRET;
+});
+
+describe('configVersion 2 schema', () => {
+	test('materializes defaults and converts explicit units', () => {
+		const source = sourceConfigV2Schema.parse(createSourceConfig());
+		const config = materializeConfig(source, { version: 'test' });
+
+		expect(config.server.listen).toEqual({ tcp: { address: '0.0.0.0', port: 3000 } });
+		expect(config.database.pool.statementTimeoutMs).toBe(10_000);
+		expect(config.limits.maximumFileSizeBytes).toBe(250 * 1024 * 1024);
+		expect(config.queues.deliver.concurrencyPerWorker).toBe(128);
 	});
 
-	test('rejects invalid sampling ratios at the load boundary', () => {
-		expect(() => validateTelemetryConfig({
-			telemetryForBackend: {
-				endpoint: 'http://localhost:4318/v1/traces',
-				tracesSampleRatio: 2,
-			},
-		})).toThrow(/tracesSampleRatio must be a finite number between 0 and 1/);
+	test('rejects old and unknown configuration keys', () => {
+		expect(() => sourceConfigV2Schema.parse({
+			...createSourceConfig(),
+			url: 'https://legacy.example',
+		})).toThrow();
+		expect(() => sourceConfigV2Schema.parse({
+			...createSourceConfig(),
+			configVersion: 1,
+		})).toThrow();
 	});
 
-	test('accepts separate private backend and public frontend settings', () => {
-		expect(validateTelemetryConfig({
-			telemetryForBackend: {
-				endpoint: 'http://localhost:4318/v1/traces',
-				headers: { Authorization: 'Bearer secret' },
+	test('rejects invalid network ranges and Meilisearch paths', () => {
+		expect(() => sourceConfigV2Schema.parse({
+			...createSourceConfig(),
+			server: { reverseProxy: { trustedNetworks: ['not-a-network'] } },
+		})).toThrow();
+		expect(() => sourceConfigV2Schema.parse({
+			...createSourceConfig(),
+			search: {
+				provider: 'meilisearch',
+				meilisearch: {
+					endpoint: 'https://search.example.test/prefix',
+					apiKey: { plainText: 'search-secret' },
+					index: 'misskey',
+				},
 			},
-			telemetryForFrontend: {
-				endpoint: 'https://collector.example/v1/traces',
-				propagateTraceHeaderCorsUrls: ['https://misskey.example/api'],
-			},
-		})).toEqual({
-			telemetryForBackend: {
-				endpoint: 'http://localhost:4318/v1/traces',
-				headers: { Authorization: 'Bearer secret' },
-				serviceName: undefined,
-				tracesSampleRatio: undefined,
-				tracePropagationTargets: undefined,
-				disabledInstrumentations: undefined,
-			},
-			telemetryForFrontend: {
-				endpoint: 'https://collector.example/v1/traces',
-				serviceName: undefined,
-				tracesSampleRatio: undefined,
-				propagateTraceHeaderCorsUrls: ['https://misskey.example/api'],
+		})).toThrow();
+	});
+
+	test('requires referenced environment secrets', () => {
+		const source = sourceConfigV2Schema.parse({
+			...createSourceConfig(),
+			database: {
+				primary: {
+					host: 'localhost',
+					name: 'misskey',
+					user: 'misskey',
+					password: { fromEnvironment: 'TEST_CONFIG_SECRET' },
+				},
 			},
 		});
+		expect(() => materializeConfig(source, { version: 'test' })).toThrow(/TEST_CONFIG_SECRET/);
+		process.env.TEST_CONFIG_SECRET = 'resolved-secret';
+		expect(materializeConfig(source, { version: 'test' }).database.primary.password).toBe('resolved-secret');
 	});
 
-	test('accepts safe backend propagation targets and known instrumentation names', () => {
-		expect(validateTelemetryConfig({
-			telemetryForBackend: {
-				endpoint: 'http://localhost:4318/v1/traces',
-				tracePropagationTargets: ['https://api.example.com', 'https://internal.example.com/v1/'],
-				disabledInstrumentations: ['@opentelemetry/instrumentation-pg'],
+	test('redacts every resolved credential represented by the effective config', () => {
+		const source = sourceConfigV2Schema.parse({
+			...createSourceConfig(),
+			outboundNetwork: {
+				proxy: {
+					url: 'http://proxy-user:proxy-password@proxy.example.test:8080',
+					smtpUrl: 'socks5://smtp-user:smtp-password@proxy.example.test:1080',
+				},
 			},
-		}).telemetryForBackend).toMatchObject({
-			tracePropagationTargets: ['https://api.example.com', 'https://internal.example.com/v1/'],
-			disabledInstrumentations: ['@opentelemetry/instrumentation-pg'],
 		});
+		const serialized = JSON.stringify(createRedactedConfig(materializeConfig(source, { version: 'test' })));
+		expect(serialized).not.toContain('database-secret');
+		expect(serialized).not.toContain('proxy-user');
+		expect(serialized).not.toContain('proxy-password');
+		expect(serialized).not.toContain('smtp-user');
+		expect(serialized).not.toContain('smtp-password');
+		expect(serialized).toContain('***');
+	});
+});
+
+describe('config units', () => {
+	test('parses duration and binary byte units', () => {
+		expect(parseDuration('7d')).toBe(604_800_000);
+		expect(parseByteSize('250MiB')).toBe(262_144_000);
 	});
 
-	test('rejects invalid propagation targets and unknown instrumentation names', () => {
-		expect(() => validateTelemetryConfig({
-			telemetryForBackend: {
-				endpoint: 'http://localhost:4318/v1/traces',
-				tracePropagationTargets: ['api.example.com'],
-			},
-		})).toThrow(/tracePropagationTargets\[0\] must be a valid absolute URL/);
-
-		expect(() => validateTelemetryConfig({
-			telemetryForBackend: {
-				endpoint: 'http://localhost:4318/v1/traces',
-				disabledInstrumentations: ['@opentelemetry/instrumentation-unknown'],
-			},
-		})).toThrow(/disabledInstrumentations\[0\] is not a supported instrumentation package name/);
+	test('rejects ambiguous units', () => {
+		expect(() => parseDuration('1.5h')).toThrow();
+		expect(() => parseByteSize('250MB')).toThrow();
 	});
 });

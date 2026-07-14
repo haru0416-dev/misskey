@@ -49,8 +49,8 @@ describe('hono-queue-system', () => {
 		config = loadConfig();
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
-		redis = new Redis.Redis(config.redis);
-		redisForReactions = new Redis.Redis(config.redisForReactions);
+		redis = new Redis.Redis(config.valkey.primary);
+		redisForReactions = new Redis.Redis(config.valkey.reactions);
 		const meta = await fetchMetaFromDatabase(db);
 		chartWriters = createHonoChartWriters({ db, redis, meta, logger: new Logger('test-chart') });
 		deps = { config, db, chartWriters, meta, redis, redisForReactions };
@@ -134,7 +134,10 @@ describe('hono-queue-system', () => {
 				lastUsedAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 365)),
 			});
 
-			await handleHonoQueueClean({ ...deps, config: { ...config, deactivateAntennaThreshold: 0 } });
+			await handleHonoQueueClean({
+				...deps,
+				config: { ...config, maintenance: { antennaInactiveAfterMs: 0 } },
+			});
 
 			const antennaAfter = await fetchAntennaByIdFromDatabase(db, antennaId);
 			expect(antennaAfter?.isActive).not.toBe(false);

@@ -1978,7 +1978,7 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 
 			const note = await post(alice, { text: 'ap/get resolve target' });
-			const noteUri = `${config.url}/notes/${note.id}`;
+			const noteUri = `${config.instance.url}/notes/${note.id}`;
 
 			const noteRes = await api('ap/get', { uri: noteUri }, alice);
 			assert.strictEqual(noteRes.status, 200);
@@ -1986,7 +1986,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(noteRes.body.id, noteUri);
 			assert.ok((noteRes.body.content as string).includes('ap/get resolve target'));
 
-			const userUri = `${config.url}/users/${alice.id}`;
+			const userUri = `${config.instance.url}/users/${alice.id}`;
 			const userRes = await api('ap/get', { uri: userUri }, alice);
 			assert.strictEqual(userRes.status, 200);
 			assert.strictEqual(userRes.body.type, 'Person');
@@ -2028,7 +2028,7 @@ describe('Endpoints', () => {
 				userId: alice.id,
 				userHost: null,
 			});
-			const questionUri = `${config.url}/questions/${pollNoteId}`;
+			const questionUri = `${config.instance.url}/questions/${pollNoteId}`;
 			const questionRes = await api('ap/get', { uri: questionUri }, alice);
 			assert.strictEqual(questionRes.status, 200);
 			assert.strictEqual(questionRes.body.type, 'Question');
@@ -2043,12 +2043,12 @@ describe('Endpoints', () => {
 				userId: alice.id,
 				reaction: '👍',
 			});
-			const likeUri = `${config.url}/likes/${reactionId}`;
+			const likeUri = `${config.instance.url}/likes/${reactionId}`;
 			const likeRes = await api('ap/get', { uri: likeUri }, alice);
 			assert.strictEqual(likeRes.status, 200);
 			assert.strictEqual(likeRes.body.type, 'Like');
 			assert.strictEqual(likeRes.body.id, likeUri);
-			assert.strictEqual(likeRes.body.object, `${config.url}/notes/${likeNote.id}`);
+			assert.strictEqual(likeRes.body.object, `${config.instance.url}/notes/${likeNote.id}`);
 
 			const remoteHost = `ap-get-remote-${suffix}.example`;
 			const remoteFolloweeId = genId(now + 2);
@@ -2071,12 +2071,12 @@ describe('Endpoints', () => {
 				followerId: alice.id,
 				followeeId: remoteFollowee.id,
 			});
-			const followUri = `${config.url}/follows/${followRequest.id}`;
+			const followUri = `${config.instance.url}/follows/${followRequest.id}`;
 			const followRes = await api('ap/get', { uri: followUri }, alice);
 			assert.strictEqual(followRes.status, 200);
 			assert.strictEqual(followRes.body.type, 'Follow');
 			assert.strictEqual(followRes.body.id, followUri);
-			assert.strictEqual(followRes.body.actor, `${config.url}/users/${alice.id}`);
+			assert.strictEqual(followRes.body.actor, `${config.instance.url}/users/${alice.id}`);
 			assert.strictEqual(followRes.body.object, remoteFollowee.uri);
 		});
 	});
@@ -2190,13 +2190,13 @@ describe('Endpoints', () => {
 		test('ローカルのユーザー/ノートをtype付きで返す', async () => {
 			const config = loadConfig();
 
-			const userRes = await api('ap/show', { uri: `${config.url}/users/${alice.id}` }, alice);
+			const userRes = await api('ap/show', { uri: `${config.instance.url}/users/${alice.id}` }, alice);
 			assert.strictEqual(userRes.status, 200);
 			assert.strictEqual(userRes.body.type, 'User');
 			assert.strictEqual(userRes.body.object.id, alice.id);
 
 			const note = await post(alice, { text: 'ap/show local note target' });
-			const noteRes = await api('ap/show', { uri: `${config.url}/notes/${note.id}` }, alice);
+			const noteRes = await api('ap/show', { uri: `${config.instance.url}/notes/${note.id}` }, alice);
 			assert.strictEqual(noteRes.status, 200);
 			assert.strictEqual(noteRes.body.type, 'Note');
 			assert.strictEqual(noteRes.body.object.id, note.id);
@@ -6484,7 +6484,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(userListsRes.status, 204);
 		});
 
-		// i/import-antennas はファイル内容を自分自身のURL(config.url)からHTTPダウンロードする。
+		// i/import-antennas はファイル内容を自分自身のURL(config.instance.url)からHTTPダウンロードする。
 		test('i/import-antennas はrole policy、ファイル検証、ダウンロードしたJSON件数によるantennaLimitを維持する', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
@@ -7819,7 +7819,7 @@ describe('Endpoints', () => {
 						}
 					});
 				});
-				await sub.subscribe(config.host);
+				await sub.subscribe(config.runtime.host);
 
 				const reported = await api('users/report-abuse', { userId: target.id, comment: `hono adminStream ${suffix}` }, reporter);
 				assert.strictEqual(reported.status, 204);

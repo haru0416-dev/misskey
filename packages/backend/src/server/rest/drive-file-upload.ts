@@ -79,14 +79,14 @@ const MULTIPART_OVERHEAD = 1024 * 1024;
 
 export async function readHonoApiMultipartRequest(
 	c: Context,
-	config: Pick<Config, 'maxFileSize'>,
+	config: Pick<Config, 'limits'>,
 ): Promise<HonoApiMultipartResult> {
 	// c.req.formData() はボディ全体を上限なしでメモリに読むため、先に上限つきで読み切る。
 	// upstream (Fastify @fastify/multipart) の limits.fileSize による途中打ち切り相当。
 	class BodyLimitExceeded extends Error {}
 	let rawBody: Uint8Array;
 	try {
-		rawBody = await readRequestBodyWithLimit(c.req.raw, config.maxFileSize + MULTIPART_OVERHEAD, () => new BodyLimitExceeded());
+		rawBody = await readRequestBodyWithLimit(c.req.raw, config.limits.maximumFileSizeBytes + MULTIPART_OVERHEAD, () => new BodyLimitExceeded());
 	} catch (err) {
 		if (err instanceof BodyLimitExceeded) return { status: 'too-large' };
 		throw err;
@@ -113,7 +113,7 @@ export async function readHonoApiMultipartRequest(
 	}
 
 	if (fileValue == null) return { status: 'missing-file' };
-	if (fileValue.size > config.maxFileSize) return { status: 'too-large' };
+	if (fileValue.size > config.limits.maximumFileSizeBytes) return { status: 'too-large' };
 
 	const [path] = await createTemp();
 	await streamPromises.pipeline(Readable.fromWeb(fileValue.stream() as import('node:stream/web').ReadableStream), fs.createWriteStream(path));
@@ -172,7 +172,7 @@ async function generateDriveFileAltsForHonoApi(
 	generateWeb: boolean,
 ): Promise<{ webpublic: IImage | null; thumbnail: IImage | null }> {
 	if (type.startsWith('video/')) {
-		if (deps.config.videoThumbnailGenerator != null) {
+		if (deps.config.media.videoThumbnailGeneratorUrl != null) {
 			return { webpublic: null, thumbnail: null };
 		}
 

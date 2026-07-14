@@ -127,6 +127,7 @@
 
 ### Server
 
+- Enhance: サーバー設定を厳密な `configVersion: 2` の階層構造へ再設計し、DB・Valkey・HTTP・キュー・ログを詳細設定できるように
 - Enhance: URLプレビューの結果をプロセスメモリへキャッシュし、同一URLの重複取得を抑制
 - Enhance: OpenTelemetryの外向きtrace伝播先とinstrumentation無効化を個別設定可能にし、既定の外部伝播を停止
 - Fix: 複数ワーカー環境のOAuth認可、投稿後処理、Renote取り消し、Page/Playのいいね件数、予約投稿キュー、分散ロックの整合性を改善

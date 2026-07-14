@@ -41,11 +41,11 @@ async function connectToRedis(redisOptions) {
 // so we use a Set to only try connecting once to each **uniq** redis.
 const promises = Array
 	.from(new Set([
-		config.redis,
-		config.redisForPubsub,
-		config.redisForJobQueue,
-		config.redisForTimelines,
-		config.redisForReactions,
+		config.valkey.primary,
+		config.valkey.pubsub,
+		config.valkey.jobQueue,
+		config.valkey.timelines,
+		config.valkey.reactions,
 	]))
 	.map(connectToRedis)
 	.concat([

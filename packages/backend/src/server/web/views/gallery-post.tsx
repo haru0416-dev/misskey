@@ -18,7 +18,7 @@ export function GalleryPostPage(props: CommonProps<{
 				<meta property="og:type" content="article" />
 				<meta property="og:title" content={props.galleryPost.title} />
 				{props.galleryPost.description != null ? <meta property="og:description" content={props.galleryPost.description} /> : null}
-				<meta property="og:url" content={`${props.config.url}/gallery/${props.galleryPost.id}`} />
+				<meta property="og:url" content={`${props.config.instance.url}/gallery/${props.galleryPost.id}`} />
 				{props.galleryPost.isSensitive && props.galleryPost.user.avatarUrl ? (
 					<>
 						<meta property="og:image" content={props.galleryPost.user.avatarUrl} />

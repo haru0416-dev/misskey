@@ -14,8 +14,8 @@ export type WebMetadataDependencies = {
 
 function createManifest(deps: WebMetadataDependencies): Record<string, unknown> {
 	const manifest = {
-		short_name: deps.meta.shortName || deps.meta.name || deps.config.host,
-		name: deps.meta.name || deps.config.host,
+		short_name: deps.meta.shortName || deps.meta.name || deps.config.runtime.host,
+		name: deps.meta.name || deps.config.runtime.host,
 		start_url: '/',
 		display: 'standalone',
 		background_color: '#313a42',
@@ -94,8 +94,8 @@ function createOpenSearchXml(deps: WebMetadataDependencies): string {
 	content += `<ShortName>${name}</ShortName>`;
 	content += `<Description>${name} Search</Description>`;
 	content += '<InputEncoding>UTF-8</InputEncoding>';
-	content += `<Image width="16" height="16" type="image/x-icon">${deps.config.url}/favicon.ico</Image>`;
-	content += `<Url type="text/html" template="${deps.config.url}/search?q={searchTerms}"/>`;
+	content += `<Image width="16" height="16" type="image/x-icon">${deps.config.instance.url}/favicon.ico</Image>`;
+	content += `<Url type="text/html" template="${deps.config.instance.url}/search?q={searchTerms}"/>`;
 	content += '</OpenSearchDescription>';
 	return content;
 }

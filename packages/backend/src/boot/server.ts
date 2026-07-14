@@ -26,30 +26,32 @@ export type HonoServerRuntime = {
 };
 
 async function listen(server: Server, config: Config, logger: Logger): Promise<void> {
-	if (config.socket) {
-		if (fs.existsSync(config.socket)) {
-			fs.unlinkSync(config.socket);
+	if ('unixSocket' in config.server.listen) {
+		const socket = config.server.listen.unixSocket;
+		if (fs.existsSync(socket.path)) {
+			fs.unlinkSync(socket.path);
 		}
 		await new Promise<void>((resolve, reject) => {
 			server.once('error', reject);
-			server.listen(config.socket, () => {
+			server.listen(socket.path, () => {
 				server.off('error', reject);
 				resolve();
 			});
 		});
-		if (config.chmodSocket) {
-			fs.chmodSync(config.socket, config.chmodSocket);
+		if (socket.permissions) {
+			fs.chmodSync(socket.path, socket.permissions);
 		}
-		logger.info(`Listening on ${config.socket}`);
+		logger.info(`Listening on ${socket.path}`);
 	} else {
+		const tcp = config.server.listen.tcp;
 		await new Promise<void>((resolve, reject) => {
 			server.once('error', reject);
-			server.listen(config.port, '0.0.0.0', () => {
+			server.listen(tcp.port, tcp.address, () => {
 				server.off('error', reject);
 				resolve();
 			});
 		});
-		logger.info(`Listening on port ${config.port}`);
+		logger.info(`Listening on ${tcp.address}:${tcp.port}`);
 	}
 }
 
@@ -278,12 +280,15 @@ async function launchHonoServerWithDependencies(
 	if (typeof Bun !== 'undefined') {
 		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
 		disposers.push(() => streamRuntime.dispose());
+		const listen = config.server.listen;
 		const bunServer = Bun.serve({
-			...(config.socket ? { unix: config.socket } : { port: config.port, hostname: '0.0.0.0' }),
+			...('unixSocket' in listen
+				? { unix: listen.unixSocket.path }
+				: { port: listen.tcp.port, hostname: listen.tcp.address }),
 			// Bun のデフォルト上限は 128 MiB で、maxFileSize がそれを超える設定だとアップロードが
 			// アプリ層に届く前に拒否される。ファイル本体 + multipart オーバーヘッドぶんを許容する
 			// (エンドポイント毎の細かい上限は body-limit.ts が実バイト数で守る)。
-			maxRequestBodySize: config.maxFileSize + 1024 * 1024,
+			maxRequestBodySize: config.server.http.maximumRequestBodySizeBytes,
 			fetch: (request, bunServerInstance) => {
 				if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
 					const url = new URL(request.url);
@@ -302,10 +307,12 @@ async function launchHonoServerWithDependencies(
 		});
 		disposers.push(() => bunServer.stop(true));
 
-		if (config.socket && config.chmodSocket) {
-			fs.chmodSync(config.socket, config.chmodSocket);
+		if ('unixSocket' in listen && listen.unixSocket.permissions) {
+			fs.chmodSync(listen.unixSocket.path, listen.unixSocket.permissions);
 		}
-		logger.info(config.socket ? `Listening on ${config.socket}` : `Listening on port ${config.port}`);
+		logger.info('unixSocket' in listen
+			? `Listening on ${listen.unixSocket.path}`
+			: `Listening on ${listen.tcp.address}:${listen.tcp.port}`);
 
 		return {
 			server: bunServer,

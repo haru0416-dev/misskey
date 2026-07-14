@@ -43,11 +43,11 @@ type IPinOrUnpinParams = {
 	noteId: string;
 };
 
-function renderAddForHonoApi(config: Pick<Config, 'url'>, user: { id: MiUser['id'] }, target: string, object: string): Record<string, unknown> {
+function renderAddForHonoApi(config: Pick<Config, 'instance'>, user: { id: MiUser['id'] }, target: string, object: string): Record<string, unknown> {
 	return { type: 'Add', actor: genLocalUserUri(config, user.id), target, object };
 }
 
-function renderRemoveForHonoApi(config: Pick<Config, 'url'>, user: { id: MiUser['id'] }, target: string, object: string): Record<string, unknown> {
+function renderRemoveForHonoApi(config: Pick<Config, 'instance'>, user: { id: MiUser['id'] }, target: string, object: string): Record<string, unknown> {
 	return { type: 'Remove', actor: genLocalUserUri(config, user.id), target, object };
 }
 
@@ -57,8 +57,8 @@ async function deliverPinnedChangeForHonoApi(
 	noteId: string,
 	isAddition: boolean,
 ): Promise<void> {
-	const target = `${deps.config.url}/users/${user.id}/collections/featured`;
-	const item = `${deps.config.url}/notes/${noteId}`;
+	const target = `${deps.config.instance.url}/users/${user.id}/collections/featured`;
+	const item = `${deps.config.instance.url}/notes/${noteId}`;
 	const content = addActivityContext(deps.config, isAddition ? renderAddForHonoApi(deps.config, user, target, item) : renderRemoveForHonoApi(deps.config, user, target, item));
 
 	await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });

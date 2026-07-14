@@ -86,9 +86,9 @@ function wantsXrd(accept: string | undefined): boolean {
 
 function generateOAuthAuthorizationServerMetadata(config: Config): Record<string, unknown> {
 	return {
-		issuer: config.url,
-		authorization_endpoint: new URL('/oauth/authorize', config.url).toString(),
-		token_endpoint: new URL('/oauth/token', config.url).toString(),
+		issuer: config.instance.url,
+		authorization_endpoint: new URL('/oauth/authorize', config.instance.url).toString(),
+		token_endpoint: new URL('/oauth/token', config.instance.url).toString(),
 		scopes_supported: kinds,
 		response_types_supported: ['code'],
 		grant_types_supported: ['authorization_code'],
@@ -99,24 +99,24 @@ function generateOAuthAuthorizationServerMetadata(config: Config): Record<string
 }
 
 function genLocalUserUri(config: Config, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
+	return `${config.instance.url}/users/${userId}`;
 }
 
 async function resolveWebFingerUser(deps: WellKnownDependencies, resource: string): Promise<MiUser | null | number> {
 	const normalized = resource.toLowerCase();
 
-	if (normalized.startsWith(`${deps.config.url.toLowerCase()}/users/`)) {
+	if (normalized.startsWith(`${deps.config.instance.url.toLowerCase()}/users/`)) {
 		const user = await fetchUserByIdFromDatabase(deps.db, normalized.split('/').pop()!);
 		if (user == null || user.host !== null || user.isSuspended) return null;
 		return user;
 	}
 
 	const acct = Acct.parse(
-		normalized.startsWith(`${deps.config.url.toLowerCase()}/@`) ? normalized.split('/').pop()! :
+		normalized.startsWith(`${deps.config.instance.url.toLowerCase()}/@`) ? normalized.split('/').pop()! :
 		normalized.startsWith('acct:') ? normalized.slice('acct:'.length) :
 		normalized,
 	);
-	if (acct.host && acct.host !== deps.config.host.toLowerCase()) return 422;
+	if (acct.host && acct.host !== deps.config.runtime.host.toLowerCase()) return 422;
 
 	const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, acct.username, null);
 	if (user == null || user.isSuspended) return null;
@@ -128,7 +128,7 @@ function webFingerResponse(deps: WellKnownDependencies, user: MiUser, accept: st
 	headers.set('Cache-Control', 'public, max-age=180');
 	headers.set('Vary', 'Accept');
 
-	const subject = `acct:${user.username}@${deps.config.host}`;
+	const subject = `acct:${user.username}@${deps.config.runtime.host}`;
 	const self = {
 		rel: 'self',
 		type: 'application/activity+json',
@@ -137,7 +137,7 @@ function webFingerResponse(deps: WellKnownDependencies, user: MiUser, accept: st
 	const profilePage = {
 		rel: 'http://webfinger.net/rel/profile-page',
 		type: 'text/html',
-		href: `${deps.config.url}/@${user.username}`,
+		href: `${deps.config.instance.url}/@${user.username}`,
 	};
 	if (wantsXrd(accept)) {
 		return textResponse(XRD(
@@ -165,7 +165,7 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 		return textResponse(XRD({ element: 'Link', attributes: {
 			rel: 'lrdd',
 			type: xrd,
-			template: `${deps.config.url}${webFingerPath}?resource={uri}`,
+			template: `${deps.config.instance.url}${webFingerPath}?resource={uri}`,
 		} }), xrd);
 	});
 
@@ -176,7 +176,7 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 			links: [{
 				rel: 'lrdd',
 				type: jrd,
-				template: `${deps.config.url}${webFingerPath}?resource={uri}`,
+				template: `${deps.config.instance.url}${webFingerPath}?resource={uri}`,
 			}],
 		});
 	});

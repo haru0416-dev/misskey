@@ -50,7 +50,7 @@ async function createNodeinfoDocument(deps: NodeinfoDependencies, version: '2.0'
 	const basePolicies = { ...DEFAULT_POLICIES, ...meta.policies };
 	const software: Record<string, unknown> = {
 		name: 'erebia',
-		version: deps.config.version,
+		version: deps.config.runtime.version,
 		homepage: meta.repositoryUrl,
 		repository: meta.repositoryUrl,
 	};

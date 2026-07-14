@@ -21,7 +21,7 @@ function createTestFeed(): Feed {
 
 function createApp(feed: Feed | null = createTestFeed()) {
 	return createFeedApp({
-		config: { url: 'http://example.test' } as Config,
+		config: { instance: { url: 'http://example.test' } } as Config,
 		db: {} as MiDrizzleDatabase,
 		meta: {} as MiMeta,
 		resolveFeed: async () => feed,

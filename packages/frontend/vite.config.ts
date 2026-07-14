@@ -22,7 +22,7 @@ import { Features } from 'lightningcss';
 
 const url =
 	process.env.NODE_ENV === 'development'
-		? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).url
+		? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
 		: null;
 const host = url ? new URL(url).hostname : undefined;
 

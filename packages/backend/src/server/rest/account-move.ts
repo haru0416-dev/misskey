@@ -22,6 +22,7 @@ import {
 import { listAllFollowingsByFollowerIdFromDatabase, listLocalFollowerFollowingsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
 import type { RelationshipQueue } from '@/core/queues.js';
 import type { RelationshipJobData, ThinUser } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { genId } from '@/misc/id/gen-id.js';
 import * as Acct from '@/misc/acct.js';
 import type { Config } from '@/config.js';
@@ -72,7 +73,7 @@ type IMoveParams = {
 	moveToAccount: string;
 };
 
-function getUserUriForHonoApi(config: Pick<Config, 'url'>, user: MiUser): string | null {
+function getUserUriForHonoApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
@@ -82,7 +83,7 @@ function toPunyForHonoApi(host: string): string {
 
 async function resolveMoveDestinationUserForHonoApi(deps: HonoApiAccountMoveDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
-	const normalizedHost = host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.host) ? null : toPunyForHonoApi(host);
+	const normalizedHost = host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host) ? null : toPunyForHonoApi(host);
 	// 原典は RemoteUserResolveService.resolveUser — 未知のリモートユーザーはWebFingerで解決する
 	// deps の型に HonoApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
@@ -91,10 +92,10 @@ async function resolveMoveDestinationUserForHonoApi(deps: HonoApiAccountMoveDepe
 	});
 }
 
-function renderMoveForHonoApi(config: Pick<Config, 'url'>, src: { id: MiUser['id'] }, dst: MiUser): Record<string, unknown> {
+function renderMoveForHonoApi(config: Pick<Config, 'instance'>, src: { id: MiUser['id'] }, dst: MiUser): Record<string, unknown> {
 	const srcUri = genLocalUserUri(config, src.id);
 	return {
-		id: `${config.url}/moves/${src.id}/${dst.id}`,
+		id: `${config.instance.url}/moves/${src.id}/${dst.id}`,
 		actor: srcUri,
 		type: 'Move',
 		object: srcUri,
@@ -118,8 +119,7 @@ async function enqueueRelationshipJobForHonoApi(
 		} satisfies RelationshipJobData,
 		opts: {
 			delay: opts.delay,
-			removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-			removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+			...queueRetentionOptions(deps.config),
 		},
 	}));
 

@@ -21,13 +21,13 @@ export function InfoCardPage(props: CommonPropsMinimum<{
 					<meta charset="UTF-8" />
 					<meta name="application-name" content="Erebia" />
 					<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-					<title safe>{props.meta.name ?? props.config.url}</title>
+					<title safe>{props.meta.name ?? props.config.instance.url}</title>
 					<link rel="stylesheet" href="/static-assets/misc/info-card.css" />
 				</head>
 				<body>
-					<a id="a" href={props.config.url} target="_blank" rel="noopener noreferrer">
+					<a id="a" href={props.config.instance.url} target="_blank" rel="noopener noreferrer">
 						<header id="banner" style={props.meta.bannerUrl != null ? `background-image: url(${props.meta.bannerUrl});` : ''}>
-							<div id="title" safe>{props.meta.name ?? props.config.url}</div>
+							<div id="title" safe>{props.meta.name ?? props.config.instance.url}</div>
 						</header>
 					</a>
 					<div id="content">

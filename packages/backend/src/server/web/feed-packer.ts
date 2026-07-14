@@ -23,11 +23,11 @@ export type FeedPackerDependencies = {
 };
 
 function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.host) && user.username.includes('.') && meta.iconUrl) {
+	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
 		return meta.iconUrl;
 	}
 
-	return `${config.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.host}`;
+	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
 }
 
 export async function packFeed(
@@ -35,7 +35,7 @@ export async function packFeed(
 	user: MiUser,
 ): Promise<Feed> {
 	const author = {
-		link: `${deps.config.url}/@${user.username}`,
+		link: `${deps.config.instance.url}/@${user.username}`,
 		name: user.name ?? user.username,
 	};
 
@@ -44,7 +44,7 @@ export async function packFeed(
 
 	const feed = new Feed({
 		id: author.link,
-		title: `${author.name} (@${user.username}@${deps.config.host})`,
+		title: `${author.name} (@${user.username}@${deps.config.runtime.host})`,
 		updated: notes.length !== 0 ? parseId(notes[0].id).date : undefined,
 		generator: 'Erebia',
 		description: `${user.notesCount} Notes, ${profile.followingVisibility === 'public' ? user.followingCount : '?'} Following, ${profile.followersVisibility === 'public' ? user.followersCount : '?'} Followers${profile.description ? ` · ${profile.description}` : ''}`,
@@ -69,7 +69,7 @@ export async function packFeed(
 
 		feed.addItem({
 			title: `New note by ${author.name}`,
-			link: `${deps.config.url}/notes/${note.id}`,
+			link: `${deps.config.instance.url}/notes/${note.id}`,
 			date: parseId(note.id).date,
 			description: note.cw ?? undefined,
 			content: text ? mfmToHtml(deps.config, mfmParse(text), JSON.parse(note.mentionedRemoteUsers)) ?? undefined : undefined,

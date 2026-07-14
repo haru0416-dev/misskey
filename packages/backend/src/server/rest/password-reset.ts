@@ -79,7 +79,7 @@ export async function handleHonoApiRequestResetPassword(
 		token,
 	});
 
-	const link = `${deps.config.url}/reset-password/${token}`;
+	const link = `${deps.config.instance.url}/reset-password/${token}`;
 
 	trackPromise(deps.emailService.sendEmail(params.email, 'Password reset requested',
 		`To reset password, please click this link:<br><a href="${link}">${link}</a>`,

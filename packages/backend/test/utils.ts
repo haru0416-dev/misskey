@@ -36,9 +36,9 @@ export type SystemWebhookPayload = {
 };
 
 const config = loadConfig();
-export const port = config.port;
-export const origin = config.url;
-export const host = new URL(config.url).host;
+export const port = 'tcp' in config.server.listen ? config.server.listen.tcp.port : 3000;
+export const origin = config.instance.url;
+export const host = new URL(config.instance.url).host;
 
 export const WEBHOOK_HOST = 'http://localhost:15080';
 export const WEBHOOK_PORT = 15080;

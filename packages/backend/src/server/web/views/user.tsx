@@ -26,7 +26,7 @@ export function UserPage(props: CommonProps<{
 				<meta property="og:type" content="blog" />
 				<meta property="og:title" content={title} />
 				{props.user.description != null ? <meta property="og:description" content={props.user.description} /> : null}
-				<meta property="og:url" content={`${props.config.url}/@${props.user.username}`} />
+				<meta property="og:url" content={`${props.config.instance.url}/@${props.user.username}`} />
 				<meta property="og:image" content={props.user.avatarUrl} />
 				<meta property="twitter:card" content="summary" />
 			</>
@@ -48,7 +48,7 @@ export function UserPage(props: CommonProps<{
 
 				{props.sub == null && props.federationEnabled ? (
 					<>
-						{props.user.host == null ? <link rel="alternate" type="application/activity+json" href={`${props.config.url}/users/${props.user.id}`} /> : null}
+						{props.user.host == null ? <link rel="alternate" type="application/activity+json" href={`${props.config.instance.url}/users/${props.user.id}`} /> : null}
 						{props.user.uri != null ? <link rel="alternate" type="application/activity+json" href={props.user.uri} /> : null}
 						{props.profile.url != null ? <link rel="alternate" type="text/html" href={props.profile.url} /> : null}
 					</>

@@ -40,9 +40,9 @@ export function createWebAuthnService(
 ) {
 	function getRelyingParty(): { origin: string; rpId: string; rpName: string; rpIcon?: string; } {
 		return {
-			origin: config.url,
-			rpId: config.hostname,
-			rpName: meta.name ?? config.host,
+			origin: config.instance.url,
+			rpId: config.runtime.hostname,
+			rpName: meta.name ?? config.runtime.host,
 			rpIcon: meta.iconUrl ?? undefined,
 		};
 	}

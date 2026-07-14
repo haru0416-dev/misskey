@@ -49,7 +49,7 @@ export class FileServerProxyHandler {
 		// アバタークロップなど、どうしてもオリジンである必要がある場合
 		const mustOrigin = 'origin' in request.query;
 
-		if (this.config.externalMediaProxyEnabled && !mustOrigin) {
+		if (this.config.media.externalProxyEnabled && !mustOrigin) {
 			return await this.redirectToExternalProxy(request, reply);
 		}
 
@@ -99,7 +99,7 @@ export class FileServerProxyHandler {
 	) {
 		reply.header('Cache-Control', 'public, max-age=259200'); // 3 days
 
-		const url = new URL(`${this.config.mediaProxy}/${request.params.url || ''}`);
+		const url = new URL(`${this.config.media.proxyUrl}/${request.params.url || ''}`);
 
 		for (const [key, value] of Object.entries(request.query)) {
 			url.searchParams.append(key, value);
@@ -261,8 +261,8 @@ export class FileServerProxyHandler {
 	}
 
 	private async getStreamAndTypeFromUrl(url: string): Promise<ProxySource> {
-		if (url.startsWith(`${this.config.url}/files/`)) {
-			const key = url.replace(`${this.config.url}/files/`, '').split('/').shift();
+		if (url.startsWith(`${this.config.instance.url}/files/`)) {
+			const key = url.replace(`${this.config.instance.url}/files/`, '').split('/').shift();
 			if (!key) throw new StatusError('Invalid File Key', 400, 'Invalid File Key');
 
 			return await this.fileResolver.resolveFileByAccessKey(key);

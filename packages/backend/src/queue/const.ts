@@ -23,10 +23,10 @@ export const QUEUE = {
 export function baseQueueOptions(config: Config, queueName: typeof QUEUE[keyof typeof QUEUE]): Bull.QueueOptions {
 	return {
 		connection: {
-			...config.redisForJobQueue,
+			...config.valkey.jobQueue,
 			keyPrefix: undefined,
 		},
-		prefix: config.redisForJobQueue.prefix ? `${config.redisForJobQueue.prefix}:queue:${queueName}` : `queue:${queueName}`,
+		prefix: config.valkey.jobQueue.prefix ? `${config.valkey.jobQueue.prefix}:queue:${queueName}` : `queue:${queueName}`,
 	};
 }
 
@@ -35,6 +35,19 @@ export function baseWorkerOptions(config: Config, queueName: typeof QUEUE[keyof 
 		...baseQueueOptions(config, queueName),
 		metrics: {
 			maxDataPoints: MetricsTime.ONE_WEEK,
+		},
+	};
+}
+
+export function queueRetentionOptions(config: Pick<Config, 'queues'>): Pick<Bull.JobsOptions, 'removeOnComplete' | 'removeOnFail'> {
+	return {
+		removeOnComplete: {
+			age: config.queues.retention.completedMaximumAgeSeconds,
+			count: config.queues.retention.completedMaximumCount,
+		},
+		removeOnFail: {
+			age: config.queues.retention.failedMaximumAgeSeconds,
+			count: config.queues.retention.failedMaximumCount,
 		},
 	};
 }

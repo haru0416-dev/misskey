@@ -13,7 +13,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiRelay } from '@/models/Relay.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 
-type RelayActivityConfig = Pick<Config, 'host' | 'url'>;
+type RelayActivityConfig = Pick<Config, 'runtime' | 'instance'>;
 
 export type RelaySideEffectDependencies = {
 	config: RelayActivityConfig;
@@ -28,21 +28,21 @@ export type RelaySideEffectDependencies = {
 	) => unknown;
 };
 
-export function genLocalUserUri(config: Pick<Config, 'url'>, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
+export function genLocalUserUri(config: Pick<Config, 'instance'>, userId: MiUser['id']): string {
+	return `${config.instance.url}/users/${userId}`;
 }
 
-export function isUriLocal(config: Pick<Config, 'host'>, uri: string): boolean {
+export function isUriLocal(config: Pick<Config, 'runtime'>, uri: string): boolean {
 	try {
-		return domainToASCII(new URL(uri).host) === domainToASCII(config.host);
+		return domainToASCII(new URL(uri).host) === domainToASCII(config.runtime.host);
 	} catch {
 		return false;
 	}
 }
 
-export function renderFollowRelay(config: Pick<Config, 'url'>, relay: MiRelay, relayActor: MiLocalUser): IFollow {
+export function renderFollowRelay(config: Pick<Config, 'instance'>, relay: MiRelay, relayActor: MiLocalUser): IFollow {
 	return {
-		id: `${config.url}/activities/follow-relay/${relay.id}`,
+		id: `${config.instance.url}/activities/follow-relay/${relay.id}`,
 		type: 'Follow',
 		actor: genLocalUserUri(config, relayActor.id),
 		object: 'https://www.w3.org/ns/activitystreams#Public',
@@ -61,9 +61,9 @@ export function renderUndo(config: RelayActivityConfig, object: string | IObject
 	};
 }
 
-export function addContext<T extends IObject>(config: Pick<Config, 'url'>, x: T): T & { '@context': any; id: string; } {
+export function addContext<T extends IObject>(config: Pick<Config, 'instance'>, x: T): T & { '@context': any; id: string; } {
 	if (typeof x === 'object' && x.id == null) {
-		x.id = `${config.url}/${randomUUID()}`;
+		x.id = `${config.instance.url}/${randomUUID()}`;
 	}
 
 	return Object.assign({ '@context': CONTEXT }, x as T & { id: string });

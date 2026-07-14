@@ -9,6 +9,7 @@ import { concat, toArray, toSingle, unique } from '@/misc/prelude/array.js';
 import { StatusError } from '@/misc/status-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import {
 	getApHrefNullable,
 	getApId,
@@ -120,11 +121,6 @@ export type HonoApiInboxDependencies =
 		publishNoteStream?: HonoApiNoteStreamPublisher;
 		publishNotesStream?: HonoApiNotesStreamPublisher;
 	};
-
-const dbQueueJobOptions = {
-	removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-	removeOnFail: { age: 3600 * 24 * 7, count: 100 },
-};
 
 /** ApInboxService.performActivity 相当。Collection/OrderedCollection をファンアウトし、各アクティビティを処理する。 */
 export async function performActivityForHonoApi(deps: HonoApiInboxDependencies, actor: MiRemoteUser, activity: IObject): Promise<string | void> {
@@ -450,7 +446,7 @@ async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor
 		return await enqueueDbJobInOutbox(transaction as MiDrizzleDatabase, 'deleteAccount', {
 			user: { id: actor.id },
 			soft: undefined,
-		}, dbQueueJobOptions);
+		}, queueRetentionOptions(deps.config));
 	});
 
 	if (outboxId == null) {
@@ -458,7 +454,7 @@ async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor
 	}
 
 	void deps.dbQueue.add('deleteAccount', { user: { id: actor.id }, soft: undefined }, {
-		...dbQueueJobOptions,
+		...queueRetentionOptions(deps.config),
 		jobId: `outbox-${outboxId}`,
 	}).catch(() => {
 		// The outbox dispatcher retries when the low-latency enqueue path is unavailable.
@@ -488,7 +484,7 @@ async function flagFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiRem
 	const uris = getApIds(activity.object);
 
 	const userIds = uris
-		.filter(uri => uri.startsWith(deps.config.url + '/users/'))
+		.filter(uri => uri.startsWith(deps.config.instance.url + '/users/'))
 		.map(uri => uri.split('/').at(-1))
 		.filter((x): x is string => x != null);
 	const users = await listUsersByIdsFromDatabase(deps.db, userIds, { includeSuspended: true });

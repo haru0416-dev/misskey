@@ -37,10 +37,10 @@ export function createVideoProcessingService(
 	}
 
 	function getExternalVideoThumbnailUrl(url: string): string | null {
-		if (config.videoThumbnailGenerator == null) return null;
+		if (config.media.videoThumbnailGeneratorUrl == null) return null;
 
 		return appendQuery(
-			`${config.videoThumbnailGenerator}/thumbnail.webp`,
+			`${config.media.videoThumbnailGeneratorUrl}/thumbnail.webp`,
 			query({
 				thumbnail: '1',
 				url,

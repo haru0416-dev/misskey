@@ -61,8 +61,8 @@ export function createEmailService(
 	async function sendEmail(to: string, subject: string, html: string, text: string) {
 		if (!meta.enableEmail) return;
 
-		const iconUrl = `${config.url}/static-assets/mi-white.png`;
-		const emailSettingUrl = `${config.url}/settings/email`;
+		const iconUrl = `${config.instance.url}/static-assets/mi-white.png`;
+		const emailSettingUrl = `${config.instance.url}/settings/email`;
 
 		const enableAuth = meta.smtpUser != null && meta.smtpUser !== '';
 
@@ -73,7 +73,7 @@ export function createEmailService(
 			port: meta.smtpPort ?? undefined,
 			secure: meta.smtpSecure,
 			ignoreTLS: !enableAuth,
-			proxy: config.proxySmtp,
+			proxy: config.outboundNetwork.proxy.smtpUrl,
 			auth: enableAuth ? {
 				user: meta.smtpUser ?? undefined,
 				pass: meta.smtpPass ?? undefined,
@@ -157,7 +157,7 @@ export function createEmailService(
 			</footer>
 		</main>
 		<nav>
-			<a href="${ config.url }">${ config.host }</a>
+			<a href="${ config.instance.url }">${ config.runtime.host }</a>
 		</nav>
 	</body>
 </html>`;

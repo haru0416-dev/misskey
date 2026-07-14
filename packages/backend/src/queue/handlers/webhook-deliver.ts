@@ -13,7 +13,7 @@ import { updateSystemWebhookInDatabase } from '@/core/SystemWebhookStore.js';
 import type { UserWebhookDeliverJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 
 export type HonoQueueWebhookDeliverDependencies = {
-	config: Pick<Config, 'host' | 'url'>;
+	config: Pick<Config, 'runtime' | 'instance'>;
 	db: MiDrizzleDatabase;
 	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
@@ -28,13 +28,13 @@ async function deliverWebhookForHonoQueue(
 			method: 'POST',
 			headers: {
 				'User-Agent': 'Misskey-Hooks',
-				'X-Misskey-Host': deps.config.host,
+				'X-Misskey-Host': deps.config.runtime.host,
 				'X-Misskey-Hook-Id': data.webhookId,
 				'X-Misskey-Hook-Secret': data.secret,
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
-				server: deps.config.url,
+				server: deps.config.instance.url,
 				hookId: data.webhookId,
 				...(data.userId != null ? { userId: data.userId } : {}),
 				eventId: data.eventId,

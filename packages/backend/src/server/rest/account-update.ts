@@ -214,9 +214,9 @@ function tryRewriteUrl(maybeUrl: string): string {
 	}
 }
 
-export function renderKeyForHonoApi(config: Pick<Config, 'url'>, user: MiLocalUser, key: MiUserKeypair, postfix?: string): Record<string, unknown> {
+export function renderKeyForHonoApi(config: Pick<Config, 'instance'>, user: MiLocalUser, key: MiUserKeypair, postfix?: string): Record<string, unknown> {
 	return {
-		id: `${config.url}/users/${user.id}${postfix ?? '/publickey'}`,
+		id: `${config.instance.url}/users/${user.id}${postfix ?? '/publickey'}`,
 		type: 'Key',
 		owner: genLocalUserUri(config, user.id),
 		publicKeyPem: createPublicKey(key.publicKey).export({ type: 'spki', format: 'pem' }),
@@ -249,7 +249,7 @@ export async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependenc
 
 	const hashtagTags = user.tags.map(tag => ({
 		type: 'Hashtag' as const,
-		href: `${deps.config.url}/tags/${encodeURIComponent(tag)}`,
+		href: `${deps.config.instance.url}/tags/${encodeURIComponent(tag)}`,
 		name: `#${tag}`,
 	}));
 
@@ -263,9 +263,9 @@ export async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependenc
 		followers: `${id}/followers`,
 		following: `${id}/following`,
 		featured: `${id}/collections/featured`,
-		sharedInbox: `${deps.config.url}/inbox`,
-		endpoints: { sharedInbox: `${deps.config.url}/inbox` },
-		url: `${deps.config.url}/@${user.username}`,
+		sharedInbox: `${deps.config.instance.url}/inbox`,
+		endpoints: { sharedInbox: `${deps.config.instance.url}/inbox` },
+		url: `${deps.config.instance.url}/@${user.username}`,
 		published: parseId(user.id).date.toISOString(),
 		preferredUsername: user.username,
 		name: user.name,
@@ -315,7 +315,7 @@ function toPunyForHonoApi(host: string): string {
 
 async function resolveAlsoKnownAsUserForHonoApi(deps: HonoApiAccountUpdateDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
-	const normalizedHost = host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.host) ? null : toPunyForHonoApi(host);
+	const normalizedHost = host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host) ? null : toPunyForHonoApi(host);
 	// 原典は RemoteUserResolveService.resolveUser — 未知のリモートユーザーはWebFingerで解決する
 	// deps の型に HonoApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
@@ -324,7 +324,7 @@ async function resolveAlsoKnownAsUserForHonoApi(deps: HonoApiAccountUpdateDepend
 	});
 }
 
-function getUserUriForHonoApi(config: Pick<Config, 'url'>, user: MiUser): string | null {
+function getUserUriForHonoApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
@@ -357,7 +357,7 @@ async function verifyLinkForHonoApi(deps: HonoApiAccountUpdateDependencies, url:
 	try {
 		const html = await deps.httpRequestService.getHtml(url);
 		const doc = htmlParser.parse(html);
-		const myLink = `${deps.config.url}/@${user.username}`;
+		const myLink = `${deps.config.instance.url}/@${user.username}`;
 
 		const aEls = Array.from(doc.getElementsByTagName('a'));
 		const linkEls = Array.from(doc.getElementsByTagName('link'));

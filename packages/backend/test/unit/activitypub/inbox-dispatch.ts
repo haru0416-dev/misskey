@@ -60,7 +60,7 @@ async function createTestRemoteUser(deps: HonoApiInboxDependencies, prefix: stri
 }
 
 function localUserUri(deps: HonoApiInboxDependencies, user: MiUser): string {
-	return `${deps.config.url}/users/${user.id}`;
+	return `${deps.config.instance.url}/users/${user.id}`;
 }
 
 describe('hono-ap-inbox performOneActivityForHonoApi', () => {
@@ -210,7 +210,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			type: 'Like',
 			id: `https://hono-inbox-like.example.com/likes/${genId()}`,
 			actor: actor.uri!,
-			object: `${deps.config.url}/notes/${noteId}`,
+			object: `${deps.config.instance.url}/notes/${noteId}`,
 		} as IObject;
 
 		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
@@ -236,7 +236,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			type: 'Like',
 			id: `https://hono-inbox-unlike.example.com/likes/${genId()}`,
 			actor: actor.uri!,
-			object: `${deps.config.url}/notes/${noteId}`,
+			object: `${deps.config.instance.url}/notes/${noteId}`,
 		} as IObject;
 		await performOneActivityForHonoApi(deps, asRemote(actor), likeActivity, new Set());
 		expect(await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, actor.id, noteId)).not.toBeNull();
@@ -248,7 +248,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: {
 				type: 'Like',
 				actor: actor.uri!,
-				object: `${deps.config.url}/notes/${noteId}`,
+				object: `${deps.config.instance.url}/notes/${noteId}`,
 			},
 		} as IObject;
 

@@ -6,7 +6,7 @@
 import { describe, expect, test } from 'vitest';
 import { antennaUsersIncludes } from '@/server/rest/antennas.js';
 
-const config = { host: 'local.example' };
+const config = { runtime: { host: 'local.example' } };
 
 describe('antennaUsersIncludes', () => {
 	test('matches a specific account without changing existing behavior', () => {

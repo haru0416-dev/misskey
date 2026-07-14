@@ -159,7 +159,7 @@ describe('createFileServerApp', () => {
 		size?: number;
 	}) {
 		const accessKey = params.accessKey;
-		const url = params.uri ?? `${config.url}/files/${accessKey}`;
+		const url = params.uri ?? `${config.instance.url}/files/${accessKey}`;
 		await createDriveFileInDatabase(drizzle, {
 			id: genId(),
 			userId: null,
@@ -580,7 +580,7 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(301);
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
-			expect(res.headers.location).toContain(`${config.mediaProxy}/static.webp`);
+			expect(res.headers.location).toContain(`${config.media.proxyUrl}/static.webp`);
 			expect(res.headers.location).toContain('static=1');
 		});
 
@@ -604,7 +604,7 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(301);
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
-			expect(res.headers.location).toContain(`${config.mediaProxy}/svg.webp`);
+			expect(res.headers.location).toContain(`${config.media.proxyUrl}/svg.webp`);
 		});
 	});
 
@@ -616,7 +616,7 @@ describe('createFileServerApp', () => {
 			});
 
 			expect(res.statusCode).toBe(301);
-			expect(res.headers.location).toBe(`${config.url}/files/testkey`);
+			expect(res.headers.location).toBe(`${config.instance.url}/files/testkey`);
 			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
 		});
 	});
@@ -789,7 +789,7 @@ describe('createFileServerApp', () => {
 
 			const res = await inject(app, {
 				method: 'GET',
-				url: `/proxy/any?url=${encodeURIComponent(`${config.url}/files/${accessKey}`)}&origin=1`,
+				url: `/proxy/any?url=${encodeURIComponent(`${config.instance.url}/files/${accessKey}`)}&origin=1`,
 				headers: {
 					'user-agent': 'Mozilla/5.0',
 				},

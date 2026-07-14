@@ -52,9 +52,9 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 	test('deliverToRelays: accepted リレーが無い場合は何もしない (署名もキュー投入も発生しない)', async () => {
 		const activity = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.url}/test-activity/${genId()}`,
+			id: `${runtime.config.instance.url}/test-activity/${genId()}`,
 			type: 'Create',
-			actor: `${runtime.config.url}/users/${user.id}`,
+			actor: `${runtime.config.instance.url}/users/${user.id}`,
 			object: { type: 'Note' },
 		};
 
@@ -70,10 +70,10 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 	test('attachLdSignature: RsaSignature2017 の signature フィールドを付与し、元のフィールドを保持する', async () => {
 		const activity = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.url}/test-activity/${genId()}`,
+			id: `${runtime.config.instance.url}/test-activity/${genId()}`,
 			type: 'Add',
-			actor: `${runtime.config.url}/users/${user.id}`,
-			object: `${runtime.config.url}/notes/dummy`,
+			actor: `${runtime.config.instance.url}/users/${user.id}`,
+			object: `${runtime.config.instance.url}/notes/dummy`,
 		};
 
 		const signed = await attachLdSignatureForHonoApi(runtime, activity, { id: user.id, host: null });
@@ -81,7 +81,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 		const signature = signed.signature as Record<string, unknown>;
 		expect(signature).toBeDefined();
 		expect(signature.type).toBe('RsaSignature2017');
-		expect(signature.creator).toBe(`${runtime.config.url}/users/${user.id}#main-key`);
+		expect(signature.creator).toBe(`${runtime.config.instance.url}/users/${user.id}#main-key`);
 		expect(typeof signature.signatureValue).toBe('string');
 		expect((signature.signatureValue as string).length).toBeGreaterThan(0);
 		expect(signed.type).toBe('Add');
@@ -99,9 +99,9 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 
 		const activity = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.url}/test-activity/${genId()}`,
+			id: `${runtime.config.instance.url}/test-activity/${genId()}`,
 			type: 'Create',
-			actor: `${runtime.config.url}/users/${user.id}`,
+			actor: `${runtime.config.instance.url}/users/${user.id}`,
 			object: { type: 'Note' },
 		};
 

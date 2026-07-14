@@ -8,10 +8,17 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import type { RedisOptions } from 'ioredis';
 import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node';
+import {
+	compiledConfigEnvelopeSchema,
+	parseByteSize,
+	parseDuration,
+	type CompiledConfigV2,
+	type SecretSource,
+} from './config-schema.js';
 
 export type TelemetryInstrumentationName = keyof InstrumentationConfigMap;
 
-const TELEMETRY_INSTRUMENTATION_NAMES = [
+const TELEMETRY_INSTRUMENTATION_NAMES = new Set<string>([
 	'@opentelemetry/instrumentation-amqplib',
 	'@opentelemetry/instrumentation-aws-lambda',
 	'@opentelemetry/instrumentation-aws-sdk',
@@ -53,11 +60,7 @@ const TELEMETRY_INSTRUMENTATION_NAMES = [
 	'@opentelemetry/instrumentation-tedious',
 	'@opentelemetry/instrumentation-undici',
 	'@opentelemetry/instrumentation-winston',
-] as const satisfies readonly TelemetryInstrumentationName[];
-
-const ALL_TELEMETRY_INSTRUMENTATION_NAMES_LISTED: Exclude<TelemetryInstrumentationName, typeof TELEMETRY_INSTRUMENTATION_NAMES[number]> extends never ? true : never = true;
-void ALL_TELEMETRY_INSTRUMENTATION_NAMES_LISTED;
-const TELEMETRY_INSTRUMENTATION_NAME_SET = new Set<string>(TELEMETRY_INSTRUMENTATION_NAMES);
+]);
 
 export type TelemetryConfig = {
 	endpoint: string;
@@ -75,511 +78,410 @@ export type FrontendTelemetryConfig = {
 	propagateTraceHeaderCorsUrls?: string[];
 };
 
-type RedisOptionsSource = Partial<RedisOptions> & {
+export type RuntimeValkeyConnection = RedisOptions & {
 	host: string;
 	port: number;
-	family?: number;
-	pass: string;
-	db?: number;
-	prefix?: string;
+	prefix: string;
+	keyPrefix: string;
 };
 
-type TrustProxyConfig = boolean | string | string[] | number | ((address: string, hop: number) => boolean);
-
-/**
- * 設定ファイルの型
- */
-type Source = {
-	url?: string;
-	port?: number;
-	socket?: string;
-	trustProxy?: TrustProxyConfig;
-	chmodSocket?: string;
-	enableIpRateLimit?: boolean;
-	disableHsts?: boolean;
-	db: {
-		host: string;
-		port: number;
-		db?: string;
-		user?: string;
-		pass?: string;
-		disableCache?: boolean;
-		extra?: { [x: string]: string };
-	};
-	dbReplications?: boolean;
-	dbSlaves?: {
-		host: string;
-		port: number;
-		db: string;
-		user: string;
-		pass: string;
-	}[];
-	redis: RedisOptionsSource;
-	redisForPubsub?: RedisOptionsSource;
-	redisForJobQueue?: RedisOptionsSource;
-	redisForTimelines?: RedisOptionsSource;
-	redisForReactions?: RedisOptionsSource;
-	fulltextSearch?: {
-		provider?: FulltextSearchProvider;
-	};
-	meilisearch?: {
-		host: string;
-		port: string;
-		apiKey: string;
-		ssl?: boolean;
-		index: string;
-		scope?: 'local' | 'global' | string[];
-	};
-	telemetryForBackend?: TelemetryConfig;
-	telemetryForFrontend?: FrontendTelemetryConfig;
-
-	publishTarballInsteadOfProvideRepositoryUrl?: boolean;
-
-	setupPassword?: string;
-
-	proxy?: string;
-	proxySmtp?: string;
-	proxyBypassHosts?: string[];
-
-	allowedPrivateNetworks?: string[];
-
-	maxFileSize?: number;
-
-	clusterLimit?: number;
-	threadPoolSize?: number;
-
-	outgoingAddress?: string;
-	outgoingAddressFamily?: 'ipv4' | 'ipv6' | 'dual';
-
-	deliverJobConcurrency?: number;
-	inboxJobConcurrency?: number;
-	relationshipJobConcurrency?: number;
-	dbJobConcurrency?: number;
-	systemJobConcurrency?: number;
-	objectStorageJobConcurrency?: number;
-	userWebhookJobConcurrency?: number;
-	systemWebhookJobConcurrency?: number;
-	deliverJobPerSec?: number;
-	inboxJobPerSec?: number;
-	relationshipJobPerSec?: number;
-	deliverJobMaxAttempts?: number;
-	inboxJobMaxAttempts?: number;
-
-	mediaProxy?: string;
-	videoThumbnailGenerator?: string;
-
-	perChannelMaxNoteCacheCount?: number;
-	perUserNotificationsMaxCount?: number;
-	deactivateAntennaThreshold?: number;
-	pidFile: string;
-
-	logging?: {
-		sql?: {
-			disableQueryTruncation?: boolean;
-			enableQueryParamLogging?: boolean;
-		};
-	};
+type QueueConfig = {
+	concurrencyPerWorker: number;
+	maximumStartsPerSecond?: number;
+	maximumAttempts?: number;
 };
 
 export type Config = {
-	url: string;
-	port: number;
-	socket: string | undefined;
-	trustProxy: TrustProxyConfig;
-	chmodSocket: string | undefined;
-	enableIpRateLimit: boolean;
-	disableHsts: boolean | undefined;
-	db: {
-		host: string;
-		port: number;
-		db: string;
-		user: string;
-		pass: string;
-		disableCache?: boolean;
-		extra?: { [x: string]: string };
+	configVersion: 2;
+	instance: {
+		url: string;
+		setupPassword?: string;
+		publishSourceTarball: boolean;
 	};
-	dbReplications: boolean | undefined;
-	dbSlaves:
-		| {
-				host: string;
-				port: number;
-				db: string;
-				user: string;
-				pass: string;
-		  }[]
-		| undefined;
-	fulltextSearch?: {
-		provider?: FulltextSearchProvider;
-	};
-	meilisearch:
-		| {
-				host: string;
-				port: string;
-				apiKey: string;
-				ssl?: boolean;
-				index: string;
-				scope?: 'local' | 'global' | string[];
-		  }
-		| undefined;
-	proxy: string | undefined;
-	proxySmtp: string | undefined;
-	proxyBypassHosts: string[] | undefined;
-	allowedPrivateNetworks: string[] | undefined;
-	maxFileSize: number;
-	clusterLimit: number | undefined;
-	threadPoolSize: number;
-	outgoingAddress: string | undefined;
-	outgoingAddressFamily: 'ipv4' | 'ipv6' | 'dual' | undefined;
-	deliverJobConcurrency: number | undefined;
-	inboxJobConcurrency: number | undefined;
-	relationshipJobConcurrency: number | undefined;
-	dbJobConcurrency: number | undefined;
-	systemJobConcurrency: number | undefined;
-	objectStorageJobConcurrency: number | undefined;
-	userWebhookJobConcurrency: number | undefined;
-	systemWebhookJobConcurrency: number | undefined;
-	deliverJobPerSec: number | undefined;
-	inboxJobPerSec: number | undefined;
-	relationshipJobPerSec: number | undefined;
-	deliverJobMaxAttempts: number | undefined;
-	inboxJobMaxAttempts: number | undefined;
-	logging?: {
-		sql?: {
-			disableQueryTruncation?: boolean;
-			enableQueryParamLogging?: boolean;
+	server: {
+		listen: { tcp: { address: string; port: number } } | { unixSocket: { path: string; permissions?: string } };
+		reverseProxy: { trustedNetworks: string[] };
+		http: {
+			maximumRequestBodySizeBytes: number;
+			gracefulShutdownTimeoutMs: number;
+			hsts: boolean;
+			ipRateLimit: boolean;
+		};
+		process: {
+			workers: number;
+			computationThreadsPerWorker: number;
+			pidFile: string;
 		};
 	};
-
-	version: string;
-	publishTarballInsteadOfProvideRepositoryUrl: boolean;
-	setupPassword: string | undefined;
-	host: string;
-	hostname: string;
-	scheme: string;
-	wsScheme: string;
-	apiUrl: string;
-	wsUrl: string;
-	authUrl: string;
-	driveUrl: string;
-	userAgent: string;
-	frontendManifestExists: boolean;
-	frontendEmbedManifestExists: boolean;
-	rootDir: string;
-	mediaProxy: string;
-	externalMediaProxyEnabled: boolean;
-	videoThumbnailGenerator: string | null;
-	redis: RedisOptions & RedisOptionsSource;
-	redisForPubsub: RedisOptions & RedisOptionsSource;
-	redisForJobQueue: RedisOptions & RedisOptionsSource;
-	redisForTimelines: RedisOptions & RedisOptionsSource;
-	redisForReactions: RedisOptions & RedisOptionsSource;
-	telemetryForBackend: TelemetryConfig | undefined;
-	telemetryForFrontend: FrontendTelemetryConfig | undefined;
-	perChannelMaxNoteCacheCount: number;
-	perUserNotificationsMaxCount: number;
-	deactivateAntennaThreshold: number;
-	pidFile: string;
+	database: {
+		primary: {
+			host: string;
+			port: number;
+			name: string;
+			user: string;
+			password: string;
+			ssl: boolean;
+		};
+		pool: {
+			minimumConnections: number;
+			maximumConnections: number;
+			connectionTimeoutMs: number;
+			idleConnectionTimeoutMs: number;
+			statementTimeoutMs: number;
+		};
+	};
+	valkey: {
+		primary: RuntimeValkeyConnection;
+		pubsub: RuntimeValkeyConnection;
+		jobQueue: RuntimeValkeyConnection;
+		timelines: RuntimeValkeyConnection;
+		reactions: RuntimeValkeyConnection;
+	};
+	search: {
+		provider: 'sqlLike' | 'sqlPgroonga' | 'meilisearch';
+		meilisearch?: {
+			endpoint: string;
+			apiKey: string;
+			index: string;
+			scope: 'local' | 'global' | string[];
+		};
+	};
+	outboundNetwork: {
+		bindAddress?: string;
+		addressFamily: 'ipv4' | 'ipv6' | 'dualStack';
+		proxy: { url?: string; smtpUrl?: string; bypassHosts: string[] };
+		http: {
+			connectionTimeoutMs: number;
+			requestTimeoutMs: number;
+			maximumResponseSizeBytes: number;
+			maximumSockets: number;
+			maximumFreeSockets: number;
+			keepAliveDurationMs: number;
+			maximumRedirects: number;
+		};
+		dnsCache: { successTtlSeconds: number; failureTtlSeconds: number };
+		privateNetworkAccess: { allowedNetworks: string[] };
+	};
+	media: {
+		proxyUrl: string;
+		externalProxyEnabled: boolean;
+		videoThumbnailGeneratorUrl: string | null;
+	};
+	limits: {
+		maximumFileSizeBytes: number;
+		channelTimelineNotes: number;
+		userNotifications: number;
+	};
+	maintenance: { antennaInactiveAfterMs: number };
+	queues: {
+		deliver: QueueConfig;
+		inbox: QueueConfig;
+		relationships: QueueConfig;
+		database: QueueConfig;
+		system: QueueConfig;
+		objectStorage: QueueConfig;
+		userWebhooks: QueueConfig;
+		systemWebhooks: QueueConfig;
+		backoff: { initialDelayMs: number; maximumDelayMs: number; jitterRatio: number };
+		retention: {
+			completedMaximumAgeSeconds: number;
+			completedMaximumCount: number;
+			failedMaximumAgeSeconds: number;
+			failedMaximumCount: number;
+		};
+	};
+	observability: {
+		logging: {
+			level: 'debug' | 'info' | 'warning' | 'error';
+			format: 'pretty' | 'json';
+			includeTimestamp: boolean;
+			sql: { enabled: boolean; logParameters: boolean; maximumQueryLength: number };
+		};
+		telemetry: { backend?: TelemetryConfig; frontend?: FrontendTelemetryConfig };
+	};
+	runtime: {
+		version: string;
+		host: string;
+		hostname: string;
+		apiUrl: string;
+		authUrl: string;
+		userAgent: string;
+		frontendManifestExists: boolean;
+		frontendEmbedManifestExists: boolean;
+		rootDir: string;
+	};
 };
-
-export type FulltextSearchProvider = 'sqlLike' | 'sqlPgroonga' | 'meilisearch';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 
-/** Path of repository root directory */
 let rootDir = _dirname;
-// 見つかるまで上に遡る
 while (!fs.existsSync(resolve(rootDir, 'packages'))) {
 	const parentDir = dirname(rootDir);
-	if (parentDir === rootDir) {
-		throw new Error('Cannot find root directory');
-	}
+	if (parentDir === rootDir) throw new Error('Cannot find root directory');
 	rootDir = parentDir;
 }
 
-/** Path of configuration directory */
-const configDir = resolve(rootDir, '.config');
-/** Path of built directory */
 const projectBuiltDir = resolve(rootDir, 'built');
-
 const compiledConfigFilePathForTest = resolve(projectBuiltDir, '._config_.json');
 
 export const compiledConfigFilePath = fs.existsSync(compiledConfigFilePathForTest)
 	? compiledConfigFilePathForTest
 	: resolve(projectBuiltDir, '.config.json');
 
+function resolveSecret(secret: SecretSource, path: string): string {
+	if ('plainText' in secret) return secret.plainText;
+	const value = process.env[secret.fromEnvironment];
+	if (value == null) throw new Error(`${path} requires environment variable ${secret.fromEnvironment}.`);
+	return value;
+}
+
+function normalizeUrl(value: string): string {
+	return value.endsWith('/') ? value.slice(0, -1) : value;
+}
+
+function resolveValkeyConnection(
+	config: CompiledConfigV2,
+	name: string,
+	host: string,
+): RuntimeValkeyConnection {
+	const source = config.valkey.connections[name];
+	if (source == null) throw new Error(`Unknown Valkey connection: ${name}`);
+	const prefix = source.keyPrefix ?? host;
+	return {
+		host: source.host,
+		port: source.port,
+		username: source.username,
+		password: source.password == null ? undefined : resolveSecret(source.password, `valkey.connections.${name}.password`),
+		db: source.database,
+		prefix,
+		keyPrefix: `${prefix}:`,
+		family: source.addressFamily === 'ipv4' ? 4 : source.addressFamily === 'ipv6' ? 6 : 0,
+		connectTimeout: parseDuration(source.connectionTimeout),
+		commandTimeout: parseDuration(source.commandTimeout),
+		...(source.tls ? { tls: {} } : {}),
+	};
+}
+
+function resolveTelemetry(config: CompiledConfigV2): Config['observability']['telemetry'] {
+	const backend = config.observability.telemetry.backend;
+	const disabledInstrumentations = backend?.disabledInstrumentations?.map((name, index) => {
+		if (!TELEMETRY_INSTRUMENTATION_NAMES.has(name)) {
+			throw new Error(`observability.telemetry.backend.disabledInstrumentations[${index}] is not supported.`);
+		}
+		return name as TelemetryInstrumentationName;
+	});
+	return {
+		backend: backend == null ? undefined : {
+			...backend,
+			headers: backend.headers == null ? undefined : Object.fromEntries(
+				Object.entries(backend.headers).map(([name, value]) => [
+					name,
+					resolveSecret(value, `observability.telemetry.backend.headers.${name}`),
+				]),
+			),
+			disabledInstrumentations,
+		},
+		frontend: config.observability.telemetry.frontend,
+	};
+}
+
+export function materializeConfig(source: CompiledConfigV2, meta: { version: string }): Config {
+	const instanceUrl = new URL(source.instance.url);
+	const url = instanceUrl.origin;
+	const maximumRequestBodySizeBytes = parseByteSize(source.server.http.maximumRequestBodySize);
+	const maximumFileSizeBytes = parseByteSize(source.limits.maximumFileSize);
+	if (maximumRequestBodySizeBytes < maximumFileSizeBytes + 1024 * 1024) {
+		throw new Error('server.http.maximumRequestBodySize must allow maximumFileSize plus at least 1MiB of multipart overhead.');
+	}
+	const internalMediaProxy = `${url}/proxy`;
+	const externalMediaProxy = source.media.externalProxyUrl == null ? null : normalizeUrl(source.media.externalProxyUrl);
+	const connections = source.valkey.assignments;
+	const primary = resolveValkeyConnection(source, 'primary', instanceUrl.host);
+	const meilisearch = source.search.provider === 'meilisearch'
+		? {
+			endpoint: normalizeUrl(source.search.meilisearch.endpoint),
+			apiKey: resolveSecret(source.search.meilisearch.apiKey, 'search.meilisearch.apiKey'),
+			index: source.search.meilisearch.index,
+			scope: source.search.meilisearch.scope,
+		}
+		: undefined;
+
+	return {
+		configVersion: 2,
+		instance: {
+			url,
+			setupPassword: source.instance.setupPassword == null ? undefined : resolveSecret(source.instance.setupPassword, 'instance.setupPassword'),
+			publishSourceTarball: source.instance.publishSourceTarball,
+		},
+		server: {
+			listen: source.server.listen,
+			reverseProxy: source.server.reverseProxy,
+			http: {
+				maximumRequestBodySizeBytes,
+				gracefulShutdownTimeoutMs: parseDuration(source.server.http.gracefulShutdownTimeout),
+				hsts: source.server.http.hsts,
+				ipRateLimit: source.server.http.ipRateLimit,
+			},
+			process: source.server.process,
+		},
+		database: {
+			primary: {
+				...source.database.primary,
+				password: resolveSecret(source.database.primary.password, 'database.primary.password'),
+			},
+			pool: {
+				minimumConnections: source.database.pool.minimumConnections,
+				maximumConnections: source.database.pool.maximumConnections,
+				connectionTimeoutMs: parseDuration(source.database.pool.connectionTimeout),
+				idleConnectionTimeoutMs: parseDuration(source.database.pool.idleConnectionTimeout),
+				statementTimeoutMs: parseDuration(source.database.pool.statementTimeout),
+			},
+		},
+		valkey: {
+			primary,
+			pubsub: connections.pubsub === 'primary' ? primary : resolveValkeyConnection(source, connections.pubsub, instanceUrl.host),
+			jobQueue: connections.jobQueue === 'primary' ? primary : resolveValkeyConnection(source, connections.jobQueue, instanceUrl.host),
+			timelines: connections.timelines === 'primary' ? primary : resolveValkeyConnection(source, connections.timelines, instanceUrl.host),
+			reactions: connections.reactions === 'primary' ? primary : resolveValkeyConnection(source, connections.reactions, instanceUrl.host),
+		},
+		search: { provider: source.search.provider, meilisearch },
+		outboundNetwork: {
+			bindAddress: source.outboundNetwork.bindAddress,
+			addressFamily: source.outboundNetwork.addressFamily,
+			proxy: source.outboundNetwork.proxy,
+			http: {
+				connectionTimeoutMs: parseDuration(source.outboundNetwork.http.connectionTimeout),
+				requestTimeoutMs: parseDuration(source.outboundNetwork.http.requestTimeout),
+				maximumResponseSizeBytes: parseByteSize(source.outboundNetwork.http.maximumResponseSize),
+				maximumSockets: source.outboundNetwork.http.maximumSockets,
+				maximumFreeSockets: source.outboundNetwork.http.maximumFreeSockets,
+				keepAliveDurationMs: parseDuration(source.outboundNetwork.http.keepAliveDuration),
+				maximumRedirects: source.outboundNetwork.http.maximumRedirects,
+			},
+			dnsCache: {
+				successTtlSeconds: parseDuration(source.outboundNetwork.dnsCache.successTtl) / 1000,
+				failureTtlSeconds: parseDuration(source.outboundNetwork.dnsCache.failureTtl) / 1000,
+			},
+			privateNetworkAccess: source.outboundNetwork.privateNetworkAccess,
+		},
+		media: {
+			proxyUrl: externalMediaProxy ?? internalMediaProxy,
+			externalProxyEnabled: externalMediaProxy != null && externalMediaProxy !== internalMediaProxy,
+			videoThumbnailGeneratorUrl: source.media.videoThumbnailGeneratorUrl == null ? null : normalizeUrl(source.media.videoThumbnailGeneratorUrl),
+		},
+		limits: {
+			maximumFileSizeBytes,
+			channelTimelineNotes: source.limits.channelTimelineNotes,
+			userNotifications: source.limits.userNotifications,
+		},
+		maintenance: { antennaInactiveAfterMs: parseDuration(source.maintenance.antennaInactiveAfter) },
+		queues: {
+			deliver: {
+				...source.queues.deliver,
+				maximumStartsPerSecond: source.queues.deliver.maximumStartsPerSecond ?? 128,
+				maximumAttempts: source.queues.deliver.maximumAttempts ?? 12,
+			},
+			inbox: {
+				...source.queues.inbox,
+				maximumStartsPerSecond: source.queues.inbox.maximumStartsPerSecond ?? 32,
+				maximumAttempts: source.queues.inbox.maximumAttempts ?? 8,
+			},
+			relationships: {
+				...source.queues.relationships,
+				maximumStartsPerSecond: source.queues.relationships.maximumStartsPerSecond ?? 64,
+			},
+			database: source.queues.database,
+			system: source.queues.system,
+			objectStorage: source.queues.objectStorage,
+			userWebhooks: {
+				...source.queues.userWebhooks,
+				maximumStartsPerSecond: source.queues.userWebhooks.maximumStartsPerSecond ?? source.queues.userWebhooks.concurrencyPerWorker,
+			},
+			systemWebhooks: {
+				...source.queues.systemWebhooks,
+				maximumStartsPerSecond: source.queues.systemWebhooks.maximumStartsPerSecond ?? source.queues.systemWebhooks.concurrencyPerWorker,
+			},
+			backoff: {
+				initialDelayMs: parseDuration(source.queues.backoff.initialDelay),
+				maximumDelayMs: parseDuration(source.queues.backoff.maximumDelay),
+				jitterRatio: source.queues.backoff.jitterRatio,
+			},
+			retention: {
+				completedMaximumAgeSeconds: parseDuration(source.queues.retention.completedMaximumAge) / 1000,
+				completedMaximumCount: source.queues.retention.completedMaximumCount,
+				failedMaximumAgeSeconds: parseDuration(source.queues.retention.failedMaximumAge) / 1000,
+				failedMaximumCount: source.queues.retention.failedMaximumCount,
+			},
+		},
+		observability: {
+			logging: source.observability.logging,
+			telemetry: resolveTelemetry(source),
+		},
+		runtime: {
+			version: meta.version,
+			host: instanceUrl.host,
+			hostname: instanceUrl.hostname,
+			apiUrl: `${url}/api`,
+			authUrl: `${url}/auth`,
+			userAgent: `Misskey/${meta.version} (${url})`,
+			frontendManifestExists: fs.existsSync(resolve(projectBuiltDir, '_frontend_vite_/manifest.json')),
+			frontendEmbedManifestExists: fs.existsSync(resolve(projectBuiltDir, '_frontend_embed_vite_/manifest.json')),
+			rootDir,
+		},
+	};
+}
+
 export function loadConfig(): Config {
 	if (!fs.existsSync(compiledConfigFilePath)) {
 		throw new Error("Compiled configuration file not found. Try running 'bun run compile-config'.");
 	}
+	const envelope = compiledConfigEnvelopeSchema.parse(JSON.parse(fs.readFileSync(compiledConfigFilePath, 'utf-8')));
+	const meta = JSON.parse(fs.readFileSync(resolve(projectBuiltDir, 'meta.json'), 'utf-8')) as { version: string };
+	return materializeConfig(envelope.config, meta);
+}
 
-	const meta = JSON.parse(fs.readFileSync(resolve(projectBuiltDir, 'meta.json'), 'utf-8'));
-
-	const frontendManifestExists = fs.existsSync(resolve(projectBuiltDir, '_frontend_vite_/manifest.json'));
-	const frontendEmbedManifestExists = fs.existsSync(resolve(projectBuiltDir, '_frontend_embed_vite_/manifest.json'));
-
-	const config = JSON.parse(fs.readFileSync(compiledConfigFilePath, 'utf-8')) as Source;
-	const { telemetryForBackend, telemetryForFrontend } = validateTelemetryConfig(config);
-
-	const url = tryCreateUrl(config.url ?? process.env.MISSKEY_URL ?? '');
-	const version = meta.version;
-	const host = url.host;
-	const hostname = url.hostname;
-	const scheme = url.protocol.replace(/:$/, '');
-	const wsScheme = scheme.replace('http', 'ws');
-
-	const dbDb = config.db.db ?? process.env.DATABASE_DB ?? '';
-	const dbUser = config.db.user ?? process.env.DATABASE_USER ?? '';
-	const dbPass = config.db.pass ?? process.env.DATABASE_PASSWORD ?? '';
-
-	const externalMediaProxy = config.mediaProxy
-		? config.mediaProxy.endsWith('/')
-			? config.mediaProxy.substring(0, config.mediaProxy.length - 1)
-			: config.mediaProxy
-		: null;
-	const internalMediaProxy = `${scheme}://${host}/proxy`;
-	const redis = convertRedisOptions(config.redis, host);
-
-	return {
-		version,
-		publishTarballInsteadOfProvideRepositoryUrl: !!config.publishTarballInsteadOfProvideRepositoryUrl,
-		setupPassword: config.setupPassword,
-		url: url.origin,
-		port: config.port ?? parseInt(process.env.PORT ?? '', 10),
-		socket: config.socket,
-		trustProxy: config.trustProxy ?? [
-			'10.0.0.0/8',
-			'172.16.0.0/12',
-			'192.168.0.0/16',
-			'127.0.0.1/32',
-			'::1/128',
-			'fc00::/7',
-		],
-		chmodSocket: config.chmodSocket,
-		disableHsts: config.disableHsts,
-		enableIpRateLimit: config.enableIpRateLimit ?? true,
-		host,
-		hostname,
-		scheme,
-		wsScheme,
-		wsUrl: `${wsScheme}://${host}`,
-		apiUrl: `${scheme}://${host}/api`,
-		authUrl: `${scheme}://${host}/auth`,
-		driveUrl: `${scheme}://${host}/files`,
-		db: { ...config.db, db: dbDb, user: dbUser, pass: dbPass },
-		dbReplications: config.dbReplications,
-		dbSlaves: config.dbSlaves,
-		fulltextSearch: config.fulltextSearch,
-		meilisearch: config.meilisearch,
-		redis,
-		redisForPubsub: config.redisForPubsub ? convertRedisOptions(config.redisForPubsub, host) : redis,
-		redisForJobQueue: config.redisForJobQueue ? convertRedisOptions(config.redisForJobQueue, host) : redis,
-		redisForTimelines: config.redisForTimelines ? convertRedisOptions(config.redisForTimelines, host) : redis,
-		redisForReactions: config.redisForReactions ? convertRedisOptions(config.redisForReactions, host) : redis,
-		telemetryForBackend,
-		telemetryForFrontend,
-		proxy: config.proxy,
-		proxySmtp: config.proxySmtp,
-		proxyBypassHosts: config.proxyBypassHosts,
-		allowedPrivateNetworks: config.allowedPrivateNetworks,
-		maxFileSize: config.maxFileSize ?? 262144000,
-		clusterLimit: config.clusterLimit,
-		threadPoolSize: config.threadPoolSize ?? 1,
-		outgoingAddress: config.outgoingAddress,
-		outgoingAddressFamily: config.outgoingAddressFamily,
-		deliverJobConcurrency: config.deliverJobConcurrency,
-		inboxJobConcurrency: config.inboxJobConcurrency,
-		relationshipJobConcurrency: config.relationshipJobConcurrency,
-		dbJobConcurrency: config.dbJobConcurrency,
-		systemJobConcurrency: config.systemJobConcurrency,
-		objectStorageJobConcurrency: config.objectStorageJobConcurrency,
-		userWebhookJobConcurrency: config.userWebhookJobConcurrency,
-		systemWebhookJobConcurrency: config.systemWebhookJobConcurrency,
-		deliverJobPerSec: config.deliverJobPerSec,
-		inboxJobPerSec: config.inboxJobPerSec,
-		relationshipJobPerSec: config.relationshipJobPerSec,
-		deliverJobMaxAttempts: config.deliverJobMaxAttempts,
-		inboxJobMaxAttempts: config.inboxJobMaxAttempts,
-		mediaProxy: externalMediaProxy ?? internalMediaProxy,
-		externalMediaProxyEnabled: externalMediaProxy !== null && externalMediaProxy !== internalMediaProxy,
-		videoThumbnailGenerator: config.videoThumbnailGenerator
-			? config.videoThumbnailGenerator.endsWith('/')
-				? config.videoThumbnailGenerator.substring(0, config.videoThumbnailGenerator.length - 1)
-				: config.videoThumbnailGenerator
-			: null,
-		userAgent: `Misskey/${version} (${url.origin})`,
-		frontendManifestExists: frontendManifestExists,
-		frontendEmbedManifestExists: frontendEmbedManifestExists,
-		rootDir,
-		perChannelMaxNoteCacheCount: config.perChannelMaxNoteCacheCount ?? 1000,
-		perUserNotificationsMaxCount: config.perUserNotificationsMaxCount ?? 500,
-		deactivateAntennaThreshold: config.deactivateAntennaThreshold ?? 1000 * 60 * 60 * 24 * 7,
-		pidFile: config.pidFile,
-		logging: config.logging,
+export function createRedactedConfig(config: Config): object {
+	const redactUrlCredentials = (value: string | undefined): string | undefined => {
+		if (value == null) return undefined;
+		const url = new URL(value);
+		if (url.username === '' && url.password === '') return value;
+		url.username = '***';
+		url.password = '***';
+		return url.toString();
 	};
-}
-
-export function validateTelemetryConfig(config: {
-	telemetryForBackend?: unknown;
-	telemetryForFrontend?: unknown;
-}): Pick<Config, 'telemetryForBackend' | 'telemetryForFrontend'> {
-	return {
-		telemetryForBackend: validateBackendTelemetryConfig(config.telemetryForBackend),
-		telemetryForFrontend: validateFrontendTelemetryConfig(config.telemetryForFrontend),
-	};
-}
-
-function validateBackendTelemetryConfig(value: unknown): TelemetryConfig | undefined {
-	if (value == null) return undefined;
-	const config = validateTelemetryObject(value, 'telemetryForBackend', [
-		'endpoint',
-		'headers',
-		'serviceName',
-		'tracesSampleRatio',
-		'tracePropagationTargets',
-		'disabledInstrumentations',
-	]);
 
 	return {
-		endpoint: validateTelemetryUrl(config.endpoint, 'telemetryForBackend.endpoint'),
-		headers: validateTelemetryHeaders(config.headers),
-		serviceName: validateOptionalNonEmptyString(config.serviceName, 'telemetryForBackend.serviceName'),
-		tracesSampleRatio: validateTraceSampleRatio(config.tracesSampleRatio, 'telemetryForBackend.tracesSampleRatio'),
-		tracePropagationTargets: validateTelemetryUrls(
-			config.tracePropagationTargets,
-			'telemetryForBackend.tracePropagationTargets',
-		),
-		disabledInstrumentations: validateDisabledInstrumentations(config.disabledInstrumentations),
-	};
-}
-
-function validateFrontendTelemetryConfig(value: unknown): FrontendTelemetryConfig | undefined {
-	if (value == null) return undefined;
-	const config = validateTelemetryObject(value, 'telemetryForFrontend', [
-		'endpoint',
-		'headers',
-		'serviceName',
-		'tracesSampleRatio',
-		'propagateTraceHeaderCorsUrls',
-	]);
-
-	if ('headers' in config) {
-		throw new Error(
-			'telemetryForFrontend.headers is not supported because frontend configuration is public. ' +
-			'Configure an unauthenticated, restricted collector endpoint or an authenticating same-origin proxy instead.',
-		);
-	}
-
-	return {
-		endpoint: validateTelemetryUrl(config.endpoint, 'telemetryForFrontend.endpoint', true),
-		serviceName: validateOptionalNonEmptyString(config.serviceName, 'telemetryForFrontend.serviceName'),
-		tracesSampleRatio: validateTraceSampleRatio(config.tracesSampleRatio, 'telemetryForFrontend.tracesSampleRatio'),
-		propagateTraceHeaderCorsUrls: validateTelemetryUrls(
-			config.propagateTraceHeaderCorsUrls,
-			'telemetryForFrontend.propagateTraceHeaderCorsUrls',
-			true,
-		),
-	};
-}
-
-function validateTelemetryObject(
-	value: unknown,
-	path: string,
-	allowedKeys: readonly string[],
-): Record<string, unknown> {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-		throw new Error(`${path} must be an object.`);
-	}
-
-	const config = value as Record<string, unknown>;
-	const unknownKey = Object.keys(config).find(key => !allowedKeys.includes(key));
-	if (unknownKey != null) throw new Error(`${path}.${unknownKey} is not a supported telemetry option.`);
-	return config;
-}
-
-function validateTelemetryUrl(value: unknown, path: string, disallowQuery = false): string {
-	if (typeof value !== 'string' || value.length === 0) throw new Error(`${path} must be a non-empty URL.`);
-
-	let url: URL;
-	try {
-		url = new URL(value);
-	} catch (error) {
-		throw new Error(`${path} must be a valid absolute URL.`, { cause: error });
-	}
-
-	if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(`${path} must use http or https.`);
-	if (url.username !== '' || url.password !== '') throw new Error(`${path} must not contain credentials.`);
-	if (url.hash !== '') throw new Error(`${path} must not contain a fragment.`);
-	if (disallowQuery && url.search !== '') {
-		throw new Error(`${path} must not contain query parameters because frontend configuration is public.`);
-	}
-
-	return value;
-}
-
-function validateTelemetryHeaders(value: unknown): Record<string, string> | undefined {
-	if (value === undefined) return undefined;
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-		throw new Error('telemetryForBackend.headers must be an object.');
-	}
-
-	const headers = value as Record<string, unknown>;
-	for (const [name, headerValue] of Object.entries(headers)) {
-		if (name.length === 0 || typeof headerValue !== 'string') {
-			throw new Error('telemetryForBackend.headers must contain only non-empty header names with string values.');
-		}
-	}
-
-	return headers as Record<string, string>;
-}
-
-function validateOptionalNonEmptyString(value: unknown, path: string): string | undefined {
-	if (value === undefined) return undefined;
-	if (typeof value !== 'string' || value.trim().length === 0) throw new Error(`${path} must be a non-empty string.`);
-	return value;
-}
-
-function validateTraceSampleRatio(value: unknown, path: string): number | undefined {
-	if (value === undefined) return undefined;
-	if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
-		throw new Error(`${path} must be a finite number between 0 and 1.`);
-	}
-	return value;
-}
-
-function validateTelemetryUrls(value: unknown, path: string, disallowQuery = false): string[] | undefined {
-	if (value === undefined) return undefined;
-	if (!Array.isArray(value)) throw new Error(`${path} must be an array of absolute URLs.`);
-	return value.map((url, index) => validateTelemetryUrl(url, `${path}[${index}]`, disallowQuery));
-}
-
-function validateDisabledInstrumentations(value: unknown): TelemetryInstrumentationName[] | undefined {
-	if (value === undefined) return undefined;
-	if (!Array.isArray(value)) throw new Error('telemetryForBackend.disabledInstrumentations must be an array of instrumentation package names.');
-
-	return value.map((name, index) => {
-		if (typeof name !== 'string' || !TELEMETRY_INSTRUMENTATION_NAME_SET.has(name)) {
-			throw new Error(`telemetryForBackend.disabledInstrumentations[${index}] is not a supported instrumentation package name.`);
-		}
-		return name as TelemetryInstrumentationName;
-	});
-}
-
-function tryCreateUrl(url: string) {
-	try {
-		return new URL(url);
-	} catch (_) {
-		throw new Error(`url="${url}" is not a valid URL.`, { cause: _ });
-	}
-}
-
-function convertRedisOptions(options: RedisOptionsSource, host: string): RedisOptions & RedisOptionsSource {
-	return {
-		...options,
-		password: options.pass,
-		prefix: options.prefix ?? host,
-		family: options.family ?? 0,
-		keyPrefix: `${options.prefix ?? host}:`,
-		db: options.db ?? 0,
+		...config,
+		instance: { ...config.instance, setupPassword: config.instance.setupPassword == null ? undefined : '***' },
+		database: { ...config.database, primary: { ...config.database.primary, password: '***' } },
+		valkey: Object.fromEntries(Object.entries(config.valkey).map(([name, value]) => [
+			name,
+			{ ...value, password: value.password == null ? undefined : '***' },
+		])),
+		search: config.search.meilisearch == null ? config.search : {
+			...config.search,
+			meilisearch: { ...config.search.meilisearch, apiKey: '***' },
+		},
+		outboundNetwork: {
+			...config.outboundNetwork,
+			proxy: {
+				...config.outboundNetwork.proxy,
+				url: redactUrlCredentials(config.outboundNetwork.proxy.url),
+				smtpUrl: redactUrlCredentials(config.outboundNetwork.proxy.smtpUrl),
+			},
+		},
+		observability: {
+			...config.observability,
+			telemetry: {
+				...config.observability.telemetry,
+				backend: config.observability.telemetry.backend == null ? undefined : {
+					...config.observability.telemetry.backend,
+					headers: config.observability.telemetry.backend.headers == null ? undefined : Object.fromEntries(
+						Object.keys(config.observability.telemetry.backend.headers).map(name => [name, '***']),
+					),
+				},
+			},
+		},
 	};
 }

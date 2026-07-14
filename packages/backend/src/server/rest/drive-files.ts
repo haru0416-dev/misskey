@@ -21,6 +21,7 @@ import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { listNotesByAttachedFileIdFromDatabase } from '@/core/NoteStore.js';
 import type { ObjectStorageQueue } from '@/core/queues.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -273,8 +274,7 @@ export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDepend
 			attempts: 5,
 			backoff: { type: 'exponential', delay: 10_000 },
 			deduplication: { id: key },
-			removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-			removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+			...queueRetentionOptions(deps.config),
 		}),
 		updateDriveChart: (file, isAdditional) => deps.chartWriters.driveChart.update(file, isAdditional),
 		updatePerUserDriveChart: (file, isAdditional) => deps.chartWriters.perUserDriveChart.update(file, isAdditional),

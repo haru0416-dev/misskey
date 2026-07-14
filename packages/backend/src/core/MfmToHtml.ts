@@ -97,7 +97,7 @@ export function mfmToHtml(
 		},
 
 		hashtag: (node) => {
-			return `<a href="${escapeHtml(`${config.url}/tags/${encodeURIComponent(node.props.hashtag)}`)}" rel="tag">#${escapeHtml(node.props.hashtag)}</a>`;
+			return `<a href="${escapeHtml(`${config.instance.url}/tags/${encodeURIComponent(node.props.hashtag)}`)}" rel="tag">#${escapeHtml(node.props.hashtag)}</a>`;
 		},
 
 		inlineCode: (node) => {
@@ -126,7 +126,7 @@ export function mfmToHtml(
 			const remoteUserInfo = mentionedRemoteUsers.find(remoteUser => remoteUser.username.toLowerCase() === username.toLowerCase() && remoteUser.host?.toLowerCase() === host?.toLowerCase());
 			const href = remoteUserInfo
 				? (remoteUserInfo.url ? remoteUserInfo.url : remoteUserInfo.uri)
-				: `${config.url}/${acct.endsWith(`@${config.url}`) ? acct.substring(0, acct.length - config.url.length - 1) : acct}`;
+				: `${config.instance.url}/${acct.endsWith(`@${config.instance.url}`) ? acct.substring(0, acct.length - config.instance.url.length - 1) : acct}`;
 			try {
 				const url = new URL(href);
 				return `<a href="${escapeHtml(url.href)}" class="u-url mention">${escapeHtml(acct)}</a>`;
