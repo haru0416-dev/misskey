@@ -31,7 +31,11 @@ function createCommonData(): CommonData {
 		instanceUrl: 'http://example.test',
 		now: 0,
 		federationEnabled: true,
-		frontendViteFiles: null,
+		frontendViteFiles: {
+			entryJs: 'scripts/entry.js',
+			css: ['assets/app.css'],
+			modulePreloads: ['scripts/vendor.js'],
+		},
 		frontendBootloaderJs: null,
 		frontendBootloaderCss: null,
 		frontendEmbedViteFiles: null,
@@ -66,6 +70,8 @@ describe('createClientBaseApp', () => {
 		expect(body).toContain('<!DOCTYPE html>');
 		expect(body).toContain('<title>Testkey</title>');
 		expect(body).toContain('<script type="application/json" id="misskey_meta"');
+		expect(body).toContain('const CLIENT_ENTRY = "scripts/entry.js";');
+		expect(body).toContain('const CLIENT_PRELOADS = ["scripts/vendor.js"];');
 	});
 
 	test('GET /tags/:tag renders a noindex base page', async () => {

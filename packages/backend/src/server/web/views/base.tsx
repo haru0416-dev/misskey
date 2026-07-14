@@ -81,6 +81,7 @@ export function Layout(props: PropsWithChildren<CommonProps<{
 					<script>
 						const VERSION = '{props.version}';
 						const CLIENT_ENTRY = {JSON.stringify(props.frontendViteFiles?.entryJs ?? null)};
+						const CLIENT_PRELOADS = {JSON.stringify(props.frontendViteFiles?.modulePreloads ?? [])};
 						const LANGS = {JSON.stringify(props.langs)};
 					</script>
 
@@ -105,4 +106,3 @@ export function Layout(props: PropsWithChildren<CommonProps<{
 }
 
 export { Layout as BasePage };
-
