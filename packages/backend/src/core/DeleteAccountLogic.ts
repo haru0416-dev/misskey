@@ -15,6 +15,7 @@ import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta, MiUser } from '@/models/_.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 
 export type DeleteAccountDependencies = {
 	config: Config;
@@ -29,17 +30,6 @@ type DeleteAccountTarget = {
 	id: MiUser['id'];
 	host: MiUser['host'];
 };
-
-const DELETE_ACCOUNT_JOB_OPTIONS = {
-	removeOnComplete: {
-		age: 3600 * 24 * 7,
-		count: 30,
-	},
-	removeOnFail: {
-		age: 3600 * 24 * 7,
-		count: 100,
-	},
-} as const;
 
 function genLocalUserUri(config: Config, userId: MiUser['id']): string {
 	return `${config.instance.url}/users/${userId}`;
@@ -64,13 +54,14 @@ function addActivityContext<T extends IObject>(config: Config, activity: T): T &
 
 async function enqueueDeleteAccountJob(
 	db: MiDrizzleDatabase,
+	config: Pick<Config, 'queues'>,
 	user: DeleteAccountTarget,
 	soft: boolean,
 ): Promise<string> {
 	return await enqueueDbJobInOutbox(db, 'deleteAccount', {
 		user: { id: user.id },
 		soft,
-	}, DELETE_ACCOUNT_JOB_OPTIONS);
+	}, queueRetentionOptions(config));
 }
 
 export async function deleteAccountWithSideEffects(
@@ -106,7 +97,7 @@ export async function deleteAccountWithSideEffects(
 	}
 
 	const outboxId = await deps.db.transaction(async transaction => {
-		const id = await enqueueDeleteAccountJob(transaction as MiDrizzleDatabase, user, user.host !== null);
+		const id = await enqueueDeleteAccountJob(transaction as MiDrizzleDatabase, deps.config, user, user.host !== null);
 		await updateUserDeletedStateInDatabase(transaction as MiDrizzleDatabase, user.id, true);
 		return id;
 	});
@@ -115,7 +106,7 @@ export async function deleteAccountWithSideEffects(
 		user: { id: user.id },
 		soft: user.host !== null,
 	}, {
-		...DELETE_ACCOUNT_JOB_OPTIONS,
+		...queueRetentionOptions(deps.config),
 		jobId: `outbox-${outboxId}`,
 	}).catch(() => {
 		// The outbox dispatcher retries when the low-latency enqueue path is unavailable.

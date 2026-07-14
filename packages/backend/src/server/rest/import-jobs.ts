@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { DbQueue } from '@/core/queues.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
@@ -29,21 +30,14 @@ export type HonoApiIImportAntennasDependencies = HonoApiImportJobDependencies & 
 	downloadService: Pick<DownloadService, 'downloadTextFile'>;
 };
 
-const IMPORT_JOB_OPTIONS = {
+const importJobOptions = (config: Pick<Config, 'queues'>) => ({
 	attempts: 3,
 	backoff: {
 		type: 'exponential',
 		delay: 1000,
 	},
-	removeOnComplete: {
-		age: 3600 * 24 * 7,
-		count: 30,
-	},
-	removeOnFail: {
-		age: 3600 * 24 * 7,
-		count: 100,
-	},
-} as const;
+	...queueRetentionOptions(config),
+});
 
 async function checkRecentlyMovedForHonoApi(deps: HonoApiImportJobDependencies, me: MiLocalUser): Promise<boolean> {
 	const oldSelfIds = await resolveAlsoKnownAsForHonoApi(deps, me.alsoKnownAs);
@@ -106,7 +100,7 @@ export async function handleHonoApiIImportBlocking(
 	deps.dbQueue.add('importBlocking', {
 		user: { id: me.id },
 		fileId: file.id,
-	}, IMPORT_JOB_OPTIONS);
+	}, importJobOptions(deps.config));
 }
 
 export const importFollowingParamDef = z.object({
@@ -132,7 +126,7 @@ export async function handleHonoApiIImportFollowing(
 		user: { id: me.id },
 		fileId: file.id,
 		withReplies: params.withReplies,
-	}, IMPORT_JOB_OPTIONS);
+	}, importJobOptions(deps.config));
 }
 
 export const importMutingParamDef = z.object({
@@ -156,7 +150,7 @@ export async function handleHonoApiIImportMuting(
 	deps.dbQueue.add('importMuting', {
 		user: { id: me.id },
 		fileId: file.id,
-	}, IMPORT_JOB_OPTIONS);
+	}, importJobOptions(deps.config));
 }
 
 export const importUserListsParamDef = z.object({
@@ -180,7 +174,7 @@ export async function handleHonoApiIImportUserLists(
 	deps.dbQueue.add('importUserLists', {
 		user: { id: me.id },
 		fileId: file.id,
-	}, IMPORT_JOB_OPTIONS);
+	}, importJobOptions(deps.config));
 }
 
 export const importAntennasParamDef = z.object({
@@ -230,5 +224,5 @@ export async function handleHonoApiIImportAntennas(
 	deps.dbQueue.add('importAntennas', {
 		user: { id: me.id },
 		antenna: antennas,
-	}, IMPORT_JOB_OPTIONS);
+	}, importJobOptions(deps.config));
 }

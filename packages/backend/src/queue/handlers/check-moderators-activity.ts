@@ -130,7 +130,7 @@ async function enqueueCheckModeratorsActivitySystemWebhook<T extends SystemWebho
 	content: SystemWebhookPayload<T>,
 ): Promise<void> {
 	const webhooks = await listSystemWebhooksFromDatabase(deps.db, { isActive: true, on: [type] });
-	await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, type, content)));
+	await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content)));
 }
 
 async function notifyInactiveModeratorsWarning(deps: HonoQueueCheckModeratorsActivityDependencies, remainingTime: ModeratorInactivityRemainingTime): Promise<void> {

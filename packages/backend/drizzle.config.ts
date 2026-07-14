@@ -17,7 +17,7 @@ type CompiledDbConfig = {
 				name: string;
 				user: string;
 				password: { fromEnvironment: string } | { plainText: string };
-				ssl: boolean;
+				ssl?: boolean;
 			};
 		};
 	};
@@ -47,6 +47,6 @@ export default {
 		user: database.user,
 		password,
 		database: database.name,
-		ssl: database.ssl,
+		...(database.ssl == null ? {} : { ssl: database.ssl }),
 	},
 } satisfies Config;

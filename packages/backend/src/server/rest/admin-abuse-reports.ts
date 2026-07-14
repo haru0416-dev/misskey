@@ -175,7 +175,7 @@ export async function notifyAbuseReportSystemWebhookForHonoApi(
 	const contents = await packAbuseReportsForSystemWebhook<typeof type>(deps, reports);
 	await Promise.all(contents.map(async content => {
 		await Promise.all(targetWebhooks
-			.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, webhook, type, content)));
+			.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content)));
 	}));
 }
 

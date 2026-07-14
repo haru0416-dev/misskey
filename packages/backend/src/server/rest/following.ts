@@ -25,6 +25,7 @@ import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -361,14 +362,7 @@ async function enqueueUserWebhook(
 			backoff: {
 				type: 'custom',
 			},
-			removeOnComplete: {
-				age: 3600 * 24 * 7,
-				count: 30,
-			},
-			removeOnFail: {
-				age: 3600 * 24 * 7,
-				count: 100,
-			},
+			...queueRetentionOptions(deps.config),
 		});
 	}));
 }

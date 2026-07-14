@@ -12,6 +12,7 @@ import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '
 import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DbQueue } from '@/core/queues.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/RoleStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -607,16 +608,7 @@ export async function handleHonoApiAdminEmojiImportZip(
 	await deps.dbQueue.add('importCustomEmojis', {
 		user: { id: me.id },
 		fileId: params.fileId,
-	}, {
-		removeOnComplete: {
-			age: 3600 * 24 * 7,
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7,
-			count: 100,
-		},
-	});
+	}, queueRetentionOptions(deps.config));
 }
 
 export async function handleHonoApiAdminEmojiUpdate(

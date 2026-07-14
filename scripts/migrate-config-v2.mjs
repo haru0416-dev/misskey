@@ -7,6 +7,7 @@ import fs from 'node:fs/promises';
 import { isIP } from 'node:net';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
+import { sourceConfigV2Schema } from '../packages/backend/src/config-schema.ts';
 
 const [inputArgument, outputArgument] = process.argv.slice(2);
 if (inputArgument == null || outputArgument == null) {
@@ -51,23 +52,35 @@ const telemetryBackend = (source) => ({
 				),
 			}),
 });
-const redisConnection = (source) => ({
-	host: source.host,
-	port: source.port ?? 6379,
-	...(source.username == null ? {} : { username: source.username }),
-	...(source.pass == null ? {} : { password: secret(source.pass, 'VALKEY_PASSWORD') }),
-	database: source.db ?? 0,
-	...(source.prefix == null ? {} : { keyPrefix: source.prefix }),
-	addressFamily: source.family === 4 ? 'ipv4' : source.family === 6 ? 'ipv6' : 'auto',
-	tls: Boolean(source.tls),
-});
+const redisConnection = (source, path) => {
+	const supportedKeys = new Set(['host', 'port', 'username', 'pass', 'db', 'prefix', 'family', 'tls']);
+	const unsupportedKey = Object.keys(source).find((key) => !supportedKeys.has(key));
+	if (unsupportedKey != null) throw new Error(`${path}.${unsupportedKey} cannot be migrated automatically.`);
+	if (
+		source.tls != null &&
+		typeof source.tls !== 'boolean' &&
+		(typeof source.tls !== 'object' || Object.keys(source.tls).length > 0)
+	) {
+		throw new Error(`${path}.tls contains options that cannot be migrated automatically.`);
+	}
+	return {
+		host: source.host,
+		port: source.port ?? 6379,
+		...(source.username == null ? {} : { username: source.username }),
+		...(source.pass == null ? {} : { password: secret(source.pass, 'VALKEY_PASSWORD') }),
+		database: source.db ?? 0,
+		...(source.prefix == null ? {} : { keyPrefix: source.prefix }),
+		addressFamily: source.family === 4 ? 'ipv4' : source.family === 6 ? 'ipv6' : 'auto',
+		...(source.tls == null ? {} : { tls: Boolean(source.tls) }),
+	};
+};
 
 const instanceUrl = old.url ?? process.env.MISSKEY_URL;
 if (typeof instanceUrl !== 'string') throw new Error('The old configuration or MISSKEY_URL must define url.');
 if (typeof old.db !== 'object' || old.db == null) throw new Error('The old configuration must define db.');
 if (typeof old.redis !== 'object' || old.redis == null) throw new Error('The old configuration must define redis.');
 
-const connections = { primary: redisConnection(old.redis) };
+const connections = { primary: redisConnection(old.redis, 'redis') };
 const assignments = {};
 for (const [oldKey, newName, assignment] of [
 	['redisForPubsub', 'pubsub', 'pubsub'],
@@ -76,8 +89,21 @@ for (const [oldKey, newName, assignment] of [
 	['redisForReactions', 'reactions', 'reactions'],
 ]) {
 	if (old[oldKey] == null) continue;
-	connections[newName] = redisConnection(old[oldKey]);
+	connections[newName] = redisConnection(old[oldKey], oldKey);
 	assignments[assignment] = newName;
+}
+
+const databaseExtra = old.db.extra ?? {};
+const supportedDatabaseExtraKeys = new Set(['ssl', 'max', 'statement_timeout']);
+const unsupportedDatabaseExtraKey = Object.keys(databaseExtra).find((key) => !supportedDatabaseExtraKeys.has(key));
+if (unsupportedDatabaseExtraKey != null)
+	throw new Error(`db.extra.${unsupportedDatabaseExtraKey} cannot be migrated automatically.`);
+if (
+	databaseExtra.ssl != null &&
+	typeof databaseExtra.ssl !== 'boolean' &&
+	(typeof databaseExtra.ssl !== 'object' || Object.keys(databaseExtra.ssl).length > 0)
+) {
+	throw new Error('db.extra.ssl contains options that cannot be migrated automatically.');
 }
 
 const migrated = {
@@ -125,11 +151,11 @@ const migrated = {
 			name: old.db.db ?? process.env.DATABASE_DB ?? 'misskey',
 			user: old.db.user ?? process.env.DATABASE_USER ?? 'misskey',
 			password: secret(old.db.pass, 'DATABASE_PASSWORD'),
-			ssl: old.db.extra?.ssl ?? false,
+			...(databaseExtra.ssl == null ? {} : { ssl: Boolean(databaseExtra.ssl) }),
 		},
 		pool: {
-			maximumConnections: old.db.extra?.max ?? 30,
-			statementTimeout: duration(old.db.extra?.statement_timeout ?? 10_000),
+			maximumConnections: databaseExtra.max ?? 30,
+			statementTimeout: duration(databaseExtra.statement_timeout ?? 10_000),
 		},
 	},
 	valkey: { connections, assignments },
@@ -203,5 +229,6 @@ const migrated = {
 	},
 };
 
+sourceConfigV2Schema.parse(migrated);
 await fs.writeFile(outputPath, yaml.dump(migrated, { noRefs: true, lineWidth: 120 }), { flag: 'wx', mode: 0o600 });
 console.log(`${inputPath} -> ${outputPath}`);
