@@ -471,6 +471,7 @@ exploreFediverse: "Fediverseを探索"
 popularTags: "人気のタグ"
 userList: "リスト"
 about: "情報"
+aboutErebia: "Erebiaについて"
 aboutMisskey: "Misskeyについて"
 administrator: "管理者"
 token: "確認コード"
@@ -2292,6 +2293,12 @@ _aboutMisskey:
   morePatrons: "他にも多くの方が支援してくれています。ありがとうございます🥰"
   patrons: "支援者"
   projectMembers: "プロジェクトメンバー"
+
+_aboutErebia:
+  about: "Erebiaは、自由につながり、表現できるオープンソースの分散型ソーシャルプラットフォームです。"
+  basedOnMisskey: "ErebiaはMisskeyを基盤として開発されています。基盤となったプロジェクトについては「Misskeyについて」をご覧ください。"
+  source: "Erebiaのソースコード"
+  love: "I $[jelly ❤] #Erebia"
 
 _displayOfSensitiveMedia:
   respect: "センシティブ設定されたメディアを隠す"
