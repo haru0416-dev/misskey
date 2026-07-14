@@ -2295,9 +2295,20 @@ _aboutMisskey:
   projectMembers: "プロジェクトメンバー"
 
 _aboutErebia:
-  about: "Erebiaは、自由につながり、表現できるオープンソースの分散型ソーシャルプラットフォームです。"
-  basedOnMisskey: "ErebiaはMisskeyを基盤として開発されています。基盤となったプロジェクトについては「Misskeyについて」をご覧ください。"
+  tagline: "つながり方を、自分たちの手に。"
+  about: "Erebiaは、自由につながり、自分らしく表現できる場所を目指すオープンソースの分散型ソーシャルプラットフォームです。"
+  basedOnMisskey: "ErebiaはMisskeyを基盤として開発されています。"
+  values: "Erebiaが大切にすること"
+  freedom: "自由につながる"
+  freedomDescription: "ひとつの場所に閉じず、それぞれのコミュニティが自分たちらしい場を育てられることを大切にします。"
+  expression: "自分らしく表現する"
+  expressionDescription: "ことば、画像、リアクションなど、多様な表現を気軽に共有できる体験を磨き続けます。"
+  community: "みんなで育てる"
+  communityDescription: "オープンな開発を通じて、使う人と運営する人の声をプロダクトへつなげます。"
+  development: "開発情報"
+  developmentDescription: "Erebiaはオープンソースで開発されています。ソースコード、更新履歴、配布物を公開しています。"
   source: "Erebiaのソースコード"
+  releases: "更新履歴"
   love: "I $[jelly ❤] #Erebia"
 
 _displayOfSensitiveMedia:
