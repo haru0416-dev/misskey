@@ -56,6 +56,7 @@ import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, t
 import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox } from '@/core/QueueOutboxStore.js';
+import type { DbJobData, DbJobName } from '@/queue/types.js';
 
 export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies & HonoQueueRelationshipDependencies & HonoQueuePostScheduledNoteDependencies & HonoQueueSystemDependencies & HonoQueueCleanRemoteNotesDependencies & HonoQueueDeliverDependencies & HonoQueueInboxDependencies & HonoQueueEndedPollNotificationDependencies & HonoQueueObjectStorageDependencies & HonoQueueDbDependencies & HonoQueueEmojisDependencies & HonoQueueDeleteAccountDependencies & HonoQueueCheckModeratorsActivityDependencies & {
 	config: Config;
@@ -72,9 +73,13 @@ export type HonoQueueWorkers = {
 	inboxQueueWorker: Bull.Worker;
 	endedPollNotificationQueueWorker: Bull.Worker;
 	objectStorageQueueWorker: Bull.Worker;
-	dbQueueWorker: Bull.Worker;
+	dbQueueWorker: Bull.Worker<DbJobData<DbJobName>, unknown, DbJobName>;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
+};
+
+type DbJobHandlerMap = {
+	[Name in DbJobName]: (job: Bull.Job<DbJobData<Name>, unknown, Name>) => Promise<unknown>;
 };
 
 // ref. https://github.com/misskey-dev/misskey/pull/7635#issue-971097019
@@ -328,30 +333,35 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
 
-	// dbキューの全18ジョブ型を移植済み。
-	const dbQueueWorker = new Bull.Worker(QUEUE.DB, (job) => {
-		switch (job.name) {
-			case 'deleteDriveFiles': return handleHonoQueueDeleteDriveFiles(deps, job);
-			case 'exportMuting': return handleHonoQueueExportMuting(deps, job);
-			case 'exportBlocking': return handleHonoQueueExportBlocking(deps, job);
-			case 'exportUserLists': return handleHonoQueueExportUserLists(deps, job);
-			case 'exportAntennas': return handleHonoQueueExportAntennas(deps, job);
-			case 'exportFollowing': return handleHonoQueueExportFollowing(deps, job);
-			case 'importAntennas': return handleHonoQueueImportAntennas(deps, job);
-			case 'importMuting': return handleHonoQueueImportMuting(deps, job);
-			case 'importUserLists': return handleHonoQueueImportUserLists(deps, job);
-			case 'importBlocking': return handleHonoQueueImportBlocking(deps, job);
-			case 'importBlockingToDb': return handleHonoQueueImportBlockingToDb(deps, job);
-			case 'importFollowing': return handleHonoQueueImportFollowing(deps, job);
-			case 'importFollowingToDb': return handleHonoQueueImportFollowingToDb(deps, job);
-			case 'exportFavorites': return handleHonoQueueExportFavorites(deps, job);
-			case 'exportNotes': return handleHonoQueueExportNotes(deps, job);
-			case 'exportClips': return handleHonoQueueExportClips(deps, job);
-			case 'exportCustomEmojis': return handleHonoQueueExportCustomEmojis(deps, job);
-			case 'importCustomEmojis': return handleHonoQueueImportCustomEmojis(deps, job);
-			case 'deleteAccount': return handleHonoQueueDeleteAccount(deps, job);
-			default: throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for db`);
-		}
+	const dbJobHandlers = {
+		deleteDriveFiles: job => handleHonoQueueDeleteDriveFiles(deps, job),
+		exportMuting: job => handleHonoQueueExportMuting(deps, job),
+		exportBlocking: job => handleHonoQueueExportBlocking(deps, job),
+		exportUserLists: job => handleHonoQueueExportUserLists(deps, job),
+		exportAntennas: job => handleHonoQueueExportAntennas(deps, job),
+		exportFollowing: job => handleHonoQueueExportFollowing(deps, job),
+		importAntennas: job => handleHonoQueueImportAntennas(deps, job),
+		importMuting: job => handleHonoQueueImportMuting(deps, job),
+		importUserLists: job => handleHonoQueueImportUserLists(deps, job),
+		importBlocking: job => handleHonoQueueImportBlocking(deps, job),
+		importBlockingToDb: job => handleHonoQueueImportBlockingToDb(deps, job),
+		importFollowing: job => handleHonoQueueImportFollowing(deps, job),
+		importFollowingToDb: job => handleHonoQueueImportFollowingToDb(deps, job),
+		exportFavorites: job => handleHonoQueueExportFavorites(deps, job),
+		exportNotes: job => handleHonoQueueExportNotes(deps, job),
+		exportClips: job => handleHonoQueueExportClips(deps, job),
+		exportCustomEmojis: job => handleHonoQueueExportCustomEmojis(deps, job),
+		importCustomEmojis: job => handleHonoQueueImportCustomEmojis(deps, job),
+		deleteAccount: job => handleHonoQueueDeleteAccount(deps, job),
+	} satisfies DbJobHandlerMap;
+	const dispatchDbJob = <K extends DbJobName>(job: Bull.Job<DbJobData<K>, unknown, K>): Promise<unknown> => {
+		if (!Object.hasOwn(dbJobHandlers, job.name)) throw new Error(`unrecognized job type ${job.name} for db`);
+		const handler: DbJobHandlerMap[K] | undefined = dbJobHandlers[job.name];
+		if (handler == null) throw new Error(`unrecognized job type ${job.name} for db`);
+		return handler(job);
+	};
+	const dbQueueWorker = new Bull.Worker<DbJobData<DbJobName>, unknown, DbJobName>(QUEUE.DB, (job) => {
+		return dispatchDbJob(job);
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.DB),
 		autorun: false,

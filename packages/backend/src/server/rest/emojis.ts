@@ -11,7 +11,7 @@ import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
 import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { DbQueue } from '@/core/queues.js';
+import { addDbJob, type DbQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/RoleStore.js';
 import type { Config } from '@/config.js';
@@ -605,10 +605,11 @@ export async function handleHonoApiAdminEmojiImportZip(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiImportZipParamDef, body);
-	await deps.dbQueue.add('importCustomEmojis', {
-		user: { id: me.id },
-		fileId: params.fileId,
-	}, queueRetentionOptions(deps.config));
+	await addDbJob(deps.dbQueue, {
+		name: 'importCustomEmojis',
+		data: { user: { id: me.id }, fileId: params.fileId },
+		opts: queueRetentionOptions(deps.config),
+	});
 }
 
 export async function handleHonoApiAdminEmojiUpdate(

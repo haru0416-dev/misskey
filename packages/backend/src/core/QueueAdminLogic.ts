@@ -64,7 +64,7 @@ function parseRedisInfo(infoText: string): Record<string, string> {
 	return result;
 }
 
-export function getQueue(deps: AdminQueueDependencies, type: QueueType): Bull.Queue {
+export function getQueue(deps: AdminQueueDependencies, type: QueueType): Bull.Queue | DbQueue {
 	switch (type) {
 		case 'system': return deps.systemQueue;
 		case 'endedPollNotification': return deps.endedPollNotificationQueue;

@@ -6,7 +6,10 @@
 import * as Bull from 'bullmq';
 import type { Config } from '@/config.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import {
+import type {
+	DbJobData,
+	DbJobMap,
+	DbJobName,
 	DeliverJobData,
 	EndedPollNotificationJobData,
 	InboxJobData,
@@ -21,11 +24,34 @@ export type EndedPollNotificationQueue = Bull.Queue<EndedPollNotificationJobData
 export type PostScheduledNoteQueue = Bull.Queue<PostScheduledNoteJobData>;
 export type DeliverQueue = Bull.Queue<DeliverJobData>;
 export type InboxQueue = Bull.Queue<InboxJobData>;
-export type DbQueue = Bull.Queue;
+type RawDbQueue = Bull.Queue<DbJobData<DbJobName>, unknown, DbJobName>;
+export type DbQueue = Omit<RawDbQueue, 'add' | 'addBulk'>;
+export type DbJobInput<K extends DbJobName = DbJobName> = {
+	[Name in K]: {
+		name: Name;
+		data: DbJobMap[Name];
+		opts?: Bull.JobsOptions;
+	};
+}[K];
+export type DbJobBulkInput<K extends DbJobName = DbJobName> = {
+	[Name in K]: {
+		name: Name;
+		data: DbJobMap[Name];
+		opts?: Bull.BulkJobOptions;
+	};
+}[K];
 export type RelationshipQueue = Bull.Queue<RelationshipJobData>;
 export type ObjectStorageQueue = Bull.Queue;
 export type UserWebhookDeliverQueue = Bull.Queue<UserWebhookDeliverJobData>;
 export type SystemWebhookDeliverQueue = Bull.Queue<SystemWebhookDeliverJobData>;
+
+export async function addDbJob(queue: DbQueue, job: DbJobInput): Promise<void> {
+	await (queue as RawDbQueue).add(job.name, job.data, job.opts);
+}
+
+export async function addDbJobs<K extends DbJobName>(queue: DbQueue, jobs: DbJobBulkInput<K>[]): Promise<void> {
+	await (queue as RawDbQueue).addBulk(jobs);
+}
 
 export function createSystemQueue(config: Config): SystemQueue {
 	return new Bull.Queue(QUEUE.SYSTEM, baseQueueOptions(config, QUEUE.SYSTEM));
@@ -48,7 +74,7 @@ export function createInboxQueue(config: Config): InboxQueue {
 }
 
 export function createDbQueue(config: Config): DbQueue {
-	return new Bull.Queue(QUEUE.DB, baseQueueOptions(config, QUEUE.DB));
+	return new Bull.Queue<DbJobData<DbJobName>, unknown, DbJobName>(QUEUE.DB, baseQueueOptions(config, QUEUE.DB));
 }
 
 export function createRelationshipQueue(config: Config): RelationshipQueue {
