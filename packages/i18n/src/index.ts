@@ -28,6 +28,7 @@ const upstreamBrandPaths = new Set([
 	'_aboutMisskey.thisIsModifiedVersion',
 	'_aboutMisskey.translation',
 	'_aboutMisskey.donate',
+	'_aboutErebia.basedOnMisskey',
 ]);
 
 /**

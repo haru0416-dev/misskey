@@ -274,6 +274,10 @@ export const ROUTE_DEF = [
 		component: page(() => import('@/pages/contact.vue')),
 	},
 	{
+		path: '/about-erebia',
+		component: page(() => import('@/pages/about-erebia.vue')),
+	},
+	{
 		path: '/about-misskey',
 		component: page(() => import('@/pages/about-misskey.vue')),
 	},
