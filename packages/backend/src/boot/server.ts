@@ -8,7 +8,7 @@ import * as fs from 'node:fs';
 import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
 import { envOption } from '@/env.js';
-import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createMisskeyHonoApp } from '@/server/app.js';
 import { createHonoNodeServer } from '@/server/node-server.js';
 import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
@@ -78,9 +78,13 @@ async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void>
 	if (firstError != null) throw firstError;
 }
 
-export async function launchHonoServer(config: Config, logger = new Logger('hono', 'cyan')): Promise<HonoServerRuntime> {
-	const deps = await createRuntimeDependencies(config);
-	const disposers: RuntimeDisposer[] = [() => deps.dispose()];
+export async function launchHonoServer(
+	config: Config,
+	logger = new Logger('hono', 'cyan'),
+	dependencies?: RuntimeDependencies,
+): Promise<HonoServerRuntime> {
+	const deps = dependencies ?? await createRuntimeDependencies(config);
+	const disposers: RuntimeDisposer[] = dependencies == null ? [() => deps.dispose()] : [];
 	try {
 		return await launchHonoServerWithDependencies(config, logger, deps, disposers);
 	} catch (error) {
