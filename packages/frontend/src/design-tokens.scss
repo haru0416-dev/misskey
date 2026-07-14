@@ -15,9 +15,9 @@
 	--MI-space-3xl: 32px;
 
 	--MI-radius-xs: 4px;
-	--MI-radius-sm: 9px;
-	--MI-radius-md: 14px;
-	--MI-radius-lg: 18px;
+	--MI-radius-sm: 8px;
+	--MI-radius-md: 12px;
+	--MI-radius-lg: 16px;
 	--MI-radius-full: 9999px;
 
 	--MI-duration-fast: 120ms;
@@ -32,11 +32,12 @@
 	/* Semantic: theme-aware surfaces, borders, and depth. */
 	--MI-surface-page: var(--MI_THEME-bg);
 	--MI-surface-panel: var(--MI_THEME-panel);
-	--MI-surface-panel-hover: color-mix(in oklab, var(--MI_THEME-panel) 96%, var(--MI_THEME-fg));
-	--MI-surface-subtle: color-mix(in oklab, var(--MI_THEME-bg) 94%, var(--MI_THEME-panel));
-	--MI-surface-nav: color-mix(in oklab, var(--MI_THEME-navBg) 96%, var(--MI_THEME-panel));
-	--MI-border-muted: color-mix(in oklab, var(--MI_THEME-divider) 72%, transparent);
-	--MI-shadow-sm: 0 2px 6px color-mix(in oklab, var(--MI_THEME-shadow) 65%, transparent);
+	--MI-surface-panel-hover: color-mix(in oklab, var(--MI_THEME-panel) 94%, var(--MI_THEME-fg));
+	--MI-surface-subtle: color-mix(in oklab, var(--MI_THEME-panel) 36%, var(--MI_THEME-bg));
+	--MI-surface-nav: color-mix(in oklab, var(--MI_THEME-navBg) 82%, var(--MI_THEME-bg));
+	--MI-border-muted: color-mix(in oklab, var(--MI_THEME-divider) 82%, transparent);
+	--MI-shadow-sm: 0 2px 8px color-mix(in oklab, var(--MI_THEME-shadow) 62%, transparent);
+	--MI-shadow-md: 0 8px 16px color-mix(in oklab, var(--MI_THEME-shadow) 72%, transparent);
 
 	--MI-layout-gutter: var(--MI-space-xl);
 	--MI-layout-gutter-compact: 10px;
@@ -53,4 +54,3 @@
 		--MI-margin: var(--MI-marginHalf);
 	}
 }
-
