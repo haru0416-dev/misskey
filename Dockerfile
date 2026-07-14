@@ -37,20 +37,13 @@ RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
 
 COPY --link . ./
 
-RUN bun run build
+RUN bun run build \
+	&& hardlink built/_frontend_vite_
 RUN rm -rf .git/
 
 # build native dependencies for target platform
 
 FROM oven/bun:${BUN_VERSION}-debian AS target-builder
-
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-	--mount=type=cache,target=/var/lib/apt,sharing=locked \
-	rm -f /etc/apt/apt.conf.d/docker-clean \
-	; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache \
-	&& apt-get update \
-	&& apt-get install -yqq --no-install-recommends \
-	build-essential
 
 WORKDIR /misskey
 
@@ -71,7 +64,12 @@ COPY --link ["scripts/changelog-checker/package.json", "./scripts/changelog-chec
 ARG NODE_ENV=production
 
 RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
-	bun install --frozen-lockfile --production --filter backend
+	bun install --frozen-lockfile --production --filter backend \
+	&& rm -rf \
+	node_modules/.bun/@img+sharp-libvips-linuxmusl-* \
+	node_modules/.bun/@img+sharp-linuxmusl-* \
+	node_modules/.bun/@napi-rs+canvas-linux-*-musl@* \
+	node_modules/.bun/slacc-linux-*-musl@*
 
 FROM oven/bun:${BUN_VERSION}-slim AS runner
 
