@@ -60,10 +60,9 @@ defineProps<{
 	align-items: center;
 	width: 100%;
 	box-sizing: border-box;
-	padding: 10px 14px;
+	padding: 9px 12px;
 	background: var(--MI_THEME-folderHeaderBg);
-	border-radius: 6px;
-	font-size: 0.9em;
+	border-radius: var(--MI-radius-md);
 
 	&:hover {
 		text-decoration: none;
@@ -101,7 +100,7 @@ defineProps<{
 
 .suffix {
 	margin-left: auto;
-	opacity: 0.7;
+	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
 	white-space: nowrap;
 
 	> .suffixText:not(:empty) {

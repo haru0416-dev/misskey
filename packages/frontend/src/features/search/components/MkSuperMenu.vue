@@ -254,12 +254,12 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 				width: 100%;
 				box-sizing: border-box;
 				padding: 9px 16px 9px 8px;
-				border-radius: 9px;
+				border-radius: var(--MI-radius-sm);
 				font-size: 0.9em;
 
 				&:hover {
 					text-decoration: none;
-					background: var(--MI_THEME-panelHighlight);
+					color: var(--MI_THEME-fgHighlighted);
 				}
 
 				&:focus-visible {
@@ -322,12 +322,7 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 
 					&:hover {
 						text-decoration: none;
-						background: none;
 						color: var(--MI_THEME-accent);
-
-						> .icon {
-							background: var(--MI_THEME-accentedBg);
-						}
 					}
 
 					> .icon {
@@ -340,7 +335,7 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 						height: 60px;
 						aspect-ratio: 1;
 						background: var(--MI_THEME-panel);
-						border-radius: 100%;
+						border-radius: var(--MI-radius-lg);
 					}
 
 					> .text {
@@ -359,12 +354,12 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 		width: 100%;
 		box-sizing: border-box;
 		padding: 9px 16px 9px 8px;
-		border-radius: 9px;
+		border-radius: var(--MI-radius-sm);
 		font-size: 0.9em;
 
 		&:hover {
 			text-decoration: none;
-			background: var(--MI_THEME-panelHighlight);
+			color: var(--MI_THEME-fgHighlighted);
 		}
 
 		&.selected {

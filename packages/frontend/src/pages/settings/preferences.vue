@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <SearchMarker path="/settings/preferences" :label="i18n.ts.preferences" :keywords="['general', 'preferences']" icon="ti ti-adjustments">
 	<div class="_gaps_m">
-		<MkFeatureBanner icon="/fluent-emoji/2699.png" color="#00ff9d">
+		<MkFeatureBanner icon="/fluent-emoji/2699.png" color="var(--MI_THEME-accent)">
 			<SearchText>{{ i18n.ts._settings.preferencesBanner }}</SearchText>
 		</MkFeatureBanner>
 
