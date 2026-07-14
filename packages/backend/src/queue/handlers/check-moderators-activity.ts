@@ -55,14 +55,14 @@ function generateModeratorInactivityMail(remainingTime: ModeratorInactivityRemai
 		'To Moderators,',
 		'',
 		`A moderator has been inactive for a period of time. If there are ${timeVariant} of inactivity left, it will switch to invitation only.`,
-		'If you do not wish to move to invitation only, you must log into Misskey and update your last active date and time.',
+		'If you do not wish to move to invitation only, you must log into Erebia and update your last active date and time.',
 		'',
 		'---------------',
 		'',
 		'To モデレーター各位',
 		'',
 		`モデレーターが一定期間活動していないようです。あと${timeVariantJa}活動していない状態が続くと招待制に切り替わります。`,
-		'招待制に切り替わることを望まない場合は、Misskeyにログインして最終アクティブ日時を更新してください。',
+		'招待制に切り替わることを望まない場合は、Erebiaにログインして最終アクティブ日時を更新してください。',
 		'',
 	];
 

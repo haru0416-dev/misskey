@@ -10,8 +10,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div class="_gaps_m znqjceqz">
 				<div v-panel class="about">
 					<div ref="containerEl" class="container" :class="{ playing: easterEggEngine != null }">
-						<img src="/client-assets/about-icon.png" alt="" class="icon" draggable="false" @load="iconLoaded" @click="gravity"/>
-						<div class="misskey">Misskey</div>
+						<img src="/client-assets/erebia-icon.svg" alt="Erebia" class="icon" draggable="false" @load="iconLoaded" @click="gravity"/>
+						<div class="misskey">Erebia</div>
 						<div class="version">v{{ version }}</div>
 						<span v-for="emoji in easterEggEmojis" :key="emoji.id" class="emoji" :data-physics-x="emoji.left" :data-physics-y="emoji.top" :class="{ _physics_circle_: !emoji.emoji.startsWith(':') }">
 							<MkCustomEmoji v-if="emoji.emoji[0] === ':'" class="emoji" :name="emoji.emoji" :normal="true" :noStyle="true" :fallbackToImage="true"/>
@@ -21,10 +21,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<button v-if="thereIsTreasure" class="_button treasure" @click="getTreasure"><img src="/fluent-emoji/1f3c6.png" class="treasureImg"></button>
 				</div>
 				<div style="text-align: center;">
-					{{ i18n.ts._aboutMisskey.about }}<br><a href="https://misskey-hub.net/docs/about-misskey/" target="_blank" class="_link">{{ i18n.ts.learnMore }}</a>
+					Erebia is an open-source federated social platform based on Misskey.<br><a href="https://misskey-hub.net/docs/about-misskey/" target="_blank" class="_link">Misskey upstream</a>
 				</div>
 				<div v-if="$i != null" style="text-align: center;">
-					<MkButton primary rounded inline @click="iLoveMisskey">I <Mfm text="$[jelly ❤]"/> #Misskey</MkButton>
+					<MkButton primary rounded inline @click="iLoveErebia">I <Mfm text="$[jelly ❤]"/> #Erebia</MkButton>
 				</div>
 				<FormSection>
 					<div class="_gaps_s">
@@ -45,7 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</FormLink>
 					</div>
 				</FormSection>
-				<FormSection v-if="instance.repositoryUrl !== 'https://github.com/misskey-dev/misskey'">
+				<FormSection v-if="instance.repositoryUrl !== 'https://github.com/haru0416-dev/misskey'">
 					<div class="_gaps_s">
 						<MkInfo>
 							{{ i18n.tsx._aboutMisskey.thisIsModifiedVersion({ name: instance.name ?? host }) }}
@@ -65,7 +65,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 				</FormSection>
 				<FormSection>
-					<template #label>{{ i18n.ts._aboutMisskey.projectMembers }}</template>
+					<template #label>Misskey upstream: {{ i18n.ts._aboutMisskey.projectMembers }}</template>
 					<div :class="$style.contributors">
 						<a href="https://github.com/syuilo" target="_blank" :class="$style.contributor">
 							<img src="https://avatars.githubusercontent.com/u/4439005?v=4" :class="$style.contributorAvatar">
@@ -94,7 +94,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 				</FormSection>
 				<FormSection>
-					<template #label>Special thanks</template>
+					<template #label>Misskey upstream: Special thanks</template>
 					<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:24px;align-items:center;">
 						<div>
 							<a style="display: inline-block;" class="masknetwork" title="Mask Network" href="https://mask.io/" target="_blank"><img style="width: 100%;" src="https://assets.misskey-hub.net/sponsors/masknetwork.png" alt="Mask Network"></a>
@@ -117,7 +117,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 				</FormSection>
 				<FormSection>
-					<template #label><Mfm text="$[jelly ❤]"/> {{ i18n.ts._aboutMisskey.patrons }}</template>
+					<template #label><Mfm text="$[jelly ❤]"/> Misskey upstream: {{ i18n.ts._aboutMisskey.patrons }}</template>
 					<div :class="$style.patronsWithIcon">
 						<div v-for="patron in patronsWithIcon" :class="$style.patronWithIcon">
 							<img :src="patron.icon" :class="$style.patronIcon">
@@ -462,9 +462,9 @@ function gravity() {
 	easterEggEngine.value = physics(containerEl.value);
 }
 
-function iLoveMisskey() {
+function iLoveErebia() {
 	os.post({
-		initialText: 'I $[jelly ❤] #Misskey',
+		initialText: 'I $[jelly ❤] #Erebia',
 		instant: true,
 	});
 }
@@ -532,8 +532,8 @@ definePage(() => ({
 			> .icon {
 				display: block;
 				width: 80px;
-				margin: 0 auto;
 				border-radius: 16px;
+				margin: 0 auto;
 				position: relative;
 				z-index: 1;
 			}

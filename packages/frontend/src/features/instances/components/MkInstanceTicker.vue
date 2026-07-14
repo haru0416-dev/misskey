@@ -45,7 +45,7 @@ const faviconUrl = computed(() => {
 	let imageSrc: string | null = null;
 	if (props.host == null) {
 		if (localInstance.iconUrl == null) {
-			return '/favicon.ico';
+			return '/client-assets/erebia-icon.svg';
 		} else {
 			imageSrc = localInstance.iconUrl;
 		}

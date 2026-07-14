@@ -21,19 +21,19 @@ function createManifest(deps: WebMetadataDependencies): Record<string, unknown> 
 		background_color: '#313a42',
 		theme_color: deps.meta.themeColor || '#86b300',
 		icons: [{
-			src: deps.meta.app192IconUrl || '/static-assets/icons/192.png',
+			src: deps.meta.app192IconUrl || '/client-assets/erebia-icon-192.png',
 			sizes: '192x192',
 			type: 'image/png',
 			purpose: 'maskable',
 		}, {
-			src: deps.meta.app512IconUrl || '/static-assets/icons/512.png',
+			src: deps.meta.app512IconUrl || '/client-assets/erebia-icon.png',
 			sizes: '512x512',
 			type: 'image/png',
 			purpose: 'maskable',
 		}, {
-			src: '/static-assets/splash.png',
-			sizes: '300x300',
-			type: 'image/png',
+			src: '/client-assets/erebia-icon.svg',
+			sizes: 'any',
+			type: 'image/svg+xml',
 			purpose: 'any',
 		}],
 		share_target: {
@@ -88,7 +88,7 @@ function createRobotsTxt(meta: MiMeta): string {
 }
 
 function createOpenSearchXml(deps: WebMetadataDependencies): string {
-	const name = deps.meta.name ?? 'Misskey';
+	const name = deps.meta.name ?? 'Erebia';
 	let content = '';
 	content += '<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">';
 	content += `<ShortName>${name}</ShortName>`;

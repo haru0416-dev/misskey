@@ -4,7 +4,7 @@
  */
 
 /**
- * Misskey Entry Point!
+ * Erebia Entry Point!
  */
 
 import cluster from 'node:cluster';
@@ -21,7 +21,7 @@ import { readyRef } from './ready.js';
 const config = loadConfig();
 await initializeTelemetry(config);
 
-process.title = `Misskey (${cluster.isPrimary ? 'master' : 'worker'})`;
+process.title = `Erebia (${cluster.isPrimary ? 'master' : 'worker'})`;
 
 Error.stackTraceLimit = Infinity;
 EventEmitter.defaultMaxListeners = 128;

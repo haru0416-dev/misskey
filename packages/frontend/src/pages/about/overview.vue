@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div class="_gaps_m">
 	<div :class="$style.banner" :style="{ backgroundImage: instance.bannerUrl ? `url(${ instance.bannerUrl })` : undefined }">
 		<div style="overflow: clip;">
-			<img :src="instance.iconUrl ?? '/favicon.ico'" alt="" :class="$style.bannerIcon"/>
+			<img :src="instance.iconUrl ?? '/client-assets/erebia-icon.svg'" alt="" :class="$style.bannerIcon"/>
 			<div :class="$style.bannerName">
 				<b>{{ instance.name ?? host }}</b>
 			</div>
@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<FormSection>
 		<div class="_gaps_m">
 			<MkKeyValue :copy="version">
-				<template #key>Misskey</template>
+				<template #key>Erebia</template>
 				<template #value>{{ version }}</template>
 			</MkKeyValue>
 			<div v-html="i18n.tsx.poweredByMisskeyDescription({ name: instance.name ?? host })">

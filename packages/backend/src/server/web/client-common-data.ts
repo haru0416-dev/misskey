@@ -135,7 +135,7 @@ export function createClientCommonDataLoader(deps: ClientCommonDataDependencies)
 			version: deps.config.version,
 			config: deps.config,
 			langs: [...languages],
-			instanceName: deps.meta.name ?? 'Misskey',
+			instanceName: deps.meta.name ?? 'Erebia',
 			icon: deps.meta.iconUrl,
 			appleTouchIcon: deps.meta.app512IconUrl,
 			themeColor: deps.meta.themeColor,

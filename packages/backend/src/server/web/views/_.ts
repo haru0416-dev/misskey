@@ -6,14 +6,10 @@
 import type { Config } from '@/config.js';
 
 export const comment = `<!--
-  _____ _         _
- |     |_|___ ___| |_ ___ _ _
- | | | | |_ -|_ -| '_| -_| | |
- |_|_|_|_|___|___|_,_|___|_  |
-                         |___|
- Thank you for using Misskey!
+  E R E B I A
+ Thank you for using Erebia!
  If you are reading this message... how about joining the development?
- https://github.com/misskey-dev/misskey
+ https://github.com/haru0416-dev/misskey
 
 -->`;
 

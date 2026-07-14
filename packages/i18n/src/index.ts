@@ -20,6 +20,13 @@ type PrimaryLang = keyof typeof primaries;
 type Locales = Record<Language, ILocale>;
 
 const backspaceRegExp = new RegExp(String.fromCodePoint(0x08), 'g');
+const upstreamBrandPaths = new Set([
+	'chooseServerOnMisskeyHub',
+	'pleaseDonate',
+	'_aboutMisskey.about',
+	'_aboutMisskey.translation',
+	'_aboutMisskey.donate',
+]);
 
 /**
  * オブジェクトを再帰的にマージする
@@ -53,6 +60,38 @@ function removeEmpty<T extends ILocale>(obj: T): T {
 			delete obj[k];
 		} else if (typeof v === 'object') {
 			removeEmpty(v as ILocale);
+		}
+	}
+	return obj;
+}
+
+function applyProductBranding<T extends ILocale>(obj: T, parentPath = ''): T {
+	const mutableObj = obj as ILocale;
+	for (const [key, value] of Object.entries(obj)) {
+		const path = parentPath === '' ? key : `${parentPath}.${key}`;
+		if (typeof value === 'string' && !upstreamBrandPaths.has(path)) {
+			const misskeyHub = '\0MISSKEY_HUB\0';
+			const mfm = '\0MISSKEY_FLAVOURED_MARKDOWN\0';
+			const reversiHashtag = '\0MISSKEY_REVERSI_HASHTAG\0';
+			const misskeyMisskey = '\0MISSKEY_MISSKEY\0';
+			let brandedValue = value
+				.replaceAll('Misskey Hub', misskeyHub)
+				.replaceAll('Misskey Flavoured Markdown', mfm)
+				.replaceAll('#MisskeyReversi', reversiHashtag)
+				.replaceAll('Misskey-Misskey', misskeyMisskey)
+				.replaceAll('Misskey', 'Erebia')
+				.replaceAll('Mískey', 'Erebia')
+				.replaceAll('ميسكي', 'Erebia')
+				.replaceAll(misskeyHub, 'Misskey Hub')
+				.replaceAll(mfm, 'Misskey Flavoured Markdown')
+				.replaceAll(reversiHashtag, '#MisskeyReversi')
+				.replaceAll(misskeyMisskey, 'Misskey-Misskey');
+			if (path === 'repositoryUrlDescription') {
+				brandedValue = brandedValue.replaceAll('https://github.com/misskey-dev/misskey', 'https://github.com/haru0416-dev/misskey');
+			}
+			mutableObj[key] = brandedValue;
+		} else if (typeof value === 'object') {
+			applyProductBranding(value as ILocale, path);
 		}
 	}
 	return obj;
@@ -94,6 +133,8 @@ function build(): Record<Language, Locale> {
 				break;
 			}
 		}
+
+		applyProductBranding(a[key]);
 
 		return a;
 	}, {} as Record<Language, Locale>);
