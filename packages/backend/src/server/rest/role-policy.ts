@@ -137,7 +137,7 @@ export async function getHonoApiRolePolicies(
 		return aggregate(policies.map(policy => policy.useDefault ? basePolicies[name] : policy.value));
 	}
 
-	const serverMaxFileSizeMb = Math.floor(deps.config.maxFileSize / (1024 * 1024));
+	const serverMaxFileSizeMb = Math.floor(deps.config.limits.maximumFileSizeBytes / (1024 * 1024));
 
 	return {
 		gtlAvailable: calc('gtlAvailable', values => values.some(value => value === true)),

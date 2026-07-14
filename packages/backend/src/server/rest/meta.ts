@@ -102,10 +102,10 @@ export async function handleHonoApiAdminMeta(
 	return {
 		maintainerName: instance.maintainerName,
 		maintainerEmail: instance.maintainerEmail,
-		version: deps.config.version,
+		version: deps.config.runtime.version,
 		name: instance.name,
 		shortName: instance.shortName,
-		uri: deps.config.url,
+		uri: deps.config.instance.url,
 		description: instance.description,
 		langs: instance.langs,
 		tosUrl: instance.termsOfServiceUrl,

@@ -167,7 +167,7 @@ export async function xaddHonoApiNotification(
 		try {
 			return (await deps.redis.xadd(
 				`notificationTimeline:${userId}`,
-				'MAXLEN', '~', deps.config.perUserNotificationsMaxCount.toString(),
+				'MAXLEN', '~', deps.config.limits.userNotifications.toString(),
 				toXListId(notification.id),
 				'data', JSON.stringify(notification),
 			))!;
@@ -194,7 +194,7 @@ export async function xaddHonoApiNotifications(
 		for (const item of batch) {
 			pipeline.xadd(
 				`notificationTimeline:${item.userId}`,
-				'MAXLEN', '~', deps.config.perUserNotificationsMaxCount.toString(),
+				'MAXLEN', '~', deps.config.limits.userNotifications.toString(),
 				toXListId(item.notification.id),
 				'data', JSON.stringify(item.notification),
 			);

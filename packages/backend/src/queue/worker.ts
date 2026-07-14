@@ -78,12 +78,12 @@ export type HonoQueueWorkers = {
 };
 
 // ref. https://github.com/misskey-dev/misskey/pull/7635#issue-971097019
-function httpRelatedBackoff(attemptsMade: number): number {
-	const baseDelay = 60 * 1000;
-	const maxBackoff = 8 * 60 * 60 * 1000;
+function httpRelatedBackoff(config: Config, attemptsMade: number): number {
+	const baseDelay = config.queues.backoff.initialDelayMs;
+	const maxBackoff = config.queues.backoff.maximumDelayMs;
 	let backoff = (Math.pow(2, attemptsMade) - 1) * baseDelay;
 	backoff = Math.min(backoff, maxBackoff);
-	backoff += Math.round(backoff * Math.random() * 0.2);
+	backoff += Math.round(backoff * Math.random() * config.queues.backoff.jitterRatio);
 	return backoff;
 }
 
@@ -138,13 +138,13 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.USER_WEBHOOK_DELIVER),
 		autorun: false,
-		concurrency: deps.config.userWebhookJobConcurrency ?? 64,
+		concurrency: deps.config.queues.userWebhooks.concurrencyPerWorker ?? 64,
 		limiter: {
-			max: deps.config.userWebhookJobConcurrency ?? 64,
+			max: deps.config.queues.userWebhooks.maximumStartsPerSecond ?? 64,
 			duration: 1000,
 		},
 		settings: {
-			backoffStrategy: httpRelatedBackoff,
+			backoffStrategy: attemptsMade => httpRelatedBackoff(deps.config, attemptsMade),
 		},
 	});
 
@@ -163,13 +163,13 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.SYSTEM_WEBHOOK_DELIVER),
 		autorun: false,
-		concurrency: deps.config.systemWebhookJobConcurrency ?? 16,
+		concurrency: deps.config.queues.systemWebhooks.concurrencyPerWorker ?? 16,
 		limiter: {
-			max: deps.config.systemWebhookJobConcurrency ?? 16,
+			max: deps.config.queues.systemWebhooks.maximumStartsPerSecond ?? 16,
 			duration: 1000,
 		},
 		settings: {
-			backoffStrategy: httpRelatedBackoff,
+			backoffStrategy: attemptsMade => httpRelatedBackoff(deps.config, attemptsMade),
 		},
 	});
 
@@ -194,9 +194,9 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.RELATIONSHIP),
 		autorun: false,
-		concurrency: deps.config.relationshipJobConcurrency ?? 16,
+		concurrency: deps.config.queues.relationships.concurrencyPerWorker ?? 16,
 		limiter: {
-			max: deps.config.relationshipJobPerSec ?? 64,
+			max: deps.config.queues.relationships.maximumStartsPerSecond ?? 64,
 			duration: 1000,
 		},
 	});
@@ -236,7 +236,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.SYSTEM),
 		autorun: false,
-		concurrency: deps.config.systemJobConcurrency ?? 1,
+		concurrency: deps.config.queues.system.concurrencyPerWorker ?? 1,
 	});
 
 	{
@@ -254,13 +254,13 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.DELIVER),
 		autorun: false,
-		concurrency: deps.config.deliverJobConcurrency ?? 128,
+		concurrency: deps.config.queues.deliver.concurrencyPerWorker ?? 128,
 		limiter: {
-			max: deps.config.deliverJobPerSec ?? 128,
+			max: deps.config.queues.deliver.maximumStartsPerSecond ?? 128,
 			duration: 1000,
 		},
 		settings: {
-			backoffStrategy: httpRelatedBackoff,
+			backoffStrategy: attemptsMade => httpRelatedBackoff(deps.config, attemptsMade),
 		},
 	});
 
@@ -279,13 +279,13 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.INBOX),
 		autorun: false,
-		concurrency: deps.config.inboxJobConcurrency ?? 16,
+		concurrency: deps.config.queues.inbox.concurrencyPerWorker ?? 16,
 		limiter: {
-			max: deps.config.inboxJobPerSec ?? 32,
+			max: deps.config.queues.inbox.maximumStartsPerSecond ?? 32,
 			duration: 1000,
 		},
 		settings: {
-			backoffStrategy: httpRelatedBackoff,
+			backoffStrategy: attemptsMade => httpRelatedBackoff(deps.config, attemptsMade),
 		},
 	});
 
@@ -315,7 +315,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.OBJECT_STORAGE),
 		autorun: false,
-		concurrency: deps.config.objectStorageJobConcurrency ?? 16,
+		concurrency: deps.config.queues.objectStorage.concurrencyPerWorker ?? 16,
 	});
 
 	{
@@ -355,7 +355,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}, {
 		...baseWorkerOptions(deps.config, QUEUE.DB),
 		autorun: false,
-		concurrency: deps.config.dbJobConcurrency ?? 1,
+		concurrency: deps.config.queues.database.concurrencyPerWorker ?? 1,
 	});
 
 	{

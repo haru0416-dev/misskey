@@ -49,7 +49,7 @@ async function checkRecentlyMovedForHonoApi(deps: HonoApiImportJobDependencies, 
 	const oldSelfIds = await resolveAlsoKnownAsForHonoApi(deps, me.alsoKnownAs);
 	if (!oldSelfIds || oldSelfIds.length === 0) return false;
 
-	const meUri = `${deps.config.url}/users/${me.id}`;
+	const meUri = `${deps.config.instance.url}/users/${me.id}`;
 	const oldSelfs = await listUsersByIdsFromDatabase(deps.db, oldSelfIds, { includeSuspended: true });
 
 	for (const oldSelf of oldSelfs) {

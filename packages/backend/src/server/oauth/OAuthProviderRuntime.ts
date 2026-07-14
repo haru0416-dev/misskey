@@ -678,7 +678,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				return redirectWithQuery(validatedRedirectUri, appendIssuer({
 					error: providerError.error,
 					...(state ? { state } : {}),
-				}, deps.config.url));
+				}, deps.config.instance.url));
 			}
 
 			return oauthProviderErrorResponse(providerError);
@@ -702,7 +702,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				return redirectWithQuery(transaction.request.redirectUri, appendIssuer({
 					error: 'access_denied',
 					...(transaction.request.state ? { state: transaction.request.state } : {}),
-				}, deps.config.url));
+				}, deps.config.instance.url));
 			}
 
 			const loginToken = firstValue(params.login_token);
@@ -727,7 +727,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 			return redirectWithQuery(transaction.request.redirectUri, appendIssuer({
 				code,
 				...(transaction.request.state ? { state: transaction.request.state } : {}),
-			}, deps.config.url));
+			}, deps.config.instance.url));
 		} catch (error) {
 			return oauthProviderErrorResponse(normalizeOAuthProviderError(error));
 		}

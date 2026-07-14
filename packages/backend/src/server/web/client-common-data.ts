@@ -95,8 +95,8 @@ async function prepareFrontendAssets(deps: ClientCommonDataDependencies, state: 
 	if (state.frontendAssetsFetched) return;
 	state.frontendAssetsFetched = true;
 
-	const frontendViteBuilt = resolve(deps.config.rootDir, 'built/_frontend_vite_');
-	const frontendEmbedViteBuilt = resolve(deps.config.rootDir, 'built/_frontend_embed_vite_');
+	const frontendViteBuilt = resolve(deps.config.runtime.rootDir, 'built/_frontend_vite_');
+	const frontendEmbedViteBuilt = resolve(deps.config.runtime.rootDir, 'built/_frontend_embed_vite_');
 	const [
 		bootJs,
 		bootCss,
@@ -109,12 +109,12 @@ async function prepareFrontendAssets(deps: ClientCommonDataDependencies, state: 
 		fsp.readFile(resolve(frontendEmbedViteBuilt, 'loader/style.css'), 'utf-8').catch(() => null),
 	]);
 
-	if (deps.config.frontendManifestExists) {
+	if (deps.config.runtime.frontendManifestExists) {
 		const manifestContent = await fsp.readFile(resolve(frontendViteBuilt, 'manifest.json'), 'utf-8').catch(() => null);
 		state.frontendViteFiles = manifestContent ? collectViteAssetFiles(JSON.parse(manifestContent)) : null;
 	}
 
-	if (deps.config.frontendEmbedManifestExists) {
+	if (deps.config.runtime.frontendEmbedManifestExists) {
 		const manifestContent = await fsp.readFile(resolve(frontendEmbedViteBuilt, 'manifest.json'), 'utf-8').catch(() => null);
 		state.frontendEmbedViteFiles = manifestContent ? collectViteAssetFiles(JSON.parse(manifestContent)) : null;
 	}
@@ -132,7 +132,7 @@ export function createClientCommonDataLoader(deps: ClientCommonDataDependencies)
 		await prepareFrontendAssets(deps, state);
 
 		return {
-			version: deps.config.version,
+			version: deps.config.runtime.version,
 			config: deps.config,
 			langs: [...languages],
 			instanceName: deps.meta.name ?? 'Erebia',
@@ -142,7 +142,7 @@ export function createClientCommonDataLoader(deps: ClientCommonDataDependencies)
 			serverErrorImageUrl: deps.meta.serverErrorImageUrl ?? 'https://xn--931a.moe/assets/error.jpg',
 			infoImageUrl: deps.meta.infoImageUrl ?? 'https://xn--931a.moe/assets/info.jpg',
 			notFoundImageUrl: deps.meta.notFoundImageUrl ?? 'https://xn--931a.moe/assets/not-found.jpg',
-			instanceUrl: deps.config.url,
+			instanceUrl: deps.config.instance.url,
 			metaJson: htmlSafeJsonStringify(await packMetaDetailed({
 				config: deps.config,
 				meta: deps.meta,

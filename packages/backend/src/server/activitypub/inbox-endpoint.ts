@@ -12,6 +12,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { InboxQueue } from '@/core/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { InboxJobData } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import { readRequestBodyWithLimit } from '../body-limit.js';
 
 export type InboxEndpointDependencies = {
@@ -35,18 +36,11 @@ function enqueueInboxJob(deps: InboxEndpointDependencies, activity: IActivity, s
 	const data: InboxJobData = { activity, signature };
 	const label = (activity.id ?? '').replace('https://', '').replace('/activity', '');
 	return deps.inboxQueue.add(label, data, {
-		attempts: deps.config.inboxJobMaxAttempts ?? 8,
+		attempts: deps.config.queues.inbox.maximumAttempts ?? 8,
 		backoff: {
 			type: 'custom',
 		},
-		removeOnComplete: {
-			age: 3600 * 24 * 7,
-			count: 30,
-		},
-		removeOnFail: {
-			age: 3600 * 24 * 7,
-			count: 100,
-		},
+		...queueRetentionOptions(deps.config),
 	});
 }
 
@@ -85,7 +79,7 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		return rawStatus(401);
 	}
 
-	if (signature.params.headers.indexOf('host') === -1 || headers.host !== deps.config.host) {
+	if (signature.params.headers.indexOf('host') === -1 || headers.host !== deps.config.runtime.host) {
 		// Host not specified or not match.
 		return rawStatus(401);
 	}

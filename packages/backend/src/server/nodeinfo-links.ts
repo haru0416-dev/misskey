@@ -11,9 +11,9 @@ export const nodeinfo2_0path = '/nodeinfo/2.0';
 export function getNodeinfoLinks(config: Config): { rel: string; href: string }[] {
 	return [{
 		rel: 'http://nodeinfo.diaspora.software/ns/schema/2.1',
-		href: config.url + nodeinfo2_1path,
+		href: config.instance.url + nodeinfo2_1path,
 	}, {
 		rel: 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-		href: config.url + nodeinfo2_0path,
+		href: config.instance.url + nodeinfo2_0path,
 	}];
 }

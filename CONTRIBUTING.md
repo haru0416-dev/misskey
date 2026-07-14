@@ -207,7 +207,7 @@ command.
 - Service Worker is watched by esbuild.
 - Vite HMR (just the `vite` command) is available. The behavior may be different from production.
 - Vite runs behind the backend (the backend will proxy Vite at /vite and /embed_vite except for websocket used for HMR).
-- You can see Misskey by accessing `http://localhost:3000` (Replace `3000` with the port configured with `port` in .config/default.yml).
+- You can see Misskey by accessing `http://localhost:3000` (Replace `3000` with the port configured at `server.listen.tcp.port` in `.config/default.yml`).
 
 ## Testing
 You can run non-backend tests by executing following commands:

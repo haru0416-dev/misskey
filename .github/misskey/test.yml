@@ -1,22 +1,32 @@
-url: 'http://misskey.local'
+configVersion: 2
 
-setupPassword: example_password_please_change_this_or_you_will_get_hacked
+instance:
+  url: http://misskey.local
+  setupPassword:
+    plainText: example_password_please_change_this_or_you_will_get_hacked
 
-# ローカルでテストするときにポートを被らないようにするためデフォルトのものとは変える(以下同じ)
-port: 61812
+server:
+  listen:
+    tcp:
+      address: 127.0.0.1
+      port: 61812
 
-db:
-  host: 127.0.0.1
-  port: 54312
-  db: test-misskey
-  user: postgres
-  pass: ''
-redis:
-  host: 127.0.0.1
-  port: 56312
+database:
+  primary:
+    host: 127.0.0.1
+    port: 54312
+    name: test-misskey
+    user: postgres
+    password:
+      plainText: ''
 
-proxyRemoteFiles: true
+valkey:
+  connections:
+    primary:
+      host: 127.0.0.1
+      port: 56312
 
-# E2E fixtures serve ActivityPub and media responses from ephemeral loopback ports.
-allowedPrivateNetworks:
-  - 127.0.0.1/32
+outboundNetwork:
+  privateNetworkAccess:
+    allowedNetworks:
+      - 127.0.0.1/32

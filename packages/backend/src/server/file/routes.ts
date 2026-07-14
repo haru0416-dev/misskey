@@ -193,7 +193,7 @@ async function errorHandler(
 
 export function createFileServerApp(deps: FileServerDependencies): Hono {
 	const app = new Hono();
-	const assetsPath = resolve(deps.config.rootDir, 'packages/backend/src/server/assets');
+	const assetsPath = resolve(deps.config.runtime.rootDir, 'packages/backend/src/server/assets');
 	const fileResolver = new FileServerFileResolver(
 		deps.db,
 		deps.fileInfoService,
@@ -238,7 +238,7 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		const redirect = createRedirectToOmitSearch(c, reply);
 		if (redirect) return redirect;
 
-		reply.redirect(`${deps.config.url}/files/${c.req.param('key')}`, 301);
+		reply.redirect(`${deps.config.instance.url}/files/${c.req.param('key')}`, 301);
 		return await toResponse(null, reply, c.req.method);
 	});
 

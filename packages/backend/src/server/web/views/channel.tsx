@@ -17,7 +17,7 @@ export function ChannelPage(props: CommonProps<{
 				<meta property="og:type" content="website" />
 				<meta property="og:title" content={props.channel.name} />
 				{props.channel.description != null ? <meta property="og:description" content={props.channel.description} /> : null}
-				<meta property="og:url" content={`${props.config.url}/channels/${props.channel.id}`} />
+				<meta property="og:url" content={`${props.config.instance.url}/channels/${props.channel.id}`} />
 				{props.channel.bannerUrl ? (
 					<>
 						<meta property="og:image" content={props.channel.bannerUrl} />

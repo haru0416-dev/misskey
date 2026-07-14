@@ -12,13 +12,14 @@ import { EventEmitter } from 'node:events';
 import { writeHeapSnapshot } from 'node:v8';
 import chalk from 'chalk';
 import { globalEventBus } from '@/misc/global-event-bus.js';
-import Logger from '@/logger.js';
+import Logger, { configureLogger } from '@/logger.js';
 import { loadConfig } from '@/config.js';
 import { envOption } from '../env.js';
 import { initializeTelemetry, recordException, shutdownTelemetry } from '../telemetry.js';
 import { readyRef } from './ready.js';
 
 const config = loadConfig();
+configureLogger(config);
 await initializeTelemetry(config);
 
 process.title = `Erebia (${cluster.isPrimary ? 'master' : 'worker'})`;
@@ -68,8 +69,20 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 		shuttingDown = true;
 		process.once(signal, () => process.exit(1));
 		void (async () => {
-			await disposeRuntime?.();
-			await shutdownTelemetry();
+			const shutdown = async () => {
+				await disposeRuntime?.();
+				await shutdownTelemetry();
+			};
+			let timeout: ReturnType<typeof setTimeout> | undefined;
+			await Promise.race([
+				shutdown(),
+				new Promise<never>((_, reject) => {
+					timeout = setTimeout(
+						() => reject(new Error('Graceful shutdown timed out.')),
+						config.server.http.gracefulShutdownTimeoutMs,
+					);
+				}),
+			]).finally(() => clearTimeout(timeout));
 			process.exit(0);
 		})().catch(error => {
 			logger.error(error);

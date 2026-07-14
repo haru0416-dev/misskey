@@ -928,7 +928,7 @@ export async function handleHonoApiNotesSearch(
 	const policies = await getHonoApiRolePolicies(deps, me);
 	if (!policies.canSearchNotes) throw notesSearchUnavailableError();
 
-	const provider = deps.config.fulltextSearch?.provider ?? 'sqlLike';
+	const provider = deps.config.search.provider ?? 'sqlLike';
 	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
 		// Meilisearch-backed search is not ported to hono; this hono route is only
 		// reachable when the sql-based fulltext search provider is configured.

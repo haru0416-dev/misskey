@@ -38,7 +38,7 @@ export function getClientRequestTarget(request: { host: string; path: string; po
 }
 
 export async function initializeTelemetry(config: Config): Promise<void> {
-	const telemetry = config.telemetryForBackend;
+	const telemetry = config.observability.telemetry.backend;
 	if (telemetry == null) return;
 
 	const candidates: TelemetryProvider[] = [];
@@ -54,8 +54,8 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 		]);
 		const resource = resources.resourceFromAttributes({
 			[semanticConventions.ATTR_SERVICE_NAME]: telemetry.serviceName ?? 'erebia-backend',
-			[semanticConventions.ATTR_SERVICE_VERSION]: config.version,
-			'service.instance.id': `${config.hostname}:${process.pid}`,
+			[semanticConventions.ATTR_SERVICE_VERSION]: config.runtime.version,
+			'service.instance.id': `${config.runtime.hostname}:${process.pid}`,
 		});
 		const exporterOptions = {
 			url: telemetry.endpoint,
@@ -133,7 +133,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			kind: api.SpanKind.SERVER,
 			attributes: {
 				'http.request.method': request.method,
-				'server.address': config.hostname,
+				'server.address': config.runtime.hostname,
 			},
 		}, api.propagation.extract(api.context.active(), request.headers, headerGetter), async span => {
 			try {

@@ -57,7 +57,7 @@ const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+a
 
 function isInternalActivityPubRedirect(location: string, config: Config): boolean {
 	const effectiveLocation = process.env.NODE_ENV === 'production' ? location : location.replace(/^http:\/\//, 'https://');
-	return effectiveLocation.startsWith(`https://${config.host}/`);
+	return effectiveLocation.startsWith(`https://${config.runtime.host}/`);
 }
 
 function activityPubRedirectRefusal(location: string, headers: Headers): Response {
@@ -93,7 +93,7 @@ function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): vo
 		});
 	}
 
-	if (deps.config.url.startsWith('https') && !deps.config.disableHsts) {
+	if (deps.config.instance.url.startsWith('https') && deps.config.server.http.hsts) {
 		app.use('*', async (c, next) => {
 			c.header('strict-transport-security', 'max-age=15552000; preload');
 			await next();

@@ -41,7 +41,7 @@ describe('Account Move', () => {
 		jq = await jobQueue();
 
 		const config = loadConfig();
-		url = new URL(config.url);
+		url = new URL(config.instance.url);
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
 		root = await signup({ username: 'root' });

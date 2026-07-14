@@ -32,7 +32,7 @@ const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
 const REACTIONS_BUFFER_REBUILD_PREFIX = 'reactionsBufferRebuild';
 
 export type HonoQueueSystemDependencies = {
-	config: Pick<Config, 'deactivateAntennaThreshold' | 'redis' | 'redisForReactions'>;
+	config: Pick<Config, 'maintenance' | 'valkey'>;
 	db: MiDrizzleDatabase;
 	chartWriters: HonoChartWriters;
 	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
@@ -86,8 +86,8 @@ export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependenci
 export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): Promise<void> {
 	await deleteUserIpsOlderThanFromDatabase(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 90)));
 
-	if (deps.config.deactivateAntennaThreshold > 0) {
-		void deactivateAntennasNotUsedSinceFromDatabase(deps.db, new Date(Date.now() - deps.config.deactivateAntennaThreshold));
+	if (deps.config.maintenance.antennaInactiveAfterMs > 0) {
+		void deactivateAntennasNotUsedSinceFromDatabase(deps.db, new Date(Date.now() - deps.config.maintenance.antennaInactiveAfterMs));
 	}
 
 	await deleteExpiredRoleAssignmentsFromDatabase(deps.db, new Date());
@@ -171,7 +171,7 @@ export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystem
 	if (!deps.meta.enableReactionsBuffering) return;
 
 	const bufferedNoteIds = new Set<string>();
-	const reactionRedisPrefix = deps.config.redisForReactions.prefix;
+	const reactionRedisPrefix = deps.config.valkey.reactions.prefix;
 	let cursor = '0';
 	do {
 		const result = await deps.redisForReactions.scan(

@@ -1,241 +1,39 @@
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Erebia configuration
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+configVersion: 2
 
-#   ┌─────┐
-#───┘ URL └─────────────────────────────────────────────────────
+instance:
+  url: https://example.tld
+  setupPassword:
+    fromEnvironment: EREBIA_SETUP_PASSWORD
 
-# Final accessible URL seen by a user.
-# You can set url from an environment variable instead.
-url: https://example.tld/
+server:
+  listen:
+    tcp:
+      address: 0.0.0.0
+      port: 3000
 
-# ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
-# URL SETTINGS AFTER THAT!
+database:
+  primary:
+    host: db
+    port: 5432
+    name: misskey
+    user: example-misskey-user
+    password:
+      fromEnvironment: DATABASE_PASSWORD
 
-#   ┌───────────────────────┐
-#───┘ Port and TLS settings └───────────────────────────────────
+valkey:
+  connections:
+    primary:
+      host: valkey
+      port: 6379
 
-#
-# Erebia requires a reverse proxy to support HTTPS connections.
-#
-#                 +----- https://example.tld/ ------------+
-#   +------+      |+-------------+      +----------------+|
-#   | User | ---> || Proxy (443) | ---> | Erebia (3000) ||
-#   +------+      |+-------------+      +----------------+|
-#                 +---------------------------------------+
-#
-#   You need to set up a reverse proxy. (e.g. nginx)
-#   An encrypted connection with HTTPS is highly recommended
-#   because tokens may be transferred in GET requests.
-
-# The port that your Erebia server should listen on.
-port: 3000
-
-#   ┌──────────────────────────┐
-#───┘ PostgreSQL configuration └────────────────────────────────
-
-db:
-  host: db
-  port: 5432
-
-  # Database name
-  # You can set db from an environment variable instead.
-  db: misskey
-
-  # Auth
-  # You can set user and pass from environment variables instead.
-  user: example-misskey-user
-  pass: example-misskey-pass
-
-  # Whether disable Caching queries
-  #disableCache: true
-
-  # Extra Connection options
-  #extra:
-  #  ssl: true
-
-dbReplications: false
-
-# You can configure any number of replicas here
-#dbSlaves:
-#  -
-#    host:
-#    port:
-#    db:
-#    user:
-#    pass:
-#  -
-#    host:
-#    port:
-#    db:
-#    user:
-#    pass:
-
-#   ┌─────────────────────┐
-#───┘ Valkey configuration └────────────────────────────────────
-
-redis:
-  host: valkey
-  port: 6379
-  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-  #pass: example-pass
-  #prefix: example-prefix
-  #db: 1
-
-#redisForPubsub:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#redisForJobQueue:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#redisForTimelines:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#redisForReactions:
-#  host: valkey
-#  port: 6379
-#  #family: 0  # 0=Both, 4=IPv4, 6=IPv6
-#  #pass: example-pass
-#  #prefix: example-prefix
-#  #db: 1
-
-#   ┌───────────────────────────────┐
-#───┘ Fulltext search configuration └─────────────────────────────
-
-# These are the setting items for the full-text search provider.
-fulltextSearch:
-  # You can select the fulltext search provider.
-  # - sqlLike (default)
-  #   Use SQL-like search.
-  #   This is a standard feature of PostgreSQL, so no special extensions are required.
-  # - sqlPgroonga
-  #   Use pgroonga.
-  #   You need to install pgroonga and configure it as a PostgreSQL extension.
-  #   In addition to the above, you need to create a pgroonga index on the text column of the note table.
-  #   see: https://pgroonga.github.io/tutorial/
-  # - meilisearch
-  #   Use Meilisearch.
-  #   You need to install Meilisearch and configure.
+search:
   provider: sqlLike
 
-# For Meilisearch settings.
-# If you select "meilisearch" for "fulltextSearch.provider", it must be set.
-# You can set scope to local (default value) or global
-# (include notes from remote).
-
-#meilisearch:
-#  host: meilisearch
-#  port: 7700
-#  apiKey: ''
-#  ssl: true
-#  index: ''
-#  scope: local
-
-#   ┌─────────────┐
-#───┘ Telemetry   └──────────────────────────────────────────────
-
-# OpenTelemetry traces and errors can be exported over OTLP/HTTP.
-# The endpoint must include /v1/traces. Frontend collector headers are not
-# supported because this configuration is public; allow browser requests with CORS.
-
-#telemetryForBackend:
-#  endpoint: 'http://otel-collector:4318/v1/traces'
-#  serviceName: 'erebia-backend'
-#  tracesSampleRatio: 0.1
-#  # Trace headers are not sent to outgoing HTTP requests by default.
-#  # Allow only trusted origins or URL prefixes. Do not add the OTLP endpoint.
-#  tracePropagationTargets:
-#    - 'https://trusted-service.example.com/api/'
-#  disabledInstrumentations:
-#    - '@opentelemetry/instrumentation-pg'
-
-#telemetryForFrontend:
-#  endpoint: 'https://collector.example.com/v1/traces'
-#  serviceName: 'erebia-frontend'
-#  tracesSampleRatio: 0.1
-#  propagateTraceHeaderCorsUrls:
-#    - 'https://misskey.example.com/api'
-
-#   ┌─────────────────────┐
-#───┘ Other configuration └─────────────────────────────────────
-
-# Whether disable HSTS
-#disableHsts: true
-
-# Number of worker processes
-#clusterLimit: 1
-
-# Number of threads of extra thread pool for CPU-intensive tasks (per worker)
-#threadPoolSize: 1
-
-# Job concurrency per worker
-# deliverJobConcurrency: 128
-# inboxJobConcurrency: 16
-# dbJobConcurrency: 1
-# systemJobConcurrency: 1
-# objectStorageJobConcurrency: 16
-# userWebhookJobConcurrency: 64
-# systemWebhookJobConcurrency: 16
-
-# Job rate limiter
-# deliverJobPerSec: 128
-# inboxJobPerSec: 32
-
-# Job attempts
-# deliverJobMaxAttempts: 12
-# inboxJobMaxAttempts: 8
-
-# IP address family used for outgoing request (ipv4, ipv6 or dual)
-#outgoingAddressFamily: ipv4
-
-# Proxy for HTTP/HTTPS
-#proxy: http://127.0.0.1:3128
-
-proxyBypassHosts:
-  - api.deepl.com
-  - api-free.deepl.com
-  - www.recaptcha.net
-  - hcaptcha.com
-  - challenges.cloudflare.com
-
-# Proxy for SMTP/SMTPS
-#proxySmtp: http://127.0.0.1:3128   # use HTTP/1.1 CONNECT
-#proxySmtp: socks4://127.0.0.1:1080 # use SOCKS4
-#proxySmtp: socks5://127.0.0.1:1080 # use SOCKS5
-
-# Media Proxy
-#mediaProxy: https://example.com/proxy
-
-# For security reasons, uploading attachments from the intranet is prohibited,
-# but exceptions can be made from the following settings. Default value is "undefined".
-# Read changelog to learn more (Improvements of 12.90.0 (2021/09/04)).
-#allowedPrivateNetworks:
-#  - '127.0.0.1/32'
-
-# Upload or download file size limits (bytes)
-#maxFileSize: 262144000
-
-# Log settings
-# logging:
-#   sql:
-#     # Outputs query parameters during SQL execution to the log.
-#     # default: false
-#     enableQueryParamLogging: false
-#     # Disable query truncation. If set to true, the full text of the query will be output to the log.
-#     # default: false
-#     disableQueryTruncation: false
+outboundNetwork:
+  proxy:
+    bypassHosts:
+      - api.deepl.com
+      - api-free.deepl.com
+      - www.recaptcha.net
+      - hcaptcha.com
+      - challenges.cloudflare.com

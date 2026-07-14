@@ -59,7 +59,7 @@ export function rawStatusResponse(c: Context, status: number): Response {
 export function signinFlowResponse(c: Context, deps: ApiShellDependencies, result: HonoApiSigninFlowResult): Response {
 	setApiHeaders(c);
 	const headers: Record<string, string> = {
-		'Access-Control-Allow-Origin': deps.config.url,
+		'Access-Control-Allow-Origin': deps.config.instance.url,
 		'Access-Control-Allow-Credentials': 'true',
 		'Cache-Control': 'private, max-age=0, must-revalidate',
 	};
@@ -85,7 +85,7 @@ export function signinWithPasskeyResponse(c: Context, deps: ApiShellDependencies
 	return new Response(JSON.stringify(result.body), {
 		status: result.status,
 		headers: {
-			'Access-Control-Allow-Origin': deps.config.url,
+			'Access-Control-Allow-Origin': deps.config.instance.url,
 			'Access-Control-Allow-Credentials': 'true',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
@@ -147,21 +147,16 @@ export function tokenFromRequest(c: Context, body: Record<string, unknown>): str
 
 export function getRequestIp(c: Context, config: Config): string {
 	const remoteAddress = c.req.header('x-misskey-remote-address') ?? '0.0.0.0';
-	if (config.trustProxy === false) return remoteAddress;
+	const trustedNetworks = config.server.reverseProxy.trustedNetworks;
+	if (trustedNetworks.length === 0) return remoteAddress;
 
 	const forwarded = c.req.header('x-forwarded-for')?.split(',').map(address => address.trim()).filter(Boolean)
 		?? [c.req.header('x-real-ip') ?? c.req.header('cf-connecting-ip')].filter((address): address is string => address != null && address !== '');
 	if (forwarded.length === 0) return remoteAddress;
 
 	const addresses = [...forwarded, remoteAddress];
-	const configuredNetworks = typeof config.trustProxy === 'string'
-		? [config.trustProxy]
-		: Array.isArray(config.trustProxy) ? config.trustProxy : [];
-	const networks = configuredNetworks.map(network => ipaddr.parseCIDR(network));
-	const isTrusted = (address: string, hop: number): boolean => {
-		if (config.trustProxy === true) return true;
-		if (typeof config.trustProxy === 'number') return hop < config.trustProxy;
-		if (typeof config.trustProxy === 'function') return config.trustProxy(address, hop);
+	const networks = trustedNetworks.map(network => ipaddr.parseCIDR(network));
+	const isTrusted = (address: string): boolean => {
 		if (!ipaddr.isValid(address)) return false;
 
 		const parsed = ipaddr.process(address);
@@ -169,7 +164,7 @@ export function getRequestIp(c: Context, config: Config): string {
 	};
 
 	for (let index = addresses.length - 1, hop = 0; index > 0; index--, hop++) {
-		if (!isTrusted(addresses[index], hop)) return addresses[index];
+		if (!isTrusted(addresses[index])) return addresses[index];
 	}
 
 	return addresses[0];

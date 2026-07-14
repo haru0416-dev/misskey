@@ -24,7 +24,7 @@ async function loadConfig() {
 }
 
 async function build() {
-	await loadConfig().then((config) => config?.publishTarballInsteadOfProvideRepositoryUrl && buildTarball());
+	await loadConfig().then((config) => config?.instance?.publishSourceTarball && buildTarball());
 }
 
 await build();

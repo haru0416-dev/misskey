@@ -42,7 +42,7 @@ const DELETE_ACCOUNT_JOB_OPTIONS = {
 } as const;
 
 function genLocalUserUri(config: Config, userId: MiUser['id']): string {
-	return `${config.url}/users/${userId}`;
+	return `${config.instance.url}/users/${userId}`;
 }
 
 function renderDelete(config: Config, object: IObject | string, user: { id: MiUser['id']; host: null }): IDelete {
@@ -56,7 +56,7 @@ function renderDelete(config: Config, object: IObject | string, user: { id: MiUs
 
 function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
-		activity.id = `${config.url}/${randomUUID()}`;
+		activity.id = `${config.instance.url}/${randomUUID()}`;
 	}
 
 	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });

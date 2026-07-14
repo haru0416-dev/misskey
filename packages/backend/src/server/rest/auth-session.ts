@@ -141,7 +141,7 @@ export async function handleHonoApiAuthSessionGenerate(
 
 	return {
 		token: session.token,
-		url: `${deps.config.authUrl}/${session.token}`,
+		url: `${deps.config.runtime.authUrl}/${session.token}`,
 	};
 }
 

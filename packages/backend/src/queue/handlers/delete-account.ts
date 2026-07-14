@@ -21,7 +21,7 @@ import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } fro
 
 export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependencies & HonoApiPageDependencies & {
 	db: MiDrizzleDatabase;
-	config: Pick<Config, 'meilisearch'>;
+	config: Pick<Config, 'search'>;
 	meilisearch: Meilisearch | null;
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
@@ -30,7 +30,7 @@ async function unindexNoteForHonoApi(deps: HonoQueueDeleteAccountDependencies, n
 	if (!deps.meilisearch) return;
 	if (!['home', 'public'].includes(note.visibility)) return;
 
-	const index = deps.meilisearch.index(`${deps.config.meilisearch!.index}---notes`);
+	const index = deps.meilisearch.index(`${deps.config.search.meilisearch!.index}---notes`);
 	await index.deleteDocument(note.id);
 }
 

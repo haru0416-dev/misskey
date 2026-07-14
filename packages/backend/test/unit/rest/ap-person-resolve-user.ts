@@ -44,7 +44,7 @@ describe('resolveUserForHonoApi', () => {
 		const username = `honoresolveuser${id}`;
 		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
 
-		const resolved = await resolveUserForHonoApi(deps, username, runtime.config.host);
+		const resolved = await resolveUserForHonoApi(deps, username, runtime.config.runtime.host);
 		expect(resolved.id).toBe(id);
 	});
 

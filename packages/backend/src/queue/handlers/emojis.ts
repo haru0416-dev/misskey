@@ -45,7 +45,7 @@ export async function handleHonoQueueExportCustomEmojis(deps: HonoQueueEmojisDep
 	fs.writeFileSync(metaPath, '', 'utf-8');
 	const metaStream = fs.createWriteStream(metaPath, { flags: 'a' });
 
-	await writeToFile(metaStream, `{"metaVersion":2,"host":"${deps.config.host}","exportedAt":"${new Date().toString()}","emojis":[`);
+	await writeToFile(metaStream, `{"metaVersion":2,"host":"${deps.config.runtime.host}","exportedAt":"${new Date().toString()}","emojis":[`);
 
 	const customEmojis = await listLocalEmojisOrderedByIdFromDatabase(deps.db);
 

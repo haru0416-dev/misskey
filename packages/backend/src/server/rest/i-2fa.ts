@@ -90,7 +90,7 @@ export async function handleHonoApiI2faRegister(
 		secret,
 		digits: 6,
 		label: me.username,
-		issuer: deps.config.host,
+		issuer: deps.config.runtime.host,
 	});
 	const url = totp.toString();
 	const qr = await QRCode.toDataURL(url);
@@ -100,7 +100,7 @@ export async function handleHonoApiI2faRegister(
 		url,
 		secret: secret.base32,
 		label: me.username,
-		issuer: deps.config.host,
+		issuer: deps.config.runtime.host,
 	};
 }
 

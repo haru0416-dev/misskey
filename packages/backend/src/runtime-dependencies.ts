@@ -108,32 +108,32 @@ export type RuntimeResources = {
 };
 
 export function createMeilisearchClient(config: Config): Meilisearch | null {
-	if (config.fulltextSearch?.provider !== 'meilisearch') {
+	if (config.search.provider !== 'meilisearch') {
 		return null;
 	}
 
-	if (!config.meilisearch) {
+	if (!config.search.meilisearch) {
 		throw new Error('Meilisearch is enabled but no configuration is provided');
 	}
 
 	return new Meilisearch({
-		host: `${config.meilisearch.ssl ? 'https' : 'http'}://${config.meilisearch.host}:${config.meilisearch.port}`,
-		apiKey: config.meilisearch.apiKey,
+		host: config.search.meilisearch.endpoint,
+		apiKey: config.search.meilisearch.apiKey,
 	});
 }
 
 export function createRedisClient(config: Config): Redis.Redis {
-	return new Redis.Redis(config.redis);
+	return new Redis.Redis(config.valkey.primary);
 }
 
 export function createRedisForPub(config: Config): Redis.Redis {
-	return new Redis.Redis(config.redisForPubsub);
+	return new Redis.Redis(config.valkey.pubsub);
 }
 
 export async function createRedisForSub(config: Config): Promise<Redis.Redis> {
-	const redis = new Redis.Redis(config.redisForPubsub);
+	const redis = new Redis.Redis(config.valkey.pubsub);
 	try {
-		await redis.subscribe(config.host);
+		await redis.subscribe(config.runtime.host);
 		return redis;
 	} catch (error) {
 		await closeRedisConnection(redis);
@@ -142,11 +142,11 @@ export async function createRedisForSub(config: Config): Promise<Redis.Redis> {
 }
 
 export function createRedisForTimelines(config: Config): Redis.Redis {
-	return new Redis.Redis(config.redisForTimelines);
+	return new Redis.Redis(config.valkey.timelines);
 }
 
 export function createRedisForReactions(config: Config): Redis.Redis {
-	return new Redis.Redis(config.redisForReactions);
+	return new Redis.Redis(config.valkey.reactions);
 }
 
 export async function fetchReactiveMeta(db: MiDrizzleDatabase, redisForSub: Redis.Redis): Promise<MiMeta> {

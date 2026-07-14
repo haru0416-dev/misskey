@@ -39,7 +39,6 @@ export type HttpRequestSendOptions = {
 };
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-const MAX_REDIRECTS = 20;
 
 /** リダイレクト先へ引き継がない (安全側に倒す) ヘッダ。cross-origin では Authorization も別途落とす。 */
 const CONTENT_HEADERS = ['content-type', 'content-length', 'content-encoding', 'content-language', 'content-location'];
@@ -147,7 +146,7 @@ class HttpRequestServiceAgent extends http.Agent {
 			if (socket instanceof net.Socket && process.env.NODE_ENV === 'production') {
 				const address = socket.remoteAddress;
 				if (address && ipaddr.isValid(address)) {
-					if (isPrivateIp(address, this.config.allowedPrivateNetworks)) {
+					if (isPrivateIp(address, this.config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
 						socket.destroy(new Error(`Blocked address: ${address}`));
 					}
 				}
@@ -178,7 +177,7 @@ class HttpsRequestServiceAgent extends https.Agent {
 			if (socket instanceof net.Socket && process.env.NODE_ENV === 'production') {
 				const address = socket.remoteAddress;
 				if (address && ipaddr.isValid(address)) {
-					if (isPrivateIp(address, this.config.allowedPrivateNetworks)) {
+					if (isPrivateIp(address, this.config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
 						socket.destroy(new Error(`Blocked address: ${address}`));
 					}
 				}
@@ -192,16 +191,20 @@ class HttpsRequestServiceAgent extends https.Agent {
 export function createHttpRequestService(config: Config) {
 	// SSRF検査と接続先解決で同じDNS結果を使い、名前解決後の差し替えを防ぐ。
 	const dnsCache = new CacheableLookup({
-		maxTtl: 3600,	// 1hours
-		errorTtl: 30,	// 30secs
+		maxTtl: config.outboundNetwork.dnsCache.successTtlSeconds,
+		errorTtl: config.outboundNetwork.dnsCache.failureTtlSeconds,
 		lookup: false,	// nativeのdns.lookupにfallbackしない
 	});
 
 	const agentOption = {
 		keepAlive: true,
-		keepAliveMsecs: 30 * 1000,
+		keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
+		maxSockets: config.outboundNetwork.http.maximumSockets,
+		maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
+		timeout: config.outboundNetwork.http.connectionTimeoutMs,
 		lookup: dnsCache.lookup as unknown as net.LookupFunction,
-		localAddress: config.outgoingAddress,
+		localAddress: config.outboundNetwork.bindAddress,
+		family: config.outboundNetwork.addressFamily === 'ipv4' ? 4 : config.outboundNetwork.addressFamily === 'ipv6' ? 6 : 0,
 	};
 
 	const httpNative: http.Agent = new http.Agent(agentOption);
@@ -212,40 +215,38 @@ export function createHttpRequestService(config: Config) {
 
 	const httpsNonProxyAgent: https.Agent = new HttpsRequestServiceAgent(config, agentOption);
 
-	const maxSockets = Math.max(256, config.deliverJobConcurrency ?? 128);
-
-	const httpAgent: http.Agent = config.proxy
+	const httpAgent: http.Agent = config.outboundNetwork.proxy.url
 		? new HttpProxyAgent({
 			keepAlive: true,
-			keepAliveMsecs: 30 * 1000,
-			maxSockets,
-			maxFreeSockets: 256,
+			keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
+			maxSockets: config.outboundNetwork.http.maximumSockets,
+			maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
 			scheduling: 'lifo',
-			proxy: config.proxy,
-			localAddress: config.outgoingAddress,
+			proxy: config.outboundNetwork.proxy.url,
+			localAddress: config.outboundNetwork.bindAddress,
 		})
 		: httpNonProxyAgent;
 
-	const httpsAgent: https.Agent = config.proxy
+	const httpsAgent: https.Agent = config.outboundNetwork.proxy.url
 		? new HttpsProxyAgent({
 			keepAlive: true,
-			keepAliveMsecs: 30 * 1000,
-			maxSockets,
-			maxFreeSockets: 256,
+			keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
+			maxSockets: config.outboundNetwork.http.maximumSockets,
+			maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
 			scheduling: 'lifo',
-			proxy: config.proxy,
-			localAddress: config.outgoingAddress,
+			proxy: config.outboundNetwork.proxy.url,
+			localAddress: config.outboundNetwork.bindAddress,
 		})
 		: httpsNonProxyAgent;
 
 	function getAgentByUrl(url: URL, bypassProxy = false, isLocalAddressAllowed = false): http.Agent | https.Agent {
-		if (bypassProxy || (config.proxyBypassHosts ?? []).includes(url.hostname)) {
+		if (bypassProxy || (config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
 			if (isLocalAddressAllowed) {
 				return url.protocol === 'http:' ? httpNative : httpsNative;
 			}
 			return url.protocol === 'http:' ? httpNonProxyAgent : httpsNonProxyAgent;
 		} else {
-			if (isLocalAddressAllowed && (!config.proxy)) {
+			if (isLocalAddressAllowed && (!config.outboundNetwork.proxy.url)) {
 				return url.protocol === 'http:' ? httpNative : httpsNative;
 			}
 			return url.protocol === 'http:' ? httpAgent : httpsAgent;
@@ -253,7 +254,7 @@ export function createHttpRequestService(config: Config) {
 	}
 
 	function getAgentForHttp(url: URL, isLocalAddressAllowed = false): http.Agent {
-		if ((config.proxyBypassHosts ?? []).includes(url.hostname)) {
+		if ((config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
 			return isLocalAddressAllowed
 				? httpNative
 				: httpNonProxyAgent;
@@ -263,7 +264,7 @@ export function createHttpRequestService(config: Config) {
 	}
 
 	function getAgentForHttps(url: URL, isLocalAddressAllowed = false): https.Agent {
-		if ((config.proxyBypassHosts ?? []).includes(url.hostname)) {
+		if ((config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
 			return isLocalAddressAllowed
 				? httpsNative
 				: httpsNonProxyAgent;
@@ -301,7 +302,7 @@ export function createHttpRequestService(config: Config) {
 		}
 
 		for (const address of addresses) {
-			if (ipaddr.isValid(address) && isPrivateIp(address, config.allowedPrivateNetworks)) {
+			if (ipaddr.isValid(address) && isPrivateIp(address, config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
 				throw new StatusError(`Blocked address: ${address}`, 403, 'Blocked');
 			}
 		}
@@ -378,8 +379,8 @@ export function createHttpRequestService(config: Config) {
 			await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
 
 			// proxy 経由の宛先解決は proxy 側が行うため、bypass 対象や proxyBypassHosts は素通しにする。
-			const useProxy = config.proxy != null
-				&& !(config.proxyBypassHosts ?? []).includes(currentUrl.hostname);
+			const useProxy = config.outboundNetwork.proxy.url != null
+				&& !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
 
 			const init: RequestInit & { proxy?: string } = {
 				method,
@@ -388,7 +389,7 @@ export function createHttpRequestService(config: Config) {
 				redirect: 'manual',
 				signal: baseInit.signal,
 			};
-			if (useProxy) init.proxy = config.proxy;
+			if (useProxy) init.proxy = config.outboundNetwork.proxy.url;
 
 			const res = await fetch(currentUrl, init);
 
@@ -397,7 +398,7 @@ export function createHttpRequestService(config: Config) {
 				return res;
 			}
 
-			if (redirects >= MAX_REDIRECTS) {
+			if (redirects >= config.outboundNetwork.http.maximumRedirects) {
 				await res.body?.cancel().catch(() => {});
 				throw new StatusError('Too many redirects', 400, 'Too Many Redirects');
 			}
@@ -438,7 +439,7 @@ export function createHttpRequestService(config: Config) {
 			validators: [],
 		},
 	): Promise<HttpRequestSendResponse> {
-		const timeout = args.timeout ?? 5000;
+		const timeout = args.timeout ?? config.outboundNetwork.http.requestTimeoutMs;
 		const isLocalAddressAllowed = args.isLocalAddressAllowed ?? false;
 
 		const controller = new AbortController();
@@ -450,13 +451,13 @@ export function createHttpRequestService(config: Config) {
 			res = await fetchFollowingRedirects(url, {
 				method: args.method ?? 'GET',
 				headers: {
-					'User-Agent': config.userAgent,
+					'User-Agent': config.runtime.userAgent,
 					...(args.headers ?? {}),
 				},
 				body: args.body,
 				signal: controller.signal,
 			}, isLocalAddressAllowed);
-			body = await readBodyWithLimit(res, args.size ?? 10 * 1024 * 1024);
+			body = await readBodyWithLimit(res, args.size ?? config.outboundNetwork.http.maximumResponseSizeBytes);
 		} finally {
 			clearTimeout(timer);
 		}

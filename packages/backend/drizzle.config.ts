@@ -9,12 +9,17 @@ import { fileURLToPath } from 'node:url';
 import type { Config } from 'drizzle-kit';
 
 type CompiledDbConfig = {
-	db: {
-		host: string;
-		port: number;
-		db?: string;
-		user?: string;
-		pass?: string;
+	config: {
+		database: {
+			primary: {
+				host: string;
+				port: number;
+				name: string;
+				user: string;
+				password: { fromEnvironment: string } | { plainText: string };
+				ssl: boolean;
+			};
+		};
 	};
 };
 
@@ -25,18 +30,23 @@ if (!existsSync(compiledConfigPath)) {
 	throw new Error("Compiled configuration file not found. Try running 'bun run compile-config'.");
 }
 
-const { db } = JSON.parse(readFileSync(compiledConfigPath, 'utf-8')) as CompiledDbConfig;
+const { config } = JSON.parse(readFileSync(compiledConfigPath, 'utf-8')) as CompiledDbConfig;
+const database = config.database.primary;
+const password = 'plainText' in database.password
+	? database.password.plainText
+	: process.env[database.password.fromEnvironment];
+if (password == null) throw new Error(`Environment variable ${database.password.fromEnvironment} is required.`);
 
 export default {
 	dialect: 'postgresql',
 	schema: './src/db/schema/*.ts',
 	out: './migration',
 	dbCredentials: {
-		host: db.host,
-		port: db.port,
-		user: db.user,
-		password: db.pass,
-		database: db.db,
-		ssl: false,
+		host: database.host,
+		port: database.port,
+		user: database.user,
+		password,
+		database: database.name,
+		ssl: database.ssl,
 	},
 } satisfies Config;

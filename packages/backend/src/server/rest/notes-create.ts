@@ -21,6 +21,7 @@ import { isReply } from '@/misc/is-reply.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { concat } from '@/misc/prelude/array.js';
 import type { Config } from '@/config.js';
+import { queueRetentionOptions } from '@/queue/const.js';
 import type { MiMeta } from '@/models/_.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { IMentionedRemoteUsers, MiNote } from '@/models/Note.js';
@@ -538,8 +539,7 @@ async function enqueueUserWebhookForHonoApi(
 		return deps.userWebhookDeliverQueue.add(webhook.id, data, {
 			attempts: 4,
 			backoff: { type: 'custom' },
-			removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-			removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+			...queueRetentionOptions(deps.config),
 		});
 	}));
 }
@@ -730,8 +730,7 @@ export async function postNoteCreatedForHonoApi(
 		const delay = data.poll.expiresAt.getTime() - Date.now();
 		await deps.endedPollNotificationQueue.add(note.id, { noteId: note.id }, {
 			delay,
-			removeOnComplete: { age: 3600 * 24 * 7, count: 30 },
-			removeOnFail: { age: 3600 * 24 * 7, count: 100 },
+			...queueRetentionOptions(deps.config),
 		});
 	}
 
@@ -842,7 +841,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(deps: HonoApiNotesCreateDepen
 	const r = deps.redisForTimelines.pipeline();
 
 	if (note.channelId) {
-		pushFanoutTimelineForHonoApi(deps, `channelTimeline:${note.channelId}`, note.id, deps.config.perChannelMaxNoteCacheCount, r);
+		pushFanoutTimelineForHonoApi(deps, `channelTimeline:${note.channelId}`, note.id, deps.config.limits.channelTimelineNotes, r);
 		pushFanoutTimelineForHonoApi(deps, `userTimelineWithChannel:${user.id}`, note.id, note.userHost == null ? deps.meta.perLocalUserUserTimelineCacheMax : deps.meta.perRemoteUserUserTimelineCacheMax, r);
 
 		const channelFollowerIds = await listFollowerUserIdsByChannelIdFromDatabase(deps.db, note.channelId);

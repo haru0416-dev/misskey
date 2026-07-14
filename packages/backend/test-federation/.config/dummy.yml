@@ -1,2 +1,17 @@
-url: https://example.com/
-port: 3000
+configVersion: 2
+
+instance:
+  url: https://example.com
+
+database:
+  primary:
+    host: localhost
+    name: misskey
+    user: postgres
+    password:
+      plainText: postgres
+
+valkey:
+  connections:
+    primary:
+      host: localhost

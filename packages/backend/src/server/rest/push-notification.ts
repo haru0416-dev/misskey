@@ -24,7 +24,7 @@ export type PushNotificationsTypes = {
 };
 
 export type HonoApiPushNotificationDependencies = {
-	config: Pick<Config, 'url' | 'proxy'>;
+	config: Pick<Config, 'instance' | 'outboundNetwork'>;
 	meta: Pick<MiMeta, 'enableServiceWorker' | 'swPublicKey' | 'swPrivateKey'>;
 	db: MiDrizzleDatabase;
 };
@@ -61,7 +61,7 @@ export async function pushSwNotificationForHonoApi<T extends keyof PushNotificat
 ): Promise<void> {
 	if (!deps.meta.enableServiceWorker || deps.meta.swPublicKey == null || deps.meta.swPrivateKey == null) return;
 
-	push.setVapidDetails(deps.config.url, deps.meta.swPublicKey, deps.meta.swPrivateKey);
+	push.setVapidDetails(deps.config.instance.url, deps.meta.swPublicKey, deps.meta.swPrivateKey);
 
 	const subscriptions = await listSwSubscriptionsByUserIdFromDatabase(deps.db, userId);
 
@@ -83,7 +83,7 @@ export async function pushSwNotificationForHonoApi<T extends keyof PushNotificat
 			userId,
 			dateTime: Date.now(),
 		}), {
-			proxy: deps.config.proxy,
+			proxy: deps.config.outboundNetwork.proxy.url,
 		}).catch((err: push.WebPushError) => {
 			if (err.statusCode === 410) {
 				void deleteSwSubscriptionForPushEndpointFromDatabase(deps.db, {

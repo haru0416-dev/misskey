@@ -28,7 +28,7 @@ export function createDownloadService(
 
 		const responseTimeout = 30 * 1000;
 		const operationTimeout = 60 * 1000;
-		const maxSize = config.maxFileSize;
+		const maxSize = config.limits.maximumFileSizeBytes;
 
 		const urlObj = new URL(url);
 		let filename = urlObj.pathname.split('/').pop() ?? 'untitled';
@@ -42,7 +42,7 @@ export function createDownloadService(
 			const res = await httpRequestService.fetchFollowingRedirects(url, {
 				method: 'GET',
 				headers: {
-					'User-Agent': config.userAgent,
+					'User-Agent': config.runtime.userAgent,
 				},
 				body: undefined,
 				signal: controller.signal,

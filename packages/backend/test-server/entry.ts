@@ -65,7 +65,7 @@ async function stopApplication() {
  * 別プロセスに切り離してしまったが故に出来なくなった環境変数の書き換え等を実現するためのエンドポイントを作る
  * @param port
  */
-async function startControllerEndpoints(port = config.port + 1000) {
+async function startControllerEndpoints(port = ('tcp' in config.server.listen ? config.server.listen.tcp.port : 3000) + 1000) {
 	const controller = new Hono();
 
 	controller.post('/env', async (c) => {
@@ -97,7 +97,7 @@ async function startControllerEndpoints(port = config.port + 1000) {
 					await pool.end();
 				}
 
-				const redis = new Redis(config.redis);
+				const redis = new Redis(config.valkey.primary);
 				try {
 					await redis.flushdb();
 				} finally {

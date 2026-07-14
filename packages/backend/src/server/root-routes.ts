@@ -41,11 +41,11 @@ function queryHas(requestUrl: string, key: string): boolean {
 }
 
 function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.host) && user.username.includes('.') && meta.iconUrl) {
+	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
 		return meta.iconUrl;
 	}
 
-	return `${config.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.host}`;
+	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
 }
 
 function cacheHeaders(): Record<string, string> {
@@ -99,11 +99,11 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 
 		let url: URL;
 		if (queryHas(c.req.url, 'badge')) {
-			url = new URL(`${deps.config.mediaProxy}/emoji.png`);
+			url = new URL(`${deps.config.media.proxyUrl}/emoji.png`);
 			url.searchParams.set('url', emoji.publicUrl || emoji.originalUrl);
 			url.searchParams.set('badge', '1');
 		} else {
-			url = new URL(`${deps.config.mediaProxy}/emoji.webp`);
+			url = new URL(`${deps.config.media.proxyUrl}/emoji.webp`);
 			url.searchParams.set('url', emoji.publicUrl || emoji.originalUrl);
 			url.searchParams.set('emoji', '1');
 			if (queryHas(c.req.url, 'static')) url.searchParams.set('static', '1');
@@ -125,7 +125,7 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 		const user = await stores.fetchUserByUsernameAndHost(
 			deps.db,
 			username,
-			(host == null) || (host === deps.config.host) ? null : host,
+			(host == null) || (host === deps.config.runtime.host) ? null : host,
 		);
 
 		if (user && !user.isSuspended) {

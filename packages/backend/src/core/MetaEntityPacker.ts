@@ -42,12 +42,12 @@ export async function packMetaLite(
 		maintainerName: meta.maintainerName,
 		maintainerEmail: meta.maintainerEmail,
 
-		version: deps.config.version,
-		providesTarball: deps.config.publishTarballInsteadOfProvideRepositoryUrl,
+		version: deps.config.runtime.version,
+		providesTarball: deps.config.instance.publishSourceTarball,
 
 		name: meta.name,
 		shortName: meta.shortName,
-		uri: deps.config.url,
+		uri: deps.config.instance.url,
 		description: meta.description,
 		langs: meta.langs,
 		tosUrl: meta.termsOfServiceUrl,
@@ -104,16 +104,16 @@ export async function packMetaLite(
 
 		policies: { ...DEFAULT_POLICIES, ...meta.policies },
 
-		telemetryForFrontend: deps.config.telemetryForFrontend == null ? null : {
-			endpoint: deps.config.telemetryForFrontend.endpoint,
-			serviceName: deps.config.telemetryForFrontend.serviceName,
-			tracesSampleRatio: deps.config.telemetryForFrontend.tracesSampleRatio,
-			propagateTraceHeaderCorsUrls: deps.config.telemetryForFrontend.propagateTraceHeaderCorsUrls,
+		telemetryForFrontend: deps.config.observability.telemetry.frontend == null ? null : {
+			endpoint: deps.config.observability.telemetry.frontend.endpoint,
+			serviceName: deps.config.observability.telemetry.frontend.serviceName,
+			tracesSampleRatio: deps.config.observability.telemetry.frontend.tracesSampleRatio,
+			propagateTraceHeaderCorsUrls: deps.config.observability.telemetry.frontend.propagateTraceHeaderCorsUrls,
 		},
-		mediaProxy: deps.config.mediaProxy,
+		mediaProxy: deps.config.media.proxyUrl,
 		enableUrlPreview: meta.urlPreviewEnabled,
-		noteSearchableScope: (deps.config.fulltextSearch?.provider === 'meilisearch' && deps.config.meilisearch?.scope === 'local') ? 'local' : 'global',
-		maxFileSize: deps.config.maxFileSize,
+		noteSearchableScope: (deps.config.search.provider === 'meilisearch' && deps.config.search.meilisearch?.scope === 'local') ? 'local' : 'global',
+		maxFileSize: deps.config.limits.maximumFileSizeBytes,
 		federation: deps.meta.federation,
 	};
 }

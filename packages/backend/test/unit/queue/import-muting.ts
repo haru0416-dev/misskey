@@ -74,7 +74,7 @@ describe('hono-queue-db (importMuting)', () => {
 		const muter = await createTestUser('honoqueueimpmuteme');
 		const target = await createTestUser('honoqueueimpmutetarget');
 
-		const { url, server } = await serveText(`${target.username}@${runtime.config.host}\n`);
+		const { url, server } = await serveText(`${target.username}@${runtime.config.runtime.host}\n`);
 		servers.push(server);
 
 		const fileId = genId();
@@ -98,7 +98,7 @@ describe('hono-queue-db (importMuting)', () => {
 	test('自分自身のacctはスキップされる', async () => {
 		const muter = await createTestUser('honoqueueimpmuteself');
 
-		const { url, server } = await serveText(`${muter.username}@${runtime.config.host}\n`);
+		const { url, server } = await serveText(`${muter.username}@${runtime.config.runtime.host}\n`);
 		servers.push(server);
 
 		const fileId = genId();

@@ -158,7 +158,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	test('正しい署名のFollowアクティビティはperformActivityForHonoApiまで到達しFollowRequestを作成する', async () => {
 		const host = `hono-queue-inbox-ok-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxee');
-		const { user: actor, job } = await createSignedInboxJob(host, { object: `${deps.config.url}/users/${followee.id}` });
+		const { user: actor, job } = await createSignedInboxJob(host, { object: `${deps.config.instance.url}/users/${followee.id}` });
 
 		const result = await handleHonoQueueInbox(deps, job);
 		expect(result).toBe('ok');
@@ -171,7 +171,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	test('署名を改竄した場合はHTTP-Signature検証に失敗しLD-Signatureも無いためUnrecoverableErrorになる', async () => {
 		const host = `hono-queue-inbox-tampered-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxtamperee');
-		const { job } = await createSignedInboxJob(host, { object: `${deps.config.url}/users/${followee.id}` });
+		const { job } = await createSignedInboxJob(host, { object: `${deps.config.instance.url}/users/${followee.id}` });
 
 		job.data.signature.params.signature = tamperBase64Signature(job.data.signature.params.signature);
 

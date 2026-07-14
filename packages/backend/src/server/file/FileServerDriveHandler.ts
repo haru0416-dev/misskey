@@ -46,7 +46,7 @@ export class FileServerDriveHandler {
 					if (isMimeImage(file.mime, 'sharp-convertible-image-with-bmp')) {
 						reply.header('Cache-Control', 'max-age=31536000, immutable');
 
-						const url = new URL(`${this.config.mediaProxy}/static.webp`);
+						const url = new URL(`${this.config.media.proxyUrl}/static.webp`);
 						url.searchParams.set('url', file.url);
 						url.searchParams.set('static', '1');
 
@@ -67,7 +67,7 @@ export class FileServerDriveHandler {
 					if (['image/svg+xml'].includes(file.mime)) {
 						reply.header('Cache-Control', 'max-age=31536000, immutable');
 
-						const url = new URL(`${this.config.mediaProxy}/svg.webp`);
+						const url = new URL(`${this.config.media.proxyUrl}/svg.webp`);
 						url.searchParams.set('url', file.url);
 
 						file.cleanup();

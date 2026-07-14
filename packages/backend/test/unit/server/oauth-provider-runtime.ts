@@ -16,8 +16,8 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { CommonData } from '@/server/web/views/_.js';
 
 const config = {
-	url: 'http://misskey.local',
-	host: 'misskey.local',
+	instance: { url: 'http://misskey.local' },
+	runtime: { host: 'misskey.local' },
 } as Config;
 
 const commonData = {
@@ -31,7 +31,7 @@ const commonData = {
 	serverErrorImageUrl: 'http://misskey.local/error.jpg',
 	infoImageUrl: 'http://misskey.local/info.jpg',
 	notFoundImageUrl: 'http://misskey.local/not-found.jpg',
-	instanceUrl: config.url,
+	instanceUrl: config.instance.url,
 	now: 0,
 	federationEnabled: true,
 	frontendViteFiles: null,
@@ -107,7 +107,7 @@ describe('createOAuthProviderRuntime', () => {
 		const code = decisionLocation.searchParams.get('code');
 		expect(decisionLocation.origin + decisionLocation.pathname).toBe(redirectUri);
 		expect(decisionLocation.searchParams.get('state')).toBe('state');
-		expect(decisionLocation.searchParams.get('iss')).toBe(config.url);
+		expect(decisionLocation.searchParams.get('iss')).toBe(config.instance.url);
 		expect(code).toBeTruthy();
 
 		const token = await runtime.token({
