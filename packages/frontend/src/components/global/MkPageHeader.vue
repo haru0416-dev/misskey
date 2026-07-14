@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</template>
 		<div v-if="(!thin_ && narrow && !hideTitle) || (actions && actions.length > 0)" :class="$style.buttons">
 			<template v-for="action in actions">
-				<button v-tooltip.noDelay="action.text" class="_button" :class="[$style.button, { [$style.highlighted]: action.highlighted }]" @click.stop="action.handler" @touchstart="preventDrag"><i :class="action.icon"></i></button>
+				<button v-tooltip.noDelay="action.text" :aria-label="action.text" class="_button" :class="[$style.button, { [$style.highlighted]: action.highlighted }]" @click.stop="action.handler" @touchstart="preventDrag"><i :class="action.icon"></i></button>
 			</template>
 		</div>
 	</div>
@@ -133,18 +133,12 @@ onUnmounted(() => {
 
 <style lang="scss" module>
 .root {
-	background: color(from var(--MI_THEME-pageHeaderBg) srgb r g b / 0.75);
-	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
-	backdrop-filter: var(--MI-blur, blur(15px));
-	border-bottom: solid 0.5px transparent;
+	background: color(from var(--MI_THEME-pageHeaderBg) srgb r g b / 0.9);
+	-webkit-backdrop-filter: var(--MI-blur, blur(12px));
+	backdrop-filter: var(--MI-blur, blur(12px));
+	border-bottom: solid 1px var(--MI-border-muted);
 	width: 100%;
 	color: var(--MI_THEME-pageHeaderFg);
-}
-
-@container style(--MI_THEME-pageHeaderBg: var(--MI_THEME-bg)) {
-	.root {
-		border-bottom: solid 0.5px var(--MI_THEME-divider);
-	}
 }
 
 .upper,
@@ -154,7 +148,7 @@ onUnmounted(() => {
 }
 
 .upper {
-	--height: 50px;
+	--height: 54px;
 	--margin: var(--MI-margin);
 	display: flex;
 	gap: var(--margin);
@@ -221,14 +215,14 @@ onUnmounted(() => {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	height: var(--height);
-	width: calc(var(--height) - 8px);
+	height: calc(var(--height) - 14px);
+	width: calc(var(--height) - 14px);
 	box-sizing: border-box;
 	position: relative;
-	border-radius: 5px;
+	border-radius: var(--MI-radius-sm);
 
 	&:hover {
-		background: rgba(0, 0, 0, 0.05);
+		background: var(--MI_THEME-buttonHoverBg);
 	}
 
 	&.highlighted {
@@ -250,9 +244,9 @@ onUnmounted(() => {
 	overflow: clip;
 	white-space: nowrap;
 	text-align: left;
-	font-weight: bold;
+	font-weight: 650;
 	flex-shrink: 1;
-	margin-left: 24px;
+	margin-left: var(--MI-space-xl);
 }
 
 .titleAvatarContainer {
@@ -283,7 +277,7 @@ onUnmounted(() => {
 }
 
 .subtitle {
-	opacity: 0.6;
+	color: color-mix(in oklab, var(--MI_THEME-pageHeaderFg) 68%, transparent);
 	font-size: 0.8em;
 	font-weight: normal;
 	white-space: nowrap;

@@ -129,7 +129,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</template>
 			</MkReactionsViewer>
 			<footer :class="$style.footer">
-				<button :class="$style.footerButton" class="_button" @click="reply()">
+				<button :aria-label="i18n.ts.reply" :class="$style.footerButton" class="_button" @click="reply()">
 					<i class="ti ti-arrow-back-up"></i>
 					<p v-if="appearNote.repliesCount > 0" :class="$style.footerButtonCount">{{ number(appearNote.repliesCount) }}</p>
 				</button>
@@ -138,6 +138,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					ref="renoteButton"
 					:class="$style.footerButton"
 					class="_button"
+					:aria-label="i18n.ts.renote"
 					@pointerenter="preloadNotePopupMenu"
 					@focus="preloadNotePopupMenu"
 					@mousedown.prevent="renote()"
@@ -145,20 +146,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<i class="ti ti-repeat"></i>
 					<p v-if="appearNote.renoteCount > 0" :class="$style.footerButtonCount">{{ number(appearNote.renoteCount) }}</p>
 				</button>
-				<button v-else :class="$style.footerButton" class="_button" disabled>
+				<button v-else :aria-label="i18n.ts.renote" :class="$style.footerButton" class="_button" disabled>
 					<i class="ti ti-ban"></i>
 				</button>
-				<button ref="reactButton" :class="$style.footerButton" class="_button" @click="toggleReact()">
+				<button ref="reactButton" :aria-label="i18n.ts.reaction" :class="$style.footerButton" class="_button" @click="toggleReact()">
 					<i v-if="appearNote.reactionAcceptance === 'likeOnly' && $appearNote.myReaction != null" class="ti ti-heart-filled" style="color: var(--MI_THEME-love);"></i>
 					<i v-else-if="$appearNote.myReaction != null" class="ti ti-minus" style="color: var(--MI_THEME-accent);"></i>
 					<i v-else-if="appearNote.reactionAcceptance === 'likeOnly'" class="ti ti-heart"></i>
 					<i v-else class="ti ti-plus"></i>
 					<p v-if="(appearNote.reactionAcceptance === 'likeOnly' || prefer.showReactionsCount) && $appearNote.reactionCount > 0" :class="$style.footerButtonCount">{{ number($appearNote.reactionCount) }}</p>
 				</button>
-				<button v-if="prefer.showClipButtonInNoteFooter" ref="clipButton" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="clip()">
+				<button v-if="prefer.showClipButtonInNoteFooter" ref="clipButton" :aria-label="i18n.ts.clip" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="clip()">
 					<i class="ti ti-paperclip"></i>
 				</button>
-				<button ref="menuButton" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showMenu()">
+				<button ref="menuButton" :aria-label="i18n.ts.menu" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showMenu()">
 					<i class="ti ti-dots"></i>
 				</button>
 			</footer>
@@ -777,7 +778,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .root {
 	position: relative;
-	font-size: 1.05em;
+	font-size: 1em;
 	overflow: clip;
 	contain: content;
 	transition: background-color var(--MI-duration-normal) var(--MI-ease-out);
@@ -802,8 +803,8 @@ function emitUpdReaction(emoji: string, delta: number) {
 			margin: auto;
 			width: calc(100% - 8px);
 			height: calc(100% - 8px);
-			border: dashed 2px var(--MI_THEME-focus);
-			border-radius: var(--MI-radius);
+			border: solid 2px var(--MI_THEME-focus);
+			border-radius: var(--MI-radius-md);
 			box-sizing: border-box;
 		}
 	}
@@ -826,8 +827,8 @@ function emitUpdReaction(emoji: string, delta: number) {
 			padding: 0 4px;
 			margin-bottom: 0;
 			background: var(--MI_THEME-popup);
-			border-radius: 8px;
-			box-shadow: 0px 4px 32px var(--MI_THEME-shadow);
+			border-radius: var(--MI-radius-md);
+			box-shadow: var(--MI-shadow-md);
 		}
 
 		.footerButton {
@@ -860,7 +861,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	line-height: 24px;
 	font-size: 90%;
 	white-space: pre;
-	color: #d28a3f;
+	color: var(--MI_THEME-warn);
 }
 
 .tip + .article {
@@ -956,7 +957,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 .article {
 	position: relative;
 	display: flex;
-	padding: 26px 30px 22px;
+	padding: 22px 24px 18px;
 }
 
 .colorBar {
@@ -972,9 +973,9 @@ function emitUpdReaction(emoji: string, delta: number) {
 .avatar {
 	flex-shrink: 0;
 	display: block !important;
-	margin: 0 14px 0 0;
-	width: 52px;
-	height: 52px;
+	margin: 0 12px 0 0;
+	width: 48px;
+	height: 48px;
 
 	&.useSticky {
 		position: sticky;
@@ -986,6 +987,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 .main {
 	flex: 1;
 	min-width: 0;
+	line-height: 1.55;
 }
 
 .cw {
@@ -1009,7 +1011,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	padding: 6px 10px;
 	font-size: 0.8em;
 	border-radius: 999px;
-	box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+	box-shadow: var(--MI-shadow-sm);
 }
 
 .contentCollapsed {
@@ -1039,7 +1041,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	padding: 6px 10px;
 	font-size: 0.8em;
 	border-radius: 999px;
-	box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+	box-shadow: var(--MI-shadow-sm);
 }
 
 .text {
@@ -1072,8 +1074,8 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .quoteNote {
 	padding: 16px;
-	border: dashed 1px var(--MI_THEME-renote);
-	border-radius: 8px;
+	border: solid 1px var(--MI-border-muted);
+	border-radius: var(--MI-radius-md);
 	overflow: clip;
 }
 
@@ -1085,8 +1087,8 @@ function emitUpdReaction(emoji: string, delta: number) {
 .footer {
 	display: flex;
 	justify-content: space-between;
-	max-width: 420px;
-	margin: 10px 0 -8px;
+	max-width: 380px;
+	margin: 12px 0 -4px;
 }
 
 .footerButton {
@@ -1097,7 +1099,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	min-height: var(--MI-control-sm);
 	margin: 0;
 	padding: 6px var(--MI-space-sm);
-	border-radius: var(--MI-radius-sm);
+	border-radius: var(--MI-radius-full);
 	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%); // opacityなど不透明度で表現するとレンダリングパフォーマンスに影響するので通常の色の混合で代用
 
 	&:hover {
@@ -1121,12 +1123,12 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 
 	.article {
-		padding: 22px 24px 18px;
+		padding: 20px 22px 16px;
 	}
 
 	.avatar {
-		width: 50px;
-		height: 50px;
+		width: 46px;
+		height: 46px;
 	}
 }
 
@@ -1140,7 +1142,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 
 	.article {
-		padding: 18px 18px 14px;
+		padding: 17px 18px 14px;
 	}
 
 	.footer {

@@ -204,7 +204,7 @@ onUnmounted(() => {
 	position: relative;
 	margin: 0;
 	height: var(--height);
-	font-size: 0.8em;
+	font-size: 0.84em;
 	text-align: center;
 	overflow-x: auto;
 	overflow-y: hidden;
@@ -220,21 +220,24 @@ onUnmounted(() => {
 .tab {
 	display: inline-block;
 	position: relative;
-	padding: 0 10px;
+	padding: 0 12px;
 	height: 100%;
-	font-weight: normal;
-	opacity: 0.7;
+	font-weight: 500;
+	color: color-mix(in oklab, var(--MI_THEME-pageHeaderFg) 72%, transparent);
+	border-radius: var(--MI-radius-sm);
 
 	&:hover {
-		opacity: 1;
+		color: var(--MI_THEME-pageHeaderFg);
+		background: var(--MI_THEME-buttonHoverBg);
 	}
 
 	&.active {
-		opacity: 1;
+		color: var(--MI_THEME-accent);
+		font-weight: 650;
 	}
 
 	&.animate {
-		transition: opacity 0.2s ease;
+		transition: color var(--MI-duration-fast) var(--MI-ease-out), background-color var(--MI-duration-fast) var(--MI-ease-out);
 	}
 }
 
@@ -258,14 +261,14 @@ onUnmounted(() => {
 .tabHighlight {
 	position: absolute;
 	bottom: 0;
-	height: 3px;
+	height: 2px;
 	background: var(--MI_THEME-accent);
 	border-radius: 999px;
 	transition: none;
 	pointer-events: none;
 
 	&.animate {
-		transition: width 0.15s ease, left 0.15s ease;
+		transition: width var(--MI-duration-normal) var(--MI-ease-out), left var(--MI-duration-normal) var(--MI-ease-out);
 	}
 }
 

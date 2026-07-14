@@ -623,7 +623,7 @@ defineExpose({
 .notes {
 	container-type: inline-size;
 	position: relative;
-	background: var(--MI_THEME-panel);
+	background: var(--MI-surface-panel);
 }
 
 .mediaGrid {
@@ -759,7 +759,7 @@ defineExpose({
 }
 
 .note:not(:empty) {
-	border-bottom: solid 0.5px var(--MI_THEME-divider);
+	border-bottom: solid 1px var(--MI-border-muted);
 }
 
 .new {
@@ -844,14 +844,14 @@ defineExpose({
 	gap: 1em;
 	padding: 8px 8px;
 	margin: 0 auto;
-	border-bottom: solid 0.5px var(--MI_THEME-divider);
+	color: color-mix(in oklab, var(--MI_THEME-fg) 72%, transparent);
+	border-bottom: solid 1px var(--MI-border-muted);
 }
 
 .ad {
 	padding: 8px;
-	background-size: auto auto;
-	background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, var(--MI_THEME-bg) 8px, var(--MI_THEME-bg) 14px);
-	border-bottom: solid 0.5px var(--MI_THEME-divider);
+	background: var(--MI-surface-subtle);
+	border-bottom: solid 1px var(--MI-border-muted);
 
 	&:empty {
 		display: none;

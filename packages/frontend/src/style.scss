@@ -11,9 +11,9 @@
 html {
 	overflow: auto;
 	overflow-wrap: break-word;
-	font-family: 'Hiragino Maru Gothic Pro', "BIZ UDGothic", Roboto, HelveticaNeue, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "BIZ UDGothic", "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
 	font-size: 14px;
-	line-height: 1.45;
+	line-height: 1.5;
 	text-size-adjust: 100%;
 	tab-size: 2;
 	-webkit-text-size-adjust: 100%;
@@ -275,7 +275,7 @@ rt {
 }
 
 ._shadow {
-	box-shadow: 0px 4px 32px var(--MI_THEME-shadow) !important;
+	box-shadow: var(--MI-shadow-md) !important;
 }
 
 ._button {
@@ -353,8 +353,8 @@ rt {
 	background: var(--MI-surface-panel);
 	border-radius: var(--MI-radius-md);
 	overflow: clip;
-	outline: solid 0.5px var(--MI-border-muted);
-	outline-offset: -0.5px;
+	outline: solid 1px var(--MI-border-muted);
+	outline-offset: -1px;
 }
 
 ._margin {
@@ -410,8 +410,9 @@ rt {
 	background: var(--MI_THEME-popup);
 	border-radius: var(--MI-radius-md);
 	contain: content;
-	outline: solid 0.5px var(--MI_THEME-divider);
-	outline-offset: -0.5px;
+	outline: solid 1px var(--MI-border-muted);
+	outline-offset: -1px;
+	box-shadow: var(--MI-shadow-md);
 }
 
 @media (prefers-reduced-motion: reduce) {
