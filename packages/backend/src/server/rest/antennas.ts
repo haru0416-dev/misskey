@@ -19,7 +19,7 @@ import {
 	updateAntennaInDatabase,
 } from '@/core/AntennaStore.js';
 import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
+import { followingExistsInDatabase, listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase } from '@/core/FollowingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listUserListIdsContainingUserFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
@@ -73,20 +73,29 @@ export function antennaUsersIncludes(
 	});
 }
 
+function passesAntennaPreconditions(
+	antenna: MiAntenna,
+	note: MiNote,
+	noteUser: { host: string | null; isBot: boolean },
+): boolean {
+	if (antenna.excludeNotesInSensitiveChannel && note.channel?.isSensitive) return false;
+	if (antenna.excludeBots && noteUser.isBot) return false;
+	if (antenna.localOnly && noteUser.host != null) return false;
+	if (!antenna.withReplies && note.replyId != null) return false;
+	return true;
+}
+
 export async function checkHitAntennaForHonoApi(
 	deps: Pick<HonoApiAntennaFanoutDependencies, 'config' | 'db'>,
 	antenna: MiAntenna,
 	note: MiNote,
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
-	hint?: { listMembershipUserListIds: Set<string> },
+	hint?: {
+		listMembershipUserListIds: Set<string>;
+		followerIds?: Set<MiUser['id']>;
+	},
 ): Promise<boolean> {
-	if (antenna.excludeNotesInSensitiveChannel && note.channel?.isSensitive) return false;
-
-	if (antenna.excludeBots && noteUser.isBot) return false;
-
-	if (antenna.localOnly && noteUser.host != null) return false;
-
-	if (!antenna.withReplies && note.replyId != null) return false;
+	if (!passesAntennaPreconditions(antenna, note, noteUser)) return false;
 
 	if (note.visibility === 'specified') {
 		if (note.userId !== antenna.userId) {
@@ -96,7 +105,9 @@ export async function checkHitAntennaForHonoApi(
 	}
 
 	if (note.visibility === 'followers') {
-		const isFollowing = await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
+		const isFollowing = hint?.followerIds != null
+			? hint.followerIds.has(antenna.userId)
+			: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
 		if (!isFollowing && antenna.userId !== note.userId) return false;
 	}
 
@@ -208,12 +219,26 @@ export async function addNoteToAntennasForHonoApi(
 			.filter((antenna): antenna is MiAntenna & { userListId: string } => antenna.src === 'list' && antenna.userListId != null)
 			.map(antenna => antenna.userListId),
 	)];
-	const listMembershipUserListIds = await listUserListIdsContainingUserFromDatabase(deps.db, note.userId, listAntennaUserListIds);
+	const followerCandidateIds = note.visibility === 'followers'
+		? [...new Set(antennas
+			.filter(antenna => antenna.userId !== note.userId && passesAntennaPreconditions(antenna, note, noteUser))
+			.map(antenna => antenna.userId))]
+		: [];
+	const [listMembershipUserListIds, followerIds] = await Promise.all([
+		listUserListIdsContainingUserFromDatabase(deps.db, note.userId, listAntennaUserListIds),
+		followerCandidateIds.length > 0
+			? listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, note.userId, followerCandidateIds)
+			: Promise.resolve([]),
+	]);
+	const followerIdSet = new Set(followerIds);
 
 	const antennasWithMatchResult: (readonly [MiAntenna, boolean])[] = [];
 	for (let index = 0; index < antennas.length; index += 50) {
 		const batch = antennas.slice(index, index + 50);
-		antennasWithMatchResult.push(...await Promise.all(batch.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser, { listMembershipUserListIds }).then(hit => [antenna, hit] as const))));
+		antennasWithMatchResult.push(...await Promise.all(batch.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser, {
+			listMembershipUserListIds,
+			followerIds: followerIdSet,
+		}).then(hit => [antenna, hit] as const))));
 	}
 	const matchedAntennas = antennasWithMatchResult.filter(([, hit]) => hit).map(([antenna]) => antenna);
 
