@@ -137,14 +137,14 @@ $widgets-hide-threshold: 1090px;
 	contain: strict;
 	display: flex;
 	flex-direction: column;
-	background: color-mix(in oklab, var(--MI-surface-page) 88%, var(--MI_THEME-navBg));
+	background: var(--MI-surface-nav);
 }
 
 .nonTitlebarArea {
 	display: flex;
 	flex: 1;
 	min-height: 0;
-	gap: 1px;
+	gap: 0;
 }
 
 .sidebar {
@@ -162,7 +162,7 @@ $widgets-hide-threshold: 1090px;
 
 	&.withSidebarAndTitlebar {
 		background: var(--MI-surface-page);
-		border-radius: var(--MI-radius-lg) 0 0 0;
+		border-radius: var(--MI-radius-md) 0 0 0;
 		overflow: clip;
 	}
 }
@@ -179,12 +179,12 @@ $widgets-hide-threshold: 1090px;
 }
 
 .widgets {
-	width: 360px;
+	width: 340px;
 	height: 100%;
 	box-sizing: border-box;
 	overflow: auto;
 	padding: var(--MI-margin) var(--MI-margin) calc(var(--MI-margin) + env(safe-area-inset-bottom, 0px));
-	border-left: solid 0.5px var(--MI-border-muted);
+	border-left: solid 1px var(--MI-border-muted);
 	background: var(--MI-surface-subtle);
 
 	@media (max-width: $widgets-hide-threshold) {

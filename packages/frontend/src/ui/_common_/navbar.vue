@@ -7,14 +7,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div :class="[$style.root, { [$style.iconOnly]: iconOnly }]">
 	<div :class="$style.body">
 		<div :class="$style.top">
-			<button v-tooltip.noDelay.right="instance.name ?? i18n.ts.instance" class="_button" :class="$style.instance" @click="openInstanceMenu">
+			<button v-tooltip.noDelay.right="instance.name ?? i18n.ts.instance" :aria-label="instance.name ?? i18n.ts.instance" class="_button" :class="$style.instance" @click="openInstanceMenu">
 				<img :src="instance.iconUrl || '/client-assets/erebia-icon.svg'" alt="" :class="$style.instanceIcon" style="view-transition-name: navbar-serverIcon;"/>
 			</button>
-			<button v-if="!iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
+			<button v-if="!iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" :aria-label="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
 				<i v-if="store.realtimeMode" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
-			<button v-if="!iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" class="_button" :class="[$style.widget]" @click="() => emit('widgetButtonClick')">
+			<button v-if="!iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" :aria-label="i18n.ts.widgets" class="_button" :class="[$style.widget]" @click="() => emit('widgetButtonClick')">
 				<i class="ti ti-apps ti-fw"></i>
 			</button>
 		</div>
@@ -54,10 +54,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkA>
 		</div>
 		<div :class="$style.bottom">
-			<button v-if="iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" class="_button" :class="[$style.widget]" @click="() => emit('widgetButtonClick')">
+			<button v-if="iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" :aria-label="i18n.ts.widgets" class="_button" :class="[$style.widget]" @click="() => emit('widgetButtonClick')">
 				<i class="ti ti-apps ti-fw"></i>
 			</button>
-			<button v-if="iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
+			<button v-if="iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" :aria-label="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
 				<i v-if="store.realtimeMode" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
@@ -85,7 +85,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<path d="M47.488,7.995C47.79,10.11 47.943,12.266 47.943,14.429C47.997,26.989 47.997,84 47.997,84C47.997,84 44.018,118.246 23.997,133.5C-0.374,152.07 -0.003,192 -0.003,192L-0.003,-96C-0.003,-96 0.151,-56.216 23.997,-37.5C40.861,-24.265 46.043,-1.243 47.488,7.995Z" style="fill:var(--MI_THEME-navBg);"/>
 				</g>
 			</svg>
-			<button class="_button" :class="$style.subButtonClickable" @click="menuEdit"><i :class="$style.subButtonIcon" class="ti ti-settings-2"></i></button>
+			<button class="_button" :aria-label="i18n.ts.edit" :class="$style.subButtonClickable" @click="menuEdit"><i :class="$style.subButtonIcon" class="ti ti-settings-2"></i></button>
 		</div>
 		<template v-if="!props.asDrawer">
 			<div :class="$style.subButtonGapFill"></div>
@@ -96,7 +96,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<path d="M47.488,7.995C47.79,10.11 47.943,12.266 47.943,14.429C47.997,26.989 47.997,84 47.997,84C47.997,84 44.018,118.246 23.997,133.5C-0.374,152.07 -0.003,192 -0.003,192L-0.003,-96C-0.003,-96 0.151,-56.216 23.997,-37.5C40.861,-24.265 46.043,-1.243 47.488,7.995Z" style="fill:var(--MI_THEME-navBg);"/>
 					</g>
 				</svg>
-				<button class="_button" :class="$style.subButtonClickable" @click="toggleIconOnly"><i v-if="iconOnly" class="ti ti-chevron-right" :class="$style.subButtonIcon"></i><i v-else class="ti ti-chevron-left" :class="$style.subButtonIcon"></i></button>
+				<button class="_button" :aria-label="iconOnly ? i18n.ts.show : i18n.ts.hide" :aria-expanded="!iconOnly" :class="$style.subButtonClickable" @click="toggleIconOnly"><i v-if="iconOnly" class="ti ti-chevron-right" :class="$style.subButtonIcon"></i><i v-else class="ti ti-chevron-left" :class="$style.subButtonIcon"></i></button>
 			</div>
 		</template>
 	</div>
@@ -201,8 +201,8 @@ function menuEdit() {
 
 <style lang="scss" module>
 .root {
-	--nav-width: 264px;
-	--nav-icon-only-width: 76px;
+	--nav-width: 248px;
+	--nav-icon-only-width: 72px;
 	--nav-bg-transparent: color(from var(--MI_THEME-navBg) srgb r g b / 0.5);
 
 	--subButtonWidth: 20px;
@@ -221,6 +221,7 @@ function menuEdit() {
 	overflow-x: clip;
 	overscroll-behavior: contain;
 	background: var(--MI-surface-nav);
+	border-right: solid 1px var(--MI-border-muted);
 	contain: strict;
 
 	/* 画面が縦に長い、設置している項目数が少ないなどの環境においても確実にbottomを最下部に表示するため */
@@ -233,46 +234,7 @@ function menuEdit() {
 .top {
 	flex-shrink: 0;
 	direction: ltr;
-
-	/* 疑似progressive blur */
-	&::before {
-		position: absolute;
-		z-index: -1;
-		inset: 0;
-		content: "";
-		backdrop-filter: blur(8px);
-		mask-image: linear-gradient(
-			to top,
-			rgb(0 0 0 / 0%) 0%,
-			rgb(0 0 0 / 4.9%) 7.75%,
-			rgb(0 0 0 / 10.4%) 11.25%,
-			rgb(0 0 0 / 45%) 23.55%,
-			rgb(0 0 0 / 55%) 26.45%,
-			rgb(0 0 0 / 89.6%) 38.75%,
-			rgb(0 0 0 / 95.1%) 42.25%,
-			rgb(0 0 0 / 100%) 50%
-		);
-	}
-
-	&::after {
-		position: absolute;
-		z-index: -1;
-		inset: 0;
-		bottom: 25%;
-		content: "";
-		backdrop-filter: blur(16px);
-		mask-image: linear-gradient(
-			to top,
-			rgb(0 0 0 / 0%) 0%,
-			rgb(0 0 0 / 4.9%) 15.5%,
-			rgb(0 0 0 / 10.4%) 22.5%,
-			rgb(0 0 0 / 45%) 47.1%,
-			rgb(0 0 0 / 55%) 52.9%,
-			rgb(0 0 0 / 89.6%) 77.5%,
-			rgb(0 0 0 / 95.1%) 91.9%,
-			rgb(0 0 0 / 100%) 100%
-		);
-	}
+	background: color(from var(--MI_THEME-navBg) srgb r g b / 0.96);
 }
 
 .middle {
@@ -283,47 +245,7 @@ function menuEdit() {
 .bottom {
 	flex-shrink: 0;
 	direction: ltr;
-
-	/* 疑似progressive blur */
-	&::before {
-		position: absolute;
-		z-index: -1;
-		inset: -30px 0 0 0;
-		content: "";
-		backdrop-filter: blur(8px);
-		mask-image: linear-gradient(
-			to bottom,
-			rgb(0 0 0 / 0%) 0%,
-			rgb(0 0 0 / 4.9%) 7.75%,
-			rgb(0 0 0 / 10.4%) 11.25%,
-			rgb(0 0 0 / 45%) 23.55%,
-			rgb(0 0 0 / 55%) 26.45%,
-			rgb(0 0 0 / 89.6%) 38.75%,
-			rgb(0 0 0 / 95.1%) 42.25%,
-			rgb(0 0 0 / 100%) 50%
-		);
-		pointer-events: none;
-	}
-
-	&::after {
-		position: absolute;
-		z-index: -1;
-		inset: 0;
-		top: 25%;
-		content: "";
-		backdrop-filter: blur(16px);
-		mask-image: linear-gradient(
-			to bottom,
-			rgb(0 0 0 / 0%) 0%,
-			rgb(0 0 0 / 4.9%) 15.5%,
-			rgb(0 0 0 / 10.4%) 22.5%,
-			rgb(0 0 0 / 45%) 47.1%,
-			rgb(0 0 0 / 55%) 52.9%,
-			rgb(0 0 0 / 89.6%) 77.5%,
-			rgb(0 0 0 / 95.1%) 91.9%,
-			rgb(0 0 0 / 100%) 100%
-		);
-	}
+	background: color(from var(--MI_THEME-navBg) srgb r g b / 0.96);
 }
 
 .subButtons {
@@ -408,14 +330,15 @@ function menuEdit() {
 	}
 
 	.top {
-		--top-height: 76px;
+		--top-height: 68px;
 
 		position: sticky;
 		top: 0;
 		z-index: 1;
 		display: flex;
 		height: var(--top-height);
-		padding-inline: var(--MI-layout-gutter-compact) var(--MI-space-sm);
+		padding-inline: var(--MI-space-sm);
+		border-bottom: solid 1px var(--MI-border-muted);
 	}
 
 	.instance {
@@ -425,7 +348,7 @@ function menuEdit() {
 
 	.instanceIcon {
 		display: inline-block;
-		width: 38px;
+		width: 36px;
 		aspect-ratio: 1;
 		border-radius: var(--MI-radius-sm);
 		box-shadow: var(--MI-shadow-sm);
@@ -450,54 +373,31 @@ function menuEdit() {
 	.bottom {
 		position: sticky;
 		bottom: 0;
-		padding-top: 20px;
+		padding: var(--MI-space-sm) 0 var(--MI-space-xs);
+		border-top: solid 1px var(--MI-border-muted);
 	}
 
 	.post {
-		position: relative;
-		display: block;
-		width: 100%;
+		display: flex;
+		align-items: center;
+		width: calc(100% - (var(--MI-space-md) * 2));
 		height: var(--MI-control-md);
+		margin: 0 var(--MI-space-md) var(--MI-space-xs);
+		padding: 0 var(--MI-space-lg);
 		color: var(--MI_THEME-fgOnAccent);
-		font-weight: bold;
+		font-weight: 650;
 		text-align: left;
-
-		&::before {
-			content: "";
-			display: block;
-			width: calc(100% - 32px);
-			height: 100%;
-			margin: auto;
-			position: absolute;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			border-radius: 999px;
-			background: var(--MI_THEME-accent);
-		}
-
-		&:focus-visible {
-			outline: none;
-
-			&::before {
-				outline: 2px solid var(--MI_THEME-fgOnAccent);
-				outline-offset: -4px;
-			}
-		}
+		background: var(--MI_THEME-accent);
+		border-radius: var(--MI-radius-md);
 
 		&:hover, &.active {
-			&::before {
-				background: hsl(from var(--MI_THEME-accent) h s calc(l + 10));
-			}
+			background: hsl(from var(--MI_THEME-accent) h s calc(l + 7));
 		}
 	}
 
 	.postIcon {
-		position: relative;
-		margin-left: 28px;
-		margin-right: 8px;
-		width: 32px;
+		margin-right: var(--MI-space-sm);
+		width: 24px;
 	}
 
 	.postText {
@@ -508,11 +408,16 @@ function menuEdit() {
 		position: relative;
 		display: flex;
 		align-items: center;
-		padding: var(--MI-space-lg) var(--MI-space-xl) var(--MI-space-xl) var(--MI-space-2xl);
+		padding: var(--MI-space-sm) var(--MI-space-lg);
+		border-radius: var(--MI-radius-md);
 		width: 100%;
 		text-align: left;
 		box-sizing: border-box;
 		overflow: clip;
+
+		&:hover {
+			background: var(--MI_THEME-buttonHoverBg);
+		}
 
 		&:focus-visible {
 			outline: none;
@@ -539,64 +444,44 @@ function menuEdit() {
 	}
 
 	.divider {
-		margin: var(--MI-layout-gutter-compact) var(--MI-space-xl);
-		border-top: solid 0.5px var(--MI_THEME-divider);
+		margin: var(--MI-space-sm) var(--MI-space-xl);
+		border-top: solid 1px var(--MI-border-muted);
 	}
 
 	.item {
 		position: relative;
 		display: block;
-		padding-left: 24px;
-		line-height: 3rem;
+		margin: 2px var(--MI-space-sm);
+		padding: 0 var(--MI-space-md);
+		line-height: var(--MI-control-md);
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;
-		width: 100%;
+		width: calc(100% - (var(--MI-space-sm) * 2));
 		text-align: left;
 		box-sizing: border-box;
 		color: var(--MI_THEME-navFg);
+		border-radius: var(--MI-radius-sm);
 
 		&:hover {
 			text-decoration: none;
-			color: light-dark(hsl(from var(--MI_THEME-navFg) h s calc(l - 17)), hsl(from var(--MI_THEME-navFg) h s calc(l + 17)));
+			color: var(--MI_THEME-fgHighlighted);
+			background: var(--MI_THEME-buttonHoverBg);
+		}
+
+		&:hover, &:focus-visible {
+			color: var(--MI_THEME-accent);
+			background: var(--MI_THEME-accentedBg);
 		}
 
 		&.active {
 			color: var(--MI_THEME-navActive);
-		}
-
-		&:focus-visible {
-			outline: none;
-
-			&::before {
-				outline: 2px solid var(--MI_THEME-focus);
-				outline-offset: -2px;
-			}
-		}
-
-		&:hover, &.active, &:focus-visible {
-			color: var(--MI_THEME-accent);
-
-			&::before {
-				content: "";
-				display: block;
-				width: calc(100% - 24px);
-				height: 100%;
-				margin: auto;
-				position: absolute;
-				top: 0;
-				left: 0;
-				right: 0;
-				bottom: 0;
-				border-radius: var(--MI-radius-sm);
-				background: var(--MI_THEME-accentedBg);
-			}
+			background: color-mix(in oklab, var(--MI_THEME-navActive) 15%, transparent);
 		}
 	}
 
 	.itemIcon {
-		position: relative;
-		width: 32px;
+		width: 28px;
 		margin-right: 8px;
 	}
 
@@ -616,9 +501,8 @@ function menuEdit() {
 	}
 
 	.itemText {
-		position: relative;
 		font-size: 0.95em;
-		font-weight: 500;
+		font-weight: 550;
 	}
 
 	.subButtons {
@@ -638,7 +522,8 @@ function menuEdit() {
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		padding: 20px 0;
+		padding: var(--MI-space-lg) 0 var(--MI-space-md);
+		border-bottom: solid 1px var(--MI-border-muted);
 	}
 
 	.instance {
@@ -666,7 +551,8 @@ function menuEdit() {
 	.bottom {
 		position: sticky;
 		bottom: 0;
-		padding-top: 20px;
+		padding: var(--MI-space-sm) 0;
+		border-top: solid 1px var(--MI-border-muted);
 	}
 
 	.widget {
@@ -693,7 +579,7 @@ function menuEdit() {
 		display: block;
 		position: relative;
 		width: 100%;
-		height: var(--MI-control-lg);
+		height: 56px;
 		text-align: center;
 
 		&::before {
@@ -705,9 +591,9 @@ function menuEdit() {
 			right: 0;
 			bottom: 0;
 			margin: auto;
-			width: var(--MI-control-lg);
+			width: 48px;
 			aspect-ratio: 1/1;
-			border-radius: 100%;
+			border-radius: var(--MI-radius-md);
 			background: var(--MI_THEME-accent);
 		}
 
@@ -739,7 +625,7 @@ function menuEdit() {
 	.account {
 		display: block;
 		text-align: center;
-		padding: 20px 0;
+		padding: var(--MI-space-md) 0;
 		width: 100%;
 		overflow: clip;
 
@@ -765,54 +651,44 @@ function menuEdit() {
 	.divider {
 		margin: 8px auto;
 		width: calc(100% - 32px);
-		border-top: solid 0.5px var(--MI_THEME-divider);
+		border-top: solid 1px var(--MI-border-muted);
 	}
 
 	.item {
-		display: block;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		position: relative;
-		padding: 14px 0;
-		width: 100%;
+		padding: 0;
+		width: 48px;
+		height: 44px;
+		margin: 4px auto;
 		text-align: center;
+		border-radius: var(--MI-radius-sm);
 
-		&:focus-visible {
-			outline: none;
+		&:hover, &:focus-visible {
+			text-decoration: none;
+			color: var(--MI_THEME-accent);
+			background: var(--MI_THEME-accentedBg);
 
-			&::before {
-				outline: 2px solid var(--MI_THEME-focus);
-				outline-offset: -2px;
+			.itemIcon {
+				opacity: 1;
 			}
 		}
 
-		&:hover, &.active, &:focus-visible {
-			text-decoration: none;
-			color: var(--MI_THEME-accent);
+		&.active {
+			color: var(--MI_THEME-navActive);
+			background: color-mix(in oklab, var(--MI_THEME-navActive) 15%, transparent);
 
-			&::before {
-				content: "";
-				display: block;
-				height: 100%;
-				aspect-ratio: 1;
-				margin: auto;
-				position: absolute;
-				top: 0;
-				left: 0;
-				right: 0;
-				bottom: 0;
-				border-radius: var(--MI-radius-sm);
-				background: var(--MI_THEME-accentedBg);
-			}
-
-			> .icon,
-			> .text {
+			.itemIcon {
 				opacity: 1;
 			}
 		}
 	}
 
 	.itemIcon {
-		display: block;
-		margin: 0 auto;
+		display: inline-block;
+		margin: 0;
 		opacity: 0.7;
 	}
 
