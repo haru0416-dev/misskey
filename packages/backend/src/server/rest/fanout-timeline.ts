@@ -7,8 +7,9 @@ import type * as Redis from 'ioredis';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
@@ -27,6 +28,41 @@ export type FanoutTimelineReadDependencies = {
 };
 
 type NoteFilter = (note: MiNote) => boolean;
+
+async function listFanoutTimelineNotesByIds(
+	db: MiDrizzleDatabase,
+	noteIds: MiNote['id'][],
+): Promise<MiNote[]> {
+	const notes = await listNotesByIdsFromDatabase(db, noteIds);
+	const relationIds = new Set<MiNote['id']>();
+	const userIds = new Set<MiUser['id']>();
+	for (const note of notes) {
+		userIds.add(note.userId);
+		if (note.replyId != null) relationIds.add(note.replyId);
+		if (note.renoteId != null) relationIds.add(note.renoteId);
+		if (note.replyUserId != null) userIds.add(note.replyUserId);
+		if (note.renoteUserId != null) userIds.add(note.renoteUserId);
+	}
+
+	const [relations, users] = await Promise.all([
+		listNotesByIdsFromDatabase(db, [...relationIds]),
+		listUsersByIdsFromDatabase(db, [...userIds], { includeSuspended: true }),
+	]);
+	const relationById = new Map(relations.map(note => [note.id, note]));
+	const userById = new Map(users.map(user => [user.id, user]));
+
+	return notes.flatMap(note => {
+		const user = userById.get(note.userId);
+		if (user == null) return [];
+
+		note.user = user;
+		note.reply = note.replyId == null ? null : (relationById.get(note.replyId) ?? null);
+		note.renote = note.renoteId == null ? null : (relationById.get(note.renoteId) ?? null);
+		if (note.reply != null) note.reply.user = userById.get(note.reply.userId) ?? null;
+		if (note.renote != null) note.renote.user = userById.get(note.renote.userId) ?? null;
+		return [note];
+	});
+}
 
 export type FanoutTimelineReadOptions = {
 	untilId: string | null;
@@ -185,7 +221,7 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 
 			readFromRedis += noteIds.length;
 
-			const notes = (await listHydratedNotesByIdsFromDatabase(deps.db, noteIds)).filter(filter);
+			const notes = (await listFanoutTimelineNotesByIds(deps.db, noteIds)).filter(filter);
 			notes.sort((a, b) => idCompare(a.id, b.id));
 			redisTimeline.push(...notes);
 			lastSuccessfulRate = notes.length / noteIds.length;
