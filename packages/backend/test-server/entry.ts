@@ -70,7 +70,8 @@ async function startControllerEndpoints(port = ('tcp' in config.server.listen ? 
 
 	controller.post('/env', async (c) => {
 		return runControllerOperation(async () => {
-			const body = await c.req.json<{ key?: string, value?: string }>().catch(() => ({}));
+			const body = await c.req.json<{ key?: string, value?: string }>()
+				.catch((): { key?: string, value?: string } => ({}));
 			console.log(body);
 			const key = body.key;
 			if (!key) {

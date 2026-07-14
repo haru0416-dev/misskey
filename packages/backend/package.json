@@ -21,7 +21,7 @@
 		"build:e2e": "MISSKEY_BUILD_E2E=1 rolldown -c",
 		"restart": "bun run build && bun run start",
 		"dev": "bun run compile-config && rolldown -c --watch",
-		"typecheck": "tsgo --noEmit && tsgo -p test --noEmit && tsgo -p test-federation --noEmit",
+		"typecheck": "tsgo -p test-server --noEmit && tsgo -p test --noEmit && tsgo -p test-federation --noEmit",
 		"lint": "bun run --bun typecheck",
 		"test": "bun run --bun build:unit && NODE_ENV=test bun run compile-config && bun ./scripts/run_unit.js",
 		"test:e2e": "bun run --bun build:e2e && NODE_ENV=test bun run compile-config && bun ./scripts/run_e2e.js",
