@@ -76,6 +76,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								ref="memoTextareaEl"
 								v-model="memoDraft"
 								rows="1"
+								:aria-label="i18n.ts.memo"
 								@focus="isEditingMemo = true"
 								@blur="updateMemo"
 								@input="adjustMemoTextarea"
@@ -317,8 +318,19 @@ function disposeBannerParallaxResizeObserver() {
 	}
 }
 
+let narrowResizeObserver: ResizeObserver | null = null;
+
 onMounted(() => {
-	narrow.value = rootEl.value!.clientWidth < 1000;
+	// rootEl自身の幅はnarrow値 (spacerの--MI_SPACER-w) に依存しフィードバックループになるため、
+	// spacerの親 (キャップされていないコンテナ) を計測・観測する
+	const narrowMeasureEl = rootEl.value?.parentElement?.parentElement ?? rootEl.value;
+	const updateNarrow = () => {
+		// keep-alive非活性時はROが0サイズを報告するため無視する
+		if (narrowMeasureEl && window.document.body.contains(narrowMeasureEl)) narrow.value = narrowMeasureEl.clientWidth < 1000;
+	};
+	updateNarrow();
+	narrowResizeObserver = new ResizeObserver(updateNarrow);
+	if (narrowMeasureEl) narrowResizeObserver.observe(narrowMeasureEl);
 
 	if (isBirthday(user.value)) {
 		confetti({
@@ -341,7 +353,11 @@ onActivated(() => {
 	}
 });
 
-onUnmounted(disposeBannerParallaxResizeObserver);
+onUnmounted(() => {
+	disposeBannerParallaxResizeObserver();
+	narrowResizeObserver?.disconnect();
+	narrowResizeObserver = null;
+});
 onDeactivated(disposeBannerParallaxResizeObserver);
 </script>
 
@@ -371,7 +387,9 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						width: 100%;
 						height: 100%;
 						background-size: cover;
-						background-color: #4c5e6d;
+						/* バナー未設定時のフォールバック (Erebiaブランドの黄昏グラデーション)。画像があればinline styleのbackground-imageが優先される */
+						background-color: #121320;
+						background-image: linear-gradient(135deg, #34366b 0%, #1e1f3a 45%, #121320 100%);
 						background-repeat: repeat-y;
 						background-position-x: center;
 						background-position-y: 50%;
@@ -383,7 +401,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						bottom: 0;
 						left: 0;
 						width: 100%;
-						height: 78px;
+						height: 110px;
 						background: linear-gradient(transparent, rgba(#000, 0.7));
 					}
 
@@ -395,7 +413,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						color: #fff;
 						background: rgba(0, 0, 0, 0.7);
 						font-size: 0.7em;
-						border-radius: 6px;
+						border-radius: var(--MI-radius-sm);
 					}
 
 					> .actions {
@@ -406,7 +424,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						backdrop-filter: var(--MI-blur, blur(8px));
 						background: rgba(0, 0, 0, 0.2);
 						padding: 8px;
-						border-radius: 24px;
+						border-radius: var(--MI-radius-lg);
 
 						> .menu {
 							vertical-align: bottom;
@@ -448,6 +466,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 								margin-right: 16px;
 								line-height: 20px;
 								opacity: 0.8;
+								text-shadow: 0 0 8px #000;
 
 								&.username {
 									font-weight: bold;
@@ -459,7 +478,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 								color: #fff;
 								-webkit-backdrop-filter: var(--MI-blur, blur(8px));
 								backdrop-filter: var(--MI-blur, blur(8px));
-								border-radius: 24px;
+								border-radius: var(--MI-radius-lg);
 								padding: 4px 8px;
 								font-size: 80%;
 							}
@@ -474,10 +493,25 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 					font-weight: bold;
 					border-bottom: solid 0.5px var(--MI_THEME-divider);
 
+					> .name {
+						display: block;
+						font-size: 1.2em;
+						line-height: 1.4;
+					}
+
 					> .bottom {
+						display: flex;
+						flex-wrap: wrap;
+						justify-content: center;
+						align-items: center;
+						gap: 8px;
+
 						> * {
 							display: inline-block;
-							margin-right: 8px;
+							min-width: 0;
+							max-width: 100%;
+							overflow: hidden;
+							text-overflow: ellipsis;
 							opacity: 0.8;
 						}
 					}
@@ -500,7 +534,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 					> .fukidashi {
 						display: block;
 						--fukidashi-bg: color-mix(in srgb, var(--MI_THEME-accent), var(--MI_THEME-panel) 85%);
-						--fukidashi-radius: 16px;
+						--fukidashi-radius: var(--MI-radius-lg);
 						font-size: 0.9em;
 
 						.messageHeader {
@@ -520,7 +554,6 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 					> .role {
 						border: solid 1px var(--color, var(--MI_THEME-divider));
 						border-radius: 999px;
-						margin-right: 4px;
 						padding: 3px 8px;
 					}
 				}
@@ -534,9 +567,13 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 					background: transparent;
 					color: var(--MI_THEME-fg);
 					border: 1px solid var(--MI_THEME-divider);
-					border-radius: 8px;
+					border-radius: var(--MI-radius-md);
 					padding: 8px;
 					line-height: 0;
+
+					&:focus-within {
+						border-color: var(--MI_THEME-accent);
+					}
 
 					> .heading {
 						text-align: left;
@@ -587,16 +624,23 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						align-items: center;
 
 						> .name {
-							width: 30%;
+							width: 130px;
+							flex-shrink: 0;
+							box-sizing: border-box;
 							overflow: hidden;
 							white-space: nowrap;
 							text-overflow: ellipsis;
 							font-weight: bold;
-							text-align: center;
+
+							/* 行頭アイコンはラベル文字より一段沈めてマーカーとして扱う */
+							> i {
+								opacity: 0.6;
+							}
 						}
 
 						> .value {
-							width: 70%;
+							flex: 1;
+							min-width: 0;
 							overflow: hidden;
 							white-space: nowrap;
 							text-overflow: ellipsis;
@@ -604,17 +648,16 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						}
 					}
 
-					&.system > .field > .name {
-					}
 				}
 
 				> .status {
 					display: flex;
-					padding: 24px;
+					padding: 16px 24px;
 					border-top: solid 0.5px var(--MI_THEME-divider);
 
 					> a {
 						flex: 1;
+						padding: 8px 0;
 						text-align: center;
 
 						&.active {
@@ -627,11 +670,13 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 
 						> b {
 							display: block;
-							line-height: 16px;
+							font-size: 1.2em;
+							line-height: 1.3;
 						}
 
 						> span {
 							font-size: 70%;
+							opacity: 0.7;
 						}
 					}
 				}
@@ -711,7 +756,6 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 
 				> .description {
 					padding: 16px;
-					text-align: center;
 				}
 
 				> .fields {
