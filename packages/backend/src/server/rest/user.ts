@@ -51,7 +51,7 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from './error.js';
 import { packNoteManyForHonoApi, populateEmojis, populateEmojisMany, type HonoApiNoteDependencies } from './note.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
-import { computeHonoApiUserRoles, getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiAdministrator, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import { computeHonoApiUserRoles, getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
@@ -223,6 +223,7 @@ async function buildUserDetailedExtrasForHonoApi(
 		relation?: UserRelationForPack | null;
 		/** 一覧pack用の事前計算値。ユーザー毎の roles(2クエリ)/pins(1クエリ) を回避する */
 		userRoles?: MiRole[];
+		policies?: RolePolicies;
 		pins?: MiUserNotePining[];
 		pinnedNotes?: Packed<'Note'>[];
 		hasSecurityKey?: boolean;
@@ -236,7 +237,7 @@ async function buildUserDetailedExtrasForHonoApi(
 	}
 
 	const userRoles = hint?.userRoles ?? await getHonoApiUserRoles(deps, user);
-	const policies = await getHonoApiRolePolicies(deps, user, userRoles);
+	const policies = hint?.policies ?? await getHonoApiRolePolicies(deps, user, userRoles);
 
 	const pins = hint?.pins ?? await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' });
 	const pinnedNoteIds = pins.map(pin => pin.noteId);
@@ -545,13 +546,17 @@ export async function packMeDetailedForHonoApi(
 	const profile = options.profile ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	const userRoles = await getHonoApiUserRoles(deps, user);
 	const policies = await getHonoApiRolePolicies(deps, user, userRoles);
-	const [isModerator, isAdmin] = await Promise.all([
-		isHonoApiModerator(deps, user),
-		isHonoApiAdministrator(deps, user),
-	]);
+	const isRoot = deps.meta.rootUserId === user.id;
+	const isAdmin = isRoot || userRoles.some(role => role.isAdministrator);
+	const isModerator = isRoot || userRoles.some(role => role.isModerator || role.isAdministrator);
 	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
 	const memo = await fetchUserMemoTextFromDatabase(deps.db, user.id, user.id);
-	const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, { id: user.id }, { iAmModerator: isModerator, relation: null });
+	const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, { id: user.id }, {
+		iAmModerator: isModerator,
+		relation: null,
+		userRoles,
+		policies,
+	});
 
 	return {
 		id: user.id,
