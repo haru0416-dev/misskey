@@ -8787,11 +8787,11 @@ export interface Locale extends ILocale {
     };
     "_aboutErebia": {
         /**
-         * つながり方を、自分たちの手に。
+         * 互換性はそのままに、体験と運用を組み直す。
          */
         "tagline": string;
         /**
-         * Erebiaは、自由につながり、自分らしく表現できる場所を目指すオープンソースの分散型ソーシャルプラットフォームです。
+         * ErebiaはMisskeyとの互換性を保ちながら、速度、安定性、運用性を優先して再設計する独立フォークです。
          */
         "about": string;
         /**
@@ -8799,33 +8799,33 @@ export interface Locale extends ILocale {
          */
         "basedOnMisskey": string;
         /**
-         * Erebiaが大切にすること
+         * Misskeyから変えたこと
          */
         "values": string;
         /**
-         * 自由につながる
+         * 軽さを後回しにしない
          */
-        "freedom": string;
+        "performance": string;
         /**
-         * ひとつの場所に閉じず、それぞれのコミュニティが自分たちらしい場を育てられることを大切にします。
+         * 必要な機能だけを遅延読み込みし、長いタイムラインを仮想化。非表示中の描画や通信も止め、端末とサーバー双方の無駄を減らします。
          */
-        "freedomDescription": string;
+        "performanceDescription": string;
         /**
-         * 自分らしく表現する
+         * 壊れ方まで設計する
          */
-        "expression": string;
+        "reliability": string;
         /**
-         * ことば、画像、リアクションなど、多様な表現を気軽に共有できる体験を磨き続けます。
+         * 重要な更新はトランザクションで守り、キューやキャッシュの不整合、破損した設定からの起動失敗を仕組みで防ぎます。
          */
-        "expressionDescription": string;
+        "reliabilityDescription": string;
         /**
-         * みんなで育てる
+         * 運用をブラックボックスにしない
          */
-        "community": string;
+        "operations": string;
         /**
-         * オープンな開発を通じて、使う人と運営する人の声をプロダクトへつなげます。
+         * 厳密な設定スキーマ、OpenTelemetry、ヘルスチェックを整備し、状態を観測して原因へたどり着ける運用を目指します。
          */
-        "communityDescription": string;
+        "operationsDescription": string;
         /**
          * 開発情報
          */
