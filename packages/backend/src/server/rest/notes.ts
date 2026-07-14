@@ -591,6 +591,7 @@ export async function handleHonoApiNotesLocalTimeline(
 			sinceId: dbSinceId,
 			untilId: dbUntilId,
 			withFiles: params.withFiles,
+			withRenotes: params.withRenotes,
 			withReplies: params.withReplies,
 			me,
 			blockedHosts: deps.meta.blockedHosts,
@@ -694,6 +695,7 @@ export async function handleHonoApiNotesHybridTimeline(
 		includeRenotedMyNotes: params.includeRenotedMyNotes,
 		includeLocalRenotes: params.includeLocalRenotes,
 		withFiles: params.withFiles,
+		withRenotes: params.withRenotes,
 		withReplies: params.withReplies,
 		blockedHosts: deps.meta.blockedHosts,
 	});

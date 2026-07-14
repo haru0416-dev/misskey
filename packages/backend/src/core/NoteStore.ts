@@ -42,6 +42,30 @@ function noteColumn(alias: string, column: keyof NoteRow): SQL {
 	return sql.raw(`"${alias}"."${column}"`);
 }
 
+function quoteContentCondition(alias: string): SQL {
+	return sql`(
+		${noteColumn(alias, 'text')} IS NOT NULL
+		OR ${noteColumn(alias, 'cw')} IS NOT NULL
+		OR ${noteColumn(alias, 'replyId')} IS NOT NULL
+		OR ${noteColumn(alias, 'hasPoll')} = TRUE
+		OR ${noteColumn(alias, 'fileIds')} != '{}'
+	)`;
+}
+
+function quoteCondition(alias: string): SQL {
+	return sql`(
+		${noteColumn(alias, 'renoteId')} IS NOT NULL
+		AND ${quoteContentCondition(alias)}
+	)`;
+}
+
+function pureRenoteCondition(alias: string): SQL {
+	return sql`(
+		${noteColumn(alias, 'renoteId')} IS NOT NULL
+		AND NOT (${quoteContentCondition(alias)})
+	)`;
+}
+
 function noteVisibilityCondition(me: { id: MiUser['id'] } | null): SQL {
 	if (me == null) {
 		return sql`("note"."visibility" = 'public' OR "note"."visibility" = 'home')`;
@@ -148,14 +172,9 @@ function blockedUserCondition(alias: string, me: { id: MiUser['id'] }): SQL {
 }
 
 function mutedUserRenotesCondition(me: { id: MiUser['id'] }): SQL {
-	return sql`(
-		(
-			"note"."renoteId" IS NOT NULL
-			AND "note"."text" IS NULL
-			AND "note"."userId" NOT IN (SELECT "muteeId" FROM "renote_muting" WHERE "muterId" = ${me.id})
-		)
-		OR "note"."renoteId" IS NULL
-		OR "note"."text" IS NOT NULL
+	return sql`NOT (
+		${pureRenoteCondition('note')}
+		AND "note"."userId" IN (SELECT "muteeId" FROM "renote_muting" WHERE "muterId" = ${me.id})
 	)`;
 }
 
@@ -769,11 +788,7 @@ export async function listChildNotesFromDatabase(
 				"note"."replyId" = ${options.noteId}
 				OR (
 					"note"."renoteId" = ${options.noteId}
-					AND (
-						"note"."text" IS NOT NULL
-						OR "note"."fileIds" != '{}'
-						OR "note"."hasPoll" = TRUE
-					)
+					AND ${quoteContentCondition('note')}
 				)
 			)
 			AND ${noteVisibilityCondition(options.me)}
@@ -1159,15 +1174,7 @@ export async function searchNotesByTextFromDatabase(
 			: sql`"note"."replyId" IS NULL`);
 	}
 
-	const isQuote = sql`(
-		"note"."renoteId" IS NOT NULL
-		AND (
-			"note"."text" IS NOT NULL
-			OR "note"."cw" IS NOT NULL
-			OR cardinality("note"."fileIds") > 0
-			OR "note"."hasPoll" = TRUE
-		)
-	)`;
+	const isQuote = quoteCondition('note');
 	if (options.withQuotes != null) {
 		conditions.push(options.withQuotes ? isQuote : sql`NOT (${isQuote})`);
 	}
@@ -1362,14 +1369,7 @@ export async function listGlobalTimelineNotesFromDatabase(
 	}
 
 	if (!options.withRenotes) {
-		conditions.push(sql`(
-			"note"."renoteId" IS NULL
-			OR (
-				"note"."text" IS NOT NULL
-				OR "note"."fileIds" != '{}'
-				OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
-			)
-		)`);
+		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
 	const result = await db.execute<NoteRow>(sql`
@@ -1398,6 +1398,7 @@ export async function listLocalTimelineNotesFromDatabase(
 		me: { id: MiUser['id'] } | null;
 		blockedHosts: string[];
 		mutedChannelIds?: string[];
+		withRenotes: boolean;
 	},
 ): Promise<MiNote[]> {
 	const conditions: SQL[] = [
@@ -1432,6 +1433,10 @@ export async function listLocalTimelineNotesFromDatabase(
 				AND "note"."replyUserId" = "note"."userId"
 			)
 		)`);
+	}
+
+	if (!options.withRenotes) {
+		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
 	const result = await db.execute<NoteRow>(sql`
@@ -1546,10 +1551,7 @@ export async function listUserTimelineNotesFromDatabase(
 	if (!options.withRenotes) {
 		conditions.push(sql`(
 			"note"."userId" != ${options.userId}
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
@@ -1640,30 +1642,21 @@ export async function listHomeTimelineNotesFromDatabase(
 	if (!options.includeMyRenotes) {
 		conditions.push(sql`(
 			"note"."userId" != ${options.me.id}
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
 	if (!options.includeRenotedMyNotes) {
 		conditions.push(sql`(
 			"note"."renoteUserId" != ${options.me.id}
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
 	if (!options.includeLocalRenotes) {
 		conditions.push(sql`(
 			"note"."renoteUserHost" IS NOT NULL
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
@@ -1672,14 +1665,7 @@ export async function listHomeTimelineNotesFromDatabase(
 	}
 
 	if (!options.withRenotes) {
-		conditions.push(sql`(
-			"note"."renoteId" IS NULL
-			OR (
-				"note"."text" IS NOT NULL
-				OR "note"."fileIds" != '{}'
-				OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
-			)
-		)`);
+		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
 	const result = await db.execute<NoteRow>(sql`
@@ -1711,6 +1697,7 @@ export async function listHybridTimelineNotesFromDatabase(
 		includeRenotedMyNotes: boolean;
 		includeLocalRenotes: boolean;
 		withFiles: boolean;
+		withRenotes: boolean;
 		withReplies: boolean;
 		blockedHosts: string[];
 	},
@@ -1768,31 +1755,26 @@ export async function listHybridTimelineNotesFromDatabase(
 	if (!options.includeMyRenotes) {
 		conditions.push(sql`(
 			"note"."userId" != ${options.me.id}
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
 	if (!options.includeRenotedMyNotes) {
 		conditions.push(sql`(
 			"note"."renoteUserId" != ${options.me.id}
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
 	if (!options.includeLocalRenotes) {
 		conditions.push(sql`(
 			"note"."renoteUserHost" IS NOT NULL
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
+	}
+
+	if (!options.withRenotes) {
+		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
 	if (options.withFiles) {
@@ -1865,42 +1847,26 @@ export async function listUserListTimelineNotesFromDatabase(
 	if (!options.includeMyRenotes) {
 		conditions.push(sql`(
 			"note"."userId" != ${options.me.id}
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
 	if (!options.includeRenotedMyNotes) {
 		conditions.push(sql`(
 			"note"."renoteUserId" != ${options.me.id}
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
 	if (!options.includeLocalRenotes) {
 		conditions.push(sql`(
 			"note"."renoteUserHost" IS NOT NULL
-			OR "note"."renoteId" IS NULL
-			OR "note"."text" IS NOT NULL
-			OR "note"."fileIds" != '{}'
-			OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
+			OR NOT (${pureRenoteCondition('note')})
 		)`);
 	}
 
 	if (!options.withRenotes) {
-		conditions.push(sql`(
-			"note"."renoteId" IS NULL
-			OR (
-				"note"."text" IS NOT NULL
-				OR "note"."fileIds" != '{}'
-				OR EXISTS (SELECT 1 FROM "poll" WHERE "poll"."noteId" = "note"."id")
-			)
-		)`);
+		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
 	if (options.withFiles) {
