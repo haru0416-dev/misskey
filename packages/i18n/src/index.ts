@@ -21,9 +21,11 @@ type Locales = Record<Language, ILocale>;
 
 const backspaceRegExp = new RegExp(String.fromCodePoint(0x08), 'g');
 const upstreamBrandPaths = new Set([
+	'aboutMisskey',
 	'chooseServerOnMisskeyHub',
 	'pleaseDonate',
 	'_aboutMisskey.about',
+	'_aboutMisskey.thisIsModifiedVersion',
 	'_aboutMisskey.translation',
 	'_aboutMisskey.donate',
 ]);

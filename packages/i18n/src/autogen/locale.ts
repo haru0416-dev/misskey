@@ -1895,7 +1895,7 @@ export interface Locale extends ILocale {
      */
     "about": string;
     /**
-     * Erebiaについて
+     * Misskeyについて
      */
     "aboutMisskey": string;
     /**
@@ -8737,7 +8737,7 @@ export interface Locale extends ILocale {
     };
     "_aboutMisskey": {
         /**
-         * ErebiaはMisskeyを基盤とする、オープンソースの分散型ソーシャルプラットフォームです。
+         * Misskeyはsyuiloによって2014年から開発されている、オープンソースのソフトウェアです。
          */
         "about": string;
         /**
@@ -8757,7 +8757,7 @@ export interface Locale extends ILocale {
          */
         "original": string;
         /**
-         * {name}はErebiaを改変したバージョンを使用しています。
+         * {name}はオリジナルのMisskeyを改変したバージョンを使用しています。
          */
         "thisIsModifiedVersion": ParameterizedString<"name">;
         /**
