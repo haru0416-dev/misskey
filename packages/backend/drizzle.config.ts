@@ -23,6 +23,15 @@ type CompiledDbConfig = {
 	};
 };
 
+function resolvePassword(passwordConfig: { fromEnvironment: string } | { plainText: string }): string {
+	const environmentVariable = 'fromEnvironment' in passwordConfig ? passwordConfig.fromEnvironment : undefined;
+	const password: string | null | undefined = 'plainText' in passwordConfig
+		? passwordConfig.plainText
+		: process.env[passwordConfig.fromEnvironment];
+	if (password == null) throw new Error(`Environment variable ${environmentVariable} is required.`);
+	return password;
+}
+
 const _dirname = dirname(fileURLToPath(import.meta.url));
 const compiledConfigPath = resolve(_dirname, '../../built/.config.json');
 
@@ -32,10 +41,7 @@ if (!existsSync(compiledConfigPath)) {
 
 const { config } = JSON.parse(readFileSync(compiledConfigPath, 'utf-8')) as CompiledDbConfig;
 const database = config.database.primary;
-const password = 'plainText' in database.password
-	? database.password.plainText
-	: process.env[database.password.fromEnvironment];
-if (password == null) throw new Error(`Environment variable ${database.password.fromEnvironment} is required.`);
+const password = resolvePassword(database.password);
 
 export default {
 	dialect: 'postgresql',
