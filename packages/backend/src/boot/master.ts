@@ -16,7 +16,7 @@ import { initExtraThreadPool, jobQueue, server } from './common.js';
 const logger = new Logger('core', 'cyan');
 const bootLogger = logger.createSubLogger('boot', 'magenta');
 
-const themeColor = chalk.hex('#86b300');
+const themeColor = chalk.hex('#8185f2');
 
 function greet(props: { version: string }) {
 	if (!envOption.quiet) {

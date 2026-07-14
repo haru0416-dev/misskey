@@ -3,8 +3,8 @@
 	"name": "Erebia",
 	"start_url": "/",
 	"display": "standalone",
-	"background_color": "#313a42",
-	"theme_color": "#86b300",
+	"background_color": "#191a21",
+	"theme_color": "#5c62d8",
 	"icons": [
 		{
 			"src": "/client-assets/erebia-icon-192.png",

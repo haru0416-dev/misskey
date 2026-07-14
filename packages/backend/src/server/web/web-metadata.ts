@@ -18,8 +18,8 @@ function createManifest(deps: WebMetadataDependencies): Record<string, unknown> 
 		name: deps.meta.name || deps.config.runtime.host,
 		start_url: '/',
 		display: 'standalone',
-		background_color: '#313a42',
-		theme_color: deps.meta.themeColor || '#86b300',
+		background_color: '#191a21',
+		theme_color: deps.meta.themeColor || '#5c62d8',
 		icons: [{
 			src: deps.meta.app192IconUrl || '/client-assets/erebia-icon-192.png',
 			sizes: '192x192',

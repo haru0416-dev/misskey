@@ -129,13 +129,6 @@ onMounted(async () => {
 				}
 			}
 
-			&.notes {
-				> .icon {
-					background: #86b30026;
-					color: #86b300;
-				}
-			}
-
 			&.instances {
 				> .icon {
 					background: #e96b0026;

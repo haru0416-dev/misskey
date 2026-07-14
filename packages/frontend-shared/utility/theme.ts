@@ -40,11 +40,52 @@ export type CompiledTheme = Record<string, string>;
 
 const MAX_THEME_REFERENCE_DEPTH = 8;
 
+// tinycolor2 は oklch() を解釈できないため、テーマ値に限り sRGB へ変換して渡す。
+// L / C / alpha は数値または % (C の 100% は 0.4)、hue は deg。色域外はチャネルクランプ。
+const OKLCH_PATTERN = /^oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+(-?[\d.]+)(?:deg)?\s*(?:\/\s*([\d.]+%?)\s*)?\)$/i;
+
+function parseOklchComponent(raw: string, percentScale: number): number {
+	return raw.endsWith('%') ? (Number(raw.slice(0, -1)) / 100) * percentScale : Number(raw);
+}
+
+function oklchToTinycolor(val: string): tinycolor.Instance | null {
+	const match = OKLCH_PATTERN.exec(val);
+	if (match == null) return null;
+
+	const [, lRaw, cRaw, hRaw, alphaRaw] = match;
+	if (lRaw == null || cRaw == null || hRaw == null) return null;
+
+	const l = parseOklchComponent(lRaw, 1);
+	const c = parseOklchComponent(cRaw, 0.4);
+	const h = Number(hRaw);
+	const alpha = alphaRaw != null ? parseOklchComponent(alphaRaw, 1) : 1;
+	if (![l, c, h, alpha].every(Number.isFinite)) return null;
+
+	// OKLCH → OKLab → linear sRGB → sRGB
+	const a = c * Math.cos((h * Math.PI) / 180);
+	const b = c * Math.sin((h * Math.PI) / 180);
+	const l_ = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+	const m_ = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+	const s_ = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
+	const toSrgbByte = (x: number) => {
+		const v = x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
+		return Math.round(Math.min(1, Math.max(0, v)) * 255);
+	};
+
+	return tinycolor({
+		r: toSrgbByte(4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_),
+		g: toSrgbByte(-1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_),
+		b: toSrgbByte(-0.0041960863 * l_ - 0.7034186147 * m_ + 1.707614701 * s_),
+		a: alpha,
+	});
+}
+
 export const themeProps = Object.keys(lightTheme.props).filter((key) => !key.startsWith('X'));
 
 export const getBuiltinThemes = () =>
 	Promise.all(
 		[
+			'l-erebia',
 			'l-light',
 			'l-coffee',
 			'l-apricot',
@@ -55,6 +96,7 @@ export const getBuiltinThemes = () =>
 			'l-sushi',
 			'l-u0',
 
+			'd-erebia',
 			'd-dark',
 			'd-persimmon',
 			'd-astro',
@@ -130,6 +172,9 @@ function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): t
 	}
 
 	// other case
+	const oklch = oklchToTinycolor(val);
+	if (oklch != null) return oklch;
+
 	const color = tinycolor(val);
 	if (!color.isValid()) {
 		throw new Error(`Theme contains invalid color: ${val}`);

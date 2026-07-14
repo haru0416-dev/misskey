@@ -106,7 +106,7 @@ async function createNodeinfoDocument(deps: NodeinfoDependencies, version: '2.0'
 			enableEmail: meta.enableEmail,
 			enableServiceWorker: meta.enableServiceWorker,
 			proxyAccountName: proxyAccount.username,
-			themeColor: meta.themeColor ?? '#86b300',
+			themeColor: meta.themeColor ?? '#5c62d8',
 		},
 	};
 }
