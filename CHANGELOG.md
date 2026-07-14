@@ -134,6 +134,7 @@
 - Enhance: 固定長APIリクエストの本文解析を高速化
 - Enhance: HTTPリクエスト処理、OpenAPIの遅延読み込み、起動時の設定ロードを最適化
 - Enhance: Fanout Timelineのノート取得とreply・renoteのpack処理を一括化
+- Enhance: single-process構成でserverとqueueのDB・Valkey接続とruntime servicesを共有
 
 - Fix: アンケート投票を直列化・トランザクション化し、並行投票と集計不整合を防止
 - Fix: migrationの同時実行、履歴改変、リリース・tarball・Compose設定の安全性を改善

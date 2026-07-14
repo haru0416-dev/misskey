@@ -5,6 +5,7 @@
 
 import { init } from 'slacc';
 import { loadConfig, type Config } from '@/config.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import type { HonoQueueShellDependencies } from '@/queue/worker.js';
 
 let slaccInitialized = false;
@@ -19,9 +20,9 @@ export function initExtraThreadPool(config: Config) {
 	slaccInitialized = true;
 }
 
-export async function server(config = loadConfig()) {
+export async function server(config = loadConfig(), dependencies?: RuntimeDependencies) {
 	const { launchHonoServer } = await import('./server.js');
-	return await launchHonoServer(config);
+	return await launchHonoServer(config, undefined, dependencies);
 }
 
 export type JobQueueRuntime = {
@@ -34,13 +35,13 @@ export type JobQueueRuntime = {
  * (20分間隔) は createRuntimeDependencies 内で常に起動される (startHonoChartWriterSaveInterval)
  * ため、ここで個別に呼び出す必要はない。
  */
-export async function jobQueue(config = loadConfig()): Promise<JobQueueRuntime> {
+export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDependencies): Promise<JobQueueRuntime> {
 	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
 	const { createHonoQueueWorkers } = await import('../queue/worker.js');
 	const { syncSystemJobSchedulers } = await import('../queue/system-job-schedulers.js');
 	const { createHonoEventPublishers } = await import('../server/rest/events.js');
 
-	const deps = await createRuntimeDependencies(config);
+	const deps = dependencies ?? await createRuntimeDependencies(config);
 	const logger = deps.loggerService.getLogger('queue', 'orange');
 	await syncSystemJobSchedulers(deps.systemQueue);
 	// 原典の QueueProcessorService は DI 経由で GlobalEventService (全ストリーム配信) を持っていた。
@@ -85,7 +86,7 @@ export async function jobQueue(config = loadConfig()): Promise<JobQueueRuntime> 
 	return {
 		close: async () => {
 			await workers.stop();
-			await deps.dispose();
+			if (dependencies == null) await deps.dispose();
 		},
 	};
 }
