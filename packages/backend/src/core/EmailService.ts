@@ -100,7 +100,7 @@ export function createEmailService(
 
 			a {
 				text-decoration: none;
-				color: #86b300;
+				color: #5c62d8;
 			}
 			a:hover {
 				text-decoration: underline;
@@ -114,7 +114,7 @@ export function createEmailService(
 			}
 				main > header {
 					padding: 32px;
-					background: #86b300;
+					background: #191b2e;
 				}
 					main > header > img {
 						max-width: 128px;

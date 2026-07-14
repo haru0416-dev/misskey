@@ -199,7 +199,7 @@
 			<p>${messages.solution2}</p>
 			<p>${messages.solution3}</p>
 			<p>${messages.solution4}</p>
-			<details style="color: #86b300;">
+			<details style="color: #8185f2;">
 				<summary>${messages.otherOption}</summary>
 				<a href="${safeModeUrl}">
 					<button class="button-small">
@@ -251,8 +251,8 @@
 
 		body,
 		html {
-			background-color: #222;
-			color: #dfddcc;
+			background-color: #191a21;
+			color: #c9ccda;
 			justify-content: center;
 			margin: auto;
 			padding: 10px;
@@ -268,38 +268,38 @@
 		}
 
 		.button-big {
-			background: linear-gradient(90deg, rgb(134, 179, 0), rgb(74, 179, 0));
+			background: linear-gradient(90deg, #8185f2, #5c62d8);
 			line-height: 50px;
 		}
 
 		.button-big:hover {
-			background: rgb(153, 204, 0);
+			background: #9a9ef5;
 		}
 
 		.button-small {
-			background: #444;
+			background: #2e303b;
 			line-height: 40px;
 		}
 
 		.button-small:hover {
-			background: #555;
+			background: #383a47;
 		}
 
 		.button-label-big {
-			color: #222;
+			color: #fff;
 			font-weight: bold;
 			font-size: 1.2em;
 			padding: 12px;
 		}
 
 		.button-label-small {
-			color: rgb(153, 204, 0);
+			color: #a9adf5;
 			font-size: 16px;
 			padding: 12px;
 		}
 
 		a {
-			color: rgb(134, 179, 0);
+			color: #8185f2;
 			text-decoration: none;
 		}
 
