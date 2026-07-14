@@ -10,7 +10,7 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"devDependencies": {
-		"@types/node": "26.0.1",
+		"@types/node": "26.1.1",
 		"@types/wawoff2": "1.0.2"
 	},
 	"dependencies": {

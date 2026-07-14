@@ -67,7 +67,7 @@
 	},
 	"devDependencies": {
 		"@playwright/test": "1.61.1",
-		"@types/node": "26.0.1",
+		"@types/node": "26.1.1",
 		"@typescript/native-preview": "7.0.0-dev.20260629.1",
 		"cross-env": "10.1.0",
 		"execa": "9.6.1",
