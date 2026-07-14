@@ -44,6 +44,7 @@ export type DbJobMap = {
 	exportCustomEmojis: DbJobDataWithUser;
 	exportAntennas: DBExportAntennasData;
 	exportNotes: DbJobDataWithUser;
+	exportClips: DbJobDataWithUser;
 	exportFavorites: DbJobDataWithUser;
 	exportFollowing: DbExportFollowingData;
 	exportMuting: DbJobDataWithUser;
@@ -59,6 +60,8 @@ export type DbJobMap = {
 	importCustomEmojis: DbUserImportJobData;
 	deleteAccount: DbUserDeleteJobData;
 };
+
+export type DbJobName = keyof DbJobMap;
 
 export type DbJobDataWithUser = {
 	user: ThinUser;

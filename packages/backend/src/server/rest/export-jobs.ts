@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import type { DbQueue } from '@/core/queues.js';
+import { addDbJob, type DbQueue } from '@/core/queues.js';
 import type { Config } from '@/config.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { parseHonoApiParams } from './validation.js';
@@ -26,10 +26,22 @@ type ExportFollowingParams = {
 	excludeInactive: boolean;
 };
 
-function enqueueSimpleExportJob(deps: HonoApiExportJobDependencies, jobName: string, user: ThinUser): void {
-	deps.dbQueue.add(jobName, {
-		user: { id: user.id },
-	}, queueRetentionOptions(deps.config));
+type SimpleExportJobName =
+	| 'exportCustomEmojis'
+	| 'exportNotes'
+	| 'exportClips'
+	| 'exportFavorites'
+	| 'exportMuting'
+	| 'exportBlocking'
+	| 'exportUserLists'
+	| 'exportAntennas';
+
+function enqueueSimpleExportJob(deps: HonoApiExportJobDependencies, jobName: SimpleExportJobName, user: ThinUser): void {
+	void addDbJob(deps.dbQueue, {
+		name: jobName,
+		data: { user: { id: user.id } },
+		opts: queueRetentionOptions(deps.config),
+	});
 }
 
 export function handleHonoApiExportCustomEmojis(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
@@ -70,9 +82,13 @@ export function handleHonoApiIExportFollowing(
 	body: Record<string, unknown>,
 ): void {
 	const params = parseHonoApiParams(exportFollowingParamDef, body);
-	deps.dbQueue.add('exportFollowing', {
-		user: { id: me.id },
-		excludeMuting: params.excludeMuting,
-		excludeInactive: params.excludeInactive,
-	}, queueRetentionOptions(deps.config));
+	void addDbJob(deps.dbQueue, {
+		name: 'exportFollowing',
+		data: {
+			user: { id: me.id },
+			excludeMuting: params.excludeMuting,
+			excludeInactive: params.excludeInactive,
+		},
+		opts: queueRetentionOptions(deps.config),
+	});
 }

@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import type { DbQueue } from '@/core/queues.js';
+import { addDbJob, type DbQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -97,10 +97,11 @@ export async function handleHonoApiIImportBlocking(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: '6f3a4dcc-f060-a707-4950-806fbdbe60d6' },
 	});
 
-	deps.dbQueue.add('importBlocking', {
-		user: { id: me.id },
-		fileId: file.id,
-	}, importJobOptions(deps.config));
+	void addDbJob(deps.dbQueue, {
+		name: 'importBlocking',
+		data: { user: { id: me.id }, fileId: file.id },
+		opts: importJobOptions(deps.config),
+	});
 }
 
 export const importFollowingParamDef = z.object({
@@ -122,11 +123,15 @@ export async function handleHonoApiIImportFollowing(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: '31a1b42c-06f7-42ae-8a38-a661c5c9f691' },
 	});
 
-	deps.dbQueue.add('importFollowing', {
-		user: { id: me.id },
-		fileId: file.id,
-		withReplies: params.withReplies,
-	}, importJobOptions(deps.config));
+	void addDbJob(deps.dbQueue, {
+		name: 'importFollowing',
+		data: {
+			user: { id: me.id },
+			fileId: file.id,
+			withReplies: params.withReplies,
+		},
+		opts: importJobOptions(deps.config),
+	});
 }
 
 export const importMutingParamDef = z.object({
@@ -147,10 +152,11 @@ export async function handleHonoApiIImportMuting(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: 'd2f12af1-e7b4-feac-86a3-519548f2728e' },
 	});
 
-	deps.dbQueue.add('importMuting', {
-		user: { id: me.id },
-		fileId: file.id,
-	}, importJobOptions(deps.config));
+	void addDbJob(deps.dbQueue, {
+		name: 'importMuting',
+		data: { user: { id: me.id }, fileId: file.id },
+		opts: importJobOptions(deps.config),
+	});
 }
 
 export const importUserListsParamDef = z.object({
@@ -171,10 +177,11 @@ export async function handleHonoApiIImportUserLists(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: '99efe367-ce6e-4d44-93f8-5fae7b040356' },
 	});
 
-	deps.dbQueue.add('importUserLists', {
-		user: { id: me.id },
-		fileId: file.id,
-	}, importJobOptions(deps.config));
+	void addDbJob(deps.dbQueue, {
+		name: 'importUserLists',
+		data: { user: { id: me.id }, fileId: file.id },
+		opts: importJobOptions(deps.config),
+	});
 }
 
 export const importAntennasParamDef = z.object({
@@ -221,8 +228,9 @@ export async function handleHonoApiIImportAntennas(
 		throw importAntennasTooManyAntennasError();
 	}
 
-	deps.dbQueue.add('importAntennas', {
-		user: { id: me.id },
-		antenna: antennas,
-	}, importJobOptions(deps.config));
+	void addDbJob(deps.dbQueue, {
+		name: 'importAntennas',
+		data: { user: { id: me.id }, antenna: antennas },
+		opts: importJobOptions(deps.config),
+	});
 }

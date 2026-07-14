@@ -37,7 +37,7 @@ import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import type { DbQueue, RelationshipQueue } from '@/core/queues.js';
+import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queues.js';
 import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '../../server/rest/drive-file-upload.js';
@@ -555,26 +555,26 @@ export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependenci
 	}
 }
 
-async function enqueueImportLines(
+async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollowingToDb'>(
 	deps: HonoQueueDbDependencies,
 	url: string,
-	createJob: (line: string, index: number) => { name: string; data: DbUserImportToDbJobData; opts: Bull.JobsOptions & { jobId: string } },
+	createJob: (line: string, index: number) => DbJobBulkInput<K>,
 ): Promise<void> {
 	const [path, cleanup] = await createTemp();
 	try {
 		await deps.downloadService.downloadUrl(url, path);
 		const lines = readline.createInterface({ input: fs.createReadStream(path), crlfDelay: Infinity });
-		let jobs: ReturnType<typeof createJob>[] = [];
+		let jobs: DbJobBulkInput<K>[] = [];
 		let lineIndex = 0;
 		for await (const line of lines) {
 			if (line.trim() === '') continue;
 			jobs.push(createJob(line, lineIndex++));
 			if (jobs.length >= 500) {
-				await deps.dbQueue.addBulk(jobs);
+				await addDbJobs(deps.dbQueue, jobs);
 				jobs = [];
 			}
 		}
-		if (jobs.length > 0) await deps.dbQueue.addBulk(jobs);
+		if (jobs.length > 0) await addDbJobs(deps.dbQueue, jobs);
 	} finally {
 		cleanup();
 	}

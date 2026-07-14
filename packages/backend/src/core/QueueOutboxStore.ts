@@ -5,17 +5,69 @@
 
 import { count, inArray, min, sql } from 'drizzle-orm';
 import type * as Bull from 'bullmq';
-import type { DbQueue } from '@/core/queues.js';
-import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import { addDbJobs, type DbJobBulkInput, type DbQueue } from '@/core/queues.js';
+import { queueOutbox, type QueueOutboxRow } from '@/db/schema/queue-outbox.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { QUEUE } from '@/queue/const.js';
+import type { DbJobMap } from '@/queue/types.js';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const invalidKeepJobs = Symbol('invalidKeepJobs');
+type KeepJobsOption = NonNullable<Bull.BulkJobOptions['removeOnComplete']>;
+
+function parseKeepJobs(value: unknown): KeepJobsOption | undefined | typeof invalidKeepJobs {
+	if (value === undefined || typeof value === 'boolean') return value;
+	if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : invalidKeepJobs;
+	if (!isRecord(value)) return invalidKeepJobs;
+
+	const age = value.age;
+	const count = value.count;
+	const limit = value.limit;
+	if (age === undefined) {
+		return typeof count === 'number' && Number.isFinite(count) && count >= 0 ? { count } : invalidKeepJobs;
+	}
+	if (typeof age !== 'number' || !Number.isFinite(age) || age < 0) return invalidKeepJobs;
+	if (count !== undefined && (typeof count !== 'number' || !Number.isFinite(count) || count < 0)) return invalidKeepJobs;
+	if (limit !== undefined && (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0)) return invalidKeepJobs;
+	return {
+		age,
+		...(count === undefined ? {} : { count }),
+		...(limit === undefined ? {} : { limit }),
+	};
+}
+
+function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput<'deleteAccount'> | null {
+	if (row.name !== 'deleteAccount' || !isRecord(row.data) || !isRecord(row.opts)) return null;
+	const user = row.data.user;
+	if (!isRecord(user) || typeof user.id !== 'string') return null;
+	if (row.data.soft !== undefined && typeof row.data.soft !== 'boolean') return null;
+	const removeOnComplete = parseKeepJobs(row.opts.removeOnComplete);
+	const removeOnFail = parseKeepJobs(row.opts.removeOnFail);
+	if (removeOnComplete === invalidKeepJobs || removeOnFail === invalidKeepJobs) return null;
+
+	return {
+		name: 'deleteAccount',
+		data: {
+			user: { id: user.id },
+			soft: row.data.soft,
+		},
+		opts: {
+			removeOnComplete,
+			removeOnFail,
+			jobId: `outbox-${row.id}`,
+		},
+	};
+}
 
 export async function enqueueDbJobInOutbox(
 	db: MiDrizzleDatabase,
-	name: string,
-	data: Record<string, unknown>,
-	opts: Bull.JobsOptions,
+	name: 'deleteAccount',
+	data: DbJobMap['deleteAccount'],
+	opts: Pick<Bull.BulkJobOptions, 'removeOnComplete' | 'removeOnFail'>,
 ): Promise<string> {
 	const id = genId();
 	await db.insert(queueOutbox).values({
@@ -40,13 +92,13 @@ export async function dispatchQueueOutbox(db: MiDrizzleDatabase, dbQueue: DbQueu
 
 		if (rows.length === 0) return 0;
 
-		await dbQueue.addBulk(rows.map(row => ({
-			name: row.name,
-			data: row.data as Record<string, unknown>,
-			opts: { ...(row.opts as Bull.JobsOptions), jobId: `outbox-${row.id}` },
-		})));
+		const jobs = rows.flatMap(row => {
+			const job = parseDbOutboxJob(row);
+			return job == null ? [] : [job];
+		});
+		if (jobs.length > 0) await addDbJobs(dbQueue, jobs);
 		await tx.delete(queueOutbox).where(inArray(queueOutbox.id, rows.map(row => row.id)));
-		return rows.length;
+		return jobs.length;
 	});
 }
 
