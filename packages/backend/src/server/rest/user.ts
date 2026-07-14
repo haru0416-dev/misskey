@@ -30,11 +30,11 @@ import {
 	listUsersByUsernamesAndHostsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
 } from '@/core/UserStore.js';
-import { blockingExistsInDatabase, listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { followRequestExistsInDatabase, listFollowRequestFolloweeIdsByFollowerIdFromDatabase, listFollowRequestFollowerIdsByFolloweeIdFromDatabase } from '@/core/FollowRequestStore.js';
-import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listAllFollowingsByFollowerIdFromDatabase, listFollowerIdsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { listRenoteMuteeIdsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import { blockingExistsInDatabase, listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase, listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase } from '@/core/BlockingStore.js';
+import { followRequestExistsInDatabase, listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase, listFollowingsByFollowerIdAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
+import { listMuteeIdsByMuterIdAndMuteeIdsFromDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
+import { listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
 import { deleteUserMemoFromDatabase, fetchUserMemoTextFromDatabase, listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
@@ -856,6 +856,9 @@ async function getUserRelationForHonoApi(deps: HonoApiUsersRelationDependencies,
 }
 
 async function getUserRelationsForHonoApi(deps: HonoApiUsersRelationDependencies, me: MiUser['id'], targets: MiUser['id'][]) {
+	const targetIds = [...new Set(targets)];
+	if (targetIds.length === 0) return new Map();
+
 	const [
 		followers,
 		followees,
@@ -866,15 +869,15 @@ async function getUserRelationsForHonoApi(deps: HonoApiUsersRelationDependencies
 		muters,
 		renoteMuters,
 	] = await Promise.all([
-		listAllFollowingsByFollowerIdFromDatabase(deps.db, me)
+		listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, me, targetIds)
 			.then(f => new Map(f.map(it => [it.followeeId, it]))),
-		listFollowerIdsByFolloweeIdFromDatabase(deps.db, me),
-		listFollowRequestFolloweeIdsByFollowerIdFromDatabase(deps.db, me),
-		listFollowRequestFollowerIdsByFolloweeIdFromDatabase(deps.db, me),
-		listBlockeeIdsByBlockerIdFromDatabase(deps.db, me),
-		listBlockerIdsByBlockeeIdFromDatabase(deps.db, me),
-		listMuteeIdsByMuterIdFromDatabase(deps.db, me),
-		listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, me),
+		listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, me, targetIds),
+		listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, me, targetIds),
+		listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, me, targetIds),
+		listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(deps.db, me, targetIds),
+		listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(deps.db, me, targetIds),
+		listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(deps.db, me, targetIds),
+		listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(deps.db, me, targetIds),
 	]);
 	const followeeSet = new Set(followees);
 	const followersRequestSet = new Set(followersRequests);
@@ -885,7 +888,7 @@ async function getUserRelationsForHonoApi(deps: HonoApiUsersRelationDependencies
 	const renoteMuterSet = new Set(renoteMuters);
 
 	return new Map(
-		targets.map(target => {
+		targetIds.map(target => {
 			const following = followers.get(target) ?? null;
 
 			return [

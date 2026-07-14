@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, lt, sql, type SQL } from 'drizzle-orm';
 import { blocking, type BlockingInsert, type BlockingRow } from '@/db/schema/blocking.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -200,6 +200,24 @@ export async function listBlockeeIdsByBlockerIdFromDatabase(
 	return rows.map(row => row.blockeeId);
 }
 
+export async function listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	blockerId: MiUser['id'],
+	blockeeIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (blockeeIds.length === 0) return [];
+
+	const rows = await db
+		.select({ blockeeId: blocking.blockeeId })
+		.from(blocking)
+		.where(and(
+			eq(blocking.blockerId, blockerId),
+			sql`${blocking.blockeeId} = ANY(${sql.param(blockeeIds)})`,
+		));
+
+	return rows.map(row => row.blockeeId);
+}
+
 export async function listBlockerIdsByBlockeeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	blockeeId: MiUser['id'],
@@ -208,6 +226,24 @@ export async function listBlockerIdsByBlockeeIdFromDatabase(
 		.select({ blockerId: blocking.blockerId })
 		.from(blocking)
 		.where(eq(blocking.blockeeId, blockeeId));
+
+	return rows.map(row => row.blockerId);
+}
+
+export async function listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	blockeeId: MiUser['id'],
+	blockerIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (blockerIds.length === 0) return [];
+
+	const rows = await db
+		.select({ blockerId: blocking.blockerId })
+		.from(blocking)
+		.where(and(
+			eq(blocking.blockeeId, blockeeId),
+			sql`${blocking.blockerId} = ANY(${sql.param(blockerIds)})`,
+		));
 
 	return rows.map(row => row.blockerId);
 }

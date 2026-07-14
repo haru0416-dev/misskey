@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, gt, lt, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, gt, lt, sql, type SQL } from 'drizzle-orm';
 import { renoteMuting, type RenoteMutingInsert, type RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
@@ -120,6 +120,24 @@ export async function listRenoteMuteeIdsByMuterIdFromDatabase(
 		.select({ muteeId: renoteMuting.muteeId })
 		.from(renoteMuting)
 		.where(eq(renoteMuting.muterId, muterId));
+
+	return rows.map(row => row.muteeId);
+}
+
+export async function listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	muterId: MiUser['id'],
+	muteeIds: MiUser['id'][],
+): Promise<MiUser['id'][]> {
+	if (muteeIds.length === 0) return [];
+
+	const rows = await db
+		.select({ muteeId: renoteMuting.muteeId })
+		.from(renoteMuting)
+		.where(and(
+			eq(renoteMuting.muterId, muterId),
+			sql`${renoteMuting.muteeId} = ANY(${sql.param(muteeIds)})`,
+		));
 
 	return rows.map(row => row.muteeId);
 }
