@@ -249,6 +249,12 @@ onUnmounted(() => {
 	margin-left: var(--MI-space-xl);
 }
 
+/* タブと同居するときはタイトルを潰さない (タブ側は overflow-x: auto に吸収される)。button でタブが実在するページのみに限定 */
+.upper:not(.slim) .titleContainer:has(~ .tabs button) {
+	flex-shrink: 0;
+	max-width: min(25%, 240px);
+}
+
 .titleAvatarContainer {
 	$size: 32px;
 	contain: strict;

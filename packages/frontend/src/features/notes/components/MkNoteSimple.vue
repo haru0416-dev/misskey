@@ -44,7 +44,6 @@ const showContent = ref(false);
 .root {
 	display: flex;
 	margin: 0;
-	padding: 0;
 	font-size: 0.95em;
 }
 
@@ -86,27 +85,10 @@ const showContent = ref(false);
 	padding: 0;
 }
 
-@container (min-width: 250px) {
-	.avatar {
-		margin: 0 10px 0 0;
-		width: 40px;
-		height: 40px;
-	}
-}
-
 @container (min-width: 350px) {
 	.avatar {
-		margin: 0 10px 0 0;
-		width: 44px;
-		height: 44px;
-	}
-}
-
-@container (min-width: 500px) {
-	.avatar {
-		margin: 0 12px 0 0;
-		width: 48px;
-		height: 48px;
+		width: 40px;
+		height: 40px;
 	}
 }
 

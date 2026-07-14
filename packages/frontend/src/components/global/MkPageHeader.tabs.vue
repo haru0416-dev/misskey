@@ -10,6 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-for="t in tabs"
 			:ref="(el) => tabRefs[t.key] = (el as HTMLElement)"
 			v-tooltip.noDelay="t.title"
+			:aria-label="t.title"
 			class="_button"
 			:class="[$style.tab, {
 				[$style.active]: t.key != null && t.key === props.tab,
@@ -171,7 +172,25 @@ function afterLeave(el: Element) {
 
 let ro2: ResizeObserver | null;
 
+// タブがオーバーフローしているとき、アクティブタブを可視域中央へスクロールする
+function scrollActiveTabIntoView() {
+	const tabEl = props.tab ? tabRefs[props.tab] : null;
+	if (!tabEl || !el.value || el.value.scrollWidth <= el.value.clientWidth) return;
+	const rect = tabEl.getBoundingClientRect();
+	const parentRect = el.value.getBoundingClientRect();
+	el.value.scrollTo({
+		left: el.value.scrollLeft + rect.left - parentRect.left - (el.value.clientWidth - rect.width) / 2,
+		behavior: prefer.animation ? 'smooth' : 'instant',
+	});
+}
+
 onMounted(() => {
+	// tabsは非同期に到着するため props.tabs も監視する。ラベル展開Transition(150ms)後に座標が確定するため遅延補正も行う
+	watch([() => props.tab, () => props.tabs], () => {
+		nextTick(() => scrollActiveTabIntoView());
+		window.setTimeout(scrollActiveTabIntoView, 170);
+	}, { immediate: true });
+
 	if (!cssAnchorSupported) {
 		watch([() => props.tab, () => props.tabs], () => {
 			nextTick(() => {
@@ -209,6 +228,18 @@ onUnmounted(() => {
 	overflow-x: auto;
 	overflow-y: hidden;
 	scrollbar-width: none;
+
+	/* オーバーフロー時のみ見切れ側をフェード (タイムラインはオーバーフロー無しだと不活性 = マスク非適用) */
+	@supports (animation-timeline: scroll()) {
+		scroll-timeline: --tabsScroll x;
+		animation: tabsEdgeFade linear both;
+		animation-timeline: --tabsScroll; /* shorthandがtimelineをリセットするため必ず後に書く */
+	}
+}
+
+@keyframes tabsEdgeFade {
+	0% { mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 32px), transparent 100%); }
+	100% { mask-image: linear-gradient(to right, transparent 0, #000 32px, #000 100%); }
 }
 
 .tabsInner {
@@ -224,11 +255,9 @@ onUnmounted(() => {
 	height: 100%;
 	font-weight: 500;
 	color: color-mix(in oklab, var(--MI_THEME-pageHeaderFg) 72%, transparent);
-	border-radius: var(--MI-radius-sm);
 
 	&:hover {
 		color: var(--MI_THEME-pageHeaderFg);
-		background: var(--MI_THEME-buttonHoverBg);
 	}
 
 	&.active {
@@ -237,7 +266,7 @@ onUnmounted(() => {
 	}
 
 	&.animate {
-		transition: color var(--MI-duration-fast) var(--MI-ease-out), background-color var(--MI-duration-fast) var(--MI-ease-out);
+		transition: color var(--MI-duration-fast) var(--MI-ease-out);
 	}
 }
 

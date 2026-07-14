@@ -10,16 +10,23 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button v-tooltip.noDelay.right="instance.name ?? i18n.ts.instance" :aria-label="instance.name ?? i18n.ts.instance" class="_button" :class="$style.instance" @click="openInstanceMenu">
 				<img :src="instance.iconUrl || '/client-assets/erebia-icon.svg'" alt="" :class="$style.instanceIcon" style="view-transition-name: navbar-serverIcon;"/>
 			</button>
-			<button v-if="!iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" :aria-label="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
+			<button v-if="!iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" :aria-label="i18n.ts.realtimeMode" class="_button" :class="[$style.topAction, $style.realtimeMode, store.realtimeMode ? $style.on : null]" @click="toggleRealtimeMode">
 				<i v-if="store.realtimeMode" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
-			<button v-if="!iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" :aria-label="i18n.ts.widgets" class="_button" :class="[$style.widget]" @click="() => emit('widgetButtonClick')">
+			<button v-if="!iconOnly && showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" :aria-label="i18n.ts.widgets" class="_button" :class="$style.topAction" @click="() => emit('widgetButtonClick')">
 				<i class="ti ti-apps ti-fw"></i>
+			</button>
+			<button v-if="!iconOnly && prefer.showNavbarSubButtons" v-tooltip.noDelay.right="i18n.ts.edit" :aria-label="i18n.ts.edit" class="_button" :class="$style.topAction" @click="menuEdit">
+				<i class="ti ti-settings-2 ti-fw"></i>
+			</button>
+			<button v-if="!props.asDrawer && prefer.showNavbarSubButtons && (!iconOnly || !forceIconOnly)" v-tooltip.noDelay.right="iconOnly ? i18n.ts.show : i18n.ts.hide" :aria-label="iconOnly ? i18n.ts.show : i18n.ts.hide" :aria-expanded="!iconOnly" class="_button" :class="iconOnly ? $style.navExpand : $style.topAction" @click="toggleIconOnly">
+				<i v-if="iconOnly" class="ti ti-chevron-right ti-fw"></i>
+				<i v-else class="ti ti-chevron-left ti-fw"></i>
 			</button>
 		</div>
 		<div :class="$style.middle">
-			<MkA v-tooltip.noDelay.right="i18n.ts.timeline" :class="$style.item" :activeClass="$style.active" to="/" exact>
+			<MkA v-tooltip.noDelay.right="iconOnly ? i18n.ts.timeline : null" :class="$style.item" :activeClass="$style.active" to="/" exact>
 				<i :class="$style.itemIcon" class="ti ti-home ti-fw" style="view-transition-name: navbar-homeIcon;"></i><span :class="$style.itemText">{{ i18n.ts.timeline }}</span>
 			</MkA>
 			<template v-for="item in prefer.menu">
@@ -27,7 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<component
 					:is="navbarItemDef[item].to ? 'MkA' : 'button'"
 					v-else-if="navbarItemDef[item] && (navbarItemDef[item].show == null || navbarItemDef[item].show.value !== false)"
-					v-tooltip.noDelay.right="navbarItemDef[item].title"
+					v-tooltip.noDelay.right="iconOnly ? navbarItemDef[item].title : null"
 					class="_button"
 					:class="[$style.item]"
 					:activeClass="$style.active"
@@ -42,14 +49,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</component>
 			</template>
 			<div :class="$style.divider"></div>
-			<MkA v-if="$i != null && ($i.isAdmin || $i.isModerator)" v-tooltip.noDelay.right="i18n.ts.controlPanel" :class="$style.item" :activeClass="$style.active" to="/admin">
+			<MkA v-if="$i != null && ($i.isAdmin || $i.isModerator)" v-tooltip.noDelay.right="iconOnly ? i18n.ts.controlPanel : null" :class="$style.item" :activeClass="$style.active" to="/admin">
 				<i :class="$style.itemIcon" class="ti ti-dashboard ti-fw" style="view-transition-name: navbar-controlPanel;"></i><span :class="$style.itemText">{{ i18n.ts.controlPanel }}</span>
 			</MkA>
 			<button class="_button" :class="$style.item" @click="more">
 				<i :class="$style.itemIcon" class="ti ti-grid-dots ti-fw" style="view-transition-name: navbar-more;"></i><span :class="$style.itemText">{{ i18n.ts.more }}</span>
 				<span v-if="otherMenuItemIndicated" :class="$style.itemIndicator" class="_blink"><i class="_indicatorCircle"></i></span>
 			</button>
-			<MkA v-tooltip.noDelay.right="i18n.ts.settings" :class="$style.item" :activeClass="$style.active" to="/settings">
+			<MkA v-tooltip.noDelay.right="iconOnly ? i18n.ts.settings : null" :class="$style.item" :activeClass="$style.active" to="/settings">
 				<i :class="$style.itemIcon" class="ti ti-settings ti-fw" style="view-transition-name: navbar-settings;"></i><span :class="$style.itemText">{{ i18n.ts.settings }}</span>
 			</MkA>
 		</div>
@@ -61,45 +68,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<i v-if="store.realtimeMode" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
-			<button v-tooltip.noDelay.right="i18n.ts.note" class="_button" :class="[$style.post]" data-cy-open-post-form @click="() => { os.post(); }">
+			<button v-tooltip.noDelay.right="iconOnly ? i18n.ts.note : null" class="_button" :class="[$style.post]" data-cy-open-post-form @click="() => { os.post(); }">
 				<i class="ti ti-pencil ti-fw" :class="$style.postIcon"></i><span :class="$style.postText">{{ i18n.ts.note }}</span>
 			</button>
-			<button v-if="$i != null" v-tooltip.noDelay.right="`${i18n.ts.account}: @${$i.username}`" class="_button" :class="[$style.account]" @click="openAccountMenu">
+			<button v-if="$i != null" v-tooltip.noDelay.right="iconOnly ? `${i18n.ts.account}: @${$i.username}` : null" class="_button" :class="[$style.account]" @click="openAccountMenu">
 				<MkAvatar :user="$i" :class="$style.avatar" style="view-transition-name: navbar-avatar;"/><MkAcct class="_nowrap" :class="$style.acct" :user="$i"/>
 			</button>
 		</div>
 	</div>
 
-	<!--
-	<svg viewBox="0 0 16 48" :class="$style.subButtonShape">
-		<g transform="matrix(0.333333,0,0,0.222222,0.000895785,13.3333)">
-			<path d="M23.935,-24C37.223,-24 47.995,-7.842 47.995,12.09C47.995,34.077 47.995,62.07 47.995,84.034C47.995,93.573 45.469,102.721 40.972,109.466C36.475,116.211 30.377,120 24.018,120L23.997,120C10.743,120 -0.003,136.118 -0.003,156C-0.003,156 -0.003,156 -0.003,156L-0.003,-60L-0.003,-59.901C-0.003,-50.379 2.519,-41.248 7.007,-34.515C11.496,-27.782 17.584,-24 23.931,-24C23.932,-24 23.934,-24 23.935,-24Z" style="fill:var(--MI_THEME-navBg);"/>
-		</g>
-	</svg>
-	-->
-
-	<div v-if="!forceIconOnly && prefer.showNavbarSubButtons" :class="$style.subButtons">
-		<div :class="$style.subButton">
-			<svg viewBox="0 0 16 64" :class="$style.subButtonShape">
-				<g transform="matrix(0.333333,0,0,0.222222,0.000895785,21.3333)">
-					<path d="M47.488,7.995C47.79,10.11 47.943,12.266 47.943,14.429C47.997,26.989 47.997,84 47.997,84C47.997,84 44.018,118.246 23.997,133.5C-0.374,152.07 -0.003,192 -0.003,192L-0.003,-96C-0.003,-96 0.151,-56.216 23.997,-37.5C40.861,-24.265 46.043,-1.243 47.488,7.995Z" style="fill:var(--MI_THEME-navBg);"/>
-				</g>
-			</svg>
-			<button class="_button" :aria-label="i18n.ts.edit" :class="$style.subButtonClickable" @click="menuEdit"><i :class="$style.subButtonIcon" class="ti ti-settings-2"></i></button>
-		</div>
-		<template v-if="!props.asDrawer">
-			<div :class="$style.subButtonGapFill"></div>
-			<div :class="$style.subButtonGapFillDivider"></div>
-			<div :class="$style.subButton">
-				<svg viewBox="0 0 16 64" :class="$style.subButtonShape">
-					<g transform="matrix(0.333333,0,0,0.222222,0.000895785,21.3333)">
-						<path d="M47.488,7.995C47.79,10.11 47.943,12.266 47.943,14.429C47.997,26.989 47.997,84 47.997,84C47.997,84 44.018,118.246 23.997,133.5C-0.374,152.07 -0.003,192 -0.003,192L-0.003,-96C-0.003,-96 0.151,-56.216 23.997,-37.5C40.861,-24.265 46.043,-1.243 47.488,7.995Z" style="fill:var(--MI_THEME-navBg);"/>
-					</g>
-				</svg>
-				<button class="_button" :aria-label="iconOnly ? i18n.ts.show : i18n.ts.hide" :aria-expanded="!iconOnly" :class="$style.subButtonClickable" @click="toggleIconOnly"><i v-if="iconOnly" class="ti ti-chevron-right" :class="$style.subButtonIcon"></i><i v-else class="ti ti-chevron-left" :class="$style.subButtonIcon"></i></button>
-			</div>
-		</template>
-	</div>
 </div>
 </template>
 
@@ -143,7 +120,7 @@ const otherMenuItemIndicated = computed(() => {
 });
 
 function calcViewState() {
-	forceIconOnly.value = window.innerWidth <= 1279;
+	forceIconOnly.value = !props.asDrawer && window.innerWidth <= 1279;
 }
 
 window.addEventListener('resize', calcViewState);
@@ -203,9 +180,6 @@ function menuEdit() {
 .root {
 	--nav-width: 248px;
 	--nav-icon-only-width: 72px;
-	--nav-bg-transparent: color(from var(--MI_THEME-navBg) srgb r g b / 0.5);
-
-	--subButtonWidth: 20px;
 
 	flex: 0 0 var(--nav-width);
 	width: var(--nav-width);
@@ -234,7 +208,7 @@ function menuEdit() {
 .top {
 	flex-shrink: 0;
 	direction: ltr;
-	background: color(from var(--MI_THEME-navBg) srgb r g b / 0.96);
+	background: var(--MI-surface-nav);
 }
 
 .middle {
@@ -245,83 +219,7 @@ function menuEdit() {
 .bottom {
 	flex-shrink: 0;
 	direction: ltr;
-	background: color(from var(--MI_THEME-navBg) srgb r g b / 0.96);
-}
-
-.subButtons {
-	position: fixed;
-	left: var(--nav-width);
-	bottom: 80px;
-	z-index: 1001;
-	box-sizing: border-box;
-}
-
-.subButton {
-	display: block;
-	position: relative;
-	z-index: 1002;
-	width: var(--subButtonWidth);
-	height: 50px;
-	box-sizing: border-box;
-	align-content: center;
-}
-
-.subButtonShape {
-	position: absolute;
-	z-index: -1;
-	top: 0;
-	bottom: 0;
-	left: 0;
-	margin: auto;
-	width: var(--subButtonWidth);
-	height: calc(var(--subButtonWidth) * 4);
-}
-
-.subButtonClickable {
-	position: absolute;
-	display: block;
-	max-width: unset;
-	width: 24px;
-	height: 42px;
-	top: 0;
-	bottom: 0;
-	left: -4px;
-	margin: auto;
-	font-size: 10px;
-
-	&:hover {
-		color: var(--MI_THEME-fgHighlighted);
-
-		.subButtonIcon {
-			opacity: 1;
-		}
-	}
-}
-
-.subButtonIcon {
-	margin-left: -4px;
-	opacity: 0.7;
-}
-
-.subButtonGapFill {
-	position: relative;
-	z-index: 1001;
-	width: var(--subButtonWidth);
-	height: 64px;
-	margin-top: -32px;
-	margin-bottom: -32px;
-	pointer-events: none;
-	background: var(--MI_THEME-navBg);
-}
-
-.subButtonGapFillDivider {
-	position: relative;
-	z-index: 1010;
-	margin-left: -2px;
-	width: 14px;
-	height: 1px;
-	background: var(--MI_THEME-divider);
-	pointer-events: none;
+	background: var(--MI-surface-nav);
 }
 
 .root:not(.iconOnly) {
@@ -337,13 +235,18 @@ function menuEdit() {
 		z-index: 1;
 		display: flex;
 		height: var(--top-height);
+		padding-top: env(safe-area-inset-top, 0px);
 		padding-inline: var(--MI-space-sm);
 		border-bottom: solid 1px var(--MI-border-muted);
 	}
 
 	.instance {
 		position: relative;
-		width: var(--top-height);
+		width: 52px;
+	}
+
+	.middle {
+		padding-top: var(--MI-space-xs);
 	}
 
 	.instanceIcon {
@@ -354,9 +257,21 @@ function menuEdit() {
 		box-shadow: var(--MI-shadow-sm);
 	}
 
-	.realtimeMode {
+	.topAction {
 		display: inline-block;
-		width: var(--top-height);
+		width: 40px;
+		color: var(--MI_THEME-navFg);
+
+		&:hover {
+			color: var(--MI_THEME-fgHighlighted);
+		}
+
+		&:focus-visible {
+			outline-offset: -2px;
+		}
+	}
+
+	.realtimeMode {
 		margin-left: auto;
 
 		&.on {
@@ -364,16 +279,10 @@ function menuEdit() {
 		}
 	}
 
-	.widget {
-		display: inline-block;
-		width: var(--top-height);
-		margin-left: auto;
-	}
-
 	.bottom {
 		position: sticky;
 		bottom: 0;
-		padding: var(--MI-space-sm) 0 var(--MI-space-xs);
+		padding: var(--MI-space-sm) 0 max(var(--MI-space-xs), env(safe-area-inset-bottom, 0px));
 		border-top: solid 1px var(--MI-border-muted);
 	}
 
@@ -392,6 +301,11 @@ function menuEdit() {
 
 		&:hover, &.active {
 			background: hsl(from var(--MI_THEME-accent) h s calc(l + 7));
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--MI_THEME-fgOnAccent);
+			outline-offset: -4px;
 		}
 	}
 
@@ -414,10 +328,6 @@ function menuEdit() {
 		text-align: left;
 		box-sizing: border-box;
 		overflow: clip;
-
-		&:hover {
-			background: var(--MI_THEME-buttonHoverBg);
-		}
 
 		&:focus-visible {
 			outline: none;
@@ -453,7 +363,7 @@ function menuEdit() {
 		display: block;
 		margin: 2px var(--MI-space-sm);
 		padding: 0 var(--MI-space-md);
-		line-height: var(--MI-control-md);
+		line-height: 40px;
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;
@@ -466,12 +376,12 @@ function menuEdit() {
 		&:hover {
 			text-decoration: none;
 			color: var(--MI_THEME-fgHighlighted);
-			background: var(--MI_THEME-buttonHoverBg);
 		}
 
-		&:hover, &:focus-visible {
+		&:focus-visible {
 			color: var(--MI_THEME-accent);
 			background: var(--MI_THEME-accentedBg);
+			outline-offset: -2px;
 		}
 
 		&.active {
@@ -503,10 +413,6 @@ function menuEdit() {
 	.itemText {
 		font-size: 0.95em;
 		font-weight: 550;
-	}
-
-	.subButtons {
-		left: var(--nav-width);
 	}
 }
 
@@ -543,7 +449,7 @@ function menuEdit() {
 
 	.instanceIcon {
 		display: inline-block;
-		width: 30px;
+		width: 36px;
 		aspect-ratio: 1;
 		border-radius: var(--MI-radius-sm);
 	}
@@ -640,7 +546,7 @@ function menuEdit() {
 
 	.avatar {
 		display: inline-block;
-		width: 38px;
+		width: 32px;
 		aspect-ratio: 1;
 	}
 
@@ -666,30 +572,27 @@ function menuEdit() {
 		text-align: center;
 		border-radius: var(--MI-radius-sm);
 
-		&:hover, &:focus-visible {
+		&:hover {
+			text-decoration: none;
+			color: var(--MI_THEME-fgHighlighted);
+		}
+
+		&:focus-visible {
 			text-decoration: none;
 			color: var(--MI_THEME-accent);
 			background: var(--MI_THEME-accentedBg);
-
-			.itemIcon {
-				opacity: 1;
-			}
+			outline-offset: -2px;
 		}
 
 		&.active {
 			color: var(--MI_THEME-navActive);
 			background: color-mix(in oklab, var(--MI_THEME-navActive) 15%, transparent);
-
-			.itemIcon {
-				opacity: 1;
-			}
 		}
 	}
 
 	.itemIcon {
 		display: inline-block;
 		margin: 0;
-		opacity: 0.7;
 	}
 
 	.itemText {
@@ -712,8 +615,22 @@ function menuEdit() {
 		}
 	}
 
-	.subButtons {
-		left: var(--nav-icon-only-width);
+	.navExpand {
+		display: block;
+		position: relative;
+		width: 100%;
+		height: 32px;
+		margin-top: var(--MI-space-xs);
+		color: var(--MI_THEME-navFg);
+		text-align: center;
+
+		&:hover {
+			color: var(--MI_THEME-fgHighlighted);
+		}
+
+		&:focus-visible {
+			outline-offset: -2px;
+		}
 	}
 }
 </style>
