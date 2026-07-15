@@ -43,6 +43,26 @@ export async function createModerationLogInDatabase(
 		.values(data);
 }
 
+export async function createModerationLogsInDatabase(
+	db: MiDrizzleDatabase,
+	data: ModerationLogInsert[],
+): Promise<void> {
+	if (data.length === 0) return;
+
+	const batchSize = 10_000;
+	const insertBatch = async (offset: number): Promise<void> => {
+		const batch = data.slice(offset, offset + batchSize);
+		if (batch.length === 0) return;
+
+		await db
+			.insert(moderationLog)
+			.values(batch);
+		await insertBatch(offset + batchSize);
+	};
+
+	await insertBatch(0);
+}
+
 export async function fetchModerationLogByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiModerationLog['id'],
