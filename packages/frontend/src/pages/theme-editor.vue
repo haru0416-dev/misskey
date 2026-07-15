@@ -11,12 +11,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #label>{{ i18n.ts.backgroundColor }}</template>
 				<div class="cwepdizn-colors">
 					<div class="row">
-						<button v-for="color in bgColors.filter(x => x.kind === 'light')" class="color _button" :class="{ active: theme.props.bg === color.color }" @click="setBgColor(color)">
+						<button v-for="color in bgColors.filter(x => x.kind === 'light')" class="color _button" :class="{ active: theme.props['bg'] === color.color }" @click="setBgColor(color)">
 							<div class="preview" :style="{ background: color.forPreview }"></div>
 						</button>
 					</div>
 					<div class="row">
-						<button v-for="color in bgColors.filter(x => x.kind === 'dark')" class="color _button" :class="{ active: theme.props.bg === color.color }" @click="setBgColor(color)">
+						<button v-for="color in bgColors.filter(x => x.kind === 'dark')" class="color _button" :class="{ active: theme.props['bg'] === color.color }" @click="setBgColor(color)">
 							<div class="preview" :style="{ background: color.forPreview }"></div>
 						</button>
 					</div>
@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #label>{{ i18n.ts.accentColor }}</template>
 				<div class="cwepdizn-colors">
 					<div class="row">
-						<button v-for="color in accentColors" class="color rounded _button" :class="{ active: theme.props.accent === color }" @click="setAccentColor(color)">
+						<button v-for="color in accentColors" class="color rounded _button" :class="{ active: theme.props['accent'] === color }" @click="setAccentColor(color)">
 							<div class="preview" :style="{ background: color }"></div>
 						</button>
 					</div>
@@ -38,7 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #label>{{ i18n.ts.textColor }}</template>
 				<div class="cwepdizn-colors">
 					<div class="row">
-						<button v-for="color in fgColors" class="color char _button" :class="{ active: (theme.props.fg === color.forLight) || (theme.props.fg === color.forDark) }" @click="setFgColor(color)">
+						<button v-for="color in fgColors" class="color char _button" :class="{ active: (theme.props['fg'] === color.forLight) || (theme.props['fg'] === color.forDark) }" @click="setFgColor(color)">
 							<div class="preview" :style="{ color: color.forPreview ? color.forPreview : theme.base === 'light' ? '#5f5f5f' : '#dadada' }">A</div>
 						</button>
 					</div>
@@ -154,20 +154,20 @@ function setBgColor(color: typeof bgColors[number]) {
 		}
 	}
 	theme.value.base = color.kind;
-	theme.value.props.bg = color.color;
+	theme.value.props['bg'] = color.color;
 
-	if (theme.value.props.fg) {
-		const matchedFgColor = fgColors.find(x => [tinycolor(x.forLight).toRgbString(), tinycolor(x.forDark).toRgbString()].includes(tinycolor(theme.value.props.fg).toRgbString()));
+	if (theme.value.props['fg']) {
+		const matchedFgColor = fgColors.find(x => [tinycolor(x.forLight).toRgbString(), tinycolor(x.forDark).toRgbString()].includes(tinycolor(theme.value.props['fg']).toRgbString()));
 		if (matchedFgColor) setFgColor(matchedFgColor);
 	}
 }
 
 function setAccentColor(color: string) {
-	theme.value.props.accent = color;
+	theme.value.props['accent'] = color;
 }
 
 function setFgColor(color: typeof fgColors[number]) {
-	theme.value.props.fg = theme.value.base === 'light' ? color.forLight : color.forDark;
+	theme.value.props['fg'] = theme.value.base === 'light' ? color.forLight : color.forDark;
 }
 
 function apply() {

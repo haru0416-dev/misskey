@@ -108,7 +108,7 @@ onMounted(() => {
 	const themeValue = themeManager.currentCompiledTheme!;
 
 	const selection = cropper.getCropperSelection()!;
-	selection.themeColor = tinycolor(themeValue.accent).toHexString();
+	selection.themeColor = tinycolor(themeValue['accent']).toHexString();
 	if (props.aspectRatio != null) selection.aspectRatio = props.aspectRatio;
 	selection.initialAspectRatio = props.aspectRatio ?? 1;
 	selection.outlined = true;

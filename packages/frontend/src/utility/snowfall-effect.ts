@@ -472,7 +472,7 @@ export class SnowfallEffect {
 	private update(activeElapsed: number, delta: number) {
 		const { gl, buffers, wind } = this;
 		const elapsed = activeElapsed * this.speed;
-		const positionBuffer = buffers.position;
+		const positionBuffer = buffers['position'];
 		if (positionBuffer == null) return;
 
 		gl.clear(gl.COLOR_BUFFER_BIT);

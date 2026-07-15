@@ -72,6 +72,13 @@ export async function removeAccount(host: string, id: AccountWithToken['id']) {
 
 const isAccountDeleted = Symbol('isAccountDeleted');
 
+type ApiErrorResponse = {
+	error: {
+		id: string;
+		[key: string]: unknown;
+	};
+};
+
 function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Promise<Misskey.entities.MeDetailed> {
 	return new Promise((done, fail) => {
 		window
@@ -86,7 +93,7 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 			})
 			.then(
 				(res) =>
-					new Promise<Misskey.entities.MeDetailed | { error: Record<string, any> }>((done2, fail2) => {
+					new Promise<Misskey.entities.MeDetailed | ApiErrorResponse>((done2, fail2) => {
 						if (res.status >= 500 && res.status < 600) {
 							// サーバーエラー(5xx)の場合をrejectとする
 							// （認証エラーなど4xxはresolve）

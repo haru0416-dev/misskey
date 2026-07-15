@@ -13,8 +13,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-model="v"
 			v-adaptive-border
 			:class="[$style.textarea, { _monospace: code }]"
-			:aria-labelledby="$slots.label ? labelId : undefined"
-			:aria-describedby="$slots.caption ? captionId : undefined"
+			:aria-labelledby="slots.label ? labelId : undefined"
+			:aria-describedby="slots.caption ? captionId : undefined"
 			:disabled="disabled"
 			:required="required"
 			:readonly="readonly"
@@ -46,6 +46,11 @@ import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 import { genId } from '@/utility/id.js';
+
+const slots = defineSlots<{
+	label?: () => void;
+	caption?: () => void;
+}>();
 
 const props = defineProps<{
 	modelValue: string | null;

@@ -5,7 +5,7 @@
 
 import * as process from 'node:process';
 
-const debug = process.env.BUILDER_DEBUG !== undefined && process.env.BUILDER_DEBUG !== '0';
+const debug = process.env['BUILDER_DEBUG'] !== undefined && process.env['BUILDER_DEBUG'] !== '0';
 
 export interface Logger {
 	debug(message: string): void;

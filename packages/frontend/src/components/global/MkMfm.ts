@@ -138,8 +138,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 						let style: CSSProperties | undefined;
 						switch (token.props.name) {
 							case 'tada': {
-								const speed = validTime(token.props.args.speed) ?? '1s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const speed = validTime(token.props.args['speed']) ?? '1s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = {
 									fontSize: '150%',
 									...(useAnim ? { animation: `global-tada ${speed} linear infinite both`, animationDelay: delay } : {}),
@@ -147,34 +147,34 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								break;
 							}
 							case 'jelly': {
-								const speed = validTime(token.props.args.speed) ?? '1s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const speed = validTime(token.props.args['speed']) ?? '1s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = useAnim
 									? { animation: `mfm-rubberBand ${speed} linear infinite both`, animationDelay: delay }
 									: {};
 								break;
 							}
 							case 'twitch': {
-								const speed = validTime(token.props.args.speed) ?? '0.5s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const speed = validTime(token.props.args['speed']) ?? '0.5s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = useAnim ? { animation: `mfm-twitch ${speed} ease infinite`, animationDelay: delay } : {};
 								break;
 							}
 							case 'shake': {
-								const speed = validTime(token.props.args.speed) ?? '0.5s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const speed = validTime(token.props.args['speed']) ?? '0.5s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = useAnim ? { animation: `mfm-shake ${speed} ease infinite`, animationDelay: delay } : {};
 								break;
 							}
 							case 'spin': {
-								const direction = token.props.args.left
+								const direction = token.props.args['left']
 									? 'reverse'
-									: token.props.args.alternate
+									: token.props.args['alternate']
 										? 'alternate'
 										: 'normal';
-								const anime = token.props.args.x ? 'mfm-spinX' : token.props.args.y ? 'mfm-spinY' : 'mfm-spin';
-								const speed = validTime(token.props.args.speed) ?? '1.5s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const anime = token.props.args['x'] ? 'mfm-spinX' : token.props.args['y'] ? 'mfm-spinY' : 'mfm-spin';
+								const speed = validTime(token.props.args['speed']) ?? '1.5s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = useAnim
 									? {
 											animation: `${anime} ${speed} linear infinite`,
@@ -185,14 +185,14 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								break;
 							}
 							case 'jump': {
-								const speed = validTime(token.props.args.speed) ?? '0.75s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const speed = validTime(token.props.args['speed']) ?? '0.75s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = useAnim ? { animation: `mfm-jump ${speed} linear infinite`, animationDelay: delay } : {};
 								break;
 							}
 							case 'bounce': {
-								const speed = validTime(token.props.args.speed) ?? '0.75s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const speed = validTime(token.props.args['speed']) ?? '0.75s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = useAnim
 									? {
 											animation: `mfm-bounce ${speed} linear infinite`,
@@ -204,9 +204,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							}
 							case 'flip': {
 								const transform =
-									token.props.args.h && token.props.args.v
+									token.props.args['h'] && token.props.args['v']
 										? 'scale(-1, -1)'
-										: token.props.args.v
+										: token.props.args['v']
 											? 'scaleY(-1)'
 											: 'scaleX(-1)';
 								style = { transform };
@@ -240,17 +240,17 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								);
 							}
 							case 'font': {
-								const family = token.props.args.serif
+								const family = token.props.args['serif']
 									? 'serif'
-									: token.props.args.monospace
+									: token.props.args['monospace']
 										? 'monospace'
-										: token.props.args.cursive
+										: token.props.args['cursive']
 											? 'cursive'
-											: token.props.args.fantasy
+											: token.props.args['fantasy']
 												? 'fantasy'
-												: token.props.args.emoji
+												: token.props.args['emoji']
 													? 'emoji'
-													: token.props.args.math
+													: token.props.args['math']
 														? 'math'
 														: null;
 								if (family) style = { fontFamily: family };
@@ -275,8 +275,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 										genEl(token.children, scale),
 									);
 								}
-								const speed = validTime(token.props.args.speed) ?? '1s';
-								const delay = validTime(token.props.args.delay) ?? '0s';
+								const speed = validTime(token.props.args['speed']) ?? '1s';
+								const delay = validTime(token.props.args['delay']) ?? '0s';
 								style = { animation: `mfm-rainbow ${speed} linear infinite`, animationDelay: delay };
 								break;
 							}
@@ -287,14 +287,14 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								return h(MkSparkle, {}, { default: () => genEl(token.children, scale) });
 							}
 							case 'rotate': {
-								const degrees = safeParseFloat(token.props.args.deg) ?? 90;
+								const degrees = safeParseFloat(token.props.args['deg']) ?? 90;
 								style = { transform: `rotate(${degrees}deg)`, transformOrigin: 'center center' };
 								break;
 							}
 							case 'position': {
 								if (!prefer.advancedMfm) break;
-								const x = safeParseFloat(token.props.args.x) ?? 0;
-								const y = safeParseFloat(token.props.args.y) ?? 0;
+								const x = safeParseFloat(token.props.args['x']) ?? 0;
+								const y = safeParseFloat(token.props.args['y']) ?? 0;
 								style = { transform: `translateX(${x}em) translateY(${y}em)` };
 								break;
 							}
@@ -303,28 +303,28 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									style = {};
 									break;
 								}
-								const x = Math.min(safeParseFloat(token.props.args.x) ?? 1, 5);
-								const y = Math.min(safeParseFloat(token.props.args.y) ?? 1, 5);
+								const x = Math.min(safeParseFloat(token.props.args['x']) ?? 1, 5);
+								const y = Math.min(safeParseFloat(token.props.args['y']) ?? 1, 5);
 								style = { transform: `scale(${x}, ${y})` };
 								scale = scale * Math.max(x, y);
 								break;
 							}
 							case 'fg': {
-								let color = validColor(token.props.args.color);
+								let color = validColor(token.props.args['color']);
 								color = color ?? 'f00';
 								style = { color: `#${color}`, overflowWrap: 'anywhere' };
 								break;
 							}
 							case 'bg': {
-								let color = validColor(token.props.args.color);
+								let color = validColor(token.props.args['color']);
 								color = color ?? 'f00';
 								style = { backgroundColor: `#${color}`, overflowWrap: 'anywhere' };
 								break;
 							}
 							case 'border': {
-								let color = validColor(token.props.args.color);
+								let color = validColor(token.props.args['color']);
 								color = color ? `#${color}` : 'var(--MI_THEME-accent)';
-								let b_style = token.props.args.style;
+								let b_style = token.props.args['style'];
 								if (
 									typeof b_style !== 'string' ||
 									!['hidden', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset'].includes(
@@ -332,14 +332,14 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									)
 								)
 									b_style = 'solid';
-								const width = safeParseFloat(token.props.args.width) ?? 1;
-								const radius = safeParseFloat(token.props.args.radius) ?? 0;
+								const width = safeParseFloat(token.props.args['width']) ?? 1;
+								const radius = safeParseFloat(token.props.args['radius']) ?? 0;
 								style = {
 									borderWidth: `${width}px`,
 									borderStyle: b_style,
 									borderColor: color,
 									borderRadius: `${radius}px`,
-									...(token.props.args.noclip ? {} : { overflow: 'clip' }),
+									...(token.props.args['noclip'] ? {} : { overflow: 'clip' }),
 								};
 								break;
 							}
@@ -393,7 +393,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 										onClick(ev: PointerEvent): void {
 											ev.stopPropagation();
 											ev.preventDefault();
-											const clickEv = typeof token.props.args.ev === 'string' ? token.props.args.ev : '';
+											const clickEv = typeof token.props.args['ev'] === 'string' ? token.props.args['ev'] : '';
 											emit('clickEv', clickEv);
 										},
 									},
@@ -481,14 +481,14 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'hashtag': {
 						return [
 							h(
-								MkA,
-								{
-									key: nextKey(),
-									to: isNote
-									? `/tags/${encodeURIComponent(token.props.hashtag)}`
-									: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
-								style: 'color:var(--MI_THEME-hashtag);',
-								...(props.linkNavigationBehavior === undefined ? {} : { behavior: props.linkNavigationBehavior }),
+							MkA,
+							{
+								key: nextKey(),
+								to: isNote
+								? `/tags/${encodeURIComponent(token.props.hashtag)}`
+								: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
+							style: 'color:var(--MI_THEME-hashtag);',
+							...(props.linkNavigationBehavior === undefined ? {} : { behavior: props.linkNavigationBehavior }),
 								},
 								{ default: () => `#${token.props.hashtag}` },
 							),

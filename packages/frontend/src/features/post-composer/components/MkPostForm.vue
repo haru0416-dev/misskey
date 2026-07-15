@@ -880,6 +880,24 @@ type StoredDraft = {
 	};
 };
 
+type StoredDraftCandidate = Record<string, unknown> & {
+	data?: unknown;
+};
+
+type StoredDraftDataCandidate = Record<string, unknown> & {
+	text?: unknown;
+	useCw?: unknown;
+	cw?: unknown;
+	visibility?: unknown;
+	localOnly?: unknown;
+	files?: unknown;
+	poll?: unknown;
+	visibleUserIds?: unknown;
+	quoteId?: unknown;
+	reactionAcceptance?: unknown;
+	scheduledAt?: unknown;
+};
+
 function getStoredDrafts(): Record<string, unknown> {
 	return miLocalStorage.getItemAsJson('drafts', isJsonObject) ?? {};
 }
@@ -1422,8 +1440,10 @@ async function restoreLocalDraft(): Promise<void> {
 	if (props.instant || props.mention || props.specified || mock || props.initialNote || prefer.draftRestoreMode === 'never') return;
 
 	const draft = getStoredDrafts()[draftKey.value];
-	const data = isJsonObject(draft) && isJsonObject(draft.data) ? draft.data : null;
-	if (data == null) return;
+	if (!isJsonObject(draft)) return;
+	const candidate = draft as StoredDraftCandidate;
+	if (!isJsonObject(candidate.data)) return;
+	const data = candidate.data as StoredDraftDataCandidate;
 
 	if (prefer.draftRestoreMode === 'ask') {
 		const { canceled } = await os.confirm({

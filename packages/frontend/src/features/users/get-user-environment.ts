@@ -27,15 +27,25 @@ type UserAgentHighEntropyData = {
 	}[];
 };
 
+type UserAgentHighEntropyDataCandidate = Record<string, unknown> & {
+	platformVersion?: unknown;
+	fullVersionList?: unknown;
+};
+
+type UserAgentBrandCandidate = Record<string, unknown> & {
+	brand?: unknown;
+	version?: unknown;
+};
+
 function isUserAgentHighEntropyData(value: unknown): value is UserAgentHighEntropyData {
 	if (typeof value !== 'object' || value === null) return false;
-	const data = value as Record<string, unknown>;
+	const data = value as UserAgentHighEntropyDataCandidate;
 	return (
 		typeof data.platformVersion === 'string' &&
 		Array.isArray(data.fullVersionList) &&
 		data.fullVersionList.every((item) => {
 			if (typeof item !== 'object' || item === null) return false;
-			const brand = item as Record<string, unknown>;
+			const brand = item as UserAgentBrandCandidate;
 			return typeof brand.brand === 'string' && typeof brand.version === 'string';
 		})
 	);

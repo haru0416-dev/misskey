@@ -206,6 +206,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return prototype === Object.prototype || prototype === null;
 }
 
+type ThemeCandidate = Record<string, unknown> & {
+	id?: unknown;
+	name?: unknown;
+	author?: unknown;
+	desc?: unknown;
+	base?: unknown;
+	props?: unknown;
+	codeHighlighter?: unknown;
+};
+
+type ThemeCodeHighlighterCandidate = Record<string, unknown> & {
+	base?: unknown;
+	overrides?: unknown;
+};
+
 function isJsonValue(value: unknown, ancestors = new Set<object>()): value is ThemeCodeHighlighterValue {
 	if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
 		return true;
@@ -220,20 +235,23 @@ function isJsonValue(value: unknown, ancestors = new Set<object>()): value is Th
 
 export function validateTheme(theme: unknown): theme is Theme {
 	if (!isRecord(theme)) return false;
-	if (typeof theme.id !== 'string') return false;
-	if (typeof theme.name !== 'string') return false;
-	if (typeof theme.author !== 'string') return false;
-	if (theme.desc !== undefined && typeof theme.desc !== 'string') return false;
-	if (theme.base !== 'light' && theme.base !== 'dark') return false;
-	if (!isRecord(theme.props) || !Object.values(theme.props).every((value) => typeof value === 'string')) return false;
-	if (theme.codeHighlighter !== undefined) {
-		if (!isRecord(theme.codeHighlighter) || typeof theme.codeHighlighter.base !== 'string') return false;
+	const candidate = theme as ThemeCandidate;
+	if (typeof candidate.id !== 'string') return false;
+	if (typeof candidate.name !== 'string') return false;
+	if (typeof candidate.author !== 'string') return false;
+	if (candidate.desc !== undefined && typeof candidate.desc !== 'string') return false;
+	if (candidate.base !== 'light' && candidate.base !== 'dark') return false;
+	if (!isRecord(candidate.props) || !Object.values(candidate.props).every((value) => typeof value === 'string')) return false;
+	if (candidate.codeHighlighter !== undefined) {
+		if (!isRecord(candidate.codeHighlighter)) return false;
+		const codeHighlighter = candidate.codeHighlighter as ThemeCodeHighlighterCandidate;
+		if (typeof codeHighlighter.base !== 'string') return false;
 		if (
-			theme.codeHighlighter.overrides !== undefined &&
-			(!isRecord(theme.codeHighlighter.overrides) || !isJsonValue(theme.codeHighlighter.overrides))
+			codeHighlighter.overrides !== undefined &&
+			(!isRecord(codeHighlighter.overrides) || !isJsonValue(codeHighlighter.overrides))
 		)
 			return false;
-		if (theme.codeHighlighter.base === '_none_' && theme.codeHighlighter.overrides === undefined) return false;
+		if (codeHighlighter.base === '_none_' && codeHighlighter.overrides === undefined) return false;
 	}
 	return true;
 }

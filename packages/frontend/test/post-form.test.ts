@@ -51,14 +51,39 @@ function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
 	return typeof value === 'object' && value !== null;
 }
 
+type ComponentCandidate = Record<PropertyKey, unknown> & {
+	props?: unknown;
+};
+
+type PropsCandidate = Record<PropertyKey, unknown> & {
+	initialLocalOnly?: unknown;
+};
+
+type BooleanPropCandidate = Record<PropertyKey, unknown> & {
+	type?: unknown;
+	default?: unknown;
+};
+
+function isComponentCandidate(value: unknown): value is ComponentCandidate {
+	return isRecord(value);
+}
+
+function isPropsCandidate(value: unknown): value is PropsCandidate {
+	return isRecord(value);
+}
+
+function isBooleanPropCandidate(value: unknown): value is BooleanPropCandidate {
+	return isRecord(value);
+}
+
 function expectUndefinedBooleanDefault(component: unknown) {
-	expect(isRecord(component)).toBe(true);
-	if (!isRecord(component)) return;
-	expect(isRecord(component.props)).toBe(true);
-	if (!isRecord(component.props)) return;
+	expect(isComponentCandidate(component)).toBe(true);
+	if (!isComponentCandidate(component)) return;
+	expect(isPropsCandidate(component.props)).toBe(true);
+	if (!isPropsCandidate(component.props)) return;
 	const option = component.props.initialLocalOnly;
-	expect(isRecord(option)).toBe(true);
-	if (!isRecord(option)) return;
+	expect(isBooleanPropCandidate(option)).toBe(true);
+	if (!isBooleanPropCandidate(option)) return;
 	expect(option.type).toBe(Boolean);
 	expect(option.default).toBeTypeOf('function');
 	if (typeof option.default !== 'function') return;

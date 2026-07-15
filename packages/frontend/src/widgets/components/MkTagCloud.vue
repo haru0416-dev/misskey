@@ -62,7 +62,7 @@ function startTagCanvas(tagCanvas: TagCanvasApi): void {
 	try {
 		tagCanvas.Start(idForCanvas, idForTags, {
 			textColour: '#ffffff',
-			outlineColour: tinycolor(themeManager.currentCompiledTheme!.accent).toHexString(),
+			outlineColour: tinycolor(themeManager.currentCompiledTheme!['accent']).toHexString(),
 			outlineRadius: 10,
 			initial: [-0.030, -0.010],
 			frontSelect: true,

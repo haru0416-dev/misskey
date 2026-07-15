@@ -85,6 +85,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+type PersistedStateChannelMessageCandidate = Record<string, unknown> & {
+	version?: unknown;
+	sourceId?: unknown;
+	where?: unknown;
+	key?: unknown;
+	stamp?: unknown;
+};
+
+type PersistedStampCandidate = Record<string, unknown> & {
+	time?: unknown;
+	sourceId?: unknown;
+};
+
 function toRecord(value: unknown): Record<string, unknown> {
 	return isRecord(value) ? value : {};
 }
@@ -107,12 +120,14 @@ function compareStamp(a: PersistedStamp, b: PersistedStamp): number {
 
 function isChannelMessage(value: unknown): value is PersistedStateChannelMessage {
 	if (!isRecord(value)) return false;
-	if (value.version !== 1) return false;
-	if (typeof value.sourceId !== 'string') return false;
-	if (value.where !== 'device' && value.where !== 'deviceAccount') return false;
-	if (typeof value.key !== 'string') return false;
-	if (!isRecord(value.stamp)) return false;
-	return typeof value.stamp.time === 'number' && typeof value.stamp.sourceId === 'string';
+	const message = value as PersistedStateChannelMessageCandidate;
+	if (message.version !== 1) return false;
+	if (typeof message.sourceId !== 'string') return false;
+	if (message.where !== 'device' && message.where !== 'deviceAccount') return false;
+	if (typeof message.key !== 'string') return false;
+	if (!isRecord(message.stamp)) return false;
+	const stamp = message.stamp as PersistedStampCandidate;
+	return typeof stamp.time === 'number' && typeof stamp.sourceId === 'string';
 }
 
 class PersistedStateController {

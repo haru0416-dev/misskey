@@ -19,7 +19,7 @@ export function applyTheme(theme: Theme) {
 
 	const colorScheme = theme.base === 'dark' ? 'dark' : 'light';
 
-	window.document.documentElement.dataset.colorScheme = colorScheme;
+	window.document.documentElement.dataset['colorScheme'] = colorScheme;
 
 	const props = compile(theme);
 
