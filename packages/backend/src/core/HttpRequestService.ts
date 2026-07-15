@@ -143,7 +143,7 @@ class HttpRequestServiceAgent extends http.Agent {
 		}
 
 		socket.on('connect', () => {
-			if (socket instanceof net.Socket && process.env.NODE_ENV === 'production') {
+			if (socket instanceof net.Socket && process.env['NODE_ENV'] === 'production') {
 				const address = socket.remoteAddress;
 				if (address && ipaddr.isValid(address)) {
 					if (isPrivateIp(address, this.config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
@@ -174,7 +174,7 @@ class HttpsRequestServiceAgent extends https.Agent {
 		}
 
 		socket.on('connect', () => {
-			if (socket instanceof net.Socket && process.env.NODE_ENV === 'production') {
+			if (socket instanceof net.Socket && process.env['NODE_ENV'] === 'production') {
 				const address = socket.remoteAddress;
 				if (address && ipaddr.isValid(address)) {
 					if (isPrivateIp(address, this.config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
@@ -284,7 +284,7 @@ export function createHttpRequestService(config: Config) {
 	 */
 	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<void> {
 		if (isLocalAddressAllowed) return;
-		if (process.env.NODE_ENV !== 'production') return;
+		if (process.env['NODE_ENV'] !== 'production') return;
 
 		const host = url.hostname.replace(/^\[/, '').replace(/\]$/, '');
 

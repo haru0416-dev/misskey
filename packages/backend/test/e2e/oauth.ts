@@ -8,7 +8,7 @@
  * and not regressed by version updates or potential migration to another library.
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { createServer, type Server, type ServerResponse } from 'node:http';
@@ -141,9 +141,9 @@ const clientConfig: ModuleOptions<'client_id'> = {
 function getMeta(html: string): { transactionId: string | undefined, clientName: string | undefined, clientLogo: string | undefined } {
 	const doc = htmlParser.parse(`<div>${html}</div>`);
 	return {
-		transactionId: doc.querySelector('meta[name="misskey:oauth:transaction-id"]')?.attributes.content,
-		clientName: doc.querySelector('meta[name="misskey:oauth:client-name"]')?.attributes.content,
-		clientLogo: doc.querySelector('meta[name="misskey:oauth:client-logo"]')?.attributes.content,
+		transactionId: doc.querySelector('meta[name="misskey:oauth:transaction-id"]')?.attributes['content'],
+		clientName: doc.querySelector('meta[name="misskey:oauth:client-name"]')?.attributes['content'],
+		clientLogo: doc.querySelector('meta[name="misskey:oauth:client-logo"]')?.attributes['content'],
 	};
 }
 
@@ -297,12 +297,12 @@ describe('OAuth', () => {
 			redirect_uri,
 			code_verifier,
 		} as AuthorizationTokenConfigExtended);
-		assert.strictEqual(typeof token.token.access_token, 'string');
-		assert.strictEqual(token.token.token_type, 'Bearer');
-		assert.strictEqual(token.token.scope, 'write:notes');
+		assert.strictEqual(typeof token.token['access_token'], 'string');
+		assert.strictEqual(token.token['token_type'], 'Bearer');
+		assert.strictEqual(token.token['scope'], 'write:notes');
 
 		const createResult = await api('notes/create', { text: 'test' }, {
-			token: token.token.access_token as string,
+			token: token.token['access_token'] as string,
 			bearer: true,
 		});
 		assert.strictEqual(createResult.status, 200);
@@ -367,13 +367,13 @@ describe('OAuth', () => {
 		} as AuthorizationTokenConfigExtended);
 
 		const createResultAlice = await api('notes/create', { text: 'test' }, {
-			token: tokenAlice.token.access_token as string,
+			token: tokenAlice.token['access_token'] as string,
 			bearer: true,
 		});
 		assert.strictEqual(createResultAlice.status, 200);
 
 		const createResultBob = await api('notes/create', { text: 'test' }, {
-			token: tokenBob.token.access_token as string,
+			token: tokenBob.token['access_token'] as string,
 			bearer: true,
 		});
 		assert.strictEqual(createResultAlice.status, 200);
@@ -514,7 +514,7 @@ describe('OAuth', () => {
 			} as AuthorizationTokenConfigExtended);
 
 			const createResult = await api('notes/create', { text: 'test' }, {
-				token: token.token.access_token as string,
+				token: token.token['access_token'] as string,
 				bearer: true,
 			});
 			assert.strictEqual(createResult.status, 200);
@@ -529,7 +529,7 @@ describe('OAuth', () => {
 			});
 
 			const createResult2 = await api('notes/create', { text: 'test' }, {
-				token: token.token.access_token as string,
+				token: token.token['access_token'] as string,
 				bearer: true,
 			});
 			assert.strictEqual(createResult2.status, 401);
@@ -554,7 +554,7 @@ describe('OAuth', () => {
 			for (const result of results) {
 				if (result.status !== 'fulfilled') continue;
 				const createResult = await api('notes/create', { text: 'test' }, {
-					token: result.value.token.access_token as string,
+					token: result.value.token['access_token'] as string,
 					bearer: true,
 				});
 				assert.strictEqual(createResult.status, 401);
@@ -651,7 +651,7 @@ describe('OAuth', () => {
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
 
-			assert.strictEqual(token.token.scope, 'write:notes');
+			assert.strictEqual(token.token['scope'], 'write:notes');
 		});
 
 		test('Known scopes', async () => {
@@ -682,7 +682,7 @@ describe('OAuth', () => {
 				redirect_uri,
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
-			assert.strictEqual(token.token.scope, 'write:notes read:account');
+			assert.strictEqual(token.token['scope'], 'write:notes read:account');
 		});
 
 		test('Scope check by API', async () => {
@@ -695,10 +695,10 @@ describe('OAuth', () => {
 				redirect_uri,
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
-			assert.strictEqual(typeof token.token.access_token, 'string');
+			assert.strictEqual(typeof token.token['access_token'], 'string');
 
 			const createResult = await api('notes/create', { text: 'test' }, {
-				token: token.token.access_token as string,
+				token: token.token['access_token'] as string,
 				bearer: true,
 			});
 			assert.strictEqual(createResult.status, 403);

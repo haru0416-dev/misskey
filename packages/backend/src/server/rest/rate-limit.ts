@@ -62,7 +62,7 @@ export async function isHonoApiRateLimited(
 	actor: string,
 	factor = 1,
 ): Promise<boolean> {
-	if (!deps.config.server.http.ipRateLimit || process.env.NODE_ENV !== 'production') {
+	if (!deps.config.server.http.ipRateLimit || process.env['NODE_ENV'] !== 'production') {
 		return false;
 	}
 

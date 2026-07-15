@@ -86,9 +86,9 @@ export const api = async <E extends keyof misskey.Endpoints, P extends misskey.E
 	};
 
 	if (me?.bearer) {
-		headers.Authorization = `Bearer ${me.token}`;
+		headers['Authorization'] = `Bearer ${me.token}`;
 	} else if (me) {
-		bodyAuth.i = me.token;
+		bodyAuth['i'] = me.token;
 	}
 
 	const res = await relativeFetch(`api/${path}`, {
@@ -328,7 +328,7 @@ export const uploadFile = async (user?: UserToken, { path, name, blob }: UploadO
 
 	const headers: Record<string, string> = {};
 	if (user?.bearer) {
-		headers.Authorization = `Bearer ${user.token}`;
+		headers['Authorization'] = `Bearer ${user.token}`;
 	} else if (user) {
 		formData.append('i', user.token);
 	}
@@ -347,14 +347,37 @@ export const uploadFile = async (user?: UserToken, { path, name, blob }: UploadO
 	};
 };
 
-export const uploadUrl = async (user: UserToken, url: string): Promise<misskey.entities.DriveFile> => {
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export type UploadedDriveFile = Pick<misskey.entities.DriveFile, 'id' | 'name' | 'type'>;
+
+export function parseUploadedDriveFile(value: unknown): UploadedDriveFile {
+	if (
+		!isRecord(value) ||
+		typeof value['id'] !== 'string' ||
+		typeof value['name'] !== 'string' ||
+		typeof value['type'] !== 'string'
+	) {
+		throw new Error('urlUploadFinished did not include a valid file');
+	}
+
+	return {
+		id: value['id'],
+		name: value['name'],
+		type: value['type'],
+	};
+}
+
+export const uploadUrl = async (user: UserToken, url: string): Promise<UploadedDriveFile> => {
 	const marker = Math.random().toString();
 
 	const catcher = makeStreamCatcher(
 		user,
 		'main',
-		(msg) => msg.type === 'urlUploadFinished' && msg.body.marker === marker,
-		(msg) => msg.body.file,
+		(msg) => msg.type === 'urlUploadFinished' && msg.body['marker'] === marker,
+		(msg) => parseUploadedDriveFile(msg.body['file']),
 		60 * 1000,
 	);
 
@@ -367,7 +390,18 @@ export const uploadUrl = async (user: UserToken, url: string): Promise<misskey.e
 	return catcher;
 };
 
-export function connectStream<C extends keyof misskey.Channels>(user: UserToken, channel: C, listener: (message: Record<string, any>) => any, params?: misskey.Channels[C]['params']): Promise<WebSocket> {
+export type StreamMessageBody = Record<string, unknown>;
+
+export type StreamMessage = Record<string, any> & {
+	type: string;
+	body: StreamMessageBody;
+};
+
+function isStreamMessage(value: unknown): value is StreamMessage {
+	return isRecord(value) && typeof value['type'] === 'string' && isRecord(value['body']);
+}
+
+export function connectStream<C extends keyof misskey.Channels>(user: UserToken, channel: C, listener: (message: StreamMessage) => any, params?: misskey.Channels[C]['params']): Promise<WebSocket> {
 	return new Promise((res, rej) => {
 		const url = new URL(`ws://127.0.0.1:${port}/streaming`);
 		const options: ClientOptions = {};
@@ -384,10 +418,17 @@ export function connectStream<C extends keyof misskey.Channels>(user: UserToken,
 		ws.on('error', err => rej(err));
 		ws.on('open', () => {
 			ws.on('message', data => {
-				const msg = JSON.parse(data.toString());
-				if (msg.type === 'channel' && msg.body.id === 'a') {
-					listener(msg.body);
-				} else if (msg.type === 'connected' && msg.body.id === 'a') {
+				let msg: unknown;
+				try {
+					msg = JSON.parse(data.toString());
+				} catch {
+					return;
+				}
+				if (!isRecord(msg) || typeof msg['type'] !== 'string' || !isRecord(msg['body'])) return;
+
+				if (msg['type'] === 'channel' && msg['body']['id'] === 'a' && isStreamMessage(msg['body'])) {
+					listener(msg['body']);
+				} else if (msg['type'] === 'connected' && msg['body']['id'] === 'a') {
 					res(ws);
 				}
 			});
@@ -405,14 +446,14 @@ export function connectStream<C extends keyof misskey.Channels>(user: UserToken,
 	});
 }
 
-export const waitFire = async <C extends keyof misskey.Channels>(user: UserToken, channel: C, trgr: () => any, cond: (msg: Record<string, any>) => boolean, params?: misskey.Channels[C]['params'], timeout = 3000) => {
+export const waitFire = async <C extends keyof misskey.Channels>(user: UserToken, channel: C, trgr: () => any, cond: (msg: StreamMessage) => boolean, params?: misskey.Channels[C]['params'], timeout = 3000) => {
 	let ws: WebSocket | undefined;
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	try {
-		let callback: (msg: Record<string, unknown>) => void;
+		let callback: (msg: StreamMessage) => void;
 		const receivedPromise = new Promise<boolean>((resolve) => {
-			callback = (msg: Record<string, unknown>) => {
+			callback = (msg: StreamMessage) => {
 				if (cond(msg)) {
 					resolve(true);
 				}
@@ -446,18 +487,22 @@ export const waitFire = async <C extends keyof misskey.Channels>(user: UserToken
 export function makeStreamCatcher<T>(
 	user: UserToken,
 	channel: keyof misskey.Channels,
-	cond: (message: Record<string, any>) => boolean,
-	extractor: (message: Record<string, any>) => T,
+	cond: (message: StreamMessage) => boolean,
+	extractor: (message: StreamMessage) => T,
 	timeout = 60 * 1000): Promise<T> {
-	let ws: WebSocket;
-	const p = new Promise<T>(async (resolve) => {
-		ws = await connectStream(user, channel, (msg) => {
-			if (cond(msg)) {
-				resolve(extractor(msg));
+	let ws: WebSocket | undefined;
+	const p = new Promise<T>((resolve, reject) => {
+		void connectStream(user, channel, (msg) => {
+			try {
+				if (cond(msg)) resolve(extractor(msg));
+			} catch (error) {
+				reject(error);
 			}
-		});
+		}).then((socket) => {
+			ws = socket;
+		}, reject);
 	}).finally(() => {
-		ws.close();
+		ws?.close();
 	});
 
 	return timeoutPromise(p, timeout);
@@ -600,7 +645,7 @@ export async function testPaginationConsistency<Entity extends { id: string, cre
 }
 
 export async function initTestDb(justBorrow = false, _initEntities?: unknown[]) {
-	if (process.env.NODE_ENV !== 'test') throw new Error('NODE_ENV is not a test');
+	if (process.env['NODE_ENV'] !== 'test') throw new Error('NODE_ENV is not a test');
 
 	if (!justBorrow) {
 		const pool = createDrizzlePool(config);

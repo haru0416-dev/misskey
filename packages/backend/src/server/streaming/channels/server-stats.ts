@@ -28,10 +28,10 @@ export const honoStreamChannelServerStats: HonoStreamChannelDefinition<unknown> 
 			onMessage: (type: string, body: JsonValue) => {
 				if (type === 'requestLog') {
 					if (!isJsonObject(body)) return;
-					ev.once(`serverStatsLog:${body.id}`, statsLog => {
+					ev.once(`serverStatsLog:${body['id']}`, statsLog => {
 						ctx.send('statsLog', statsLog as JsonValue);
 					});
-					ev.emit('requestServerStatsLog', { id: body.id, length: body.length });
+					ev.emit('requestServerStatsLog', { id: body['id'], length: body['length'] });
 				}
 			},
 		};

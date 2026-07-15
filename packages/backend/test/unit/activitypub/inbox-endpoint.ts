@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -124,8 +124,8 @@ describe('hono-inbox-endpoint', () => {
 		expect(response.status).toBe(202);
 
 		const after = await runtime.inboxQueue.getJobCounts();
-		expect((after.waiting ?? 0) + (after.active ?? 0) + (after.delayed ?? 0))
-			.toBeGreaterThan((before.waiting ?? 0) + (before.active ?? 0) + (before.delayed ?? 0) - 1);
+		expect((after['waiting'] ?? 0) + (after['active'] ?? 0) + (after['delayed'] ?? 0))
+			.toBeGreaterThan((before['waiting'] ?? 0) + (before['active'] ?? 0) + (before['delayed'] ?? 0) - 1);
 		const queued = (await runtime.inboxQueue.getJobs(['waiting', 'active', 'delayed', 'completed', 'failed']))
 			.find(job => job.data.activity.id === activityId);
 		expect(queued?.opts.attempts).toBe(runtime.config.queues.inbox.maximumAttempts ?? 8);

@@ -275,8 +275,8 @@ describe('createFileServerApp', () => {
 
 	describe('GET /files/app-default.jpg', () => {
 		test('GET /files/app-default.jpg ヘッダを検証する', async () => {
-			const prevNodeEnv = process.env.NODE_ENV;
-			process.env.NODE_ENV = 'test';
+			const prevNodeEnv = process.env['NODE_ENV'];
+			process.env['NODE_ENV'] = 'test';
 
 			try {
 				const res = await inject(app, {
@@ -290,13 +290,13 @@ describe('createFileServerApp', () => {
 				expect(res.headers['content-type']).toBe('image/jpeg');
 				expect(res.headers['access-control-allow-origin']).toBeUndefined();
 			} finally {
-				process.env.NODE_ENV = prevNodeEnv;
+				process.env['NODE_ENV'] = prevNodeEnv;
 			}
 		});
 
 		test('GET /files/app-default.jpg development で CORS を許可する', async () => {
-			const prevNodeEnv = process.env.NODE_ENV;
-			process.env.NODE_ENV = 'development';
+			const prevNodeEnv = process.env['NODE_ENV'];
+			process.env['NODE_ENV'] = 'development';
 
 			try {
 				const res = await inject(app, {
@@ -307,7 +307,7 @@ describe('createFileServerApp', () => {
 				expect(res.statusCode).toBe(200);
 				expect(res.headers['access-control-allow-origin']).toBe('*');
 			} finally {
-				process.env.NODE_ENV = prevNodeEnv;
+				process.env['NODE_ENV'] = prevNodeEnv;
 			}
 		});
 
@@ -318,7 +318,7 @@ describe('createFileServerApp', () => {
 			});
 
 			expect(res.statusCode).toBe(301);
-			expect(res.headers.location).toBe('/files/app-default.jpg');
+			expect(res.headers['location']).toBe('/files/app-default.jpg');
 			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
 		});
 	});
@@ -583,8 +583,8 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(301);
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
-			expect(res.headers.location).toContain(`${config.media.proxyUrl}/static.webp`);
-			expect(res.headers.location).toContain('static=1');
+			expect(res.headers['location']).toContain(`${config.media.proxyUrl}/static.webp`);
+			expect(res.headers['location']).toContain('static=1');
 		});
 
 		test('GET /files/:key webpublic svg は mediaProxy/svg.webp にリダイレクトする', async () => {
@@ -607,7 +607,7 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(301);
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
-			expect(res.headers.location).toContain(`${config.media.proxyUrl}/svg.webp`);
+			expect(res.headers['location']).toContain(`${config.media.proxyUrl}/svg.webp`);
 		});
 	});
 
@@ -619,7 +619,7 @@ describe('createFileServerApp', () => {
 			});
 
 			expect(res.statusCode).toBe(301);
-			expect(res.headers.location).toBe(`${config.instance.url}/files/testkey`);
+			expect(res.headers['location']).toBe(`${config.instance.url}/files/testkey`);
 			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
 		});
 	});
@@ -633,9 +633,9 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(301);
 			expect(res.headers['cache-control']).toBe('public, max-age=259200');
-			expect(res.headers.location).toContain('https://media-proxy.test/');
-			expect(res.headers.location).toContain('url=https%3A%2F%2Fexample.com%2Fimg.png');
-			expect(res.headers.location).toContain('static=1');
+			expect(res.headers['location']).toContain('https://media-proxy.test/');
+			expect(res.headers['location']).toContain('url=https%3A%2F%2Fexample.com%2Fimg.png');
+			expect(res.headers['location']).toContain('static=1');
 			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
 		});
 
@@ -663,7 +663,7 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(400);
 			expect(res.headers['cache-control']).toBe('max-age=300');
-			expect(res.headers.location).toBeUndefined();
+			expect(res.headers['location']).toBeUndefined();
 			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
 		});
 

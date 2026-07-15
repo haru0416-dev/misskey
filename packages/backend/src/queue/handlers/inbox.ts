@@ -56,7 +56,7 @@ let updateInstanceQueue: CollapsedQueue<string, UpdateInstanceJob> | undefined;
 
 function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
 	if (!updateInstanceQueue) {
-		const timeout = process.env.NODE_ENV !== 'test' ? 60 * 1000 * 5 : 0;
+		const timeout = process.env['NODE_ENV'] !== 'test' ? 60 * 1000 * 5 : 0;
 		updateInstanceQueue = new CollapsedQueue<string, UpdateInstanceJob>(
 			timeout,
 			collapseUpdateInstanceJobs,

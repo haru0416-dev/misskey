@@ -56,7 +56,7 @@ import { computeHonoApiUserRoles, getHonoApiRolePolicies, getHonoApiUserRoles, i
 import { parseHonoApiParams } from './validation.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
-export type UserDetailedNotMeHonoApiResponse = Record<string, unknown>;
+export type UserDetailedNotMeHonoApiResponse = Record<string, unknown> & { id: MiUser['id'] };
 
 export type UserPackingDependencies = {
 	config: Config;

@@ -7,8 +7,8 @@ import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 
 // fluent-ffmpeg と同じ環境変数でバイナリの場所を上書きできるようにする
-const FFMPEG_BIN = process.env.FFMPEG_PATH ?? 'ffmpeg';
-const FFPROBE_BIN = process.env.FFPROBE_PATH ?? 'ffprobe';
+const FFMPEG_BIN = process.env['FFMPEG_PATH'] ?? 'ffmpeg';
+const FFPROBE_BIN = process.env['FFPROBE_PATH'] ?? 'ffprobe';
 
 export type FfprobeResult = {
 	streams: {

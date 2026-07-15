@@ -48,15 +48,15 @@ export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies
 		const stats = {
 			deliver: {
 				activeSincePrevTick: activeDeliverJobs,
-				active: deliverJobCounts.active,
-				waiting: deliverJobCounts.waiting,
-				delayed: deliverJobCounts.delayed,
+				active: deliverJobCounts['active'],
+				waiting: deliverJobCounts['waiting'],
+				delayed: deliverJobCounts['delayed'],
 			},
 			inbox: {
 				activeSincePrevTick: activeInboxJobs,
-				active: inboxJobCounts.active,
-				waiting: inboxJobCounts.waiting,
-				delayed: inboxJobCounts.delayed,
+				active: inboxJobCounts['active'],
+				waiting: inboxJobCounts['waiting'],
+				delayed: inboxJobCounts['delayed'],
 			},
 		};
 

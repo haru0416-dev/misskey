@@ -40,8 +40,17 @@ export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
+export type HonoApiSigninBody = Record<string, unknown> & {
+	username?: unknown;
+	password?: unknown;
+	token?: unknown;
+	credential?: unknown;
+	context?: unknown;
+	code?: unknown;
+};
+
 export type HonoApiSigninRequest = {
-	body: Record<string, unknown>;
+	body: HonoApiSigninBody;
 	headers: Headers;
 	ip: string;
 };
@@ -200,7 +209,7 @@ function verifyTestcaptcha(response: string | null | undefined): void {
 }
 
 async function verifyEnabledCaptchas(deps: HonoApiSigninDependencies, body: Record<string, unknown>): Promise<void> {
-	if (process.env.NODE_ENV === 'test') return;
+	if (process.env['NODE_ENV'] === 'test') return;
 
 	if (deps.meta.enableHcaptcha && deps.meta.hcaptchaSecretKey) {
 		await verifyHcaptcha(deps, deps.meta.hcaptchaSecretKey, body['hcaptcha-response'] as string | null | undefined);

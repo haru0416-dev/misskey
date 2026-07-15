@@ -20,8 +20,8 @@ export const honoStreamChannelRoleTimeline: HonoStreamChannelDefinition<HonoApiN
 	requireCredential: false,
 	kind: null,
 	init: async (deps, ctx, params) => {
-		if (typeof params.roleId !== 'string') return;
-		const roleId = params.roleId;
+		if (typeof params['roleId'] !== 'string') return;
+		const roleId = params['roleId'];
 
 		const handler = async (data: { type: string; body: JsonValue }) => {
 			if (data.type === 'note') {

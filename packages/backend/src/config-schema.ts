@@ -146,7 +146,7 @@ export const sourceConfigV2Schema = z.strictObject({
 		path: ['pool', 'minimumConnections'],
 	}),
 	valkey: z.strictObject({
-		connections: z.record(z.string().min(1), valkeyConnectionSchema).refine(value => value.primary != null, {
+		connections: z.record(z.string().min(1), valkeyConnectionSchema).refine((value): value is typeof value & { primary: z.output<typeof valkeyConnectionSchema> } => value['primary'] != null, {
 			message: 'A primary connection is required',
 		}),
 		assignments: z.strictObject({

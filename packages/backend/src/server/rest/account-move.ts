@@ -283,7 +283,7 @@ async function moveFromLocalForHonoApi(deps: HonoApiAccountMoveDependencies, src
 	void enqueueRelationshipJobForHonoApi(deps, 'unfollow', followings.map(f => ({
 		from: { id: updatedSrc.id },
 		to: { id: f.followeeId },
-	})), { delay: process.env.NODE_ENV === 'test' ? 10000 : 1000 * 60 * 60 * 24 }).catch(() => {});
+	})), { delay: process.env['NODE_ENV'] === 'test' ? 10000 : 1000 * 60 * 60 * 24 }).catch(() => {});
 
 	await postMoveProcessForHonoApi(deps, updatedSrc, dst);
 

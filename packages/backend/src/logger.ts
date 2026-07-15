@@ -41,7 +41,7 @@ function shouldLog(level: Level): boolean {
  * 呼び出し側でメッセージ文字列の構築自体を省略したい場合 (高頻度呼び出し箇所) にこれで事前判定できる。
  */
 export function isDebugLoggingEnabled(): boolean {
-	return (process.env.NODE_ENV !== 'production' || loggingConfig.level === 'debug' || envOption.verbose) && !envOption.quiet;
+	return (process.env['NODE_ENV'] !== 'production' || loggingConfig.level === 'debug' || envOption.verbose) && !envOption.quiet;
 }
 
 // eslint-disable-next-line import/no-default-export
@@ -115,7 +115,7 @@ export default class Logger {
 	@bindThis
 	public error(x: string | Error, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // 実行を継続できない状況で使う
 		if (x instanceof Error) {
-			const record: Record<string, unknown> = (data instanceof Error || Array.isArray(data)) ? { data } : data ?? {};
+			const record: Record<string, unknown> & { e?: Error } = (data instanceof Error || Array.isArray(data)) ? { data } : data ?? {};
 			record.e = x;
 			this.log('error', x.toString(), record, important);
 		} else {

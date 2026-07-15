@@ -328,7 +328,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 
 		job.log(`Deleted ${noteIds.length} notes; ${Date.now() - batchBeginAt}ms`);
 
-		if (process.env.NODE_ENV !== 'test') {
+		if (process.env['NODE_ENV'] !== 'test') {
 			await setTimeout(Math.min(1000 * 5, queryDuration));
 		}
 	}

@@ -28,7 +28,7 @@ function createSourceConfig() {
 }
 
 afterEach(() => {
-	delete process.env.TEST_CONFIG_SECRET;
+	delete process.env['TEST_CONFIG_SECRET'];
 });
 
 describe('configVersion 2 schema', () => {
@@ -85,7 +85,7 @@ describe('configVersion 2 schema', () => {
 			},
 		});
 		expect(() => materializeConfig(source, { version: 'test' })).toThrow(/TEST_CONFIG_SECRET/);
-		process.env.TEST_CONFIG_SECRET = 'resolved-secret';
+		process.env['TEST_CONFIG_SECRET'] = 'resolved-secret';
 		expect(materializeConfig(source, { version: 'test' }).database.primary.password).toBe('resolved-secret');
 	});
 

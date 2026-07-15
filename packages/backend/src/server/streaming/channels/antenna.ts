@@ -14,10 +14,10 @@ export const honoStreamChannelAntenna: HonoStreamChannelDefinition<HonoApiNoteDe
 	requireCredential: true,
 	kind: 'read:account',
 	init: async (deps, ctx, params) => {
-		if (typeof params.antennaId !== 'string') return false;
+		if (typeof params['antennaId'] !== 'string') return false;
 		if (!ctx.user) return false;
 		const user = ctx.user;
-		const antennaId = params.antennaId;
+		const antennaId = params['antennaId'];
 
 		const antennaExists = await antennaExistsForUserFromDatabase(deps.db, antennaId, user.id);
 		if (!antennaExists) return false;

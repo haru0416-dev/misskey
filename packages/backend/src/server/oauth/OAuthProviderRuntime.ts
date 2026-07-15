@@ -48,7 +48,7 @@ function validateClientId(raw: string): URL {
 		}
 	})();
 
-	const allowedProtocols = process.env.NODE_ENV === 'test' ? ['http:', 'https:'] : ['https:'];
+	const allowedProtocols = process.env['NODE_ENV'] === 'test' ? ['http:', 'https:'] : ['https:'];
 	if (!allowedProtocols.includes(url.protocol)) {
 		throw new InvalidRequestError('client_id must be a valid HTTPS URL');
 	}
@@ -80,8 +80,23 @@ interface ClientInformation {
 	logo: string | null;
 }
 
+type OAuthRequestParameterValue = string | string[] | undefined;
+
 export interface OAuthRequestParameters {
-	[key: string]: string | string[] | undefined;
+	[key: string]: OAuthRequestParameterValue;
+	client_id?: OAuthRequestParameterValue;
+	redirect_uri?: OAuthRequestParameterValue;
+	response_type?: OAuthRequestParameterValue;
+	state?: OAuthRequestParameterValue;
+	code_challenge?: OAuthRequestParameterValue;
+	code_challenge_method?: OAuthRequestParameterValue;
+	scope?: OAuthRequestParameterValue;
+	transaction_id?: OAuthRequestParameterValue;
+	cancel?: OAuthRequestParameterValue;
+	login_token?: OAuthRequestParameterValue;
+	grant_type?: OAuthRequestParameterValue;
+	code?: OAuthRequestParameterValue;
+	code_verifier?: OAuthRequestParameterValue;
 }
 
 interface AuthorizationRequest {
@@ -179,7 +194,7 @@ function parseMicroformats(doc: htmlParser.HTMLElement, baseUrl: string, id: str
 
 	const nameEl = hApp.querySelector('.p-name');
 	if (nameEl != null) {
-		const href = nameEl.attributes.href || nameEl.attributes.src;
+		const href = nameEl.attributes['href'] || nameEl.attributes['src'];
 		if (href != null && new URL(href, baseUrl).toString() === new URL(id).toString()) {
 			name = nameEl.textContent.trim();
 		}
@@ -187,7 +202,7 @@ function parseMicroformats(doc: htmlParser.HTMLElement, baseUrl: string, id: str
 
 	const logoEl = hApp.querySelector('.u-logo');
 	if (logoEl != null) {
-		const href = logoEl.attributes.href || logoEl.attributes.src;
+		const href = logoEl.attributes['href'] || logoEl.attributes['src'];
 		if (href != null) {
 			logo = new URL(href, baseUrl).toString();
 		}
@@ -244,7 +259,7 @@ async function discoverClientInformation(logger: Logger, httpRequestService: OAu
 			const doc = htmlParser.parse(`<div>${text}</div>`);
 
 			redirectUris.push(...[...doc.querySelectorAll('link[rel=redirect_uri][href]')]
-				.map(el => el.attributes.href)
+				.map(el => el.attributes['href'])
 				.filter((href): href is string => href != null));
 
 			if (text) {
@@ -592,7 +607,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 
 		const clientUrl = validateClientId(clientId);
 
-		if (process.env.NODE_ENV !== 'test' || process.env.MISSKEY_TEST_CHECK_IP_RANGE === '1') {
+		if (process.env['NODE_ENV'] !== 'test' || process.env['MISSKEY_TEST_CHECK_IP_RANGE'] === '1') {
 			const lookup = await dns.lookup(clientUrl.hostname);
 			if (ipaddr.parse(lookup.address).range() !== 'unicast') {
 				throw new InvalidRequestError('client_id resolves to disallowed IP range.');
