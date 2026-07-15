@@ -52,16 +52,66 @@ export type AdminQueueDependencies = {
 };
 
 function parseRedisInfo(infoText: string): Record<string, string> {
-	const fields = infoText
+	const lines = infoText
 		.split('\n')
 		.filter(line => line.length > 0 && !line.startsWith('#'))
-		.map(line => line.trim().split(':'));
+		.map(line => line.trim());
 
 	const result: Record<string, string> = {};
-	for (const [key, value] of fields) {
-		result[key] = value;
+	for (const line of lines) {
+		const separator = line.indexOf(':');
+		if (separator === -1) continue;
+		result[line.slice(0, separator)] = line.slice(separator + 1);
 	}
 	return result;
+}
+
+function parseRedisInfoInteger(value: string | undefined, field: string): number {
+	if (value == null) throw new Error(`Redis INFO response is missing ${field}`);
+	const parsed = parseInt(value, 10);
+	if (!Number.isFinite(parsed)) throw new Error(`Redis INFO response has invalid ${field}`);
+	return parsed;
+}
+
+function parseOptionalRedisInfoNumber(value: string | undefined, fallback: number): number {
+	if (value == null) return fallback;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function requireRedisInfoString(value: string | undefined, field: string): string {
+	if (value == null || value === '') throw new Error(`Redis INFO response is missing ${field}`);
+	return value;
+}
+
+function parseRedisMode(value: string | undefined): 'cluster' | 'standalone' | 'sentinel' {
+	if (value === 'cluster' || value === 'standalone' || value === 'sentinel') return value;
+	throw new Error('Redis INFO response has invalid server mode');
+}
+
+export function parseQueueDatabaseInfo(infoText: string) {
+	const db = parseRedisInfo(infoText);
+	const usedMemory = parseRedisInfoInteger(db.used_memory, 'used_memory');
+
+	return {
+		version: requireRedisInfoString(db.valkey_version ?? db.redis_version, 'valkey_version or redis_version'),
+		mode: parseRedisMode(db.server_mode ?? db.redis_mode),
+		runId: requireRedisInfoString(db.run_id, 'run_id'),
+		processId: requireRedisInfoString(db.process_id, 'process_id'),
+		port: parseRedisInfoInteger(db.tcp_port, 'tcp_port'),
+		os: requireRedisInfoString(db.os, 'os'),
+		uptime: parseRedisInfoInteger(db.uptime_in_seconds, 'uptime_in_seconds'),
+		memory: {
+			total: parseOptionalRedisInfoNumber(db.total_system_memory, 0) || parseOptionalRedisInfoNumber(db.maxmemory, 0),
+			used: usedMemory,
+			fragmentationRatio: parseOptionalRedisInfoNumber(db.mem_fragmentation_ratio, 0),
+			peak: parseOptionalRedisInfoNumber(db.used_memory_peak, usedMemory),
+		},
+		clients: {
+			connected: parseRedisInfoInteger(db.connected_clients, 'connected_clients'),
+			blocked: parseOptionalRedisInfoNumber(db.blocked_clients, 0),
+		},
+	};
 }
 
 export function getQueue(deps: AdminQueueDependencies, type: QueueType): Bull.Queue | DbQueue {
@@ -226,7 +276,7 @@ export async function getQueueStats(deps: AdminQueueDependencies, queueType: Que
 	const isPaused = await queue.isPaused();
 	const metricsCompleted = await queue.getMetrics('completed', 0, MetricsTime.ONE_WEEK);
 	const metricsFailed = await queue.getMetrics('failed', 0, MetricsTime.ONE_WEEK);
-	const db = parseRedisInfo(await (await queue.client).info());
+	const db = parseQueueDatabaseInfo(await (await queue.client).info());
 
 	return {
 		name: queueType,
@@ -238,25 +288,7 @@ export async function getQueueStats(deps: AdminQueueDependencies, queueType: Que
 			completed: metricsCompleted,
 			failed: metricsFailed,
 		},
-		db: {
-			version: db.valkey_version ?? db.redis_version,
-			mode: (db.server_mode ?? db.redis_mode) as 'cluster' | 'standalone' | 'sentinel',
-			runId: db.run_id,
-			processId: db.process_id,
-			port: parseInt(db.tcp_port, 10),
-			os: db.os,
-			uptime: parseInt(db.uptime_in_seconds, 10),
-			memory: {
-				total: parseInt(db.total_system_memory, 10) || parseInt(db.maxmemory, 10),
-				used: parseInt(db.used_memory, 10),
-				fragmentationRatio: parseInt(db.mem_fragmentation_ratio, 10),
-				peak: parseInt(db.used_memory_peak, 10),
-			},
-			clients: {
-				connected: parseInt(db.connected_clients, 10),
-				blocked: parseInt(db.blocked_clients, 10),
-			},
-		},
+		db,
 	};
 }
 

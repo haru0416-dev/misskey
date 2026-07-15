@@ -58,7 +58,9 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 	// params が Zod スキーマのエンドポイントだけは元の (非コピー) 配列から都度参照する。
 	const copiedEndpoints = JSON.parse(JSON.stringify(endpoints)) as IEndpoint[];
 	for (const [i, endpoint] of copiedEndpoints.entries()) {
-		const originalParams = endpoints[i].params;
+		const originalEndpoint = endpoints[i];
+		if (originalEndpoint == null) throw new Error(`OpenAPI endpoint copy is missing index ${i}`);
+		const originalParams = originalEndpoint.params;
 		const params = originalParams instanceof z.ZodType ? originalParams : endpoint.params;
 		const errors: Record<string, { value: { error: unknown } }> = {};
 

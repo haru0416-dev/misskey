@@ -45,6 +45,22 @@ function okResponse(results: unknown[]) {
 
 const buf = (s: string) => Buffer.from(s);
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value != null && !Array.isArray(value);
+}
+
+function getSendCall(index: number): unknown[] {
+	const call = sendMock.mock.calls[index];
+	if (call == null) throw new Error(`Missing send call at index ${index}`);
+	return call;
+}
+
+function getRequestOptions(index: number): Record<string, unknown> {
+	const options = getSendCall(index)[1];
+	if (!isRecord(options)) throw new Error(`Missing request options at index ${index}`);
+	return options;
+}
+
 describe('AiService', () => {
 	beforeEach(() => {
 		sendMock.mockReset();
@@ -62,7 +78,7 @@ describe('AiService', () => {
 			[{ className: 'Porn', probability: 0.8 }],
 		]);
 		expect(sendMock).toHaveBeenCalledTimes(1);
-		expect(sendMock.mock.calls[0][0]).toBe('http://localhost:3009/v1/detect-images');
+		expect(getSendCall(0)[0]).toBe('http://localhost:3009/v1/detect-images');
 	});
 
 	test('外部サービス: SSRF/proxy 制限を素通ししない (isLocalAddressAllowed を立てない)', async () => {
@@ -71,9 +87,9 @@ describe('AiService', () => {
 
 		await svc.detectSensitiveMany([buf('a')]);
 
-		const args = sendMock.mock.calls[0][1] as { isLocalAddressAllowed?: boolean; body: unknown };
-		expect(args.isLocalAddressAllowed).toBeUndefined();
-		expect(args.body).toBeInstanceOf(FormData);
+		const args = getRequestOptions(0);
+		expect(args['isLocalAddressAllowed']).toBeUndefined();
+		expect(args['body']).toBeInstanceOf(FormData);
 	});
 
 	test('detectSensitive: 単一画像はバッチの先頭を返す', async () => {
@@ -135,10 +151,14 @@ describe('AiService', () => {
 
 		const withKey = makeService({ sensitiveMediaDetectionApiKey: 'secret' });
 		await withKey.detectSensitiveMany([buf('a')]);
-		expect((sendMock.mock.calls[0][1] as any).headers.Authorization).toBe('Bearer secret');
+		const withKeyHeaders = getRequestOptions(0)['headers'];
+		if (typeof withKeyHeaders !== 'object' || withKeyHeaders == null) throw new Error('Missing request headers');
+		expect(Reflect.get(withKeyHeaders, 'Authorization')).toBe('Bearer secret');
 
 		const withoutKey = makeService();
 		await withoutKey.detectSensitiveMany([buf('a')]);
-		expect((sendMock.mock.calls[1][1] as any).headers.Authorization).toBeUndefined();
+		const withoutKeyHeaders = getRequestOptions(1)['headers'];
+		if (typeof withoutKeyHeaders !== 'object' || withoutKeyHeaders == null) throw new Error('Missing request headers');
+		expect(Reflect.get(withoutKeyHeaders, 'Authorization')).toBeUndefined();
 	});
 });

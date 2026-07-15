@@ -139,7 +139,7 @@ export function tokenFromRequest(c: Context, body: Record<string, unknown>): str
 	if (authorization != null) {
 		// 原典 (ApiCallService) 同様、スキーム名は大文字小文字を区別する ('bearer' は不可)
 		const match = authorization.match(/^Bearer (.+)$/);
-		if (match) return match[1];
+		if (match?.[1] != null) return match[1];
 	}
 
 	return typeof body.i === 'string' ? body.i : null;
@@ -164,10 +164,11 @@ export function getRequestIp(c: Context, config: Config): string {
 	};
 
 	for (let index = addresses.length - 1, hop = 0; index > 0; index--, hop++) {
-		if (!isTrusted(addresses[index])) return addresses[index];
+		const address = addresses[index];
+		if (address != null && !isTrusted(address)) return address;
 	}
 
-	return addresses[0];
+	return addresses[0] ?? remoteAddress;
 }
 
 export async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {

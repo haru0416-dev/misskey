@@ -3,6 +3,12 @@ import assert, { deepStrictEqual, strictEqual } from 'assert';
 import * as Misskey from 'misskey-js';
 import { addCustomEmoji, createAccount, type LoginUser, resolveRemoteUser, sleep } from './utils.js';
 
+function first<T>(values: readonly T[]): T {
+	const value = values[0];
+	assert(value);
+	return value;
+}
+
 describe('Emoji', () => {
 	let alice: LoginUser, bob: LoginUser;
 	let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
@@ -28,7 +34,7 @@ describe('Emoji', () => {
 		await sleep();
 
 		const notes = await bob.client.request('notes/timeline', {});
-		const noteInB = notes[0];
+		const noteInB = first(notes);
 
 		strictEqual(noteInB.text, `I love \u200b:${emoji.name}:\u200b`);
 		assert(noteInB.emojis != null);
@@ -44,7 +50,7 @@ describe('Emoji', () => {
 		await alice.client.request('notes/reactions/create', { noteId: note.id, reaction: `:${emoji.name}:` });
 		await sleep();
 
-		const noteInB = (await bob.client.request('notes/timeline', {}))[0];
+		const noteInB = first(await bob.client.request('notes/timeline', {}));
 		deepStrictEqual(noteInB.reactions[`:${emoji.name}@a.test:`], 1);
 		deepStrictEqual(noteInB.reactionEmojis[`${emoji.name}@a.test`], emoji.url);
 	});
@@ -66,7 +72,7 @@ describe('Emoji', () => {
 		await sleep();
 
 		const notes = await bob.client.request('notes/timeline', {});
-		const noteInB = notes[0];
+		const noteInB = first(notes);
 
 		strictEqual(noteInB.text, `I love \u200b:${emoji.name}:\u200b`);
 		// deepStrictEqual(noteInB.emojis, {}); // TODO: this fails (why?)
@@ -81,7 +87,7 @@ describe('Emoji', () => {
 		await alice.client.request('notes/reactions/create', { noteId: note.id, reaction: `:${emoji.name}:` });
 		await sleep();
 
-		const noteInB = (await bob.client.request('notes/timeline', {}))[0];
+		const noteInB = first(await bob.client.request('notes/timeline', {}));
 		deepStrictEqual({ ...noteInB.reactions }, { '❤': 1 });
 		deepStrictEqual({ ...noteInB.reactionEmojis }, {});
 	});

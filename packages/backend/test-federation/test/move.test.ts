@@ -52,7 +52,7 @@ describe('Move', () => {
 		test('Check from followee', async () => {
 			const followers = await bob.client.request('users/followers', { userId: bob.id });
 			strictEqual(followers.length, 1);
-			const follower = followers[0].follower;
+			const follower = followers[0]?.follower;
 			assert(follower != null);
 			strictEqual(follower.url, `https://a.test/@${carol.username}`);
 		});

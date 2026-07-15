@@ -237,7 +237,7 @@ export function createEmailService(
 			};
 		}
 
-		const emailDomain: string = emailAddress.split('@')[1];
+		const emailDomain = emailAddress.slice(emailAddress.lastIndexOf('@') + 1);
 		const isBanned = utilityService.isBlockedHost(meta.bannedEmailDomains, emailDomain);
 
 		if (isBanned) {

@@ -55,6 +55,6 @@ export async function readRequestBodyWithLimit(request: Request, limit: number, 
 	}
 
 	if (chunks.length === 0) return new Uint8Array(0);
-	if (chunks.length === 1) return chunks[0];
+	if (chunks.length === 1) return chunks[0] ?? new Uint8Array(0);
 	return Buffer.concat(chunks, total);
 }

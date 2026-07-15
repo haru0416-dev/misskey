@@ -964,13 +964,17 @@ export async function packFollowingsForHonoApi(
 ): Promise<FollowingListItem[]> {
 	const packedFollowees = await packUserDetailedNotMeManyForHonoApi(deps, followings.map(f => f.followee ?? f.followeeId));
 
-	return followings.map((following, index) => ({
-		id: following.id,
-		createdAt: parseId(following.id).date.toISOString(),
-		followeeId: following.followeeId,
-		followerId: following.followerId,
-		followee: packedFollowees[index],
-	}));
+	return followings.map((following, index) => {
+		const followee = packedFollowees[index];
+		if (followee == null) throw new Error(`Packed followee is missing at index ${index}`);
+		return {
+			id: following.id,
+			createdAt: parseId(following.id).date.toISOString(),
+			followeeId: following.followeeId,
+			followerId: following.followerId,
+			followee,
+		};
+	});
 }
 
 export async function handleHonoApiFollowingList(
@@ -1005,13 +1009,17 @@ async function packFollowersForHonoApi(
 ): Promise<FollowerListItem[]> {
 	const packedFollowers = await packUserDetailedNotMeManyForHonoApi(deps, followings.map(f => f.follower ?? f.followerId));
 
-	return followings.map((following, index) => ({
-		id: following.id,
-		createdAt: parseId(following.id).date.toISOString(),
-		followeeId: following.followeeId,
-		followerId: following.followerId,
-		follower: packedFollowers[index],
-	}));
+	return followings.map((following, index) => {
+		const follower = packedFollowers[index];
+		if (follower == null) throw new Error(`Packed follower is missing at index ${index}`);
+		return {
+			id: following.id,
+			createdAt: parseId(following.id).date.toISOString(),
+			followeeId: following.followeeId,
+			followerId: following.followerId,
+			follower,
+		};
+	});
 }
 
 function toPunyNullableForHonoApi(host: string | null | undefined): string | null {

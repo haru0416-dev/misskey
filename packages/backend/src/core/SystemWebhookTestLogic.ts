@@ -221,9 +221,11 @@ export async function testSystemWebhookWithQueue<T extends SystemWebhookEventTyp
 	if (webhooks.length === 0) {
 		throw new NoSuchSystemWebhookForTestError();
 	}
+	const storedWebhook = webhooks[0];
+	if (storedWebhook == null) throw new NoSuchSystemWebhookForTestError();
 
 	const webhook = {
-		...webhooks[0],
+		...storedWebhook,
 		...params.override,
 	};
 	const payload = await createSystemWebhookTestPayload(deps.populateEmojis, params.type);

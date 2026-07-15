@@ -16,6 +16,7 @@ export function extractLinkHeaderUrisByRel(header: string, rel: string): string[
 		const match = /^\s*<([^>]*)>\s*(.*)$/s.exec(value);
 		if (match == null) continue;
 		const [, uri, rest] = match;
+		if (uri == null || rest == null) continue;
 
 		// RFC 8288 3.3: 同名パラメータが複数ある場合は最初の出現のみ有効
 		let relValue: string | null = null;

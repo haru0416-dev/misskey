@@ -18,7 +18,7 @@ export type RangeStream = {
 
 export function createRangeStream(rangeHeader: string, size: number, path: string): RangeStream {
 	const parts = rangeHeader.replace(/bytes=/, '').split('-');
-	const start = parseInt(parts[0], 10);
+	const start = parseInt(parts[0] ?? '', 10);
 	let end = parts[1] ? parseInt(parts[1], 10) : size - 1;
 	if (end > size) {
 		end = size - 1;

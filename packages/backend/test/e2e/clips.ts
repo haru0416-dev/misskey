@@ -18,6 +18,12 @@ import type * as Misskey from 'misskey-js';
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
+function getAt<T>(values: readonly T[], index: number): T {
+	const value = values[index];
+	assert.ok(value != null);
+	return value;
+}
+
 describe('クリップ', () => {
 	let alice: Misskey.entities.SignupResponse;
 	let bob: Misskey.entities.SignupResponse;
@@ -451,16 +457,16 @@ describe('クリップ', () => {
 		clips.sort(compareBy(s => s.id));
 		const res = await usersClips({
 			userId: alice.id,
-			sinceId: clips[1].id,
-			untilId: clips[5].id,
+			sinceId: getAt(clips, 1).id,
+			untilId: getAt(clips, 5).id,
 			limit: 4,
 		});
 
 		// Promise.allで返ってくる配列には順序保障がないのでidでソートして厳密比較
 		assert.deepStrictEqual(
 			res.sort(compareBy<Misskey.entities.Clip>(s => s.id)),
-			[clips[2], clips[3], clips[4]], // sinceIdとuntilId自体は結果に含まれない
-			clips[1].id + ' ... ' + clips[3].id + ' with ' + clips.map(s => s.id) + ' vs. ' + res.map(s => s.id));
+			[getAt(clips, 2), getAt(clips, 3), getAt(clips, 4)], // sinceIdとuntilId自体は結果に含まれない
+			getAt(clips, 1).id + ' ... ' + getAt(clips, 3).id + ' with ' + clips.map(s => s.id) + ' vs. ' + res.map(s => s.id));
 	});
 
 	test.each([
@@ -886,12 +892,12 @@ describe('クリップ', () => {
 
 			const res = await notes({
 				clipId: aliceClip.id,
-				sinceId: noteList[2].id,
+				sinceId: getAt(noteList, 2).id,
 				limit: 3,
 			});
 
 			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
-			const expects = [noteList[3], noteList[4], noteList[5]];
+			const expects = [getAt(noteList, 3), getAt(noteList, 4), getAt(noteList, 5)];
 			assert.deepStrictEqual(
 				res.sort(compareBy(s => s.id)).map(x => x.id),
 				expects.sort(compareBy(s => s.id)).map(x => x.id));
@@ -906,12 +912,12 @@ describe('クリップ', () => {
 
 			const res = await notes({
 				clipId: aliceClip.id,
-				sinceId: noteList[1].id,
-				untilId: noteList[4].id,
+				sinceId: getAt(noteList, 1).id,
+				untilId: getAt(noteList, 4).id,
 			});
 
 			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
-			const expects = [noteList[2], noteList[3]];
+			const expects = [getAt(noteList, 2), getAt(noteList, 3)];
 			assert.deepStrictEqual(
 				res.sort(compareBy(s => s.id)).map(x => x.id),
 				expects.sort(compareBy(s => s.id)).map(x => x.id));

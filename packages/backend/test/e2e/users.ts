@@ -897,6 +897,7 @@ describe('ユーザー', () => {
 		{ label: '削除済(byAdmin)ユーザーが含まれる', user: () => userDeletedByAdmin },
 	] as const)('がよくリプライをするユーザーのリストを取得でき、結果に$label', async ({ user, excluded }) => {
 		const replyTo = (await successfulApiCall({ endpoint: 'users/notes', parameters: { userId: user().id }, user: undefined }))[0];
+		assert.ok(replyTo);
 		await post(alice, { text: `@${user().username} test`, replyId: replyTo.id });
 		const parameters = { userId: alice.id, limit: 100 };
 		const response = await successfulApiCall({ endpoint: 'users/get-frequently-replied-users', parameters, user: alice });

@@ -25,16 +25,18 @@ describe('Abuse report', () => {
 			]);
 		});
 
-		test('Alice reports Bob, moderator in A forwards it, and B moderator receives it', async () => {
+			test('Alice reports Bob, moderator in A forwards it, and B moderator receives it', async () => {
 			const comment = crypto.randomUUID();
 			await alice.client.request('users/report-abuse', { userId: bobInA.id, comment });
 			const reports = await aModerator.client.request('admin/abuse-user-reports', {});
-			const report = reports.filter(report => report.comment === comment)[0];
+			const report = reports.find(report => report.comment === comment);
+			if (report == null) throw new Error('Forwarded abuse report was not found in a.test');
 			await aModerator.client.request('admin/forward-abuse-user-report', { reportId: report.id });
 			await sleep();
 
 			const reportsInB = await bModerator.client.request('admin/abuse-user-reports', {});
-			const reportInB = reportsInB.filter(report => report.comment.includes(comment))[0];
+			const reportInB = reportsInB.find(report => report.comment.includes(comment));
+			if (reportInB == null) throw new Error('Forwarded abuse report was not found in b.test');
 			// NOTE: reporter is not Alice, and is not moderator in A
 			strictEqual(reportInB.reporter.url, 'https://a.test/@system.actor');
 			strictEqual(reportInB.targetUserId, bob.id);

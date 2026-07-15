@@ -179,10 +179,12 @@ export class JsonLd {
 
 			if (this.preLoad) {
 				if (url in PRELOADED_CONTEXTS) {
+					const document = PRELOADED_CONTEXTS[url];
+					if (document == null) throw new Error(`Preloaded JSON-LD context is missing for ${url}`);
 					if (this.debug) console.debug(`HIT: ${url}`);
 					return {
 						contextUrl: undefined,
-						document: PRELOADED_CONTEXTS[url],
+						document,
 						documentUrl: url,
 					};
 				}

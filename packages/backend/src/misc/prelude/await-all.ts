@@ -19,7 +19,9 @@ export async function awaitAll<T>(obj: Promiseable<T>): Promise<T> {
 	));
 
 	for (let i = 0; i < keys.length; i++) {
-		target[keys[i]] = resolvedValues[i];
+		const key = keys[i];
+		if (key == null) continue;
+		target[key] = resolvedValues[i];
 	}
 
 	return target;

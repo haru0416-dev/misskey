@@ -145,7 +145,9 @@ export class ApRequestCreator {
 
 	static #lcObjectKey(src: Record<string, string>): Record<string, string> {
 		const dst: Record<string, string> = {};
-		for (const key of Object.keys(src).filter(x => x !== '__proto__' && typeof src[x] === 'string')) dst[key.toLowerCase()] = src[key];
+		for (const [key, value] of Object.entries(src)) {
+			if (key !== '__proto__') dst[key.toLowerCase()] = value;
+		}
 		return dst;
 	}
 

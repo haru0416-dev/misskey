@@ -64,7 +64,10 @@ export async function getHonoApiNotifications(
 
 		if (notificationsRes.length === 0) return [];
 
-		notifications = notificationsRes.map(x => JSON.parse(x[1][1])) as MiNotification[];
+		notifications = notificationsRes.flatMap(([, fields]) => {
+			const data = fields[1];
+			return data == null ? [] : [JSON.parse(data) as MiNotification];
+		});
 
 		if (includeTypeSet != null) {
 			notifications = notifications.filter(n => includeTypeSet.has(n.type));
@@ -73,11 +76,13 @@ export async function getHonoApiNotifications(
 		}
 
 		if (notifications.length !== 0) break;
+		const lastEntry = notificationsRes.at(-1);
+		if (lastEntry == null) return [];
 
 		if (options.sinceId && !options.untilId) {
-			sinceTime = notificationsRes[notificationsRes.length - 1][0];
+			sinceTime = lastEntry[0];
 		} else {
-			untilTime = notificationsRes[notificationsRes.length - 1][0];
+			untilTime = lastEntry[0];
 		}
 	}
 
@@ -301,11 +306,14 @@ export async function handleHonoApiINotifications(
 }
 
 function groupHonoApiNotifications(notifications: MiNotification[]): MiGroupedNotification[] {
-	let groupedNotifications: MiGroupedNotification[] = [notifications[0]];
+	const firstNotification = notifications[0];
+	if (firstNotification == null) return [];
+	const groupedNotifications: MiGroupedNotification[] = [firstNotification];
 	for (let i = 1; i < notifications.length; i++) {
 		const notification = notifications[i];
 		const prev = notifications[i - 1];
-		let prevGroupedNotification = groupedNotifications.at(-1)!;
+		let prevGroupedNotification = groupedNotifications.at(-1);
+		if (notification == null || prev == null || prevGroupedNotification == null) continue;
 
 		if (prev.type === 'reaction' && notification.type === 'reaction' && prev.noteId === notification.noteId) {
 			if (prevGroupedNotification.type !== 'reaction:grouped') {
@@ -316,7 +324,8 @@ function groupHonoApiNotifications(notifications: MiNotification[]): MiGroupedNo
 					noteId: prev.noteId,
 					reactions: [{ userId: prev.notifierId, reaction: prev.reaction }],
 				};
-				prevGroupedNotification = groupedNotifications.at(-1)!;
+				prevGroupedNotification = groupedNotifications.at(-1);
+				if (prevGroupedNotification == null) continue;
 			}
 			if (prevGroupedNotification.type === 'reaction:grouped') {
 				prevGroupedNotification.reactions.push({ userId: notification.notifierId, reaction: notification.reaction });
@@ -333,7 +342,8 @@ function groupHonoApiNotifications(notifications: MiNotification[]): MiGroupedNo
 					noteId: prev.noteId,
 					userIds: [prev.notifierId],
 				};
-				prevGroupedNotification = groupedNotifications.at(-1)!;
+				prevGroupedNotification = groupedNotifications.at(-1);
+				if (prevGroupedNotification == null) continue;
 			}
 			if (prevGroupedNotification.type === 'renote:grouped') {
 				prevGroupedNotification.userIds.push(notification.notifierId);

@@ -71,17 +71,21 @@ async function getFeaturedRanking(
 	const redisPipeline = redis.pipeline();
 	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
 	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	const [currentRankingResult, previousRankingResult] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : [[], []]);
+	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : []);
 
 	const ranking = new Map<string, number>();
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
 		const noteId = currentRankingResult[i];
-		const score = parseInt(currentRankingResult[i + 1], 10);
+		const scoreValue = currentRankingResult[i + 1];
+		if (noteId == null || scoreValue == null) continue;
+		const score = parseInt(scoreValue, 10);
 		ranking.set(noteId, score);
 	}
 	for (let i = 0; i < previousRankingResult.length; i += 2) {
 		const noteId = previousRankingResult[i];
-		const score = parseInt(previousRankingResult[i + 1], 10);
+		const scoreValue = previousRankingResult[i + 1];
+		if (noteId == null || scoreValue == null) continue;
+		const score = parseInt(scoreValue, 10);
 		const exist = ranking.get(noteId);
 		if (exist != null) {
 			ranking.set(noteId, (exist + score) / 2);
@@ -121,7 +125,12 @@ async function getHashtagCharts(
 
 	for (let i = 0; i < range; i++) {
 		for (let j = 0; j < hashtags.length; j++) {
-			charts[hashtags[j]].push(result[(i * hashtags.length) + j][1] as number);
+			const hashtag = hashtags[j];
+			const entry = result[(i * hashtags.length) + j];
+			if (hashtag == null || entry == null || typeof entry[1] !== 'number') throw new Error('Hashtag chart pipeline returned an incomplete result');
+			const chart = charts[hashtag];
+			if (chart == null) throw new Error(`Hashtag chart is missing for ${hashtag}`);
+			chart.push(entry[1]);
 		}
 	}
 
@@ -163,6 +172,7 @@ export async function handleHonoApiHashtagsTrend(
 
 	return ranking.map(tag => {
 		const chart = charts[tag];
+		if (chart == null) throw new Error(`Hashtag chart is missing for ${tag}`);
 
 		return {
 			tag,

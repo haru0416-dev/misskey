@@ -37,6 +37,7 @@ describe('targeted user relation stores', () => {
 			});
 		}));
 		const [viewer, target, unrelated] = users;
+		if (viewer == null || target == null || unrelated == null) throw new Error('Failed to create relation test users');
 
 		for (const other of [target, unrelated]) {
 			await Promise.all([

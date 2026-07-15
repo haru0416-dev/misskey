@@ -86,7 +86,8 @@ function splitQuoted(input: string, separator: ',' | ';'): string[] {
 
 /** candidate ('application/activity+json; charset=utf-8' 等、パラメータ付き可) に最も specific にマッチする range を返す (RFC 7231 §5.3.2)。 */
 function matchRange(ranges: AcceptRange[], candidate: string): AcceptRange | null {
-	const mediaType = candidate.split(';')[0].trim().toLowerCase();
+	const mediaType = candidate.split(';', 1)[0]?.trim().toLowerCase();
+	if (mediaType == null) return null;
 	const slash = mediaType.indexOf('/');
 	if (slash === -1) return null;
 	const type = mediaType.slice(0, slash);

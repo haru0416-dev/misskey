@@ -29,6 +29,12 @@ import {
 } from '../../utils.js';
 import type { JobQueueRuntime } from '@/boot/common.js';
 
+function first<T>(values: readonly T[]): T {
+	const value = values[0];
+	if (value == null) throw new Error('Expected a non-empty array');
+	return value;
+}
+
 describe('[シナリオ] ユーザ通報', () => {
 	let queue: JobQueueRuntime;
 	let admin: entities.SignupResponse;
@@ -219,7 +225,7 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			expect(webhookBody1).toBe('timeout');
 
-			const abuseReportId = (await api('admin/abuse-user-reports', {}, admin)).body[0].id;
+			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
@@ -291,7 +297,7 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			expect(webhookBody1).toBe('timeout');
 
-			const abuseReportId = (await api('admin/abuse-user-reports', {}, admin)).body[0].id;
+			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
@@ -321,7 +327,7 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			expect(webhookBody1).toBe('timeout');
 
-			const abuseReportId = (await api('admin/abuse-user-reports', {}, admin)).body[0].id;
+			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
@@ -351,7 +357,7 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			expect(webhookBody1).toBe('timeout');
 
-			const abuseReportId = (await api('admin/abuse-user-reports', {}, admin)).body[0].id;
+			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {

@@ -130,7 +130,9 @@ export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): b
 			return words.every(keyword => text.includes(keyword));
 		}
 		try {
-			return new RegExp(regexp[1], regexp[2]).test(text);
+			const [, pattern, flags] = regexp;
+			if (pattern == null || flags == null) return false;
+			return new RegExp(pattern, flags).test(text);
 		} catch {
 			return false;
 		}

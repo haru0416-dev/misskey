@@ -35,8 +35,8 @@ export type HonoApiApResolveDependencies = HonoApiAccountUpdateDependencies & {
 
 type LocalApUriParseResult = {
 	local: true;
-	id: string;
-	type: string;
+	id: string | undefined;
+	type: string | undefined;
 	rest?: string;
 } | {
 	local: false;
@@ -79,7 +79,7 @@ export function isFederationAllowedUri(config: Pick<Config, 'runtime'>, meta: Pi
 	return isFederationAllowedHost(config, meta, extractDbHost(uri));
 }
 
-export function parseLocalApUri(config: Pick<Config, 'runtime'>, uri: string): LocalApUriParseResult {
+export function parseLocalApUri(config: { runtime: Pick<Config['runtime'], 'host'> }, uri: string): LocalApUriParseResult {
 	const url = new URL(uri);
 	if (toPuny(url.host) !== toPuny(config.runtime.host)) {
 		return { local: false, uri: url.href };
@@ -99,7 +99,7 @@ export function parseLocalApUri(config: Pick<Config, 'runtime'>, uri: string): L
 export async function getNoteFromApIdForHonoApi(deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiNote | null> {
 	const parsed = parseLocalApUri(deps.config, getApId(value));
 	if (parsed.local) {
-		if (parsed.type !== 'notes') return null;
+		if (parsed.type !== 'notes' || parsed.id == null) return null;
 		return await fetchNoteByIdFromDatabase(deps.db, parsed.id);
 	}
 	return await fetchNoteByUriFromDatabase(deps.db, parsed.uri);
@@ -109,7 +109,7 @@ export async function getNoteFromApIdForHonoApi(deps: { config: Pick<Config, 'ru
 export async function getUserFromApIdForHonoApi(deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase }, value: string | IObject): Promise<MiLocalUser | MiRemoteUser | null> {
 	const parsed = parseLocalApUri(deps.config, getApId(value));
 	if (parsed.local) {
-		if (parsed.type !== 'users') return null;
+		if (parsed.type !== 'users' || parsed.id == null) return null;
 		const user = await fetchUserByIdFromDatabase(deps.db, parsed.id);
 		return user == null || user.isDeleted ? null : user as MiLocalUser;
 	}
@@ -168,6 +168,9 @@ function renderFollowForHonoApi(config: Pick<Config, 'instance'>, follower: MiLo
 async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies, url: string): Promise<IObject> {
 	const parsed = parseLocalApUri(deps.config, url);
 	if (!parsed.local) throw new IdentifiableError('02b40cd0-fa92-4b0c-acc9-fb2ada952ab8', 'resolveLocal: not local');
+	if (parsed.id == null) {
+		throw new IdentifiableError('7a5d2fc0-94bc-4db6-b8b8-1bf24a2e23d0', `resolveLocal: type ${parsed.type} unhandled`);
+	}
 
 	switch (parsed.type) {
 		case 'notes': {
@@ -237,7 +240,7 @@ async function signedGetForHonoApi(
 
 	if (
 		res.ok &&
-		(contentType ?? '').split(';')[0].trimEnd().toLowerCase() === 'text/html' &&
+		(contentType ?? '').split(';', 1)[0]?.trimEnd().toLowerCase() === 'text/html' &&
 		followAlternate
 	) {
 		const html = await res.text();

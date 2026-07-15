@@ -47,14 +47,18 @@ async function packModerationLogsForHonoApi(
 ): Promise<HonoApiModerationLogResponse[]> {
 	const users = await packUserDetailedNotMeManyForHonoApi(deps, logs.map(log => log.user ?? log.userId));
 
-	return logs.map((log, index) => ({
-		id: log.id,
-		createdAt: parseId(log.id).date.toISOString(),
-		type: log.type,
-		info: log.info,
-		userId: log.userId,
-		user: users[index],
-	}));
+	return logs.map((log, index) => {
+		const user = users[index];
+		if (user == null) throw new Error(`Packed moderation log user is missing at index ${index}`);
+		return {
+			id: log.id,
+			createdAt: parseId(log.id).date.toISOString(),
+			type: log.type,
+			info: log.info,
+			userId: log.userId,
+			user,
+		};
+	});
 }
 
 export async function handleHonoApiAdminShowModerationLogs(
