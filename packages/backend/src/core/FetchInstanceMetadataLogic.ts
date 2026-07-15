@@ -155,9 +155,10 @@ async function fetchIconUrl(
 	doc: htmlParser.HTMLElement | null,
 	manifest: WebAppManifest | null,
 ): Promise<string | null> {
-	if (manifest && manifest.icons && manifest.icons.length > 0 && manifest.icons[0].src) {
+	const manifestIcon = manifest?.icons?.[0];
+	if (manifestIcon?.src) {
 		const url = 'https://' + instance.host;
-		return (new URL(manifest.icons[0].src, url)).href;
+		return (new URL(manifestIcon.src, url)).href;
 	}
 
 	if (doc) {

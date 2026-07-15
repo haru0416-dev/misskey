@@ -24,7 +24,7 @@ function createSeededRandom(seed: string): (max: number) => number {
 const size = 128; // px
 const n = 5; // resolution
 const margin = (size / 4);
-const colors = [
+const colors: readonly (readonly [string, string])[] = [
 	['#FF512F', '#DD2476'],
 	['#FF61D2', '#FE9090'],
 	['#72FFB6', '#10D164'],
@@ -57,6 +57,7 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 	const ctx = canvas.getContext('2d');
 
 	const bgColors = colors[rand(colors.length)];
+	if (bgColors == null) throw new Error('Identicon color palette is empty');
 
 	const bg = ctx.createLinearGradient(0, 0, size, size);
 	bg.addColorStop(0, bgColors[0]);
@@ -77,8 +78,10 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 
 	// eslint:disable-next-line:prefer-for-of
 	for (let x = 0; x < side.length; x++) {
-		for (let y = 0; y < side[x].length; y++) {
-			side[x][y] = rand(3) === 0;
+		const column = side[x];
+		if (column == null) continue;
+		for (let y = 0; y < column.length; y++) {
+			column[y] = rand(3) === 0;
 		}
 	}
 
@@ -92,10 +95,10 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 			if (isXCenter && !center[y]) continue;
 
 			const isLeftSide = x < ((n - 1) / 2);
-			if (isLeftSide && !side[x][y]) continue;
+			if (isLeftSide && !side[x]?.[y]) continue;
 
 			const isRightSide = x > ((n - 1) / 2);
-			if (isRightSide && !side[sideN - (x - sideN)][y]) continue;
+			if (isRightSide && !side[sideN - (x - sideN)]?.[y]) continue;
 
 			const actualX = margin + (cellSize * x);
 			const actualY = margin + (cellSize * y);

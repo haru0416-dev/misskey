@@ -22,7 +22,9 @@ describe('Drive', () => {
 				const noteInB = await resolveRemoteNote('a.test', noteWithImage.id, bAdmin);
 				assert(noteInB.files != null);
 				strictEqual(noteInB.files.length, 1);
-				imageInB = noteInB.files[0];
+				const resolvedImage = noteInB.files[0];
+				assert(resolvedImage);
+				imageInB = resolvedImage;
 			});
 
 			test('Check consistency of DriveFile', () => {
@@ -75,7 +77,9 @@ describe('Drive', () => {
 				const noteWithUpdatedImageInB = await resolveRemoteNote('a.test', noteWithUpdatedImage.id, bAdmin);
 				assert(noteWithUpdatedImageInB.files != null);
 				strictEqual(noteWithUpdatedImageInB.files.length, 1);
-				reupdatedImageInB = noteWithUpdatedImageInB.files[0];
+				const resolvedImage = noteWithUpdatedImageInB.files[0];
+				assert(resolvedImage);
+				reupdatedImageInB = resolvedImage;
 			});
 
 			test('Check consistency', () => {
@@ -118,9 +122,10 @@ describe('Drive', () => {
 				const notes = await bob.client.request('notes/timeline', {});
 				strictEqual(notes.length, 1);
 				const noteInB = notes[0];
+				assert(noteInB);
 				assert(noteInB.files != null);
 				strictEqual(noteInB.files.length, 1);
-				strictEqual(noteInB.files[0].isSensitive, true);
+				strictEqual(noteInB.files[0]?.isSensitive, true);
 			});
 		});
 
@@ -142,7 +147,7 @@ describe('Drive', () => {
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				assert(noteInB.files != null);
 				strictEqual(noteInB.files.length, 1);
-				strictEqual(noteInB.files[0].isSensitive, true);
+				strictEqual(noteInB.files[0]?.isSensitive, true);
 			});
 		});
 
@@ -169,7 +174,7 @@ describe('Drive', () => {
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				assert(noteInB.files != null);
 				strictEqual(noteInB.files.length, 1);
-				strictEqual(noteInB.files[0].isSensitive, true);
+				strictEqual(noteInB.files[0]?.isSensitive, true);
 			});
 		});
 	});

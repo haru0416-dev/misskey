@@ -50,6 +50,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		if (match == null) return await next();
 
 		let session = match[1];
+		if (session == null) return await next();
 		try {
 			session = decodeURIComponent(session);
 		} catch {

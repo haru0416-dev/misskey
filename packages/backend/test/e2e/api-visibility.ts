@@ -401,7 +401,7 @@ describe('API visibility', () => {
 			const res = await api('notes/timeline', { limit: 100 }, alice);
 			assert.strictEqual(res.status, 200);
 			const notes = res.body.filter(n => n.id === pub.id);
-			assert.strictEqual(notes[0].text, 'x');
+			assert.strictEqual(notes[0]?.text, 'x');
 		});
 
 		test('[HTL] public-post が 非フォロワーから見れない', async () => {
@@ -415,14 +415,14 @@ describe('API visibility', () => {
 			const res = await api('notes/timeline', { limit: 100 }, follower);
 			assert.strictEqual(res.status, 200);
 			const notes = res.body.filter(n => n.id === fol.id);
-			assert.strictEqual(notes[0].text, 'x');
+			assert.strictEqual(notes[0]?.text, 'x');
 		});
 
 		test('[replies] followers-reply が フォロワーから見れる', async () => {
 			const res = await api('notes/replies', { noteId: tgt.id, limit: 100 }, follower);
 			assert.strictEqual(res.status, 200);
 			const notes = res.body.filter(n => n.id === folR.id);
-			assert.strictEqual(notes[0].text, 'x');
+			assert.strictEqual(notes[0]?.text, 'x');
 		});
 
 		test('[replies] followers-reply が 非フォロワー (リプライ先ではない) から見れない', async () => {
@@ -436,22 +436,21 @@ describe('API visibility', () => {
 			const res = await api('notes/replies', { noteId: tgt.id, limit: 100 }, target);
 			assert.strictEqual(res.status, 200);
 			const notes = res.body.filter(n => n.id === folR.id);
-			assert.strictEqual(notes[0].text, 'x');
+			assert.strictEqual(notes[0]?.text, 'x');
 		});
 
 		test('[mentions] followers-reply が 非フォロワー (リプライ先である) から見れる', async () => {
 			const res = await api('notes/mentions', { limit: 100 }, target);
 			assert.strictEqual(res.status, 200);
 			const notes = res.body.filter(n => n.id === folR.id);
-			assert.strictEqual(notes[0].text, 'x');
+			assert.strictEqual(notes[0]?.text, 'x');
 		});
 
 		test('[mentions] followers-mention が 非フォロワー (メンション先である) から見れる', async () => {
 			const res = await api('notes/mentions', { limit: 100 }, target);
 			assert.strictEqual(res.status, 200);
 			const notes = res.body.filter(n => n.id === folM.id);
-			assert.strictEqual(notes[0].text, '@target x');
+			assert.strictEqual(notes[0]?.text, '@target x');
 		});
 	});
 });
-

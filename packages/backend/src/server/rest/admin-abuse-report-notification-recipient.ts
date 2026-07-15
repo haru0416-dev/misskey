@@ -255,8 +255,10 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientShow(
 	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientShowParamDef, body);
 	const recipients = await fetchRecipients(deps, { ids: [params.id] });
 	if (recipients.length === 0) throw noSuchRecipientError();
+	const recipient = recipients[0];
+	if (recipient == null) throw noSuchRecipientError();
 
-	return await packHonoApiAbuseReportNotificationRecipient(deps, recipients[0]);
+	return await packHonoApiAbuseReportNotificationRecipient(deps, recipient);
 }
 
 export async function handleHonoApiAdminAbuseReportNotificationRecipientCreate(

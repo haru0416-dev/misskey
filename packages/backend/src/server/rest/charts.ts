@@ -200,12 +200,12 @@ const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1
 
 export async function handleHonoApiStats(deps: HonoApiChartDependencies): Promise<Record<string, unknown>> {
 	const notesChart = await createHonoApiChart(deps, notesChartName, notesChartSchema).getChart('hour', 1, null);
-	const notesCount = notesChart.local.total[0] + notesChart.remote.total[0];
-	const originalNotesCount = notesChart.local.total[0];
+	const originalNotesCount = notesChart.local.total[0] ?? 0;
+	const notesCount = originalNotesCount + (notesChart.remote.total[0] ?? 0);
 
 	const usersChart = await createHonoApiChart(deps, usersChartName, usersChartSchema).getChart('hour', 1, null);
-	const usersCount = usersChart.local.total[0] + usersChart.remote.total[0];
-	const originalUsersCount = usersChart.local.total[0];
+	const originalUsersCount = usersChart.local.total[0] ?? 0;
+	const usersCount = originalUsersCount + (usersChart.remote.total[0] ?? 0);
 
 	const [reactionsCount, instances] = await Promise.all([
 		statsReactionsCountCache.fetch('all', () => countNoteReactionsFromDatabase(deps.db)),

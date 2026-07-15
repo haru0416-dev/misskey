@@ -414,7 +414,7 @@ export async function handleHonoQueueImportAntennas(deps: HonoQueueDbDependencie
 	const now = new Date();
 	try {
 		for (const antenna of job.data.antenna) {
-			if (antenna.keywords.length === 0 || antenna.keywords[0].every(x => x === '')) continue;
+			if (antenna.keywords.length === 0 || antenna.keywords[0]?.every(x => x === '')) continue;
 			if (!validateExportedAntenna(antenna)) continue;
 
 			const result = await createAntennaInDatabase(deps.db, {
@@ -478,7 +478,8 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 
 	for (const line of csv.trim().split('\n')) {
 		try {
-			const acct = line.split(',')[0].trim();
+			const acct = line.split(',', 1)[0]?.trim();
+			if (!acct) continue;
 			const target = await resolveImportTargetUserForHonoApi(deps, acct);
 
 			if (target == null) {
@@ -513,8 +514,10 @@ export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependenci
 	for (const line of csv.trim().split('\n')) {
 		try {
 			const parts = line.split(',');
-			const listName = parts[0].trim();
-			const { username, host } = Acct.parse(parts[1].trim());
+			const [listNamePart, acctPart] = parts;
+			if (listNamePart == null || acctPart == null) continue;
+			const listName = listNamePart.trim();
+			const { username, host } = Acct.parse(acctPart.trim());
 			let withReplies = false;
 
 			for (const keyValue of parts.slice(2)) {
@@ -600,7 +603,8 @@ export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDepende
 	const user = job.data.user;
 
 	try {
-		const acct = line.split(',')[0].trim();
+		const acct = line.split(',', 1)[0]?.trim();
+		if (!acct) return;
 		const target = await resolveImportTargetUserForHonoApi(deps, acct);
 
 		if (target == null) {
@@ -638,7 +642,8 @@ export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDepend
 
 	try {
 		const parts = line.split(',');
-		const acct = parts[0].trim();
+		const acct = parts[0]?.trim();
+		if (!acct) return;
 		let withReplies: boolean | null = null;
 
 		for (const keyValue of parts.slice(2)) {

@@ -107,6 +107,7 @@ export async function getQueueOutboxStats(db: MiDrizzleDatabase): Promise<{ pend
 		pending: count(),
 		oldestCreatedAt: min(queueOutbox.createdAt),
 	}).from(queueOutbox);
+	if (stats == null) throw new Error('Queue outbox aggregate query returned no rows');
 
 	return {
 		pending: stats.pending,

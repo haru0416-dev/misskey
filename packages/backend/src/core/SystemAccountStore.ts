@@ -77,9 +77,9 @@ export async function createOrFetchSystemAccountInDatabase(db: MiDrizzleDatabase
 			))
 			.limit(1);
 
-		const account = existingUser ?? await tx
-			.insert(userTable)
-			.values({
+		let account = existingUser;
+		if (account == null) {
+			const [created] = await tx.insert(userTable).values({
 				id: data.id,
 				username: data.username,
 				usernameLower: data.usernameLower,
@@ -89,15 +89,10 @@ export async function createOrFetchSystemAccountInDatabase(db: MiDrizzleDatabase
 				isExplorable: false,
 				isBot: true,
 				name: data.name,
-			})
-			.returning()
-			.then(([row]) => {
-				if (!row) {
-					throw new Error('User row was not created');
-				}
-
-				return row;
-			});
+			}).returning();
+			if (created == null) throw new Error('User row was not created');
+			account = created;
+		}
 
 		if (!existingUser) {
 			await tx.insert(userKeypair).values({

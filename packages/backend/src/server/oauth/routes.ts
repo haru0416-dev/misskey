@@ -36,7 +36,7 @@ async function bodyParameters(c: Context): Promise<OAuthRequestParameters> {
 		throw err;
 	}
 
-	const contentType = c.req.header('content-type')?.split(';')[0].trim().toLowerCase();
+	const contentType = c.req.header('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
 	if (contentType === 'application/json') {
 		let parsed: unknown = null;
 		try {

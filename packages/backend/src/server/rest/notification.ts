@@ -583,9 +583,10 @@ export async function handleHonoApiNotificationsDelete(
 		if (targetIndex !== -1) {
 			const parseNotification = (fields: string[]): Record<string, unknown> | null => {
 				const dataIndex = fields.indexOf('data');
-				if (dataIndex === -1 || fields[dataIndex + 1] == null) return null;
+				const data = fields[dataIndex + 1];
+				if (dataIndex === -1 || data == null) return null;
 				try {
-					return JSON.parse(fields[dataIndex + 1]) as Record<string, unknown>;
+					return JSON.parse(data) as Record<string, unknown>;
 				} catch {
 					return null;
 				}

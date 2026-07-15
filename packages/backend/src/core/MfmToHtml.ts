@@ -48,7 +48,8 @@ export function mfmToHtml(
 		fn: (node) => {
 			switch (node.props.name) {
 				case 'unixtime': {
-					const text = node.children[0].type === 'text' ? node.children[0].props.text : '';
+					const child = node.children[0];
+					const text = child?.type === 'text' ? child.props.text : '';
 					try {
 						const date = new Date(parseInt(text, 10) * 1000);
 						return `<time datetime="${escapeHtml(date.toISOString())}">${escapeHtml(date.toISOString())}</time>`;
@@ -60,8 +61,9 @@ export function mfmToHtml(
 				case 'ruby': {
 					if (node.children.length === 1) {
 						const child = node.children[0];
-						const text = child.type === 'text' ? child.props.text : '';
-						return `<ruby>${escapeHtml(text.split(' ')[0])}<rp>(</rp><rt>${escapeHtml(text.split(' ')[1])}</rt><rp>)</rp></ruby>`;
+						const text = child?.type === 'text' ? child.props.text : '';
+						const [rubyBase = '', rubyText = ''] = text.split(' ');
+						return `<ruby>${escapeHtml(rubyBase)}<rp>(</rp><rt>${escapeHtml(rubyText)}</rt><rp>)</rp></ruby>`;
 					} else {
 						const rt = node.children.at(-1);
 

@@ -17,7 +17,9 @@ export function isKeywordIncluded(text: string, keywords: string[]): boolean {
 		}
 
 		try {
-			return new RE2(regexp[1], regexp[2]).test(text);
+			const [, pattern, flags] = regexp;
+			if (pattern == null || flags == null) return false;
+			return new RE2(pattern, flags).test(text);
 		} catch {
 			return false;
 		}

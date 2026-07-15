@@ -57,20 +57,22 @@ describe('Drive', () => {
 
 	test('添付ノート一覧を取得できる', async () => {
 		const ids = (await Promise.all([uploadFile(alice), uploadFile(alice), uploadFile(alice)])).map(elm => elm.body!.id);
+		const [fileId0, fileId1, fileId2] = ids;
+		assert.ok(fileId0 && fileId1 && fileId2);
 
-		const note0 = await post(alice, { fileIds: [ids[0]] });
-		const note1 = await post(alice, { fileIds: [ids[0], ids[1]] });
+		const note0 = await post(alice, { fileIds: [fileId0] });
+		const note1 = await post(alice, { fileIds: [fileId0, fileId1] });
 
-		const attached0 = await api('drive/files/attached-notes', { fileId: ids[0] }, alice);
+		const attached0 = await api('drive/files/attached-notes', { fileId: fileId0 }, alice);
 		assert.strictEqual(attached0.body.length, 2);
-		assert.strictEqual(attached0.body[0].id, note1.id);
-		assert.strictEqual(attached0.body[1].id, note0.id);
+		assert.strictEqual(attached0.body[0]?.id, note1.id);
+		assert.strictEqual(attached0.body[1]?.id, note0.id);
 
-		const attached1 = await api('drive/files/attached-notes', { fileId: ids[1] }, alice);
+		const attached1 = await api('drive/files/attached-notes', { fileId: fileId1 }, alice);
 		assert.strictEqual(attached1.body.length, 1);
-		assert.strictEqual(attached1.body[0].id, note1.id);
+		assert.strictEqual(attached1.body[0]?.id, note1.id);
 
-		const attached2 = await api('drive/files/attached-notes', { fileId: ids[2] }, alice);
+		const attached2 = await api('drive/files/attached-notes', { fileId: fileId2 }, alice);
 		assert.strictEqual(attached2.body.length, 0);
 	});
 

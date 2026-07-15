@@ -80,8 +80,10 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 		expect(unrelated.users).toEqual(['@someoneelse']);
 
 		expect(publishInternalEvent).toHaveBeenCalledTimes(1);
-		expect(publishInternalEvent.mock.calls[0][0]).toBe('antennaUpdated');
-		expect((publishInternalEvent.mock.calls[0][1] as { id: string }).id).toBe(hitAntennaId);
+		const call = publishInternalEvent.mock.calls[0];
+		if (call == null) throw new Error('Missing antennaUpdated event');
+		expect(call[0]).toBe('antennaUpdated');
+		expect(call[1]).toEqual(expect.objectContaining({ id: hitAntennaId }));
 	});
 
 	test('非アクティブなアンテナは移行対象にならない (原典の getAntennas がアクティブのみ返す挙動)', async () => {
