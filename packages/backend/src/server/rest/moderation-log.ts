@@ -11,6 +11,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { Config } from '@/config.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
 import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -67,7 +68,7 @@ export async function handleHonoApiAdminShowModerationLogs(
 ): Promise<HonoApiModerationLogResponse[]> {
 	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
-	const logs = await listModerationLogsFromDatabase(deps.db, {
+	const logs = await listModerationLogsFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		order: pagination.order,
 		sinceId: pagination.sinceId,
@@ -75,7 +76,7 @@ export async function handleHonoApiAdminShowModerationLogs(
 		type: params.type,
 		userId: params.userId,
 		search: params.search,
-	});
+	}));
 
 	return await packModerationLogsForHonoApi(deps, logs);
 }

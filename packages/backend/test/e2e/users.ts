@@ -15,19 +15,11 @@ import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { omitUndefined as stripUndefined } from '@/misc/clone.js';
 
 describe('ユーザー', () => {
 	// エンティティとしてのユーザーを主眼においたテストを記述する
 	// (Userを返すエンドポイントとUserエンティティを書き換えるエンドポイントをテストする)
-
-	const stripUndefined = <T extends { [key: string]: any } >(orig: T): Partial<T> => {
-		return Object.entries({ ...orig })
-			.filter(([, value]) => value !== undefined)
-			.reduce((obj: Partial<T>, [key, value]) => {
-				obj[key as keyof T] = value;
-				return obj;
-			}, {});
-	};
 
 	const show = async (id: string, me = root): Promise<misskey.entities.UserDetailed> => {
 		return successfulApiCall({ endpoint: 'users/show', parameters: { userId: id }, user: me });

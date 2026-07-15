@@ -37,6 +37,7 @@ import { listMuteeIdsByMuterIdAndMuteeIdsFromDatabase, mutingExistsInDatabase } 
 import { listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
 import { deleteUserMemoFromDatabase, fetchUserMemoTextFromDatabase, listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { UserRow } from '@/db/schema/user.js';
@@ -132,10 +133,10 @@ async function buildHonoApiAvatarDecorations(
 			if (decoration == null) return [];
 			return [{
 				id: userDecoration.id,
-				angle: userDecoration.angle || undefined,
-				flipH: userDecoration.flipH || undefined,
-				offsetX: userDecoration.offsetX || undefined,
-				offsetY: userDecoration.offsetY || undefined,
+				...(userDecoration.angle ? { angle: userDecoration.angle } : {}),
+				...(userDecoration.flipH ? { flipH: true } : {}),
+				...(userDecoration.offsetX ? { offsetX: userDecoration.offsetX } : {}),
+				...(userDecoration.offsetY ? { offsetY: userDecoration.offsetY } : {}),
 				url: decoration.url,
 			}];
 		}));
@@ -368,24 +369,24 @@ export async function packUserDetailedNotMeManyForHonoApi(
 		const hasSecurityKey = me != null && (iAmModerator || user.id === me.id) && profile.twoFactorEnabled
 			? securityKeyUserIdSet.has(user.id)
 			: undefined;
-		const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, me, {
+		const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, me, omitUndefined({
 			iAmModerator,
 			relation: relationByUserId?.get(user.id) ?? null,
 			userRoles: computeHonoApiUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
 			pins,
 			pinnedNotes: pins.map(pin => packedPinnedNoteById.get(pin.noteId)).filter(note => note != null),
 			hasSecurityKey,
-		});
+		}));
 		return packUserDetailedNotMeCoreForHonoApi(
 			deps,
 			user,
 			profile,
 			memoByTargetUserId ? (memoByTargetUserId.get(user.id) ?? null) : null,
 			extras,
-			{
+			omitUndefined({
 				alsoKnownAs: alsoKnownAsByUserId.get(user.id),
 				emojis: emojisByUserId.get(user.id),
-			},
+			}),
 		);
 	}));
 }
@@ -1165,10 +1166,10 @@ export async function handleHonoApiUsersSearchByUsernameAndHost(
 ): Promise<unknown[]> {
 	const params = parseHonoApiParams(usersSearchByUsernameAndHostParamDef, body);
 
-	const searchParams = {
+	const searchParams = omitUndefined({
 		username: 'username' in params ? params.username : undefined,
 		host: 'host' in params ? params.host : undefined,
-	};
+	});
 
 	const queries = me
 		? buildSearchUserQueriesForHonoApi(deps.config, me, searchParams)
@@ -1282,7 +1283,7 @@ export async function handleHonoApiUsers(
 ): Promise<unknown[]> {
 	const params = parseHonoApiParams(usersParamDef, body);
 
-	const users = await listExplorableUsersFromDatabase(deps.db, {
+	const users = await listExplorableUsersFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		offset: params.offset,
 		sort: params.sort,
@@ -1290,7 +1291,7 @@ export async function handleHonoApiUsers(
 		origin: params.origin,
 		hostname: params.hostname,
 		meId: me?.id,
-	});
+	}));
 
 	return await packUserDetailedManyForHonoApi(deps, users, me);
 }

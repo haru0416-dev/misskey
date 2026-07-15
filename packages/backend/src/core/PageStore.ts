@@ -69,8 +69,8 @@ export function resolvePagePagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: PageOrder;
 } {
 	return resolveDateIdPagination(idService, options);

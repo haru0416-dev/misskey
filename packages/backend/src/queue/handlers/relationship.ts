@@ -11,6 +11,7 @@ import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
@@ -143,7 +144,7 @@ export async function followWithSideEffectsForHonoApi(
 	}
 
 	try {
-		await insertFollowingWithSideEffects(deps, follower, followee, { withReplies, followeeProfile, silent });
+		await insertFollowingWithSideEffects(deps, follower, followee, omitUndefined({ withReplies, followeeProfile, silent }));
 	} catch (err) {
 		if (isDuplicateKeyValueError(err) && isRemoteUser(follower) && isLocalUser(followee)) {
 			await refreshUserFollowingsCache(deps, follower.id);
@@ -172,11 +173,11 @@ export async function handleHonoQueueRelationshipFollow(
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
 	]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 
-	return followWithSideEffectsForHonoApi(deps, follower, followee, {
+	return followWithSideEffectsForHonoApi(deps, follower, followee, omitUndefined({
 		requestId: job.data.requestId,
 		silent: job.data.silent,
 		withReplies: job.data.withReplies,
-	});
+	}));
 }
 
 /** UserFollowingService.unfollow 相当 (RelationshipProcessorService.processUnfollow から呼ばれる)。 */

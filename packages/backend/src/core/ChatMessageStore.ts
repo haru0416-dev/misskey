@@ -51,8 +51,8 @@ export function resolveChatMessagePagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: ChatMessageOrder;
 } {
 	return resolveDateIdPagination(idService, options);

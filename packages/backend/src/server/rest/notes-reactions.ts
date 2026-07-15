@@ -96,7 +96,7 @@ export function decodeReactionForHonoApi(str: string): { reaction: string; name?
 		const host = custom[2] ?? null;
 		return { reaction: `:${name}@${host ?? '.'}:`, name, host };
 	}
-	return { reaction: str, name: undefined, host: undefined };
+	return { reaction: str };
 }
 
 function reactionNoSuchNoteError(): HonoApiError {

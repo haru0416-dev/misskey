@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { countWebhooksByUserIdFromDatabase, createWebhookInDatabase, deleteWebhookFromDatabase, fetchWebhookByIdAndUserIdFromDatabase, listWebhooksByUserIdFromDatabase, updateWebhookInDatabase } from '@/core/WebhookStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -177,13 +178,13 @@ export async function handleHonoApiIWebhooksUpdate(
 		});
 	}
 
-	const updated = await updateWebhookInDatabase(deps.db, webhook.id, {
+	const updated = await updateWebhookInDatabase(deps.db, webhook.id, omitUndefined({
 		name: params.name,
 		url: params.url,
 		secret: params.secret === null ? '' : params.secret,
 		on: params.on,
 		active: params.active,
-	});
+	}));
 
 	if (updated == null) {
 		throw new Error(`Webhook ${webhook.id} not found`);
@@ -512,7 +513,7 @@ export async function handleHonoApiIWebhooksTest(
 	}
 
 	const send = <T extends WebhookEventTypes>(type: T, contents: unknown): void => {
-		const merged = { ...webhook, ...params.override };
+		const merged = { ...webhook, ...omitUndefined(params.override ?? {}) };
 		const data: UserWebhookDeliverJobData = {
 			type,
 			content: contents as UserWebhookDeliverJobData['content'],

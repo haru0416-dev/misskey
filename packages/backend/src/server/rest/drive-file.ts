@@ -6,7 +6,7 @@
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchDriveFileByIdFromDatabase, fetchDriveFileByIdOrFailFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import type { Config } from '@/config.js';
-import { deepClone } from '@/misc/clone.js';
+import { deepClone, omitUndefined } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -50,9 +50,14 @@ function getPublicProperties(file: MiDriveFile): MiDriveFile['properties'] {
 	if (file.properties.orientation != null) {
 		const properties = deepClone(file.properties);
 		if (file.properties.orientation >= 5) {
-			[properties.width, properties.height] = [properties.height, properties.width];
+			const width = properties.width;
+			const height = properties.height;
+			if (height === undefined) delete properties.width;
+			else properties.width = height;
+			if (width === undefined) delete properties.height;
+			else properties.height = width;
 		}
-		properties.orientation = undefined;
+		delete properties.orientation;
 		return properties;
 	}
 
@@ -150,10 +155,10 @@ export async function packDriveFileManyForHonoApi(
 		folderMap = new Map(packedFolders.map(folder => [folder.id, folder]));
 	}
 
-	const items = await Promise.all(files.map(file => packDriveFileForHonoApi(deps, file, options, {
+	const items = await Promise.all(files.map(file => packDriveFileForHonoApi(deps, file, options, omitUndefined({
 		packedUser: file.userId ? (userMap?.get(file.userId) ?? undefined) : undefined,
 		packedFolder: file.folderId ? (folderMap?.get(file.folderId) ?? undefined) : undefined,
-	})));
+	}))));
 
 	return items.filter((item): item is Packed<'DriveFile'> => item != null);
 }

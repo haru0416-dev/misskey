@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { domainToASCII } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
@@ -673,10 +674,10 @@ export async function handleHonoApiFollowingCreate(
 		}
 	}
 
-	await insertFollowingWithSideEffects(deps, follower, followee, {
+	await insertFollowingWithSideEffects(deps, follower, followee, omitUndefined({
 		withReplies: params.withReplies,
 		followeeProfile,
-	});
+	}));
 
 	return await packUserLiteForHonoApi(deps, followee);
 }
@@ -687,10 +688,10 @@ export async function handleHonoApiFollowingUpdateAll(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(followingUpdateAllParamDef, body);
-	await updateFollowingsByFollowerIdInDatabase(deps.db, me.id, {
+	await updateFollowingsByFollowerIdInDatabase(deps.db, me.id, omitUndefined({
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
-	});
+	}));
 	if (params.withReplies != null) {
 		deps.publishInternalEvent?.('followingsUpdated', { followerId: me.id, withReplies: params.withReplies });
 	}
@@ -739,10 +740,10 @@ export async function handleHonoApiFollowingUpdate(
 		throw followingUpdateNotFollowingError();
 	}
 
-	await updateFollowingByIdInDatabase(deps.db, exist.id, {
+	await updateFollowingByIdInDatabase(deps.db, exist.id, omitUndefined({
 		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
 		withReplies: params.withReplies != null ? params.withReplies : undefined,
-	});
+	}));
 	if (params.withReplies != null) {
 		deps.publishInternalEvent?.('followingUpdated', { followerId: me.id, followeeId: followee.id, withReplies: params.withReplies });
 	}

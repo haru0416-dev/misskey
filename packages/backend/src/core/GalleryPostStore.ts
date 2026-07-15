@@ -44,8 +44,8 @@ export function resolveGalleryPostPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: GalleryPostOrder;
 } {
 	return resolveDateIdPagination(idService, options);

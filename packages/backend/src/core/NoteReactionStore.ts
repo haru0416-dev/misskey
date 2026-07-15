@@ -49,8 +49,8 @@ export function resolveNoteReactionPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: NoteReactionOrder;
 } {
 	return resolveDateIdPagination(idService, options);

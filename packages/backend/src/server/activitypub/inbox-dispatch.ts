@@ -192,7 +192,7 @@ async function followFromApForHonoApi(deps: HonoApiInboxDependencies, actor: MiR
 	if (followee.host != null) return 'skip: フォローしようとしているユーザーはローカルユーザーではありません';
 
 	// don't queue because the sender may attempt again when timeout
-	await followWithSideEffectsForHonoApi(deps, actor, followee, { requestId: activity.id });
+	await followWithSideEffectsForHonoApi(deps, actor, followee, activity.id === undefined ? {} : { requestId: activity.id });
 	return 'ok';
 }
 
@@ -318,7 +318,6 @@ async function announceNoteFromApForHonoApi(deps: HonoApiInboxDependencies, acto
 			files: [],
 			reply: null,
 			renote,
-			name: undefined,
 			cw: null,
 			text: null,
 			localOnly: false,
@@ -445,7 +444,6 @@ async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor
 
 		return await enqueueDbJobInOutbox(transaction as MiDrizzleDatabase, 'deleteAccount', {
 			user: { id: actor.id },
-			soft: undefined,
 		}, queueRetentionOptions(deps.config));
 	});
 
@@ -455,7 +453,7 @@ async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor
 
 	void addDbJob(deps.dbQueue, {
 		name: 'deleteAccount',
-		data: { user: { id: actor.id }, soft: undefined },
+		data: { user: { id: actor.id } },
 		opts: {
 			...queueRetentionOptions(deps.config),
 			jobId: `outbox-${outboxId}`,

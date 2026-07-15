@@ -36,6 +36,7 @@ import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
@@ -226,7 +227,7 @@ export async function handleHonoApiNotesMentions(
 	const params = parseHonoApiParams(notesMentionsParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const mentions = await listMentionNotesFromDatabase(deps.db, {
+	const mentions = await listMentionNotesFromDatabase(deps.db, omitUndefined({
 		me,
 		limit: params.limit,
 		sinceId,
@@ -234,7 +235,7 @@ export async function handleHonoApiNotesMentions(
 		visibility: params.visibility,
 		following: params.following,
 		blockedHosts: deps.meta.blockedHosts,
-	});
+	}));
 
 	return await packNoteManyForHonoApi(deps, mentions, me);
 }
@@ -520,7 +521,7 @@ export async function handleHonoApiNotes(
 	const params = parseHonoApiParams(notesParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const notes = await listPublicNotesFromDatabase(deps.db, {
+	const notes = await listPublicNotesFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		sinceId,
 		untilId,
@@ -529,7 +530,7 @@ export async function handleHonoApiNotes(
 		renote: params.renote,
 		withFiles: params.withFiles,
 		poll: params.poll,
-	});
+	}));
 
 	// 元実装 (notes.ts) は noteEntityService.packMany(notes) を me なしで呼んでおり、常に匿名扱いでパックする。
 	return await packNoteManyForHonoApi(deps, notes, null);
@@ -942,7 +943,7 @@ export async function handleHonoApiNotesSearch(
 		throw notesSearchUnavailableError();
 	}
 
-	const notes = await searchNotesByTextFromDatabase(deps.db, {
+	const notes = await searchNotesByTextFromDatabase(deps.db, omitUndefined({
 		query: params.query,
 		usePgroonga: provider === 'sqlPgroonga',
 		me,
@@ -961,7 +962,7 @@ export async function handleHonoApiNotesSearch(
 		withQuotes: params.withQuotes,
 		withCw: params.withCw,
 		visibility: params.visibility,
-	});
+	}));
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
@@ -1061,7 +1062,7 @@ export async function handleHonoApiNotesSearchByTag(
 			}));
 		}
 
-		const notes = await listNotesByTagSearchFromDatabase(deps.db, {
+		const notes = await listNotesByTagSearchFromDatabase(deps.db, omitUndefined({
 			limit: params.limit,
 			sinceId,
 			untilId,
@@ -1072,7 +1073,7 @@ export async function handleHonoApiNotesSearchByTag(
 			poll: params.poll,
 			me: me ?? null,
 			blockedHosts: deps.meta.blockedHosts,
-		});
+		}));
 
 		return await packNoteManyForHonoApi(deps, notes, me);
 	} catch (e) {

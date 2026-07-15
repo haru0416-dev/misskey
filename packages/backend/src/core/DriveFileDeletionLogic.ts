@@ -22,7 +22,7 @@ export type DriveFileDeletionDependencies = {
 	updateDriveChart?: (file: MiDriveFile, isAdditional: boolean) => unknown;
 	updatePerUserDriveChart?: (file: MiDriveFile, isAdditional: boolean) => unknown;
 	updateInstanceDriveChart?: (file: MiDriveFile, isAdditional: boolean) => unknown;
-	publishDriveStream?: (userId: MiUser['id'], type: 'fileDeleted', value: MiDriveFile['id']) => void;
+	publishDriveStream?: ((userId: MiUser['id'], type: 'fileDeleted', value: MiDriveFile['id']) => void) | undefined;
 	isModerator?: (user: MiUser) => Promise<boolean>;
 	logDriveFileDeletion?: (
 		deleter: MiUser,

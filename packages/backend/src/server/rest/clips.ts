@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { clipFavoriteExistsInDatabase, countClipFavoritesByClipIdsFromDatabase, countClipFavoritesFromDatabase, listFavoritedClipIdsByUserIdFromDatabase, listFavoritedClipIdsByUserIdAndClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
 import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteInDatabase, deleteClipNoteInDatabase } from '@/core/ClipNoteStore.js';
 import {
@@ -232,12 +233,12 @@ export async function packClipsManyForHonoApi(
 	const userById = new Map(packedUsers.map(u => [u.id, u]));
 	const favoritedClipIdSet = new Set(favoritedClipIds);
 
-	return await Promise.all(clips.map(clip => packClipForHonoApi(deps, clip, me, {
+	return await Promise.all(clips.map(clip => packClipForHonoApi(deps, clip, me, omitUndefined({
 		packedUser: userById.get(clip.userId),
 		favoritedCount: favoriteCounts.get(clip.id) ?? 0,
 		isFavorited: meId == null ? undefined : favoritedClipIdSet.has(clip.id),
 		notesCount: clip.userId === meId ? (noteCounts.get(clip.id) ?? 0) : undefined,
-	})));
+	}))));
 }
 
 export async function handleHonoApiClipsList(
@@ -318,11 +319,11 @@ export async function handleHonoApiClipsUpdate(
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsUpdateNoSuchClipError();
 
-	await updateClipInDatabase(deps.db, clip.id, {
+	await updateClipInDatabase(deps.db, clip.id, omitUndefined({
 		name: params.name,
 		description: params.description || null,
 		isPublic: params.isPublic,
-	});
+	}));
 
 	return await packClipForHonoApi(deps, await fetchClipByIdOrFailFromDatabase(deps.db, clip.id), me);
 }
@@ -409,7 +410,7 @@ export async function handleHonoApiClipsNotes(
 		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
-	const notes = await listClipNotesFromDatabase(deps.db, {
+	const notes = await listClipNotesFromDatabase(deps.db, omitUndefined({
 		clipId: clip.id,
 		limit: params.limit,
 		sinceId,
@@ -417,7 +418,7 @@ export async function handleHonoApiClipsNotes(
 		searchWords: params.search != null ? params.search.trim().split(' ').map(word => sqlLikeEscape(word)) : undefined,
 		me: me ?? null,
 		blockedHosts: deps.meta.blockedHosts,
-	});
+	}));
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }

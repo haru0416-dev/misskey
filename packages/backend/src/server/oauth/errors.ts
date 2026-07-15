@@ -5,7 +5,7 @@
 
 export class OAuthProviderError extends Error {
 	public error: string;
-	public error_description?: string;
+	public error_description: string | undefined;
 	public expose = true;
 	public allow_redirect = true;
 	public status = 400;
@@ -38,7 +38,7 @@ export class InvalidRequestError extends OAuthProviderError {
 }
 
 export class InvalidScopeError extends OAuthProviderError {
-	public scope?: string;
+	public scope: string | undefined;
 
 	constructor(description = '`scope` parameter has no known scope', scope?: string) {
 		super('invalid_scope', description);
@@ -57,4 +57,3 @@ export class UnsupportedResponseTypeError extends OAuthProviderError {
 		super('unsupported_response_type', description);
 	}
 }
-

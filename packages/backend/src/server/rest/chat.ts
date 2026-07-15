@@ -61,6 +61,7 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -471,7 +472,7 @@ export async function packChatRoomMembershipsForHonoApi(
 			: Promise.resolve(undefined),
 	]);
 
-	return await Promise.all(memberships.map(membership => packChatRoomMembershipForHonoApi(deps, membership, me, { ...options, _hint_: { packedUsers, packedRooms } })));
+	return await Promise.all(memberships.map(membership => packChatRoomMembershipForHonoApi(deps, membership, me, { ...options, _hint_: omitUndefined({ packedUsers, packedRooms }) })));
 }
 
 // ---------------------------------------------------------------------------
@@ -742,14 +743,14 @@ export async function deleteChatMessageForHonoApi(deps: HonoApiChatDependencies,
 export async function chatUserTimelineForHonoApi(deps: HonoApiChatDependencies, meId: MiUser['id'], otherId: MiUser['id'], limit: number, sinceId?: MiChatMessage['id'] | null, untilId?: MiChatMessage['id'] | null): Promise<MiChatMessage[]> {
 	return await listChatMessagesBetweenUsersFromDatabase(deps.db, meId, otherId, {
 		limit,
-		...resolveChatMessagePagination({ gen: (time) => genId(time) }, { sinceId, untilId }),
+		...resolveChatMessagePagination({ gen: (time) => genId(time) }, omitUndefined({ sinceId, untilId })),
 	});
 }
 
 export async function chatRoomTimelineForHonoApi(deps: HonoApiChatDependencies, roomId: MiChatRoom['id'], limit: number, sinceId?: MiChatMessage['id'] | null, untilId?: MiChatMessage['id'] | null): Promise<MiChatMessage[]> {
 	return await listChatMessagesByRoomIdFromDatabase(deps.db, roomId, {
 		limit,
-		...resolveChatMessagePagination({ gen: (time) => genId(time) }, { sinceId, untilId }),
+		...resolveChatMessagePagination({ gen: (time) => genId(time) }, omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -886,15 +887,15 @@ export async function createChatRoomInvitationForHonoApi(deps: HonoApiChatDepend
 }
 
 export async function getSentChatRoomInvitationsWithPaginationForHonoApi(deps: HonoApiChatDependencies, roomId: MiChatRoom['id'], limit: number, sinceId?: string | null, untilId?: string | null): Promise<ChatRoomInvitationRow[]> {
-	return await listChatRoomInvitationsByRoomIdFromDatabase(deps.db, roomId, { limit, ...resolveChatRoomRecordPagination({ sinceId, untilId }) });
+	return await listChatRoomInvitationsByRoomIdFromDatabase(deps.db, roomId, { limit, ...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })) });
 }
 
 export async function getOwnedChatRoomsWithPaginationForHonoApi(deps: HonoApiChatDependencies, ownerId: MiUser['id'], limit: number, sinceId?: string | null, untilId?: string | null): Promise<MiChatRoom[]> {
-	return await listChatRoomsByOwnerIdFromDatabase(deps.db, ownerId, { limit, ...resolveChatRoomRecordPagination({ sinceId, untilId }) });
+	return await listChatRoomsByOwnerIdFromDatabase(deps.db, ownerId, { limit, ...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })) });
 }
 
 export async function getReceivedChatRoomInvitationsWithPaginationForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], limit: number, sinceId?: string | null, untilId?: string | null): Promise<ChatRoomInvitationRow[]> {
-	return await listChatRoomInvitationsByUserIdFromDatabase(deps.db, userId, { ignored: false, limit, ...resolveChatRoomRecordPagination({ sinceId, untilId }) });
+	return await listChatRoomInvitationsByUserIdFromDatabase(deps.db, userId, { ignored: false, limit, ...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })) });
 }
 
 export async function joinToChatRoomForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], roomId: MiChatRoom['id']): Promise<void> {
@@ -937,7 +938,7 @@ export async function updateChatRoomForHonoApi(deps: HonoApiChatDependencies, ro
 }
 
 export async function getRoomChatMembershipsWithPaginationForHonoApi(deps: HonoApiChatDependencies, roomId: MiChatRoom['id'], limit: number, sinceId?: string | null, untilId?: string | null): Promise<ChatRoomMembershipRow[]> {
-	return await listChatRoomMembershipsByRoomIdFromDatabase(deps.db, roomId, { limit, ...resolveChatRoomRecordPagination({ sinceId, untilId }) });
+	return await listChatRoomMembershipsByRoomIdFromDatabase(deps.db, roomId, { limit, ...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })) });
 }
 
 export async function searchChatMessagesForHonoApi(deps: HonoApiChatDependencies, meId: MiUser['id'], query: string, limit: number, params: { userId?: MiUser['id'] | null; roomId?: MiChatRoom['id'] | null }): Promise<MiChatMessage[]> {
@@ -1019,7 +1020,7 @@ export async function unreactToChatMessageForHonoApi(deps: HonoApiChatDependenci
 }
 
 export async function getMyChatMembershipsForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], limit: number, sinceId?: string | null, untilId?: string | null): Promise<ChatRoomMembershipRow[]> {
-	return await listChatRoomMembershipsByUserIdFromDatabase(deps.db, userId, { limit, ...resolveChatRoomRecordPagination({ sinceId, untilId }) });
+	return await listChatRoomMembershipsByUserIdFromDatabase(deps.db, userId, { limit, ...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })) });
 }
 
 // ---------------------------------------------------------------------------
@@ -1114,7 +1115,7 @@ export async function handleHonoApiChatMessagesCreateToUser(deps: HonoApiChatDep
 
 	const toUser = await getUserForHonoApiChat(deps, params.toUserId);
 
-	return await createChatMessageToUserForHonoApi(deps, me, toUser, { text: params.text, file });
+	return await createChatMessageToUserForHonoApi(deps, me, toUser, omitUndefined({ text: params.text, file }));
 }
 
 export const chatMessagesCreateToRoomParamDef = z.object({
@@ -1142,7 +1143,7 @@ export async function handleHonoApiChatMessagesCreateToRoom(deps: HonoApiChatDep
 		throw new HonoApiError({ status: 400, message: 'Content required. You need to set text or fileId.', code: 'CONTENT_REQUIRED', id: '340517b7-6d04-42c0-bac1-37ee804e3594' });
 	}
 
-	return await createChatMessageToRoomForHonoApi(deps, me, room, { text: params.text, file });
+	return await createChatMessageToRoomForHonoApi(deps, me, room, omitUndefined({ text: params.text, file }));
 }
 
 export const chatMessagesDeleteParamDef = z.object({
@@ -1238,7 +1239,7 @@ export async function handleHonoApiChatMessagesSearch(deps: HonoApiChatDependenc
 		if (!(await isChatRoomMemberForHonoApi(deps, room, me.id))) throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
 	}
 
-	const messages = await searchChatMessagesForHonoApi(deps, me.id, params.query, params.limit, { userId: params.userId, roomId: params.roomId });
+	const messages = await searchChatMessagesForHonoApi(deps, me.id, params.query, params.limit, omitUndefined({ userId: params.userId, roomId: params.roomId }));
 
 	return await packChatMessagesDetailedForHonoApi(deps, messages, me);
 }
@@ -1337,7 +1338,7 @@ export async function handleHonoApiChatRoomsUpdate(deps: HonoApiChatDependencies
 	const room = await findMyChatRoomByIdForHonoApi(deps, me.id, params.roomId);
 	if (room == null) throw noSuchRoomError('fcdb0f92-bda6-47f9-bd05-343e0e020932');
 
-	const updated = await updateChatRoomForHonoApi(deps, room, { name: params.name, description: params.description });
+	const updated = await updateChatRoomForHonoApi(deps, room, omitUndefined({ name: params.name, description: params.description }));
 	return await packChatRoomForHonoApi(deps, updated, me);
 }
 

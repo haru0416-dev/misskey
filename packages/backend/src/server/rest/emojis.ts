@@ -6,6 +6,7 @@
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
@@ -650,7 +651,7 @@ export async function handleHonoApiAdminEmojiUpdate(
 		throw adminSameNameEmojiExistsError();
 	}
 
-	await updateEmojiInDatabase(deps.db, emoji.id, {
+	await updateEmojiInDatabase(deps.db, emoji.id, omitUndefined({
 		updatedAt: new Date(),
 		name: params.name,
 		category: params.category,
@@ -662,7 +663,7 @@ export async function handleHonoApiAdminEmojiUpdate(
 		publicUrl: driveFile != null ? (driveFile.webpublicUrl ?? driveFile.url) : undefined,
 		type: driveFile != null ? (driveFile.webpublicType ?? driveFile.type) : undefined,
 		roleIdsThatCanBeUsedThisEmojiAsReaction: params.roleIdsThatCanBeUsedThisEmojiAsReaction ?? undefined,
-	});
+	}));
 
 	await refreshHonoApiLocalEmojisCache(deps);
 	const updated = await fetchEmojiByIdOrFailFromDatabase(deps.db, emoji.id);
@@ -848,8 +849,8 @@ export async function handleHonoApiV2AdminEmojiList(
 
 	const q = params.query;
 	const limit = params.limit;
-	const result = await fetchEmojisFromDatabase(deps.db, {
-		query: {
+	const result = await fetchEmojisFromDatabase(deps.db, omitUndefined({
+		query: omitUndefined({
 			updatedAtFrom: q?.updatedAtFrom,
 			updatedAtTo: q?.updatedAtTo,
 			name: q?.name,
@@ -864,14 +865,14 @@ export async function handleHonoApiV2AdminEmojiList(
 			localOnly: q?.localOnly,
 			hostType: q?.hostType,
 			roleIds: q?.roleIds,
-		},
+		}),
 		sinceId,
 		untilId,
-	}, {
+	}), omitUndefined({
 		limit,
 		page: params.page,
 		sortKeys: params.sortKeys,
-	});
+	}));
 
 	return {
 		emojis: await packHonoEmojiDetailedAdminMany(deps, result.emojis),

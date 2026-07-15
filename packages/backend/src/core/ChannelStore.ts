@@ -46,8 +46,8 @@ export function resolveChannelPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: ChannelOrder;
 } {
 	return resolveDateIdPagination(idService, options);

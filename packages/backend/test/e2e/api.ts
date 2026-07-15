@@ -110,10 +110,9 @@ describe('API', () => {
 		});
 
 		test('cannot set undefined if it has default value', async () => {
-			const res = await api('test', {
-				required: true,
-				nullableDefault: undefined,
-			});
+			const params = { required: true };
+			Object.defineProperty(params, 'nullableDefault', { value: undefined, enumerable: true });
+			const res = await api('test', params);
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.nullableDefault, 'hello');
 		});

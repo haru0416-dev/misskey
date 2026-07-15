@@ -118,7 +118,7 @@ async function enqueueRelationshipJobForHonoApi(
 			to: { id: rel.to.id },
 		} satisfies RelationshipJobData,
 		opts: {
-			delay: opts.delay,
+			...(opts.delay === undefined ? {} : { delay: opts.delay }),
 			...queueRetentionOptions(deps.config),
 		},
 	}));

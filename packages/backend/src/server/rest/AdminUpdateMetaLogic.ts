@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import type { MiMeta } from '@/models/Meta.js';
 
 export const adminUpdateMetaParamDef = z.object({
@@ -564,7 +565,7 @@ export function buildAdminUpdateMetaPatch(
 	if (params.clientOptions !== undefined) {
 		set.clientOptions = {
 			...serverSettings.clientOptions,
-			...params.clientOptions,
+			...omitUndefined(params.clientOptions),
 		};
 	}
 

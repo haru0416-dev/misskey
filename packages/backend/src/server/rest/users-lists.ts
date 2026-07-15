@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { blockingExistsInDatabase, listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase } from '@/core/BlockingStore.js';
 import type { RelationshipQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
@@ -410,7 +411,7 @@ export async function handleHonoApiUsersListsUpdateMembership(
 
 	const user = await getUserForHonoApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 
-	await updateUserListMembershipForHonoApi(deps, user, userList, {
+	await updateUserListMembershipForHonoApi(deps, user, userList, omitUndefined({
 		withReplies: params.withReplies,
-	});
+	}));
 }

@@ -166,7 +166,7 @@ async function fetchDecisionFromResponse(response: Response, user: misskey.entit
 	const { transactionId } = getMeta(await response.text());
 	assert.ok(transactionId);
 
-	return await fetchDecision(transactionId, user, { cancel });
+	return await fetchDecision(transactionId, user, cancel === undefined ? {} : { cancel });
 }
 
 async function fetchAuthorizationCode(user: misskey.entities.SignupResponse, scope: string, code_challenge: string): Promise<{ client: AuthorizationCode, code: string }> {

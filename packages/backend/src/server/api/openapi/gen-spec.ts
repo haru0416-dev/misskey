@@ -107,7 +107,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 
 		if (schema.required && schema.required.length <= 0) {
 			// 空配列は許可されない
-			schema.required = undefined;
+			delete schema.required;
 		}
 
 		const hasBody = (schema.type === 'object' && schema.properties && Object.keys(schema.properties).length >= 1)

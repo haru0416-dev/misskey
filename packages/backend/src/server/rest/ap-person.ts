@@ -11,6 +11,7 @@ import { checkHttps } from '@/misc/check-https.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { createMfmService } from '@/core/MfmService.js';
 import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
@@ -105,9 +106,9 @@ export function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IOb
 	if (sharedInboxObject != null) {
 		const sharedInbox = getApId(sharedInboxObject);
 		if (!(typeof sharedInbox === 'string' && sharedInbox.length > 0 && new URL(sharedInbox).host === expectHost)) {
-			x.sharedInbox = undefined;
+			delete x.sharedInbox;
 			if (x.endpoints?.sharedInbox) {
-				x.endpoints.sharedInbox = undefined;
+				delete x.endpoints.sharedInbox;
 			}
 		}
 	}
@@ -136,7 +137,7 @@ export function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IOb
 		}
 		x.name = truncate(x.name, nameLength);
 	} else if (x.name === '') {
-		x.name = undefined;
+		delete x.name;
 	}
 	if (x.summary) {
 		if (!(typeof x.summary === 'string' && x.summary.length > 0)) {
@@ -207,13 +208,13 @@ export async function extractEmojisForHonoApi(deps: HonoApiApPersonDependencies,
 				|| (new Date(tag.updated) > exists.updatedAt)
 				|| (icon?.url !== exists.originalUrl)
 			) {
-				const emoji = await updateEmojiByHostAndNameInDatabase(deps.db, punyHost, name, {
+				const emoji = await updateEmojiByHostAndNameInDatabase(deps.db, punyHost, name, omitUndefined({
 					uri: tag.id,
 					originalUrl: icon?.url,
 					publicUrl: icon?.url,
 					updatedAt: new Date(),
 					license: tag._misskey_license?.freeText ?? null,
-				});
+				}));
 				if (emoji == null) throw new Error('emoji update failed');
 				return emoji;
 			}
@@ -250,14 +251,14 @@ export async function resolveImageForHonoApi(deps: HonoApiApPersonDependencies, 
 	const shouldBeCached = deps.meta.cacheRemoteFiles && (deps.meta.cacheRemoteSensitiveFiles || !image.sensitive);
 
 	try {
-		const file = await uploadDriveFileFromUrlForHonoApi(deps, {
+		const file = await uploadDriveFileFromUrlForHonoApi(deps, omitUndefined({
 			url: image.url,
 			user: actor,
 			uri: image.url,
 			sensitive: image.sensitive,
 			isLink: !shouldBeCached,
 			comment: truncate(image.name ?? undefined, 512),
-		});
+		}));
 
 		if (!file.isLink || file.url === image.url) return file;
 
@@ -451,9 +452,10 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 
 	if (moving) updates.movedAt = new Date();
 
+	const serializedAlsoKnownAs = serializeAlsoKnownAs(updates.alsoKnownAs as string[] | null | undefined);
 	const updated = await updateUserIfNotDeletedInDatabase(deps.db, exist.id, {
 		...updates,
-		alsoKnownAs: serializeAlsoKnownAs(updates.alsoKnownAs as string[] | null | undefined),
+		...(serializedAlsoKnownAs === undefined ? {} : { alsoKnownAs: serializedAlsoKnownAs }),
 	});
 	if (!updated) return;
 
@@ -471,7 +473,7 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 		description = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
 	}
 
-	await updateUserProfileInDatabase(deps.db, exist.id, {
+	await updateUserProfileInDatabase(deps.db, exist.id, omitUndefined({
 		url,
 		fields,
 		description,
@@ -480,7 +482,7 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 		followersVisibility,
 		birthday: bday?.[0] ?? null,
 		location: (person as { 'vcard:Address'?: string })['vcard:Address'] ?? null,
-	});
+	}));
 
 	deps.publishInternalEvent?.('remoteUserUpdated', { id: exist.id });
 
@@ -565,7 +567,7 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	const userId = genId();
 	try {
 		user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
-			user: {
+			user: omitUndefined({
 				id: userId,
 				avatarId: null,
 				bannerId: null,
@@ -591,7 +593,7 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 				makeNotesFollowersOnlyBefore: (person as { makeNotesFollowersOnlyBefore?: number | null }).makeNotesFollowersOnlyBefore ?? null,
 				makeNotesHiddenBefore: (person as { makeNotesHiddenBefore?: number | null }).makeNotesHiddenBefore ?? null,
 				emojis,
-			},
+			}),
 			profile: {
 				userId,
 				description,
@@ -604,11 +606,11 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 				location: (person as { 'vcard:Address'?: string })['vcard:Address'] ?? null,
 				userHost: host,
 			},
-			publickey: person.publicKey ? {
+			...(person.publicKey ? { publickey: {
 				userId,
 				keyId: person.publicKey.id,
 				keyPem: person.publicKey.publicKeyPem,
-			} : undefined,
+			} } : {}),
 		}) as MiRemoteUser;
 	} catch (e) {
 		if (isDuplicateKeyValueError(e)) {

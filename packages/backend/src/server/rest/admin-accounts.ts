@@ -13,6 +13,7 @@ import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js'
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { MiUser } from '@/models/_.js';
 import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -155,10 +156,10 @@ export async function handleHonoApiAdminUpdateProxyAccount(
 ): Promise<MeDetailedHonoApiResponse> {
 	const params = parseHonoApiParams(adminUpdateProxyAccountParamDef, body);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy');
-	const updated = await updateSystemAccountUserInDatabase(deps.db, {
+	const updated = await updateSystemAccountUserInDatabase(deps.db, omitUndefined({
 		userId: proxy.id,
 		description: params.description,
-	});
+	}));
 
 	if (params.description !== undefined) {
 		void logModerationEventInDatabase(deps, me, 'updateProxyAccountDescription', {

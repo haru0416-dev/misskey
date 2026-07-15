@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
 import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdsFromDatabase } from '@/core/UserListMembershipStore.js';
@@ -229,10 +230,10 @@ export async function handleHonoApiUsersListsUpdate(
 		});
 	}
 
-	await updateUserListInDatabase(deps.db, userList.id, {
+	await updateUserListInDatabase(deps.db, userList.id, omitUndefined({
 		name: params.name,
 		isPublic: params.isPublic,
-	});
+	}));
 
 	return await packUserListForHonoApi(deps, userList.id);
 }

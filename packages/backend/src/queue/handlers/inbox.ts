@@ -65,7 +65,7 @@ function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueu
 					latestRequestReceivedAt: job.latestRequestReceivedAt,
 					isNotResponding: false,
 					// もしサーバーが死んでるために配信が止まっていた場合には自動的に復活させてあげる
-					suspensionState: job.shouldUnsuspend ? 'none' : undefined,
+					...(job.shouldUnsuspend ? { suspensionState: 'none' as const } : {}),
 				});
 			},
 			(error, id) => deps.logger.error(`Failed to update federated instance ${id}`, error instanceof Error ? error : new Error(String(error))),

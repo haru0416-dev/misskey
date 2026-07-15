@@ -45,8 +45,8 @@ export function resolveBlockingPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: BlockingOrder;
 } {
 	return resolveDateIdPagination(idService, options);

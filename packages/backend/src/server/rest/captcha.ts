@@ -10,6 +10,7 @@ import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
 import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
@@ -98,14 +99,14 @@ export async function handleHonoApiAdminCaptchaSave(
 			const { before, after } = await updateMetaInDatabase(deps.db, data);
 			Object.assign(deps.meta, after);
 			deps.meta.rootUser = null;
-			deps.publishInternalEvent?.('metaUpdated', { before, after });
+			deps.publishInternalEvent?.('metaUpdated', { ...(before === undefined ? {} : { before }), after });
 		},
-	}, params.provider, {
+	}, params.provider, omitUndefined({
 		sitekey: params.sitekey,
 		secret: params.secret,
 		instanceUrl: params.instanceUrl,
 		captchaResult: params.captchaResult,
-	});
+	}));
 
 	if (!result.success) {
 		throw captchaErrorToHonoApiError(result.error);

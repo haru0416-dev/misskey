@@ -26,7 +26,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
-import { deepClone } from '@/misc/clone.js';
+import { deepClone, omitUndefined } from '@/misc/clone.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiPoll } from '@/models/Poll.js';
@@ -60,6 +60,7 @@ function decodeReaction(str: string): { reaction: string; name?: string; host?: 
 
 	if (custom) {
 		const name = custom[1];
+		if (name == null) return { reaction: str };
 		const host = custom[2] ?? null;
 
 		return {
@@ -69,7 +70,7 @@ function decodeReaction(str: string): { reaction: string; name?: string; host?: 
 		};
 	}
 
-	return { reaction: str, name: undefined, host: undefined };
+	return { reaction: str };
 }
 
 function normalizeReactionKey(reaction: string): string {
@@ -530,18 +531,18 @@ export async function packNoteForHonoApi(
 		note.channelId
 			? (hint != null ? (hint.channels.get(note.channelId) ?? null) : fetchChannelByIdFromDatabase(deps.db, note.channelId))
 			: Promise.resolve(null),
-		(opts.detail && note.replyId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.reply ?? note.replyId, me, {
+		(opts.detail && note.replyId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.reply ?? note.replyId, me, omitUndefined({
 			detail: false,
 			skipHide: opts.skipHide,
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
 			hint: opts.hint,
-		})) : Promise.resolve(undefined),
-		(opts.detail && note.renoteId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.renote ?? note.renoteId, me, {
+		}))) : Promise.resolve(undefined),
+		(opts.detail && note.renoteId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.renote ?? note.renoteId, me, omitUndefined({
 			detail: true,
 			skipHide: opts.skipHide,
 			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
 			hint: opts.hint,
-		})) : Promise.resolve(undefined),
+		}))) : Promise.resolve(undefined),
 		(opts.detail && note.hasPoll) ? populatePoll(deps, note, meId, hint?.polls.has(note.id) ? {
 			poll: hint.polls.get(note.id)!,
 			...(hint.pollVoteNoteIds.has(note.id) ? { votes: hint.pollVotes.get(note.id) ?? [] } : {}),
@@ -797,8 +798,10 @@ export async function createPackNoteHintsForUsersForHonoApi(
 			myReactions,
 			pollVotes: pollVotesByUserId.get(userId) ?? new Map(),
 			pollVoteNoteIds: new Set(pollTargetIds),
-			followeeIds: followeeIdCoverage != null ? (followeeIdsByFollowerId.get(userId) ?? new Set()) : undefined,
-			followeeIdCoverage,
+			...omitUndefined({
+				followeeIds: followeeIdCoverage != null ? (followeeIdsByFollowerId.get(userId) ?? new Set()) : undefined,
+				followeeIdCoverage,
+			}),
 		}];
 	}));
 }
@@ -889,8 +892,10 @@ export async function packNoteManyForHonoApi(
 		myReactions,
 		pollVotes: Map.groupBy(pollVotes, vote => vote.noteId),
 		pollVoteNoteIds: meId != null ? new Set(pollTargetIds) : new Set(),
-		followeeIds: options?.followeeIds ?? (followeeIdCoverage != null ? new Set(packedFolloweeIds) : undefined),
-		followeeIdCoverage,
+		...omitUndefined({
+			followeeIds: options?.followeeIds ?? (followeeIdCoverage != null ? new Set(packedFolloweeIds) : undefined),
+			followeeIdCoverage,
+		}),
 	};
 
 	return await Promise.all(notes.map(note => packNoteForHonoApi(deps, note, me, { ...options, hint })));
