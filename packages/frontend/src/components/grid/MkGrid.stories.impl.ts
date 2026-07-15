@@ -102,7 +102,8 @@ function createRender(params: { settings: GridSetting; data: DataSource[] }) {
 							event: (event: GridEvent, context: GridContext) => {
 								switch (event.type) {
 									case 'cell-value-change': {
-										args.data[event.row.index][event.column.setting.bindTo] = event.newValue;
+										const item = args.data[event.row.index];
+										if (item != null) item[event.column.setting.bindTo] = event.newValue;
 									}
 								}
 							},
@@ -161,7 +162,7 @@ export const AdditionalRowStyle = createRender(
 			row: {
 				styleRules: [
 					{
-						condition: ({ row }) => AdditionalRowStyle.args.data[row.index].check as boolean,
+						condition: ({ row }) => AdditionalRowStyle.args.data[row.index]?.check === true,
 						applyStyle: {
 							style: {
 								backgroundColor: 'lightgray',
@@ -227,7 +228,8 @@ export const ContextMenu = createRender(
 						text: 'Delete',
 						action: () => {
 							for (const cell of context.rangedCells) {
-								ContextMenu.args.data[cell.row.index][cell.column.setting.bindTo] = undefined;
+								const item = ContextMenu.args.data[cell.row.index];
+								if (item != null) item[cell.column.setting.bindTo] = undefined;
 							}
 						},
 					},

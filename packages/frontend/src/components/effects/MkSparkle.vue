@@ -92,7 +92,7 @@ onMounted(() => {
 			y,
 			size: 0.2 + ((sizeFactor / 10) * 3),
 			dur: 1000 + (sizeFactor * 1000),
-			color: colors[Math.floor(Math.random() * colors.length)],
+			color: colors[Math.floor(Math.random() * colors.length)] ?? '#FFE202',
 		};
 		particles.value.push(particle);
 		window.setTimeout(() => {

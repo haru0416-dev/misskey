@@ -277,6 +277,7 @@ function onPointermove(ev: PointerEvent) {
 	if (pointers.size > 1) {
 		isClick = false;
 		const [a, b] = Array.from(pointers.values());
+		if (a == null || b == null) return;
 		const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 		if (pinchDistance > 0) {
 			const nextScale = calculatePinchScale(transform.value.scale, distance - pinchDistance);
@@ -308,6 +309,7 @@ function onPointerup(ev: PointerEvent) {
 	pinchDistance = 0;
 	if (pointers.size > 0) {
 		const [nextPointer] = pointers.values();
+		if (nextPointer == null) return;
 		pointerId = nextPointer.pointerId;
 		start = last = { x: nextPointer.clientX, y: nextPointer.clientY };
 		isClick = false;
@@ -337,7 +339,10 @@ const doubleTapDetector = makeDoubleTapDetector(ev => {
 	ev.preventDefault();
 	ev.stopPropagation();
 	if (isZooming.value) resetToNeutral();
-	else zoomInTo(ev.touches[0].clientX, ev.touches[0].clientY, 2, true);
+	else {
+		const touch = ev.touches.item(0);
+		if (touch != null) zoomInTo(touch.clientX, touch.clientY, 2, true);
+	}
 });
 
 function cancelPointerGesture() {

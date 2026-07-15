@@ -11,22 +11,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<stop offset="100%" :stop-color="color" stop-opacity="0.65"></stop>
 		</linearGradient>
 	</defs>
-	<polygon
-		:points="polygonPoints"
-		:style="`stroke: none; fill: url(#${ gradientId });`"
-	/>
-	<polyline
-		:points="polylinePoints"
-		fill="none"
-		:stroke="color"
-		stroke-width="2"
-	/>
-	<circle
-		:cx="headX ?? undefined"
-		:cy="headY ?? undefined"
-		r="3"
-		:fill="color"
-	/>
+	<template v-if="polylinePoints !== ''">
+		<polygon
+			:points="polygonPoints"
+			:style="`stroke: none; fill: url(#${ gradientId });`"
+		/>
+		<polyline
+			:points="polylinePoints"
+			fill="none"
+			:stroke="color"
+			stroke-width="2"
+		/>
+		<circle
+			:cx="headX ?? undefined"
+			:cy="headY ?? undefined"
+			r="3"
+			:fill="color"
+		/>
+	</template>
 </svg>
 </template>
 
@@ -52,6 +54,13 @@ const color = accent.toRgbString();
 
 function draw(): void {
 	const stats = props.src.slice().reverse();
+	if (stats.length === 0) {
+		polylinePoints.value = '';
+		polygonPoints.value = '';
+		headX.value = null;
+		headY.value = null;
+		return;
+	}
 	const peak = Math.max.apply(null, stats) || 1;
 
 	const _polylinePoints = stats.map((n, i) => [
@@ -63,8 +72,9 @@ function draw(): void {
 
 	polygonPoints.value = `0,${ viewBoxY } ${ polylinePoints.value } ${ viewBoxX },${ viewBoxY }`;
 
-	headX.value = _polylinePoints.at(-1)![0];
-	headY.value = _polylinePoints.at(-1)![1];
+	const head = _polylinePoints.at(-1);
+	headX.value = head?.[0] ?? null;
+	headY.value = head?.[1] ?? null;
 }
 
 watch(() => props.src, draw, { deep: true, immediate: true });

@@ -485,11 +485,15 @@ function done(query?: string): boolean | void {
 		return true;
 	}
 	if (searchResultCustom.value.length > 0) {
-		chosen(searchResultCustom.value[0]);
+		const firstResult = searchResultCustom.value[0];
+		if (firstResult == null) return;
+		chosen(firstResult);
 		return true;
 	}
 	if (searchResultUnicode.value.length > 0) {
-		chosen(searchResultUnicode.value[0]);
+		const firstResult = searchResultUnicode.value[0];
+		if (firstResult == null) return;
+		chosen(firstResult);
 		return true;
 	}
 }

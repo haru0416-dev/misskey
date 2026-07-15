@@ -24,8 +24,8 @@ export function deepEqual(a: JsonLike, b: JsonLike): boolean {
 
 	if (Array.isArray(a) && Array.isArray(b)) {
 		if (a.length !== b.length) return false;
-		for (let i = 0; i < a.length; i++) {
-			if (!deepEqual(a[i], b[i])) return false;
+		for (const [i, value] of a.entries()) {
+			if (!deepEqual(value, b[i])) return false;
 		}
 		return true;
 	} else if (a instanceof Map && b instanceof Map) {
@@ -38,8 +38,7 @@ export function deepEqual(a: JsonLike, b: JsonLike): boolean {
 		const aks = Object.keys(a);
 		const bks = Object.keys(b as { [key: string]: JsonLike });
 		if (aks.length !== bks.length) return false;
-		for (let i = 0; i < aks.length; i++) {
-			const k = aks[i];
+		for (const k of aks) {
 			if (!deepEqual((a as { [key: string]: JsonLike })[k], (b as { [key: string]: JsonLike })[k])) return false;
 		}
 		return true;

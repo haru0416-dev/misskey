@@ -15,10 +15,9 @@ export function groupAvatarDecorations<T extends AvatarDecorationBase>(decoratio
 
 	for (const decoration of decorations) {
 		const category = decoration.category ?? '';
-		if (!(category in grouped)) {
-			grouped[category] = [];
-		}
-		grouped[category].push(decoration);
+		const group = grouped[category] ?? [];
+		group.push(decoration);
+		grouped[category] = group;
 	}
 
 	return grouped;

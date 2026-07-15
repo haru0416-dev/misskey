@@ -13,14 +13,15 @@ vi.mock('chromatic/isChromatic', () => ({ default: () => false }));
 vi.mock('@/utility/webgl.js', () => ({ initShaderProgram: () => ({}) }));
 
 preferState.animation = true;
-preferReactive.animation = ref(true);
+const animationPreference = ref(true);
+preferReactive.animation = animationPreference;
 
 describe('MkAnimBg', () => {
 	afterEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
 		vi.unstubAllGlobals();
-		preferReactive.animation.value = true;
+		animationPreference.value = true;
 	});
 
 	test('renders only while visible and animations are enabled', async () => {
@@ -103,7 +104,7 @@ describe('MkAnimBg', () => {
 		intersectionCallback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
 		assert.equal(frames.size, 1);
 
-		preferReactive.animation.value = false;
+		animationPreference.value = false;
 		await nextTick();
 		assert.equal(frames.size, 0);
 

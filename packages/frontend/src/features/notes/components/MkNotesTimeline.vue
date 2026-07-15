@@ -42,10 +42,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:data-scroll-anchor="note.id"
 					:class="[$style.rowFallback, { [$style.gapped]: !noGap, [$style.last]: i === notes.length - 1 }]"
 				>
-					<div v-if="i > 0 && isSeparatorNeeded(notes[i - 1].createdAt, note.createdAt)" :class="[$style.date, { [$style.noGap]: noGap }]">
-						<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(notes[i - 1].createdAt, note.createdAt)?.prevText }}</span>
+					<div v-if="getNoteSeparator(notes, i, note.createdAt) != null" :class="[$style.date, { [$style.noGap]: noGap }]">
+						<span><i class="ti ti-chevron-up"></i> {{ getNoteSeparator(notes, i, note.createdAt)?.prevText }}</span>
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getSeparatorInfo(notes[i - 1].createdAt, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span>{{ getNoteSeparator(notes, i, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
 					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
 					<div v-if="note._shouldInsertAd_" :class="$style.ad">
@@ -99,19 +99,26 @@ const virtualizer = useVirtualizer(computed(() => ({
 	useAnimationFrameWithResizeObserver: true,
 })));
 
-const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virtualItem) => {
+const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
 	const note = props.paginator.items.value[virtualItem.index];
+	if (note == null) return [];
 	const previousNote = props.paginator.items.value[virtualItem.index - 1];
 	const separatorInfo = previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
 		? getSeparatorInfo(previousNote.createdAt, note.createdAt)
 		: null;
-	return {
+	return [{
 		index: virtualItem.index,
 		start: virtualItem.start,
 		note,
 		separatorInfo,
-	};
+	}];
 }));
+
+function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
+	const previousNote = notes[index - 1];
+	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) return null;
+	return getSeparatorInfo(previousNote.createdAt, createdAt);
+}
 
 function measureElement(node: Element | ComponentPublicInstance | null) {
 	if (node instanceof Element) virtualizer.value.measureElement(node);

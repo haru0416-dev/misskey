@@ -270,16 +270,21 @@ async function fetchMore() {
 	const LIMIT = 30;
 
 	moreFetching.value = true;
+	const lastMessage = messages.value.at(-1);
+	if (lastMessage == null) {
+		moreFetching.value = false;
+		return;
+	}
 
-	const newMessages = props.userId ? await misskeyApi('chat/messages/user-timeline', {
-		userId: user.value!.id,
+	const newMessages = props.userId && user.value != null ? await misskeyApi('chat/messages/user-timeline', {
+		userId: user.value.id,
 		limit: LIMIT,
-		untilId: messages.value[messages.value.length - 1].id,
-	}) : await misskeyApi('chat/messages/room-timeline', {
-		roomId: room.value!.id,
+		untilId: lastMessage.id,
+	}) : room.value != null ? await misskeyApi('chat/messages/room-timeline', {
+		roomId: room.value.id,
 		limit: LIMIT,
-		untilId: messages.value[messages.value.length - 1].id,
-	});
+		untilId: lastMessage.id,
+	}) : [];
 
 	messages.value.push(...newMessages.map(x => normalizeMessage(x)));
 

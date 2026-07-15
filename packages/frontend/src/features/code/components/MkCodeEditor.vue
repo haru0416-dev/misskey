@@ -83,7 +83,7 @@ function onKeydown(ev: KeyboardEvent) {
 		const posEnd = inputEl.value?.selectionEnd ?? v.value.length;
 		if (pos === posEnd) {
 			const lines = v.value.slice(0, pos).split('\n');
-			const currentLine = lines[lines.length - 1];
+			const currentLine = lines.at(-1) ?? '';
 			const currentLineSpaces = currentLine.match(/^\s+/);
 			const posDelta = currentLineSpaces ? currentLineSpaces[0].length : 0;
 			ev.preventDefault();

@@ -34,10 +34,9 @@ export function detectI18nFacadeChunk(sourceCode: string, fileName: string, file
 	// export { something };
 	// ```
 	if (programNode.body.length !== 2) return null; // not a facade
-	if (programNode.body[0].type !== 'ImportDeclaration') return null; // not a facade
-	if (programNode.body[1].type !== 'ExportNamedDeclaration') return null; // not a facade
-	const importDecl = programNode.body[0];
-	const exportDecl = programNode.body[1];
+	const [importDecl, exportDecl] = programNode.body;
+	if (importDecl?.type !== 'ImportDeclaration') return null; // not a facade
+	if (exportDecl?.type !== 'ExportNamedDeclaration') return null; // not a facade
 
 	// the file is a facade file.
 

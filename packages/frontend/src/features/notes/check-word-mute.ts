@@ -22,8 +22,10 @@ function compileMutes(mutedWords: Array<string | string[]>): CompiledMute[] {
 
 		const regexp = filter.match(/^\/(.+)\/(.*)$/);
 		if (regexp == null) continue;
+		const source = regexp[1];
+		if (source == null) continue;
 		try {
-			compiled.push({ source: filter, regexp: new RegExp(regexp[1], regexp[2]) });
+			compiled.push({ source: filter, regexp: new RegExp(source, regexp[2] ?? '') });
 		} catch (_) {
 			// This should never happen due to input sanitisation.
 		}

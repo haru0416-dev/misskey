@@ -208,7 +208,8 @@ function saveTlFilter(key: keyof typeof store.tl.filter, newValue: boolean) {
 
 function switchTlIfNeeded() {
 	if (isBasicTimeline(src.value) && !isAvailableBasicTimeline(src.value)) {
-		src.value = availableBasicTimelines()[0];
+		const availableTimeline = availableBasicTimelines()[0];
+		if (availableTimeline != null) src.value = availableTimeline;
 	}
 }
 

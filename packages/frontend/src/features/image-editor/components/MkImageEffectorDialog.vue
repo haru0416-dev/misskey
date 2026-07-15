@@ -36,7 +36,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<XLayer
 					v-for="(layer, i) in layers"
 					:key="layer.id"
-					v-model:layer="layers[i]"
+					:layer="layer"
+					@update:layer="updatedLayer => updateLayer(i, updatedLayer)"
 					@del="onLayerDelete(layer)"
 					@swapUp="onLayerSwapUp(layer)"
 					@swapDown="onLayerSwapDown(layer)"
@@ -88,6 +89,11 @@ async function cancel() {
 }
 
 const layers = reactive<ImageEffectorLayer[]>([]);
+
+function updateLayer(index: number, layer: ImageEffectorLayer) {
+	if (layers[index] == null) return;
+	layers[index] = layer;
+}
 
 watch(layers, async () => {
 	if (renderer != null) {

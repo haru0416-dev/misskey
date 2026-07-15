@@ -24,7 +24,7 @@ export function calcPopupPosition(
 		rect = props.anchorElement.getBoundingClientRect();
 	}
 
-	const calcPosWhenTop = () => {
+	const calcPosWhenTop = (): [number, number] => {
 		let left: number;
 		let top: number;
 
@@ -49,7 +49,7 @@ export function calcPopupPosition(
 		return [left, top];
 	};
 
-	const calcPosWhenBottom = () => {
+	const calcPosWhenBottom = (): [number, number] => {
 		let left: number;
 		let top: number;
 
@@ -74,7 +74,7 @@ export function calcPopupPosition(
 		return [left, top];
 	};
 
-	const calcPosWhenLeft = () => {
+	const calcPosWhenLeft = (): [number, number] => {
 		let left: number;
 		let top: number;
 
@@ -99,7 +99,7 @@ export function calcPopupPosition(
 		return [left, top];
 	};
 
-	const calcPosWhenRight = () => {
+	const calcPosWhenRight = (): [number, number] => {
 		let left = 0; // TSを黙らすためとりあえず初期値を0に
 		let top = 0; // TSを黙らすためとりあえず初期値を0に
 

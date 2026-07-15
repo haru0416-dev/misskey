@@ -14,12 +14,12 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform1f(u.rMax, params.max);
-		gl.uniform1f(u.rMin, 1.0 + params.min);
-		gl.uniform1f(u.gMax, params.max);
-		gl.uniform1f(u.gMin, 1.0 + params.min);
-		gl.uniform1f(u.bMax, params.max);
-		gl.uniform1f(u.bMin, 1.0 + params.min);
+		gl.uniform1f(u('rMax'), params.max);
+		gl.uniform1f(u('rMin'), 1.0 + params.min);
+		gl.uniform1f(u('gMax'), params.max);
+		gl.uniform1f(u('gMin'), 1.0 + params.min);
+		gl.uniform1f(u('bMax'), params.max);
+		gl.uniform1f(u('bMin'), 1.0 + params.min);
 	},
 });
 

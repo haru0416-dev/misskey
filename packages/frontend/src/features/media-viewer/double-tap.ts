@@ -12,12 +12,14 @@ export function makeDoubleTapDetector(onDoubletap: (event: TouchEvent) => void) 
 
 	function onTouchstart(ev: TouchEvent) {
 		if (ev.touches.length !== 1) return;
+		const touch = ev.touches[0];
+		if (touch == null) return;
 
 		const currentTime = Date.now();
 		const tapLength = currentTime - lastTapTime;
 		const positionDelta = Math.max(
-			Math.abs(ev.touches[0].clientX - lastTapPosition.x),
-			Math.abs(ev.touches[0].clientY - lastTapPosition.y),
+			Math.abs(touch.clientX - lastTapPosition.x),
+			Math.abs(touch.clientY - lastTapPosition.y),
 		);
 
 		if (tapLength < durationThreshold && tapLength > 0 && positionDelta < positionThreshold) {
@@ -28,16 +30,18 @@ export function makeDoubleTapDetector(onDoubletap: (event: TouchEvent) => void) 
 
 		lastTapTime = currentTime;
 		lastTapPosition = {
-			x: ev.touches[0].clientX,
-			y: ev.touches[0].clientY,
+			x: touch.clientX,
+			y: touch.clientY,
 		};
 	}
 
 	function onTouchmove(ev: TouchEvent) {
 		if (ev.touches.length === 0) return;
+		const touch = ev.touches[0];
+		if (touch == null) return;
 		const positionDelta = Math.max(
-			Math.abs(ev.touches[0].clientX - lastTapPosition.x),
-			Math.abs(ev.touches[0].clientY - lastTapPosition.y),
+			Math.abs(touch.clientX - lastTapPosition.x),
+			Math.abs(touch.clientY - lastTapPosition.y),
 		);
 		if (positionDelta > positionThreshold) lastTapTime = 0;
 	}

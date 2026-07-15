@@ -69,6 +69,7 @@ watch(description, () => {
 async function setAvatar(ev: PointerEvent) {
 	const files = await os.chooseFileFromPc({ multiple: false });
 	const file = files[0];
+	if (file == null) return;
 
 	let originalOrCropped = file;
 
@@ -86,6 +87,7 @@ async function setAvatar(ev: PointerEvent) {
 	}
 
 	const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
+	if (driveFile == null) return;
 
 	const i = await os.apiWithDialog('i/update', {
 		avatarId: driveFile.id,

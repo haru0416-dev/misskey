@@ -346,6 +346,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							case 'ruby': {
 								if (token.children.length === 1) {
 									const child = token.children[0];
+									if (child == null) return [];
 									let text = child.type === 'text' ? child.props.text : '';
 									if (!disableNyaize && shouldNyaize) {
 										text = Misskey.nyaize(text);
@@ -365,7 +366,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							}
 							case 'unixtime': {
 								const child = token.children[0];
-								const unixtime = parseInt(child.type === 'text' ? child.props.text : '');
+								const unixtime = parseInt(child?.type === 'text' ? child.props.text : '');
 								return h(
 									'span',
 									{

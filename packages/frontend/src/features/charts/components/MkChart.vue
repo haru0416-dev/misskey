@@ -38,6 +38,21 @@ export type ChartSrc =
 	| 'per-user-following'
 	| 'per-user-followers'
 	| 'per-user-drive';
+
+export function sumChartSeries(...arrays: [number[], ...number[][]]) {
+	const [first, ...rest] = arrays;
+	for (const array of rest) {
+		if (array.length !== first.length) {
+			throw new Error(`Chart series length mismatch: expected ${first.length}, received ${array.length}`);
+		}
+	}
+
+	return first.map((value, index) => rest.reduce((total, array) => {
+		const next = array[index];
+		if (next == null) throw new Error(`Chart series value is missing at index ${index}`);
+		return total + next;
+	}, value));
+}
 </script>
 
 <script lang="ts" setup>
@@ -78,7 +93,7 @@ const props = withDefaults(defineProps<{
 	nowForChromatic: undefined,
 });
 
-const sum = (...arr: number[][]) => arr.reduce((r, a) => r.map((b, i) => a[i] + b));
+const sum = sumChartSeries;
 const negate = (arr: number[]) => arr.map((x) => -x);
 
 const colors = {

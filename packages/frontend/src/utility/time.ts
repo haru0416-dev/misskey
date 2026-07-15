@@ -10,22 +10,24 @@ const dateTimeIntervals = {
 };
 
 export function dateUTC(time: number[]): Date {
+	const [year, month, date, hours, minutes, seconds, ms] = time;
+	if (year == null || month == null) throw new Error('wrong number of arguments');
 	const d =
 		time.length === 2
-			? Date.UTC(time[0], time[1])
-			: time.length === 3
-				? Date.UTC(time[0], time[1], time[2])
-				: time.length === 4
-					? Date.UTC(time[0], time[1], time[2], time[3])
-					: time.length === 5
-						? Date.UTC(time[0], time[1], time[2], time[3], time[4])
-						: time.length === 6
-							? Date.UTC(time[0], time[1], time[2], time[3], time[4], time[5])
-							: time.length === 7
-								? Date.UTC(time[0], time[1], time[2], time[3], time[4], time[5], time[6])
+			? Date.UTC(year, month)
+			: time.length === 3 && date != null
+				? Date.UTC(year, month, date)
+				: time.length === 4 && date != null && hours != null
+					? Date.UTC(year, month, date, hours)
+					: time.length === 5 && date != null && hours != null && minutes != null
+						? Date.UTC(year, month, date, hours, minutes)
+						: time.length === 6 && date != null && hours != null && minutes != null && seconds != null
+							? Date.UTC(year, month, date, hours, minutes, seconds)
+							: time.length === 7 && date != null && hours != null && minutes != null && seconds != null && ms != null
+								? Date.UTC(year, month, date, hours, minutes, seconds, ms)
 								: null;
 
-	if (!d) throw new Error('wrong number of arguments');
+	if (d == null) throw new Error('wrong number of arguments');
 
 	return new Date(d);
 }

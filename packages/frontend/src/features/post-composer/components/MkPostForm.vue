@@ -273,7 +273,7 @@ const placeholder = computed((): string => {
 			i18n.ts._postForm._placeholders.e,
 			i18n.ts._postForm._placeholders.f,
 		];
-		return xs[Math.floor(Math.random() * xs.length)];
+		return xs[Math.floor(Math.random() * xs.length)] ?? i18n.ts._postForm._placeholders.a;
 	}
 });
 
@@ -515,11 +515,15 @@ function updateFileSensitive(file: Misskey.entities.DriveFile, isSensitive: bool
 	if (props.mock) {
 		emit('fileChangeSensitive', file.id, isSensitive);
 	}
-	files.value[files.value.findIndex(x => x.id === file.id)].isSensitive = isSensitive;
+	const target = files.value.find(x => x.id === file.id);
+	if (target == null) return;
+	target.isSensitive = isSensitive;
 }
 
 function updateFileName(file: Misskey.entities.DriveFile, name: Misskey.entities.DriveFile['name']) {
-	files.value[files.value.findIndex(x => x.id === file.id)].name = name;
+	const target = files.value.find(x => x.id === file.id);
+	if (target == null) return;
+	target.name = name;
 }
 
 function setVisibility() {
@@ -1041,10 +1045,12 @@ async function post(ev?: PointerEvent) {
 			postData.text = hashtags_;
 		} else {
 			const postTextLines = postData.text.split('\n');
-			if (postTextLines[postTextLines.length - 1].trim() === '') {
-				postTextLines[postTextLines.length - 1] += hashtags_;
+			const lastLineIndex = postTextLines.length - 1;
+			const lastLine = postTextLines[lastLineIndex] ?? '';
+			if (lastLine.trim() === '') {
+				postTextLines[lastLineIndex] = lastLine + hashtags_;
 			} else {
-				postTextLines[postTextLines.length - 1] += ' ' + hashtags_;
+				postTextLines[lastLineIndex] = lastLine + ' ' + hashtags_;
 			}
 			postData.text = postTextLines.join('\n');
 		}

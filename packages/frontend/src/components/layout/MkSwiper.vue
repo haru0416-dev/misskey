@@ -78,8 +78,10 @@ function touchStart(event: TouchEvent) {
 
 	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) return;
 
-	startScreenX = event.touches[0].screenX;
-	startScreenY = event.touches[0].screenY;
+	const touch = event.touches[0];
+	if (touch == null) return;
+	startScreenX = touch.screenX;
+	startScreenY = touch.screenY;
 	swipeDirectionLocked = null; // スワイプ方向をリセット
 }
 
@@ -94,8 +96,10 @@ function touchMove(event: TouchEvent) {
 
 	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) return;
 
-	let distanceX = event.touches[0].screenX - startScreenX;
-	let distanceY = event.touches[0].screenY - startScreenY;
+	const touch = event.touches[0];
+	if (touch == null) return;
+	let distanceX = touch.screenX - startScreenX;
+	let distanceY = touch.screenY - startScreenY;
 
 	// スワイプ方向をロック
 	if (!swipeDirectionLocked) {
@@ -121,10 +125,12 @@ function touchMove(event: TouchEvent) {
 	if (Math.abs(distanceX) < MIN_SWIPE_DISTANCE) return;
 	if (Math.abs(distanceX) > MAX_SWIPE_DISTANCE) return;
 
-	if (currentTabIndex.value === 0 || props.tabs[currentTabIndex.value - 1].onClick) {
+	const previousTab = props.tabs[currentTabIndex.value - 1];
+	const nextTab = props.tabs[currentTabIndex.value + 1];
+	if (currentTabIndex.value === 0 || previousTab?.onClick) {
 		distanceX = Math.min(distanceX, 0);
 	}
-	if (currentTabIndex.value === props.tabs.length - 1 || props.tabs[currentTabIndex.value + 1].onClick) {
+	if (currentTabIndex.value === props.tabs.length - 1 || nextTab?.onClick) {
 		distanceX = Math.max(distanceX, 0);
 	}
 	if (distanceX === 0) return;
@@ -154,18 +160,22 @@ function touchEnd(event: TouchEvent) {
 
 	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) return;
 
-	const distance = event.changedTouches[0].screenX - startScreenX;
+	const changedTouch = event.changedTouches[0];
+	if (changedTouch == null) return;
+	const distance = changedTouch.screenX - startScreenX;
 
 	if (Math.abs(distance) > SWIPE_DISTANCE_THRESHOLD) {
 		if (distance > 0) {
-			if (props.tabs[currentTabIndex.value - 1] && !props.tabs[currentTabIndex.value - 1].onClick) {
-				tabModel.value = props.tabs[currentTabIndex.value - 1].key;
-				emit('swiped', props.tabs[currentTabIndex.value - 1].key, 'right');
+			const previousTab = props.tabs[currentTabIndex.value - 1];
+			if (previousTab != null && !previousTab.onClick) {
+				tabModel.value = previousTab.key;
+				emit('swiped', previousTab.key, 'right');
 			}
 		} else {
-			if (props.tabs[currentTabIndex.value + 1] && !props.tabs[currentTabIndex.value + 1].onClick) {
-				tabModel.value = props.tabs[currentTabIndex.value + 1].key;
-				emit('swiped', props.tabs[currentTabIndex.value + 1].key, 'left');
+			const nextTab = props.tabs[currentTabIndex.value + 1];
+			if (nextTab != null && !nextTab.onClick) {
+				tabModel.value = nextTab.key;
+				emit('swiped', nextTab.key, 'left');
 			}
 		}
 	}

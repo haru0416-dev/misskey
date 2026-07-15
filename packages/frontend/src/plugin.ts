@@ -186,9 +186,10 @@ export async function uninstallPlugin(plugin: Plugin) {
 	});
 
 	if (Object.hasOwn(store.pluginTokens, plugin.installId)) {
-		await os.apiWithDialog('i/revoke-token', {
-			token: store.pluginTokens[plugin.installId],
-		});
+		const token = store.pluginTokens[plugin.installId];
+		if (token != null) {
+			await os.apiWithDialog('i/revoke-token', { token });
+		}
 		const pluginTokens = { ...store.pluginTokens };
 		delete pluginTokens[plugin.installId];
 		store.set('pluginTokens', pluginTokens);
@@ -359,7 +360,8 @@ export async function configPlugin(plugin: Plugin) {
 
 	const config = plugin.config;
 	for (const key in plugin.configData) {
-		config[key].default = plugin.configData[key];
+		const definition = config[key];
+		if (definition != null) definition.default = plugin.configData[key];
 	}
 
 	const { canceled, result } = await os.form(plugin.name, config);
@@ -500,12 +502,19 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 	};
 
 	// 後方互換性のため
-	env['Plugin:register_post_form_action'] = env['Plugin:register:post_form_action'];
-	env['Plugin:register_user_action'] = env['Plugin:register:user_action'];
-	env['Plugin:register_note_action'] = env['Plugin:register:note_action'];
-	env['Plugin:register_note_view_interruptor'] = env['Plugin:register:note_view_interruptor'];
-	env['Plugin:register_note_post_interruptor'] = env['Plugin:register:note_post_interruptor'];
-	env['Plugin:register_page_view_interruptor'] = env['Plugin:register:page_view_interruptor'];
+	const compatibilityAliases = [
+		['Plugin:register_post_form_action', 'Plugin:register:post_form_action'],
+		['Plugin:register_user_action', 'Plugin:register:user_action'],
+		['Plugin:register_note_action', 'Plugin:register:note_action'],
+		['Plugin:register_note_view_interruptor', 'Plugin:register:note_view_interruptor'],
+		['Plugin:register_note_post_interruptor', 'Plugin:register:note_post_interruptor'],
+		['Plugin:register_page_view_interruptor', 'Plugin:register:page_view_interruptor'],
+	] as const;
+	for (const [alias, source] of compatibilityAliases) {
+		const value = env[source];
+		if (value == null) throw new Error(`Plugin API ${source} is not registered`);
+		env[alias] = value;
+	}
 
 	return env;
 }

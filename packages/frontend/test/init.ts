@@ -62,7 +62,9 @@ fetchMocker.mockIf(/^\/assets\/locales\/.*\.json$/, async () => {
 });
 
 const { updateI18n } = await import('@/i18n.js');
-updateI18n(locales['en-US']);
+const enUsLocale = locales['en-US'];
+if (enUsLocale == null) throw new Error('en-US locale is required for frontend tests');
+updateI18n(enUsLocale);
 
 export const preferState: Record<string, unknown> = {
 	// なんかtestがうまいこと動かないのでここに書く

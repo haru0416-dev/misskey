@@ -85,10 +85,11 @@ const emit = defineEmits<{
 const dialog = useTemplateRef('dialog');
 const exceeded = computed(() => ($i.policies.avatarDecorationLimit - $i.avatarDecorations.length) <= 0);
 const locked = computed(() => props.decoration.roleIdsThatCanBeUsedThisDecoration.length > 0 && !$i.roles.some(r => props.decoration.roleIdsThatCanBeUsedThisDecoration.includes(r.id)));
-const angle = ref((props.usingIndex != null ? $i.avatarDecorations[props.usingIndex].angle : null) ?? 0);
-const flipH = ref((props.usingIndex != null ? $i.avatarDecorations[props.usingIndex].flipH : null) ?? false);
-const offsetX = ref((props.usingIndex != null ? $i.avatarDecorations[props.usingIndex].offsetX : null) ?? 0);
-const offsetY = ref((props.usingIndex != null ? $i.avatarDecorations[props.usingIndex].offsetY : null) ?? 0);
+const attachedDecoration = props.usingIndex == null ? null : ($i.avatarDecorations[props.usingIndex] ?? null);
+const angle = ref(attachedDecoration?.angle ?? 0);
+const flipH = ref(attachedDecoration?.flipH ?? false);
+const offsetX = ref(attachedDecoration?.offsetX ?? 0);
+const offsetY = ref(attachedDecoration?.offsetY ?? 0);
 
 const decorationsForPreview = computed(() => {
 	const decoration = {

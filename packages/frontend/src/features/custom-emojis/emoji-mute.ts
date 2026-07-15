@@ -12,7 +12,7 @@ export function makeEmojiMuteKey(props: { name: string; host?: string | null }) 
 }
 
 export function extractCustomEmojiName(name: string) {
-	return (name[0] === ':' ? name.substring(1, name.length - 1) : name).replace('@.', '').split('@')[0];
+	return (name[0] === ':' ? name.substring(1, name.length - 1) : name).replace('@.', '').split('@')[0] ?? '';
 }
 
 export function extractCustomEmojiHost(name: string) {

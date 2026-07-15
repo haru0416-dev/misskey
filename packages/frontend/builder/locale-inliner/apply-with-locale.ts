@@ -62,6 +62,7 @@ export function applyWithLocale(
 					let lastIndex = 0;
 					for (const match of format.matchAll(/\{(.+?)}/g)) {
 						const [fullMatch, paramName] = match;
+						if (paramName == null) continue;
 						if (lastIndex < match.index) {
 							components.push(JSON.stringify(format.slice(lastIndex, match.index)));
 						}
@@ -111,7 +112,9 @@ function getPropertyByPath(localeJson: ILocale, localizationKey: string[]): stri
 		if (typeof current !== 'object' || !(key in current)) {
 			return null; // Key not found
 		}
-		current = current[key];
+		const next: string | ILocale | undefined = current[key];
+		if (next == null) return null;
+		current = next;
 	}
 	return current;
 }

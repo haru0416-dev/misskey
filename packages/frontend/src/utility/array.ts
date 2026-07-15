@@ -98,8 +98,11 @@ export function maximum(xs: number[]): number {
  */
 export function lessThan(xs: number[], ys: number[]): boolean {
 	for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
-		if (xs[i] < ys[i]) return true;
-		if (xs[i] > ys[i]) return false;
+		const x = xs[i];
+		const y = ys[i];
+		if (x == null || y == null) continue;
+		if (x < y) return true;
+		if (x > y) return false;
 	}
 	return xs.length < ys.length;
 }
@@ -120,9 +123,8 @@ export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 }
 
 export function cumulativeSum(xs: number[]): number[] {
-	const ys = Array.from(xs); // deep copy
-	for (let i = 1; i < ys.length; i++) ys[i] += ys[i - 1];
-	return ys;
+	let total = 0;
+	return xs.map((x) => (total += x));
 }
 
 export function toArray<T>(x: T | T[] | undefined): T[] {

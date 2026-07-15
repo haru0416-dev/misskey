@@ -150,7 +150,8 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 
 		for (const tag of window.document.head.children) {
 			if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {
-				tag.setAttribute('content', this.currentCompiledTheme['htmlThemeColor']);
+				const htmlThemeColor = this.currentCompiledTheme['htmlThemeColor'];
+				if (htmlThemeColor != null) tag.setAttribute('content', htmlThemeColor);
 				break;
 			}
 		}

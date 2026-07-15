@@ -10,13 +10,14 @@ import { preferReactive, preferState } from './init';
 import MkNumber from '@/components/display/MkNumber.vue';
 
 preferState.animation = true;
-preferReactive.animation = ref(true);
+const animationPreference = ref(true);
+preferReactive.animation = animationPreference;
 
 describe('MkNumber', () => {
 	afterEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
-		preferReactive.animation.value = true;
+		animationPreference.value = true;
 	});
 
 	test('keeps only the latest animation frame loop and cancels it on unmount', async () => {
@@ -60,7 +61,7 @@ describe('MkNumber', () => {
 	});
 
 	test('updates immediately when animations are disabled', () => {
-		preferReactive.animation.value = false;
+		animationPreference.value = false;
 		const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame');
 
 		const result = render(MkNumber, { props: { value: 1234 } });

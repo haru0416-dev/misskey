@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkButton inline primary @click="save"><i class="ti ti-check"></i> {{ i18n.ts.save }}</MkButton>
 			</div>
 			<div class="_gaps">
-				<MkInput v-for="(_, i) in accountAliases" v-model="accountAliases[i]">
+				<MkInput v-for="(alias, i) in accountAliases" :modelValue="alias" @update:modelValue="updateAlias(i, $event)">
 					<template #prefix><i class="ti ti-plane-arrival"></i></template>
 					<template #label>{{ i18n.tsx._accountMigration.moveFromLabel({ n: i + 1 }) }}</template>
 				</MkInput>
@@ -107,6 +107,11 @@ async function move(): Promise<void> {
 
 function add(): void {
 	accountAliases.value.push('');
+}
+
+function updateAlias(index: number, alias: string): void {
+	if (accountAliases.value[index] == null) return;
+	accountAliases.value[index] = alias;
 }
 
 async function save(): Promise<void> {

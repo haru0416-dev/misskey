@@ -82,19 +82,21 @@ async function onPaste(ev: ClipboardEvent) {
 	const items = clipboardData.items;
 
 	if (items.length === 1) {
-		if (items[0].kind === 'file') {
-			const pastedFile = items[0].getAsFile();
+		const item = items[0];
+		if (item?.kind === 'file') {
+			const pastedFile = item.getAsFile();
 			if (!pastedFile) return;
 			const lio = pastedFile.name.lastIndexOf('.');
 			const ext = lio >= 0 ? pastedFile.name.slice(lio) : '';
 			const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replace(/{{number}}/g, '1') + ext;
 			const renamedFile = new File([pastedFile], formattedName, { type: pastedFile.type });
 			os.launchUploader([renamedFile], { multiple: false }).then(driveFiles => {
-				file.value = driveFiles[0];
+				const driveFile = driveFiles[0];
+				if (driveFile != null) file.value = driveFile;
 			});
 		}
 	} else {
-		if (items[0].kind === 'file') {
+		if (items[0]?.kind === 'file') {
 			os.alert({
 				type: 'error',
 				text: i18n.ts.onlyOneFileCanBeAttached,
@@ -106,7 +108,7 @@ async function onPaste(ev: ClipboardEvent) {
 function onDragover(ev: DragEvent) {
 	if (!ev.dataTransfer) return;
 
-	const isFile = ev.dataTransfer.items[0].kind === 'file';
+	const isFile = ev.dataTransfer.items[0]?.kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles'])) {
 		ev.preventDefault();
 		switch (ev.dataTransfer.effectAllowed) {
@@ -134,7 +136,8 @@ function onDrop(ev: DragEvent): void {
 	// ファイルだったら
 	if (ev.dataTransfer.files.length === 1) {
 		ev.preventDefault();
-		os.launchUploader([Array.from(ev.dataTransfer.files)[0]], { multiple: false });
+		const droppedFile = ev.dataTransfer.files[0];
+		if (droppedFile != null) os.launchUploader([droppedFile], { multiple: false });
 		return;
 	} else if (ev.dataTransfer.files.length > 1) {
 		ev.preventDefault();
@@ -149,7 +152,8 @@ function onDrop(ev: DragEvent): void {
 	{
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
-			file.value = droppedData[0];
+			const droppedFile = droppedData[0];
+			if (droppedFile != null) file.value = droppedFile;
 			ev.preventDefault();
 		}
 	}
@@ -187,7 +191,8 @@ function onChangeFile() {
 
 	if (fileEl.value.files[0]) {
 		os.launchUploader(Array.from(fileEl.value.files), { multiple: false }).then(driveFiles => {
-			file.value = driveFiles[0];
+			const driveFile = driveFiles[0];
+			if (driveFile != null) file.value = driveFile;
 		});
 	}
 }

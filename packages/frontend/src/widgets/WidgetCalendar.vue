@@ -98,7 +98,7 @@ function update(time: number) {
 		i18n.ts._weekday.thursday,
 		i18n.ts._weekday.friday,
 		i18n.ts._weekday.saturday,
-	][now.getDay()];
+	][now.getDay()] ?? '';
 
 	const dayNumer = now.getTime() - new Date(ny, nm, nd).getTime();
 	const dayDenom = 1000/*ms*/ * 60/*s*/ * 60/*m*/ * 24/*h*/;

@@ -14,13 +14,19 @@ type TourStep = {
 
 export function startTour(steps: TourStep[]) {
 	return new Promise<void>((resolve) => {
+		const firstStep = steps[0];
+		if (firstStep == null) {
+			resolve();
+			return;
+		}
 		const currentStepIndex = ref(0);
-		const titleRef = ref(steps[0].title);
-		const descriptionRef = ref(steps[0].description);
-		const anchorElementRef = shallowRef<HTMLElement>(steps[0].element);
+		const titleRef = ref(firstStep.title);
+		const descriptionRef = ref(firstStep.description);
+		const anchorElementRef = shallowRef<HTMLElement>(firstStep.element);
 
 		watch(currentStepIndex, (newIndex) => {
 			const step = steps[newIndex];
+			if (step == null) return;
 			titleRef.value = step.title;
 			descriptionRef.value = step.description;
 			anchorElementRef.value = step.element;

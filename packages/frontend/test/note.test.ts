@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { describe, test, assert, afterEach } from 'vitest';
+import { describe, test, assert, afterEach, expect } from 'vitest';
 import { render, cleanup, type RenderResult } from '@testing-library/vue';
 import './init';
 import * as Misskey from 'misskey-js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
 import MkMediaImage from '@/features/media-viewer/components/MkMediaImage.vue';
+import { requireReactionCount } from '@/features/notes/components/MkReactionsViewer.vue';
 
 describe('MkMediaImage', () => {
 	const renderMediaImage = (image: Partial<Misskey.entities.DriveFile>): RenderResult => {
@@ -90,5 +91,13 @@ describe('MkMediaImage', () => {
 		const mkMediaImage = renderMediaImage({ type: 'image/png' });
 		assert.ok(mkMediaImage.getByRole('button', { name: 'Menu' }));
 		assert.ok(mkMediaImage.getByRole('button', { name: 'Hide' }));
+	});
+});
+
+describe('MkReactionsViewer', () => {
+	test('rejects a current-user reaction without a corresponding count', () => {
+		expect(() => requireReactionCount({ ':other:': 1 }, ':mine:')).toThrow(
+			"Reaction count is missing for the current user's reaction: :mine:",
+		);
 	});
 });

@@ -82,7 +82,7 @@ const choseAd = (): Ad | null => {
 
 	if (ads.length === 0) {
 		if (lowPriorityAds.length !== 0) {
-			return lowPriorityAds[Math.floor(Math.random() * lowPriorityAds.length)];
+			return lowPriorityAds[Math.floor(Math.random() * lowPriorityAds.length)] ?? null;
 		} else {
 			return null;
 		}

@@ -16,10 +16,10 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform1f(u.phase, params.phase);
-		gl.uniform1f(u.frequency, params.frequency);
-		gl.uniform1f(u.strength, params.strength);
-		gl.uniform1i(u.direction, params.direction);
+		gl.uniform1f(u('phase'), params.phase);
+		gl.uniform1f(u('frequency'), params.frequency);
+		gl.uniform1f(u('strength'), params.strength);
+		gl.uniform1i(u('direction'), params.direction);
 	},
 });
 

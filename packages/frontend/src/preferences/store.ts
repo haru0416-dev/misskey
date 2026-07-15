@@ -173,11 +173,11 @@ export function getInitialPrefValue<K extends keyof PREF>(k: K): ValueOf<K> {
 }
 
 function isAccountDependentKey<K extends keyof PREF>(key: K): boolean {
-	return (PREF_DEF as PreferencesDefinition)[key].accountDependent === true;
+	return (PREF_DEF as PreferencesDefinition)[key]?.accountDependent === true;
 }
 
 function isServerDependentKey<K extends keyof PREF>(key: K): boolean {
-	return (PREF_DEF as PreferencesDefinition)[key].serverDependent === true;
+	return (PREF_DEF as PreferencesDefinition)[key]?.serverDependent === true;
 }
 
 function createEmptyProfile(): PossiblyNonNormalizedPreferencesProfile {
@@ -533,7 +533,7 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 
 				// undefined ... cancel
 				async function resolveConflict(local: ValueOf<K>, remote: ValueOf<K>): Promise<ValueOf<K> | undefined> {
-					const merge = (PREF_DEF as PreferencesDefinition)[key].mergeStrategy;
+					const merge = (PREF_DEF as PreferencesDefinition)[key]?.mergeStrategy;
 					let mergedValue: ValueOf<K> | undefined = undefined; // null と区別したいため
 					try {
 						if (merge != null) mergedValue = merge(local, remote) as ValueOf<K> | undefined;

@@ -89,8 +89,10 @@ describe('media lightbox', () => {
 		});
 		const marked = result.container.querySelectorAll('[data-marker="source"]');
 		assert.equal(marked.length, 1);
-		assert.equal(marked[0].tagName, 'DIV');
-		assert.equal(marked[0].getAttribute('data-object-fit'), 'cover');
+		const marker = marked[0];
+		assert.ok(marker != null);
+		assert.equal(marker.tagName, 'DIV');
+		assert.equal(marker.getAttribute('data-object-fit'), 'cover');
 	});
 
 	test('coalesces concurrent opens into one task', async () => {
@@ -137,9 +139,13 @@ describe('media lightbox', () => {
 		});
 		const buttons = result.container.querySelectorAll('button');
 		assert.equal(buttons.length, 3);
-		assert.equal(buttons[0].querySelectorAll('button').length, 0);
-		assert.equal(buttons[0].parentElement, buttons[1].parentElement);
-		assert.equal(buttons[0].parentElement, buttons[2].parentElement);
+		const firstButton = buttons[0];
+		const secondButton = buttons[1];
+		const thirdButton = buttons[2];
+		assert.ok(firstButton != null && secondButton != null && thirdButton != null);
+		assert.equal(firstButton.querySelectorAll('button').length, 0);
+		assert.equal(firstButton.parentElement, secondButton.parentElement);
+		assert.equal(firstButton.parentElement, thirdButton.parentElement);
 	});
 
 	test('closes on Escape while a range input has focus', async () => {

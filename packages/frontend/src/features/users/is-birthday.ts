@@ -9,7 +9,7 @@ export function isBirthday(user: Misskey.entities.UserDetailed, now = new Date()
 	if (user.birthday == null) return false;
 
 	const [_, bm, bd] = user.birthday.split('-').map((v) => parseInt(v, 10));
-	if (isNaN(bm) || isNaN(bd)) return false;
+	if (bm == null || bd == null || isNaN(bm) || isNaN(bd)) return false;
 
 	const y = now.getFullYear();
 	const m = now.getMonth() + 1;

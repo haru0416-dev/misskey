@@ -170,13 +170,15 @@ function setupGrid(): GridSetting {
 				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction', title: 'role', type: 'text', editable: true, width: 140,
 				valueTransformer: (row) => {
 					// バックエンドからからはIDと名前のペア配列で受け取るが、表示にIDがあると煩雑なので名前だけにする
-					return gridItems.value[row.index].roleIdsThatCanBeUsedThisEmojiAsReaction
+					return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [])
 						.map((it) => it.name)
 						.join(',');
 				},
 				customValueEditor: async (row) => {
 					// ID直記入は体験的に最悪なのでモーダルを使って入力する
-					const current = gridItems.value[row.index].roleIdsThatCanBeUsedThisEmojiAsReaction;
+					const item = gridItems.value[row.index];
+					if (item == null) return [];
+					const current = item.roleIdsThatCanBeUsedThisEmojiAsReaction;
 					const result = await os.selectRole({
 						initialRoleIds: current.map(it => it.id),
 						title: i18n.ts.rolesThatCanBeUsedThisEmojiAsReaction,
@@ -188,7 +190,7 @@ function setupGrid(): GridSetting {
 					}
 
 					const transform = result.result.map(it => ({ id: it.id, name: it.name }));
-					gridItems.value[row.index].roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
+					item.roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
 
 					return transform;
 				},
@@ -196,7 +198,8 @@ function setupGrid(): GridSetting {
 					paste: roleIdsParser,
 					delete(cell) {
 						// デフォルトはundefinedになるが、このプロパティは空配列にしたい
-						gridItems.value[cell.row.index].roleIdsThatCanBeUsedThisEmojiAsReaction = [];
+						const item = gridItems.value[cell.row.index];
+						if (item != null) item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
 					},
 				},
 			},
@@ -335,8 +338,9 @@ function onGridCellValidation(event: GridCellValidationEvent) {
 
 function onGridCellValueChange(event: GridCellValueChangeEvent) {
 	const { row, column, newValue } = event;
-	if (gridItems.value.length > row.index && column.setting.bindTo in gridItems.value[row.index]) {
-		(gridItems.value[row.index] as any)[column.setting.bindTo] = newValue;
+	const item = gridItems.value[row.index];
+	if (item != null && column.setting.bindTo in item) {
+		(item as any)[column.setting.bindTo] = newValue;
 	}
 }
 

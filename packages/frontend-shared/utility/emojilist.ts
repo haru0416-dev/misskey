@@ -23,18 +23,21 @@ export type UnicodeEmojiDef = {
 
 import _emojilist from '@misskey-dev/emoji-data/emojilist.json';
 
-export const emojilist: UnicodeEmojiDef[] = _emojilist.map((x) => ({
-	name: x[1] as string,
-	char: x[0] as string,
-	category: unicodeEmojiCategories[x[2] as number],
-}));
+export const emojilist: UnicodeEmojiDef[] = _emojilist.map((x) => {
+	const category = unicodeEmojiCategories[x[2] as number];
+	if (category == null) throw new Error(`Unknown emoji category: ${x[2]}`);
+	return {
+		name: x[1] as string,
+		char: x[0] as string,
+		category,
+	};
+});
 
 const unicodeEmojisMap = new Map<string, UnicodeEmojiDef>(emojilist.map((x) => [x.char, x]));
 
 const _indexByChar = new Map<string, number>();
 const _charGroupByCategory = new Map<string, string[]>();
-for (let i = 0; i < emojilist.length; i++) {
-	const emo = emojilist[i];
+for (const [i, emo] of emojilist.entries()) {
 	_indexByChar.set(emo.char, i);
 
 	if (_charGroupByCategory.has(emo.category)) {
@@ -73,7 +76,7 @@ export function getEmojiName(char: string): string {
 		// 絵文字情報がjsonに無い場合は名前の取得が出来ないのでそのまま返すしか無い
 		return char;
 	} else {
-		return emojilist[idx].name;
+		return emojilist[idx]?.name ?? char;
 	}
 }
 

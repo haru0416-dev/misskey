@@ -337,8 +337,9 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 
 						for (const q in route.query) {
 							const as = route.query[q];
-							if (queryObject[q] != null) {
-								props.set(as, safeURIDecode(queryObject[q]));
+							const value = queryObject[q];
+							if (as != null && value != null) {
+								props.set(as, safeURIDecode(value));
 							}
 						}
 					}

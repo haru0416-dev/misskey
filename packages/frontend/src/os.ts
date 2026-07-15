@@ -104,8 +104,11 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 			title = i18n.ts.gotInvalidResponseError;
 			text = i18n.ts.gotInvalidResponseErrorDescription;
 		} else if (customErrors && customErrors[err.id] != null) {
-			title = customErrors[err.id].title;
-			text = customErrors[err.id].text;
+			const customError = customErrors[err.id];
+			if (customError != null) {
+				title = customError.title;
+				text = customError.text;
+			}
 		}
 		alert({
 			type: 'error',

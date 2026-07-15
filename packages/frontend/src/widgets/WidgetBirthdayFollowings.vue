@@ -13,12 +13,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div>
 			<template v-for="(user, i) in items" :key="user.id">
 				<div
-					v-if="i > 0 && isSeparatorNeeded(birthdayUsersPaginator.items.value[i - 1].birthday, user.birthday)"
+					v-if="getBirthdaySeparator(items, i, user.birthday) != null"
 				>
 					<div :class="$style.date">
-						<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(birthdayUsersPaginator.items.value[i - 1].birthday, user.birthday)?.prevText }}</span>
+						<span><i class="ti ti-chevron-up"></i> {{ getBirthdaySeparator(items, i, user.birthday)?.prevText }}</span>
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getSeparatorInfo(birthdayUsersPaginator.items.value[i - 1].birthday, user.birthday)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span>{{ getBirthdaySeparator(items, i, user.birthday)?.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
 					<XUser :class="$style.user" :item="user" />
 				</div>
@@ -133,6 +133,12 @@ const birthdayUsersPaginator = markRaw(new Paginator('users/get-following-users-
 		}
 	}),
 }));
+
+function getBirthdaySeparator(items: { birthday: string }[], index: number, birthday: string) {
+	const previous = items[index - 1];
+	if (previous == null || !isSeparatorNeeded(previous.birthday, birthday)) return null;
+	return getSeparatorInfo(previous.birthday, birthday);
+}
 
 function fetch() {
 	const now = new Date();

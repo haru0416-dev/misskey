@@ -43,7 +43,7 @@ function onDragover(ev: DragEvent) {
 		ev.dataTransfer.dropEffect = 'none';
 	}
 
-	const isFile = ev.dataTransfer.items[0].kind === 'file';
+	const isFile = ev.dataTransfer.items[0]?.kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles', 'driveFolders'])) {
 		switch (ev.dataTransfer.effectAllowed) {
 			case 'all':
@@ -110,6 +110,7 @@ function onDrop(ev: DragEvent) {
 		const droppedData = getDragData(ev, 'driveFolders');
 		if (droppedData != null) {
 			const droppedFolder = droppedData[0];
+			if (droppedFolder == null) return;
 			// 移動先が自分自身ならreject
 			if (props.folder && droppedFolder.id === props.folder.id) return;
 			misskeyApi('drive/folders/update', {

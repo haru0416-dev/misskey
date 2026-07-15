@@ -92,10 +92,12 @@ const vote = async (id: number) => {
 
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
 	if (!isLoggedIn) return;
+	const choice = props.choices[id];
+	if (choice == null) return;
 
 	const { canceled } = await os.confirm({
 		type: 'question',
-		text: i18n.tsx.voteConfirm({ choice: props.choices[id].text }),
+		text: i18n.tsx.voteConfirm({ choice: choice.text }),
 	});
 	if (canceled) return;
 

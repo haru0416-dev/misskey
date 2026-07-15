@@ -65,10 +65,14 @@ const fetching = ref(true);
 
 onMounted(async () => {
 	const chart = await misskeyApiGet('charts/federation', { limit: 2, span: 'day' });
-	federationPubActive.value = chart.pubActive[0];
-	federationPubActiveDiff.value = chart.pubActive[0] - chart.pubActive[1];
-	federationSubActive.value = chart.subActive[0];
-	federationSubActiveDiff.value = chart.subActive[0] - chart.subActive[1];
+	const pubActive = chart.pubActive[0];
+	const previousPubActive = chart.pubActive[1];
+	const subActive = chart.subActive[0];
+	const previousSubActive = chart.subActive[1];
+	federationPubActive.value = pubActive ?? null;
+	federationPubActiveDiff.value = pubActive != null && previousPubActive != null ? pubActive - previousPubActive : null;
+	federationSubActive.value = subActive ?? null;
+	federationSubActiveDiff.value = subActive != null && previousSubActive != null ? subActive - previousSubActive : null;
 
 	misskeyApiGet('federation/stats', { limit: 10 }).then(res => {
 		topSubInstancesForPie.value = [
