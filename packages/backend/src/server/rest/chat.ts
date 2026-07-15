@@ -13,10 +13,10 @@ import {
 	fetchChatMessageByIdAndFromUserIdFromDatabase,
 	fetchChatMessageByIdFromDatabase,
 	fetchChatMessageByIdOrFailFromDatabase,
-	findLatestChatMessageForRoomsExcludingRoomsFromDatabase,
-	findLatestChatMessageForUserExcludingUsersFromDatabase,
 	listChatMessagesBetweenUsersFromDatabase,
 	listChatMessagesByRoomIdFromDatabase,
+	listRoomChatHistoryFromDatabase,
+	listUserChatHistoryFromDatabase,
 	removeChatMessageReactionInDatabase,
 	resolveChatMessagePagination,
 	searchChatMessagesFromDatabase,
@@ -724,43 +724,11 @@ export async function chatRoomTimelineForHonoApi(deps: HonoApiChatDependencies, 
 }
 
 export async function chatUserHistoryForHonoApi(deps: HonoApiChatDependencies, meId: MiUser['id'], limit: number): Promise<MiChatMessage[]> {
-	const history: MiChatMessage[] = [];
-
-	for (let i = 0; i < limit; i++) {
-		const found = history.map(m => (m.fromUserId === meId) ? m.toUserId! : m.fromUserId!);
-		const message = await findLatestChatMessageForUserExcludingUsersFromDatabase(deps.db, meId, found);
-		if (message) {
-			history.push(message);
-		} else {
-			break;
-		}
-	}
-
-	return history;
+	return await listUserChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
 export async function chatRoomHistoryForHonoApi(deps: HonoApiChatDependencies, meId: MiUser['id'], limit: number): Promise<MiChatMessage[]> {
-	const [memberRoomIds, ownedRoomIds] = await Promise.all([
-		listChatRoomMembershipsByUserIdFromDatabase(deps.db, meId).then(xs => xs.map(x => x.roomId)),
-		listChatRoomsByOwnerIdFromDatabase(deps.db, meId).then(xs => xs.map(x => x.id)),
-	]);
-
-	const roomIds = memberRoomIds.concat(ownedRoomIds);
-	if (memberRoomIds.length === 0 && ownedRoomIds.length === 0) return [];
-
-	const history: MiChatMessage[] = [];
-
-	for (let i = 0; i < limit; i++) {
-		const found = history.map(m => m.toRoomId!);
-		const message = await findLatestChatMessageForRoomsExcludingRoomsFromDatabase(deps.db, roomIds, found);
-		if (message) {
-			history.push(message);
-		} else {
-			break;
-		}
-	}
-
-	return history;
+	return await listRoomChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
 export async function getUserChatReadStateMapForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], otherIds: MiUser['id'][]): Promise<Record<MiUser['id'], boolean>> {
